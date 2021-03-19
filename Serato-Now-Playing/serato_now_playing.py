@@ -7,6 +7,7 @@
 # pylint: disable=global-statement
 # pylint: disable=too-few-public-methods
 
+import logging
 import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import pathlib
@@ -36,6 +37,18 @@ __author__ = "Ely Miranda"
 __version__ = "1.5.0"
 __license__ = "MIT"
 
+
+# this loglevel should eventually be tied into config
+# but for now, hard-set at debug
+logging.basicConfig(format='%(asctime)s %(module)s:%(funcName)s:%(lineno)d ' +
+                    '%(levelname)s %(message)s',
+                    datefmt='%Y-%m-%dT%H:%M:%S%z',
+                    filename=os.path.join(tempfile.gettempdir(),
+                                          'npsdebug.log'),
+                    level=logging.DEBUG)
+logging = logging.getLogger(__name__)
+logging.info('booting up %s', __version__)
+
 # set paths for bundled files
 if getattr(sys, 'frozen', False) and sys.platform == "darwin":
     BUNDLEDIR = os.path.abspath(os.path.dirname(
@@ -58,9 +71,8 @@ TRAY = None
 class Tray:  # pylint: disable=too-many-instance-attributes
     ''' System Tray object '''
     def __init__(self):
-
         global __version__, CONFIG
-
+        logging.debug('Tray is thread %u', QThread.currentThreadId())
         self.settingswindow = nowplaying.settingsui.SettingsUI(
             tray=self, config=CONFIG, version=__version__)
         ''' create systemtray UI '''
@@ -210,7 +222,6 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             nowplaying.utils.writetxttrack(filename=CONFIG.file)
         # calling exit should call __del__ on all of our QThreads
         QAPP.exit(0)
-        sys.exit(0)
 
 
 class WebHandler(BaseHTTPRequestHandler):
@@ -289,6 +300,10 @@ class WebHandler(BaseHTTPRequestHandler):
 
         self.send_error(404)
 
+    def log_message(self, format, *args):  ## pylint: disable=redefined-builtin
+        logging.info("%s - - [%s] %s\n", self.address_string(),
+                     self.log_date_time_string(), format % args)
+
 
 class ThreadingWebServer(ThreadingMixIn, HTTPServer):
     ''' threaded webserver object '''
@@ -307,7 +322,7 @@ class WebServer(QThread):
         self.prevdir = None
         self.endthread = False
 
-    def run(self):  # pylint: disable=too-many-branches
+    def run(self):  # pylint: disable=too-many-branches, too-many-statements
         '''
             Configure a webserver.
 
@@ -319,10 +334,13 @@ class WebServer(QThread):
 
         '''
         global CONFIG
+        logging.debug('WebServer is thread %u', QThread.currentThreadId())
 
-        while not CONFIG.httpenabled and not self.endthread:
+        while not CONFIG.httpenabled and not self.endthread and not CONFIG.initialized:
             time.sleep(5)
             CONFIG.get()
+
+        logging.debug('Web server is enabled!')
 
         while not self.endthread:
             while CONFIG.paused:
@@ -332,14 +350,17 @@ class WebServer(QThread):
             time.sleep(1)
             CONFIG.get()
 
-            if CONFIG.httpdir:
-                if CONFIG.httpdir != self.prevdir:
-
-                    self.prevdir = CONFIG.httpdir
+            if CONFIG.usinghttpdir:
+                if CONFIG.usinghttpdir != self.prevdir:
+                    logging.debug('Using web server dir %s',
+                                  CONFIG.usinghttpdir)
+                    self.prevdir = CONFIG.usinghttpdir
                     resetserver = True
             else:
                 if not self.prevdir:
+                    logging.debug('No web server dir?!?')
                     self.prevdir = tempfile.gettempdir()
+                    CONFIG.setusinghttpdir(self.prevdir)
 
             if not os.path.exists(self.prevdir):
                 try:
@@ -347,6 +368,7 @@ class WebServer(QThread):
                                                      exist_ok=True)
                 except Exception as error:  # pylint: disable=broad-except
                     print(f'webserver error: {error}')
+                    logging.error('Web server threw exception! %s', error)
                     self.webenable.emit(False)
 
             os.chdir(self.prevdir)
@@ -368,6 +390,7 @@ class WebServer(QThread):
                         ('0.0.0.0', CONFIG.httpport), WebHandler)
                 except Exception as error:  # pylint: disable=broad-except
                     print(f'webserver error: {error}')
+                    logging.error('Web server threw exception! %s', error)
                     self.webenable.emit(False)
 
             try:
@@ -385,6 +408,7 @@ class WebServer(QThread):
             self.server.shutdown()
 
     def __del__(self):
+        logging.debug('Web server thread is being killed!')
         self.endthread = True
         self.stop()
         self.wait()
@@ -407,7 +431,7 @@ class TrackPoll(QThread):
         ''' track polling process '''
 
         global CONFIG
-
+        logging.debug('TrackPoll is thread %u', QThread.currentThreadId())
         previoustxttemplate = None
         previoushtmltemplate = None
 
@@ -448,11 +472,12 @@ class TrackPoll(QThread):
                     previoushtmltemplate = CONFIG.htmltemplate
 
                 nowplaying.utils.update_javascript(
-                    serverdir=CONFIG.httpdir,
+                    serverdir=CONFIG.usinghttpdir,
                     templatehandler=htmltemplatehandler,
                     metadata=newmeta)
 
     def __del__(self):
+        logging.debug('TrackPoll is being killed!')
         self.endthread = True
         self.wait()
 
@@ -468,43 +493,51 @@ def gettrack(configuration):  # pylint: disable=too-many-branches
 
     serato = None
 
+    logging.debug('called gettrack')
     # check paused state
     while True:
         if not conf.paused:
             break
 
-    #print("checking...")
     if conf.local:  # locally derived
         # paths for session history
         sera_dir = conf.libpath
         hist_dir = os.path.abspath(os.path.join(sera_dir, "History"))
         sess_dir = os.path.abspath(os.path.join(hist_dir, "Sessions"))
         if os.path.isdir(sess_dir):
+            logging.debug('SeratoHandler called against %s', sess_dir)
             serato = nowplaying.serato.SeratoHandler(seratodir=sess_dir,
                                                      mixmode=conf.mixmode)
+            logging.debug('Serato processor called')
             serato.process_sessions()
 
     else:  # remotely derived
-
+        logging.debug('SeratoHandler called against %s', conf.url)
         serato = nowplaying.serato.SeratoHandler(seratourl=conf.url)
 
     if not serato:
+        logging.debug('gettrack serato is None; returning')
         return None
 
+    logging.debug('getplayingtrack called')
     (artist, song) = serato.getplayingtrack()
 
     if not artist and not song:
+        logging.debug('getplaying track was None; returning')
         return None
 
     if artist == CURRENTMETA['fetchedartist'] and \
        song == CURRENTMETA['fetchedtitle']:
+        logging.debug('getplaying was existing meta; returning')
         return None
 
+    logging.debug('Fetching more metadata from serato')
     nextmeta = serato.getplayingmetadata()
     nextmeta['fetchedtitle'] = song
     nextmeta['fetchedartist'] = artist
 
     if 'filename' in nextmeta:
+        logging.debug('serato provided filename, parsing file')
         nextmeta = nowplaying.utils.getmoremetadata(nextmeta)
 
     CURRENTMETA = nextmeta
@@ -516,4 +549,6 @@ def gettrack(configuration):  # pylint: disable=too-many-branches
 
 if __name__ == "__main__":
     TRAY = Tray()
-    sys.exit(QAPP.exec_())
+    exitval = QAPP.exec_()
+    logging.info('shutting down %s', __version__)
+    sys.exit(exitval)

@@ -3,13 +3,14 @@
    config file parsing/handling
 '''
 
+import logging
 import os
 import pathlib
 import sys
 import threading
 
 # pylint: disable=no-name-in-module
-from PyQt5.QtCore import QSettings
+from PyQt5.QtCore import QSettings, QThread
 
 
 class ConfigFile:  # pylint: disable=too-many-instance-attributes
@@ -24,8 +25,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     lock = threading.RLock()
 
     def __init__(self, bundledir=None, reset=False):
-
+        logging.debug('attempting lock for %u', QThread.currentThreadId())
         ConfigFile.lock.acquire()
+        logging.debug('locked by %u', QThread.currentThreadId())
         self.initialized = False
         self.bundledir = bundledir
 
@@ -59,6 +61,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                                         "basic.txt")
         self.httpenabled = False
         self.httpdir = None
+        self.usinghttpdir = None
         self.htmltemplate = os.path.join(self.bundledir, "templates",
                                          "basic.htm")
 
@@ -70,15 +73,19 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         else:
             self.get()
         ConfigFile.lock.release()
+        logging.debug('lock release for %u', QThread.currentThreadId())
 
     def reset(self):
         ''' forcibly go back to defaults '''
+        logging.debug('by thread %u', QThread.currentThreadId())
         self.__init__(bundledir=self.bundledir, reset=True)
 
     def get(self):
         ''' refresh values '''
 
+        logging.debug('attempting lock for %u', QThread.currentThreadId())
         ConfigFile.lock.acquire()
+        logging.debug('locked by %u', QThread.currentThreadId())
 
         try:
             self.interval = self.cparser.value('settings/interval', type=float)
@@ -117,6 +124,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             pass
 
         self.httpdir = self.cparser.value('weboutput/httpdir')
+        if self.httpdir and self.usinghttpdir is not self.httpdir:
+            self.usinghttpdir = self.httpdir
         self.htmltemplate = self.cparser.value('weboutput/htmltemplate')
 
         try:
@@ -126,9 +135,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             pass
 
         ConfigFile.lock.release()
+        logging.debug('lock release for %u', QThread.currentThreadId())
 
     def defaults(self):
         ''' default values for things '''
+        logging.debug('by thread %u', QThread.currentThreadId())
 
         settings = QSettings(self.qsettingsformat, QSettings.SystemScope,
                              ConfigFile._organization, ConfigFile._application)
@@ -153,7 +164,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             notif):
         ''' Save the configuration file '''
 
+        logging.debug('attempting lock for %u', QThread.currentThreadId())
         ConfigFile.lock.acquire()
+        logging.debug('locked by %u', QThread.currentThreadId())
 
         self.initialized = initialized
         self.local = local
@@ -163,6 +176,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.txttemplate = txttemplate
         self.httpport = int(httpport)
         self.httpdir = httpdir
+        self.usinghttpdir = self.httpdir
         self.httpenabled = httpenabled
         self.htmltemplate = htmltemplate
         self.interval = float(interval)
@@ -172,11 +186,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.save()
 
         ConfigFile.lock.release()
+        logging.debug('lock release for %u', QThread.currentThreadId())
 
     def save(self):
         ''' save the current set '''
 
+        logging.debug('attempting lock for %u', QThread.currentThreadId())
         ConfigFile.lock.acquire()
+        logging.debug('locked by %u', QThread.currentThreadId())
 
         self.cparser.setValue('settings/initialized', self.initialized)
         self.cparser.setValue('settings/interval', self.interval)
@@ -194,3 +211,16 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.cparser.setValue('weboutput/htmltemplate', self.htmltemplate)
 
         ConfigFile.lock.release()
+        logging.debug('lock release for %u', QThread.currentThreadId())
+
+    # pylint: disable=too-many-locals, too-many-arguments
+    def setusinghttpdir(self, usinghttpdir):
+        ''' Save the configuration file '''
+
+        logging.debug('attempting lock for %u', QThread.currentThreadId())
+        ConfigFile.lock.acquire()
+        logging.debug('locked by %u', QThread.currentThreadId())
+        logging.debug('setting the usinghttpdir to %s', usinghttpdir)
+        self.usinghttpdir = usinghttpdir
+        ConfigFile.lock.release()
+        logging.debug('lock release for %u', QThread.currentThreadId())

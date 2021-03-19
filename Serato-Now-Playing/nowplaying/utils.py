@@ -8,6 +8,7 @@
 #
 
 import io
+import logging
 import os
 import sys
 
@@ -28,7 +29,10 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
         if os.path.exists(filename):
             envdir = os.path.dirname(filename)
         else:
+            logging.debug('os.path.exists failed for %s', filename)
             return
+
+        self.filename = filename
 
         if not self.envdir or self.envdir != envdir:
             self.envdir = envdir
@@ -42,6 +46,7 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
 
     def generate(self, metadatadict=None):
         ''' get the generated template '''
+        logging.debug('generating data for %s', self.filename)
         if self.template:
             return self.template.render(metadatadict)
         return "No template found; check your settings"
@@ -49,6 +54,8 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
 
 def getmoremetadata(metadata=None):
     ''' given a chunk of metadata, try to fill in more '''
+
+    logging.debug('getmoremetadata called')
 
     if not metadata or 'filename' not in metadata:
         return metadata
@@ -60,6 +67,9 @@ def getmoremetadata(metadata=None):
 
     if not os.path.isfile(metadata['filename']):
         return metadata
+
+    logging.debug('getmoremetadata calling TinyTag for %s',
+                  metadata['filename'])
 
     tag = tinytag.TinyTag.get(metadata['filename'], image=True)
 
@@ -87,41 +97,57 @@ def getmoremetadata(metadata=None):
 
 def writetxttrack(filename=None, templatehandler=None, metadata=None):
     ''' write new track info '''
+
+    logging.debug('writetxttrack called for %s', filename)
     if templatehandler:
         txttemplate = templatehandler.generate(metadata)
     else:
         txttemplate = '{{ artist }} - {{ title }}'
 
+    logging.debug('writetxttrack: starting write')
     # need to -specifically- open as utf-8 otherwise
     # pyinstaller built app crashes
     with open(filename, "w", encoding='utf-8') as textfh:
         #print("writing...")
         textfh.write(txttemplate)
+    logging.debug('writetxttrack: finished write')
 
 
 def update_javascript(serverdir='/tmp', templatehandler=None, metadata=None):
     ''' update the image with the new info '''
 
-    # This should really use a better templating engine,
-    # but let us keep it simple for now
+    logging.debug('update_javascript: called')
+    if not serverdir:
+        logging.debug('update_javascript: no serverdir')
+        return
+
+    if not templatehandler:
+        logging.debug('update_javascript: no templatehandler')
+        return
+
+    if not metadata:
+        logging.debug('update_javascript: incomplete metadata')
+        return
+
+    logging.debug('update_javascript:using dir %s', serverdir)
 
     indexhtm = os.path.join(serverdir, "index.htm")
 
-    if not templatehandler:
-        # absolutely require a template
-        return
-
+    logging.debug('update_javascript:generating template')
     titlecardhtml = templatehandler.generate(metadata)
 
+    logging.debug('update_javascript: writing index file')
     # need to -specifically- open as utf-8 otherwise
     # pyinstaller built app crashes
     with open(indexhtm, "w", encoding='utf-8') as indexfh:
         indexfh.write(titlecardhtml)
 
     if 'coverimageraw' in metadata:
+        logging.debug('update_javascript: writing cover image')
         extension = metadata['coverimagetype']  # probably png or jpg
         with open(f'cover.{extension}', "wb") as coverfh:
             coverfh.write(metadata['coverimageraw'])
+    logging.debug('update_javascript: done')
 
 
 def main():
