@@ -1,5 +1,5 @@
 jinja2==2.11.3
-lxml==4.6.2
+lxml==4.6.3
 pyinstaller==4.2
 PyQT5==5.15.2
 requests==2.25.1
