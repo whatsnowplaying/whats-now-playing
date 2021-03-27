@@ -95,7 +95,10 @@ def getmoremetadata(metadata=None):
     return metadata
 
 
-def writetxttrack(filename=None, templatehandler=None, metadata=None, clear=False):
+def writetxttrack(filename=None,
+                  templatehandler=None,
+                  metadata=None,
+                  clear=False):
     ''' write new track info '''
 
     logging.debug('writetxttrack called for %s', filename)

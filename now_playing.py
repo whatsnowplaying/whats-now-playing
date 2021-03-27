@@ -338,8 +338,8 @@ class WebServer(QThread):
 
             if CONFIG.usinghttpdir:
                 if CONFIG.usinghttpdir != self.prevdir:
-                    logging.debug('Using web server dir %s',
-                                  CONFIG.usinghttpdir)
+                    logging.info('Changing web server dir %s',
+                                 CONFIG.usinghttpdir)
                     self.prevdir = CONFIG.usinghttpdir
                     resetserver = True
             else:
@@ -356,6 +356,7 @@ class WebServer(QThread):
                     logging.error('Web server threw exception! %s', error)
                     self.webenable.emit(False)
 
+            logging.info('Using web server dir %s', self.prevdir)
             os.chdir(self.prevdir)
 
             if CONFIG.httpport != self.prevport:
@@ -542,9 +543,11 @@ def gettrack(configuration):  # pylint: disable=too-many-branches
         logging.error('Track missing title data, setting it to blank.')
 
     CURRENTMETA = nextmeta
-    logging.info('New track: %s / %s', CURRENTMETA['artist'], CURRENTMETA['title'])
+    logging.info('New track: %s / %s', CURRENTMETA['artist'],
+                 CURRENTMETA['title'])
 
     return CURRENTMETA
+
 
 def setuplogging():
     ''' configure logging '''
@@ -569,12 +572,13 @@ def setuplogging():
     # this loglevel should eventually be tied into config
     # but for now, hard-set at info
     logging.basicConfig(
-        format='%(asctime)s %(threadName)s %(module)s:%(funcName)s:%(lineno)d ' +
-        '%(levelname)s %(message)s',
+        format='%(asctime)s %(threadName)s %(module)s:%(funcName)s:%(lineno)d '
+        + '%(levelname)s %(message)s',
         datefmt='%Y-%m-%dT%H:%M:%S%z',
         handlers=[logfhandler],
-        level=logging.INFO)
+        level=logging.DEBUG)
     logging.info('starting up %s', nowplaying.version.VERSION)
+
 
 def bootstrap_template_ignore(srcdir, srclist):  # pylint: disable=unused-argument
     ''' do not copy template files that already exist '''
@@ -617,6 +621,7 @@ def bootstrap():
                     ignore=bootstrap_template_ignore,
                     dirs_exist_ok=True)
 
+
 # END FUNCTIONS ####
 
 if __name__ == "__main__":
@@ -627,8 +632,10 @@ if __name__ == "__main__":
     bootstrap()
 
     CONFIG = nowplaying.config.ConfigFile(bundledir=BUNDLEDIR)
+    logging.getLogger().setLevel(CONFIG.loglevel)
 
-    logging.info('boot up mixmode: %s / local mode: %s ', CONFIG.mixmode, CONFIG.local)
+    logging.info('boot up mixmode: %s / local mode: %s ', CONFIG.mixmode,
+                 CONFIG.local)
 
     TRAY = Tray()
     QAPP.setQuitOnLastWindowClosed(False)

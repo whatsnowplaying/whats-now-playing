@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' user interface to configure '''
 
+import logging
 import os
 import pathlib
 import socket
@@ -10,6 +11,7 @@ from PyQt5.QtCore import Qt
 
 from PyQt5.QtWidgets import \
                             QCheckBox, \
+                            QComboBox, \
                             QFileDialog, \
                             QFrame, \
                             QHBoxLayout, \
@@ -51,6 +53,7 @@ class SettingsUI:  # pylint: disable=too-many-instance-attributes
         self.layoutHttpPort = QHBoxLayout()
         self.layoutHttpHtmlTemplate = QHBoxLayout()
         self.layoutHttpServerPath = QHBoxLayout()
+        self.layoutLogLevel = QHBoxLayout()
 
         self.fBold = QFont()
         self.fBold.setBold(True)
@@ -269,6 +272,32 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
         self.layoutHttpServerPath.addWidget(self.httpdirEdit)
         self.layoutV.addLayout(self.layoutHttpServerPath)
 
+        if self.config.loglevel == 'INFO':
+            setlogindex = 0
+        else:
+            setlogindex = 1
+
+        self.loglevelLabel = QLabel('Logging Level')
+        self.loglevelLabel.setFont(self.fBold)
+        self.loglevelDesc = QLabel('Verbosity of the log')
+        self.loglevelDesc.setStyleSheet('color: grey')
+        self.layoutV.addWidget(self.loglevelLabel)
+        self.layoutV.addWidget(self.loglevelDesc)
+        self.loglevelComboBox = QComboBox()
+        self.loglevelComboBox.addItem('INFO')
+        self.loglevelComboBox.addItem('DEBUG')
+        self.loglevelComboBox.setCurrentIndex(setlogindex)
+        self.loglevelComboBox.setMaximumWidth(100)
+        self.layoutLogLevel.addWidget(self.loglevelComboBox)
+        self.layoutLogLevel.setAlignment(Qt.AlignLeft)
+        self.layoutV.addLayout(self.layoutLogLevel)
+
+        # separator line
+        self.separatorRCS = QFrame()
+        self.separatorRCS.setFrameShape(QFrame.HLine)
+        # self.separator.setFrameShadow(QFrame.Sunken)
+        self.layoutV.addWidget(self.separatorRCS)
+
         # error area
         self.layoutV.addWidget(self.errLabel)
         # reset btn
@@ -335,6 +364,7 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
         interval = self.intervalEdit.text()
         delay = self.delayEdit.text()
         notif = self.notifCbox.isChecked()
+        loglevel = self.loglevelComboBox.currentText()
 
         self.config.put(initialized=True,
                         local=local,
@@ -348,7 +378,10 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
                         htmltemplate=htmltemplate,
                         interval=interval,
                         delay=delay,
-                        notif=notif)
+                        notif=notif,
+                        loglevel=loglevel)
+
+        logging.getLogger().setLevel(loglevel)
 
     def on_radiobutton_select(self, b):
         ''' radio button action '''

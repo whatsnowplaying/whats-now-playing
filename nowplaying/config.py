@@ -61,13 +61,13 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.httpport = 8899
         self.url = None
         self.file = None
-        self.txttemplate = os.path.join(self.templatedir,
-                                        "basic.txt")
+        self.txttemplate = os.path.join(self.templatedir, "basic.txt")
         self.httpenabled = False
         self.httpdir = None
         self.usinghttpdir = None
-        self.htmltemplate = os.path.join(self.templatedir,
-                                         "basic.htm")
+        self.htmltemplate = os.path.join(self.templatedir, "basic.htm")
+
+        self.loglevel = 'DEBUG'
 
         # Tell Qt to match the above
 
@@ -93,6 +93,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         try:
             self.interval = self.cparser.value('settings/interval', type=float)
+        except TypeError:
+            pass
+
+        try:
+            self.loglevel = self.cparser.value('settings/loglevel')
         except TypeError:
             pass
 
@@ -152,46 +157,53 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         settings = QSettings(self.qsettingsformat, QSettings.SystemScope,
                              QCoreApplication.organizationName(),
                              QCoreApplication.applicationName())
+
+        settings.setValue('settings/delay', self.delay)
+        settings.setValue('settings/handler', 'serato')
         settings.setValue('settings/initialized', False)
         settings.setValue('settings/interval', self.interval)
-        settings.setValue('settings/delay', self.delay)
+        settings.setValue('settings/loglevel', self.loglevel)
         settings.setValue('settings/notif', self.notif)
-        settings.setValue('settings/handler', 'serato')
-        settings.setValue('serato/local', self.local)
-        settings.setValue('serato/mixmode', self.mixmode)
-        settings.setValue('serato/libpath', self.libpath)
-        settings.setValue('serato/url', self.url)
         settings.setValue('textoutput/file', self.file)
         settings.setValue('textoutput/txttemplate', self.txttemplate)
+        settings.setValue('weboutput/htmltemplate', self.htmltemplate)
+        settings.setValue('weboutput/httpdir', self.httpdir)
         settings.setValue('weboutput/httpenabled', self.httpenabled)
         settings.setValue('weboutput/httpport', self.httpport)
-        settings.setValue('weboutput/httpdir', self.httpdir)
-        settings.setValue('weboutput/htmltemplate', self.htmltemplate)
+
+        settings.setValue('serato/libpath', self.libpath)
+        settings.setValue('serato/local', self.local)
+        settings.setValue('serato/mixmode', self.mixmode)
+        settings.setValue('serato/url', self.url)
 
     # pylint: disable=too-many-locals, too-many-arguments
     def put(self, initialized, local, libpath, url, file, txttemplate,
             httpport, httpdir, httpenabled, htmltemplate, interval, delay,
-            notif):
+            notif, loglevel):
         ''' Save the configuration file '''
 
         logging.debug('attempting lock')
         ConfigFile.lock.acquire()
         logging.debug('locked')
 
-        self.initialized = initialized
-        self.local = local
-        self.libpath = libpath
-        self.url = url
-        self.file = file
-        self.txttemplate = txttemplate
-        self.httpport = int(httpport)
-        self.httpdir = httpdir
-        self.usinghttpdir = self.httpdir
-        self.httpenabled = httpenabled
-        self.htmltemplate = htmltemplate
-        self.interval = float(interval)
         self.delay = float(delay)
+        self.file = file
+        self.htmltemplate = htmltemplate
+        self.httpdir = httpdir
+        self.httpenabled = httpenabled
+        self.httpport = int(httpport)
+        self.initialized = initialized
+        self.interval = float(interval)
+        self.loglevel = loglevel
         self.notif = notif
+        self.txttemplate = txttemplate
+        self.usinghttpdir = self.httpdir
+
+        # Serato
+
+        self.libpath = libpath
+        self.local = local
+        self.url = url
 
         self.save()
 
@@ -205,22 +217,24 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         ConfigFile.lock.acquire()
         logging.debug('locked')
 
+        self.cparser.setValue('settings/delay', self.delay)
+        self.cparser.setValue('settings/handler', 'serato')
         self.cparser.setValue('settings/initialized', self.initialized)
         self.cparser.setValue('settings/interval', self.interval)
-        self.cparser.setValue('settings/delay', self.delay)
+        self.cparser.setValue('settings/loglevel', self.loglevel)
         self.cparser.setValue('settings/notif', self.notif)
-        self.cparser.setValue('settings/handler', 'serato')
-        self.cparser.setValue('serato/local', self.local)
+        self.cparser.setValue('textoutput/file', self.file)
+        self.cparser.setValue('textoutput/txttemplate', self.txttemplate)
+        self.cparser.setValue('weboutput/htmltemplate', self.htmltemplate)
+        self.cparser.setValue('weboutput/httpdir', self.httpdir)
+        self.cparser.setValue('weboutput/httpenabled', self.httpenabled)
+        self.cparser.setValue('weboutput/httpport', self.httpport)
+
         self.cparser.setValue('serato/libpath', self.libpath)
+        self.cparser.setValue('serato/local', self.local)
         if self.local:
             self.cparser.setValue('serato/mixmode', self.mixmode)
         self.cparser.setValue('serato/url', self.url)
-        self.cparser.setValue('textoutput/file', self.file)
-        self.cparser.setValue('textoutput/txttemplate', self.txttemplate)
-        self.cparser.setValue('weboutput/httpenabled', self.httpenabled)
-        self.cparser.setValue('weboutput/httpport', self.httpport)
-        self.cparser.setValue('weboutput/httpdir', self.httpdir)
-        self.cparser.setValue('weboutput/htmltemplate', self.htmltemplate)
 
         ConfigFile.lock.release()
         logging.debug('lock release')
