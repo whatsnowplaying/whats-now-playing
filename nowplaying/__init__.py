@@ -36,6 +36,8 @@ import nowplaying.utils
 import nowplaying.version
 import nowplaying.webserver
 
+__version__ = nowplaying.version.get_versions()['version']
+
 QAPP = QApplication(sys.argv)
 QAPP.setOrganizationName('com.github.em1ran')
 QAPP.setApplicationName('NowPlaying')
@@ -63,7 +65,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.menu = QMenu()
 
         # create systemtray options and actions
-        self.action_title = QAction(f'Now Playing {self.version}')
+        self.action_title = QAction(f'Now Playing v{self.version}')
         self.menu.addAction(self.action_title)
         self.action_title.setEnabled(False)
 
@@ -394,7 +396,7 @@ def setuplogging():
         datefmt='%Y-%m-%dT%H:%M:%S%z',
         handlers=[logfhandler],
         level=logging.DEBUG)
-    logging.info('starting up %s',
+    logging.info('starting up v%s',
                  nowplaying.version.get_versions()['version'])
 
 
@@ -463,7 +465,7 @@ def main():
     TRAY = Tray()
     QAPP.setQuitOnLastWindowClosed(False)
     exitval = QAPP.exec_()
-    logging.info('shutting down %s',
+    logging.info('shutting down v%s',
                  nowplaying.version.get_versions()['version'])
     sys.exit(exitval)
 

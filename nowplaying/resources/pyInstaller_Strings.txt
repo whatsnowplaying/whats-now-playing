@@ -1,4 +1,0 @@
-Mac
-    pyinstaller -w SeratoNowPlaying_MAC.spec
-Win
-    pyinstaller -F -w SeratoNowPlaying_WIN.spec
