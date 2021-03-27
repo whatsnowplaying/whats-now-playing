@@ -484,13 +484,11 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
         self.upd_conf()
         self.close()
         self.errLabel.setText('')
-        self.config.mixmode = 'oldest'
         if self.config.local:
-            self.tray.action_mixmode.setText('Newest')
+            self.tray.action_oldestmode.setCheckable(True)
         else:
             self.config.mixmode = 'newest'
-            self.tray.action_mixmode.setText('Oldest')
-        self.tray.action_mixmode.setEnabled(True)
+            self.tray.action_oldestmode.setCheckable(False)
         self.tray.action_pause.setText('Pause')
         self.tray.action_pause.setEnabled(True)
 

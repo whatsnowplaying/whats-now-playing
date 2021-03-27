@@ -26,6 +26,7 @@ from PyQt5.QtCore import \
                             QThread
 from PyQt5.QtWidgets import \
                             QAction, \
+                            QActionGroup, \
                             QApplication, \
                             QErrorMessage, \
                             QMenu, \
@@ -52,7 +53,7 @@ TRAY = None
 
 class Tray:  # pylint: disable=too-many-instance-attributes
     ''' System Tray object '''
-    def __init__(self):
+    def __init__(self):  #pylint: disable=too-many-statements
         global CONFIG
         self.version = nowplaying.version.VERSION
         self.settingswindow = nowplaying.settingsui.SettingsUI(
@@ -74,10 +75,19 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.menu.addAction(self.action_config)
         self.menu.addSeparator()
 
-        self.action_mixmode = QAction()
-        self.action_mixmode.triggered.connect(self.newestmixmode)
-        self.menu.addAction(self.action_mixmode)
-        self.action_mixmode.setEnabled(False)
+        self.action_newestmode = QAction('Newest')
+        self.action_newestmode.setCheckable(True)
+        self.action_newestmode.setEnabled(True)
+        self.action_oldestmode = QAction('Oldest')
+        self.action_oldestmode.setCheckable(False)
+        self.menu.addAction(self.action_newestmode)
+        self.menu.addAction(self.action_oldestmode)
+        self.mixmode_actiongroup = QActionGroup(self.tray)
+        self.mixmode_actiongroup.addAction(self.action_newestmode)
+        self.mixmode_actiongroup.addAction(self.action_oldestmode)
+
+        self.action_newestmode.triggered.connect(self.newestmixmode)
+        self.action_oldestmode.triggered.connect(self.oldestmixmode)
 
         self.menu.addSeparator()
 
@@ -98,12 +108,18 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         if not CONFIG.file:
             self.settingswindow.show()
         else:
+
             if CONFIG.local:
-                self.action_mixmode.setText('Newest')
-                self.action_mixmode.setEnabled(True)
+                self.action_oldestmode.setCheckable(True)
+                if CONFIG.mixmode == 'newest':
+                    self.action_newestmode.setChecked(True)
+                else:
+                    self.action_oldestmode.setChecked(True)
             else:
                 CONFIG.mixmode = 'newest'
-                self.action_mixmode.setEnabled(False)
+                self.action_oldestmode.setChecked(False)
+                self.action_newestmode.setChecked(True)
+
             self.action_pause.setText('Pause')
             self.action_pause.setEnabled(True)
 
@@ -160,37 +176,26 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.action_pause.setText('Resume')
         self.action_pause.triggered.connect(self.unpause)
 
-    def oldestmixmode(self):
+    def oldestmixmode(self):  #pylint: disable=no-self-use
         ''' enable active mixing '''
-
         global CONFIG
 
         if not CONFIG.local:
             CONFIG.mixmode = 'newest'
-            self.action_mixmode.setEnabled(False)
-            self.action_mixmode.setText('Newest')
-            self.action_mixmode.triggered.connect(self.oldestmixmode)
+            logging.debug('called oldestmixmode, but overrode')
             return
 
         CONFIG.mixmode = 'oldest'
-        self.action_mixmode.setText('Newest')
-        self.action_mixmode.triggered.connect(self.newestmixmode)
+        CONFIG.save()
+        logging.debug('called oldestmixmode')
 
-    def newestmixmode(self):
+    def newestmixmode(self):  #pylint: disable=no-self-use
         ''' enable passive mixing '''
-
         global CONFIG
 
-        if not CONFIG.local:
-            CONFIG.mixmode = 'newest'
-            self.action_mixmode.setText('Newest')
-            self.action_mixmode.triggered.connect(self.oldestmixmode)
-            self.action_mixmode.setEnabled(False)
-            return
-
         CONFIG.mixmode = 'newest'
-        self.action_mixmode.setText('Oldest')
-        self.action_mixmode.triggered.connect(self.oldestmixmode)
+        CONFIG.save()
+        logging.debug('called newestmixmode')
 
     def cleanquit(self):
         ''' quit app and cleanup '''
@@ -606,6 +611,8 @@ if __name__ == "__main__":
     bootstrap()
 
     CONFIG = nowplaying.config.ConfigFile(bundledir=BUNDLEDIR)
+
+    logging.info('boot up mixmode: %s / local mode: %s ', CONFIG.mixmode, CONFIG.local)
 
     TRAY = Tray()
     QAPP.setQuitOnLastWindowClosed(False)

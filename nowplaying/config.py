@@ -47,8 +47,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         self.iconfile = self.find_icon_file()
 
-        self.mixmode = 'newest'
-
         self.cparser = QSettings(self.qsettingsformat, QSettings.UserScope,
                                  QCoreApplication.organizationName(),
                                  QCoreApplication.applicationName())
@@ -57,6 +55,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.delay = float(0)
         self.notif = False
         self.local = True
+        self.mixmode = 'newest'
         self.paused = False
         self.httpenabled = False
         self.httpport = 8899
@@ -114,6 +113,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         self.libpath = self.cparser.value('serato/libpath')
         self.url = self.cparser.value('serato/url')
+        if self.local:
+            self.mixmode = self.cparser.value('serato/mixmode')
+        else:
+            self.mixmode = 'newest'
         self.file = self.cparser.value('textoutput/file')
         self.txttemplate = self.cparser.value('textoutput/txttemplate')
 
@@ -155,6 +158,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         settings.setValue('settings/notif', self.notif)
         settings.setValue('settings/handler', 'serato')
         settings.setValue('serato/local', self.local)
+        settings.setValue('serato/mixmode', self.mixmode)
         settings.setValue('serato/libpath', self.libpath)
         settings.setValue('serato/url', self.url)
         settings.setValue('textoutput/file', self.file)
@@ -208,6 +212,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.cparser.setValue('settings/handler', 'serato')
         self.cparser.setValue('serato/local', self.local)
         self.cparser.setValue('serato/libpath', self.libpath)
+        if self.local:
+            self.cparser.setValue('serato/mixmode', self.mixmode)
         self.cparser.setValue('serato/url', self.url)
         self.cparser.setValue('textoutput/file', self.file)
         self.cparser.setValue('textoutput/txttemplate', self.txttemplate)
