@@ -520,6 +520,22 @@ def gettrack(configuration):  # pylint: disable=too-many-branches
         logging.debug('serato provided filename, parsing file')
         nextmeta = nowplaying.utils.getmoremetadata(nextmeta)
 
+    # At this point, we have as much data as we can get from
+    # either the handler or from reading the file directly.
+    # There is still a possibility that artist and title
+    # are empty because the user never provided it to anything
+    # In this worst case, put in empty strings since
+    # everything from here on out will expect them to
+    # exist.  If we do not do this, we risk a crash.
+
+    if 'artist' not in nextmeta:
+        nextmeta['artist'] = ''
+        logging.error('Track missing artist data, setting it to blank.')
+
+    if 'title' not in nextmeta:
+        nextmeta['title'] = ''
+        logging.error('Track missing title data, setting it to blank.')
+
     CURRENTMETA = nextmeta
     logging.info('New track: %s / %s', CURRENTMETA['artist'], CURRENTMETA['title'])
 
