@@ -71,7 +71,7 @@ class SettingsUI:  # pylint: disable=too-many-instance-attributes
 
         self.fBold = QFont()
         self.fBold.setBold(True)
-        self.scroll.setWindowTitle(f'Now Playing {self.version} - Settings')
+        self.scroll.setWindowTitle(f'Now Playing v{self.version} - Settings')
 
         self.scroll.setWidgetResizable(True)
         self.scroll.setWindowFlag(Qt.CustomizeWindowHint, True)

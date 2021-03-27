@@ -1,4 +1,5 @@
-nowplaying/resources/*
+nowplaying/resources/
 nowplaying/version.py
+bincomponents/
 versioneer.py
 NowPlaying.spec

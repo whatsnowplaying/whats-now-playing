@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''
-    Titles for streaming for Serato
+   setup nowplaying w/versioneer
 '''
 from setuptools import setup
 import versioneer
