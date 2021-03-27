@@ -585,7 +585,7 @@ class SeratoHandler():
             return SeratoHandler.playingadat.artist, SeratoHandler.playingadat.title
         return None, None
 
-    def getremoteplayingtrack(self):
+    def getremoteplayingtrack(self):  # pylint: disable=too-many-return-statements, too-many-branches
         ''' get the currently playing title from Live Playlists '''
 
         if SeratoHandler.mode == 'local':
@@ -596,11 +596,27 @@ class SeratoHandler():
         # It is hard to believe in 2021, we are still scraping websites
         # and companies don't have APIs for data.
         #
-        page = requests.get(self.url)
-        tree = lxml.html.fromstring(page.text)
-        # [\n(spaces)artist - title (tabs)]
-        item = tree.xpath(
-            '(//div[@class="playlist-trackname"]/text())[last()]')
+        try:
+            page = requests.get(self.url)
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error("Cannot process %s: %s", self.url, error)
+            return None, None
+
+        if not page:
+            return None, None
+
+        try:
+            tree = lxml.html.fromstring(page.text)
+            # [\n(spaces)artist - title (tabs)]
+            item = tree.xpath(
+                '(//div[@class="playlist-trackname"]/text())[last()]')
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error("Cannot process %s: %s", self.url, error)
+            return None, None
+
+        if not item:
+            return None, None
+
         # cleanup
         tdat = str(item)
         tdat = tdat.replace("['", "")\
@@ -615,11 +631,15 @@ class SeratoHandler():
             SeratoHandler.playingadat = ChunkTrackADAT()
             return None, None
 
-        # artist - track
-        #
-        # The only hope we have is to split on ' - ' and hope that the
-        # artist/title doesn't have a similar split.
-        (artist, title) = tdat.split(' - ', 1)
+        if ' - ' not in tdat:
+            artist = None
+            title = tdat.strip()
+        else:
+            # artist - track
+            #
+            # The only hope we have is to split on ' - ' and hope that the
+            # artist/title doesn't have a similar split.
+            (artist, title) = tdat.split(' - ', 1)
 
         if not artist or artist == '.':
             artist = None

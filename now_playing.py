@@ -328,17 +328,16 @@ class WebServer(QThread):
         logging.debug('Web server is enabled!')
 
         while not self.endthread:
-            while CONFIG.paused:
+            while CONFIG.paused or not CONFIG.httpenabled:
                 time.sleep(5)
                 CONFIG.get()
 
             resetserver = False
-            time.sleep(1)
             CONFIG.get()
 
             if CONFIG.usinghttpdir:
                 if CONFIG.usinghttpdir != self.prevdir:
-                    logging.info('Changing web server dir %s',
+                    logging.info('Using web server dir %s',
                                  CONFIG.usinghttpdir)
                     self.prevdir = CONFIG.usinghttpdir
                     resetserver = True
@@ -347,6 +346,7 @@ class WebServer(QThread):
                     logging.debug('No web server dir?!?')
                     self.prevdir = tempfile.gettempdir()
                     CONFIG.setusinghttpdir(self.prevdir)
+                    logging.info('Using web server dir %s', self.prevdir)
 
             if not os.path.exists(self.prevdir):
                 try:
@@ -356,15 +356,10 @@ class WebServer(QThread):
                     logging.error('Web server threw exception! %s', error)
                     self.webenable.emit(False)
 
-            logging.info('Using web server dir %s', self.prevdir)
             os.chdir(self.prevdir)
 
             if CONFIG.httpport != self.prevport:
                 self.prevport = CONFIG.httpport
-
-            if not CONFIG.httpenabled:
-                self.stop()
-                continue
 
             if resetserver:
                 self.stop()
