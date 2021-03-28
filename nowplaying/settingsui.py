@@ -49,6 +49,8 @@ class SettingsUI:  # pylint: disable=too-many-instance-attributes
         self.separator1 = QFrame()
         self.separator2 = QFrame()
         self.separator3 = QFrame()
+        if not config.iconfile:
+            self.tray.cleanquit()
         self.scroll.setWindowIcon(QIcon(self.iconfile))
         self.layoutV = QVBoxLayout()
         self.layoutH0 = QHBoxLayout()

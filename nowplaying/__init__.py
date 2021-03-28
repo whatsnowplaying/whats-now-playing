@@ -52,7 +52,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
     ''' System Tray object '''
     def __init__(self):  #pylint: disable=too-many-statements
         global CONFIG
-        self.version = nowplaying.version.VERSION
+        self.version = nowplaying.version.get_versions()['version']
         self.settingswindow = nowplaying.settingsui.SettingsUI(
             tray=self, config=CONFIG, version=self.version)
         self.icon = QIcon(CONFIG.iconfile)
@@ -200,15 +200,19 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         global CONFIG
 
         self.tray.setVisible(False)
-        self.trackthread.endthread = True
-        self.trackthread.exit()
-        self.webthread.endthread = True
-        self.webthread.stop()
-        if CONFIG.file:
+        if self.trackthread:
+            self.trackthread.endthread = True
+            self.trackthread.exit()
+        if self.webthread:
+            self.webthread.endthread = True
+            self.webthread.stop()
+        if CONFIG and CONFIG.file:
             nowplaying.utils.writetxttrack(filename=CONFIG.file, clear=True)
         # calling exit should call __del__ on all of our QThreads
-        self.trackthread.wait()
-        self.webthread.wait()
+        if self.trackthread:
+            self.trackthread.wait()
+        if self.webthread:
+            self.webthread.wait()
         QAPP.exit(0)
 
 
@@ -390,7 +394,8 @@ def setuplogging():
         datefmt='%Y-%m-%dT%H:%M:%S%z',
         handlers=[logfhandler],
         level=logging.DEBUG)
-    logging.info('starting up %s', nowplaying.version.VERSION)
+    logging.info('starting up %s',
+                 nowplaying.version.get_versions()['version'])
 
 
 def bootstrap_template_ignore(srcdir, srclist):  # pylint: disable=unused-argument
@@ -429,16 +434,21 @@ def bootstrap():
 
     bundletemplatedir = os.path.join(BUNDLEDIR, 'templates')
 
-    shutil.copytree(bundletemplatedir,
-                    TEMPLATEDIR,
-                    ignore=bootstrap_template_ignore,
-                    dirs_exist_ok=True)
+    if os.path.exists(bundletemplatedir):
+        shutil.copytree(bundletemplatedir,
+                        TEMPLATEDIR,
+                        ignore=bootstrap_template_ignore,
+                        dirs_exist_ok=True)
+    else:
+        logging.error('Cannot locate templates dir during bootstrap!')
 
 
 # END FUNCTIONS ####
 
-if __name__ == "__main__":
 
+def main():
+    ''' main entrypoint '''
+    global CURRENTMETA, CONFIG, TRAY, QAPP
     # define global variables
     CURRENTMETA = {'fetchedartist': None, 'fetchedtitle': None}
 
@@ -453,5 +463,10 @@ if __name__ == "__main__":
     TRAY = Tray()
     QAPP.setQuitOnLastWindowClosed(False)
     exitval = QAPP.exec_()
-    logging.info('shutting down %s', nowplaying.version.VERSION)
+    logging.info('shutting down %s',
+                 nowplaying.version.get_versions()['version'])
     sys.exit(exitval)
+
+
+if __name__ == "__main__":
+    main()

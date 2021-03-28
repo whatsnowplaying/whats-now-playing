@@ -2,3 +2,6 @@
 refactor:
   skip:
     - assign-if-exp
+ignore:
+  - versioneer.py
+  - nowplaying/version.py
