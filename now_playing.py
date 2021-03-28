@@ -52,7 +52,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
     ''' System Tray object '''
     def __init__(self):  #pylint: disable=too-many-statements
         global CONFIG
-        self.version = nowplaying.version.VERSION
+        self.version = nowplaying.version.get_versions()['version']
         self.settingswindow = nowplaying.settingsui.SettingsUI(
             tray=self, config=CONFIG, version=self.version)
         self.icon = QIcon(CONFIG.iconfile)
@@ -390,7 +390,7 @@ def setuplogging():
         datefmt='%Y-%m-%dT%H:%M:%S%z',
         handlers=[logfhandler],
         level=logging.DEBUG)
-    logging.info('starting up %s', nowplaying.version.VERSION)
+    logging.info('starting up %s', nowplaying.version.get_versions()['version'])
 
 
 def bootstrap_template_ignore(srcdir, srclist):  # pylint: disable=unused-argument
@@ -453,5 +453,5 @@ if __name__ == "__main__":
     TRAY = Tray()
     QAPP.setQuitOnLastWindowClosed(False)
     exitval = QAPP.exec_()
-    logging.info('shutting down %s', nowplaying.version.VERSION)
+    logging.info('shutting down %s', nowplaying.version.get_versions()['version'])
     sys.exit(exitval)

@@ -1,1 +1,3 @@
 resources/*
+nowplaying/version.py
+versioneer.py
