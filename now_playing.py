@@ -291,7 +291,8 @@ class WebHandler(BaseHTTPRequestHandler):
 
 class ThreadingWebServer(ThreadingMixIn, HTTPServer):
     ''' threaded webserver object '''
-    pass  # pylint: disable=unnecessary-pass
+    daemon_threads = True
+    allow_reuse_address = True
 
 
 class WebServer(QThread):
@@ -317,6 +318,21 @@ class WebServer(QThread):
             some other situation, we bring everything
             to a halt by triggering pause.
 
+            But in general:
+
+                - web server thread starts
+                - check if web serving is running
+                - if so, open ANOTHER thread (MixIn) that will
+                  serve connections concurrently
+                - if the settings change, then another thread
+                  will call into this one via stop() to
+                  shutdown the (blocking) serve_forever()
+                - after serve_forever, effectively restart
+                  the loop, checking what values changed, and
+                  doing whatever is necessary
+                - land back into serve_forever
+                - rinse/repeat
+
         '''
         global CONFIG
 
@@ -325,9 +341,10 @@ class WebServer(QThread):
             time.sleep(5)
             CONFIG.get()
 
-        logging.debug('Web server is enabled!')
+        logging.debug('Web server thread started')
 
         while not self.endthread:
+            logging.debug('Starting main loop')
             while CONFIG.paused or not CONFIG.httpenabled:
                 time.sleep(5)
                 CONFIG.get()
@@ -359,33 +376,41 @@ class WebServer(QThread):
             os.chdir(self.prevdir)
 
             if CONFIG.httpport != self.prevport:
+                if self.prevport:
+                    resetserver = True
                 self.prevport = CONFIG.httpport
 
             if resetserver:
+                logging.debug('asked to reset')
                 self.stop()
                 time.sleep(5)
 
-            if not self.server:
-                try:
-                    self.server = ThreadingWebServer(
-                        ('0.0.0.0', CONFIG.httpport), WebHandler)
-                except Exception as error:  # pylint: disable=broad-except
-                    logging.error('Web server threw exception! %s', error)
-                    self.webenable.emit(False)
+            try:
+                self.server = ThreadingWebServer(('0.0.0.0', CONFIG.httpport),
+                                                 WebHandler)
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error(
+                    'Web server threw exception on thread create: %s', error)
+                self.webenable.emit(False)
 
             try:
                 if self.server:
                     self.server.serve_forever()
             except KeyboardInterrupt:
                 pass
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error('Web server threw exception after forever: %s',
+                              error)
             finally:
                 if self.server:
                     self.server.shutdown()
 
     def stop(self):
         ''' method to stop the thread '''
+        logging.debug('WebServer asked to stop')
         if self.server:
             self.server.shutdown()
+            self.server.server_close()
 
     def __del__(self):
         logging.debug('Web server thread is being killed!')

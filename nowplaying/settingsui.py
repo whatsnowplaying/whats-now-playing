@@ -29,6 +29,14 @@ from PyQt5.QtGui import QIcon, QFont
 class SettingsUI:  # pylint: disable=too-many-instance-attributes
     ''' create settings form window '''
 
+    # Need to keep track of these values get changed by the
+    # user.  These will get set in init.  If these values
+    # change, then trigger the webthread to reset itself
+    # to pick up the new values...
+    httpdir = None
+    httpenabled = None
+    httpport = None
+
     # pylint: disable=too-many-statements, invalid-name
     def __init__(self, config, tray, version):
 
@@ -54,6 +62,10 @@ class SettingsUI:  # pylint: disable=too-many-instance-attributes
         self.layoutHttpHtmlTemplate = QHBoxLayout()
         self.layoutHttpServerPath = QHBoxLayout()
         self.layoutLogLevel = QHBoxLayout()
+
+        SettingsUI.httpenabled = self.config.httpenabled
+        SettingsUI.httpport = self.config.httpport
+        SettingsUI.httpdir = self.config.httpdir
 
         self.fBold = QFont()
         self.fBold.setBold(True)
@@ -382,6 +394,19 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
                         loglevel=loglevel)
 
         logging.getLogger().setLevel(loglevel)
+
+        # Check to see if our web settings changed
+        # from what we initially had.  if so
+        # need to trigger the webthread to reset
+        # itself.  Hitting stop makes it go through
+        # the loop again
+        if SettingsUI.httpport != httpport or \
+           SettingsUI.httpenabled != httpenabled or \
+           SettingsUI.httpdir != httpdir:
+            self.tray.webthread.stop()
+            SettingsUI.httpport = httpport
+            SettingsUI.httpenabled = httpenabled
+            SettingsUI.httpdir = httpdir
 
     def on_radiobutton_select(self, b):
         ''' radio button action '''
