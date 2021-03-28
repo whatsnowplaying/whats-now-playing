@@ -19,6 +19,7 @@ from PyQt5.QtCore import \
 
 CONFIG = None
 
+
 class WebHandler(BaseHTTPRequestHandler):
     ''' Custom handler for built-in webserver '''
 
@@ -162,10 +163,8 @@ class WebServer(QThread):
                 time.sleep(5)
                 CONFIG.get()
 
-
             if CONFIG.usinghttpdir:
-                logging.info('Using web server dir %s',
-                                 CONFIG.usinghttpdir)
+                logging.info('Using web server dir %s', CONFIG.usinghttpdir)
             else:
                 logging.debug('No web server dir?!?')
                 CONFIG.setusinghttpdir(tempfile.gettempdir())
@@ -173,9 +172,10 @@ class WebServer(QThread):
 
             if not os.path.exists(CONFIG.usinghttpdir):
                 try:
-                    logging.debug('Making %s as it does not exist', CONFIG.usinghttpdir)
+                    logging.debug('Making %s as it does not exist',
+                                  CONFIG.usinghttpdir)
                     pathlib.Path(CONFIG.usinghttpdir).mkdir(parents=True,
-                                                     exist_ok=True)
+                                                            exist_ok=True)
                 except Exception as error:  # pylint: disable=broad-except
                     logging.error('Web server threw exception! %s', error)
                     self.webenable.emit(False)

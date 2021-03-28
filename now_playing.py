@@ -206,6 +206,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # calling exit should call __del__ on all of our QThreads
         QAPP.exit(0)
 
+
 class TrackPoll(QThread):
     '''
         QThread that runs the main polling work.
