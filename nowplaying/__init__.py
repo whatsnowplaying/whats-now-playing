@@ -437,8 +437,9 @@ def bootstrap():
 
 # END FUNCTIONS ####
 
-if __name__ == "__main__":
-
+def main():
+    ''' main entrypoint '''
+    global CURRENTMETA, CONFIG, TRAY, QAPP
     # define global variables
     CURRENTMETA = {'fetchedartist': None, 'fetchedtitle': None}
 
@@ -455,3 +456,6 @@ if __name__ == "__main__":
     exitval = QAPP.exec_()
     logging.info('shutting down %s', nowplaying.version.get_versions()['version'])
     sys.exit(exitval)
+
+if __name__ == "__main__":
+    main()

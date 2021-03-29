@@ -28,11 +28,9 @@ jobs:
           source /tmp/venv/bin/activate
           python3 -m pip install --upgrade pip
           pip install .
-          rm -rf nowplaying
       - name: pyinstaller
         run: |
-          cp resources/NowPlaying_MAC.spec .
-          /tmp/venv/bin/pyinstaller -w NowPlaying_MAC.spec
+          /tmp/venv/bin/pyinstaller resources\NowPlaying.spec
       - name: manipulate the dist
         run: |
           cp -p CHANGELOG* README* LICENSE.txt NOTICE.txt dist
@@ -64,8 +62,7 @@ jobs:
           pip install .
       - name: pyinstaller
         run: |
-          copy resources\NowPlaying_WIN.spec .
-          pyinstaller -F -w NowPlaying_WIN.spec
+          pyinstaller resources\NowPlaying.spec
           copy CHANGELOG*.* dist
           copy README*.* dist
           copy LICENSE.txt dist\LICENSE.txt
