@@ -506,16 +506,16 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
     def on_savebutton_clicked(self):
         ''' save button clicked action '''
         if self.remoteRadio.isChecked() and (
-            'https://serato.com/playlists' not in self.urlEdit.text()
-            and 'https://www.serato.com/playlists' not in self.urlEdit.text()
-            or len(self.urlEdit.text()) < 30
-        ):
+                'https://serato.com/playlists' not in self.urlEdit.text() and
+                'https://www.serato.com/playlists' not in self.urlEdit.text()
+                or len(self.urlEdit.text()) < 30):
             self.errLabel.setText('* URL is invalid')
             self.window.hide()
             self.window.show()
             return
 
-        if self.localRadio.isChecked() and '_Serato_' not in self.libEdit.text():
+        if self.localRadio.isChecked() and '_Serato_' not in self.libEdit.text(
+        ):
             self.errLabel.setText(
                 '* Serato Library Path is required.  Should point to "_Serato_" folder'
             )

@@ -25,7 +25,7 @@ class WebHandler(BaseHTTPRequestHandler):
 
     counter = 0
 
-    def do_GET(self):    # pylint: disable=invalid-name
+    def do_GET(self):  # pylint: disable=invalid-name
         '''
             HTTP GET
                 - if there is an index.htm file to read, give it out
@@ -80,7 +80,8 @@ class WebHandler(BaseHTTPRequestHandler):
                 self.wfile.write(textfh.read())
             return
 
-        if parsedrequest.path in ['/cover.jpg'] and os.path.isfile('cover.jpg'):
+        if parsedrequest.path in ['/cover.jpg'
+                                  ] and os.path.isfile('cover.jpg'):
             self.send_response(200, 'OK')
             self.send_header('Content-type', 'image/jpeg')
             self.end_headers()
@@ -88,7 +89,8 @@ class WebHandler(BaseHTTPRequestHandler):
                 self.wfile.write(indexfh.read())
             return
 
-        if parsedrequest.path in ['/cover.png'] and os.path.isfile('cover.png'):
+        if parsedrequest.path in ['/cover.png'
+                                  ] and os.path.isfile('cover.png'):
             self.send_response(200, 'OK')
             self.send_header('Content-type', 'image/png')
             self.end_headers()
@@ -123,7 +125,7 @@ class WebServer(QThread):
         self.server = None
         self.endthread = False
 
-    def run(self):    # pylint: disable=too-many-branches, too-many-statements
+    def run(self):  # pylint: disable=too-many-branches, too-many-statements
         '''
             Configure a webserver.
 

@@ -482,10 +482,8 @@ class SeratoHandler():
             for adat in index.adats:
                 if 'playtime' in adat and adat.playtime > 0:
                     continue
-                if (
-                    adat.deck in SeratoHandler.decks
-                    and adat.updatedat < SeratoHandler.decks[adat.deck].updatedat
-                ):
+                if (adat.deck in SeratoHandler.decks and adat.updatedat <
+                        SeratoHandler.decks[adat.deck].updatedat):
                     continue
                 logging.debug('Setting deck: %d artist: %s title: %s',
                               adat.deck, adat.artist, adat.title)
@@ -663,18 +661,21 @@ class SeratoHandler():
             return self.getlocalplayingtrack()
         return self.getremoteplayingtrack()
 
-    def getplayingmetadata(self):    #pylint: disable=too-many-branches
+    def getplayingmetadata(self):  #pylint: disable=too-many-branches
         ''' take the current adat and generate a media dict '''
         self.getplayingtrack()
 
         if not SeratoHandler.playingadat:
             return None
 
-        return {key: getattr(SeratoHandler.playingadat, key) for key in [
+        return {
+            key: getattr(SeratoHandler.playingadat, key)
+            for key in [
                 'album', 'artist', 'bitrate', 'bpm', 'composer', 'filename',
                 'genre', 'key', 'publisher', 'lang', 'title', 'year'
-        ] if hasattr(SeratoHandler.playingadat, key) and getattr(
-                    SeratoHandler.playingadat, key)}
+            ] if hasattr(SeratoHandler.playingadat, key)
+            and getattr(SeratoHandler.playingadat, key)
+        }
 
 
 def main():
