@@ -118,10 +118,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         self.libpath = self.cparser.value('serato/libpath')
         self.url = self.cparser.value('serato/url')
-        if self.local:
-            self.mixmode = self.cparser.value('serato/mixmode')
-        else:
-            self.mixmode = 'newest'
+        self.mixmode = self.cparser.value('serato/mixmode') if self.local else 'newest'
         self.file = self.cparser.value('textoutput/file')
         self.txttemplate = self.cparser.value('textoutput/txttemplate')
 

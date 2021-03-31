@@ -284,11 +284,7 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
         self.layoutHttpServerPath.addWidget(self.httpdirEdit)
         self.layoutV.addLayout(self.layoutHttpServerPath)
 
-        if self.config.loglevel == 'INFO':
-            setlogindex = 0
-        else:
-            setlogindex = 1
-
+        setlogindex = 0 if self.config.loglevel == 'INFO' else 1
         self.loglevelLabel = QLabel('Logging Level')
         self.loglevelLabel.setFont(self.fBold)
         self.loglevelDesc = QLabel('Verbosity of the log')
@@ -421,9 +417,6 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
             self.libEdit.setHidden(False)
             self.libDesc.setHidden(False)
             self.libButton.setHidden(False)
-            self.window.hide()
-            self.errLabel.setText('')
-            self.window.show()
         else:
             self.urlLabel.setHidden(False)
             self.urlEdit.setHidden(False)
@@ -435,17 +428,15 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
             self.libEdit.setHidden(True)
             self.libDesc.setHidden(True)
             self.libButton.setHidden(True)
-            self.window.hide()
-            self.errLabel.setText('')
-            self.window.show()
+
+        self.window.hide()
+        self.errLabel.setText('')
+        self.window.show()
 
     def on_filebutton_clicked(self):
         ''' file button clicked action '''
         startfile = self.fileEdit.text()
-        if startfile:
-            startdir = os.path.dirname(startfile)
-        else:
-            startdir = '.'
+        startdir = os.path.dirname(startfile) if startfile else '.'
         filename = QFileDialog.getSaveFileName(self.window, 'Open file',
                                                startdir, '*.txt')
         if filename:
@@ -514,23 +505,23 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
 
     def on_savebutton_clicked(self):
         ''' save button clicked action '''
-        if self.remoteRadio.isChecked():
-            if 'https://serato.com/playlists' not in self.urlEdit.text() and \
-                    'https://www.serato.com/playlists' not in self.urlEdit.text() or \
-                    len(self.urlEdit.text()) < 30:
-                self.errLabel.setText('* URL is invalid')
-                self.window.hide()
-                self.window.show()
-                return
+        if self.remoteRadio.isChecked() and (
+            'https://serato.com/playlists' not in self.urlEdit.text()
+            and 'https://www.serato.com/playlists' not in self.urlEdit.text()
+            or len(self.urlEdit.text()) < 30
+        ):
+            self.errLabel.setText('* URL is invalid')
+            self.window.hide()
+            self.window.show()
+            return
 
-        if self.localRadio.isChecked():
-            if '_Serato_' not in self.libEdit.text():
-                self.errLabel.setText(
-                    '* Serato Library Path is required.  Should point to "_Serato_" folder'
-                )
-                self.window.hide()
-                self.window.show()
-                return
+        if self.localRadio.isChecked() and '_Serato_' not in self.libEdit.text():
+            self.errLabel.setText(
+                '* Serato Library Path is required.  Should point to "_Serato_" folder'
+            )
+            self.window.hide()
+            self.window.show()
+            return
 
         if self.fileEdit.text() == "":
             self.errLabel.setText('* File is required')

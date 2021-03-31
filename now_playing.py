@@ -137,16 +137,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         global CONFIG
 
         if CONFIG.notif:
-            if 'artist' in metadata:
-                artist = metadata['artist']
-            else:
-                artist = ''
-
-            if 'title' in metadata:
-                title = metadata['title']
-            else:
-                title = ''
-
+            artist = metadata['artist'] if 'artist' in metadata else ''
+            title = metadata['title'] if 'title' in metadata else ''
             tip = f'{artist} - {title}'
             self.tray.showMessage('Now Playing ▶ ', tip, 0)
 
@@ -249,11 +241,7 @@ class TrackPoll(QThread):
                 previoustxttemplate = CONFIG.txttemplate
 
             # get poll interval and then poll
-            if CONFIG.local:
-                interval = 1
-            else:
-                interval = CONFIG.interval
-
+            interval = 1 if CONFIG.local else CONFIG.interval
             time.sleep(interval)
             newmeta = gettrack(CONFIG)
             if not newmeta:
