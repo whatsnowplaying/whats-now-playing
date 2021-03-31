@@ -53,8 +53,7 @@ class ChunkParser():  #pylint: disable=too-few-public-methods
     def _intfield(self):
         ''' read the # of ints, then the int '''
         self._int()  # number of ints, which always seems to be 1, so ignore
-        actualint = self._int()
-        return actualint
+        return self._int()
 
     def _string_nodecode(self):
         ''' read # of chars in a string, then the string '''
@@ -112,10 +111,8 @@ class ChunkParser():  #pylint: disable=too-few-public-methods
         ''' a dumb function to help debug stuff when writing a new chunk '''
         hexbytes = binascii.hexlify(self.data[self.bytecounter:])
         total = len(hexbytes)
-        j = 1
-        while j < total:
+        for j in range(1, total, 8):
             print(f'{hexbytes[j:j+7]} ')
-            j = j + 8
 
     def importantvalues(self):
         ''' another debug function to see when these fields change '''
@@ -353,8 +350,7 @@ class SessionFile():  # pylint: disable=too-few-public-methods
                 except:  # pylint: disable=bare-except
                     break
 
-                if header.chunktype == b'oent' or \
-                   header.chunktype == b'oren':
+                if header.chunktype in [b'oent', b'oren']:
                     containertype = header.chunktype
                     continue
 
@@ -486,11 +482,9 @@ class SeratoHandler():
             for adat in index.adats:
                 if 'playtime' in adat and adat.playtime > 0:
                     continue
-                if adat.deck in SeratoHandler.decks:
-                    if adat.deck in SeratoHandler.decks:
-                        if adat.updatedat < SeratoHandler.decks[
-                                adat.deck].updatedat:
-                            continue
+                if (adat.deck in SeratoHandler.decks and adat.updatedat <
+                        SeratoHandler.decks[adat.deck].updatedat):
+                    continue
                 logging.debug('Setting deck: %d artist: %s title: %s',
                               adat.deck, adat.artist, adat.title)
                 SeratoHandler.decks[adat.deck] = adat
@@ -669,23 +663,19 @@ class SeratoHandler():
 
     def getplayingmetadata(self):  #pylint: disable=too-many-branches
         ''' take the current adat and generate a media dict '''
-        metadata = {}
-
         self.getplayingtrack()
 
         if not SeratoHandler.playingadat:
             return None
 
-        for key in [
+        return {
+            key: getattr(SeratoHandler.playingadat, key)
+            for key in [
                 'album', 'artist', 'bitrate', 'bpm', 'composer', 'filename',
                 'genre', 'key', 'publisher', 'lang', 'title', 'year'
-        ]:
-
-            if hasattr(SeratoHandler.playingadat, key) and getattr(
-                    SeratoHandler.playingadat, key):
-                metadata[key] = getattr(SeratoHandler.playingadat, key)
-
-        return metadata
+            ] if hasattr(SeratoHandler.playingadat, key)
+            and getattr(SeratoHandler.playingadat, key)
+        }
 
 
 def main():

@@ -157,8 +157,7 @@ def update_javascript(serverdir='/tmp', templatehandler=None, metadata=None):
 
 def main():
     ''' entry point as a standalone app'''
-    metadata = {}
-    metadata['filename'] = sys.argv[1]
+    metadata = {'filename': sys.argv[1]}
     metadata = getmoremetadata(metadata)
     print(metadata)
 

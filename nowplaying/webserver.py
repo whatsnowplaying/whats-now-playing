@@ -80,23 +80,23 @@ class WebHandler(BaseHTTPRequestHandler):
                 self.wfile.write(textfh.read())
             return
 
-        if parsedrequest.path in ['/cover.jpg']:
-            if os.path.isfile('cover.jpg'):
-                self.send_response(200, 'OK')
-                self.send_header('Content-type', 'image/jpeg')
-                self.end_headers()
-                with open('cover.jpg', 'rb') as indexfh:
-                    self.wfile.write(indexfh.read())
-                return
+        if parsedrequest.path in ['/cover.jpg'
+                                  ] and os.path.isfile('cover.jpg'):
+            self.send_response(200, 'OK')
+            self.send_header('Content-type', 'image/jpeg')
+            self.end_headers()
+            with open('cover.jpg', 'rb') as indexfh:
+                self.wfile.write(indexfh.read())
+            return
 
-        if parsedrequest.path in ['/cover.png']:
-            if os.path.isfile('cover.png'):
-                self.send_response(200, 'OK')
-                self.send_header('Content-type', 'image/png')
-                self.end_headers()
-                with open('cover.png', 'rb') as indexfh:
-                    self.wfile.write(indexfh.read())
-                return
+        if parsedrequest.path in ['/cover.png'
+                                  ] and os.path.isfile('cover.png'):
+            self.send_response(200, 'OK')
+            self.send_header('Content-type', 'image/png')
+            self.end_headers()
+            with open('cover.png', 'rb') as indexfh:
+                self.wfile.write(indexfh.read())
+            return
 
         self.send_error(404)
 
@@ -169,13 +169,10 @@ class WebServer(QThread):
                 self.stop()
                 break
 
-            if CONFIG.usinghttpdir:
-                logging.info('Using web server dir %s', CONFIG.usinghttpdir)
-            else:
+            if not CONFIG.usinghttpdir:
                 logging.debug('No web server dir?!?')
                 CONFIG.setusinghttpdir(tempfile.gettempdir())
-                logging.info('Using web server dir %s', CONFIG.usinghttpdir)
-
+            logging.info('Using web server dir %s', CONFIG.usinghttpdir)
             if not os.path.exists(CONFIG.usinghttpdir):
                 try:
                     logging.debug('Making %s as it does not exist',
