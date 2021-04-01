@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" http-equiv="refresh" content="30">
+    <title>Titlecard</title>
+    <style>
+      div {
+        margin: 3px;
+        width: 1600px;
+        display: none;
+        height: 300px;
+        float: right;
+        font-size: 48px;
+        font-family: sans-serif;
+      }
+      #titlecard {
+        background-color: #555;
+        color: #fff;
+        text-indent: 5%;
+      }
+      img {
+        margin: 10px;
+        display: block;
+        float: left;
+        max-height: 90%
+      }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
+  </head>
+  <body>
+    <div id="titlecard">
+      <img src="{{ coverurl }}">
+      <p>"{{ title }}"</p>
+      <p>{{ artist }}</p>
+    </div>
+    <script>
+      $(document).ready(function() {
+        $('#titlecard').delay(1000).fadeIn(2000);
+        $('#titlecard').delay(6000).fadeOut(2000);
+      });
+    </script>
+  </body>
+</html>
