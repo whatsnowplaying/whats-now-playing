@@ -671,8 +671,9 @@ class SeratoHandler():
         return {
             key: getattr(SeratoHandler.playingadat, key)
             for key in [
-                'album', 'artist', 'bitrate', 'bpm', 'composer', 'filename',
-                'genre', 'key', 'publisher', 'lang', 'title', 'year'
+                'album', 'artist', 'bitrate', 'bpm', 'composer', 'deck',
+                'filename', 'genre', 'key', 'publisher', 'lang', 'title',
+                'year'
             ] if hasattr(SeratoHandler.playingadat, key)
             and getattr(SeratoHandler.playingadat, key)
         }

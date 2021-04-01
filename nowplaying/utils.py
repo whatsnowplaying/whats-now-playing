@@ -91,7 +91,11 @@ def getmoremetadata(metadata=None):
             if headertype == 'jpeg':
                 headertype = 'jpg'
             metadata['coverimagetype'] = headertype
-            metadata['coverurl'] = f'/cover.{headertype}'
+            if 'deck' in metadata:
+                deck = metadata['deck']
+                metadata['coverurl'] = f'cover{deck}.{headertype}'
+            else:
+                metadata['coverurl'] = f'cover.{headertype}'
     return metadata
 
 
@@ -150,8 +154,14 @@ def update_javascript(serverdir='/tmp', templatehandler=None, metadata=None):
     if 'coverimageraw' in metadata:
         logging.debug('update_javascript: writing cover image')
         extension = metadata['coverimagetype']  # probably png or jpg
-        with open(f'cover.{extension}', "wb") as coverfh:
+        coverfilename = f'cover.{extension}'
+        with open(coverfilename, "wb") as coverfh:
             coverfh.write(metadata['coverimageraw'])
+        if 'deck' in metadata:
+            deck = metadata['deck']
+            coverfilename = f'cover{deck}.{extension}'
+            with open(coverfilename, "wb") as coverfh:
+                coverfh.write(metadata['coverimageraw'])
     logging.debug('update_javascript: done')
 
 
