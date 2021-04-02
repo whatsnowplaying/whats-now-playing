@@ -381,7 +381,7 @@ class SeratoHandler():
 
 
         To use local Serato directory, construct with:
-            SeratoHandler(seratodir='/path/to/_Serato_')
+            SeratoHandler(seratodir='/path/to/_Serato_/History/Sessions')
 
     '''
 

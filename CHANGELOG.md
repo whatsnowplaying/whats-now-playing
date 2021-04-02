@@ -5,6 +5,8 @@
 
 * Main program name change: SeratoNowPlaying -> NowPlaying
 * Fixed licensing
+  * Added a proper license file
+  * Switched to PySide2 and added a NOTICE file for it
 * No longer need to pre-create the text file that gets written.
 * New HTTP Server built for users who need fade-in/fade-out and other effects
 * Rewritten local mode:
@@ -26,6 +28,8 @@
     in OS X).
   * Defaults are much more likely to be correct for your system.
 * Major internal, structural changes to allow for easier ability to add new features.
+* Now installable via pip
+* Significant documentation updates
 * Many, many bug fixes... but probably new ones added too.
 
 ## Version 1.4.0 - 2020-10-21

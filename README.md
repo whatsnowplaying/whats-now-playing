@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD013 MD034 -->
 
-# __Now Playing__ in Serato ![Menu Bar Image](https://github.com/e1miran/Now-Playing-Serato/blob/master/git-images/seratoPlaying.png?raw=true)
+# __Now Playing__ in Serato ![Menu Bar Image](git-images/seratoPlaying.png?raw=true)
 
 __Now Playing__ is a tool written in Python to retrieve the current/last played song in Serato DJ
 (as tested with v2.4.x).
@@ -10,11 +10,30 @@ Compiled, standalone versions are available for:
 * Windows
 * macOS (10.13/High Sierra to 10.15/Catalina)
   * We do not yet have binaries for 10.11/Big Sur or M1.
-  * [*__IMPORTANT__ note for macOS users*](#important-note-for-macos-users).
 
-## Changes from previous versions
+For everyone else, you will need to build and install locally.  See [Developers](#Developers) below.
 
-See the [CHANGELOG](CHANGELOG.md) file.
+## Versus Comparisons
+
+There are a lot of different solutions to provide titling for your stream. While
+we would love for you to choose and and work with us, we are realistic that this software
+may not be the one for you.
+
+### Serato's Now Playing Twitch Extension
+
+|  Description | This App | Serato Extension |
+|:--------------- |:----------- |:------------ |
+| Works locally | :heavy_check_mark: | :x: |
+| Works with Live Playlists | :heavy_check_mark: | :heavy_check_mark: |
+| Cover art | :heavy_check_mark: | :x: |
+| Multi-DJ on one stream friendly | :heavy_check_mark: | :x: |
+| Album name can be displayed | :heavy_check_mark: | :x: |
+| Label/Publisher can be displayed | :heavy_check_mark: | :x: |
+| High degree of customization via templates | :heavy_check_mark: | :x: |
+| Open source | :heavy_check_mark: | :x: |
+| Supports multi-deck | :heavy_check_mark: | :x: |
+| Ability to give data to other programs to manipulate | :heavy_check_mark: | :x: |
+| Supports 2-computer streaming | :heavy_check_mark: | :heavy_check_mark: |
 
 ## Considerations and Pre-requisites
 
@@ -33,7 +52,7 @@ For more info on Serato Live Playlists: https://support.serato.com/hc/en-us/arti
 
 ### Mac
 
-* Download the latest macOS release zip package [here](releases/latest)
+* Download the latest macOS release zip package [here](https://github.com/aw-was-here/releases/latest)
 * Unzip the archive and place the unzipped 'SeratoNowPlaying.app' file in your "Applications" folder or any other location that you desire.
 
 #### *Important note for macOS users*
@@ -51,9 +70,14 @@ steps below. Versions before High Sierra have not been verified and are not curr
 
 ### Windows
 
-* Download the latest Windows release zip package here: https://github.com/e1miran/Now-Playing-Serato/releases/latest
+* Download the latest Windows release zip package here: [here](https://github.com/aw-was-here/releases/latest)
 * Unzip the package and copy the entire unzipped folder containing the
   'SeratoNowPlaying.exe' file and supporting files to the directory you'd like the app to run from (i.e., C:\Program Files).
+
+#### *Important note for Windows users*
+
+Microsoft has beefed up Windows security and you may now get prompted about an unsigned binary.  Click on 'More Info'
+and then 'Run Anyway' to launch __Now Playing__.
 
 ## Usage
 
@@ -61,8 +85,9 @@ Start the __Now Playing__ app from the location where you placed it. On Windows,
 select "Run as Administrator'. The app is controlled and configured by accessing the menu from the icon in the
 Windows system tray or Mac menu bar after configuration.
 
-However, the first time you run the app a [Settings](#settings) window will appear. Populate the fields accordingly, and press
-save. Once saved, the app will start polling for new songs. The app can be controlled and exited from the Windows system task tray or the macOS menu bar icon.
+However, the first time you run the app a [Settings](#settings) window will appear. Populate the fields
+accordingly, and press Save. Once saved, the app will start polling for new songs. The app can be controlled
+and exited from the Windows system task tray or the macOS menu bar icon.
 
 ![Task Tray](git-images/systray.png?raw=true) Windows
 
@@ -128,6 +153,14 @@ Upon initial execution of the app, a settings window will appear. The icon in th
 * __Server Path__ - Directory to store the webserver files.  If
 the field is blank, the app will use a temporary directory.
 
+* __Logging Level__ - By default, __Now Playing__ will write debug logs into your Documents/NowPlaying/Logs directory.
+This option lets you control the level of logging.
+
+* __Reset/Cancel/Save__
+  * Reset - Switch settings back to factory defaults.
+  * Cancel - You've changed your mind and would like to go back to your previous saved settings.
+  * Save - Save these settings to activate now and use for future application launches.
+
 ### Local Mode
 
 ![Local Mode Settings](git-images/local.png?raw=true)
@@ -156,7 +189,25 @@ due to limitations on the Serato-side.
 
 __Now Playing__ has the ability to serve a web page after a song change.  This option
 allows users to utilize features such as the OBS Browser source for dynamically
-changing content.  There are many URLs supported:
+changing content.
+
+For example, the `cover-artist-title.htm` template draws the cover image, the title, and the artist
+in a 1600x300-sized box for Local Mode installations with their files properly tagged.
+Assuming OBS is running on the same machine as __Now Playing__, we would need to configure it to
+match:
+
+![OBS settings](git-images/obs-browser-settings.png)
+
+We then end up with this image fading in and out when we play Björk's live rendition
+of "Venus as a Boy" from Debut - Live:
+
+![cover-artist-title Image](git-images/cover-artist-title.png?raw=true)
+
+To build your own templates, see [below](#more-on-template-files).
+
+#### Supported URLs
+
+There are many URLs supported:
 
 * /index.html (or /index.htm or just /)
 
@@ -182,17 +233,15 @@ This URL will return __Now Playing__'s icon.
 
 #### Extra Content
 
-For security reasons, __Now Playing__ will ONLY serve either the HTTP refresh page or the titlecard.  Any other content (images,
-CSS, JavaScript libraries, etc) must come from another source.
+For security reasons, __Now Playing__ will ONLY serve either the HTTP refresh page or the titlecard.  Any other
+content (images, CSS, JavaScript libraries, etc) must come from another source.
 
 ## More on Template Files
 
 In order to provide maximum formatting flexibility, [Jinja2 template](https://jinja.palletsprojects.com/en/2.11.x/templates/)
-files are used to format the output.  __Now Playing__ provides several built-in example templates that may be modified as necessary
-to suit your needs.  Be aware that some information provided to the templating engine is only available when run in Local
-Mode and only if your songs and videos have the proper IDv3 or equivalent tags in them.  A tool such as
-[Musicbrainz Picard](https://picard.musicbrainz.org/) is recommended to fill in as much information as possible as easily
-and accurately as possible.
+files are used to format the output.  __Now Playing__ provides several built-in example templates that
+may be modified as necessary to suit your needs.  The examples have been copied to your Documents/NowPlaying
+folder.
 
 Currently supported variables:
 
@@ -204,6 +253,7 @@ Currently supported variables:
 | bitrate        | Bitrate the file was encoded at |
 | bpm            | Beats per minute of the song |
 | composer       | Composer of the song |
+| coverurl       | Location to fetch the cover |
 | coverimageraw  | Raw bytes of the cover image |
 | coverimagetype | Kind of image in rawcoverimage |
 | disc           | Disc number |
@@ -218,11 +268,14 @@ Currently supported variables:
 | track_total    | Total tracks on the disc |
 | year           | Year or date of the media |
 
-When HTTP Server mode is active:
+Two important notes:
 
-| Variable       | Description |
-|:--------------:|:-----------:|
-| coverurl | Location to fetch the cover |
+* As of this writing (2021-04-02), Remote Mode only has the artist
+and the title information available.  This is a limitation in Serato.**
+* Your media files may or may not have all of this information available.  If they do not, we
+recommend using a tool such as [Musicbrainz Picard](https://picard.musicbrainz.org/)
+to fill in as much information as possible as easily and accurately as possible.
+* `coverurl` is only active if the HTTP Server Mode is enabled.
 
 ### Template Examples
 
@@ -289,3 +342,51 @@ Björk
 There are many many other things one can do with the Jinja templating system.  Please
 see [the documentation](https://jinja.palletsprojects.com/en/2.11.x/templates/) for more
 information and ideas!
+
+## Developers
+
+```text
+    NOTE: For people familiar with Python, it is HIGHLY RECOMMENDED that you use and
+    build with venv due to the restrictive requirements of the tested packages listing.
+    While newer versions MAY work, there is no guarantee that PyInstaller and other
+    utilities will build a proper executable.
+```
+
+### Development Requirements
+
+To locally build and install __Now Playing__, you will need the following:
+
+1. Python for your operating system (3.8 or higher is recommended)
+2. Access to a development shell (e.g., /Applications/Utility/Terminal on OS X)
+3. `git` installed and working
+
+### Commands
+
+```bash
+python -m venv (virtualenv directory)
+source (virtualenv directory)/bin/activate
+git clone https://github.com/aw-was-here/Now-Playing-Serato
+cd Now-Playing-Serato
+pip install .
+```
+
+At this point, you should be able to run the software from the shell:
+
+```bash
+NowPlaying
+```
+
+### Build Executable
+
+To build a stand-alone executable, you will need to run PyInstaller:
+
+```bash
+pyinstaller NowPlaying.spec
+```
+
+There should now be a `dist` directory and inside that directory will be
+either a `NowPlaying.app` on OS X or just a `NowPlaying` single file.
+
+## Changes from previous versions
+
+See the [CHANGELOG](CHANGELOG.md) file.
