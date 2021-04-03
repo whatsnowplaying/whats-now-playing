@@ -14,7 +14,7 @@ import nowplaying.version
 
 NUMERICDATE = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
 VERSION = nowplaying.version.get_versions()['version']
-WINVERSFILE = outfile = os.path.join('bincomponents', 'winvers.bin')
+WINVERSFILE = os.path.join('bincomponents', 'winvers.bin')
 
 
 def geticon():
@@ -97,8 +97,6 @@ def windows_version_file():
     metadata = create_version_file.MetaData(metadata_file='fake')
     metadata._metadata = rawmetadata # pylint: disable=protected-access
     metadata._render_version_file(outfile=WINVERSFILE) # pylint: disable=protected-access
-    return outfile
-
 
 def Entrypoint(dist, group, name, **kwargs):
     ''' Calculate the location of main() '''
