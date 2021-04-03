@@ -14,6 +14,7 @@ import nowplaying.version
 
 NUMERICDATE = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
 VERSION = nowplaying.version.get_versions()['version']
+WINVERSFILE = outfile = os.path.join('bincomponents', 'winvers.bin')
 
 
 def geticon():
@@ -80,12 +81,8 @@ def windows_version_file():
     ''' create a windows version file
         version field: MAJOR.MINOR.MICRO.0
         copyright: actual version
-
-        winvers.bin will be read by pyi-set_version
-        later on
         '''
 
-    outfile = os.path.join('bincomponents', 'winvers.bin')
     versionparts = getsplitversion()
     version = '.'.join(versionparts[0:3] + ['0'])
     rawmetadata = {
@@ -99,7 +96,7 @@ def windows_version_file():
     }
     metadata = create_version_file.MetaData(metadata_file='fake')
     metadata._metadata = rawmetadata # pylint: disable=protected-access
-    metadata._render_version_file(outfile=outfile) # pylint: disable=protected-access
+    metadata._render_version_file(outfile=WINVERSFILE) # pylint: disable=protected-access
     return outfile
 
 
@@ -207,4 +204,6 @@ else:
         upx_exclude=[],
         runtime_tmpdir=None,
         console=False,
+        version=WINVERSFILE,
         icon='bincomponents/' + geticon())
+    os.unlink(WINVERSFILE)

@@ -63,7 +63,6 @@ jobs:
       - name: pyinstaller
         run: |
           pyinstaller NowPlaying.spec
-          pyi-set_version bincomponents\winvers.bin dist\NowPlaying.exe
           copy CHANGELOG*.* dist
           copy README*.* dist
           copy LICENSE.txt dist\LICENSE.txt
