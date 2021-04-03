@@ -5,3 +5,4 @@ refactor:
 ignore:
   - versioneer.py
   - nowplaying/version.py
+  - NowPlaying.spec
