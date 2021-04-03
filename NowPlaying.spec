@@ -80,6 +80,9 @@ def windows_version_file():
     ''' create a windows version file
         version field: MAJOR.MINOR.MICRO.0
         copyright: actual version
+
+        winvers.bin will be read by pyi-set_version
+        later on
         '''
 
     outfile = os.path.join('bincomponents', 'winvers.bin')
