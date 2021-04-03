@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 ''' NowPlaying as run via python -m '''
 
 import nowplaying
