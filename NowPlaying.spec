@@ -78,7 +78,9 @@ def osxminimumversion():
 
 def windows_version_file():
     ''' create a windows version file
-        MAJOR.MINOR.MICRO.DATE.(cleaned up git describe in decimal) '''
+        version field: MAJOR.MINOR.MICRO.0
+        copyright: actual version
+        '''
 
     outfile = os.path.join('bincomponents', 'winvers.bin')
     versionparts = getsplitversion()
