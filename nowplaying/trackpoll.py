@@ -97,25 +97,20 @@ class TrackPoll(QThread):
                 break
             time.sleep(1)
 
-        logging.debug('getplayingtrack called')
         (artist, title) = self.input.getplayingtrack()
 
         if not artist and not title:
-            logging.debug('getplaying track was None; returning')
             return False
 
         if artist == self.currentmeta['fetchedartist'] and \
            title == self.currentmeta['fetchedtitle']:
-            logging.debug('getplaying was existing meta; returning')
             return False
 
-        logging.debug('Fetching more metadata from serato')
         nextmeta = self.input.getplayingmetadata()
         nextmeta['fetchedtitle'] = title
         nextmeta['fetchedartist'] = artist
 
         if 'filename' in nextmeta:
-            logging.debug('serato provided filename, parsing file')
             nextmeta = nowplaying.utils.getmoremetadata(nextmeta)
 
         # At this point, we have as much data as we can get from

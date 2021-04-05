@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
 ''' Input Plugin definition '''
 
+import logging
+
 import nowplaying.config
 
 
 class InputPlugin():
     ''' base class of input plugins '''
-    def __init__(self, qsettings=None):
+    def __init__(self, config=None, qsettings=None):
+        self.plugintype = 'input'
+        if config:
+            self.config = config
+            logging.debug('set config')
+
         if qsettings:
             self.defaults(qsettings)
             return
 
-        self.config = nowplaying.config.ConfigFile()
+        if not config:
+            self.config = nowplaying.config.ConfigFile()
 
     def getplayingtrack(self):
         ''' Get the currently playing track '''
@@ -52,4 +60,12 @@ class InputPlugin():
         ''' stopping either the entire program or just this
             input '''
 
+        raise NotImplementedError
+
+    def load_settingsui(self, qtui):
+        ''' draw the plugin's settings page '''
+        raise NotImplementedError
+
+    def save_settingsui(self, qtui):
+        ''' take the settings page and save it '''
         raise NotImplementedError
