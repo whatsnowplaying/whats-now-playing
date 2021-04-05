@@ -685,8 +685,8 @@ class SeratoHandler():
 
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
-    def __init__(self, qsettings=None):
-        super().__init__(qsettings=qsettings)
+    def __init__(self, config=None, qsettings=None):
+        super().__init__(config=config, qsettings=qsettings)
 
         self.url = None
         self.libpath = None
@@ -803,6 +803,28 @@ class Plugin(InputPlugin):
 
     def stop(self):
         ''' not needed for serato plugin '''
+
+    def load_settingsui(self, qtui):
+        ''' draw the plugin's settings page '''
+        if self.config.cparser.value('serato/local', type=bool):
+            qtui.serato_local_button.setChecked(True)
+            qtui.serato_remote_button.setChecked(False)
+        else:
+            qtui.serato_local_button.setChecked(False)
+            qtui.serato_remote_button.setChecked(True)
+        qtui.serato_local_lineedit.setText(
+            self.config.cparser.value('serato/libpath'))
+        qtui.serato_remote_url_lineedit.setText(
+            self.config.cparser.value('serato/url'))
+
+    def save_settingsui(self, qtui):
+        ''' take the settings page and save it '''
+        self.config.cparser.setValue('serato/libpath',
+                                     qtui.serato_local_lineedit.text())
+        self.config.cparser.setValue('serato/local',
+                                     qtui.serato_local_button.isChecked())
+        self.config.cparser.setValue('serato/url',
+                                     qtui.serato_remote_url_lineedit.text())
 
 
 def main():

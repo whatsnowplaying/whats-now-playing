@@ -115,7 +115,6 @@ def writetxttrack(filename=None,
     # need to -specifically- open as utf-8 otherwise
     # pyinstaller built app crashes
     with open(filename, "w", encoding='utf-8') as textfh:
-        #print("writing...")
         textfh.write(txttemplate)
     logging.debug('writetxttrack: finished write')
 

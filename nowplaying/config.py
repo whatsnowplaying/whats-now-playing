@@ -62,6 +62,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.loglevel = 'DEBUG'
 
         self.plugins = None
+        self.pluginobjs = None
         self._import_plugins()
 
         # Tell Qt to match the above
@@ -152,9 +153,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
     def _defaults_input_plugins(self, settings):
         ''' configure the defaults for input plugins '''
-        for key in self.plugins.keys():
-            inputplugin = self.plugins[key].Plugin(qsettings=settings)
-            inputplugin.defaults(settings)
+        self.pluginobjs = {}
+        for key in self.plugins:
+            self.pluginobjs[key] = self.plugins[key].Plugin(config=self,
+                                                            qsettings=settings)
+            self.pluginobjs[key].defaults(settings)
 
     def _import_plugins(self):
         ''' configure the defaults for input plugins '''
@@ -165,6 +168,16 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             name: importlib.import_module(name)
             for finder, name, ispkg in iter_ns(nowplaying.inputs)
         }
+
+    def plugins_load_settingsui(self, qtui):
+        ''' configure the defaults for input plugins '''
+        for key in self.pluginobjs:
+            self.pluginobjs[key].load_settingsui(qtui)
+
+    def plugins_save_settingsui(self, qtui):
+        ''' configure the defaults for input plugins '''
+        for key in self.pluginobjs:
+            self.pluginobjs[key].save_settingsui(qtui)
 
     # pylint: disable=too-many-arguments
     def put(self, initialized, file, txttemplate, interval, delay, notif,
@@ -197,6 +210,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.cparser.setValue('settings/notif', self.notif)
         self.cparser.setValue('textoutput/file', self.file)
         self.cparser.setValue('textoutput/txttemplate', self.txttemplate)
+        self.cparser.sync()
 
         ConfigFile.LOCK.release()
 

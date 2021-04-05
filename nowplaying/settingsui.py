@@ -113,21 +113,21 @@ class SettingsUI(QWidget):
         self.qtui.read_delay_lineedit.setText(str(self.config.delay))
         self.qtui.notification_checkbox.setChecked(self.config.notif)
 
-        self._upd_win_serato()
+        self._upd_win_input()
+        self._upd_win_plugins()
         self._upd_win_webserver()
         self._upd_win_obsws()
 
-    def _upd_win_serato(self):
-        if self.config.cparser.value('serato/local', type=bool):
-            self.qtui.serato_local_button.setChecked(True)
-            self.qtui.serato_remote_button.setChecked(False)
-        else:
-            self.qtui.serato_local_button.setChecked(False)
-            self.qtui.serato_remote_button.setChecked(True)
-        self.qtui.serato_local_lineedit.setText(
-            self.config.cparser.value('serato/libpath'))
-        self.qtui.serato_remote_url_lineedit.setText(
-            self.config.cparser.value('serato/url'))
+    def _upd_win_input(self):
+        ''' this is totally wrong and will need to get dealt
+            with as part of ui code redesign '''
+        currentinput = self.config.cparser.value('settings/input')
+        buttons = self.qtui.source_button_group.buttons()
+        for button in buttons:
+            if button.text().lower() == currentinput:
+                button.setChecked(True)
+            else:
+                button.setChecked(False)
 
     def _upd_win_webserver(self):
         ''' update the webserver settings to match config '''
@@ -162,6 +162,10 @@ class SettingsUI(QWidget):
         self.qtui.obsws_template_lineedit.setText(
             self.config.cparser.value('obsws/template'))
 
+    def _upd_win_plugins(self):
+        ''' tell config to trigger plugins to update windows '''
+        self.config.plugins_load_settingsui(self.qtui)
+
     def disable_web(self):
         ''' if the web server gets in trouble, this gets called '''
         self.qtui.error_label.setText(
@@ -184,6 +188,8 @@ class SettingsUI(QWidget):
         delay = float(self.qtui.read_delay_lineedit.text())
         loglevel = self.qtui.logging_level_combobox.currentText()
 
+        self._upd_conf_input()
+
         self.config.put(initialized=True,
                         file=self.qtui.text_filename_lineedit.text(),
                         txttemplate=self.qtui.text_template_lineedit.text(),
@@ -194,9 +200,22 @@ class SettingsUI(QWidget):
 
         logging.getLogger().setLevel(loglevel)
 
+        self._upd_conf_input()
         self._upd_conf_webserver()
         self._upd_conf_obsws()
-        self._upd_conf_serato()
+        self._upd_conf_plugins()
+
+    def _upd_conf_input(self):
+        ''' find the text of the currently selected handler '''
+        checkedbutton = self.qtui.source_button_group.checkedId()
+        inputbtn = self.qtui.source_button_group.button(checkedbutton)
+        inputtext = inputbtn.text().lower()
+
+        self.config.cparser.setValue('settings/input', inputtext)
+
+    def _upd_conf_plugins(self):
+        ''' tell config to trigger plugins to update '''
+        self.config.plugins_save_settingsui(self.qtui)
 
     def _upd_conf_webserver(self):
         ''' update the webserver settings '''
@@ -239,14 +258,6 @@ class SettingsUI(QWidget):
                                      self.qtui.obsws_template_lineedit.text())
         self.config.cparser.setValue(
             'obsws/enabled', self.qtui.obsws_enable_checkbox.isChecked())
-
-    def _upd_conf_serato(self):
-        self.config.cparser.setValue('serato/libpath',
-                                     self.qtui.serato_local_lineedit.text())
-        self.config.cparser.setValue('serato/local',
-                                     self.qtui.serato_local_button.isChecked())
-        self.config.cparser.setValue(
-            'serato/url', self.qtui.serato_remote_url_lineedit.text())
 
     @Slot()
     def on_text_saveas_button(self):

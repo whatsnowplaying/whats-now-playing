@@ -4,7 +4,6 @@
 import asyncio
 import os
 import logging
-import pathlib
 import sys
 import time
 import threading
@@ -249,15 +248,7 @@ def start(orgname, appname, bundledir):
     if os.path.exists(databasefile):
         os.unlink(databasefile)
 
-    config = nowplaying.config.ConfigFile(bundledir=bundledir)
-    logpath = os.path.join(
-        QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
-        QCoreApplication.applicationName(), 'logs')
-    pathlib.Path(logpath).mkdir(parents=True, exist_ok=True)
-    logpath = os.path.join(logpath, "webserver.log")
-    logging.getLogger().setLevel(config.loglevel)
-    nowplaying.bootstrap.setuplogging(logpath=logpath)
-
+    config = nowplaying.config.ConfigFile(bundledir=bundledir)  # pylint: disable=unused-variable
     logging.info('boot up')
     webserver = WebHandler(databasefile)  # pylint: disable=unused-variable
 
