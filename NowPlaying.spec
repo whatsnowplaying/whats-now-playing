@@ -9,7 +9,7 @@ import platform
 import sys
 
 import pkg_resources
-from pyinstaller_versionfile import create_version_file
+import pyinstaller_versionfile
 import nowplaying.version
 
 NUMERICDATE = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
@@ -83,20 +83,20 @@ def windows_version_file():
         copyright: actual version
         '''
 
-    versionparts = getsplitversion()
-    version = '.'.join(versionparts[0:3] + ['0'])
     rawmetadata = {
-        'CompanyName': 'NowPlaying',
-        'FileDescription': 'Titling for DJs - https://github.com/aw-was-here/Now-Playing-Serato',
-        'InternalName': 'NowPlaying',
-        'LegalCopyright': f'{VERSION} (c) 2020-2021 Ely Miranda, (c) 2021 Allen Wittenauer',
-        'OriginalFilename': 'NowPlaying.exe',
-        'ProductName': 'Now Playing',
-        'Version': version
+        'output_file': WINVERSFILE,
+        'company_name': 'NowPlaying',
+        'file_description':
+        'Titling for DJs - https://github.com/aw-was-here/Now-Playing-Serato',
+        'internal_name': 'NowPlaying',
+        'legal_copyright':
+        f'{VERSION} (c) 2020-2021 Ely Miranda, (c) 2021 Allen Wittenauer',
+        'original_filename': 'NowPlaying.exe',
+        'product_name': 'Now Playing',
+        'version': '.'.join(getsplitversion()[0:3] + ['0'])
     }
-    metadata = create_version_file.MetaData(metadata_file='fake')
-    metadata._metadata = rawmetadata # pylint: disable=protected-access
-    metadata._render_version_file(outfile=WINVERSFILE) # pylint: disable=protected-access
+    pyinstaller_versionfile.create_versionfile(**rawmetadata)
+
 
 def Entrypoint(dist, group, name, **kwargs):
     ''' Calculate the location of main() '''
