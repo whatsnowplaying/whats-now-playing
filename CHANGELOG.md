@@ -1,7 +1,7 @@
 
 # Changelog
 
-## In progress - Unreleased
+## Version 2.0.0 - 2021-04-07
 
 * Main program name change: SeratoNowPlaying -> NowPlaying
 * Fixed licensing
@@ -30,6 +30,7 @@
 * Major internal, structural changes to allow for easier ability to add new features.
 * Now installable via pip
 * Significant documentation updates
+* Binaries should now report their versions in Get Info/Properties
 * Many, many bug fixes... but probably new ones added too.
 
 ## Version 1.4.0 - 2020-10-21
