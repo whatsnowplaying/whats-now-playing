@@ -4,8 +4,6 @@
 '''
 
 # pylint: disable=no-name-in-module
-# pylint: disable=global-statement
-# pylint: disable=too-few-public-methods
 
 import logging
 import logging.handlers
@@ -18,6 +16,7 @@ import time
 
 from PySide2.QtCore import \
                             Signal, \
+                            QCoreApplication, \
                             QStandardPaths, \
                             QThread
 from PySide2.QtWidgets import \
@@ -29,7 +28,9 @@ from PySide2.QtWidgets import \
                             QSystemTrayIcon
 from PySide2.QtGui import QIcon
 
+import nowplaying.bootstrap
 import nowplaying.config
+import nowplaying.db
 import nowplaying.serato
 import nowplaying.settingsui
 import nowplaying.utils
@@ -38,26 +39,15 @@ import nowplaying.webserver
 
 __version__ = nowplaying.version.get_versions()['version']
 
-QAPP = QApplication(sys.argv)
-QAPP.setOrganizationName('com.github.em1ran')
-QAPP.setApplicationName('NowPlaying')
-
-# Initialize these later..
-BUNDLEDIR = None
-TEMPLATEDIR = None
-CONFIG = None
-CURRENTMETA = None
-TRAY = None
-
 
 class Tray:  # pylint: disable=too-many-instance-attributes
     ''' System Tray object '''
     def __init__(self):  #pylint: disable=too-many-statements
-        global CONFIG
+        self.config = nowplaying.config.ConfigFile()
         self.version = nowplaying.version.get_versions()['version']
         self.settingswindow = nowplaying.settingsui.SettingsUI(
-            tray=self, config=CONFIG, version=self.version)
-        self.icon = QIcon(CONFIG.iconfile)
+            tray=self, version=self.version)
+        self.icon = QIcon(self.config.iconfile)
         self.tray = QSystemTrayIcon()
         self.tray.setIcon(self.icon)
         self.tray.setToolTip("Now Playing ▶")
@@ -104,18 +94,22 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # add menu to the systemtray UI
         self.tray.setContextMenu(self.menu)
 
-        if not CONFIG.file:
+        self.config.get()
+        if not self.config.file:
             self.settingswindow.show()
+            if self.config.getmixmode() == 'newest':
+                self.action_newestmode.setChecked(True)
+            else:
+                self.action_oldestmode.setChecked(True)
         else:
 
-            if CONFIG.local:
+            if self.config.local:
                 self.action_oldestmode.setCheckable(True)
-                if CONFIG.mixmode == 'newest':
+                if self.config.getmixmode() == 'newest':
                     self.action_newestmode.setChecked(True)
                 else:
                     self.action_oldestmode.setChecked(True)
             else:
-                CONFIG.mixmode = 'newest'
                 self.action_oldestmode.setChecked(False)
                 self.action_newestmode.setChecked(True)
 
@@ -130,15 +124,15 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.trackthread.start()
 
         # Start the webserver
-        self.webthread = nowplaying.webserver.WebServer(config=CONFIG)
+        self.webthread = nowplaying.webserver.WebServer()
         self.webthread.webenable[bool].connect(self.webenable)
         self.webthread.start()
 
     def tracknotify(self, metadata):
         ''' signal handler to update the tooltip '''
-        global CONFIG
 
-        if CONFIG.notif:
+        self.config.get()
+        if self.config.notif:
             if 'artist' in metadata:
                 artist = metadata['artist']
             else:
@@ -161,45 +155,31 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def unpause(self):
         ''' unpause polling '''
-        global CONFIG
-
-        CONFIG.paused = False
+        self.config.unpause()
         self.action_pause.setText('Pause')
         self.action_pause.triggered.connect(self.pause)
 
     def pause(self):
         ''' pause polling '''
-
-        global CONFIG
-        CONFIG.paused = True
+        self.config.pause()
         self.action_pause.setText('Resume')
         self.action_pause.triggered.connect(self.unpause)
 
     def oldestmixmode(self):  #pylint: disable=no-self-use
         ''' enable active mixing '''
-        global CONFIG
 
-        if not CONFIG.local:
-            CONFIG.mixmode = 'newest'
-            logging.debug('called oldestmixmode, but overrode')
-            return
-
-        CONFIG.mixmode = 'oldest'
-        CONFIG.save()
-        logging.debug('called oldestmixmode')
+        self.config.get()
+        self.config.setmixmode('oldest')
+        self.config.save()
 
     def newestmixmode(self):  #pylint: disable=no-self-use
         ''' enable passive mixing '''
-        global CONFIG
-
-        CONFIG.mixmode = 'newest'
-        CONFIG.save()
-        logging.debug('called newestmixmode')
+        self.config.get()
+        self.config.setmixmode('newest')
+        self.config.save()
 
     def cleanquit(self):
         ''' quit app and cleanup '''
-
-        global CONFIG
 
         self.tray.setVisible(False)
         if self.trackthread:
@@ -208,14 +188,18 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         if self.webthread:
             self.webthread.endthread = True
             self.webthread.stop()
-        if CONFIG and CONFIG.file:
-            nowplaying.utils.writetxttrack(filename=CONFIG.file, clear=True)
+        if self.config:
+            self.config.get()
+            if self.config.file:
+                nowplaying.utils.writetxttrack(filename=self.config.file,
+                                               clear=True)
         # calling exit should call __del__ on all of our QThreads
         if self.trackthread:
             self.trackthread.wait()
         if self.webthread:
             self.webthread.wait()
-        QAPP.exit(0)
+        app = QApplication.instance()
+        app.exit(0)
 
 
 class TrackPoll(QThread):
@@ -231,240 +215,185 @@ class TrackPoll(QThread):
         QThread.__init__(self, parent)
         self.endthread = False
         self.setObjectName('TrackPoll')
+        self.config = nowplaying.config.ConfigFile()
+        self.currentmeta = {'fetchedartist': None, 'fetchedtitle': None}
 
     def run(self):
         ''' track polling process '''
 
-        global CONFIG
         threading.current_thread().name = 'TrackPoll'
         previoustxttemplate = None
         previoushtmltemplate = None
 
         # sleep until we have something to write
-        while not CONFIG.file and not self.endthread:
+        while not self.config.file and not self.endthread and not self.config.getpause(
+        ):
             time.sleep(5)
-            CONFIG.get()
+            self.config.get()
 
         while not self.endthread:
             time.sleep(1)
-            CONFIG.get()
+            self.config.get()
 
-            if not previoustxttemplate or previoustxttemplate != CONFIG.txttemplate:
+            if not previoustxttemplate or previoustxttemplate != self.config.txttemplate:
                 txttemplatehandler = nowplaying.utils.TemplateHandler(
-                    filename=CONFIG.txttemplate)
-                previoustxttemplate = CONFIG.txttemplate
+                    filename=self.config.txttemplate)
+                previoustxttemplate = self.config.txttemplate
 
             # get poll interval and then poll
-            if CONFIG.local:
+            if self.config.local:
                 interval = 1
             else:
-                interval = CONFIG.interval
+                interval = self.config.interval
 
             time.sleep(interval)
-            newmeta = gettrack(CONFIG)
-            if not newmeta:
+            if not self.gettrack():
                 continue
-            time.sleep(CONFIG.delay)
-            nowplaying.utils.writetxttrack(filename=CONFIG.file,
+            time.sleep(self.config.delay)
+            nowplaying.utils.writetxttrack(filename=self.config.file,
                                            templatehandler=txttemplatehandler,
-                                           metadata=newmeta)
-            self.currenttrack.emit(newmeta)
-            if CONFIG.httpenabled:
+                                           metadata=self.currentmeta)
+            self.currenttrack.emit(self.currentmeta)
+            if self.config.httpenabled:
 
-                if not previoushtmltemplate or previoushtmltemplate != CONFIG.htmltemplate:
+                if not previoushtmltemplate or previoushtmltemplate != self.config.htmltemplate:
                     htmltemplatehandler = nowplaying.utils.TemplateHandler(
-                        filename=CONFIG.htmltemplate)
-                    previoushtmltemplate = CONFIG.htmltemplate
+                        filename=self.config.htmltemplate)
+                    previoushtmltemplate = self.config.htmltemplate
 
                 nowplaying.utils.update_javascript(
-                    serverdir=CONFIG.usinghttpdir,
+                    serverdir=self.config.usinghttpdir,
                     templatehandler=htmltemplatehandler,
-                    metadata=newmeta)
+                    metadata=self.currentmeta)
 
     def __del__(self):
         logging.debug('TrackPoll is being killed!')
         self.endthread = True
-        self.wait()
+
+    def gettrack(self):  # pylint: disable=too-many-branches
+        ''' get currently playing track, returns None if not new or not found '''
+        serato = None
+
+        logging.debug('called gettrack')
+        # check paused state
+        while True:
+            if not self.config.getpause():
+                break
+            time.sleep(1)
+
+        if self.config.local:  # locally derived
+            # paths for session history
+            sera_dir = self.config.libpath
+            hist_dir = os.path.abspath(os.path.join(sera_dir, "History"))
+            sess_dir = os.path.abspath(os.path.join(hist_dir, "Sessions"))
+            if os.path.isdir(sess_dir):
+                logging.debug('SeratoHandler called against %s', sess_dir)
+                serato = nowplaying.serato.SeratoHandler(
+                    seratodir=sess_dir, mixmode=self.config.getmixmode())
+                logging.debug('Serato processor called')
+                serato.process_sessions()
+
+        else:  # remotely derived
+            logging.debug('SeratoHandler called against %s', self.config.url)
+            serato = nowplaying.serato.SeratoHandler(seratourl=self.config.url)
+
+        if not serato:
+            logging.debug('gettrack serato is None; returning')
+            return False
+
+        logging.debug('getplayingtrack called')
+        (artist, title) = serato.getplayingtrack()
+
+        if not artist and not title:
+            logging.debug('getplaying track was None; returning')
+            return False
+
+        if artist == self.currentmeta['fetchedartist'] and \
+           title == self.currentmeta['fetchedtitle']:
+            logging.debug('getplaying was existing meta; returning')
+            return False
+
+        logging.debug('Fetching more metadata from serato')
+        nextmeta = serato.getplayingmetadata()
+        nextmeta['fetchedtitle'] = title
+        nextmeta['fetchedartist'] = artist
+
+        if 'filename' in nextmeta:
+            logging.debug('serato provided filename, parsing file')
+            nextmeta = nowplaying.utils.getmoremetadata(nextmeta)
+
+        # At this point, we have as much data as we can get from
+        # either the handler or from reading the file directly.
+        # There is still a possibility that artist and title
+        # are empty because the user never provided it to anything
+        # In this worst case, put in empty strings since
+        # everything from here on out will expect them to
+        # exist.  If we do not do this, we risk a crash.
+
+        if 'artist' not in nextmeta:
+            nextmeta['artist'] = ''
+            logging.error('Track missing artist data, setting it to blank.')
+
+        if 'title' not in nextmeta:
+            nextmeta['title'] = ''
+            logging.error('Track missing title data, setting it to blank.')
+
+        self.currentmeta = nextmeta
+        logging.info('New track: %s / %s', self.currentmeta['artist'],
+                     self.currentmeta['title'])
+
+        metadb = nowplaying.db.MetadataDB()
+        metadb.write_to_metadb(metadata=self.currentmeta)
+        return True
 
 
-# FUNCTIONS ####
-
-
-def gettrack(configuration):  # pylint: disable=too-many-branches
-    ''' get currently playing track, returns None if not new or not found '''
-    global CURRENTMETA
-
-    conf = configuration
-
-    serato = None
-
-    logging.debug('called gettrack')
-    # check paused state
-    while True:
-        if not conf.paused:
-            break
-
-    if conf.local:  # locally derived
-        # paths for session history
-        sera_dir = conf.libpath
-        hist_dir = os.path.abspath(os.path.join(sera_dir, "History"))
-        sess_dir = os.path.abspath(os.path.join(hist_dir, "Sessions"))
-        if os.path.isdir(sess_dir):
-            logging.debug('SeratoHandler called against %s', sess_dir)
-            serato = nowplaying.serato.SeratoHandler(seratodir=sess_dir,
-                                                     mixmode=conf.mixmode)
-            logging.debug('Serato processor called')
-            serato.process_sessions()
-
-    else:  # remotely derived
-        logging.debug('SeratoHandler called against %s', conf.url)
-        serato = nowplaying.serato.SeratoHandler(seratourl=conf.url)
-
-    if not serato:
-        logging.debug('gettrack serato is None; returning')
-        return None
-
-    logging.debug('getplayingtrack called')
-    (artist, title) = serato.getplayingtrack()
-
-    if not artist and not title:
-        logging.debug('getplaying track was None; returning')
-        return None
-
-    if artist == CURRENTMETA['fetchedartist'] and \
-       title == CURRENTMETA['fetchedtitle']:
-        logging.debug('getplaying was existing meta; returning')
-        return None
-
-    logging.debug('Fetching more metadata from serato')
-    nextmeta = serato.getplayingmetadata()
-    nextmeta['fetchedtitle'] = title
-    nextmeta['fetchedartist'] = artist
-
-    if 'filename' in nextmeta:
-        logging.debug('serato provided filename, parsing file')
-        nextmeta = nowplaying.utils.getmoremetadata(nextmeta)
-
-    # At this point, we have as much data as we can get from
-    # either the handler or from reading the file directly.
-    # There is still a possibility that artist and title
-    # are empty because the user never provided it to anything
-    # In this worst case, put in empty strings since
-    # everything from here on out will expect them to
-    # exist.  If we do not do this, we risk a crash.
-
-    if 'artist' not in nextmeta:
-        nextmeta['artist'] = ''
-        logging.error('Track missing artist data, setting it to blank.')
-
-    if 'title' not in nextmeta:
-        nextmeta['title'] = ''
-        logging.error('Track missing title data, setting it to blank.')
-
-    CURRENTMETA = nextmeta
-    logging.info('New track: %s / %s', CURRENTMETA['artist'],
-                 CURRENTMETA['title'])
-
-    return CURRENTMETA
-
-
-def setuplogging():
-    ''' configure logging '''
-    global QAPP
-
-    besuretorotate = False
+def run_bootstrap(bundledir=None):
+    ''' bootstrap the app '''
 
     logpath = os.path.join(
         QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
-        QAPP.applicationName(), 'logs')
+        QCoreApplication.applicationName(), 'logs')
     pathlib.Path(logpath).mkdir(parents=True, exist_ok=True)
     logpath = os.path.join(logpath, "debug.log")
-    if os.path.exists(logpath):
-        besuretorotate = True
 
-    logfhandler = logging.handlers.RotatingFileHandler(filename=logpath,
-                                                       backupCount=10,
-                                                       encoding='utf-8')
-    if besuretorotate:
-        logfhandler.doRollover()
+    nowplaying.bootstrap.setuplogging(logpath=logpath)
 
-    # this loglevel should eventually be tied into config
-    # but for now, hard-set at info
-    logging.basicConfig(
-        format='%(asctime)s %(threadName)s %(module)s:%(funcName)s:%(lineno)d '
-        + '%(levelname)s %(message)s',
-        datefmt='%Y-%m-%dT%H:%M:%S%z',
-        handlers=[logfhandler],
-        level=logging.DEBUG)
-    logging.info('starting up v%s',
-                 nowplaying.version.get_versions()['version'])
+    # fail early if metadatadb can't be configured
+    metadb = nowplaying.db.MetadataDB()
+    metadb.setupsql()
 
-
-def bootstrap_template_ignore(srcdir, srclist):  # pylint: disable=unused-argument
-    ''' do not copy template files that already exist '''
-    global TEMPLATEDIR
-
-    ignore = []
-    for src in srclist:
-        check = os.path.join(TEMPLATEDIR, src)
-        if os.path.exists(check):
-            ignore.append(src)
-        else:
-            logging.debug('Adding %s to templates dir', src)
-
-    return ignore
-
-
-def bootstrap():
-    ''' bootstrap the app '''
-
-    global BUNDLEDIR, TEMPLATEDIR, QAPP
-
-    setuplogging()
-
-    TEMPLATEDIR = os.path.join(
+    templatedir = os.path.join(
         QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
-        QAPP.applicationName(), 'templates')
+        QCoreApplication.applicationName(), 'templates')
 
-    pathlib.Path(TEMPLATEDIR).mkdir(parents=True, exist_ok=True)
-    # set paths for bundled files
-    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        BUNDLEDIR = getattr(sys, '_MEIPASS',
-                            os.path.abspath(os.path.dirname(__file__)))
-    else:
-        BUNDLEDIR = os.path.abspath(os.path.dirname(__file__))
-
-    bundletemplatedir = os.path.join(BUNDLEDIR, 'templates')
-
-    if os.path.exists(bundletemplatedir):
-        shutil.copytree(bundletemplatedir,
-                        TEMPLATEDIR,
-                        ignore=bootstrap_template_ignore,
-                        dirs_exist_ok=True)
-    else:
-        logging.error('Cannot locate templates dir during bootstrap!')
-
-
-# END FUNCTIONS ####
+    pathlib.Path(templatedir).mkdir(parents=True, exist_ok=True)
+    nowplaying.bootstrap.setuptemplates(bundledir=bundledir,
+                                        templatedir=templatedir)
 
 
 def main():
     ''' main entrypoint '''
-    global CURRENTMETA, CONFIG, TRAY, QAPP
-    # define global variables
-    CURRENTMETA = {'fetchedartist': None, 'fetchedtitle': None}
+    # set paths for bundled files
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        bundledir = getattr(sys, '_MEIPASS',
+                            os.path.abspath(os.path.dirname(__file__)))
+    else:
+        bundledir = os.path.abspath(os.path.dirname(__file__))
 
-    bootstrap()
+    qapp = QApplication(sys.argv)
+    qapp.setOrganizationName('com.github.em1ran')
+    qapp.setApplicationName('NowPlaying')
+    run_bootstrap(bundledir=bundledir)
 
-    CONFIG = nowplaying.config.ConfigFile(bundledir=BUNDLEDIR)
-    logging.getLogger().setLevel(CONFIG.loglevel)
+    config = nowplaying.config.ConfigFile(bundledir=bundledir)
+    logging.getLogger().setLevel(config.loglevel)
 
-    logging.info('boot up mixmode: %s / local mode: %s ', CONFIG.mixmode,
-                 CONFIG.local)
+    logging.info('boot up mixmode: %s / local mode: %s ', config.getmixmode(),
+                 config.local)
 
-    TRAY = Tray()
-    QAPP.setQuitOnLastWindowClosed(False)
-    exitval = QAPP.exec_()
+    tray = Tray()  # pylint: disable=unused-variable
+    qapp.setQuitOnLastWindowClosed(False)
+    exitval = qapp.exec_()
     logging.info('shutting down v%s',
                  nowplaying.version.get_versions()['version'])
     sys.exit(exitval)

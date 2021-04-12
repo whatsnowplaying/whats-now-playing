@@ -18,12 +18,15 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     ## Qt doesn't appear to support re-entrant locks or mutexes so
     ## let's use boring old Python threading
 
-    lock = threading.RLock()
+    BUNDLEDIR = None
+    LOCK = threading.RLock()
+    MIXMODE = 'newest'
+    PAUSED = False
 
     def __init__(self, bundledir=None, reset=False):
 
         logging.debug('attempting lock')
-        ConfigFile.lock.acquire()
+        ConfigFile.LOCK.acquire()
         logging.debug('locked')
 
         self.initialized = False
@@ -31,10 +34,12 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             QStandardPaths.standardLocations(
                 QStandardPaths.DocumentsLocation)[0],
             QCoreApplication.applicationName(), 'templates')
-        self.bundledir = bundledir
+
+        if not ConfigFile.BUNDLEDIR and bundledir:
+            ConfigFile.BUNDLEDIR = bundledir
 
         logging.info('Templates: %s', self.templatedir)
-        logging.info('Bundle: %s', self.bundledir)
+        logging.info('Bundle: %s', ConfigFile.BUNDLEDIR)
 
         self.libpath = os.path.join(
             QStandardPaths.standardLocations(QStandardPaths.MusicLocation)[0],
@@ -56,7 +61,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.notif = False
         self.local = True
         self.mixmode = 'newest'
-        self.paused = False
+        ConfigFile.PAUSED = False
         self.httpenabled = False
         self.httpport = 8899
         self.url = None
@@ -76,19 +81,19 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             self.save()
         else:
             self.get()
-        ConfigFile.lock.release()
+        ConfigFile.LOCK.release()
         logging.debug('lock release')
 
     def reset(self):
         ''' forcibly go back to defaults '''
         logging.debug('config reset')
-        self.__init__(bundledir=self.bundledir, reset=True)
+        self.__init__(bundledir=ConfigFile.BUNDLEDIR, reset=True)
 
     def get(self):
         ''' refresh values '''
 
         logging.debug('attempting lock')
-        ConfigFile.lock.acquire()
+        ConfigFile.LOCK.acquire()
         logging.debug('locked')
 
         try:
@@ -147,7 +152,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         except TypeError:
             pass
 
-        ConfigFile.lock.release()
+        ConfigFile.LOCK.release()
         logging.debug('lock release')
 
     def defaults(self):
@@ -183,7 +188,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         ''' Save the configuration file '''
 
         logging.debug('attempting lock')
-        ConfigFile.lock.acquire()
+        ConfigFile.LOCK.acquire()
         logging.debug('locked')
 
         self.delay = float(delay)
@@ -207,14 +212,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         self.save()
 
-        ConfigFile.lock.release()
+        ConfigFile.LOCK.release()
         logging.debug('lock release')
 
     def save(self):
         ''' save the current set '''
 
         logging.debug('attempting lock')
-        ConfigFile.lock.acquire()
+        ConfigFile.LOCK.acquire()
         logging.debug('locked')
 
         self.cparser.setValue('settings/delay', self.delay)
@@ -236,7 +241,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             self.cparser.setValue('serato/mixmode', self.mixmode)
         self.cparser.setValue('serato/url', self.url)
 
-        ConfigFile.lock.release()
+        ConfigFile.LOCK.release()
         logging.debug('lock release')
 
     # pylint: disable=too-many-locals, too-many-arguments
@@ -244,20 +249,20 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         ''' Save the configuration file '''
 
         logging.debug('attempting lock')
-        ConfigFile.lock.acquire()
+        ConfigFile.LOCK.acquire()
         logging.debug('locked')
         logging.debug('setting the usinghttpdir to %s', usinghttpdir)
         self.usinghttpdir = usinghttpdir
-        ConfigFile.lock.release()
+        ConfigFile.LOCK.release()
         logging.debug('lock release')
 
-    def find_icon_file(self):
+    def find_icon_file(self):  # pylint: disable=no-self-use
         ''' try to find our icon '''
 
         for testdir in [
-                self.bundledir,
-                os.path.join(self.bundledir, 'bin'),
-                os.path.join(self.bundledir, 'resources')
+                ConfigFile.BUNDLEDIR,
+                os.path.join(ConfigFile.BUNDLEDIR, 'bin'),
+                os.path.join(ConfigFile.BUNDLEDIR, 'resources')
         ]:
             for testfilename in ['icon.ico', 'windows.ico']:
                 testfile = os.path.join(testdir, testfilename)
@@ -267,3 +272,36 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         logging.error('Unable to find the icon file. Death only follows.')
         return None
+
+    def pause(self):  # pylint: disable=no-self-use
+        ''' Pause system '''
+        ConfigFile.PAUSED = True
+
+    def unpause(self):  # pylint: disable=no-self-use
+        ''' unpause system '''
+        ConfigFile.PAUSED = False
+
+    def getpause(self):  # pylint: disable=no-self-use
+        ''' Get the pause status '''
+        return ConfigFile.PAUSED
+
+    def setmixmode(self, mixmode):  # pylint: disable=no-self-use
+        ''' Pause system '''
+
+        logging.debug('attempting lock')
+        ConfigFile.LOCK.acquire()
+        logging.debug('locked')
+        self.get()
+        if self.local:
+            ConfigFile.MIXMODE = mixmode
+            self.mixmode = mixmode
+            self.save()
+        else:
+            ConfigFile.MIXMODE = 'oldest'
+
+        ConfigFile.LOCK.release()
+        logging.debug('lock release')
+
+    def getmixmode(self):  # pylint: disable=no-self-use
+        ''' unpause system '''
+        return ConfigFile.MIXMODE

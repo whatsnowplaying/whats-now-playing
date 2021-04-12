@@ -17,7 +17,7 @@ from PySide2.QtCore import \
                             Signal, \
                             QThread
 
-CONFIG = None
+import nowplaying.config
 
 
 class WebHandler(BaseHTTPRequestHandler):
@@ -39,8 +39,7 @@ class WebHandler(BaseHTTPRequestHandler):
             Also, doing it this way means the webserver can only ever
             share specific content.
         '''
-
-        global CONFIG  # pylint: disable=global-statement
+        config = nowplaying.config.ConfigFile()
 
         # see what was asked for
         parsedrequest = urllib.parse.urlparse(self.path)
@@ -52,7 +51,7 @@ class WebHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'image/x-icon')
             self.end_headers()
-            with open(CONFIG.iconfile, 'rb') as iconfh:
+            with open(config.iconfile, 'rb') as iconfh:
                 self.wfile.write(iconfh.read())
             return
 
@@ -76,7 +75,7 @@ class WebHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
-            with open(CONFIG.file, 'rb') as textfh:
+            with open(config.file, 'rb') as textfh:
                 self.wfile.write(textfh.read())
             return
 
@@ -116,11 +115,8 @@ class WebServer(QThread):
 
     webenable = Signal(bool)
 
-    def __init__(self, parent=None, config=None):
-        global CONFIG  # pylint: disable=global-statement
-
-        CONFIG = config
-
+    def __init__(self, parent=None):
+        self.config = nowplaying.config.ConfigFile()
         QThread.__init__(self, parent)
         self.server = None
         self.endthread = False
@@ -151,17 +147,16 @@ class WebServer(QThread):
                 - rinse/repeat
 
         '''
-        global CONFIG  # pylint: disable=global-statement
 
         threading.current_thread().name = 'WebServerControl'
 
         while not self.endthread:
             logging.debug('Starting main loop')
-            CONFIG.get()
+            self.config.get()
 
-            while CONFIG.paused or not CONFIG.httpenabled:
+            while self.config.getpause() or not self.config.httpenabled:
                 time.sleep(5)
-                CONFIG.get()
+                self.config.get()
                 if self.endthread:
                     break
 
@@ -169,25 +164,25 @@ class WebServer(QThread):
                 self.stop()
                 break
 
-            if not CONFIG.usinghttpdir:
+            if not self.config.usinghttpdir:
                 logging.debug('No web server dir?!?')
-                CONFIG.setusinghttpdir(tempfile.gettempdir())
-            logging.info('Using web server dir %s', CONFIG.usinghttpdir)
-            if not os.path.exists(CONFIG.usinghttpdir):
+                self.config.setusinghttpdir(tempfile.gettempdir())
+            logging.info('Using web server dir %s', self.config.usinghttpdir)
+            if not os.path.exists(self.config.usinghttpdir):
                 try:
                     logging.debug('Making %s as it does not exist',
-                                  CONFIG.usinghttpdir)
-                    pathlib.Path(CONFIG.usinghttpdir).mkdir(parents=True,
-                                                            exist_ok=True)
+                                  self.config.usinghttpdir)
+                    pathlib.Path(self.config.usinghttpdir).mkdir(parents=True,
+                                                                 exist_ok=True)
                 except Exception as error:  # pylint: disable=broad-except
                     logging.error('Web server threw exception! %s', error)
                     self.webenable.emit(False)
 
-            os.chdir(CONFIG.usinghttpdir)
+            os.chdir(self.config.usinghttpdir)
 
             try:
-                self.server = ThreadingWebServer(('0.0.0.0', CONFIG.httpport),
-                                                 WebHandler)
+                self.server = ThreadingWebServer(
+                    ('0.0.0.0', self.config.httpport), WebHandler)
             except Exception as error:  # pylint: disable=broad-except
                 logging.error(
                     'Web server threw exception on thread create: %s', error)
@@ -216,4 +211,3 @@ class WebServer(QThread):
         logging.debug('Web server thread is being killed!')
         self.endthread = True
         self.stop()
-        self.wait()
