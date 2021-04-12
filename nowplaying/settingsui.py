@@ -24,6 +24,8 @@ from PySide2.QtWidgets import \
                             QWidget
 from PySide2.QtGui import QIcon, QFont
 
+import nowplaying.config
+
 
 # settings UI
 class SettingsUI:  # pylint: disable=too-many-instance-attributes
@@ -38,10 +40,10 @@ class SettingsUI:  # pylint: disable=too-many-instance-attributes
     httpport = None
 
     # pylint: disable=too-many-statements, invalid-name
-    def __init__(self, config, tray, version):
+    def __init__(self, tray, version):
 
-        self.config = config
-        self.iconfile = config.iconfile
+        self.config = nowplaying.config.ConfigFile()
+        self.iconfile = self.config.iconfile
         self.tray = tray
         self.version = version
         self.scroll = QScrollArea()
@@ -49,7 +51,7 @@ class SettingsUI:  # pylint: disable=too-many-instance-attributes
         self.separator1 = QFrame()
         self.separator2 = QFrame()
         self.separator3 = QFrame()
-        if not config.iconfile:
+        if not self.config.iconfile:
             self.tray.cleanquit()
         self.scroll.setWindowIcon(QIcon(self.iconfile))
         self.layoutV = QVBoxLayout()
@@ -457,7 +459,7 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
         if startfile:
             startdir = os.path.dirname(startfile)
         else:
-            startdir = os.path.join(self.config.bundledir, "templates")
+            startdir = os.path.join(self.config.BUNDLEDIR, "templates")
         filename = QFileDialog.getOpenFileName(self.window, 'Open file',
                                                startdir, '*.txt')
         if filename:
@@ -490,7 +492,7 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
         if startfile:
             startdir = os.path.dirname(startfile)
         else:
-            startdir = os.path.join(self.config.bundledir, "templates")
+            startdir = os.path.join(self.config.BUNDLEDIR, "templates")
         filename = QFileDialog.getOpenFileName(self.window, 'Open file',
                                                startdir, '*.htm *.html')
         if filename:
@@ -538,14 +540,13 @@ to delay writing the new track info once it\'s retrieved. (Default = 0)')
             self.window.show()
             return
 
-        self.config.paused = False
+        self.config.unpause()
         self.upd_conf()
         self.close()
         self.errLabel.setText('')
         if self.config.local:
             self.tray.action_oldestmode.setCheckable(True)
         else:
-            self.config.mixmode = 'newest'
             self.tray.action_oldestmode.setCheckable(False)
         self.tray.action_pause.setText('Pause')
         self.tray.action_pause.setEnabled(True)
