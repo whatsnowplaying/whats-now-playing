@@ -149,10 +149,10 @@ class MetadataDB:
         cursor = connection.cursor()
 
         sql = 'CREATE TABLE currentmeta ('
-        sql = sql + 'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+        sql += 'id INTEGER PRIMARY KEY AUTOINCREMENT, '
         sql = sql + ' TEXT, '.join(
             MetadataDB.METADATALIST) + ' TEXT,  coverimageraw BLOB'
-        sql = sql + ')'
+        sql += ')'
 
         cursor.execute(sql)
         connection.commit()
