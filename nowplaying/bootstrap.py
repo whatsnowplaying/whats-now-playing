@@ -2,6 +2,7 @@
 ''' bootstrap the app '''
 
 import logging
+import logging.handlers
 import os
 import shutil
 
