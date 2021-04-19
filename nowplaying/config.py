@@ -51,6 +51,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             self.qsettingsformat = QSettings.NativeFormat
 
         self.iconfile = self.find_icon_file()
+        self.uifile = self.find_ui_file()
 
         self.cparser = QSettings(self.qsettingsformat, QSettings.UserScope,
                                  QCoreApplication.organizationName(),
@@ -271,6 +272,22 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                     return testfile
 
         logging.error('Unable to find the icon file. Death only follows.')
+        return None
+
+    def find_ui_file(self):  # pylint: disable=no-self-use
+        ''' try to find our icon '''
+
+        for testdir in [
+                ConfigFile.BUNDLEDIR,
+                os.path.join(ConfigFile.BUNDLEDIR, 'bin'),
+                os.path.join(ConfigFile.BUNDLEDIR, 'resources')
+        ]:
+            testfile = os.path.join(testdir, 'settings.ui')
+            if os.path.exists(testfile):
+                logging.debug('ui file at %s', testfile)
+                return testfile
+
+        logging.error('Unable to find the ui file. Death only follows.')
         return None
 
     def pause(self):  # pylint: disable=no-self-use

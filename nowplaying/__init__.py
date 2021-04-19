@@ -8,7 +8,7 @@ import os
 import pathlib
 import sys
 
-from PySide2.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
+from PySide2.QtCore import QCoreApplication, QStandardPaths, Qt  # pylint: disable=no-name-in-module
 from PySide2.QtWidgets import QApplication  # pylint: disable=no-name-in-module
 
 import nowplaying.bootstrap
@@ -52,6 +52,7 @@ def main():
     else:
         bundledir = os.path.abspath(os.path.dirname(__file__))
 
+    QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     qapp = QApplication(sys.argv)
     qapp.setOrganizationName('com.github.em1ran')
     qapp.setApplicationName('NowPlaying')
