@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>496</width>
+    <width>512</width>
     <height>544</height>
    </rect>
   </property>
@@ -20,14 +20,14 @@
   <widget class="QTabWidget" name="settings_tabs">
    <property name="geometry">
     <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>481</width>
-     <height>401</height>
+     <x>10</x>
+     <y>10</y>
+     <width>491</width>
+     <height>521</height>
     </rect>
    </property>
    <property name="currentIndex">
-    <number>0</number>
+    <number>1</number>
    </property>
    <widget class="QWidget" name="general_tab">
     <attribute name="title">
@@ -112,7 +112,7 @@
      <property name="geometry">
       <rect>
        <x>0</x>
-       <y>140</y>
+       <y>160</y>
        <width>471</width>
        <height>83</height>
       </rect>
@@ -178,7 +178,7 @@
      <property name="geometry">
       <rect>
        <x>0</x>
-       <y>240</y>
+       <y>280</y>
        <width>471</width>
        <height>52</height>
       </rect>
@@ -279,7 +279,7 @@
        <x>10</x>
        <y>230</y>
        <width>461</width>
-       <height>42</height>
+       <height>71</height>
       </rect>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
@@ -297,6 +297,9 @@
        <widget class="QLabel" name="network_info_label">
         <property name="text">
          <string/>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -437,7 +440,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>441</width>
+        <width>471</width>
         <height>77</height>
        </rect>
       </property>
@@ -478,9 +481,9 @@
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>8</x>
-       <y>130</y>
-       <width>461</width>
+       <x>10</x>
+       <y>110</y>
+       <width>471</width>
        <height>52</height>
       </rect>
      </property>
@@ -525,9 +528,9 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>190</y>
-       <width>461</width>
-       <height>83</height>
+       <y>210</y>
+       <width>471</width>
+       <height>101</height>
       </rect>
      </property>
      <layout class="QVBoxLayout" name="serato_remote_retrieval_layout">
@@ -586,7 +589,7 @@
   <widget class="QWidget" name="horizontalLayoutWidget_2">
    <property name="geometry">
     <rect>
-     <x>0</x>
+     <x>10</x>
      <y>470</y>
      <width>491</width>
      <height>61</height>
