@@ -1,6 +1,6 @@
 jinja2==2.11.3
 lxml==4.6.3
-pyinstaller==4.2
+pyinstaller==4.3
 pyinstaller_versionfile==2.0.0
 PySide2==5.15.2
 requests==2.25.1
