@@ -172,6 +172,16 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         settings.setValue('settings/notif', self.notif)
         settings.setValue('textoutput/file', self.file)
         settings.setValue('textoutput/txttemplate', self.txttemplate)
+
+        settings.setValue('obsws/enabled', False)
+        settings.setValue('obsws/freetype2', True)
+        settings.setValue('obsws/host', 'localhost')
+        settings.setValue('obsws/port', '4444')
+        settings.setValue('obsws/secret', '')
+        settings.setValue('obsws/source', '')
+        settings.setValue('obsws/template',
+                          os.path.join(self.templatedir, "basic.txt"))
+
         settings.setValue('weboutput/htmltemplate', self.htmltemplate)
         settings.setValue('weboutput/httpdir', self.httpdir)
         settings.setValue('weboutput/httpenabled', self.httpenabled)
@@ -231,6 +241,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.cparser.setValue('settings/notif', self.notif)
         self.cparser.setValue('textoutput/file', self.file)
         self.cparser.setValue('textoutput/txttemplate', self.txttemplate)
+
         self.cparser.setValue('weboutput/htmltemplate', self.htmltemplate)
         self.cparser.setValue('weboutput/httpdir', self.httpdir)
         self.cparser.setValue('weboutput/httpenabled', self.httpenabled)
