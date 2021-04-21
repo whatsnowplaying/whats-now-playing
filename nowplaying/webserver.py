@@ -158,6 +158,7 @@ class WebServer(QThread):
                 time.sleep(5)
                 self.config.get()
                 if self.endthread:
+                    self.stop()
                     break
 
             if self.endthread:

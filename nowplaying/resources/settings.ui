@@ -14,8 +14,8 @@
    <string>Now Playing - Settings</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="settings.qrc">
-    <normaloff>:/resources/icon.ico</normaloff>:/resources/icon.ico</iconset>
+   <iconset>
+    <normaloff>icon.ico</normaloff>icon.ico</iconset>
   </property>
   <widget class="QTabWidget" name="settings_tabs">
    <property name="geometry">
@@ -27,7 +27,7 @@
     </rect>
    </property>
    <property name="currentIndex">
-    <number>1</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="general_tab">
     <attribute name="title">
@@ -239,6 +239,19 @@
       </item>
      </layout>
     </widget>
+    <widget class="QLabel" name="error_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>360</y>
+       <width>471</width>
+       <height>69</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
    </widget>
    <widget class="QWidget" name="http_tab">
     <attribute name="title">
@@ -415,6 +428,151 @@
          </widget>
         </item>
        </layout>
+      </item>
+     </layout>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="obs_websocket_tab">
+    <attribute name="title">
+     <string>OBS WebSocket</string>
+    </attribute>
+    <widget class="QCheckBox" name="obsws_enable_checkbox">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>90</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Enable</string>
+     </property>
+    </widget>
+    <widget class="QGroupBox" name="obs_sourcetype_groupbox">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>311</width>
+       <height>111</height>
+      </rect>
+     </property>
+     <property name="title">
+      <string>Source Type</string>
+     </property>
+     <widget class="QWidget" name="verticalLayoutWidget">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>20</y>
+        <width>311</width>
+        <height>80</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QRadioButton" name="obsws_freetype2_button">
+         <property name="text">
+          <string>FreeType2</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="obsws_gdi_button">
+         <property name="text">
+          <string>GDI+ (Windows Only)</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="formLayoutWidget">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>170</y>
+       <width>471</width>
+       <height>120</height>
+      </rect>
+     </property>
+     <layout class="QFormLayout" name="obsws_form_layout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="obsws_source_label">
+        <property name="text">
+         <string>Source Name</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="obsws_source_lineedit"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="obsws_host_label">
+        <property name="text">
+         <string>OBS Host</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="obsws_host_lineedit"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="obsws_port_label">
+        <property name="text">
+         <string>OBS Port</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="obsws_port_lineedit"/>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="obsws_secret_label">
+        <property name="text">
+         <string>OBS Secret</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="obsws_secret_lineedit">
+        <property name="echoMode">
+         <enum>QLineEdit::Password</enum>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+    <widget class="QWidget" name="horizontalLayoutWidget_3">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>300</y>
+       <width>471</width>
+       <height>27</height>
+      </rect>
+     </property>
+     <layout class="QHBoxLayout" name="obsws_template_layout">
+      <item>
+       <widget class="QLabel" name="obsws_template_label">
+        <property name="text">
+         <string>Template File</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="obsws_template_button">
+        <property name="text">
+         <string>PushButton</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="obsws_template_lineedit"/>
       </item>
      </layout>
     </widget>
@@ -628,27 +786,16 @@
     </item>
    </layout>
   </widget>
-  <widget class="QLabel" name="error_label">
+  <widget class="QWidget" name="horizontalLayoutWidget">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>415</y>
-     <width>471</width>
-     <height>41</height>
+     <y>395</y>
+     <width>491</width>
+     <height>71</height>
     </rect>
    </property>
-   <property name="styleSheet">
-    <string notr="true">QLabel {color: red}</string>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-   <property name="textFormat">
-    <enum>Qt::MarkdownText</enum>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
+   <layout class="QHBoxLayout" name="error_layout"/>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="9"/>
@@ -672,9 +819,7 @@
   <tabstop>cancel_button</tabstop>
   <tabstop>save_button</tabstop>
  </tabstops>
- <resources>
-  <include location="settings.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>serato_remote_button</sender>
@@ -913,6 +1058,214 @@
     <hint type="destinationlabel">
      <x>470</x>
      <y>201</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_freetype2_button</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>90</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>94</x>
+     <y>170</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_gdi_button</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>90</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>244</x>
+     <y>170</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_host_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>90</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>43</x>
+     <y>303</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_host_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>90</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>289</x>
+     <y>303</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_port_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>90</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>41</x>
+     <y>334</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_port_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>90</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>289</x>
+     <y>334</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_secret_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>90</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>49</x>
+     <y>365</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_secret_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>90</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>289</x>
+     <y>365</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_source_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>90</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>56</x>
+     <y>272</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_source_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>116</x>
+     <y>90</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>289</x>
+     <y>272</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_template_button</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>66</x>
+     <y>70</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>156</x>
+     <y>352</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_template_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>66</x>
+     <y>70</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>65</x>
+     <y>352</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>obsws_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>obsws_template_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>66</x>
+     <y>70</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>347</x>
+     <y>352</y>
     </hint>
    </hints>
   </connection>

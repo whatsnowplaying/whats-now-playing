@@ -7,6 +7,7 @@ from PySide2.QtGui import QIcon  # pylint: disable=no-name-in-module
 
 import nowplaying.config
 import nowplaying.db
+import nowplaying.obsws
 import nowplaying.serato
 import nowplaying.settingsui
 import nowplaying.trackpoll
@@ -20,8 +21,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
     def __init__(self):  #pylint: disable=too-many-statements
         self.config = nowplaying.config.ConfigFile()
         self.version = nowplaying.version.get_versions()['version']
-        self.settingswindow = nowplaying.settingsui.SettingsUI(
-            tray=self, version=self.version)
+
         self.icon = QIcon(self.config.iconfile)
         self.tray = QSystemTrayIcon()
         self.tray.setIcon(self.icon)
@@ -33,6 +33,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.action_title = QAction(f'Now Playing v{self.version}')
         self.menu.addAction(self.action_title)
         self.action_title.setEnabled(False)
+
+        self.settingswindow = nowplaying.settingsui.SettingsUI(
+            tray=self, version=self.version)
 
         self.action_config = QAction("Settings")
         self.action_config.triggered.connect(self.settingswindow.show)
@@ -93,6 +96,18 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self.error_dialog = QErrorMessage()
 
+        self.trackthread = None
+        self.webthread = None
+        self.obswsthread = None
+        self.threadstart()
+
+    def threadstart(self):
+        ''' start our various threads '''
+        # Start the OBS WebSocket thread
+        self.obswsthread = nowplaying.obsws.OBSWebSocketHandler()
+        self.obswsthread.obswsenable[bool].connect(self.obswsenable)
+        self.obswsthread.start()
+
         # Start the polling thread
         self.trackthread = nowplaying.trackpoll.TrackPoll()
         self.trackthread.currenttrack[dict].connect(self.tracknotify)
@@ -128,6 +143,13 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self.settingswindow.show()
             self.pause()
 
+    def obswsenable(self, status):
+        ''' If the OBS WebSocket gets in trouble, we need to tell the user '''
+        if not status:
+            self.settingswindow.disable_obsws()
+            self.settingswindow.show()
+            self.pause()
+
     def unpause(self):
         ''' unpause polling '''
         self.config.unpause()
@@ -157,12 +179,16 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         ''' quit app and cleanup '''
 
         self.tray.setVisible(False)
+        if self.obswsthread:
+            self.obswsthread.endthread = True
+            self.obswsthread.exit()
         if self.trackthread:
             self.trackthread.endthread = True
             self.trackthread.exit()
         if self.webthread:
             self.webthread.endthread = True
             self.webthread.stop()
+
         if self.config:
             self.config.get()
             if self.config.file:
@@ -173,5 +199,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self.trackthread.wait()
         if self.webthread:
             self.webthread.wait()
+        if self.obswsthread:
+            self.obswsthread.wait()
         app = QApplication.instance()
         app.exit(0)

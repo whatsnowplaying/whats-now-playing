@@ -15,7 +15,7 @@ import nowplaying.config
 
 
 # settings UI
-class SettingsUI(QWidget):
+class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
     ''' create settings form window '''
 
     # Need to keep track of these values get changed by the
@@ -96,6 +96,13 @@ class SettingsUI(QWidget):
         self.qtui.serato_local_browsebutton.clicked.connect(
             self.on_serato_lib_button)
 
+    def connect_obsws_tab(self):
+        ''' connect serato tab to non-built-ins.  UI file
+            properly enables/disables based upon local/remote '''
+
+        self.qtui.obsws_template_button.clicked.connect(
+            self.on_obsws_template_button)
+
     def upd_win(self):
         ''' update the settings window '''
         self.config.get()
@@ -119,11 +126,43 @@ class SettingsUI(QWidget):
         self.qtui.read_delay_lineedit.setText(str(self.config.delay))
         self.qtui.notification_checkbox.setChecked(self.config.notif)
 
+        self.upd_win_obsws()
+
+    def upd_win_obsws(self):
+        ''' update the obsws settings to match config '''
+        self.qtui.obsws_enable_checkbox.setChecked(
+            self.config.cparser.value('obsws/enabled', type=bool))
+        if self.config.cparser.value('obsws/freetype2', type=bool):
+            self.qtui.obsws_freetype2_button.setChecked(True)
+            self.qtui.obsws_gdi_button.setChecked(False)
+        else:
+            self.qtui.obsws_freetype2_button.setChecked(False)
+            self.qtui.obsws_gdi_button.setChecked(True)
+
+        self.qtui.obsws_source_lineedit.setText(
+            self.config.cparser.value('obsws/source'))
+        self.qtui.obsws_host_lineedit.setText(
+            self.config.cparser.value('obsws/host'))
+        self.qtui.obsws_port_lineedit.setText(
+            self.config.cparser.value('obsws/port'))
+        self.qtui.obsws_secret_lineedit.setText(
+            self.config.cparser.value('obsws/secret'))
+        self.qtui.obsws_template_lineedit.setText(
+            self.config.cparser.value('obsws/template'))
+
     def disable_web(self):
         ''' if the web server gets in trouble, this gets called '''
         self.qtui.error_label.setText(
             'HTTP Server settings are invalid. Bad port? Wrong directory?')
         self.qtui.http_enable_checkbox.setChecked(False)
+        self.upd_win()
+        self.upd_conf()
+
+    def disable_obsws(self):
+        ''' if the OBS WebSocket gets in trouble, this gets called '''
+        self.qtui.error_label.setText(
+            'OBS WebServer settings are invalid. Bad port? Wrong password?')
+        #self.qtui.http_enable_checkbox.setChecked(False)
         self.upd_win()
         self.upd_conf()
 
@@ -157,6 +196,8 @@ class SettingsUI(QWidget):
 
         logging.getLogger().setLevel(loglevel)
 
+        self.upd_conf_obsws()
+
         # Check to see if our web settings changed
         # from what we initially had.  if so
         # need to trigger the webthread to reset
@@ -169,6 +210,23 @@ class SettingsUI(QWidget):
             SettingsUI.httpport = httpport
             SettingsUI.httpenabled = httpenabled
             SettingsUI.httpdir = httpdir
+
+    def upd_conf_obsws(self):
+        ''' update the obsws settings '''
+        self.config.cparser.setValue(
+            'obsws/freetype2', self.qtui.obsws_freetype2_button.isChecked())
+        self.config.cparser.setValue('obsws/source',
+                                     self.qtui.obsws_source_lineedit.text())
+        self.config.cparser.setValue('obsws/host',
+                                     self.qtui.obsws_host_lineedit.text())
+        self.config.cparser.setValue('obsws/port',
+                                     self.qtui.obsws_port_lineedit.text())
+        self.config.cparser.setValue('obsws/secret',
+                                     self.qtui.obsws_secret_lineedit.text())
+        self.config.cparser.setValue('obsws/template',
+                                     self.qtui.obsws_template_lineedit.text())
+        self.config.cparser.setValue(
+            'obsws/enabled', self.qtui.obsws_enable_checkbox.isChecked())
 
     @Slot()
     def on_text_saveas_button(self):
@@ -195,6 +253,19 @@ class SettingsUI(QWidget):
                                                startdir, '*.txt')
         if filename:
             self.qtui.text_template_lineedit.setText(filename[0])
+
+    @Slot()
+    def on_obsws_template_button(self):
+        ''' file button clicked action '''
+        startfile = self.qtui.obsws_template_lineedit.text()
+        if startfile:
+            startdir = os.path.dirname(startfile)
+        else:
+            startdir = os.path.join(self.config.BUNDLEDIR, "templates")
+        filename = QFileDialog.getOpenFileName(self.qtui, 'Open file',
+                                               startdir, '*.txt')
+        if filename:
+            self.qtui.obsws_template_lineedit.setText(filename[0])
 
     @Slot()
     def on_serato_lib_button(self):
