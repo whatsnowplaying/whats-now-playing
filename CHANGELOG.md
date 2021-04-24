@@ -3,8 +3,8 @@
 
 ## Version 2.1.0 - Unreleased
 
-* Added support for writing to the OBS Web Socket
-  plugin (https://github.com/Palakis/obs-websocket)
+* Added support for writing to the [OBS Web Socket
+  plugin](https://github.com/Palakis/obs-websocket)
 * Revamped settings user interface to be tabbed
   and easier to maintain by using a Qt UI file
 * Now write data to a sqlite DB while running
