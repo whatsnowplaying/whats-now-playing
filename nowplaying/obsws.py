@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 
+''' Code to use the OBS Web Socket plugin
+    see https://github.com/Palakis/obs-websocket '''
+
+
 import logging
-import os
 import threading
 import time
 
 import obswebsocket
 import obswebsocket.requests
 
+from PySide2.QtCore import Signal, QThread  # pylint: disable=no-name-in-module
+
 import nowplaying.config
 import nowplaying.db
 
-from PySide2.QtCore import Signal, QThread  # pylint: disable=no-name-in-module
 
 
-class OBSWebSocketHandler(QThread):
-    ''' Talk to OBS Directly '''
+class OBSWebSocketHandler(QThread):  #pylint: disable=too-many-instance-attributes
+    ''' Talk to OBS directly via WebSocket '''
 
     obswsenable = Signal(bool)
 
