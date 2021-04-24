@@ -86,13 +86,11 @@ class OBSWebSocketHandler(QThread):  #pylint: disable=too-many-instance-attribut
         template = self.config.cparser.value('obsws/template')
         templatehandler = nowplaying.utils.TemplateHandler(filename=template)
         if templatehandler:
-            txttemplate = templatehandler.generate(metadatadict=metadata)
+            return templatehandler.generate(metadatadict=metadata)
         elif clear:
-            txttemplate = ''
+            return ''
         else:
-            txttemplate = '{{ artist }} - {{ title }}'
-
-        return txttemplate
+            return '{{ artist }} - {{ title }}'
 
     def check_reconnect(self):
         ''' check if our params have changed and if so reconnect '''
