@@ -54,17 +54,20 @@ class MetadataDB:
                     QStandardPaths.CacheLocation)[0], 'npsql.db')
 
         if not os.path.exists(self.databasefile) or initialize:
+            logging.debug('Setting up a new DB')
             self.setupsql()
 
     def write_to_metadb(self, metadata=None):
         ''' update metadb '''
 
+        logging.debug('Called write_to_metadb')
         if not metadata or not MetadataDB.METADATALIST:
             return
 
         if not os.path.exists(self.databasefile):
             self.setupsql()
 
+        logging.debug('Waiting for lock')
         MetadataDB.LOCK.acquire()
 
         # do not want to modify the original dictionary
@@ -110,8 +113,18 @@ class MetadataDB:
         connection = sqlite3.connect(self.databasefile)
         connection.row_factory = sqlite3.Row
         cursor = connection.cursor()
-        cursor.execute('''SELECT * FROM currentmeta''')
+        try:
+            cursor.execute(
+                '''SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1''')
+        except sqlite3.OperationalError:
+            MetadataDB.LOCK.release()
+            return None
+
         row = cursor.fetchone()
+        if not row:
+            MetadataDB.LOCK.release()
+            return None
+
         for data in MetadataDB.METADATALIST:
             value = row[data]
             if isinstance(value, str):
