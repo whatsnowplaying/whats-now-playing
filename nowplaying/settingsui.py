@@ -10,6 +10,7 @@ from PySide2.QtCore import Slot, QFile  # pylint: disable=no-name-in-module
 from PySide2.QtWidgets import QFileDialog, QWidget  # pylint: disable=no-name-in-module
 from PySide2.QtGui import QIcon  # pylint: disable=no-name-in-module
 from PySide2.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
+import PySide2.QtXml  # pylint: disable=unused-import, import-error, no-name-in-module
 
 import nowplaying.config
 
