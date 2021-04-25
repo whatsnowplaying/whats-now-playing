@@ -1,214 +1,255 @@
 #!/usr/bin/env python3
-''' web server code '''
+''' WebServer process '''
 
-# pylint: disable=no-name-in-module
-
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import logging
+import asyncio
 import os
+import logging
 import pathlib
-from socketserver import ThreadingMixIn
-import tempfile
-import threading
+import sys
 import time
-import urllib.parse
+import threading
+import weakref
 
-from PySide2.QtCore import \
-                            Signal, \
-                            QThread
+import requests
+import aiohttp
+from aiohttp import web, WSCloseCode
+import aiosqlite
+
+from PySide2.QtCore import QCoreApplication, QStandardPaths, Qt  # pylint: disable=no-name-in-module
 
 import nowplaying.config
+import nowplaying.db
+import nowplaying.bootstrap
+
+INDEXREFRESH = \
+    '<!doctype html><html lang="en">' \
+    '<head><meta http-equiv="refresh" content="5" ></head>' \
+    '<body></body></html>\n'
 
 
-class WebHandler(BaseHTTPRequestHandler):
-    ''' Custom handler for built-in webserver '''
-
-    counter = 0
-
-    def do_GET(self):  # pylint: disable=invalid-name
-        '''
-            HTTP GET
-                - if there is an index.htm file to read, give it out
-                  then delete it
-                - if not, have our reader check back in 5 seconds
-
-            Note that there is very specific path information
-            handling here.  So any chdir() that happens MUST
-            be this directory.
-
-            Also, doing it this way means the webserver can only ever
-            share specific content.
-        '''
+class WebHandler():
+    ''' aiohttp built server that does both http and websocket '''
+    def __init__(self, databasefile):
+        threading.current_thread().name = 'WebServer'
         config = nowplaying.config.ConfigFile()
+        port = config.cparser.value('weboutput/httpport', type=int)
+        enabled = config.cparser.value('weboutput/httpenabled', type=bool)
+        self.databasefile = databasefile
 
-        # see what was asked for
-        parsedrequest = urllib.parse.urlparse(self.path)
+        while not enabled:
+            time.sleep(5)
+            config.get()
+            enabled = config.cparser.value('weboutput/httpenabled', type=bool)
 
-        WebHandler.counter += 1
-        threading.current_thread().name = f'WebHandler-{WebHandler.counter}'
+        self.loop = asyncio.get_event_loop()
+        self.loop.run_until_complete(
+            self.start_server(host='0.0.0.0', port=port))
+        self.loop.run_forever()
 
-        if parsedrequest.path in ['/favicon.ico']:
-            self.send_response(200)
-            self.send_header('Content-type', 'image/x-icon')
-            self.end_headers()
-            with open(config.iconfile, 'rb') as iconfh:
-                self.wfile.write(iconfh.read())
-            return
+    async def indexhtm_handler(self, request):  # pylint: disable=unused-argument
+        ''' handle static index.html '''
+        htmloutput = ""
+        metadata = request.app['metadb'].read_last_meta()
+        lastid = await self.getlastid(request)
+        template = request.app['config'].cparser.value(
+            'weboutput/htmltemplate')
 
-        if parsedrequest.path in ['/', 'index.html', 'index.htm']:
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            if os.path.isfile('index.htm'):
-                with open('index.htm', 'rb') as indexfh:
-                    self.wfile.write(indexfh.read())
-                os.unlink('index.htm')
-                return
+        if template and metadata and 'dbid' in metadata:
+            await self.setlastid(request, metadata['dbid'])
+            templatehandler = nowplaying.utils.TemplateHandler(
+                filename=template)
+            htmloutput = templatehandler.generate(metadata)
 
-            self.wfile.write(b'<!doctype html><html lang="en">')
-            self.wfile.write(
-                b'<head><meta http-equiv="refresh" content="5" ></head>')
-            self.wfile.write(b'<body></body></html>\n')
-            return
+        if (lastid != metadata['dbid'] or not lastid
+            ) or not request.app['config'].cparser.value('weboutput/once'):
+            return web.Response(content_type='text/html', text=htmloutput)
 
-        if parsedrequest.path in ['/index.txt']:
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            with open(config.file, 'rb') as textfh:
-                self.wfile.write(textfh.read())
-            return
+        return web.Response(content_type='text/html', text=INDEXREFRESH)
 
-        if parsedrequest.path in ['/cover.jpg'
-                                  ] and os.path.isfile('cover.jpg'):
-            self.send_response(200, 'OK')
-            self.send_header('Content-type', 'image/jpeg')
-            self.end_headers()
-            with open('cover.jpg', 'rb') as indexfh:
-                self.wfile.write(indexfh.read())
-            return
+    async def setlastid(self, request, lastid):
+        ''' get the lastid sent by http/html '''
+        await request.app['statedb'].execute(
+            'UPDATE lastprocessed SET lastid = ? WHERE id=1', [lastid])
+        await request.app['statedb'].commit()
 
-        if parsedrequest.path in ['/cover.png'
-                                  ] and os.path.isfile('cover.png'):
-            self.send_response(200, 'OK')
-            self.send_header('Content-type', 'image/png')
-            self.end_headers()
-            with open('cover.png', 'rb') as indexfh:
-                self.wfile.write(indexfh.read())
-            return
+    async def getlastid(self, request):
+        ''' get the lastid sent by http/html '''
+        cursor = await request.app['statedb'].execute(
+            'SELECT lastid FROM lastprocessed WHERE id=1')
+        row = await cursor.fetchone()
+        if not row or 'lastid' not in row:
+            lastid = None
+        else:
+            lastid = row['lastid']
+        await cursor.close()
+        return lastid
 
-        self.send_error(404)
+    async def indextxt_handler(self, request):
+        ''' handle static index.txt '''
+        metadata = request.app['metadb'].read_last_meta()
+        txtoutput = ""
+        if metadata:
+            templatehandler = nowplaying.utils.TemplateHandler(
+                filename=request.app['config'].cparser.value(
+                    'textoutput/txttemplate'))
+            txtoutput = templatehandler.generate(metadata)
+        return web.Response(text=txtoutput)
 
-    def log_message(self, format, *args):  ## pylint: disable=redefined-builtin
-        logging.info("%s - - [%s] %s\n", self.address_string(),
-                     self.log_date_time_string(), format % args)
+    async def favicon_handler(self, request):
+        ''' handle favicon.ico '''
+        return web.FileResponse(path=request.app['config'].iconfile)
+
+    async def cover_handler(self, request):
+        ''' handle cover image '''
+        image = ""
+        if 'coverimageraw' in request.app['metadb'].read_last_meta():
+            return web.Response(content_type='image/png', text=image)
+        return web.Response(status=404)
+
+    async def api_v1_last_handler(self, request):
+        ''' handle static index.txt '''
+        metadata = request.app['metadb'].read_last_meta()
+        return web.json_response(metadata)
+
+    async def websocket_lastjson_handler(self, request, websocket):
+        ''' handle static index.txt '''
+        metadata = request.app['metadb'].read_last_meta()
+        await websocket.send_json(metadata)
+
+    async def websocket_handler(self, request):
+        ''' handle inbound websockets '''
+        websocket = web.WebSocketResponse()
+        await websocket.prepare(request)
+        request.app['websockets'].add(websocket)
+        try:
+            async for msg in websocket:
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    if msg.data == 'close':
+                        await websocket.close()
+                    elif msg.data == 'last':
+                        await self.websocket_lastjson_handler(
+                            request, websocket)
+                    else:
+                        await websocket.send_str(
+                            'some websocket message payload')
+                elif msg.type == aiohttp.WSMsgType.ERROR:
+                    logging.error('ws connection closed with exception %s',
+                                  websocket.exception())
+        finally:
+            request.app['websockets'].discard(websocket)
+
+        return websocket
+
+    def create_runner(self):
+        ''' setup http routing '''
+        threading.current_thread().name = 'WebServer-runner'
+        app = web.Application()
+        app['websockets'] = weakref.WeakSet()
+        app.on_startup.append(self.on_startup)
+        app.on_cleanup.append(self.on_cleanup)
+        app.on_shutdown.append(self.on_shutdown)
+        app.add_routes([
+            web.get('/', self.indexhtm_handler),
+            web.get('/v1/last', self.api_v1_last_handler),
+            web.get('/cover*', self.cover_handler),
+            web.get('/favicon.ico', self.favicon_handler),
+            web.get('/index.htm', self.indexhtm_handler),
+            web.get('/index.html', self.indexhtm_handler),
+            web.get('/index.txt', self.indextxt_handler),
+            web.get('/ws', self.websocket_handler),
+            web.get('/quit', self.stop_server)
+        ])
+        return web.AppRunner(app)
+
+    async def start_server(self, host="127.0.0.1", port=8899):
+        ''' start our server '''
+        runner = self.create_runner()
+        await runner.setup()
+        site = web.TCPSite(runner, host, port)
+        await site.start()
+
+    async def on_startup(self, app):
+        ''' setup app connections '''
+        threading.current_thread().name = 'WebServer-startup'
+        app['config'] = nowplaying.config.ConfigFile()
+        app['metadb'] = nowplaying.db.MetadataDB()
+        app['statedb'] = await aiosqlite.connect(self.databasefile)
+        app['statedb'].row_factory = aiosqlite.Row
+        cursor = await app['statedb'].cursor()
+        await cursor.execute('CREATE TABLE IF NOT EXISTS lastprocessed ('
+                             'id INTEGER, '
+                             'lastid INTEGER '
+                             ')')
+        await cursor.execute(
+            'INSERT INTO lastprocessed (id, lastid) VALUES (1,0)')
+        await app['statedb'].commit()
+
+    async def on_shutdown(self, app):
+        ''' handle shutdown '''
+        for websocket in set(app['websockets']):
+            await websocket.close(code=WSCloseCode.GOING_AWAY,
+                                  message='Server shutdown')
+
+    async def on_cleanup(self, app):
+        ''' cleanup the app '''
+        await app['statedb'].close()
+
+    async def stop_server(self, request):  # pylint: disable=unused-argument
+        ''' stop our server '''
+        await request.app.shutdown()
+        await request.app.cleanup()
+        self.loop.stop()
 
 
-class ThreadingWebServer(ThreadingMixIn, HTTPServer):
-    ''' threaded webserver object '''
-    daemon_threads = True
-    allow_reuse_address = True
+def stop():
+    ''' stop the web server -- called from Tray '''
+    config = nowplaying.config.ConfigFile()
+    port = config.cparser.value('weboutput/httpport', type=int)
+
+    try:
+        requests.get(f'http://localhost:{port}/quit')
+    except Exception as error:  # pylint: disable=broad-except
+        logging.info(error)
 
 
-class WebServer(QThread):
-    ''' Now Playing built-in web server using custom handler '''
+def start(orgname, appname, bundledir):
+    ''' multiprocessing start hook '''
+    threading.current_thread().name = 'WebServer'
 
-    webenable = Signal(bool)
+    if not orgname:
+        orgname = 'com.github.em1ran'
 
-    def __init__(self, parent=None):
-        self.config = nowplaying.config.ConfigFile()
-        QThread.__init__(self, parent)
-        self.server = None
-        self.endthread = False
+    if not appname:
+        appname = 'NowPlaying'
 
-    def run(self):  # pylint: disable=too-many-branches, too-many-statements
-        '''
-            Configure a webserver.
+    if not bundledir:
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            bundledir = getattr(sys, '_MEIPASS',
+                                os.path.abspath(os.path.dirname(__file__)))
+        else:
+            bundledir = os.path.abspath(os.path.dirname(__file__))
 
-            The sleeps are here to make sure we don't
-            tie up a CPU constantly checking on
-            status.  If we cannot open the port or
-            some other situation, we bring everything
-            to a halt by triggering pause.
+    QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
+    QCoreApplication.setOrganizationName(orgname)
+    QCoreApplication.setApplicationName(appname)
+    databasefile = os.path.join(
+        QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0],
+        'web.db')
+    if os.path.exists(databasefile):
+        os.unlink(databasefile)
 
-            But in general:
+    config = nowplaying.config.ConfigFile(bundledir=bundledir)
+    logpath = os.path.join(
+        QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
+        QCoreApplication.applicationName(), 'logs')
+    pathlib.Path(logpath).mkdir(parents=True, exist_ok=True)
+    logpath = os.path.join(logpath, "webserver.log")
+    logging.getLogger().setLevel(config.loglevel)
+    nowplaying.bootstrap.setuplogging(logpath=logpath)
 
-                - web server thread starts
-                - check if web serving is running
-                - if so, open ANOTHER thread (MixIn) that will
-                  serve connections concurrently
-                - if the settings change, then another thread
-                  will call into this one via stop() to
-                  shutdown the (blocking) serve_forever()
-                - after serve_forever, effectively restart
-                  the loop, checking what values changed, and
-                  doing whatever is necessary
-                - land back into serve_forever
-                - rinse/repeat
+    logging.info('boot up')
+    webserver = WebHandler(databasefile)  # pylint: disable=unused-variable
 
-        '''
 
-        threading.current_thread().name = 'WebServerControl'
-
-        while not self.endthread:
-            logging.debug('Starting main loop')
-            self.config.get()
-
-            while self.config.getpause() or not self.config.httpenabled:
-                time.sleep(5)
-                self.config.get()
-                if self.endthread:
-                    self.stop()
-                    break
-
-            if self.endthread:
-                self.stop()
-                break
-
-            if not self.config.usinghttpdir:
-                logging.debug('No web server dir?!?')
-                self.config.setusinghttpdir(tempfile.gettempdir())
-            logging.info('Using web server dir %s', self.config.usinghttpdir)
-            if not os.path.exists(self.config.usinghttpdir):
-                try:
-                    logging.debug('Making %s as it does not exist',
-                                  self.config.usinghttpdir)
-                    pathlib.Path(self.config.usinghttpdir).mkdir(parents=True,
-                                                                 exist_ok=True)
-                except Exception as error:  # pylint: disable=broad-except
-                    logging.error('Web server threw exception! %s', error)
-                    self.webenable.emit(False)
-
-            os.chdir(self.config.usinghttpdir)
-
-            try:
-                self.server = ThreadingWebServer(
-                    ('0.0.0.0', self.config.httpport), WebHandler)
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error(
-                    'Web server threw exception on thread create: %s', error)
-                self.webenable.emit(False)
-
-            try:
-                if self.server:
-                    self.server.serve_forever()
-            except KeyboardInterrupt:
-                pass
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error('Web server threw exception after forever: %s',
-                              error)
-            finally:
-                if self.server:
-                    self.server.shutdown()
-
-    def stop(self):
-        ''' method to stop the thread '''
-        logging.debug('WebServer asked to stop or reconfigure')
-        if self.server:
-            self.server.shutdown()
-            self.server.server_close()
-
-    def __del__(self):
-        logging.debug('Web server thread is being killed!')
-        self.endthread = True
-        self.stop()
+if __name__ == "__main__":
+    start(None, None, None)

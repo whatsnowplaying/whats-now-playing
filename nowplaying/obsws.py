@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-
 ''' Code to use the OBS Web Socket plugin
     see https://github.com/Palakis/obs-websocket '''
-
 
 import logging
 import threading
@@ -15,7 +13,6 @@ from PySide2.QtCore import Signal, QThread  # pylint: disable=no-name-in-module
 
 import nowplaying.config
 import nowplaying.db
-
 
 
 class OBSWebSocketHandler(QThread):  #pylint: disable=too-many-instance-attributes

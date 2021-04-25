@@ -289,8 +289,8 @@
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>10</x>
-       <y>230</y>
+       <x>0</x>
+       <y>270</y>
        <width>461</width>
        <height>71</height>
       </rect>
@@ -400,36 +400,41 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="http_serverpath_label">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Server Path</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QPushButton" name="http_serverpath_button">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Save to folder ...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="2">
-         <widget class="QLineEdit" name="http_serverpath_lineedit">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
        </layout>
       </item>
      </layout>
+    </widget>
+    <widget class="QCheckBox" name="http_once_checkbox">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>240</y>
+       <width>181</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Refresh after first fetch</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="http_once_label">
+     <property name="geometry">
+      <rect>
+       <x>11</x>
+       <y>220</y>
+       <width>181</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>**HTTP index.html Mode**</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::MarkdownText</enum>
+     </property>
     </widget>
    </widget>
    <widget class="QWidget" name="obs_websocket_tab">
@@ -497,7 +502,7 @@
        <x>10</x>
        <y>170</y>
        <width>471</width>
-       <height>120</height>
+       <height>131</height>
       </rect>
      </property>
      <layout class="QFormLayout" name="obsws_form_layout">
@@ -553,7 +558,7 @@
        <x>10</x>
        <y>300</y>
        <width>471</width>
-       <height>27</height>
+       <height>31</height>
       </rect>
      </property>
      <layout class="QHBoxLayout" name="obsws_template_layout">
@@ -642,7 +647,7 @@
        <x>10</x>
        <y>110</y>
        <width>471</width>
-       <height>52</height>
+       <height>61</height>
       </rect>
      </property>
      <layout class="QVBoxLayout" name="serato_local_retrieval_layout">
@@ -686,7 +691,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>210</y>
+       <y>190</y>
        <width>471</width>
        <height>101</height>
       </rect>
@@ -809,8 +814,6 @@
   <tabstop>http_port_lineedit</tabstop>
   <tabstop>html_template_button</tabstop>
   <tabstop>html_template_lineedit</tabstop>
-  <tabstop>http_serverpath_button</tabstop>
-  <tabstop>http_serverpath_lineedit</tabstop>
   <tabstop>serato_remote_url_lineedit</tabstop>
   <tabstop>serato_remote_poll_lineedit</tabstop>
   <tabstop>serato_local_browsebutton</tabstop>
@@ -962,54 +965,6 @@
     <hint type="destinationlabel">
      <x>302</x>
      <y>148</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>http_enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>http_serverpath_button</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>46</x>
-     <y>90</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>237</x>
-     <y>232</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>http_enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>http_serverpath_lineedit</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>46</x>
-     <y>90</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>470</x>
-     <y>232</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>http_enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>http_serverpath_label</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>46</x>
-     <y>90</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>69</x>
-     <y>232</y>
     </hint>
    </hints>
   </connection>
@@ -1266,6 +1221,38 @@
     <hint type="destinationlabel">
      <x>347</x>
      <y>352</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>http_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>http_once_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>56</x>
+     <y>100</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>112</x>
+     <y>290</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>http_enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>http_once_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>56</x>
+     <y>100</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>103</x>
+     <y>268</y>
     </hint>
    </hints>
   </connection>

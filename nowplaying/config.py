@@ -6,7 +6,7 @@
 import logging
 import os
 import sys
-import threading
+import multiprocessing
 
 # pylint: disable=no-name-in-module
 from PySide2.QtCore import QCoreApplication, QSettings, QStandardPaths
@@ -19,7 +19,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     ## let's use boring old Python threading
 
     BUNDLEDIR = None
-    LOCK = threading.RLock()
+    LOCK = multiprocessing.RLock()
     MIXMODE = 'newest'
     PAUSED = False
 
@@ -63,22 +63,16 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.local = True
         self.mixmode = 'newest'
         ConfigFile.PAUSED = False
-        self.httpenabled = False
-        self.httpport = 8899
         self.url = None
         self.file = None
         self.txttemplate = os.path.join(self.templatedir, "basic.txt")
-        self.httpenabled = False
-        self.httpdir = None
-        self.usinghttpdir = None
-        self.htmltemplate = os.path.join(self.templatedir, "basic.htm")
-
         self.loglevel = 'DEBUG'
 
         # Tell Qt to match the above
 
         self.defaults()
         if reset:
+            self.cparser.clear()
             self.save()
         else:
             self.get()
@@ -132,22 +126,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.txttemplate = self.cparser.value('textoutput/txttemplate')
 
         try:
-            self.httpenabled = self.cparser.value('weboutput/httpenabled',
-                                                  type=bool)
-        except TypeError:
-            pass
-
-        try:
-            self.httpport = self.cparser.value('weboutput/httpport', type=int)
-        except TypeError:
-            pass
-
-        self.httpdir = self.cparser.value('weboutput/httpdir')
-        if self.httpdir and self.usinghttpdir is not self.httpdir:
-            self.usinghttpdir = self.httpdir
-        self.htmltemplate = self.cparser.value('weboutput/htmltemplate')
-
-        try:
             self.initialized = self.cparser.value('settings/initialized',
                                                   type=bool)
         except TypeError:
@@ -182,10 +160,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         settings.setValue('obsws/template',
                           os.path.join(self.templatedir, "basic.txt"))
 
-        settings.setValue('weboutput/htmltemplate', self.htmltemplate)
-        settings.setValue('weboutput/httpdir', self.httpdir)
-        settings.setValue('weboutput/httpenabled', self.httpenabled)
-        settings.setValue('weboutput/httpport', self.httpport)
+        settings.setValue('weboutput/htmltemplate',
+                          os.path.join(self.templatedir, "basic.htm"))
+        settings.setValue('weboutput/httpenabled', False)
+        settings.setValue('weboutput/httpport', '8899')
+        settings.setValue('weboutput/once', True)
 
         settings.setValue('serato/libpath', self.libpath)
         settings.setValue('serato/local', self.local)
@@ -194,8 +173,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
     # pylint: disable=too-many-locals, too-many-arguments
     def put(self, initialized, local, libpath, url, file, txttemplate,
-            httpport, httpdir, httpenabled, htmltemplate, interval, delay,
-            notif, loglevel):
+            interval, delay, notif, loglevel):
         ''' Save the configuration file '''
 
         logging.debug('attempting lock')
@@ -204,16 +182,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         self.delay = float(delay)
         self.file = file
-        self.htmltemplate = htmltemplate
-        self.httpdir = httpdir
-        self.httpenabled = httpenabled
-        self.httpport = int(httpport)
         self.initialized = initialized
         self.interval = float(interval)
         self.loglevel = loglevel
         self.notif = notif
         self.txttemplate = txttemplate
-        self.usinghttpdir = self.httpdir
 
         # Serato
 
@@ -242,29 +215,12 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.cparser.setValue('textoutput/file', self.file)
         self.cparser.setValue('textoutput/txttemplate', self.txttemplate)
 
-        self.cparser.setValue('weboutput/htmltemplate', self.htmltemplate)
-        self.cparser.setValue('weboutput/httpdir', self.httpdir)
-        self.cparser.setValue('weboutput/httpenabled', self.httpenabled)
-        self.cparser.setValue('weboutput/httpport', self.httpport)
-
         self.cparser.setValue('serato/libpath', self.libpath)
         self.cparser.setValue('serato/local', self.local)
         if self.local:
             self.cparser.setValue('serato/mixmode', self.mixmode)
         self.cparser.setValue('serato/url', self.url)
 
-        ConfigFile.LOCK.release()
-        logging.debug('lock release')
-
-    # pylint: disable=too-many-locals, too-many-arguments
-    def setusinghttpdir(self, usinghttpdir):
-        ''' Save the configuration file '''
-
-        logging.debug('attempting lock')
-        ConfigFile.LOCK.acquire()
-        logging.debug('locked')
-        logging.debug('setting the usinghttpdir to %s', usinghttpdir)
-        self.usinghttpdir = usinghttpdir
         ConfigFile.LOCK.release()
         logging.debug('lock release')
 
@@ -333,3 +289,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     def getmixmode(self):  # pylint: disable=no-self-use
         ''' unpause system '''
         return ConfigFile.MIXMODE
+
+    def getbundledir(self):  # pylint: disable=no-self-use
+        ''' get the bundle dir '''
+        return ConfigFile.BUNDLEDIR

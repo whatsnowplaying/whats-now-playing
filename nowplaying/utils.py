@@ -12,9 +12,9 @@ import logging
 import os
 import sys
 
-import imghdr
 import jinja2
 import tinytag
+import PIL
 
 
 class TemplateHandler():  # pylint: disable=too-few-public-methods
@@ -86,16 +86,11 @@ def getmoremetadata(metadata=None):
 
         if coverimage:
             metadata['coverimageraw'] = coverimage
-            iostream = io.BytesIO(metadata['coverimageraw'])
-            headertype = imghdr.what(iostream)
-            if headertype == 'jpeg':
-                headertype = 'jpg'
-            metadata['coverimagetype'] = headertype
-            if 'deck' in metadata:
-                deck = metadata['deck']
-                metadata['coverurl'] = f'cover{deck}.{headertype}'
-            else:
-                metadata['coverurl'] = f'cover.{headertype}'
+            imgbuffer = io.BytesIO(coverimage)
+            image = PIL.Image.open(imgbuffer)
+            image.save(imgbuffer, format='png')
+            metadata['coverimageraw'] = imgbuffer
+            metadata['coverimagetype'] = 'png'
     return metadata
 
 
@@ -120,49 +115,6 @@ def writetxttrack(filename=None,
         #print("writing...")
         textfh.write(txttemplate)
     logging.debug('writetxttrack: finished write')
-
-
-def update_javascript(serverdir='/tmp', templatehandler=None, metadata=None):
-    ''' update the image with the new info '''
-
-    logging.debug('update_javascript: called')
-    if not serverdir:
-        logging.debug('update_javascript: no serverdir')
-        return
-
-    if not templatehandler:
-        logging.debug('update_javascript: no templatehandler')
-        return
-
-    if not metadata:
-        logging.debug('update_javascript: incomplete metadata')
-        return
-
-    logging.debug('update_javascript:using dir %s', serverdir)
-
-    indexhtm = os.path.join(serverdir, "index.htm")
-
-    logging.debug('update_javascript:generating template')
-    titlecardhtml = templatehandler.generate(metadata)
-
-    logging.debug('update_javascript: writing index file')
-    # need to -specifically- open as utf-8 otherwise
-    # pyinstaller built app crashes
-    with open(indexhtm, "w", encoding='utf-8') as indexfh:
-        indexfh.write(titlecardhtml)
-
-    if 'coverimageraw' in metadata:
-        logging.debug('update_javascript: writing cover image')
-        extension = metadata['coverimagetype']  # probably png or jpg
-        coverfilename = f'cover.{extension}'
-        with open(coverfilename, "wb") as coverfh:
-            coverfh.write(metadata['coverimageraw'])
-        if 'deck' in metadata:
-            deck = metadata['deck']
-            coverfilename = f'cover{deck}.{extension}'
-            with open(coverfilename, "wb") as coverfh:
-                coverfh.write(metadata['coverimageraw'])
-    logging.debug('update_javascript: done')
 
 
 def main():

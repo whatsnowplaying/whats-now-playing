@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 ''' system tray '''
 
+import logging
+
+import multiprocessing
+
 from PySide2.QtWidgets import (  # pylint: disable=no-name-in-module
     QAction, QActionGroup, QApplication, QErrorMessage, QMenu, QSystemTrayIcon)
 from PySide2.QtGui import QIcon  # pylint: disable=no-name-in-module
@@ -97,7 +101,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.error_dialog = QErrorMessage()
 
         self.trackthread = None
-        self.webthread = None
+        self.webprocess = None
         self.obswsthread = None
         self.threadstart()
 
@@ -113,10 +117,37 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.trackthread.currenttrack[dict].connect(self.tracknotify)
         self.trackthread.start()
 
-        # Start the webserver
-        self.webthread = nowplaying.webserver.WebServer()
-        self.webthread.webenable[bool].connect(self.webenable)
-        self.webthread.start()
+        if self.config.cparser.value('weboutput/httpenabled', type=bool):
+            self._start_webprocess()
+
+    def _stop_webprocess(self):
+        ''' stop the web process '''
+        if self.webprocess:
+            logging.debug('Notifying webserver')
+            nowplaying.webserver.stop()
+            logging.debug('Waiting for webserver')
+            if not self.webprocess.join(20):
+                logging.info('Terminating webprocess forcefully')
+                self.webprocess.terminate()
+
+    def _start_webprocess(self):
+        ''' Start the webserver '''
+        logging.info('Starting web process')
+        if not self.webprocess:
+            app = QApplication.instance()
+            self.webprocess = multiprocessing.Process(
+                target=nowplaying.webserver.start,
+                args=(
+                    app.organizationName(),
+                    app.applicationName(),
+                    self.config.getbundledir(),
+                ))
+            self.webprocess.start()
+
+    def restart_webprocess(self):
+        ''' handle starting or restarting the webserver process '''
+        self._stop_webprocess()
+        self._start_webprocess()
 
     def tracknotify(self, metadata):
         ''' signal handler to update the tooltip '''
@@ -135,6 +166,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
             tip = f'{artist} - {title}'
             self.tray.showMessage('Now Playing ▶ ', tip)
+            self.tray.setIcon(self.icon)
 
     def webenable(self, status):
         ''' If the web server gets in trouble, we need to tell the user '''
@@ -178,28 +210,36 @@ class Tray:  # pylint: disable=too-many-instance-attributes
     def cleanquit(self):
         ''' quit app and cleanup '''
 
+        logging.debug('Starting shutdown')
         self.tray.setVisible(False)
+
         if self.obswsthread:
+            logging.debug('Notifying obswsthread')
             self.obswsthread.endthread = True
             self.obswsthread.exit()
+
         if self.trackthread:
+            logging.debug('Notifying trackthread')
             self.trackthread.endthread = True
             self.trackthread.exit()
-        if self.webthread:
-            self.webthread.endthread = True
-            self.webthread.stop()
 
         if self.config:
             self.config.get()
             if self.config.file:
+                logging.debug('Writing empty file')
                 nowplaying.utils.writetxttrack(filename=self.config.file,
                                                clear=True)
+
+        logging.debug('Shutting down webprocess')
+        self._stop_webprocess()
+
         # calling exit should call __del__ on all of our QThreads
         if self.trackthread:
+            logging.debug('Waiting for trackthread')
             self.trackthread.wait()
-        if self.webthread:
-            self.webthread.wait()
+
         if self.obswsthread:
+            logging.debug('Waiting for obswsthread')
             self.obswsthread.wait()
         app = QApplication.instance()
         app.exit(0)

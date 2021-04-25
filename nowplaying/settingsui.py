@@ -16,14 +16,13 @@ import nowplaying.config
 
 
 # settings UI
-class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
+class SettingsUI(QWidget):
     ''' create settings form window '''
 
     # Need to keep track of these values get changed by the
     # user.  These will get set in init.  If these values
     # change, then trigger the webthread to reset itself
     # to pick up the new values...
-    httpdir = None
     httpenabled = None
     httpport = None
 
@@ -40,26 +39,25 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
             self.tray.cleanquit()
         self.qtui.setWindowIcon(QIcon(self.iconfile))
 
-        SettingsUI.httpenabled = self.config.httpenabled
-        SettingsUI.httpport = self.config.httpport
-        SettingsUI.httpdir = self.config.httpdir
-
         try:
             hostname = socket.gethostname()
             hostip = socket.gethostbyname(hostname)
         except:  # pylint: disable = bare-except
             hostname = 'Unknown Hostname'
             hostip = 'Unknown IP'
-
+        SettingsUI.httpenabled = self.config.cparser.value(
+            'weboutput/httpenabled', type=bool)
+        SettingsUI.httpport = self.config.cparser.value('weboutput/httpport',
+                                                        type=int)
         self.qtui.network_info_label.setText(
             f'Hostname: {hostname} / IP: {hostip}')
 
         # make connections. Note that radio button flipping, etc
         # should be in the ui file itself
 
-        self.connect_general_tab()
-        self.connect_webserver_tab()
-        self.connect_serato_tab()
+        self._connect_general_tab()
+        self._connect_webserver_tab()
+        self._connect_serato_tab()
 
     def load_qtui(self):
         ''' Load the QtDesigner UI file '''
@@ -70,7 +68,7 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
         self.qtui = loader.load(ui_file)
         ui_file.close()
 
-    def connect_general_tab(self):
+    def _connect_general_tab(self):
         ''' hook up the general tab to non-built-ins '''
         self.qtui.cancel_button.clicked.connect(self.on_cancel_button)
         self.qtui.reset_button.clicked.connect(self.on_reset_button)
@@ -81,23 +79,22 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
         self.qtui.text_saveas_button.clicked.connect(
             self.on_text_saveas_button)
 
-    def connect_webserver_tab(self):
+    def _connect_webserver_tab(self):
         ''' connect webserver tab to non-built-ins. Note that
             the UI file does the enable/disable of the fields here
             based upon the Enable button '''
-        self.qtui.http_serverpath_button.clicked.connect(
-            self.on_httpdirbutton_clicked)
+
         self.qtui.html_template_button.clicked.connect(
             self.on_html_template_button)
 
-    def connect_serato_tab(self):
+    def _connect_serato_tab(self):
         ''' connect serato tab to non-built-ins.  UI file
             properly enables/disables based upon local/remote '''
 
         self.qtui.serato_local_browsebutton.clicked.connect(
             self.on_serato_lib_button)
 
-    def connect_obsws_tab(self):
+    def _connect_obsws_tab(self):
         ''' connect serato tab to non-built-ins.  UI file
             properly enables/disables based upon local/remote '''
 
@@ -118,18 +115,27 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
         self.qtui.serato_remote_url_lineedit.setText(self.config.url)
         self.qtui.text_filename_lineedit.setText(self.config.file)
         self.qtui.text_template_lineedit.setText(self.config.txttemplate)
-        self.qtui.http_enable_checkbox.setChecked(self.config.httpenabled)
-        self.qtui.http_port_lineedit.setText(str(self.config.httpport))
-        self.qtui.http_serverpath_lineedit.setText(self.config.httpdir)
-        self.qtui.html_template_lineedit.setText(self.config.htmltemplate)
+
         self.qtui.serato_remote_poll_lineedit.setText(str(
             self.config.interval))
         self.qtui.read_delay_lineedit.setText(str(self.config.delay))
         self.qtui.notification_checkbox.setChecked(self.config.notif)
 
-        self.upd_win_obsws()
+        self._upd_win_webserver()
+        self._upd_win_obsws()
 
-    def upd_win_obsws(self):
+    def _upd_win_webserver(self):
+        ''' update the webserver settings to match config '''
+        self.qtui.http_enable_checkbox.setChecked(
+            self.config.cparser.value('weboutput/httpenabled', type=bool))
+        self.qtui.http_port_lineedit.setText(
+            str(self.config.cparser.value('weboutput/httpport')))
+        self.qtui.html_template_lineedit.setText(
+            self.config.cparser.value('weboutput/htmltemplate'))
+        self.qtui.http_once_checkbox.setChecked(
+            self.config.cparser.value('weboutput/once', type=bool))
+
+    def _upd_win_obsws(self):
         ''' update the obsws settings to match config '''
         self.qtui.obsws_enable_checkbox.setChecked(
             self.config.cparser.value('obsws/enabled', type=bool))
@@ -145,7 +151,7 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
         self.qtui.obsws_host_lineedit.setText(
             self.config.cparser.value('obsws/host'))
         self.qtui.obsws_port_lineedit.setText(
-            self.config.cparser.value('obsws/port'))
+            str(self.config.cparser.value('obsws/port')))
         self.qtui.obsws_secret_lineedit.setText(
             self.config.cparser.value('obsws/secret'))
         self.qtui.obsws_template_lineedit.setText(
@@ -155,8 +161,8 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
         ''' if the web server gets in trouble, this gets called '''
         self.qtui.error_label.setText(
             'HTTP Server settings are invalid. Bad port? Wrong directory?')
-        self.qtui.http_enable_checkbox.setChecked(False)
         self.upd_win()
+        self.qtui.http_enable_checkbox.setChecked(False)
         self.upd_conf()
 
     def disable_obsws(self):
@@ -169,13 +175,6 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
 
     def upd_conf(self):
         ''' update the configuration '''
-
-        #
-        # These all need special/more handling at some point
-        #
-        httpenabled = self.qtui.http_enable_checkbox.isChecked()
-        httpport = int(self.qtui.http_port_lineedit.text())
-        httpdir = self.qtui.http_serverpath_lineedit.text()
         interval = float(self.qtui.serato_remote_poll_lineedit.text())
         delay = float(self.qtui.read_delay_lineedit.text())
         loglevel = self.qtui.logging_level_combobox.currentText()
@@ -186,10 +185,6 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
                         url=self.qtui.serato_remote_url_lineedit.text(),
                         file=self.qtui.text_filename_lineedit.text(),
                         txttemplate=self.qtui.text_template_lineedit.text(),
-                        httpport=httpport,
-                        httpdir=httpdir,
-                        httpenabled=httpenabled,
-                        htmltemplate=self.qtui.html_template_lineedit.text(),
                         interval=interval,
                         delay=delay,
                         notif=self.qtui.notification_checkbox.isChecked(),
@@ -197,22 +192,35 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
 
         logging.getLogger().setLevel(loglevel)
 
-        self.upd_conf_obsws()
+        self._upd_conf_webserver()
+        self._upd_conf_obsws()
 
+    def _upd_conf_webserver(self):
+        ''' update the webserver settings '''
         # Check to see if our web settings changed
         # from what we initially had.  if so
         # need to trigger the webthread to reset
         # itself.  Hitting stop makes it go through
         # the loop again
+
+        httpenabled = self.qtui.http_enable_checkbox.isChecked()
+        httpport = int(self.qtui.http_port_lineedit.text())
+
+        self.config.cparser.setValue('weboutput/httpenabled', httpenabled)
+        self.config.cparser.setValue('weboutput/httpport', httpport)
+        self.config.cparser.setValue('weboutput/htmltemplate',
+                                     self.qtui.html_template_lineedit.text())
+        self.config.cparser.setValue('weboutput/once',
+                                     self.qtui.http_once_checkbox.isChecked())
+
+
         if SettingsUI.httpport != httpport or \
-           SettingsUI.httpenabled != httpenabled or \
-           SettingsUI.httpdir != httpdir:
-            self.tray.webthread.stop()
+           SettingsUI.httpenabled != httpenabled:
+            self.tray.restart_webprocess()
             SettingsUI.httpport = httpport
             SettingsUI.httpenabled = httpenabled
-            SettingsUI.httpdir = httpdir
 
-    def upd_conf_obsws(self):
+    def _upd_conf_obsws(self):
         ''' update the obsws settings '''
         self.config.cparser.setValue(
             'obsws/freetype2', self.qtui.obsws_freetype2_button.isChecked())
@@ -249,7 +257,7 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
         if startfile:
             startdir = os.path.dirname(startfile)
         else:
-            startdir = os.path.join(self.config.BUNDLEDIR, "templates")
+            startdir = os.path.join(self.config.getbundledir(), "templates")
         filename = QFileDialog.getOpenFileName(self.qtui, 'Open file',
                                                startdir, '*.txt')
         if filename:
@@ -262,7 +270,7 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
         if startfile:
             startdir = os.path.dirname(startfile)
         else:
-            startdir = os.path.join(self.config.BUNDLEDIR, "templates")
+            startdir = os.path.join(self.config.getbundledir(), "templates")
         filename = QFileDialog.getOpenFileName(self.qtui, 'Open file',
                                                startdir, '*.txt')
         if filename:
@@ -298,7 +306,7 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
         if startfile:
             startdir = os.path.dirname(startfile)
         else:
-            startdir = os.path.join(self.config.BUNDLEDIR, "templates")
+            startdir = os.path.join(self.config.getbundledir(), "templates")
         filename = QFileDialog.getOpenFileName(self.qtui, 'Open file',
                                                startdir, '*.htm *.html')
         if filename:
@@ -320,6 +328,10 @@ class SettingsUI(QWidget):  #pylint: disable=too-many-public-methods
     def on_reset_button(self):
         ''' cancel button clicked action '''
         self.config.reset()
+        SettingsUI.httpenabled = self.config.cparser.value(
+            'weboutput/httpenabled', type=bool)
+        SettingsUI.httpport = self.config.cparser.value('weboutput/httpport',
+                                                        type=int)
         self.upd_win()
 
     @Slot()

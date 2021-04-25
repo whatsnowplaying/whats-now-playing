@@ -4,6 +4,7 @@
 '''
 
 import logging
+import multiprocessing
 import os
 import pathlib
 import sys
@@ -45,6 +46,9 @@ def run_bootstrap(bundledir=None):
 
 def main():
     ''' main entrypoint '''
+
+    multiprocessing.freeze_support()
+
     # set paths for bundled files
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
         bundledir = getattr(sys, '_MEIPASS',

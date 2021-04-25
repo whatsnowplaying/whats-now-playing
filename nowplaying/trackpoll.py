@@ -34,7 +34,6 @@ class TrackPoll(QThread):
 
         threading.current_thread().name = 'TrackPoll'
         previoustxttemplate = None
-        previoushtmltemplate = None
 
         # sleep until we have something to write
         while not self.config.file and not self.endthread and not self.config.getpause(
@@ -65,17 +64,6 @@ class TrackPoll(QThread):
                                            templatehandler=txttemplatehandler,
                                            metadata=self.currentmeta)
             self.currenttrack.emit(self.currentmeta)
-            if self.config.httpenabled:
-
-                if not previoushtmltemplate or previoushtmltemplate != self.config.htmltemplate:
-                    htmltemplatehandler = nowplaying.utils.TemplateHandler(
-                        filename=self.config.htmltemplate)
-                    previoushtmltemplate = self.config.htmltemplate
-
-                nowplaying.utils.update_javascript(
-                    serverdir=self.config.usinghttpdir,
-                    templatehandler=htmltemplatehandler,
-                    metadata=self.currentmeta)
 
     def __del__(self):
         logging.debug('TrackPoll is being killed!')
