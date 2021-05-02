@@ -101,8 +101,8 @@ class WebHandler():
 
     async def cover_handler(self, request):
         ''' handle cover image '''
-        image = ""
         if 'coverimageraw' in request.app['metadb'].read_last_meta():
+            image = ""
             return web.Response(content_type='image/png', text=image)
         return web.Response(status=404)
 
