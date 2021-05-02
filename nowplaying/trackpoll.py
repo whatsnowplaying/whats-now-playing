@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 ''' thread to poll music player '''
 
+import importlib
 import logging
-import os
+import pkgutil
 import time
 import threading
 
@@ -10,6 +11,7 @@ from PySide2.QtCore import Signal, QThread  # pylint: disable=no-name-in-module
 
 import nowplaying.config
 import nowplaying.db
+import nowplaying.inputs
 import nowplaying.utils
 
 
@@ -28,12 +30,29 @@ class TrackPoll(QThread):
         self.setObjectName('TrackPoll')
         self.config = nowplaying.config.ConfigFile()
         self.currentmeta = {'fetchedartist': None, 'fetchedtitle': None}
+        self.handler = None
+        self.handlername = None
+        self.plugins = {}
+        self.importplugins()
+
+    def importplugins(self):
+        ''' import all of the input plugins '''
+        def iter_ns(ns_pkg):
+            return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
+
+        self.plugins = {
+            name: importlib.import_module(name)
+            for finder, name, ispkg in iter_ns(nowplaying.inputs)
+        }
+
+        logging.info('Plugins: %s ', self.plugins.keys())
 
     def run(self):
         ''' track polling process '''
 
         threading.current_thread().name = 'TrackPoll'
         previoustxttemplate = None
+        previoushandler = None
 
         # sleep until we have something to write
         while not self.config.file and not self.endthread and not self.config.getpause(
@@ -50,13 +69,12 @@ class TrackPoll(QThread):
                     filename=self.config.txttemplate)
                 previoustxttemplate = self.config.txttemplate
 
-            # get poll interval and then poll
-            if self.config.local:
-                interval = 1
-            else:
-                interval = self.config.interval
+            if not previoushandler or previoushandler != self.config.cparser.value(
+                    'settings/handler'):
+                previoushandler = self.config.cparser.value('settings/handler')
+                self.handler = self.plugins[
+                    f'nowplaying.inputs.{previoushandler}'].Plugin()
 
-            time.sleep(interval)
             if not self.gettrack():
                 continue
             time.sleep(self.config.delay)
@@ -71,7 +89,6 @@ class TrackPoll(QThread):
 
     def gettrack(self):  # pylint: disable=too-many-branches
         ''' get currently playing track, returns None if not new or not found '''
-        serato = None
 
         logging.debug('called gettrack')
         # check paused state
@@ -80,28 +97,8 @@ class TrackPoll(QThread):
                 break
             time.sleep(1)
 
-        if self.config.local:  # locally derived
-            # paths for session history
-            sera_dir = self.config.libpath
-            hist_dir = os.path.abspath(os.path.join(sera_dir, "History"))
-            sess_dir = os.path.abspath(os.path.join(hist_dir, "Sessions"))
-            if os.path.isdir(sess_dir):
-                logging.debug('SeratoHandler called against %s', sess_dir)
-                serato = nowplaying.serato.SeratoHandler(
-                    seratodir=sess_dir, mixmode=self.config.getmixmode())
-                logging.debug('Serato processor called')
-                serato.process_sessions()
-
-        else:  # remotely derived
-            logging.debug('SeratoHandler called against %s', self.config.url)
-            serato = nowplaying.serato.SeratoHandler(seratourl=self.config.url)
-
-        if not serato:
-            logging.debug('gettrack serato is None; returning')
-            return False
-
         logging.debug('getplayingtrack called')
-        (artist, title) = serato.getplayingtrack()
+        (artist, title) = self.handler.getplayingtrack()
 
         if not artist and not title:
             logging.debug('getplaying track was None; returning')
@@ -113,7 +110,7 @@ class TrackPoll(QThread):
             return False
 
         logging.debug('Fetching more metadata from serato')
-        nextmeta = serato.getplayingmetadata()
+        nextmeta = self.handler.getplayingmetadata()
         nextmeta['fetchedtitle'] = title
         nextmeta['fetchedartist'] = artist
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' A _very_ simple and incomplete toy parser for Serato Live session files '''
+''' A _very_ simple and incomplete parser for Serato Live session files '''
 
 import binascii
 import collections
@@ -13,6 +13,10 @@ import traceback
 
 import lxml.html
 import requests
+
+from PySide2.QtCore import QStandardPaths # pylint: disable=no-name-in-module
+
+from nowplaying.inputs import InputPlugin
 
 Header = collections.namedtuple('Header', 'chunktype size')
 
@@ -76,8 +80,8 @@ class ChunkParser():  #pylint: disable=too-few-public-methods
             # strip ending null character at the end
             decoded = decoded[:-1]
         except UnicodeDecodeError:
-            print(f'Blew up on {encoded}:')
-            traceback.print_stack()
+            logging.error('Blew up on %s:', encoded)
+            logging.error(traceback.print_stack())
             # just take out all the nulls this time and hope for the best
             decoded = encoded.replace(b'\x00', b'')
         return decoded
@@ -112,7 +116,7 @@ class ChunkParser():  #pylint: disable=too-few-public-methods
         hexbytes = binascii.hexlify(self.data[self.bytecounter:])
         total = len(hexbytes)
         for j in range(1, total, 8):
-            print(f'{hexbytes[j:j+7]} ')
+            logging.debug('_debug: %s', hexbytes[j:j + 7])
 
     def importantvalues(self):
         ''' another debug function to see when these fields change '''
@@ -122,7 +126,7 @@ class ChunkParser():  #pylint: disable=too-few-public-methods
                     'field70', 'field72', 'field78', 'title', 'played',
                     'playtime', 'starttime', 'updatedat'
             ]:
-                print(f'thisdeck.{key} = {value}')
+                logging.debug('thisdeck.%s = %s', key, value)
 
     def __iter__(self):
         yield self
@@ -281,7 +285,7 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
             elif field == 78:
                 self.field78 = self._intfield()
             else:
-                print(f'Unknown field: {field}')
+                logging.debug('Unknown field: %s', field)
                 break
 
         # what people would expect in a filename meta
@@ -366,7 +370,7 @@ class SessionFile():  # pylint: disable=too-few-public-methods
                 elif header.chunktype == b'vrsn':
                     self.vrsn = ChunkVRSN(data=data)
                 else:
-                    print(f'Skipping chunktype: {header.chunktype}')
+                    logging.warning('Skipping chunktype: %s', header.chunktype)
                     break
 
     def __iter__(self):
@@ -395,6 +399,7 @@ class SeratoHandler():
     mode = None
 
     def __init__(self, mixmode='oldest', seratodir=None, seratourl=None):
+
         if seratodir:
             self.seratodir = seratodir
             self.watchdeck = None
@@ -661,9 +666,8 @@ class SeratoHandler():
             return self.getlocalplayingtrack()
         return self.getremoteplayingtrack()
 
-    def getplayingmetadata(self):  #pylint: disable=too-many-branches
+    def getplayingmetadata(self):  #pylint: disable=no-self-use
         ''' take the current adat and generate a media dict '''
-        self.getplayingtrack()
 
         if not SeratoHandler.playingadat:
             return None
@@ -679,14 +683,133 @@ class SeratoHandler():
         }
 
 
+class Plugin(InputPlugin):
+    ''' handler for NowPlaying '''
+    def __init__(self, qsettings=None):
+        super().__init__(qsettings=qsettings)
+
+        self.url = None
+        self.libpath = None
+        self.local = True
+        self.serato = None
+        self.mixmode = "newest"
+
+        if not qsettings:
+            self.gethandler()
+
+    def gethandler(self):
+        ''' setup the SeratoHandler for this session '''
+
+        stilllocal = self.config.cparser.value('serato/local', type=bool)
+
+        # now configured as remote!
+        if not stilllocal:
+            stillurl = self.config.cparser.value('serato/url')
+
+            # if previously remote and same URL, do nothing
+            if not self.local and self.url == stillurl:
+                return
+
+            logging.debug('new url = %s', stillurl)
+            self.local = stilllocal
+            self.url = stillurl
+            self.serato = SeratoHandler(seratourl=self.url)
+            return
+
+        # configured as local!
+
+        self.local = stilllocal
+        stilllibpath = self.config.cparser.value('serato/libpath')
+        stillmixmode = self.config.cparser.value('serato/mixmode')
+
+        # same path and same mixmode, no nothing
+        if self.libpath == stilllibpath and self.mixmode == stillmixmode:
+            return
+
+        self.libpath = stilllibpath
+        self.mixmode = stillmixmode
+
+        self.serato = None
+
+        # paths for session history
+        sera_dir = self.libpath
+        hist_dir = os.path.abspath(os.path.join(sera_dir, "History"))
+        sess_dir = os.path.abspath(os.path.join(hist_dir, "Sessions"))
+        if os.path.isdir(sess_dir):
+            logging.debug('new session path = %s', sess_dir)
+            self.serato = SeratoHandler(seratodir=sess_dir,
+                                        mixmode=self.mixmode)
+            if self.serato:
+                self.serato.process_sessions()
+
+    def getplayingtrack(self):
+        ''' wrapper to call getplayingtrack '''
+        self.gethandler()
+
+        # get poll interval and then poll
+        if self.local:
+            interval = 1
+        else:
+            interval = self.config.cparser.value('settings/interval',
+                                                 type=float)
+
+        time.sleep(interval)
+
+        if self.serato:
+            return self.serato.getplayingtrack()
+        return None, None
+
+    def getplayingmetadata(self):
+        ''' wrapper to call getplayingmetadata '''
+        if self.serato:
+            return self.serato.getplayingmetadata()
+        return {}
+
+    def defaults(self, qsettings):
+        qsettings.setValue(
+            'serato/libpath',
+            os.path.join(
+                QStandardPaths.standardLocations(
+                    QStandardPaths.MusicLocation)[0], "_Serato_"))
+        qsettings.setValue('serato/local', True)
+        qsettings.setValue('serato/mixmode', "newest")
+        qsettings.setValue('serato/url', None)
+
+    def validmixmodes(self):
+        ''' let the UI know which modes are valid '''
+        if self.config.cparser.value('serato/local', type=bool):
+            return ['newest', 'oldest']
+
+        return ['oldest']
+
+    def setmixmode(self, mixmode):
+        ''' Pause system '''
+
+        if self.config.cparser.value('serato/local', type=bool):
+            self.config.cparser.setValue('serato/mixmode', mixmode)
+            return mixmode
+
+        self.config.cparser.setValue('serato/mixmode', 'newest')
+        return 'newest'
+
+    def getmixmode(self):
+        ''' Pause system '''
+
+        if self.config.cparser.value('serato/local', type=bool):
+            return self.config.cparser.value('serato/mixmode')
+
+        self.config.cparser.setValue('serato/mixmode', 'newest')
+        return 'newest'
+
+
 def main():
     ''' entry point as a standalone app'''
 
-    seratohandler = SeratoHandler(seratodir=sys.argv[1])
-    seratohandler.process_sessions()
-    seratohandler.getplayingtrack()
-    if seratohandler.playingadat:
-        seratohandler.playingadat.importantvalues()
+    serato = SeratoHandler(seratodir=sys.argv[1])
+    serato.process_sessions()
+    serato.getplayingtrack()
+    if serato.playingadat:
+        serato.playingadat.importantvalues()
     else:
         print('No title currently suspecting of playing.')
 

@@ -12,7 +12,6 @@ from PySide2.QtGui import QIcon  # pylint: disable=no-name-in-module
 import nowplaying.config
 import nowplaying.db
 import nowplaying.obsws
-import nowplaying.serato
 import nowplaying.settingsui
 import nowplaying.trackpoll
 import nowplaying.utils
@@ -79,24 +78,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.config.get()
         if not self.config.file:
             self.settingswindow.show()
-            if self.config.getmixmode() == 'newest':
-                self.action_newestmode.setChecked(True)
-            else:
-                self.action_oldestmode.setChecked(True)
+
         else:
-
-            if self.config.local:
-                self.action_oldestmode.setCheckable(True)
-                if self.config.getmixmode() == 'newest':
-                    self.action_newestmode.setChecked(True)
-                else:
-                    self.action_oldestmode.setChecked(True)
-            else:
-                self.action_oldestmode.setChecked(False)
-                self.action_newestmode.setChecked(True)
-
             self.action_pause.setText('Pause')
             self.action_pause.setEnabled(True)
+
+        self.fix_mixmode_menu()
 
         self.error_dialog = QErrorMessage()
 
@@ -194,18 +181,32 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.action_pause.setText('Resume')
         self.action_pause.triggered.connect(self.unpause)
 
+    def fix_mixmode_menu(self):
+        ''' update the mixmode based upon current rules '''
+        validmixmodes = self.config.validmixmodes()
+
+        if 'oldest' in validmixmodes:
+            self.action_oldestmode.setCheckable(True)
+
+        if 'newest' in validmixmodes:
+            self.action_newestmode.setCheckable(True)
+
+        if self.config.getmixmode() == 'newest':
+            self.action_newestmode.setChecked(True)
+            self.action_oldestmode.setChecked(False)
+        else:
+            self.action_oldestmode.setChecked(True)
+            self.action_newestmode.setChecked(False)
+
     def oldestmixmode(self):  #pylint: disable=no-self-use
         ''' enable active mixing '''
-
-        self.config.get()
         self.config.setmixmode('oldest')
-        self.config.save()
+        self.fix_mixmode_menu()
 
     def newestmixmode(self):  #pylint: disable=no-self-use
         ''' enable passive mixing '''
-        self.config.get()
         self.config.setmixmode('newest')
-        self.config.save()
+        self.fix_mixmode_menu()
 
     def cleanquit(self):
         ''' quit app and cleanup '''

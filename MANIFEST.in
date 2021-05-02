@@ -1,2 +1,4 @@
 include versioneer.py
 include nowplaying/version.py
+graft nowplaying/inputs
+global-exclude *.py[co]

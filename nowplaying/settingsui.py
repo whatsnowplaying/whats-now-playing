@@ -105,14 +105,6 @@ class SettingsUI(QWidget):
         ''' update the settings window '''
         self.config.get()
 
-        if self.config.local:
-            self.qtui.serato_local_button.setChecked(True)
-            self.qtui.serato_remote_button.setChecked(False)
-        else:
-            self.qtui.serato_local_button.setChecked(False)
-            self.qtui.serato_remote_button.setChecked(True)
-        self.qtui.serato_local_lineedit.setText(self.config.libpath)
-        self.qtui.serato_remote_url_lineedit.setText(self.config.url)
         self.qtui.text_filename_lineedit.setText(self.config.file)
         self.qtui.text_template_lineedit.setText(self.config.txttemplate)
 
@@ -121,8 +113,21 @@ class SettingsUI(QWidget):
         self.qtui.read_delay_lineedit.setText(str(self.config.delay))
         self.qtui.notification_checkbox.setChecked(self.config.notif)
 
+        self._upd_win_serato()
         self._upd_win_webserver()
         self._upd_win_obsws()
+
+    def _upd_win_serato(self):
+        if self.config.cparser.value('serato/local', type=bool):
+            self.qtui.serato_local_button.setChecked(True)
+            self.qtui.serato_remote_button.setChecked(False)
+        else:
+            self.qtui.serato_local_button.setChecked(False)
+            self.qtui.serato_remote_button.setChecked(True)
+        self.qtui.serato_local_lineedit.setText(
+            self.config.cparser.value('serato/libpath'))
+        self.qtui.serato_remote_url_lineedit.setText(
+            self.config.cparser.value('serato/url'))
 
     def _upd_win_webserver(self):
         ''' update the webserver settings to match config '''
@@ -180,9 +185,6 @@ class SettingsUI(QWidget):
         loglevel = self.qtui.logging_level_combobox.currentText()
 
         self.config.put(initialized=True,
-                        local=self.qtui.serato_local_button.isChecked(),
-                        libpath=self.qtui.serato_local_lineedit.text(),
-                        url=self.qtui.serato_remote_url_lineedit.text(),
                         file=self.qtui.text_filename_lineedit.text(),
                         txttemplate=self.qtui.text_template_lineedit.text(),
                         interval=interval,
@@ -194,6 +196,7 @@ class SettingsUI(QWidget):
 
         self._upd_conf_webserver()
         self._upd_conf_obsws()
+        self._upd_conf_serato()
 
     def _upd_conf_webserver(self):
         ''' update the webserver settings '''
@@ -236,6 +239,14 @@ class SettingsUI(QWidget):
                                      self.qtui.obsws_template_lineedit.text())
         self.config.cparser.setValue(
             'obsws/enabled', self.qtui.obsws_enable_checkbox.isChecked())
+
+    def _upd_conf_serato(self):
+        self.config.cparser.setValue('serato/libpath',
+                                     self.qtui.serato_local_lineedit.text())
+        self.config.cparser.setValue('serato/local',
+                                     self.qtui.serato_local_button.isChecked())
+        self.config.cparser.setValue(
+            'serato/url', self.qtui.serato_remote_url_lineedit.text())
 
     @Slot()
     def on_text_saveas_button(self):
@@ -362,10 +373,7 @@ class SettingsUI(QWidget):
         self.upd_conf()
         self.close()
         self.qtui.error_label.setText('')
-        if self.config.local:
-            self.tray.action_oldestmode.setCheckable(True)
-        else:
-            self.tray.action_oldestmode.setCheckable(False)
+        self.tray.fix_mixmode_menu()
         self.tray.action_pause.setText('Pause')
         self.tray.action_pause.setEnabled(True)
 

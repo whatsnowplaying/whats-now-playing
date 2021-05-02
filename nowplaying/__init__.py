@@ -65,9 +65,6 @@ def main():
     config = nowplaying.config.ConfigFile(bundledir=bundledir)
     logging.getLogger().setLevel(config.loglevel)
 
-    logging.info('boot up mixmode: %s / local mode: %s ', config.getmixmode(),
-                 config.local)
-
     tray = nowplaying.systemtray.Tray()  # pylint: disable=unused-variable
     qapp.setQuitOnLastWindowClosed(False)
     exitval = qapp.exec_()

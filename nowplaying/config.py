@@ -2,14 +2,17 @@
 '''
    config file parsing/handling
 '''
-
+import importlib
 import logging
 import os
+import pkgutil
 import sys
 import multiprocessing
 
 # pylint: disable=no-name-in-module
 from PySide2.QtCore import QCoreApplication, QSettings, QStandardPaths
+
+import nowplaying.inputs
 
 
 class ConfigFile:  # pylint: disable=too-many-instance-attributes
@@ -20,14 +23,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
     BUNDLEDIR = None
     LOCK = multiprocessing.RLock()
-    MIXMODE = 'newest'
     PAUSED = False
 
     def __init__(self, bundledir=None, reset=False):
 
-        logging.debug('attempting lock')
         ConfigFile.LOCK.acquire()
-        logging.debug('locked')
 
         self.initialized = False
         self.templatedir = os.path.join(
@@ -40,10 +40,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         logging.info('Templates: %s', self.templatedir)
         logging.info('Bundle: %s', ConfigFile.BUNDLEDIR)
-
-        self.libpath = os.path.join(
-            QStandardPaths.standardLocations(QStandardPaths.MusicLocation)[0],
-            "_Serato_")
 
         if sys.platform == "win32":
             self.qsettingsformat = QSettings.IniFormat
@@ -60,13 +56,13 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.interval = float(10)
         self.delay = float(0)
         self.notif = False
-        self.local = True
-        self.mixmode = 'newest'
         ConfigFile.PAUSED = False
-        self.url = None
         self.file = None
         self.txttemplate = os.path.join(self.templatedir, "basic.txt")
         self.loglevel = 'DEBUG'
+
+        self.plugins = None
+        self._import_plugins()
 
         # Tell Qt to match the above
 
@@ -76,8 +72,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             self.save()
         else:
             self.get()
+
         ConfigFile.LOCK.release()
-        logging.debug('lock release')
 
     def reset(self):
         ''' forcibly go back to defaults '''
@@ -87,9 +83,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     def get(self):
         ''' refresh values '''
 
-        logging.debug('attempting lock')
         ConfigFile.LOCK.acquire()
-        logging.debug('locked')
 
         try:
             self.interval = self.cparser.value('settings/interval', type=float)
@@ -111,17 +105,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         except TypeError:
             pass
 
-        try:
-            self.local = self.cparser.value('serato/local', type=bool)
-        except TypeError:
-            pass
-
-        self.libpath = self.cparser.value('serato/libpath')
-        self.url = self.cparser.value('serato/url')
-        if self.local:
-            self.mixmode = self.cparser.value('serato/mixmode')
-        else:
-            self.mixmode = 'newest'
         self.file = self.cparser.value('textoutput/file')
         self.txttemplate = self.cparser.value('textoutput/txttemplate')
 
@@ -132,7 +115,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             pass
 
         ConfigFile.LOCK.release()
-        logging.debug('lock release')
 
     def defaults(self):
         ''' default values for things '''
@@ -166,19 +148,30 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         settings.setValue('weboutput/httpport', '8899')
         settings.setValue('weboutput/once', True)
 
-        settings.setValue('serato/libpath', self.libpath)
-        settings.setValue('serato/local', self.local)
-        settings.setValue('serato/mixmode', self.mixmode)
-        settings.setValue('serato/url', self.url)
+        self._defaults_input_plugins(settings)
 
-    # pylint: disable=too-many-locals, too-many-arguments
-    def put(self, initialized, local, libpath, url, file, txttemplate,
-            interval, delay, notif, loglevel):
+    def _defaults_input_plugins(self, settings):
+        ''' configure the defaults for input plugins '''
+        for key in self.plugins.keys():
+            handler = self.plugins[key].Plugin(qsettings=settings)
+            handler.defaults(settings)
+
+    def _import_plugins(self):
+        ''' configure the defaults for input plugins '''
+        def iter_ns(ns_pkg):
+            return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
+
+        self.plugins = {
+            name: importlib.import_module(name)
+            for finder, name, ispkg in iter_ns(nowplaying.inputs)
+        }
+
+    # pylint: disable=too-many-arguments
+    def put(self, initialized, file, txttemplate, interval, delay, notif,
+            loglevel):
         ''' Save the configuration file '''
 
-        logging.debug('attempting lock')
         ConfigFile.LOCK.acquire()
-        logging.debug('locked')
 
         self.delay = float(delay)
         self.file = file
@@ -188,23 +181,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.notif = notif
         self.txttemplate = txttemplate
 
-        # Serato
-
-        self.libpath = libpath
-        self.local = local
-        self.url = url
-
         self.save()
 
         ConfigFile.LOCK.release()
-        logging.debug('lock release')
 
     def save(self):
         ''' save the current set '''
 
-        logging.debug('attempting lock')
         ConfigFile.LOCK.acquire()
-        logging.debug('locked')
 
         self.cparser.setValue('settings/delay', self.delay)
         self.cparser.setValue('settings/handler', 'serato')
@@ -215,14 +199,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.cparser.setValue('textoutput/file', self.file)
         self.cparser.setValue('textoutput/txttemplate', self.txttemplate)
 
-        self.cparser.setValue('serato/libpath', self.libpath)
-        self.cparser.setValue('serato/local', self.local)
-        if self.local:
-            self.cparser.setValue('serato/mixmode', self.mixmode)
-        self.cparser.setValue('serato/url', self.url)
-
         ConfigFile.LOCK.release()
-        logging.debug('lock release')
 
     def find_icon_file(self):  # pylint: disable=no-self-use
         ''' try to find our icon '''
@@ -269,26 +246,24 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         ''' Get the pause status '''
         return ConfigFile.PAUSED
 
+    def validmixmodes(self):  # pylint: disable=no-self-use
+        ''' unpause system '''
+        plugin = self.cparser.value('settings/handler')
+        handler = self.plugins[f'nowplaying.inputs.{plugin}'].Plugin()
+        return handler.getmixmode()
+
     def setmixmode(self, mixmode):  # pylint: disable=no-self-use
-        ''' Pause system '''
+        ''' set the mixmode by calling the plugin '''
 
-        logging.debug('attempting lock')
-        ConfigFile.LOCK.acquire()
-        logging.debug('locked')
-        self.get()
-        if self.local:
-            ConfigFile.MIXMODE = mixmode
-            self.mixmode = mixmode
-            self.save()
-        else:
-            ConfigFile.MIXMODE = 'oldest'
-
-        ConfigFile.LOCK.release()
-        logging.debug('lock release')
+        plugin = self.cparser.value('settings/handler')
+        handler = self.plugins[f'nowplaying.inputs.{plugin}'].Plugin()
+        return handler.setmixmode(mixmode)
 
     def getmixmode(self):  # pylint: disable=no-self-use
         ''' unpause system '''
-        return ConfigFile.MIXMODE
+        plugin = self.cparser.value('settings/handler')
+        handler = self.plugins[f'nowplaying.inputs.{plugin}'].Plugin()
+        return handler.getmixmode()
 
     def getbundledir(self):  # pylint: disable=no-self-use
         ''' get the bundle dir '''
