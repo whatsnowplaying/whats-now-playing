@@ -8,7 +8,6 @@ import os
 import platform
 import sys
 
-import pkg_resources
 import pyinstaller_versionfile
 import nowplaying.version
 
@@ -100,7 +99,7 @@ def windows_version_file():
 
 block_cipher = None
 
-a = Analysis(['nowplaying.py'],
+a = Analysis(['np-pyinstaller.py'],
              pathex=['.'],
              binaries=[],
              datas=[('nowplaying/resources/*', 'resources/'),
