@@ -99,7 +99,7 @@ def windows_version_file():
 
 block_cipher = None
 
-a = Analysis(['np-pyinstaller.py'],
+a = Analysis(['nppyi.py'],
              pathex=['.'],
              binaries=[],
              datas=[('nowplaying/resources/*', 'resources/'),

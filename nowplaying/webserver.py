@@ -61,7 +61,7 @@ class WebHandler():
             htmloutput = templatehandler.generate(metadata)
 
         if (lastid != metadata['dbid'] or not lastid
-            ) or not request.app['config'].cparser.value('weboutput/once'):
+           ) or not request.app['config'].cparser.value('weboutput/once'):
             return web.Response(content_type='text/html', text=htmloutput)
 
         return web.Response(content_type='text/html', text=INDEXREFRESH)
@@ -101,8 +101,8 @@ class WebHandler():
 
     async def cover_handler(self, request):
         ''' handle cover image '''
-        image = ""
         if 'coverimageraw' in request.app['metadb'].read_last_meta():
+            image = ""
             return web.Response(content_type='image/png', text=image)
         return web.Response(status=404)
 
