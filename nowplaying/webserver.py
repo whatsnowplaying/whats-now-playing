@@ -60,8 +60,9 @@ class WebHandler():
                 filename=template)
             htmloutput = templatehandler.generate(metadata)
 
-        if (lastid != metadata['dbid'] or not lastid
-           ) or not request.app['config'].cparser.value('weboutput/once'):
+        if 'dbid' not in metadata or (
+                lastid != metadata['dbid'] or not lastid
+        ) or not request.app['config'].cparser.value('weboutput/once'):
             return web.Response(content_type='text/html', text=htmloutput)
 
         return web.Response(content_type='text/html', text=INDEXREFRESH)
@@ -101,9 +102,10 @@ class WebHandler():
 
     async def cover_handler(self, request):
         ''' handle cover image '''
-        if 'coverimageraw' in request.app['metadb'].read_last_meta():
-            image = ""
-            return web.Response(content_type='image/png', text=image)
+        metadata = request.app['metadb'].read_last_meta()
+        if 'coverimageraw' in metadata:
+            return web.Response(content_type='image/png',
+                                body=metadata['coverimageraw'])
         return web.Response(status=404)
 
     async def api_v1_last_handler(self, request):
@@ -151,7 +153,7 @@ class WebHandler():
         app.add_routes([
             web.get('/', self.indexhtm_handler),
             web.get('/v1/last', self.api_v1_last_handler),
-            web.get('/cover*', self.cover_handler),
+            web.get('/cover.png', self.cover_handler),
             web.get('/favicon.ico', self.favicon_handler),
             web.get('/index.htm', self.indexhtm_handler),
             web.get('/index.html', self.indexhtm_handler),

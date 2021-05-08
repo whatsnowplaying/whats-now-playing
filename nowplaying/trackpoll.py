@@ -30,8 +30,8 @@ class TrackPoll(QThread):
         self.setObjectName('TrackPoll')
         self.config = nowplaying.config.ConfigFile()
         self.currentmeta = {'fetchedartist': None, 'fetchedtitle': None}
-        self.handler = None
-        self.handlername = None
+        self.input = None
+        self.inputname = None
         self.plugins = {}
         self.importplugins()
 
@@ -52,7 +52,7 @@ class TrackPoll(QThread):
 
         threading.current_thread().name = 'TrackPoll'
         previoustxttemplate = None
-        previoushandler = None
+        previousinput = None
 
         # sleep until we have something to write
         while not self.config.file and not self.endthread and not self.config.getpause(
@@ -69,11 +69,11 @@ class TrackPoll(QThread):
                     filename=self.config.txttemplate)
                 previoustxttemplate = self.config.txttemplate
 
-            if not previoushandler or previoushandler != self.config.cparser.value(
-                    'settings/handler'):
-                previoushandler = self.config.cparser.value('settings/handler')
-                self.handler = self.plugins[
-                    f'nowplaying.inputs.{previoushandler}'].Plugin()
+            if not previousinput or previousinput != self.config.cparser.value(
+                    'settings/input'):
+                previousinput = self.config.cparser.value('settings/input')
+                self.input = self.plugins[
+                    f'nowplaying.inputs.{previousinput}'].Plugin()
 
             if not self.gettrack():
                 continue
@@ -98,7 +98,7 @@ class TrackPoll(QThread):
             time.sleep(1)
 
         logging.debug('getplayingtrack called')
-        (artist, title) = self.handler.getplayingtrack()
+        (artist, title) = self.input.getplayingtrack()
 
         if not artist and not title:
             logging.debug('getplaying track was None; returning')
@@ -110,7 +110,7 @@ class TrackPoll(QThread):
             return False
 
         logging.debug('Fetching more metadata from serato')
-        nextmeta = self.handler.getplayingmetadata()
+        nextmeta = self.input.getplayingmetadata()
         nextmeta['fetchedtitle'] = title
         nextmeta['fetchedartist'] = artist
 
@@ -119,7 +119,7 @@ class TrackPoll(QThread):
             nextmeta = nowplaying.utils.getmoremetadata(nextmeta)
 
         # At this point, we have as much data as we can get from
-        # either the handler or from reading the file directly.
+        # either the input or from reading the file directly.
         # There is still a possibility that artist and title
         # are empty because the user never provided it to anything
         # In this worst case, put in empty strings since

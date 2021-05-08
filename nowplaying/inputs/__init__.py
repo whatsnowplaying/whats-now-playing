@@ -47,3 +47,9 @@ class InputPlugin():
         #return 'newest'
 
         raise NotImplementedError
+
+    def stop(self):
+        ''' stopping either the entire program or just this
+            input '''
+
+        raise NotImplementedError

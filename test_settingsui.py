@@ -23,7 +23,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods
             hostname = 'Unknown Hostname'
             hostip = 'Unknown IP'
 
-        self.ui.network_info_label.setText(
+        self.qtui.network_info_label.setText(
             f'Hostname: {hostname} / IP: {hostip}')
 
     def load_ui(self):

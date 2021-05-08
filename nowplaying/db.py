@@ -6,7 +6,7 @@ import logging
 import os
 import pathlib
 import sys
-import threading
+import multiprocessing
 import urllib
 import sqlite3
 
@@ -35,6 +35,7 @@ class MetadataDB:
         'genre',
         'key',
         'lang',
+        'length',
         'publisher',
         'title',
         'track',
@@ -42,7 +43,7 @@ class MetadataDB:
         'year',
     ]
 
-    LOCK = threading.RLock()
+    LOCK = multiprocessing.RLock()
 
     def __init__(self, databasefile=None, initialize=False):
 
@@ -73,17 +74,14 @@ class MetadataDB:
         # do not want to modify the original dictionary
         # otherwise Bad Things(tm) will happen
         mdcopy = copy.deepcopy(metadata)
-        coverimageraw = None
-
         connection = sqlite3.connect(self.databasefile)
         cursor = connection.cursor()
 
         logging.debug('Adding record with %s/%s', mdcopy['artist'],
                       mdcopy['title'])
 
-        if 'coverimageraw' in mdcopy:
-            coverimageraw = bytearray(mdcopy['coverimageraw'])
-            del mdcopy['coverimageraw']
+        if 'coverimageraw' not in mdcopy:
+            mdcopy['coverimageraw'] = None
 
         for data in self.databasefile:
             if data in metadata:
@@ -93,10 +91,10 @@ class MetadataDB:
                     mdcopy[data] = str(mdcopy[data])
 
         sql = 'INSERT INTO currentmeta ('
-        sql += ', '.join(mdcopy.keys()) + ', coverimageraw) VALUES ('
-        sql += '?,' * len(mdcopy.keys()) + '?)'
+        sql += ', '.join(mdcopy.keys()) + ') VALUES ('
+        sql += '?,' * (len(mdcopy.keys()) - 1) + '?)'
 
-        cursor.execute(sql, list(mdcopy.values()) + [coverimageraw])
+        cursor.execute(sql, tuple(list(mdcopy.values())))
         connection.commit()
         connection.close()
         MetadataDB.LOCK.release()

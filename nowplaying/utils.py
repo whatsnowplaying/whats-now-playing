@@ -14,7 +14,7 @@ import sys
 
 import jinja2
 import tinytag
-import PIL
+import PIL.Image
 
 
 class TemplateHandler():  # pylint: disable=too-few-public-methods
@@ -63,7 +63,7 @@ def getmoremetadata(metadata=None):
     # tinytag is pure python and supports a wide variety of
     # formats.  because of that, it doesn't necessarily
     # have all the bells and whistles of other, more specific
-    # libraries.  But this is good enough for us.
+    # libraries.  But this is good enough for now.
 
     if not os.path.isfile(metadata['filename']):
         return metadata
@@ -82,15 +82,18 @@ def getmoremetadata(metadata=None):
             metadata[key] = getattr(tag, key)
 
     if 'coverimageraw' not in metadata:
-        coverimage = tag.get_image()
+        metadata['coverimageraw'] = tag.get_image()
 
-        if coverimage:
-            metadata['coverimageraw'] = coverimage
-            imgbuffer = io.BytesIO(coverimage)
-            image = PIL.Image.open(imgbuffer)
-            image.save(imgbuffer, format='png')
-            metadata['coverimageraw'] = imgbuffer
-            metadata['coverimagetype'] = 'png'
+    # always convert to png
+
+    if metadata['coverimageraw']:
+        coverimage = metadata['coverimageraw']
+        imgbuffer = io.BytesIO(coverimage)
+        image = PIL.Image.open(imgbuffer)
+        image.save(imgbuffer, format='png')
+        metadata['coverimageraw'] = imgbuffer.getvalue()
+        metadata['coverimagetype'] = 'png'
+        metadata['coverurl'] = 'cover.png'
     return metadata
 
 

@@ -125,7 +125,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                              QCoreApplication.applicationName())
 
         settings.setValue('settings/delay', self.delay)
-        settings.setValue('settings/handler', 'serato')
+        settings.setValue('settings/input', 'serato')
         settings.setValue('settings/initialized', False)
         settings.setValue('settings/interval', self.interval)
         settings.setValue('settings/loglevel', self.loglevel)
@@ -153,8 +153,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     def _defaults_input_plugins(self, settings):
         ''' configure the defaults for input plugins '''
         for key in self.plugins.keys():
-            handler = self.plugins[key].Plugin(qsettings=settings)
-            handler.defaults(settings)
+            inputplugin = self.plugins[key].Plugin(qsettings=settings)
+            inputplugin.defaults(settings)
 
     def _import_plugins(self):
         ''' configure the defaults for input plugins '''
@@ -191,7 +191,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         ConfigFile.LOCK.acquire()
 
         self.cparser.setValue('settings/delay', self.delay)
-        self.cparser.setValue('settings/handler', 'serato')
         self.cparser.setValue('settings/initialized', self.initialized)
         self.cparser.setValue('settings/interval', self.interval)
         self.cparser.setValue('settings/loglevel', self.loglevel)
@@ -248,22 +247,22 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
     def validmixmodes(self):  # pylint: disable=no-self-use
         ''' unpause system '''
-        plugin = self.cparser.value('settings/handler')
-        handler = self.plugins[f'nowplaying.inputs.{plugin}'].Plugin()
-        return handler.getmixmode()
+        plugin = self.cparser.value('settings/input')
+        inputplugin = self.plugins[f'nowplaying.inputs.{plugin}'].Plugin()
+        return inputplugin.getmixmode()
 
     def setmixmode(self, mixmode):  # pylint: disable=no-self-use
         ''' set the mixmode by calling the plugin '''
 
-        plugin = self.cparser.value('settings/handler')
-        handler = self.plugins[f'nowplaying.inputs.{plugin}'].Plugin()
-        return handler.setmixmode(mixmode)
+        plugin = self.cparser.value('settings/input')
+        inputplugin = self.plugins[f'nowplaying.inputs.{plugin}'].Plugin()
+        return inputplugin.setmixmode(mixmode)
 
     def getmixmode(self):  # pylint: disable=no-self-use
         ''' unpause system '''
-        plugin = self.cparser.value('settings/handler')
-        handler = self.plugins[f'nowplaying.inputs.{plugin}'].Plugin()
-        return handler.getmixmode()
+        plugin = self.cparser.value('settings/input')
+        inputplugin = self.plugins[f'nowplaying.inputs.{plugin}'].Plugin()
+        return inputplugin.getmixmode()
 
     def getbundledir(self):  # pylint: disable=no-self-use
         ''' get the bundle dir '''

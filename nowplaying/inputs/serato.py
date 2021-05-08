@@ -14,7 +14,7 @@ import traceback
 import lxml.html
 import requests
 
-from PySide2.QtCore import QStandardPaths # pylint: disable=no-name-in-module
+from PySide2.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 from nowplaying.inputs import InputPlugin
 
@@ -780,10 +780,10 @@ class Plugin(InputPlugin):
         if self.config.cparser.value('serato/local', type=bool):
             return ['newest', 'oldest']
 
-        return ['oldest']
+        return ['newest']
 
     def setmixmode(self, mixmode):
-        ''' Pause system '''
+        ''' set the mixmode '''
 
         if self.config.cparser.value('serato/local', type=bool):
             self.config.cparser.setValue('serato/mixmode', mixmode)
@@ -793,13 +793,16 @@ class Plugin(InputPlugin):
         return 'newest'
 
     def getmixmode(self):
-        ''' Pause system '''
+        ''' get the mixmode '''
 
         if self.config.cparser.value('serato/local', type=bool):
             return self.config.cparser.value('serato/mixmode')
 
         self.config.cparser.setValue('serato/mixmode', 'newest')
         return 'newest'
+
+    def stop(self):
+        ''' not needed for serato plugin '''
 
 
 def main():
