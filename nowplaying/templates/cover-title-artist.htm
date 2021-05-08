@@ -29,7 +29,9 @@
   </head>
   <body>
     <div id="titlecard">
+      {% if coverurl is defined and coverurl is not none and coverurl|length %}
       <img src="{{ coverurl }}">
+      {% endif %}
       <p>"{{ title }}"</p>
       <p>{{ artist }}</p>
     </div>
