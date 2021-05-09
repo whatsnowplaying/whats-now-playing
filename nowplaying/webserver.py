@@ -46,7 +46,7 @@ class WebHandler():
             self.start_server(host='0.0.0.0', port=port))
         self.loop.run_forever()
 
-    async def indexhtm_handler(self, request):  # pylint: disable=unused-argument
+    async def indexhtm_handler(self, request):    # pylint: disable=unused-argument
         ''' handle static index.html '''
         htmloutput = ""
         metadata = request.app['metadb'].read_last_meta()
@@ -67,8 +67,7 @@ class WebHandler():
                                 content_type='text/html',
                                 text=INDEXREFRESH)
 
-        if lastid == 0 or lastid != metadata['dbid'] or (
-                lastid == metadata['dbid'] and not once):
+        if lastid == 0 or lastid != metadata['dbid'] or not once:
             await self.setlastid(request, metadata['dbid'])
             templatehandler = nowplaying.utils.TemplateHandler(
                 filename=template)
