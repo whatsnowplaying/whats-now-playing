@@ -53,16 +53,25 @@ class WebHandler():
         lastid = await self.getlastid(request)
         template = request.app['config'].cparser.value(
             'weboutput/htmltemplate')
+        once = request.app['config'].cparser.value('weboutput/once', type=bool)
 
-        if template and metadata and 'dbid' in metadata:
+        # | dbid  |  lastid | once |
+        # |   x   |   NA    |      |  -> update lastid, send template
+        # |   x   |  diff   |   NA |  -> update lastid, send template
+        # |   x   |  same   |      |  -> send template
+        # |   x   |  same   |   x  |  -> send refresh
+        # |       |   NA    |      |  -> send refresh because not ready or something broke
+
+        if 'dbid' not in metadata or not template:
+            return web.Response(status=202,
+                                content_type='text/html',
+                                text=INDEXREFRESH)
+
+        if lastid == 0 or lastid != metadata['dbid'] or not once:
             await self.setlastid(request, metadata['dbid'])
             templatehandler = nowplaying.utils.TemplateHandler(
                 filename=template)
             htmloutput = templatehandler.generate(metadata)
-
-        if 'dbid' not in metadata or (
-                lastid != metadata['dbid'] or not lastid
-        ) or not request.app['config'].cparser.value('weboutput/once'):
             return web.Response(content_type='text/html', text=htmloutput)
 
         return web.Response(content_type='text/html', text=INDEXREFRESH)
@@ -78,10 +87,10 @@ class WebHandler():
         cursor = await request.app['statedb'].execute(
             'SELECT lastid FROM lastprocessed WHERE id=1')
         row = await cursor.fetchone()
-        if not row or 'lastid' not in row:
-            lastid = None
+        if not row:
+            lastid = 0
         else:
-            lastid = row['lastid']
+            lastid = row[0]
         await cursor.close()
         return lastid
 
