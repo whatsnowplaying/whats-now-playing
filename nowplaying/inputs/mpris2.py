@@ -64,9 +64,9 @@ class MPRIS2Handler():
         # if NowPlaying is launched before our service...
         if not self.proxy:
             self.resetservice(self.service)
-            if not self.proxy:
-                logging.error('Unknown service: %s', self.service)
-                return None, None
+        if not self.proxy:
+            logging.error('Unknown service: %s', self.service)
+            return None, None
 
         properties = dbus.Interface(
             self.proxy, dbus_interface='org.freedesktop.DBus.Properties')
