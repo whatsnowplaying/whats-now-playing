@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" http-equiv="refresh" content="30" >
+    <title>Titlecard</title>
+    <link href="https://db.onlinewebfonts.com/c/de58fdcb98299a76fccd3c0cb4e5a6c0?family=Kabel" rel="stylesheet" type="text/css"/>
+
+    <style>
+      div {
+	      import url(https://db.onlinewebfonts.com/c/de58fdcb98299a76fccd3c0cb4e5a6c0?family=Kabel);
+      	margin: 1px;
+        width: 2500px;
+        display: none;
+      	height: 300px;
+      	float: left;
+      	font-size: 48px;
+      	font-family: "Kabel";
+      	line-height: 30%;
+      	text-shadow: 4px 4px #000000;
+      }
+      #titlecard {
+        color: #FFF;
+        text-indent: 1%;
+      }
+      img {
+        margin: 10px;
+        display: block;
+        float: left;
+        max-height: 90%
+      }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
+  </head>
+  <body>
+    <div id="titlecard">
+      {% if coverurl is defined and coverurl is not none and coverurl|length %}
+      <img src="{{ coverurl }}">
+      {% endif %}
+      <p>{{ artist }}</p>
+      <p>"{{ title }}"</p>
+      {% if album is defined and album is not none and album|length %}
+      <p>{{ album }}</p>
+      {% endif %}
+      {% if publisher is defined and publisher is not none and publisher|length %}
+      <p>{{ publisher }}</p>
+      {% endif %}
+    </div>
+    <script>
+      $(document).ready(function() {
+        $('#titlecard').delay(2000).fadeIn(2000);
+        $('#titlecard').delay(2000).fadeOut(2000);
+      });
+    </script>
+  </body>
+</html>
