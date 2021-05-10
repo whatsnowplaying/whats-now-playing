@@ -2,10 +2,8 @@
 '''
    config file parsing/handling
 '''
-import importlib
 import logging
 import os
-import pkgutil
 import sys
 import multiprocessing
 
@@ -61,9 +59,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.txttemplate = os.path.join(self.templatedir, "basic.txt")
         self.loglevel = 'DEBUG'
 
-        self.plugins = None
+        self.plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
         self.pluginobjs = None
-        self._import_plugins()
 
         # Tell Qt to match the above
 
@@ -158,16 +155,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             self.pluginobjs[key] = self.plugins[key].Plugin(config=self,
                                                             qsettings=settings)
             self.pluginobjs[key].defaults(settings)
-
-    def _import_plugins(self):
-        ''' configure the defaults for input plugins '''
-        def iter_ns(ns_pkg):
-            return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
-
-        self.plugins = {
-            name: importlib.import_module(name)
-            for finder, name, ispkg in iter_ns(nowplaying.inputs)
-        }
 
     def plugins_load_settingsui(self, qtui):
         ''' configure the defaults for input plugins '''

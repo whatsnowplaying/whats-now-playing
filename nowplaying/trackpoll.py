@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 ''' thread to poll music player '''
 
-import importlib
 import logging
-import pkgutil
 import time
 import threading
 
@@ -32,20 +30,7 @@ class TrackPoll(QThread):
         self.currentmeta = {'fetchedartist': None, 'fetchedtitle': None}
         self.input = None
         self.inputname = None
-        self.plugins = {}
-        self.importplugins()
-
-    def importplugins(self):
-        ''' import all of the input plugins '''
-        def iter_ns(ns_pkg):
-            return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
-
-        self.plugins = {
-            name: importlib.import_module(name)
-            for finder, name, ispkg in iter_ns(nowplaying.inputs)
-        }
-
-        logging.info('Plugins: %s ', self.plugins.keys())
+        self.plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
 
     def run(self):
         ''' track polling process '''
@@ -86,6 +71,7 @@ class TrackPoll(QThread):
     def __del__(self):
         logging.debug('TrackPoll is being killed!')
         self.endthread = True
+        self.plugins = None
 
     def gettrack(self):  # pylint: disable=too-many-branches
         ''' get currently playing track, returns None if not new or not found '''

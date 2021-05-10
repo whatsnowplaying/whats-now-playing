@@ -7,8 +7,10 @@
 # engines or custom handling (pull tags from mixxing software?)
 #
 
+import importlib
 import io
 import logging
+import pkgutil
 import os
 import sys
 
@@ -117,6 +119,35 @@ def writetxttrack(filename=None,
     with open(filename, "w", encoding='utf-8') as textfh:
         textfh.write(txttemplate)
     logging.debug('writetxttrack: finished write')
+
+
+def import_plugins(namespace):
+    ''' import plugins and return an object
+        with all of them '''
+    def iter_ns(ns_pkg):
+        ''' iterate over a package and return children.
+            used to monkey patch in plugins
+        '''
+        prefix = ns_pkg.__name__ + "."
+        for pkg in pkgutil.iter_modules(ns_pkg.__path__, prefix):
+            yield pkg[1]
+
+        # special handling when the package is bundled with PyInstaller
+        # See https://github.com/pyinstaller/pyinstaller/issues/1905#issuecomment-445787510
+        toc = set()
+        for importer in pkgutil.iter_importers(
+                ns_pkg.__name__.partition(".")[0]):
+            if hasattr(importer, 'toc'):
+                toc |= importer.toc
+        for name in toc:
+            if name.startswith(prefix):
+                yield name
+
+    plugins = {
+        name: importlib.import_module(name)
+        for name in iter_ns(namespace)
+    }
+    return plugins
 
 
 def main():
