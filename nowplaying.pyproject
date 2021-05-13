@@ -7,6 +7,8 @@
         "nowplaying/resources/settings.qrc",
         "nowplaying/resources/settings_ui.ui",
         "nowplaying/resources/source_ui.ui",
-        "nowplaying/resources/webserver_ui.ui", "test_settingsui.py"
+        "nowplaying/resources/twitchbot_ui.ui",
+        "nowplaying/resources/webserver_ui.ui",
+        "test_settingsui.py"
     ]
 }

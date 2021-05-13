@@ -2,11 +2,15 @@
 ''' WebServer process '''
 
 import asyncio
-import os
 import logging
+import logging.config
+import os
+import secrets
+import signal
+import string
 import sys
-import time
 import threading
+import time
 import weakref
 
 import requests
@@ -16,9 +20,16 @@ import aiosqlite
 
 from PySide2.QtCore import QCoreApplication, QStandardPaths, Qt  # pylint: disable=no-name-in-module
 
+logging.config.dictConfig({
+    'version': 1,
+    'disable_existing_loggers': True,
+})
+
+#pylint: disable=wrong-import-position
+
+import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
-import nowplaying.bootstrap
 
 INDEXREFRESH = \
     '<!doctype html><html lang="en">' \
@@ -31,18 +42,27 @@ class WebHandler():
     def __init__(self, databasefile):
         threading.current_thread().name = 'WebServer'
         config = nowplaying.config.ConfigFile()
-        port = config.cparser.value('weboutput/httpport', type=int)
+        self.port = config.cparser.value('weboutput/httpport', type=int)
         enabled = config.cparser.value('weboutput/httpenabled', type=bool)
         self.databasefile = databasefile
 
         while not enabled:
-            time.sleep(5)
-            config.get()
-            enabled = config.cparser.value('weboutput/httpenabled', type=bool)
+            try:
+                time.sleep(5)
+                config.get()
+                enabled = config.cparser.value('weboutput/httpenabled',
+                                               type=bool)
+            except KeyboardInterrupt:
+                sys.exit(0)
 
+        self.magicstopurl = ''.join(
+            secrets.choice(string.ascii_letters) for i in range(32))
+        logging.info('Secret url to quit websever: %s', self.magicstopurl)
+
+        signal.signal(signal.SIGINT, self.forced_stop)
         self.loop = asyncio.get_event_loop()
         self.loop.run_until_complete(
-            self.start_server(host='0.0.0.0', port=port))
+            self.start_server(host='0.0.0.0', port=self.port))
         self.loop.run_forever()
 
     async def indexhtm_handler(self, request):  # pylint: disable=unused-argument
@@ -167,7 +187,7 @@ class WebHandler():
             web.get('/index.html', self.indexhtm_handler),
             web.get('/index.txt', self.indextxt_handler),
             web.get('/ws', self.websocket_handler),
-            web.get('/quit', self.stop_server)
+            web.get(f'/{self.magicstopurl}', self.stop_server)
         ])
         return web.AppRunner(app)
 
@@ -210,16 +230,28 @@ class WebHandler():
         await request.app.cleanup()
         self.loop.stop()
 
+    def forced_stop(self, signum, frame):  # pylint: disable=unused-argument
+        ''' caught an int signal so tell the world to stop '''
+        try:
+            requests.get(f'http://localhost:{self.port}/{self.magicstopurl}')
+        except Exception as error:  # pylint: disable=broad-except
+            logging.info(error)
 
-def stop():
+
+def stop(pid):
     ''' stop the web server -- called from Tray '''
-    config = nowplaying.config.ConfigFile()
-    port = config.cparser.value('weboutput/httpport', type=int)
-
+    logging.info('sending INT to %s', pid)
     try:
-        requests.get(f'http://localhost:{port}/quit')
-    except Exception as error:  # pylint: disable=broad-except
-        logging.info(error)
+        os.kill(pid, signal.SIGINT)
+    except ProcessLookupError:
+        pass
+    # config = nowplaying.config.ConfigFile()
+    # port = config.cparser.value('weboutput/httpport', type=int)
+
+    # try:
+    #     requests.get(f'http://localhost:{port}/quit')
+    # except Exception as error:  # pylint: disable=broad-except
+    #     logging.info(error)
 
 
 def start(orgname, appname, bundledir):

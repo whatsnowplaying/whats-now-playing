@@ -33,7 +33,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods
 
         self.qtui = _load_ui('settings')
         for basic in [
-                'general', 'source', 'webserver', 'obsws', 'serato', 'mpris2'
+                'general', 'source', 'webserver', 'obsws', 'twitchbot',
+                'serato', 'mpris2'
         ]:
             self.widgets[basic] = _load_ui(f'{basic}')
             try:

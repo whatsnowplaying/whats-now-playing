@@ -211,7 +211,10 @@ p, li { white-space: pre-wrap; }
        <bool>false</bool>
       </property>
       <property name="inputMethodHints">
-       <set>Qt::ImhSensitiveData</set>
+       <set>Qt::ImhHiddenText|Qt::ImhNoAutoUppercase|Qt::ImhNoPredictiveText|Qt::ImhSensitiveData</set>
+      </property>
+      <property name="echoMode">
+       <enum>QLineEdit::Password</enum>
       </property>
      </widget>
     </item>

@@ -3,6 +3,7 @@
     see https://github.com/Palakis/obs-websocket '''
 
 import logging
+import logging.config
 import threading
 import time
 
@@ -10,6 +11,13 @@ import obswebsocket
 import obswebsocket.requests
 
 from PySide2.QtCore import Signal, QThread  # pylint: disable=no-name-in-module
+
+logging.config.dictConfig({
+    'version': 1,
+    'disable_existing_loggers': True,
+})
+
+#pylint: disable=wrong-import-position
 
 import nowplaying.config
 import nowplaying.db
@@ -35,8 +43,8 @@ class OBSWebSocketHandler(QThread):  #pylint: disable=too-many-instance-attribut
         ''' run our thread '''
         threading.current_thread().name = 'OBSWebSocket'
 
+        logging.debug('Starting main loop')
         while not self.endthread:
-            logging.debug('Starting main loop')
             self.config.get()
 
             while self.config.getpause() or not self.config.cparser.value(

@@ -1,0 +1,17 @@
+{% if cmdtarget[0] is defined and cmdtarget[0] is not none %}Hey @{{ cmdtarget[0] }} this song has these details... {% endif %}
+"{{ title }}"
+{% if artist is defined and artist is not none %} by {{ artist }}.{% endif %}
+{% if track is defined and track is not none %} It is track #{{ track }}
+{% if track_total is defined and track_total is not none%} out of {{ track_total }} {% endif %}{% endif %}
+{% if album is defined and album is not none %} on the album _{{ album }}_ {% endif %}
+{% if disc is defined and disc is not none %} on disc #{{ disc }}
+{% if disc_total is defined and disc_total is not none%} out of {{ disc_total }}{% endif %}. {% endif %}
+{% if albumartist is defined and albumartist is not none %} The album artist is listed as {{ albumartist }}. {% endif %}
+{% if lang is defined and lang is not none %} The language is {{ lang }}.{% endif %}
+{% if genre is defined and genre is not none %} It is classified as {{ genre }} by some people. {% endif %}
+{% if bpm is defined and bpm is not none %}The BPM is approximately {{ bpm }}.{% endif %}
+{% if key is defined and key is not none %}Performed in the key of {{ key }}{% endif %}
+{% if composer is defined and composer is not none %} {{ composer }} is the composer listing. {% endif %}
+{% if publisher is defined and publisher is not none %} It was published by {{ publisher }}.{% endif %}
+{% if year is defined and year is not none %}The year is listed as {{ year }}, but that might be
+ the year of the media. {% endif %}

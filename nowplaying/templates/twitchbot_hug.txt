@@ -1,0 +1,1 @@
+@{{ cmduser }} sends hugs to {% for people in cmdtarget %}@{{ people }} VirtualHug {% endfor %}

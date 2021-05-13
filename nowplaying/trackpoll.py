@@ -76,7 +76,7 @@ class TrackPoll(QThread):
     def gettrack(self):  # pylint: disable=too-many-branches
         ''' get currently playing track, returns None if not new or not found '''
 
-        logging.debug('called gettrack')
+        #logging.debug('called gettrack')
         # check paused state
         while True:
             if not self.config.getpause():

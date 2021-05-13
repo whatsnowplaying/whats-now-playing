@@ -7,7 +7,7 @@ import pathlib
 import socket
 
 from PySide2.QtCore import Slot, QFile, Qt  # pylint: disable=no-name-in-module
-from PySide2.QtWidgets import QErrorMessage, QFileDialog, QWidget  # pylint: disable=no-name-in-module
+from PySide2.QtWidgets import QCheckBox, QErrorMessage, QFileDialog, QTableWidgetItem, QWidget  # pylint: disable=no-name-in-module
 from PySide2.QtGui import QIcon  # pylint: disable=no-name-in-module
 from PySide2.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
 import PySide2.QtXml  # pylint: disable=unused-import, import-error, no-name-in-module
@@ -18,14 +18,6 @@ import nowplaying.config
 # settings UI
 class SettingsUI(QWidget):
     ''' create settings form window '''
-
-    # Need to keep track of these values get changed by the
-    # user.  These will get set in init.  If these values
-    # change, then trigger the webthread to reset itself
-    # to pick up the new values...
-    httpenabled = None
-    httpport = None
-
     def __init__(self, tray, version):
 
         self.config = nowplaying.config.ConfigFile()
@@ -42,14 +34,6 @@ class SettingsUI(QWidget):
             self.tray.cleanquit()
         self.qtui.setWindowIcon(QIcon(self.iconfile))
 
-        SettingsUI.httpenabled = self.config.cparser.value(
-            'weboutput/httpenabled', type=bool)
-        SettingsUI.httpport = self.config.cparser.value('weboutput/httpport',
-                                                        type=int)
-
-        # make connections. Note that radio button flipping, etc
-        # should be in the ui file itself
-
     def load_qtui(self):
         ''' load the base UI and wire it up '''
         def _load_ui(name):
@@ -64,7 +48,7 @@ class SettingsUI(QWidget):
 
         self.qtui = _load_ui('settings')
 
-        baseuis = ['general', 'source', 'webserver', 'obsws']
+        baseuis = ['general', 'source', 'webserver', 'obsws', 'twitchbot']
         pluginuis = [
             key.replace('nowplaying.inputs.', '')
             for key in self.config.plugins.keys()
@@ -127,10 +111,15 @@ class SettingsUI(QWidget):
         qobject.local_dir_button.clicked.connect(self.on_serato_lib_button)
 
     def _connect_obsws_widget(self, qobject):
-        ''' connect serato tab to non-built-ins.  UI file
-            properly enables/disables based upon local/remote '''
-
+        ''' connect obsws button to template picker'''
         qobject.template_button.clicked.connect(self.on_obsws_template_button)
+
+    def _connect_twitchbot_widget(self, qobject):
+        '''  connect twitchbot announce to template picker'''
+        qobject.announce_button.clicked.connect(
+            self.on_twitchbot_announce_button)
+        qobject.add_button.clicked.connect(self.on_twitchbot_add_button)
+        qobject.del_button.clicked.connect(self.on_twitchbot_del_button)
 
     def _connect_source_widget(self, qobject):
         ''' populate the input group box '''
@@ -163,6 +152,7 @@ class SettingsUI(QWidget):
         self._upd_win_plugins()
         self._upd_win_webserver()
         self._upd_win_obsws()
+        self._upd_win_twitchbot()
 
     def _upd_win_input(self):
         ''' this is totally wrong and will need to get dealt
@@ -206,20 +196,55 @@ class SettingsUI(QWidget):
         self.widgets['obsws'].template_lineedit.setText(
             self.config.cparser.value('obsws/template'))
 
+    def _upd_win_twitchbot(self):
+        ''' update the twitch settings '''
+
+        # needs to match ui file
+        checkboxes = [
+            'broadcaster', 'moderator', 'subscriber', 'founder', 'conductor',
+            'vip', 'bits'
+        ]
+
+        for configitem in self.config.cparser.childGroups():
+            setting = {}
+            if 'twitchbot-command-' in configitem:
+                command = configitem.replace('twitchbot-command-', '')
+                setting['command'] = command
+                for box in checkboxes:
+                    setting[box] = self.config.cparser.value(
+                        f'{configitem}/{box}', defaultValue=True, type=bool)
+                self._twitchbot_command_load(**setting)
+
+        self.widgets['twitchbot'].enable_checkbox.setChecked(
+            self.config.cparser.value('twitchbot/enabled', type=bool))
+        self.widgets['twitchbot'].clientid_lineedit.setText(
+            self.config.cparser.value('twitchbot/clientid'))
+        self.widgets['twitchbot'].channel_lineedit.setText(
+            self.config.cparser.value('twitchbot/channel'))
+        self.widgets['twitchbot'].username_lineedit.setText(
+            self.config.cparser.value('twitchbot/username'))
+        self.widgets['twitchbot'].token_lineedit.setText(
+            self.config.cparser.value('twitchbot/token'))
+        self.widgets['twitchbot'].announce_lineedit.setText(
+            self.config.cparser.value('twitchbot/announce'))
+        self.widgets['twitchbot'].commandchar_lineedit.setText(
+            self.config.cparser.value('twitchbot/commandchar'))
+
     def _upd_win_plugins(self):
         ''' tell config to trigger plugins to update windows '''
         self.config.plugins_load_settingsui(self.widgets)
 
     def disable_web(self):
         ''' if the web server gets in trouble, this gets called '''
+        self.upd_win()
         self.widgets['webserver'].enable_checkbox.setChecked(False)
         self.upd_conf()
-        self.upd_win()
         self.errormessage.showMessage(
             'HTTP Server settings are invalid. Bad port?')
 
     def disable_obsws(self):
         ''' if the OBS WebSocket gets in trouble, this gets called '''
+        self.upd_win()
         self.widgets['obsws'].enable_checkbox.setChecked(False)
         self.upd_conf()
         self.upd_win()
@@ -249,7 +274,9 @@ class SettingsUI(QWidget):
         self._upd_conf_input()
         self._upd_conf_webserver()
         self._upd_conf_obsws()
+        self._upd_conf_twitchbot()
         self._upd_conf_plugins()
+        self.config.cparser.sync()
 
     def _upd_conf_input(self):
         ''' find the text of the currently selected handler '''
@@ -270,6 +297,10 @@ class SettingsUI(QWidget):
         # itself.  Hitting stop makes it go through
         # the loop again
 
+        oldenabled = self.config.cparser.value('weboutput/httpenabled',
+                                               type=bool)
+        oldport = self.config.cparser.value('weboutput/httpport', type=int)
+
         httpenabled = self.widgets['webserver'].enable_checkbox.isChecked()
         httpport = int(self.widgets['webserver'].port_lineedit.text())
 
@@ -282,12 +313,8 @@ class SettingsUI(QWidget):
             'weboutput/once',
             self.widgets['webserver'].once_checkbox.isChecked())
 
-
-        if SettingsUI.httpport != httpport or \
-           SettingsUI.httpenabled != httpenabled:
+        if oldenabled != httpenabled or oldport != httpport:
             self.tray.restart_webprocess()
-            SettingsUI.httpport = httpport
-            SettingsUI.httpenabled = httpenabled
 
     def _upd_conf_obsws(self):
         ''' update the obsws settings '''
@@ -307,6 +334,58 @@ class SettingsUI(QWidget):
         self.config.cparser.setValue(
             'obsws/enabled', self.widgets['obsws'].enable_checkbox.isChecked())
 
+    def _upd_conf_twitchbot(self):
+        ''' update the twitch settings '''
+        def reset_commands(widget, config):
+
+            # needs to match ui file
+            checkboxes = [
+                'broadcaster', 'moderator', 'subscriber', 'founder',
+                'conductor', 'vip', 'bits'
+            ]
+
+            for configitem in config.allKeys():
+                if 'twitchbot-command-' in configitem:
+                    config.remove(configitem)
+
+            rowcount = widget.rowCount()
+            for row in range(0, rowcount):
+                item = widget.item(row, 0)
+                cmd = item.text()
+                cmd = f'twitchbot-command-{cmd}'
+                for column, cbtype in enumerate(checkboxes):
+                    item = widget.cellWidget(row, column + 1)
+                    value = item.isChecked()
+                    config.setValue(f'{cmd}/{cbtype}', value)
+
+        oldenabled = self.config.cparser.value('twitchbot/enabled', type=bool)
+        newenabled = self.widgets['twitchbot'].enable_checkbox.isChecked()
+
+        self.config.cparser.setValue('twitchbot/enabled', newenabled)
+        self.config.cparser.setValue(
+            'twitchbot/clientid',
+            self.widgets['twitchbot'].clientid_lineedit.text())
+        self.config.cparser.setValue(
+            'twitchbot/channel',
+            self.widgets['twitchbot'].channel_lineedit.text())
+        self.config.cparser.setValue(
+            'twitchbot/username',
+            self.widgets['twitchbot'].username_lineedit.text())
+        self.config.cparser.setValue(
+            'twitchbot/token', self.widgets['twitchbot'].token_lineedit.text())
+        self.config.cparser.setValue(
+            'twitchbot/announce',
+            self.widgets['twitchbot'].announce_lineedit.text())
+        self.config.cparser.setValue(
+            'twitchbot/commandchar',
+            self.widgets['twitchbot'].commandchar_lineedit.text())
+
+        reset_commands(self.widgets['twitchbot'].command_perm_table,
+                       self.config.cparser)
+
+        if oldenabled != newenabled:
+            self.tray.restart_twitchbotprocess()
+
     @Slot()
     def on_text_saveas_button(self):
         ''' file button clicked action '''
@@ -320,31 +399,35 @@ class SettingsUI(QWidget):
         if filename:
             self.widgets['general'].textoutput_lineedit.setText(filename[0])
 
-    @Slot()
-    def on_text_template_button(self):
-        ''' file button clicked action '''
-        startfile = self.widgets['general'].texttemplate_lineedit.text()
+    def template_picker(self, startfile=None, startdir=None, limit='*.txt'):
+        ''' generic code to pick a template file '''
         if startfile:
             startdir = os.path.dirname(startfile)
-        else:
-            startdir = os.path.join(self.config.getbundledir(), "templates")
+        elif not startdir:
+            startdir = os.path.join(self.config.templatedir, "templates")
         filename = QFileDialog.getOpenFileName(self.qtui, 'Open file',
-                                               startdir, '*.txt')
+                                               startdir, limit)
         if filename:
-            self.widgets['general'].texttemplate_lineedit.setText(filename[0])
+            return filename[0]
+        return None
+
+    def template_picker_lineedit(self, qwidget, limit='*.txt'):
+        ''' generic code to pick a template file '''
+        filename = self.template_picker(qwidget.text(), limit)
+        if filename:
+            qwidget.setText(filename)
+
+    @Slot()
+    def on_text_template_button(self):
+        ''' file template button clicked action '''
+        self.template_picker_lineedit(
+            self.widgets['general'].texttemplate_lineedit)
 
     @Slot()
     def on_obsws_template_button(self):
-        ''' file button clicked action '''
-        startfile = self.widgets['obsws'].template_lineedit.text()
-        if startfile:
-            startdir = os.path.dirname(startfile)
-        else:
-            startdir = os.path.join(self.config.getbundledir(), "templates")
-        filename = QFileDialog.getOpenFileName(self.qtui, 'Open file',
-                                               startdir, '*.txt')
-        if filename:
-            self.widgets['obsws'].template_lineedit.setText(filename[0])
+        ''' obsws template button clicked action '''
+        self.template_picker_lineedit(
+            self.widgets['obsws'].texttemplate_lineedit)
 
     @Slot()
     def on_serato_lib_button(self):
@@ -359,16 +442,62 @@ class SettingsUI(QWidget):
 
     @Slot()
     def on_html_template_button(self):
-        ''' file button clicked action '''
-        startfile = self.widgets['webserver'].template_lineedit.text()
-        if startfile:
-            startdir = os.path.dirname(startfile)
-        else:
-            startdir = os.path.join(self.config.getbundledir(), "templates")
-        filename = QFileDialog.getOpenFileName(self.qtui, 'Open file',
-                                               startdir, '*.htm *.html')
-        if filename:
-            self.widgets['webserver'].template_lineedit.setText(filename[0])
+        ''' html template button clicked action '''
+        self.template_picker_lineedit(
+            self.widgets['webserver'].texttemplate_lineedit,
+            limit='*.htm *.html')
+
+    @Slot()
+    def on_twitchbot_announce_button(self):
+        ''' twitchbot announce button clicked action '''
+        self.template_picker_lineedit(
+            self.widgets['twitchbot'].announce_lineedit,
+            limit='twitchbot_*.txt')
+
+    def _twitchbot_command_load(self, command=None, **kwargs):
+        if not command:
+            return
+
+        row = self.widgets['twitchbot'].command_perm_table.rowCount()
+        self.widgets['twitchbot'].command_perm_table.insertRow(row)
+        cmditem = QTableWidgetItem(command)
+        self.widgets['twitchbot'].command_perm_table.setItem(row, 0, cmditem)
+
+        # needs to match ui file
+        checkboxes = [
+            'broadcaster', 'moderator', 'subscriber', 'founder', 'conductor',
+            'vip', 'bits'
+        ]
+        checkbox = []
+        for column, cbtype in enumerate(checkboxes):  # pylint: disable=unused-variable
+            checkbox = QCheckBox()
+            if cbtype in kwargs:
+                checkbox.setChecked(kwargs[cbtype])
+            else:
+                checkbox.setChecked(True)
+            self.widgets['twitchbot'].command_perm_table.setCellWidget(
+                row, column + 1, checkbox)
+
+    @Slot()
+    def on_twitchbot_add_button(self):
+        ''' twitchbot add button clicked action '''
+        filename = self.template_picker(limit='twitchbot_*.txt')
+        if not filename:
+            return
+
+        filename = os.path.basename(filename)
+        filename = filename.replace('twitchbot_', '')
+        command = filename.replace('.txt', '')
+
+        self._twitchbot_command_load(command)
+
+    @Slot()
+    def on_twitchbot_del_button(self):
+        ''' twitchbot del button clicked action '''
+        items = self.widgets['twitchbot'].command_perm_table.selectedIndexes()
+        if items:
+            self.widgets['twitchbot'].command_perm_table.removeRow(
+                items[0].row())
 
     @Slot()
     def on_cancel_button(self):

@@ -2,7 +2,6 @@
 ''' system tray '''
 
 import logging
-
 import multiprocessing
 
 from PySide2.QtWidgets import (  # pylint: disable=no-name-in-module
@@ -14,6 +13,7 @@ import nowplaying.db
 import nowplaying.obsws
 import nowplaying.settingsui
 import nowplaying.trackpoll
+import nowplaying.twitchbot
 import nowplaying.utils
 import nowplaying.version
 import nowplaying.webserver
@@ -90,6 +90,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.trackthread = None
         self.webprocess = None
         self.obswsthread = None
+        self.twitchbotprocess = None
         self.threadstart()
 
     def threadstart(self):
@@ -107,20 +108,27 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         if self.config.cparser.value('weboutput/httpenabled', type=bool):
             self._start_webprocess()
 
+        if self.config.cparser.value('twitchbot/enabled', type=bool):
+            self._start_twitchbotprocess()
+
     def _stop_webprocess(self):
         ''' stop the web process '''
         if self.webprocess:
             logging.debug('Notifying webserver')
-            nowplaying.webserver.stop()
+            nowplaying.webserver.stop(self.webprocess.pid)
             logging.debug('Waiting for webserver')
-            if not self.webprocess.join(20):
+            if not self.webprocess.join(5):
                 logging.info('Terminating webprocess forcefully')
                 self.webprocess.terminate()
+            self.webprocess.join(5)
+            self.webprocess.close()
+            self.webprocess = None
 
     def _start_webprocess(self):
         ''' Start the webserver '''
-        logging.info('Starting web process')
-        if not self.webprocess:
+        if not self.webprocess and self.config.cparser.value(
+                'weboutput/httpenabled', type=bool):
+            logging.info('Starting web process')
             app = QApplication.instance()
             self.webprocess = multiprocessing.Process(
                 target=nowplaying.webserver.start,
@@ -131,10 +139,43 @@ class Tray:  # pylint: disable=too-many-instance-attributes
                 ))
             self.webprocess.start()
 
+    def _stop_twitchbotprocess(self):
+        ''' stop the twitchbot process '''
+        if self.twitchbotprocess:
+            logging.debug('Notifying twitchbot')
+            nowplaying.twitchbot.stop(self.twitchbotprocess.pid)
+            logging.debug('Waiting for twitchbot')
+            if not self.twitchbotprocess.join(5):
+                logging.info('Terminating twitchbot forcefully')
+                self.twitchbotprocess.terminate()
+            self.twitchbotprocess.join(5)
+            self.twitchbotprocess.close()
+            self.twitchbotprocess = None
+
+    def _start_twitchbotprocess(self):
+        ''' Start the twitchbot '''
+        logging.info('Starting twitchbot')
+        if not self.twitchbotprocess and self.config.cparser.value(
+                'twitchbot/enabled', type=bool):
+            app = QApplication.instance()
+            self.twitchbotprocess = multiprocessing.Process(
+                target=nowplaying.twitchbot.start,
+                args=(
+                    app.organizationName(),
+                    app.applicationName(),
+                    self.config.getbundledir(),
+                ))
+            self.twitchbotprocess.start()
+
     def restart_webprocess(self):
         ''' handle starting or restarting the webserver process '''
         self._stop_webprocess()
         self._start_webprocess()
+
+    def restart_twitchbotprocess(self):
+        ''' handle starting or restarting the webserver process '''
+        self._stop_twitchbotprocess()
+        self._start_twitchbotprocess()
 
     def tracknotify(self, metadata):
         ''' signal handler to update the tooltip '''
@@ -233,6 +274,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         logging.debug('Shutting down webprocess')
         self._stop_webprocess()
+        self._stop_twitchbotprocess()
 
         # calling exit should call __del__ on all of our QThreads
         if self.trackthread:
