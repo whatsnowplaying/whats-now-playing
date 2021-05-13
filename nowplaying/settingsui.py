@@ -64,7 +64,7 @@ class SettingsUI(QWidget):
 
         self.qtui = _load_ui('settings')
 
-        baseuis = ['general', 'source', 'webserver', 'obsws']
+        baseuis = ['general', 'source', 'webserver', 'obsws', 'twitchbot']
         pluginuis = [
             key.replace('nowplaying.inputs.', '')
             for key in self.config.plugins.keys()
@@ -163,6 +163,7 @@ class SettingsUI(QWidget):
         self._upd_win_plugins()
         self._upd_win_webserver()
         self._upd_win_obsws()
+        self._upd_win_twitchbot()
 
     def _upd_win_input(self):
         ''' this is totally wrong and will need to get dealt
@@ -206,20 +207,38 @@ class SettingsUI(QWidget):
         self.widgets['obsws'].template_lineedit.setText(
             self.config.cparser.value('obsws/template'))
 
+    def _upd_win_twitchbot(self):
+        ''' update the twitch settings '''
+        self.widgets['twitchbot'].enable_checkbox.setChecked(
+            self.config.cparser.value('twitchbot/enabled', type=bool))
+        self.widgets['twitchbot'].clientid_lineedit.setText(
+            self.config.cparser.value('twitchbot/clientid'))
+        self.widgets['twitchbot'].channel_lineedit.setText(
+            self.config.cparser.value('twitchbot/channel'))
+        self.widgets['twitchbot'].username_lineedit.setText(
+            self.config.cparser.value('twitchbot/username'))
+        self.widgets['twitchbot'].token_lineedit.setText(
+            self.config.cparser.value('twitchbot/token'))
+        self.widgets['twitchbot'].announce_lineedit.setText(
+            self.config.cparser.value('twitchbot/announce'))
+        self.widgets['twitchbot'].commandchar_lineedit.setText(
+            self.config.cparser.value('twitchbot/commandchar'))
+
     def _upd_win_plugins(self):
         ''' tell config to trigger plugins to update windows '''
         self.config.plugins_load_settingsui(self.widgets)
 
     def disable_web(self):
         ''' if the web server gets in trouble, this gets called '''
+        self.upd_win()
         self.widgets['webserver'].enable_checkbox.setChecked(False)
         self.upd_conf()
-        self.upd_win()
         self.errormessage.showMessage(
             'HTTP Server settings are invalid. Bad port?')
 
     def disable_obsws(self):
         ''' if the OBS WebSocket gets in trouble, this gets called '''
+        self.upd_win()
         self.widgets['obsws'].enable_checkbox.setChecked(False)
         self.upd_conf()
         self.upd_win()
@@ -249,7 +268,9 @@ class SettingsUI(QWidget):
         self._upd_conf_input()
         self._upd_conf_webserver()
         self._upd_conf_obsws()
+        self._upd_conf_twitchbot()
         self._upd_conf_plugins()
+        self.config.cparser.sync()
 
     def _upd_conf_input(self):
         ''' find the text of the currently selected handler '''
@@ -306,6 +327,29 @@ class SettingsUI(QWidget):
             'obsws/template', self.widgets['obsws'].template_lineedit.text())
         self.config.cparser.setValue(
             'obsws/enabled', self.widgets['obsws'].enable_checkbox.isChecked())
+
+    def _upd_conf_twitchbot(self):
+        ''' update the twitch settings '''
+        self.config.cparser.setValue(
+            'twitchbot/enabled',
+            self.widgets['twitchbot'].enable_checkbox.isChecked())
+        self.config.cparser.setValue(
+            'twitchbot/clientid',
+            self.widgets['twitchbot'].clientid_lineedit.text())
+        self.config.cparser.setValue(
+            'twitchbot/channel',
+            self.widgets['twitchbot'].channel_lineedit.text())
+        self.config.cparser.setValue(
+            'twitchbot/username',
+            self.widgets['twitchbot'].username_lineedit.text())
+        self.config.cparser.setValue(
+            'twitchbot/token', self.widgets['twitchbot'].token_lineedit.text())
+        self.config.cparser.setValue(
+            'twitchbot/announce',
+            self.widgets['twitchbot'].announce_lineedit.text())
+        self.config.cparser.setValue(
+            'twitchbot/commandchar',
+            self.widgets['twitchbot'].commandchar_lineedit.text())
 
     @Slot()
     def on_text_saveas_button(self):

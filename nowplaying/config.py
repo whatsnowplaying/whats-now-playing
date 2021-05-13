@@ -146,6 +146,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         settings.setValue('weboutput/httpport', '8899')
         settings.setValue('weboutput/once', True)
 
+        settings.setValue('twitchbot/enabled', False)
+
         self._defaults_input_plugins(settings)
 
     def _defaults_input_plugins(self, settings):

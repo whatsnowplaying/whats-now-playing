@@ -14,6 +14,7 @@ import nowplaying.db
 import nowplaying.obsws
 import nowplaying.settingsui
 import nowplaying.trackpoll
+import nowplaying.twitchbot
 import nowplaying.utils
 import nowplaying.version
 import nowplaying.webserver
@@ -90,6 +91,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.trackthread = None
         self.webprocess = None
         self.obswsthread = None
+        self.twitchbotprocess = None
         self.threadstart()
 
     def threadstart(self):
@@ -106,6 +108,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         if self.config.cparser.value('weboutput/httpenabled', type=bool):
             self._start_webprocess()
+
+        if self.config.cparser.value('twitchbot/enabled', type=bool):
+            self._start_twitchbotprocess()
 
     def _stop_webprocess(self):
         ''' stop the web process '''
@@ -131,10 +136,39 @@ class Tray:  # pylint: disable=too-many-instance-attributes
                 ))
             self.webprocess.start()
 
+    def _stop_twitchbotprocess(self):
+        ''' stop the twitchbot process '''
+        if self.twitchbotprocess:
+            logging.debug('Notifying twitchbot')
+            nowplaying.twitchbot.stop()
+            logging.debug('Waiting for twitchbot')
+            if not self.twitchbotprocess.join(20):
+                logging.info('Terminating twitchbot forcefully')
+                self.twitchbotprocess.terminate()
+
+    def _start_twitchbotprocess(self):
+        ''' Start the twitchbot '''
+        logging.info('Starting twitchbot')
+        if not self.twitchbotprocess:
+            app = QApplication.instance()
+            self.twitchbotprocess = multiprocessing.Process(
+                target=nowplaying.twitchbot.start,
+                args=(
+                    app.organizationName(),
+                    app.applicationName(),
+                    self.config.getbundledir(),
+                ))
+            self.twitchbotprocess.start()
+
     def restart_webprocess(self):
         ''' handle starting or restarting the webserver process '''
         self._stop_webprocess()
         self._start_webprocess()
+
+    def restart_twitchbotprocess(self):
+        ''' handle starting or restarting the webserver process '''
+        self._stop_twitchbotprocess()
+        self._start_twitchbotprocess()
 
     def tracknotify(self, metadata):
         ''' signal handler to update the tooltip '''
@@ -233,6 +267,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         logging.debug('Shutting down webprocess')
         self._stop_webprocess()
+        self._stop_twitchbotprocess()
 
         # calling exit should call __del__ on all of our QThreads
         if self.trackthread:

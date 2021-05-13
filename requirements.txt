@@ -1,5 +1,6 @@
 aiohttp==3.7.4.post0
 aiosqlite==0.17.0
+irc==19.0.1
 jinja2==2.11.3
 lxml==4.6.3
 obs-websocket-py==0.5.3

@@ -1,0 +1,2 @@
+{% if cmdtarget2 is defined and cmdtarget2 is not none %}Hey {{ cmdtarget2 }}! {% endif %}
+ Shout out to @{{ cmdtarget1 }}! Go checkout their channel at https://twitch.tv/{{ cmdtarget1 }}! 

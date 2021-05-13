@@ -1,0 +1,14 @@
+{% if cmdtarget1 is defined and cmdtarget1 is not none %}Hey @{{ cmdtarget1 }} this song has these details... {% endif %}
+Title: {{ title }}
+{% if artist is defined and artist is not none %} Artist: {{ artist }}{% endif %}
+{% if track is defined and track is not none %} [Track: {{ track }}{% if track_total is defined and track_total is not none%}/ {{ track_total }} {% endif %}]{% endif %}
+{% if album is defined and album is not none %} Album: {{ album }} {% endif %}
+{% if disc is defined and disc is not none %} [Disc: {{ disc }} {% if disc_total is defined and disc_total is not none%}/ {{ disc_total }} {% endif %}]{% endif %}
+{% if albumartist is defined and albumartist is not none %} Album Artist: {{ albumartist }}{% endif %}
+{% if lang is defined and lang is not none %} Language: {{ lang }}{% endif %}
+{% if genre is defined and genre is not none %} Genre: {{ genre }}{% endif %}
+{% if bpm is defined and bpm is not none %} BPM: {{ bpm }}{% endif %}
+{% if key is defined and key is not none %} Key: {{ key }}{% endif %}
+{% if composer is defined and composer is not none %} Composer: {{ composer }}{% endif %}
+{% if publisher is defined and publisher is not none %} Publisher: {{ publisher }}{% endif %}
+{% if year is defined and year is not none %} Year: {{ year }}{% endif %}
