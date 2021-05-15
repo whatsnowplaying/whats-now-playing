@@ -57,6 +57,8 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
 def getmoremetadata(metadata=None):
     ''' given a chunk of metadata, try to fill in more '''
 
+    tag = None
+
     logging.debug('getmoremetadata called')
 
     if not metadata or 'filename' not in metadata:
@@ -73,18 +75,23 @@ def getmoremetadata(metadata=None):
     logging.debug('getmoremetadata calling TinyTag for %s',
                   metadata['filename'])
 
-    tag = tinytag.TinyTag.get(metadata['filename'], image=True)
 
-    for key in [
-            'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'composer',
-            'disc', 'disc_total', 'genre', 'key', 'publisher', 'lang', 'title',
-            'track', 'track_total', 'year'
-    ]:
-        if key not in metadata and hasattr(tag, key) and getattr(tag, key):
-            metadata[key] = getattr(tag, key)
+    try:
+        tag = tinytag.TinyTag.get(metadata['filename'], image=True)
+    except tinytag.tinytag.TinyTagException:
+        logging.error('File format not supported')
 
-    if 'coverimageraw' not in metadata:
-        metadata['coverimageraw'] = tag.get_image()
+    if tag:
+        for key in [
+                'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'composer',
+                'disc', 'disc_total', 'genre', 'key', 'publisher', 'lang', 'title',
+                'track', 'track_total', 'year'
+        ]:
+            if key not in metadata and hasattr(tag, key) and getattr(tag, key):
+                metadata[key] = getattr(tag, key)
+
+        if 'coverimageraw' not in metadata:
+            metadata['coverimageraw'] = tag.get_image()
 
     # always convert to png
 

@@ -9,6 +9,7 @@
 import collections
 import logging
 import sys
+import urllib
 try:
     import dbus
     DBUS_STATUS = True
@@ -91,13 +92,13 @@ class MPRIS2Handler():
             artists = collections.deque(artists)
             artist = str(artists.popleft())
             while len(artists) > 0:
-                artist = artist + ', ' + str(artists.popleft())
+                artist = artist + '/' + str(artists.popleft())
 
-        title = self.meta.get('xesam:title')
+        title = str(self.meta.get('xesam:title'))
         self.metadata = {
             'album': str(self.meta.get('xesam:album')),
             'artist': artist,
-            'title': str(title),
+            'title': title,
         }
 
         length = self.meta.get('mpris:length')
@@ -106,11 +107,17 @@ class MPRIS2Handler():
 
         tracknumber = self.meta.get('xesam:tracknumber')
         if tracknumber:
-            self.metadata['tracknumber'] = tracknumber
+            self.metadata['track'] = int(tracknumber)
 
         filename = self.meta.get('xesam:url')
         if filename and 'file://' in filename:
+            filename = urllib.parse.unquote(filename)
             self.metadata['filename'] = filename.replace('file://', '')
+
+        arturl = self.meta.get('mpris:artUrl')
+        if arturl:
+            with urllib.request.urlopen(arturl) as coverart:
+                self.metadata['coverimageraw'] = coverart.read()
 
         return artist, title
 
@@ -252,8 +259,13 @@ def main():
         mpris2.resetservice(sys.argv[1])
         (artist, title) = mpris2.getplayingtrack()
         print(f'Artist: {artist} / Title: {title}')
-        print(mpris2.getplayingmetadata())
+        data = mpris2.getplayingmetadata()
+        if 'coverartraw' in data:
+            print('Got coverart')
+            del data['coverimageraw']
+        print(data)
     else:
+
         print(mpris2.get_mpris2_services())
 
 
