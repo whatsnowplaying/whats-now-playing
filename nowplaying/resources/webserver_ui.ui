@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>http_ui</class>
+ <widget class="QWidget" name="http_ui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>HTTP Server</string>
+  </property>
+  <widget class="QLabel" name="server_enable_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>181</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>**HTTP Server Support**</string>
+   </property>
+   <property name="textFormat">
+    <enum>Qt::MarkdownText</enum>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="enable_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>30</y>
+     <width>86</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enable</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="template_label">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>126</y>
+     <width>131</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>index.html Template</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="template_button">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>120</y>
+     <width>141</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Browse for File ...</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="port_label">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>70</y>
+     <width>59</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>TCP Port</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="port_lineedit">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>120</x>
+     <y>70</y>
+     <width>113</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="inputMethodHints">
+    <set>Qt::ImhDigitsOnly|Qt::ImhPreferNumbers</set>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="template_lineedit">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>120</y>
+     <width>321</width>
+     <height>31</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="once_label">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>160</y>
+     <width>111</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>**Send Refresh**</string>
+   </property>
+   <property name="textFormat">
+    <enum>Qt::MarkdownText</enum>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="once_checkbox">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>190</y>
+     <width>621</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Only send content once, then send HTTP refresh meta until new content is available.</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="networking_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>250</y>
+     <width>291</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>**Networking Info**</string>
+   </property>
+   <property name="textFormat">
+    <enum>Qt::MarkdownText</enum>
+   </property>
+  </widget>
+  <widget class="QLabel" name="hostnamelabel_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>280</y>
+     <width>91</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Hostname:</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="hostiplabel_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>310</y>
+     <width>59</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>IP:</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="hostname_label">
+   <property name="geometry">
+    <rect>
+     <x>140</x>
+     <y>280</y>
+     <width>221</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Unknown Hostname</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="hostip_label">
+   <property name="geometry">
+    <rect>
+     <x>140</x>
+     <y>310</y>
+     <width>221</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Unknown IP Address</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>template_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>52</x>
+     <y>39</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>75</x>
+     <y>135</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>port_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>52</x>
+     <y>39</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>176</x>
+     <y>80</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>port_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>52</x>
+     <y>39</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>49</x>
+     <y>77</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>once_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>52</x>
+     <y>39</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>320</x>
+     <y>215</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>once_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>52</x>
+     <y>39</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>65</x>
+     <y>167</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>template_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>52</x>
+     <y>39</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>460</x>
+     <y>135</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>template_button</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>52</x>
+     <y>39</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>220</x>
+     <y>135</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

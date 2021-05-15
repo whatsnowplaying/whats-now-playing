@@ -804,27 +804,32 @@ class Plugin(InputPlugin):
     def stop(self):
         ''' not needed for serato plugin '''
 
-    def load_settingsui(self, qtui):
+    def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
         if self.config.cparser.value('serato/local', type=bool):
-            qtui.serato_local_button.setChecked(True)
-            qtui.serato_remote_button.setChecked(False)
+            qwidget.local_button.setChecked(True)
+            qwidget.remote_button.setChecked(False)
         else:
-            qtui.serato_local_button.setChecked(False)
-            qtui.serato_remote_button.setChecked(True)
-        qtui.serato_local_lineedit.setText(
+            qwidget.local_dir_button.setChecked(False)
+            qwidget.remote_button.setChecked(True)
+        qwidget.local_dir_lineedit.setText(
             self.config.cparser.value('serato/libpath'))
-        qtui.serato_remote_url_lineedit.setText(
+        qwidget.remote_url_lineedit.setText(
             self.config.cparser.value('serato/url'))
 
-    def save_settingsui(self, qtui):
+    def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
         self.config.cparser.setValue('serato/libpath',
-                                     qtui.serato_local_lineedit.text())
+                                     qwidget.local_dir_lineedit.text())
         self.config.cparser.setValue('serato/local',
-                                     qtui.serato_local_button.isChecked())
+                                     qwidget.local_button.isChecked())
         self.config.cparser.setValue('serato/url',
-                                     qtui.serato_remote_url_lineedit.text())
+                                     qwidget.remote_url_lineedit.text())
+
+    def desc_settingsui(self, qwidget):
+        ''' description '''
+        qwidget.setText('This plugin provides support for Serato '
+                        'in both a local and remote capacity.')
 
 
 def main():

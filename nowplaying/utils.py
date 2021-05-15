@@ -75,7 +75,6 @@ def getmoremetadata(metadata=None):
     logging.debug('getmoremetadata calling TinyTag for %s',
                   metadata['filename'])
 
-
     try:
         tag = tinytag.TinyTag.get(metadata['filename'], image=True)
     except tinytag.tinytag.TinyTagException:
@@ -84,8 +83,8 @@ def getmoremetadata(metadata=None):
     if tag:
         for key in [
                 'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'composer',
-                'disc', 'disc_total', 'genre', 'key', 'publisher', 'lang', 'title',
-                'track', 'track_total', 'year'
+                'disc', 'disc_total', 'genre', 'key', 'publisher', 'lang',
+                'title', 'track', 'track_total', 'year'
         ]:
             if key not in metadata and hasattr(tag, key) and getattr(tag, key):
                 metadata[key] = getattr(tag, key)

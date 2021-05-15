@@ -16,6 +16,7 @@ try:
 except ImportError:
     DBUS_STATUS = False
 
+from PySide2.QtCore import Qt  # pylint: disable=no-name-in-module
 from nowplaying.inputs import InputPlugin
 
 MPRIS2_BASE = 'org.mpris.MediaPlayer2'
@@ -94,12 +95,14 @@ class MPRIS2Handler():
             while len(artists) > 0:
                 artist = artist + '/' + str(artists.popleft())
 
-        title = str(self.meta.get('xesam:title'))
-        self.metadata = {
-            'album': str(self.meta.get('xesam:album')),
-            'artist': artist,
-            'title': title,
-        }
+        title = self.meta.get('xesam:title')
+        if title:
+            title = str(title)
+            self.metadata = {
+                'album': str(self.meta.get('xesam:album')),
+                'artist': artist,
+                'title': title,
+            }
 
         length = self.meta.get('mpris:length')
         if length:
@@ -227,23 +230,37 @@ class Plugin(InputPlugin):
     def stop(self):
         ''' not needed '''
 
-    def load_settingsui(self, qtui):
+    def load_settingsui(self, qwidget):
         ''' populate the combobox '''
         if not self.dbus_status or not self.mpris2:
             return
         currentservice = self.config.cparser.value('mpris2/service')
         servicelist = self.mpris2.get_mpris2_services()
-        qtui.mpris2_combo_box.addItems(servicelist)
-        qtui.mpris2_combo_box.setCurrentIndex(
-            servicelist.index(currentservice))
+        qwidget.list_widget.clear()
+        qwidget.list_widget.addItems(servicelist)
+        curbutton = qwidget.list_widget.findItems(currentservice,
+                                                  Qt.MatchContains)
+        if curbutton:
+            curbutton[0].setSelected(True)
 
-    def save_settingsui(self, qtui):
+    def save_settingsui(self, qwidget):
         ''' save the combobox '''
         if not self.dbus_status:
             return
+        curitem = qwidget.list_widget.currentItem()
+        if curitem:
+            curtext = curitem.text()
+            self.config.cparser.setValue('mpris2/service', curtext)
 
-        self.config.cparser.setValue('mpris2/service',
-                                     qtui.mpris2_combo_box.currentText())
+    def desc_settingsui(self, qwidget):
+        ''' description '''
+        if not self.dbus_status:
+            qwidget.setText('Not available.')
+            return
+
+        qwidget.setText('This plugin provides support for MPRIS2 '
+                        'compatible software on Linux and other DBus systems.')
+        return
 
 
 def main():
@@ -258,9 +275,9 @@ def main():
     if len(sys.argv) == 2:
         mpris2.resetservice(sys.argv[1])
         (artist, title) = mpris2.getplayingtrack()
-        print(f'Artist: {artist} / Title: {title}')
+        print(f'Artist: {artist} | Title: {title}')
         data = mpris2.getplayingmetadata()
-        if 'coverartraw' in data:
+        if 'coverimageraw' in data:
             print('Got coverart')
             del data['coverimageraw']
         print(data)

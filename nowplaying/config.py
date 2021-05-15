@@ -45,14 +45,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             self.qsettingsformat = QSettings.NativeFormat
 
         self.iconfile = self.find_icon_file()
-        self.uifile = self.find_ui_file()
+        self.uidir = self.find_ui_file()
 
         self.cparser = QSettings(self.qsettingsformat, QSettings.UserScope,
                                  QCoreApplication.organizationName(),
                                  QCoreApplication.applicationName())
         logging.info('configuration: %s', self.cparser.fileName())
         self.interval = float(10)
-        self.delay = float(0)
+        self.delay = float(1.0)
         self.notif = False
         ConfigFile.PAUSED = False
         self.file = None
@@ -156,15 +156,22 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                                                             qsettings=settings)
             self.pluginobjs[key].defaults(settings)
 
-    def plugins_load_settingsui(self, qtui):
+    def plugins_load_settingsui(self, qtwidgets):
         ''' configure the defaults for input plugins '''
         for key in self.pluginobjs:
-            self.pluginobjs[key].load_settingsui(qtui)
+            widgetkey = key.split('.')[-1]
+            self.pluginobjs[key].load_settingsui(qtwidgets[widgetkey])
 
-    def plugins_save_settingsui(self, qtui):
+    def plugins_save_settingsui(self, qtwidgets):
         ''' configure the defaults for input plugins '''
         for key in self.pluginobjs:
-            self.pluginobjs[key].save_settingsui(qtui)
+            widgetkey = key.split('.')[-1]
+            self.pluginobjs[key].save_settingsui(qtwidgets[widgetkey])
+
+    def plugins_description(self, plugin, qtwidget):
+        ''' configure the defaults for input plugins '''
+        self.pluginobjs[f'nowplaying.inputs.{plugin}'].desc_settingsui(
+            qtwidget)
 
     # pylint: disable=too-many-arguments
     def put(self, initialized, file, txttemplate, interval, delay, notif,
@@ -226,12 +233,12 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                 os.path.join(ConfigFile.BUNDLEDIR, 'bin'),
                 os.path.join(ConfigFile.BUNDLEDIR, 'resources')
         ]:
-            testfile = os.path.join(testdir, 'settings.ui')
+            testfile = os.path.join(testdir, 'settings_ui.ui')
             if os.path.exists(testfile):
                 logging.debug('ui file at %s', testfile)
-                return testfile
+                return testdir
 
-        logging.error('Unable to find the ui file. Death only follows.')
+        logging.error('Unable to find the ui dir. Death only follows.')
         return None
 
     def pause(self):  # pylint: disable=no-self-use

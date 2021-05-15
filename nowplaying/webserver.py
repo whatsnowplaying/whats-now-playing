@@ -61,7 +61,7 @@ class WebHandler():
         # |   x   |  same   |   x  |  -> send refresh
         # |       |   NA    |      |  -> send refresh because not ready or something broke
 
-        if 'dbid' not in metadata or not template:
+        if not metadata or 'dbid' not in metadata or not template:
             return web.Response(status=202,
                                 content_type='text/html',
                                 text=INDEXREFRESH)

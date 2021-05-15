@@ -62,10 +62,14 @@ class InputPlugin():
 
         raise NotImplementedError
 
-    def load_settingsui(self, qtui):
+    def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
         raise NotImplementedError
 
-    def save_settingsui(self, qtui):
+    def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
+        raise NotImplementedError
+
+    def desc_settingsui(self, qwidget):
+        ''' provide a description for the plugins page '''
         raise NotImplementedError

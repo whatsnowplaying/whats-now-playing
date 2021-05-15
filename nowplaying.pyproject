@@ -1,3 +1,12 @@
 {
-    "files": ["nowplaying/resources/settings.ui","test_settingsui.py"]
+    "files": [
+        "nowplaying/resources/general_ui.ui",
+        "nowplaying/resources/mpris2_ui.ui",
+        "nowplaying/resources/obsws_ui.ui",
+        "nowplaying/resources/serato_ui.ui",
+        "nowplaying/resources/settings.qrc",
+        "nowplaying/resources/settings_ui.ui",
+        "nowplaying/resources/source_ui.ui",
+        "nowplaying/resources/webserver_ui.ui", "test_settingsui.py"
+    ]
 }
