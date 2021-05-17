@@ -146,7 +146,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             message = message.replace('\r', '')
             self.connection.privmsg(self.channel, str(message).strip())
 
-    def do_command(self, event, command):  # pylint: disable=unused-argument
+    def do_command(self, event, command):    # pylint: disable=unused-argument
         ''' process a command '''
         metadata = {}
         fullstring = event.arguments[0]
@@ -154,9 +154,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         commands = fullstring.split()
         commands[0] = commands[0][1:]
         if len(commands) > 1:
-            counter = 0
-            for target in commands[1:]:
-                counter = counter + 1
+            for counter, target in enumerate(commands[1:], start=1):
                 metadata[f'cmdtarget{counter}'] = target
 
         cmdfile = f'twitchbot_{commands[0]}.txt'
@@ -243,13 +241,13 @@ class TwitchBotHandler():
 
     def isconfigured(self):
         ''' need everything configured! '''
-        if (not self.config.cparser.value('twitchbot/enabled', type=bool)
-                or not self.config.cparser.value('twitchbot/username')
-                or not self.config.cparser.value('twitchbot/clientid')
-                or not self.config.cparser.value('twitchbot/token')
-                or not self.config.cparser.value('twitchbot/channel')):
-            return False
-        return True
+        return bool(
+            self.config.cparser.value('twitchbot/enabled', type=bool)
+            and self.config.cparser.value('twitchbot/username')
+            and self.config.cparser.value('twitchbot/clientid')
+            and self.config.cparser.value('twitchbot/token')
+            and self.config.cparser.value('twitchbot/channel')
+        )
 
     def stop(self):
         ''' method to stop the thread '''
