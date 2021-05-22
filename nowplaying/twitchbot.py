@@ -238,11 +238,9 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
         allowed = True
         if perms:
-            allowed = False
-            for usertype in perms.items():
-                if 'badgesdict' in profile and usertype in profile[
-                        'badgesdict']:
-                    allowed = True
+            allowed = any(
+                'badgesdict' in profile and usertype in profile['badgesdict']
+                for usertype in perms.items())
 
         if not allowed:
             return
