@@ -208,7 +208,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             message = message.replace('\r', '')
             self.connection.privmsg(self.channel, str(message).strip())
 
-    def do_command(self, event, command):  # pylint: disable=unused-argument
+    def do_command(self, event, command):    # pylint: disable=unused-argument
         ''' process a command '''
         fullstring = event.arguments[0]
         profile = self._build_user_profile(event)
@@ -227,18 +227,17 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
         self.config.get()
         self.config.cparser.beginGroup(f'twitchbot-commands-{commands[0]}')
-        perms = {}
-        for key in self.config.cparser.childKeys():
-            perms[key] = self.config.cparser.value(key, type=bool)
+        perms = {
+            key: self.config.cparser.value(key, type=bool)
+            for key in self.config.cparser.childKeys()
+        }
+
         self.config.cparser.endGroup()
 
         allowed = True
         if perms:
-            allowed = False
-            for usertype in perms.items():
-                if 'badgesdict' in profile and usertype in profile[
-                        'badgesdict']:
-                    allowed = True
+            allowed = any('badgesdict' in profile and usertype in profile[
+                        'badgesdict'] for usertype in perms.items())
 
         if not allowed:
             return
