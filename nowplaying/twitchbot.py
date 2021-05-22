@@ -206,7 +206,10 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             message = template.render(metadata)
             message = message.replace('\n', '')
             message = message.replace('\r', '')
-            self.connection.privmsg(self.channel, str(message).strip())
+            try:
+                self.connection.privmsg(self.channel, str(message).strip())
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error(error)
 
     def do_command(self, event, command):  # pylint: disable=unused-argument
         ''' process a command '''

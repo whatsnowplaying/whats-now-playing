@@ -114,6 +114,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         ''' connect obsws button to template picker'''
         qobject.template_button.clicked.connect(self.on_obsws_template_button)
 
+    def _connect_m3u_widget(self, qobject):
+        ''' connect m3u button to filename picker'''
+        qobject.filename_button.clicked.connect(self.on_m3u_filename_button)
+
     def _connect_twitchbot_widget(self, qobject):
         '''  connect twitchbot announce to template picker'''
         qobject.announce_button.clicked.connect(
@@ -123,7 +127,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def _connect_source_widget(self, qobject):
         ''' populate the input group box '''
-        for text in ['Serato', 'MPRIS2']:
+        for text in ['M3U', 'Serato', 'MPRIS2']:
             qobject.sourcelist.addItem(text)
         qobject.sourcelist.currentRowChanged.connect(
             self._set_source_description)
@@ -498,6 +502,17 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         if items:
             self.widgets['twitchbot'].command_perm_table.removeRow(
                 items[0].row())
+
+    @Slot()
+    def on_m3u_filename_button(self):
+        ''' filename button clicked action'''
+        startdir = self.widgets['m3u'].filename_lineedit.text()
+        if not startdir:
+            startdir = str(pathlib.Path.home())
+        filename = QFileDialog.getOpenFileName(self.qtui, 'Open file',
+                                               startdir, '*.m3u')
+        if filename:
+            self.widgets['m3u'].filename_lineedit.setText(filename[0])
 
     @Slot()
     def on_cancel_button(self):
