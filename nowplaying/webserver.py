@@ -20,12 +20,16 @@ import aiosqlite
 
 from PySide2.QtCore import QCoreApplication, QStandardPaths, Qt  # pylint: disable=no-name-in-module
 
+#
+# quiet down our imports
+#
+
 logging.config.dictConfig({
     'version': 1,
     'disable_existing_loggers': True,
 })
 
-#pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -245,13 +249,6 @@ def stop(pid):
         os.kill(pid, signal.SIGINT)
     except ProcessLookupError:
         pass
-    # config = nowplaying.config.ConfigFile()
-    # port = config.cparser.value('weboutput/httpport', type=int)
-
-    # try:
-    #     requests.get(f'http://localhost:{port}/quit')
-    # except Exception as error:  # pylint: disable=broad-except
-    #     logging.info(error)
 
 
 def start(orgname, appname, bundledir):

@@ -35,6 +35,10 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 from PySide2.QtCore import QCoreApplication, QStandardPaths, Qt  # pylint: disable=no-name-in-module
 
+#
+# quiet down our imports
+#
+
 logging.config.dictConfig({
     'version': 1,
     'disable_existing_loggers': True,
@@ -45,8 +49,9 @@ logging.config.dictConfig({
 import nowplaying.config
 import nowplaying.db
 
-# enable 2FA
-# register your application
+# 1. create a bot account, be sure to enable multiple logins per email
+# 2. enable 2FA
+# 3. go to dev.twitch.tv to register your application
 #   1. name (this will be the login username for the bot, the name in chat will be the account name)
 #   2. http://localhost
 #   3. Category: Chat bot
