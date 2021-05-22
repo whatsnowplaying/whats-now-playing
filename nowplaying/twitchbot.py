@@ -213,7 +213,6 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         fullstring = event.arguments[0]
         profile = self._build_user_profile(event)
         metadata = {'cmduser': profile['display-name']}
-        print(profile)
         commands = fullstring.split()
         commands[0] = commands[0][1:]
         metadata['cmdtarget'] = []
@@ -230,21 +229,16 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         self.config.cparser.beginGroup(f'twitchbot-commands-{commands[0]}')
         perms = {}
         for key in self.config.cparser.childKeys():
-            print(f'reading {key}')
             perms[key] = self.config.cparser.value(key, type=bool)
         self.config.cparser.endGroup()
 
         allowed = True
         if perms:
-            print('got perms')
             allowed = False
             for usertype in perms.items():
                 if 'badgesdict' in profile and usertype in profile[
                         'badgesdict']:
-                    print(f'{usertype} in profile')
                     allowed = True
-        else:
-            print('no custom perms defined')
 
         if not allowed:
             return
