@@ -16,7 +16,7 @@ import nowplaying.config
 
 
 # settings UI
-class SettingsUI(QWidget):
+class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     ''' create settings form window '''
     def __init__(self, tray, version):
 
@@ -349,7 +349,7 @@ class SettingsUI(QWidget):
                     config.remove(configitem)
 
             rowcount = widget.rowCount()
-            for row in range(0, rowcount):
+            for row in range(rowcount):
                 item = widget.item(row, 0)
                 cmd = item.text()
                 cmd = f'twitchbot-command-{cmd}'
