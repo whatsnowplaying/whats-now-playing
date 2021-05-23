@@ -15,6 +15,9 @@ import traceback
 import lxml.html
 import requests
 
+from watchdog.observers import Observer
+from watchdog.events import PatternMatchingEventHandler
+
 from PySide2.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 from PySide2.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
@@ -404,19 +407,22 @@ class SeratoHandler():
     # actually on the decks
 
     decks = {}
+    parsedsessions = []
     playingadat = ChunkTrackADAT()
     lastprocessed = None
     lastfetched = None
     mode = None
 
     def __init__(self, mixmode='oldest', seratodir=None, seratourl=None):
-
         if seratodir:
             self.seratodir = seratodir
             self.watchdeck = None
-            self.parsedsessions = []
+            SeratoHandler.parsedsessions = []
             SeratoHandler.mode = 'local'
             self.mixmode = mixmode
+            self.event_handler = None
+            self.observer = None
+            self._setup_watcher()
 
         if seratourl:
             self.url = seratourl
@@ -426,14 +432,33 @@ class SeratoHandler():
         if self.mixmode not in ['newest', 'oldest']:
             self.mixmode = 'newest'
 
-    def process_sessions(self):
+    def _setup_watcher(self):
+        logging.debug('setting up watcher')
+        self.event_handler = PatternMatchingEventHandler(
+            patterns=['*.session'],
+            ignore_patterns=['.DS_Store'],
+            ignore_directories=True,
+            case_sensitive=False)
+        self.event_handler.on_modified = self.process_sessions
+        self.observer = Observer()
+        self.observer.schedule(self.event_handler,
+                               self.seratodir,
+                               recursive=False)
+        self.observer.start()
+
+        # process what is already there
+        self.process_sessions(path=self.seratodir)
+
+    def process_sessions(self, path):  # pylint: disable=unused-argument
         ''' read and process all of the relevant session files '''
 
+        logging.debug('processing %s path', path)
+
         if SeratoHandler.mode == 'remote':
-            logging.debug('in remote mode; skipping')
             return
 
-        self.parsedsessions = []
+        logging.debug('triggered by watcher')
+        SeratoHandler.parsedsessions = []
 
         # Just nuke the OS X metadata file rather than
         # work around it
@@ -446,6 +471,7 @@ class SeratoHandler():
 
         # Serato probably hasn't been started yet
         if not os.path.exists(self.seratodir):
+            logging.debug('no seratodir?')
             return
 
         # some other conditions may give us FNF, so just
@@ -459,9 +485,10 @@ class SeratoHandler():
 
         # The directory exists, but nothing in it.
         if not files:
+            logging.debug('dir is empty?')
             return
 
-        #
+        logging.debug('all files %s', files)
         for file in files:
             sessionfilename = os.path.abspath(
                 os.path.join(self.seratodir, file))
@@ -469,20 +496,18 @@ class SeratoHandler():
             file_mod_age = time.time() - os.path.getmtime(sessionfilename)
             # ignore files older than 10 minutes
             if file_mod_age > 600:
+                logging.debug('ignoring %s; too old', file)
                 continue
 
-            if not SeratoHandler.lastprocessed or\
-               filetimestamp > SeratoHandler.lastprocessed:
-                SeratoHandler.lastprocessed = filetimestamp
-                logging.debug('processing %s', sessionfilename)
-                self.parsedsessions.append(SessionFile(sessionfilename))
+            SeratoHandler.lastprocessed = filetimestamp
+            logging.debug('processing %s', sessionfilename)
+            SeratoHandler.parsedsessions.append(SessionFile(sessionfilename))
 
-    def computedecks(self):
+    def computedecks(self):  # pylint: disable=no-self-use
         ''' based upon the session data, figure out what is actually
             on each deck '''
 
         if SeratoHandler.mode == 'remote':
-            logging.debug('in remote mode; skipping')
             return
 
         SeratoHandler.decks = {}
@@ -494,7 +519,7 @@ class SeratoHandler():
         # playtime is _ONLY_ set when that deck
         # has been reloaded!
 
-        for index in reversed(self.parsedsessions):
+        for index in reversed(SeratoHandler.parsedsessions):
             for adat in index.adats:
                 if 'playtime' in adat and adat.playtime > 0:
                     continue
@@ -581,13 +606,9 @@ class SeratoHandler():
             logging.debug('in remote mode; skipping')
             return None, None
 
-        if not SeratoHandler.lastprocessed:
-            self.process_sessions()
-
         if not SeratoHandler.lastfetched or \
-           SeratoHandler.lastprocessed > SeratoHandler.lastfetched:
-            SeratoHandler.lastfetched = SeratoHandler.lastprocessed
-
+           SeratoHandler.lastprocessed >= SeratoHandler.lastfetched:
+            SeratoHandler.lastfetched = SeratoHandler.lastprocessed + 1
             self.computedecks()
             self.computeplaying()
 
@@ -693,6 +714,12 @@ class SeratoHandler():
             and getattr(SeratoHandler.playingadat, key)
         }
 
+    def __del__(self):
+        if self.observer:
+            self.observer.stop()
+            self.observer.join()
+            self.observer = None
+
 
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
@@ -751,8 +778,8 @@ class Plugin(InputPlugin):
             logging.debug('new session path = %s', sess_dir)
             self.serato = SeratoHandler(seratodir=sess_dir,
                                         mixmode=self.mixmode)
-            if self.serato:
-                self.serato.process_sessions()
+            #if self.serato:
+            #    self.serato.process_sessions()
 
     def getplayingtrack(self):
         ''' wrapper to call getplayingtrack '''
@@ -881,7 +908,7 @@ def main():
 
     logging.basicConfig(level=logging.DEBUG)
     serato = SeratoHandler(mixmode='oldest', seratodir=sys.argv[1])
-    serato.process_sessions()
+    serato.process_sessions(path=sys.argv[1])
     serato.getplayingtrack()
     if serato.playingadat:
         serato.playingadat.importantvalues()

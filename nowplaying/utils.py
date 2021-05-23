@@ -94,7 +94,7 @@ def getmoremetadata(metadata=None):
 
     # always convert to png
 
-    if metadata['coverimageraw']:
+    if 'coverimageraw' in metadata and metadata['coverimageraw']:
         coverimage = metadata['coverimageraw']
         imgbuffer = io.BytesIO(coverimage)
         image = PIL.Image.open(imgbuffer)

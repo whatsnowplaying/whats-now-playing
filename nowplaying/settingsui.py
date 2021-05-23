@@ -141,7 +141,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         ''' update the settings window '''
         self.config.get()
 
-        self.widgets['about'].program_label.setText(f'Now Playing v{self.version}')
+        self.widgets['about'].program_label.setText(
+            f'Now Playing v{self.version}')
 
         self.widgets['general'].textoutput_lineedit.setText(self.config.file)
         self.widgets['general'].texttemplate_lineedit.setText(

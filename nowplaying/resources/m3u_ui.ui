@@ -27,21 +27,21 @@
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <widget class="QLabel" name="filename_label">
+     <widget class="QLabel" name="dir_label">
       <property name="text">
-       <string>M3U File</string>
+       <string>M3U Directory</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QPushButton" name="filename_button">
+     <widget class="QPushButton" name="dir_button">
       <property name="text">
-       <string>Browse for File ...</string>
+       <string>Select Dir ...</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QLineEdit" name="filename_lineedit"/>
+     <widget class="QLineEdit" name="dir_lineedit"/>
     </item>
    </layout>
   </widget>
@@ -55,7 +55,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>M3U support is for a variety of tools, including Virtual DJ.</string>
+    <string>M3U support is for a variety of tools, including Virtual DJ.  Select the directory where the .m3u file exists.  Now Playing will read any new/updated m3u file in it.</string>
    </property>
    <property name="wordWrap">
     <bool>true</bool>
