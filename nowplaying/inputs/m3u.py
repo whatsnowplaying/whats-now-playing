@@ -12,7 +12,6 @@ from PySide2.QtCore import QCoreApplication, QDir, Qt  # pylint: disable=no-name
 from PySide2.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 from nowplaying.inputs import InputPlugin
-import nowplaying.settingsui
 import nowplaying.utils
 
 # https://datatracker.ietf.org/doc/html/rfc8216
