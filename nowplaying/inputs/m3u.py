@@ -12,6 +12,7 @@ from PySide2.QtCore import QCoreApplication, QDir, Qt  # pylint: disable=no-name
 from PySide2.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 from nowplaying.inputs import InputPlugin
+from nowplaying.exceptions import PluginVerifyError
 import nowplaying.utils
 
 # https://datatracker.ietf.org/doc/html/rfc8216
@@ -19,39 +20,56 @@ import nowplaying.utils
 
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
-    def __init__(self, config=None, m3ufile=None, qsettings=None):
+
+    metadata = {'artist': None, 'title': None}
+
+    def __init__(self, config=None, m3udir=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
 
-        self.m3ufile = m3ufile
+        self.m3udir = m3udir
         self.mixmode = "newest"
         self.event_handler = None
         self.observer = None
-        self.metadata = {'artist': None, 'title': None}
         self.qwidget = None
 
         if not qsettings:
-            self._setup_timer()
+            self._setup_watcher()
 
-    def _setup_timer(self):
-        if not self.m3ufile:
-            self.m3ufile = self.config.cparser.value('m3u/filename')
-        logging.info('Watching for changes on %s', self.m3ufile)
+    def _setup_watcher(self):
+        if not self.m3udir:
+            self.m3udir = self.config.cparser.value('m3u/directory')
+
+        if not self.m3udir:
+            logging.error('M3U Directory Path does not exist: %s',
+                          self.m3udir)
+            return
+
+        logging.info('Watching for changes on %s', self.m3udir)
         self.event_handler = PatternMatchingEventHandler(
-            patterns=[os.path.basename(self.m3ufile)],
-            ignore_patterns=None,
+            patterns=['*.m3u'],
+            ignore_patterns=['.DS_Store'],
             ignore_directories=True,
             case_sensitive=False)
-        self.event_handler.on_closed = self._read_track
+        self.event_handler.on_modified = self._read_track
+        self.event_handler.on_created = self._read_track
         self.observer = Observer()
         self.observer.schedule(self.event_handler,
-                               os.path.dirname(self.m3ufile),
+                               self.m3udir,
                                recursive=False)
         self.observer.start()
 
-    def _read_track(self, filename):
-        self.metadata = {'artist': None, 'title': None}
-        with open(filename, 'r') as m3ufh:
-            content = m3ufh.readlines()[-1].rstrip()
+    def _read_track(self, event):  #pylint: disable=no-self-use
+
+        if event.is_directory:
+            return
+
+        filename = event.src_path
+        logging.debug('got %s', filename)
+        with open(filename, 'r', errors='ignore') as m3ufh:
+            content = m3ufh.readlines()[-1]
+
+        logging.debug('attempting to read %s', content)
+        content = content.rstrip()
         content = content.replace('file://', '')
         if not os.path.exists(content):
             dirpath = os.path.dirname(filename)
@@ -61,30 +79,34 @@ class Plugin(InputPlugin):
             else:
                 logging.error('Unable to read %s', content)
                 return
-        logging.debug('Updated m3u file detected')
-        self.metadata = {'filename': content}
-        self.metadata = nowplaying.utils.getmoremetadata(self.metadata)
+        newmeta = {'filename': content}
+        newmeta = nowplaying.utils.getmoremetadata(newmeta)
+        if 'artist' not in newmeta:
+            newmeta['artist'] = None
+        if 'title' not in newmeta:
+            newmeta['title'] = None
+        Plugin.metadata = newmeta
 
-    def getplayingtrack(self):
+    def getplayingtrack(self):  #pylint: disable=no-self-use
         ''' wrapper to call getplayingtrack '''
-        return self.metadata['artist'], self.metadata['title']
+        return Plugin.metadata['artist'], Plugin.metadata['title']
 
-    def getplayingmetadata(self):
+    def getplayingmetadata(self):  #pylint: disable=no-self-use
         ''' wrapper to call getplayingmetadata '''
-        return self.metadata
+        return Plugin.metadata
 
-    def defaults(self, qsettings):
+    def defaults(self, qsettings):  #pylint: disable=no-self-use
         pass
 
-    def validmixmodes(self):
+    def validmixmodes(self):  #pylint: disable=no-self-use
         ''' let the UI know which modes are valid '''
         return ['newest']
 
-    def setmixmode(self, mixmode):
+    def setmixmode(self, mixmode):  #pylint: disable=no-self-use
         ''' set the mixmode '''
         return 'newest'
 
-    def getmixmode(self):
+    def getmixmode(self):  #pylint: disable=no-self-use
         ''' get the mixmode '''
         return 'newest'
 
@@ -95,37 +117,40 @@ class Plugin(InputPlugin):
             self.observer.join()
             self.observer = None
 
-    def on_m3u_filename_button(self):
+    def on_m3u_dir_button(self):
         ''' filename button clicked action'''
-        if self.qwidget.filename_lineedit.text():
-            startdir = os.path.dirname(self.qwidget.filename_lineedit.text())
+        if self.qwidget.dir_lineedit.text():
+            startdir = self.qwidget.dir_lineedit.text()
         else:
             startdir = QDir.homePath()
-        filename = QFileDialog.getOpenFileName(self.qwidget, 'Open file',
-                                               startdir, '*.m3u')
-        if filename:
-            self.qwidget.filename_lineedit.setText(filename[0])
+        dirname = QFileDialog.getExistingDirectory(self.qwidget,
+                                                   'Select directory',
+                                                   startdir)
+        if dirname:
+            self.qwidget.dir_lineedit.setText(dirname)
 
     def connect_settingsui(self, qwidget):
         ''' connect m3u button to filename picker'''
         self.qwidget = qwidget
-        qwidget.filename_button.clicked.connect(self.on_m3u_filename_button)
+        qwidget.dir_button.clicked.connect(self.on_m3u_dir_button)
 
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
-        qwidget.filename_lineedit.setText(
-            self.config.cparser.value('m3u/filename'))
+        qwidget.dir_lineedit.setText(
+            self.config.cparser.value('m3u/directory'))
 
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''
+        if not os.path.exists(qwidget.dir_lineedit.text()):
+            raise PluginVerifyError(r'm3u directory must exist.')
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
-        self.config.cparser.setValue('m3u/filename',
-                                     qwidget.filename_lineedit.text())
-        self.m3ufile = None
+        self.config.cparser.setValue('m3u/directory',
+                                     qwidget.dir_lineedit.text())
+        self.m3udir = None
         self.stop()
-        self._setup_timer()
+        self._setup_watcher()
 
     def desc_settingsui(self, qwidget):
         ''' description '''
@@ -136,6 +161,7 @@ class Plugin(InputPlugin):
 def main():
     ''' entry point as a standalone app'''
 
+    logging.basicConfig(level=logging.DEBUG)
     orgname = 'com.github.em1ran'
 
     appname = 'NowPlaying'
@@ -147,12 +173,16 @@ def main():
     QCoreApplication.setApplicationName(appname)
     # need to make sure config is initialized with something
     config = nowplaying.config.ConfigFile(bundledir=bundledir)
-    plugin = Plugin(config=config, m3ufile=sys.argv[1])
+    plugin = Plugin(config=config, m3udir=os.path.dirname(sys.argv[1]))
     plugin._read_track(sys.argv[1])  # pylint: disable=protected-access
     print('playing track:')
     print(plugin.getplayingtrack())
     print('metadata:')
-    print(plugin.getplayingmetadata())
+    metadata = plugin.getplayingmetadata()
+    if 'coverimageraw' in metadata:
+        print('got image')
+        del metadata['coverimageraw']
+    print(metadata)
 
 
 if __name__ == "__main__":

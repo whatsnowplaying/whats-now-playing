@@ -275,7 +275,12 @@ def start(orgname, appname, bundledir):
         QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0],
         'web.db')
     if os.path.exists(databasefile):
-        os.unlink(databasefile)
+        try:
+            os.unlink(databasefile)
+        except PermissionError as error:
+            logging.error('WebServer process already running?')
+            logging.error(error)
+            sys.exit(0)
 
     config = nowplaying.config.ConfigFile(bundledir=bundledir)  # pylint: disable=unused-variable
     logging.info('boot up')
