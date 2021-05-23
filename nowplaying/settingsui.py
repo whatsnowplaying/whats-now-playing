@@ -3,7 +3,6 @@
 
 import logging
 import os
-import pathlib
 import socket
 
 from PySide2.QtCore import Slot, QFile, Qt  # pylint: disable=no-name-in-module
@@ -13,6 +12,7 @@ from PySide2.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
 import PySide2.QtXml  # pylint: disable=unused-import, import-error, no-name-in-module
 
 import nowplaying.config
+from nowplaying.exceptions import PluginVerifyError
 
 
 # settings UI
@@ -49,12 +49,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.qtui = _load_ui('settings')
 
         baseuis = ['general', 'source', 'webserver', 'obsws', 'twitchbot']
-        pluginuis = [
+        inputpluginuis = [
             key.replace('nowplaying.inputs.', '')
-            for key in self.config.plugins.keys()
+            for key in self.config.input_plugins.keys()
         ]
 
-        for uiname in baseuis + pluginuis:
+        for uiname in baseuis + inputpluginuis:
             self.widgets[uiname] = _load_ui(f'{uiname}')
             try:
                 qobject_connector = getattr(self, f'_connect_{uiname}_widget')
@@ -64,6 +64,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
             self.qtui.settings_stack.addWidget(self.widgets[uiname])
             self._load_list_item(f'{uiname}', self.widgets[uiname])
+
+        for uiname in inputpluginuis:
+            displayname = self.widgets[uiname].property('displayName')
+            if not displayname:
+                displayname = uiname.capitalize()
+            self.widgets['source'].sourcelist.addItem(displayname)
+            self.widgets['source'].sourcelist.currentRowChanged.connect(
+                self._set_source_description)
+
+        self._connect_plugins()
 
         self.qtui.settings_list.currentRowChanged.connect(
             self._set_stacked_display)
@@ -106,17 +116,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             self.on_text_template_button)
         qobject.textoutput_button.clicked.connect(self.on_text_saveas_button)
 
-    def _connect_serato_widget(self, qobject):
-        ''' connect serato local dir button '''
-        qobject.local_dir_button.clicked.connect(self.on_serato_lib_button)
-
     def _connect_obsws_widget(self, qobject):
         ''' connect obsws button to template picker'''
         qobject.template_button.clicked.connect(self.on_obsws_template_button)
-
-    def _connect_m3u_widget(self, qobject):
-        ''' connect m3u button to filename picker'''
-        qobject.filename_button.clicked.connect(self.on_m3u_filename_button)
 
     def _connect_twitchbot_widget(self, qobject):
         '''  connect twitchbot announce to template picker'''
@@ -125,12 +127,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         qobject.add_button.clicked.connect(self.on_twitchbot_add_button)
         qobject.del_button.clicked.connect(self.on_twitchbot_del_button)
 
-    def _connect_source_widget(self, qobject):
-        ''' populate the input group box '''
-        for text in ['M3U', 'Serato', 'MPRIS2']:
-            qobject.sourcelist.addItem(text)
-        qobject.sourcelist.currentRowChanged.connect(
-            self._set_source_description)
+    def _connect_plugins(self):
+        ''' tell config to trigger plugins to update windows '''
+        self.config.plugins_connect_settingsui(self.widgets)
 
     def _set_source_description(self, index):
         item = self.widgets['source'].sourcelist.item(index)
@@ -417,7 +416,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def template_picker_lineedit(self, qwidget, limit='*.txt'):
         ''' generic code to pick a template file '''
-        filename = self.template_picker(qwidget.text(), limit)
+        filename = self.template_picker(startfile=qwidget.text(), limit=limit)
         if filename:
             qwidget.setText(filename)
 
@@ -430,26 +429,13 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     @Slot()
     def on_obsws_template_button(self):
         ''' obsws template button clicked action '''
-        self.template_picker_lineedit(
-            self.widgets['obsws'].texttemplate_lineedit)
-
-    @Slot()
-    def on_serato_lib_button(self):
-        ''' lib button clicked action'''
-        startdir = self.widgets['serato'].local_dir_lineedit.text()
-        if not startdir:
-            startdir = str(pathlib.Path.home())
-        libdir = QFileDialog.getExistingDirectory(self.qtui,
-                                                  'Select directory', startdir)
-        if libdir:
-            self.widgets['serato'].local_dir_lineedit.setText(libdir)
+        self.template_picker_lineedit(self.widgets['obsws'].template_lineedit)
 
     @Slot()
     def on_html_template_button(self):
         ''' html template button clicked action '''
         self.template_picker_lineedit(
-            self.widgets['webserver'].texttemplate_lineedit,
-            limit='*.htm *.html')
+            self.widgets['webserver'].template_lineedit, limit='*.htm *.html')
 
     @Slot()
     def on_twitchbot_announce_button(self):
@@ -504,17 +490,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
                 items[0].row())
 
     @Slot()
-    def on_m3u_filename_button(self):
-        ''' filename button clicked action'''
-        startdir = self.widgets['m3u'].filename_lineedit.text()
-        if not startdir:
-            startdir = str(pathlib.Path.home())
-        filename = QFileDialog.getOpenFileName(self.qtui, 'Open file',
-                                               startdir, '*.m3u')
-        if filename:
-            self.widgets['m3u'].filename_lineedit.setText(filename[0])
-
-    @Slot()
     def on_cancel_button(self):
         ''' cancel button clicked action '''
         if self.tray:
@@ -543,25 +518,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         if curbutton:
             inputtext = curbutton.text().lower()
 
-        if inputtext == 'serato':
-            if self.widgets['serato'].remote_button.isChecked() and (
-                    'https://serato.com/playlists' not in
-                    self.self.widgets['serato'].remote_url_lineedit.text()
-                    and 'https://www.serato.com/playlists'
-                    not in self.widgets['serato'].remote_url_lineedit.text()
-                    or len(self.widgets['serato'].remote_url_lineedit.text()) <
-                    30):
-                self.errormessage.showMessage(
-                    'Serato Live Playlist URL is invalid')
-                return
-
-            if self.widgets['serato'].local_button.isChecked() and (
-                    '_Serato_'
-                    not in self.widgets['serato'].local_dir_lineedit.text()):
-                self.errormessage.showMessage(
-                    r'Serato Library Path is required.  Should point to "\_Serato\_" folder'
-                )
-                return
+        try:
+            self.config.plugins_verify_settingsui(inputtext, self.widgets)
+        except PluginVerifyError as error:
+            self.errormessage.showMessage(error.message)
+            return
 
         if self.widgets['general'].textoutput_lineedit.text() == "":
             self.errormessage.showMessage('File to write is required')

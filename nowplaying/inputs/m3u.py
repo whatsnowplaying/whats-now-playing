@@ -8,9 +8,11 @@ import sys
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
-from PySide2.QtCore import QCoreApplication, Qt  # pylint: disable=no-name-in-module
+from PySide2.QtCore import QCoreApplication, QDir, Qt  # pylint: disable=no-name-in-module
+from PySide2.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 from nowplaying.inputs import InputPlugin
+import nowplaying.settingsui
 import nowplaying.utils
 
 # https://datatracker.ietf.org/doc/html/rfc8216
@@ -26,6 +28,7 @@ class Plugin(InputPlugin):
         self.event_handler = None
         self.observer = None
         self.metadata = {'artist': None, 'title': None}
+        self.qwidget = None
 
         if not qsettings:
             self._setup_timer()
@@ -93,10 +96,29 @@ class Plugin(InputPlugin):
             self.observer.join()
             self.observer = None
 
+    def on_m3u_filename_button(self):
+        ''' filename button clicked action'''
+        if self.qwidget.filename_lineedit.text():
+            startdir = os.path.dirname(self.qwidget.filename_lineedit.text())
+        else:
+            startdir = QDir.homePath()
+        filename = QFileDialog.getOpenFileName(self.qwidget, 'Open file',
+                                               startdir, '*.m3u')
+        if filename:
+            self.qwidget.filename_lineedit.setText(filename[0])
+
+    def connect_settingsui(self, qwidget):
+        ''' connect m3u button to filename picker'''
+        self.qwidget = qwidget
+        qwidget.filename_button.clicked.connect(self.on_m3u_filename_button)
+
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
         qwidget.filename_lineedit.setText(
             self.config.cparser.value('m3u/filename'))
+
+    def verify_settingsui(self, qwidget):
+        ''' no verification to do '''
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''

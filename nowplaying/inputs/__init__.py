@@ -4,6 +4,7 @@
 import logging
 
 import nowplaying.config
+from nowplaying.exceptions import PluginVerifyError
 
 
 class InputPlugin():
@@ -21,17 +22,33 @@ class InputPlugin():
         if not config:
             self.config = nowplaying.config.ConfigFile()
 
-    def getplayingtrack(self):
-        ''' Get the currently playing track '''
-        raise NotImplementedError
-
-    def getplayingmetadata(self):
-        ''' Get the metadata of the currently playing track '''
-        raise NotImplementedError
+#### Settings UI methods
 
     def defaults(self, qsettings):
-        ''' set the default configuration values for this plugin '''
+        ''' (re-)set the default configuration values for this plugin '''
         raise NotImplementedError
+
+    def connect_settingsui(self, qwidget):
+        ''' connect any UI elements such as buttons '''
+        raise NotImplementedError
+
+    def load_settingsui(self, qwidget):
+        ''' load values from config and populate page '''
+        raise NotImplementedError
+
+    def verify_settingsui(self, qwidget):  #pylint: disable=no-self-use
+        ''' verify the values in the UI prior to saving '''
+        raise PluginVerifyError('Plugin did not implement verification.')
+
+    def save_settingsui(self, qwidget):
+        ''' take the settings page and save it '''
+        raise NotImplementedError
+
+    def desc_settingsui(self, qwidget):
+        ''' provide a description for the plugins page '''
+        raise NotImplementedError
+
+#### Mix Mode menu item methods
 
     def validmixmodes(self):  #pylint: disable=no-self-use
         ''' tell ui valid mixmodes '''
@@ -56,20 +73,20 @@ class InputPlugin():
 
         raise NotImplementedError
 
+#### Data feed methods
+
+    def getplayingtrack(self):
+        ''' Get the currently playing track '''
+        raise NotImplementedError
+
+    def getplayingmetadata(self):
+        ''' Get the metadata of the currently playing track '''
+        raise NotImplementedError
+
+
+#### Control methods
+
     def stop(self):
         ''' stopping either the entire program or just this
             input '''
-
-        raise NotImplementedError
-
-    def load_settingsui(self, qwidget):
-        ''' draw the plugin's settings page '''
-        raise NotImplementedError
-
-    def save_settingsui(self, qwidget):
-        ''' take the settings page and save it '''
-        raise NotImplementedError
-
-    def desc_settingsui(self, qwidget):
-        ''' provide a description for the plugins page '''
         raise NotImplementedError

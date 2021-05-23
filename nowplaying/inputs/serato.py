@@ -6,6 +6,7 @@ import collections
 import datetime
 import logging
 import os
+import pathlib
 import struct
 import sys
 import time
@@ -15,8 +16,10 @@ import lxml.html
 import requests
 
 from PySide2.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
+from PySide2.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 from nowplaying.inputs import InputPlugin
+from nowplaying.exceptions import PluginVerifyError
 
 Header = collections.namedtuple('Header', 'chunktype size')
 
@@ -693,6 +696,7 @@ class Plugin(InputPlugin):
         self.local = True
         self.serato = None
         self.mixmode = "newest"
+        self.qwidget = None
 
         if not qsettings:
             self.gethandler()
@@ -804,6 +808,22 @@ class Plugin(InputPlugin):
     def stop(self):
         ''' not needed for serato plugin '''
 
+    def on_serato_lib_button(self):
+        ''' lib button clicked action'''
+        startdir = self.qwidget.local_dir_lineedit.text()
+        if not startdir:
+            startdir = str(pathlib.Path.home())
+        libdir = QFileDialog.getExistingDirectory(self.qwidget,
+                                                  'Select directory', startdir)
+        if libdir:
+            self.qwidget.local_dir_lineedit.setText(libdir)
+
+    def connect_settingsui(self, qwidget):
+        ''' connect serato local dir button '''
+        self.qwidget = qwidget
+        self.qwidget.local_dir_button.clicked.connect(
+            self.on_serato_lib_button)
+
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
         if self.config.cparser.value('serato/local', type=bool):
@@ -816,6 +836,22 @@ class Plugin(InputPlugin):
             self.config.cparser.value('serato/libpath'))
         qwidget.remote_url_lineedit.setText(
             self.config.cparser.value('serato/url'))
+
+    def verify_settingsui(self, qwidget):
+        ''' no verification to do '''
+        if qwidget.remote_button.isChecked() and (
+                'https://serato.com/playlists'
+                not in qwidget.remote_url_lineedit.text()
+                and 'https://www.serato.com/playlists'
+                not in qwidget.remote_url_lineedit.text()
+                or len(qwidget.remote_url_lineedit.text()) < 30):
+            raise PluginVerifyError('Serato Live Playlist URL is invalid')
+
+        if qwidget.local_button.isChecked() and (
+                '_Serato_' not in qwidget.local_dir_lineedit.text()):
+            raise PluginVerifyError(
+                r'Serato Library Path is required.  Should point to "\_Serato\_" folder'
+            )
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''

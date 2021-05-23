@@ -230,6 +230,9 @@ class Plugin(InputPlugin):
     def stop(self):
         ''' not needed '''
 
+    def connect_settingsui(self, qwidget):
+        ''' not needed '''
+
     def load_settingsui(self, qwidget):
         ''' populate the combobox '''
         if not self.dbus_status or not self.mpris2:
@@ -242,6 +245,9 @@ class Plugin(InputPlugin):
                                                   Qt.MatchContains)
         if curbutton:
             curbutton[0].setSelected(True)
+
+    def verify_settingsui(self, qwidget):
+        ''' no verification to do '''
 
     def save_settingsui(self, qwidget):
         ''' save the combobox '''
