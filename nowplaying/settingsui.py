@@ -54,7 +54,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             for key in self.config.input_plugins.keys()
         ]
 
-        for uiname in baseuis + inputpluginuis:
+        for uiname in baseuis + inputpluginuis + ['about']:
             self.widgets[uiname] = _load_ui(f'{uiname}')
             try:
                 qobject_connector = getattr(self, f'_connect_{uiname}_widget')
@@ -140,6 +140,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     def upd_win(self):
         ''' update the settings window '''
         self.config.get()
+
+        self.widgets['about'].program_label.setText(f'Now Playing v{self.version}')
 
         self.widgets['general'].textoutput_lineedit.setText(self.config.file)
         self.widgets['general'].texttemplate_lineedit.setText(

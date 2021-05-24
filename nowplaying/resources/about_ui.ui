@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <widget class="QLabel" name="program_label">
+   <property name="geometry">
+    <rect>
+     <x>100</x>
+     <y>30</y>
+     <width>251</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Now Playing</string>
+   </property>
+  </widget>
+  <widget class="QWidget" name="verticalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>60</y>
+     <width>621</width>
+     <height>401</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QLabel" name="e1miran_label">
+      <property name="text">
+       <string>Copyright (c) 2020-2021 Ely Miranda ( -&gt; v1.4.0)</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="other_label">
+      <property name="text">
+       <string>Copyright (c) 2021 Allen Wittenauer (v2.0.0 -&gt;) http://twitch.tv/modernmeerkat</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="np_label">
+      <property name="text">
+       <string>Licensed under the MIT License.  Includes software licensed under other terms.  Please see the bundled NOTICE.txt file.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="aw_label">
+      <property name="text">
+       <string>All other product or company names are trademarks or registered trademarks of their respective owners.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
