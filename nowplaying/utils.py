@@ -52,7 +52,7 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
         return "No template found; check your settings"
 
 
-def getmoremetadata(metadata=None):
+def getmoremetadata(metadata=None):  #pylint: disable=too-many-branches
     ''' given a chunk of metadata, try to fill in more '''
 
     logging.debug('getmoremetadata called')
@@ -71,31 +71,58 @@ def getmoremetadata(metadata=None):
     logging.debug('getmoremetadata calling TinyTag for %s',
                   metadata['filename'])
 
-    tag = tinytag.TinyTag.get(metadata['filename'], image=True)
+    tag = None
+    try:
+        tag = tinytag.TinyTag.get(metadata['filename'], image=True)
+    except tinytag.tinytag.TinyTagException:
+        logging.error('File format not supported or file corrupted')
 
-    for key in [
-            'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'composer',
-            'disc', 'disc_total', 'genre', 'key', 'publisher', 'lang', 'title',
-            'track', 'track_total', 'year'
-    ]:
-        if key not in metadata and hasattr(tag, key) and getattr(tag, key):
-            metadata[key] = getattr(tag, key)
+    if tag:
+        for key in [
+                'album',
+                'albumartist',
+                'artist',
+                'bitrate',
+                'bpm',
+                'composer',
+                'disc',
+                'disc_total',
+                'genre',
+                'key',
+                'publisher',
+                'lang',
+                'title',
+                'track',
+                'track_total',
+                'year',
+        ]:
+            if key not in metadata and hasattr(tag, key) and getattr(tag, key):
+                metadata[key] = getattr(tag, key)
 
-    if 'coverimageraw' not in metadata:
-        coverimage = tag.get_image()
+        for key in ['extra.publisher', 'extra.label', 'extra.organization']:
+            if 'publisher' not in metadata and hasattr(tag, key) and getattr(
+                    tag, key):
+                metadata['publisher'] = getattr(tag, key)
 
-        if coverimage:
-            metadata['coverimageraw'] = coverimage
-            iostream = io.BytesIO(metadata['coverimageraw'])
-            headertype = imghdr.what(iostream)
-            if headertype == 'jpeg':
-                headertype = 'jpg'
-            metadata['coverimagetype'] = headertype
-            if 'deck' in metadata:
-                deck = metadata['deck']
-                metadata['coverurl'] = f'cover{deck}.{headertype}'
-            else:
-                metadata['coverurl'] = f'cover.{headertype}'
+        if 'coverimageraw' not in metadata:
+            coverimage = tag.get_image()
+
+            if coverimage:
+                metadata['coverimageraw'] = coverimage
+                iostream = io.BytesIO(metadata['coverimageraw'])
+                headertype = imghdr.what(iostream)
+                if not headertype:
+                    del metadata['coverimageraw']
+                    return metadata
+
+                if headertype == 'jpeg':
+                    headertype = 'jpg'
+                metadata['coverimagetype'] = headertype
+                if 'deck' in metadata:
+                    deck = metadata['deck']
+                    metadata['coverurl'] = f'cover{deck}.{headertype}'
+                else:
+                    metadata['coverurl'] = f'cover.{headertype}'
     return metadata
 
 

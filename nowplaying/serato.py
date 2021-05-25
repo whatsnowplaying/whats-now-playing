@@ -17,8 +17,6 @@ import requests
 Header = collections.namedtuple('Header', 'chunktype size')
 
 
-
-
 class ChunkParser():  #pylint: disable=too-few-public-methods
     ''' Basic Chunk Parser '''
 

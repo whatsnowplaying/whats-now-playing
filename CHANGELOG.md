@@ -3,8 +3,8 @@
 
 ## Version 2.0.1 - 2021-05-xx
 
-* Fix Windows support (#141)
-
+* Fix Windows Support (#141)
+* Add AIFF/FLAC Support by upgrading to TinyTag master
 
 ## Version 2.0.0 - 2021-04-07
 
