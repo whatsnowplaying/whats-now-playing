@@ -1,6 +1,11 @@
 
 # Changelog
 
+## Version 2.0.1 - 2021-05-xx
+
+* Fix Windows support (#141)
+
+
 ## Version 2.0.0 - 2021-04-07
 
 * Main program name change: SeratoNowPlaying -> NowPlaying
