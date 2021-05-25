@@ -47,24 +47,28 @@ class ChunkParser():  #pylint: disable=too-few-public-methods
         # will kick in
 
         (self.chunkheader,
-         self.chunksize) = struct.unpack_from('>4si', self.data,
+         self.chunksize) = struct.unpack_from('>4sI', self.data,
                                               self.bytecounter)
         self.bytecounter += 8
 
-    def _int(self):
-        ''' read an integer '''
-        readint = struct.unpack_from('>i', self.data, self.bytecounter)[0]
-        self.bytecounter += 4
-        return readint
+    def _num(self, size=4):
+        ''' read an number '''
+        if size == 8:
+            readnum = struct.unpack_from('>Q', self.data, self.bytecounter)[0]
+            self.bytecounter += 8
+        else:
+            readnum = struct.unpack_from('>I', self.data, self.bytecounter)[0]
+            self.bytecounter += 4
+        return readnum
 
-    def _intfield(self):
-        ''' read the # of ints, then the int '''
-        self._int()  # number of ints, which always seems to be 1, so ignore
-        return self._int()
+    def _numfield(self):
+        ''' read the size of the number, then the number '''
+        size = self._num()
+        return self._num(size)
 
     def _string_nodecode(self):
         ''' read # of chars in a string, then the string '''
-        stringsize = self._int()
+        stringsize = self._num()
         readstring = struct.unpack_from(f'{stringsize}s', self.data,
                                         self.bytecounter)[0]
         self.bytecounter += stringsize
@@ -95,21 +99,20 @@ class ChunkParser():  #pylint: disable=too-few-public-methods
 
     def _bytes(self):
         ''' read number of bytes, then that many bytes '''
-        bytesize = self._int()
-        readint = struct.unpack_from(f'{bytesize}c', self.data,
+        bytesize = self._num()
+        readnum = struct.unpack_from(f'{bytesize}c', self.data,
                                      self.bytecounter)[0]
         self.bytecounter += 1
-        return readint
+        return readnum
 
     def _bool(self):
         ''' true/false handling '''
         return bool(struct.unpack('b', self._bytes())[0])
 
     def _timestamp(self):
-        ''' read # of timestamps, then the timestamp '''
-        self._int()  # number of timestamps. we ignore
-        timestampint = self._int()
-        return datetime.datetime.fromtimestamp(timestampint)
+        ''' timestamps are numfields converted to a datetime object '''
+        timestampnum = self._numfield()
+        return datetime.datetime.fromtimestamp(timestampnum)
 
     def process(self):
         ''' overridable function meant to process the chunk '''
@@ -118,18 +121,18 @@ class ChunkParser():  #pylint: disable=too-few-public-methods
         ''' a dumb function to help debug stuff when writing a new chunk '''
         hexbytes = binascii.hexlify(self.data[self.bytecounter:])
         total = len(hexbytes)
-        for j in range(1, total, 8):
+        for j in range(1, total + 1, 8):
             logging.debug('_debug: %s', hexbytes[j:j + 7])
 
     def importantvalues(self):
         ''' another debug function to see when these fields change '''
         for key, value in self.__dict__.items():
-            if key in [
-                    'deck', 'field16', 'field39', 'field68', 'field69',
-                    'field70', 'field72', 'field78', 'title', 'played',
-                    'playtime', 'starttime', 'updatedat'
-            ]:
-                logging.debug('thisdeck.%s = %s', key, value)
+            # if key in [
+            #         'deck', 'field16', 'field39', 'field68', 'field69',
+            #         'field70', 'field72', 'field78', 'title', 'played',
+            #         'playtime', 'starttime', 'updatedat'
+            # ]:
+            logging.info('thisdeck.%s = %s', key, value)
 
     def __iter__(self):
         yield self
@@ -200,14 +203,14 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
         # [adat][size][row][fields...]
         #
         # all fields are (effectively)
-        # [int][size][content]
+        # [field identifier][size of field][content]
         #
 
         self._header()
-        self.row = self._int()
+        self.row = self._num()
 
         while self.bytecounter < len(self.data):
-            field = self._int()
+            field = self._num()
 
             # Python's lack of 'case' is annoying. :(
             # opted to just use simple if/elif ladder
@@ -236,7 +239,7 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
             elif field == 14:
                 self.frequency = self._string()
             elif field == 15:
-                self.bpm = self._intfield()
+                self.bpm = self._numfield()
             elif field == 16:
                 self.field16 = self._hex()
             elif field == 17:
@@ -258,13 +261,13 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
             elif field == 29:
                 self.endtime = self._timestamp()
             elif field == 31:
-                self.deck = self._intfield()
+                self.deck = self._numfield()
             elif field == 39:
                 self.field39 = self._string_nodecode()
             elif field == 45:
-                self.playtime = self._intfield()
+                self.playtime = self._numfield()
             elif field == 48:
-                self.sessionid = self._intfield()
+                self.sessionid = self._numfield()
             elif field == 50:
                 self.played = self._bytes()
             elif field == 51:
@@ -286,9 +289,10 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
             elif field == 72:
                 self.field72 = self._string_nodecode()
             elif field == 78:
-                self.field78 = self._intfield()
+                self.field78 = self._numfield()
             else:
                 logging.debug('Unknown field: %s', field)
+                self._debug()
                 break
 
         # what people would expect in a filename meta
@@ -345,6 +349,10 @@ class SessionFile():  # pylint: disable=too-few-public-methods
         #   loaded
         # The rest get ignored
 
+        if '.session' not in self.filename:
+            return
+
+        logging.debug('starting to read %s', self.filename)
         with open(self.filename, 'rb') as self.sessionfile:
             while True:
                 header_bin = self.sessionfile.read(8)
@@ -353,7 +361,7 @@ class SessionFile():  # pylint: disable=too-few-public-methods
                     break
 
                 try:
-                    header = Header._make(struct.unpack('>4si', header_bin))
+                    header = Header._make(struct.unpack('>4sI', header_bin))
                 except:  # pylint: disable=bare-except
                     break
 
@@ -871,13 +879,14 @@ class Plugin(InputPlugin):
 def main():
     ''' entry point as a standalone app'''
 
-    serato = SeratoHandler(seratodir=sys.argv[1])
+    logging.basicConfig(level=logging.DEBUG)
+    serato = SeratoHandler(mixmode='oldest', seratodir=sys.argv[1])
     serato.process_sessions()
     serato.getplayingtrack()
     if serato.playingadat:
         serato.playingadat.importantvalues()
     else:
-        print('No title currently suspecting of playing.')
+        logging.info('No title currently suspecting of playing.')
 
 
 if __name__ == "__main__":
