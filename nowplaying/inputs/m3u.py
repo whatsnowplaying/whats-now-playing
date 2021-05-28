@@ -38,10 +38,10 @@ class Plugin(InputPlugin):
     def _setup_watcher(self):
         if not self.m3udir:
             self.m3udir = self.config.cparser.value('m3u/directory')
-            if not self.m3udir:
-                logging.error('M3U Directory Path does not exist: %s',
-                              self.m3udir)
-                return
+        if not self.m3udir:
+            logging.error('M3U Directory Path does not exist: %s',
+                          self.m3udir)
+            return
 
         logging.info('Watching for changes on %s', self.m3udir)
         self.event_handler = PatternMatchingEventHandler(
