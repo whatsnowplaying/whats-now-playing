@@ -27,6 +27,7 @@ class DBWatcher:
 
     def start(self, customhandler=None):
         ''' fire up the watcher '''
+        logging.debug('Asked for a DB watcher')
         directory = os.path.dirname(self.databasefile)
         filename = os.path.basename(self.databasefile)
         logging.info('Watching for changes on %s', self.databasefile)
@@ -51,8 +52,11 @@ class DBWatcher:
 
     def stop(self):
         ''' stop the watcher '''
+        logging.debug('watcher asked to stop')
         if self.observer:
+            logging.debug('calling stop')
             self.observer.stop()
+            logging.debug('calling join')
             self.observer.join()
             self.observer = None
 

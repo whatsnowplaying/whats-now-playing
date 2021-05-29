@@ -263,7 +263,6 @@ class WebHandler():
 
     async def on_shutdown(self, app):
         ''' handle shutdown '''
-        app['watcher'].stop()
         for websocket in set(app['websockets']):
             await websocket.close(code=WSCloseCode.GOING_AWAY,
                                   message='Server shutdown')
@@ -271,6 +270,7 @@ class WebHandler():
     async def on_cleanup(self, app):
         ''' cleanup the app '''
         await app['statedb'].close()
+        app['watcher'].stop()
 
     async def stop_server(self, request):  # pylint: disable=unused-argument
         ''' stop our server '''
@@ -281,6 +281,7 @@ class WebHandler():
     def forced_stop(self, signum, frame):  # pylint: disable=unused-argument
         ''' caught an int signal so tell the world to stop '''
         try:
+            logging.debug('telling webserver to stop via http')
             requests.get(f'http://localhost:{self.port}/{self.magicstopurl}')
         except Exception as error:  # pylint: disable=broad-except
             logging.info(error)
