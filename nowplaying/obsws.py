@@ -4,13 +4,11 @@
 
 import logging
 import logging.config
-import threading
-import time
+#import threading
+#import time
 
 import obswebsocket
 import obswebsocket.requests
-
-from PySide2.QtCore import Signal, QThread  # pylint: disable=no-name-in-module
 
 logging.config.dictConfig({
     'version': 1,
@@ -23,47 +21,33 @@ import nowplaying.config
 import nowplaying.db
 
 
-class OBSWebSocketHandler(QThread):  #pylint: disable=too-many-instance-attributes
+class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
     ''' Talk to OBS directly via WebSocket '''
-
-    obswsenable = Signal(bool)
-
-    def __init__(self, parent=None):
+    def __init__(self, tray=None):
         self.config = nowplaying.config.ConfigFile()
-        QThread.__init__(self, parent)
         self.client = None
-        self.endthread = False
         self.metadb = nowplaying.db.MetadataDB()
         self.text = None
         self.obswsport = None
         self.obswssecret = None
         self.obswshost = None
+        self.watcher = None
+        self.tray = tray
 
-    def run(self):
+    def start(self):
         ''' run our thread '''
-        threading.current_thread().name = 'OBSWebSocket'
 
-        logging.debug('Starting main loop')
-        while not self.endthread:
-            self.config.get()
+        if self.config.cparser.value('obsws/enabled',
+                                     type=bool) and not self.watcher:
+            self.watcher = self.metadb.watcher()
+            self.watcher.start(customhandler=self.process_update)
+            self.process_update(None)
 
-            while self.config.getpause() or not self.config.cparser.value(
-                    'obsws/enabled', type=bool):
-                time.sleep(5)
-                self.config.get()
-                if self.endthread:
-                    break
+    def process_update(self, event):  # pylint: disable=unused-argument
+        ''' watcher picked up an update, so execute on it '''
 
-            if self.endthread:
-                break
-
-            source = self.config.cparser.value('obsws/source')
-            if not source:
-                continue
-
-            time.sleep(
-                self.config.cparser.value('settings/interval', type=float))
-
+        source = self.config.cparser.value('obsws/source')
+        if source:
             self.check_reconnect()
             self.text = self.generate_text()
             if self.text:
@@ -76,11 +60,11 @@ class OBSWebSocketHandler(QThread):  #pylint: disable=too-many-instance-attribut
                         self.client.call(
                             obswebsocket.requests.SetTextGDIPlusProperties(
                                 source=source, text=self.text))
-                except:  # pylint: disable=bare-except
+                except Exception as error:  # pylint: disable=broad-except
                     # there are a lot of uncaught, internal exceptions from
                     # upstream :(
 
-                    pass
+                    logging.debug(error)
 
     def generate_text(self, clear=False):
         ''' convert template '''
@@ -96,7 +80,7 @@ class OBSWebSocketHandler(QThread):  #pylint: disable=too-many-instance-attribut
         if clear:
             return ''
 
-        return '{{ artist }} - {{ title }}'
+        return ' {{ artist }} - {{ title }} '
 
     def check_reconnect(self):
         ''' check if our params have changed and if so reconnect '''
@@ -104,7 +88,9 @@ class OBSWebSocketHandler(QThread):  #pylint: disable=too-many-instance-attribut
         try:
             obswsport = self.config.cparser.value('obsws/port', type=int)
         except TypeError:
-            self.obswsenable.emit(False)
+            self.tray.obswsenable(False)
+            self.stop()
+            return
 
         obswssecret = self.config.cparser.value('obsws/secret')
 
@@ -126,21 +112,23 @@ class OBSWebSocketHandler(QThread):  #pylint: disable=too-many-instance-attribut
                 self.client = obswebsocket.obsws(obswshost, obswsport,
                                                  obswssecret)
                 self.client.connect()
-            except:  # pylint: disable=bare-except
+            except Exception as error:  # pylint: disable=broad-except
 
                 # there are a lot of uncaught, internal exceptions from
                 # upstream :(
+                logging.debug(error)
+                self.tray.obswsenable(False)
+                self.stop()
 
-                self.obswsenable.emit(False)
-
-    def exit(self):
+    def stop(self):
         ''' exit the thread '''
-        logging.debug('OBS WebSocket asked to stop')
-        self.endthread = True
+        logging.debug('OBSWS asked to stop')
+        if self.watcher:
+            self.watcher.stop()
         if self.client:
             self.client.disconnect()
             self.client = None
 
     def __del__(self):
-        logging.debug('OBS WebSocket thread is being killed!')
-        self.exit()
+        logging.debug('Stopping OBSWS')
+        self.stop()

@@ -324,6 +324,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def _upd_conf_obsws(self):
         ''' update the obsws settings '''
+
+        oldenabled = self.config.cparser.value('obsws/enabled', type=bool)
+        newenabled = self.widgets['obsws'].enable_checkbox.isChecked()
+
         self.config.cparser.setValue(
             'obsws/freetype2',
             self.widgets['obsws'].freetype2_button.isChecked())
@@ -337,8 +341,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             'obsws/secret', self.widgets['obsws'].secret_lineedit.text())
         self.config.cparser.setValue(
             'obsws/template', self.widgets['obsws'].template_lineedit.text())
-        self.config.cparser.setValue(
-            'obsws/enabled', self.widgets['obsws'].enable_checkbox.isChecked())
+        self.config.cparser.setValue('obsws/enabled', newenabled)
+
+        if oldenabled != newenabled:
+            self.tray.restart_obsws()
 
     def _upd_conf_twitchbot(self):
         ''' update the twitch settings '''

@@ -89,16 +89,16 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self.trackthread = None
         self.webprocess = None
-        self.obswsthread = None
+        self.obswsobj = None
         self.twitchbotprocess = None
         self.threadstart()
 
     def threadstart(self):
         ''' start our various threads '''
         # Start the OBS WebSocket thread
-        self.obswsthread = nowplaying.obsws.OBSWebSocketHandler()
-        self.obswsthread.obswsenable[bool].connect(self.obswsenable)
-        self.obswsthread.start()
+        self.obswsobj = nowplaying.obsws.OBSWebSocketHandler(tray=self)
+        if self.config.cparser.value('obsws/enabled', type=bool):
+            self._start_obsws()
 
         # Start the polling thread
         self.trackthread = nowplaying.trackpoll.TrackPoll()
@@ -110,6 +110,17 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         if self.config.cparser.value('twitchbot/enabled', type=bool):
             self._start_twitchbotprocess()
+
+    def _start_obsws(self):
+        self.obswsobj.start()
+
+    def _stop_obsws(self):
+        self.obswsobj.stop()
+
+    def restart_obsws(self):
+        ''' bounce the obsws connection '''
+        self._stop_obsws()
+        self._start_obsws()
 
     def _stop_webprocess(self):
         ''' stop the web process '''
@@ -255,14 +266,11 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         logging.debug('Starting shutdown')
         self.tray.setVisible(False)
 
-        if self.obswsthread:
-            logging.debug('Notifying obswsthread')
-            self.obswsthread.endthread = True
-            self.obswsthread.exit()
+        logging.debug('Notifying obswsobj')
+        self._stop_obsws()
 
         if self.trackthread:
             logging.debug('Notifying trackthread')
-            self.trackthread.endthread = True
             self.trackthread.exit()
 
         if self.config:
@@ -279,10 +287,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # calling exit should call __del__ on all of our QThreads
         if self.trackthread:
             logging.debug('Waiting for trackthread')
+            self.trackthread.endthread = True
             self.trackthread.wait()
 
-        if self.obswsthread:
-            logging.debug('Waiting for obswsthread')
-            self.obswsthread.wait()
         app = QApplication.instance()
         app.exit(0)

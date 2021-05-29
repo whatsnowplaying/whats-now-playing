@@ -40,8 +40,8 @@ class DBWatcher:
             self.event_handler.on_modified = self.update_time
             self.event_handler.on_created = self.update_time
         else:
-            self.event_handler = customhandler
-            self.event_handler = customhandler
+            self.event_handler.on_modified = customhandler
+            self.event_handler.on_created = customhandler
         self.observer = Observer()
         self.observer.schedule(self.event_handler, directory, recursive=False)
         self.observer.start()

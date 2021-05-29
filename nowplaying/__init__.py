@@ -3,6 +3,7 @@
     Titles for streaming for Serato
 '''
 
+import faulthandler
 import logging
 import multiprocessing
 import os
@@ -48,6 +49,7 @@ def main():
     ''' main entrypoint '''
 
     multiprocessing.freeze_support()
+    faulthandler.enable()
 
     # set paths for bundled files
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
