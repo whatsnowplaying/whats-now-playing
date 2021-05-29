@@ -146,9 +146,48 @@ class WebHandler():
         return web.json_response(metadata)
 
     async def websocket_lastjson_handler(self, request, websocket):
-        ''' handle static index.txt '''
+        ''' handle singular websocket request '''
         metadata = request.app['metadb'].read_last_meta()
+        logging.debug('metadata = %s', metadata)
+        if 'coverimageraw' in metadata:
+            del metadata['coverimageraw']
         await websocket.send_json(metadata)
+        logging.debug('past send json')
+
+    async def websocket_streamer(self, request):
+        ''' handle continually streamed updates '''
+        async def do_update(websocket, database):
+            # early launch can be a bit weird so
+            # pause a bit
+            await asyncio.sleep(1)
+            metadata = database.read_last_meta()
+            if 'coverimageraw' in metadata:
+                del metadata['coverimageraw']
+            await websocket.send_json(metadata)
+            return time.time()
+
+        websocket = web.WebSocketResponse()
+        await websocket.prepare(request)
+        request.app['websockets'].add(websocket)
+
+        try:
+            mytime = await do_update(websocket, request.app['metadb'])
+            while True:
+                while mytime > request.app['watcher'].updatetime:
+                    await asyncio.sleep(1)
+
+                logging.debug('%s > %s', mytime,
+                              request.app['watcher'].updatetime)
+
+                mytime = await do_update(websocket, request.app['metadb'])
+                await asyncio.sleep(1)
+        except Exception as error:  #pylint: disable=broad-except
+            logging.debug(error)
+        finally:
+            logging.debug('ended in finally')
+            await websocket.close()
+            request.app['websockets'].discard(websocket)
+        return websocket
 
     async def websocket_handler(self, request):
         ''' handle inbound websockets '''
@@ -161,6 +200,7 @@ class WebHandler():
                     if msg.data == 'close':
                         await websocket.close()
                     elif msg.data == 'last':
+                        logging.debug('got last')
                         await self.websocket_lastjson_handler(
                             request, websocket)
                     else:
@@ -191,6 +231,7 @@ class WebHandler():
             web.get('/index.html', self.indexhtm_handler),
             web.get('/index.txt', self.indextxt_handler),
             web.get('/ws', self.websocket_handler),
+            web.get('/wsstream', self.websocket_streamer),
             web.get(f'/{self.magicstopurl}', self.stop_server)
         ])
         return web.AppRunner(app)
@@ -207,6 +248,8 @@ class WebHandler():
         threading.current_thread().name = 'WebServer-startup'
         app['config'] = nowplaying.config.ConfigFile()
         app['metadb'] = nowplaying.db.MetadataDB()
+        app['watcher'] = app['metadb'].watcher()
+        app['watcher'].start()
         app['statedb'] = await aiosqlite.connect(self.databasefile)
         app['statedb'].row_factory = aiosqlite.Row
         cursor = await app['statedb'].cursor()
@@ -220,6 +263,7 @@ class WebHandler():
 
     async def on_shutdown(self, app):
         ''' handle shutdown '''
+        app['watcher'].stop()
         for websocket in set(app['websockets']):
             await websocket.close(code=WSCloseCode.GOING_AWAY,
                                   message='Server shutdown')
@@ -288,4 +332,5 @@ def start(orgname, appname, bundledir):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     start(None, None, None)

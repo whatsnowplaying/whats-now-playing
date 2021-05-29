@@ -9,8 +9,55 @@ import sys
 import multiprocessing
 import urllib
 import sqlite3
+import time
+
+from watchdog.observers import Observer
+from watchdog.events import PatternMatchingEventHandler
 
 from PySide2.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
+
+
+class DBWatcher:
+    ''' utility to watch for database changes '''
+    def __init__(self, databasefile):
+        self.observer = None
+        self.event_handler = None
+        self.updatetime = time.time()
+        self.databasefile = databasefile
+
+    def start(self, customhandler=None):
+        ''' fire up the watcher '''
+        directory = os.path.dirname(self.databasefile)
+        filename = os.path.basename(self.databasefile)
+        logging.info('Watching for changes on %s', self.databasefile)
+        self.event_handler = PatternMatchingEventHandler(
+            patterns=[filename],
+            ignore_patterns=['.DS_Store'],
+            ignore_directories=True,
+            case_sensitive=False)
+        if not customhandler:
+            self.event_handler.on_modified = self.update_time
+            self.event_handler.on_created = self.update_time
+        else:
+            self.event_handler = customhandler
+            self.event_handler = customhandler
+        self.observer = Observer()
+        self.observer.schedule(self.event_handler, directory, recursive=False)
+        self.observer.start()
+
+    def update_time(self, event):  # pylint: disable=unused-argument
+        ''' just need to update the time '''
+        self.updatetime = time.time()
+
+    def stop(self):
+        ''' stop the watcher '''
+        if self.observer:
+            self.observer.stop()
+            self.observer.join()
+            self.observer = None
+
+    def __del__(self):
+        self.stop()
 
 
 class MetadataDB:
@@ -57,6 +104,10 @@ class MetadataDB:
         if not os.path.exists(self.databasefile) or initialize:
             logging.debug('Setting up a new DB')
             self.setupsql()
+
+    def watcher(self):
+        ''' get access to a watch on the database file '''
+        return DBWatcher(self.databasefile)
 
     def write_to_metadb(self, metadata=None):
         ''' update metadb '''
