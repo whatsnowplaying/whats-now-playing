@@ -414,14 +414,15 @@ class SeratoHandler():
     mode = None
 
     def __init__(self, mixmode='oldest', seratodir=None, seratourl=None):
+        self.event_handler = None
+        self.observer = None
+
         if seratodir:
             self.seratodir = seratodir
             self.watchdeck = None
             SeratoHandler.parsedsessions = []
             SeratoHandler.mode = 'local'
             self.mixmode = mixmode
-            self.event_handler = None
-            self.observer = None
             self._setup_watcher()
 
         if seratourl:
@@ -810,6 +811,7 @@ class Plugin(InputPlugin):
             os.path.join(
                 QStandardPaths.standardLocations(
                     QStandardPaths.MusicLocation)[0], "_Serato_"))
+        qsettings.setValue('serato/interval', 10.0)
         qsettings.setValue('serato/local', True)
         qsettings.setValue('serato/mixmode', "newest")
         qsettings.setValue('serato/url', None)
@@ -871,6 +873,8 @@ class Plugin(InputPlugin):
             self.config.cparser.value('serato/libpath'))
         qwidget.remote_url_lineedit.setText(
             self.config.cparser.value('serato/url'))
+        qwidget.remote_poll_lineedit.setText(
+            str(self.config.cparser.value('serato/interval')))
 
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''
@@ -896,6 +900,8 @@ class Plugin(InputPlugin):
                                      qwidget.local_button.isChecked())
         self.config.cparser.setValue('serato/url',
                                      qwidget.remote_url_lineedit.text())
+        self.config.cparser.setValue('serato/interval',
+                                     qwidget.remote_poll_lineedit.text())
 
     def desc_settingsui(self, qwidget):
         ''' description '''

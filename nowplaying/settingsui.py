@@ -148,8 +148,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.widgets['general'].texttemplate_lineedit.setText(
             self.config.txttemplate)
 
-        self.widgets['serato'].remote_poll_lineedit.setText(
-            str(self.config.interval))
         self.widgets['general'].read_delay_lineedit.setText(
             str(self.config.delay))
         self.widgets['general'].notify_checkbox.setChecked(self.config.notif)
@@ -260,7 +258,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     def upd_conf(self):
         ''' update the configuration '''
 
-        interval = float(self.widgets['serato'].remote_poll_lineedit.text())
         delay = float(self.widgets['general'].read_delay_lineedit.text())
         loglevel = self.widgets['general'].logging_combobox.currentText()
 
@@ -270,7 +267,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             initialized=True,
             file=self.widgets['general'].textoutput_lineedit.text(),
             txttemplate=self.widgets['general'].texttemplate_lineedit.text(),
-            interval=interval,
             delay=delay,
             notif=self.widgets['general'].notify_checkbox.isChecked(),
             loglevel=loglevel)
