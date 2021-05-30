@@ -31,8 +31,7 @@ import time
 import irc.bot
 import jinja2
 import requests
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
+
 from PySide2.QtCore import QCoreApplication, QStandardPaths, Qt  # pylint: disable=no-name-in-module
 
 #
@@ -65,31 +64,42 @@ import nowplaying.db
 class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instance-attributes
     ''' twitch bot '''
     def __init__(self, username, client_id, token, channel):
+        self.username = username
         self.client_id = client_id
         self.token = token.removeprefix("oauth:")
         self.channel = '#' + channel.lower()
-        self.event_handler = None
-        self.observer = None
+        self.watcher = None
         self.templatedir = os.path.join(
             QStandardPaths.standardLocations(
                 QStandardPaths.DocumentsLocation)[0],
             QCoreApplication.applicationName(), 'templates')
         self.metadb = nowplaying.db.MetadataDB()
         self.config = nowplaying.config.ConfigFile()
+        self.lastannounced = {'artist': None, 'title': None}
         self.magiccommand = ''.join(
             secrets.choice(string.ascii_letters) for i in range(32))
         logging.info('Secret command to quit twitchbot: %s', self.magiccommand)
-
-        threading.current_thread().name = 'TwitchBot'
 
         self.jinja2 = jinja2.Environment(
             loader=jinja2.FileSystemLoader(self.templatedir),
             autoescape=jinja2.select_autoescape(['htm', 'html', 'xml']))
 
+        self.channel_id = self._get_channel_id()
+
+        logging.debug('channel_id %s', self.channel_id)
+        # Create IRC bot connection
+        server = 'irc.chat.twitch.tv'
+        port = 6667
+        logging.info('Connecting to %s on port %d', server, port)
+        irc.bot.SingleServerIRCBot.__init__(
+            self, [(server, port, 'oauth:' + self.token)], self.username,
+            self.username)
+
+    def _get_channel_id(self):
         # Get the channel id, we will need this for v5 API calls
-        url = 'https://api.twitch.tv/kraken/users?login=' + channel
+        url = 'https://api.twitch.tv/kraken/users?login=' + self.channel[1:]
         headers = {
-            'Client-ID': client_id,
+            'Client-ID': self.client_id,
             'Accept': 'application/vnd.twitchtv.v5+json'
         }
         req = requests.get(url, headers=headers).json()
@@ -97,39 +107,25 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             logging.error('%s %s: %s', req['status'], req['error'],
                           req['message'])
             sys.exit(0)
-        self.channel_id = req['users'][0]['_id']
-
-        logging.debug('channel_id %s', self.channel_id)
-        # Create IRC bot connection
-        server = 'irc.chat.twitch.tv'
-        port = 6667
-        logging.info('Connecting to %s on port %d', server, port)
-        irc.bot.SingleServerIRCBot.__init__(self,
-                                            [(server, port, 'oauth:' + token)],
-                                            username, username)
-        self._setup_timer()
+        return req['users'][0]['_id']
 
     def _setup_timer(self):
-        watchfile = self.config.cparser.value('textoutput/file')
-        self.event_handler = PatternMatchingEventHandler(
-            patterns=[os.path.basename(watchfile)],
-            ignore_patterns=None,
-            ignore_directories=True,
-            case_sensitive=False)
-        self.event_handler.on_closed = self._announce_track
-        self.observer = Observer()
-        self.observer.schedule(self.event_handler,
-                               os.path.dirname(watchfile),
-                               recursive=False)
-        self.observer.start()
+        self.watcher = self.metadb.watcher()
+        self.watcher.start(customhandler=self._announce_track)
+        self._announce_track(None)
 
-    def _announce_track(self, filename):  # pylint: disable=unused-argument
+    def _announce_track(self, event):  # pylint: disable=unused-argument
         ''' announce new tracks '''
         self.config.get()
-        filecheck = self.config.cparser.value('textoutput/file')
 
-        if not os.path.exists(filecheck) or os.stat(filecheck).st_size == 0:
+        metadata = self.metadb.read_last_meta()
+
+        if not metadata or metadata['artist'] == self.lastannounced['artist'] and \
+           metadata['title'] == self.lastannounced['title']:
             return
+
+        self.lastannounced['artist'] = metadata['artist']
+        self.lastannounced['title'] = metadata['title']
 
         logging.info('Announcing %s',
                      self.config.cparser.value('twitchbot/announce'))
@@ -140,6 +136,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
     def on_welcome(self, connection, event):  # pylint: disable=unused-argument
         ''' join the IRC channel and set up our stuff '''
+        threading.current_thread().name = 'TwitchBot'
         logging.info('Joining %s', self.channel)
 
         # You must request specific capabilities before you can use them
@@ -148,6 +145,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         connection.cap('REQ', ':twitch.tv/commands')
         connection.join(self.channel)
         logging.info('Successfully joined %s', self.channel)
+        self._setup_timer()
 
     def on_pubmsg(self, connection, event):  # pylint: disable=unused-argument
         ''' find commands '''
@@ -251,10 +249,9 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         self._post_template(cmdfile, moremetadata=metadata)
 
     def shutdown(self):  # pylint: disable=no-self-use
-        '''
-        logging.info('Would shutdown but not sure how')'''
-        self.observer.stop()
-        self.observer.join()
+        ''' shutdown '''
+        if self.watcher:
+            self.watcher.stop()
         sys.exit(0)
 
 
@@ -319,7 +316,7 @@ class TwitchBotHandler():
             except KeyboardInterrupt:
                 pass
             except Exception as error:  # pylint: disable=broad-except
-                logging.error('Web server threw exception after forever: %s',
+                logging.error('TwitchBot threw exception after forever: %s',
                               error)
             finally:
                 if self.server:
