@@ -1,0 +1,37 @@
+#
+#
+# yamllint disable rule:line-length
+---
+name: website
+
+# execute this workflow automatically when a we push to master
+on:  # yamllint disable-line rule:truthy
+  push:
+    branches: [master]
+
+jobs:
+
+  build_docs_job:
+    runs-on: ubuntu-latest
+    container: debian:buster-slim
+
+    steps:
+
+      - name: Prereqs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          apt-get update
+          apt-get install -y git python3-pip
+          git clone --depth 1 "https://token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" .
+        shell: bash
+
+      # - name: check
+      #   run: |
+      #     pip3 install .
+
+      - name: Execute script to build our documentation and update pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: "./build-website.sh"
+        shell: bash

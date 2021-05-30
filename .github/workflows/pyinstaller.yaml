@@ -8,7 +8,7 @@
 
 name: pyinstaller
 
-on: [push, pull_request]  # yamllint disable-line rule:truthy
+on: [push]  # yamllint disable-line rule:truthy
 
 jobs:
   pyinstaller-mac:

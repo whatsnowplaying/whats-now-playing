@@ -8,6 +8,12 @@ import os
 import platform
 import sys
 
+
+from PyInstaller.utils.hooks import collect_submodules
+
+sys.path.insert(0, os.path.abspath('.'))
+
+
 import pyinstaller_versionfile
 import nowplaying.version
 
@@ -15,6 +21,7 @@ NUMERICDATE = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
 VERSION = nowplaying.version.get_versions()['version']
 WINVERSFILE = os.path.join('bincomponents', 'winvers.bin')
 
+INPUT_MODULES = collect_submodules('nowplaying.inputs')
 
 def geticon():
     ''' get the icon for this platform '''
@@ -104,7 +111,7 @@ a = Analysis(['nppyi.py'],
              binaries=[],
              datas=[('nowplaying/resources/*', 'resources/'),
                     ('nowplaying/templates/*', 'templates/')],
-             hiddenimports=[],
+             hiddenimports=INPUT_MODULES,
              hookspath=[],
              runtime_hooks=[],
              excludes=[],

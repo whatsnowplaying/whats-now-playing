@@ -16,6 +16,7 @@ import pkg_resources
 from PySide2.QtCore import QCoreApplication, QSettings, QStandardPaths
 
 import nowplaying.inputs
+import nowplaying.utils
 import nowplaying.version
 
 

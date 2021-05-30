@@ -2,6 +2,8 @@
 
 # __Now Playing__ in Serato ![Menu Bar Image](git-images/seratoPlaying.png?raw=true)
 
+(For users testing 3.x, see updated documentation at [here](https://whatsnowplaying.github.io/). )
+
 __Now Playing__ is a tool written in Python to retrieve the current/last played song in Serato DJ
 (as tested with v2.4.x).
 
@@ -52,7 +54,7 @@ For more info on Serato Live Playlists: https://support.serato.com/hc/en-us/arti
 
 ### Mac
 
-* Download the latest macOS release zip package [here](https://github.com/aw-was-here/releases/latest)
+* Download the latest macOS release zip package [here](https://github.com/whatsnowplaying/whats-now-playing/releases/latest)
 * Unzip the archive and place the unzipped 'SeratoNowPlaying.app' file in your "Applications" folder or any other location that you desire.
 
 #### *Important note for macOS users*

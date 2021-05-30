@@ -10,5 +10,5 @@ import multiprocessing
 multiprocessing.freeze_support()
 
 if __name__ == "__main__":
-    import nowplaying
-    nowplaying.main()
+    from nowplaying.__main__ import main as realmain
+    realmain()

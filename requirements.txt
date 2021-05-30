@@ -9,6 +9,7 @@ pyinstaller==4.3
 pyinstaller_versionfile==2.0.0
 PySide2==5.15.2
 requests==2.25.1
+Sphinx==4.0.2
 tinytag==1.5.0
 urllib3==1.26.4
 watchdog==2.1.2
