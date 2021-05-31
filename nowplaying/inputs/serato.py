@@ -409,8 +409,8 @@ class SeratoHandler():
     decks = {}
     parsedsessions = []
     playingadat = ChunkTrackADAT()
-    lastprocessed = None
-    lastfetched = None
+    lastprocessed = 0
+    lastfetched = 0
     mode = None
 
     def __init__(self, mixmode='oldest', seratodir=None, seratourl=None):
