@@ -58,7 +58,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                                  QCoreApplication.organizationName(),
                                  QCoreApplication.applicationName())
         logging.info('configuration: %s', self.cparser.fileName())
-        self.delay = float(1.0)
         self.notif = False
         ConfigFile.PAUSED = False
         self.file = None
@@ -175,11 +174,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             pass
 
         try:
-            self.delay = self.cparser.value('settings/delay', type=float)
-        except TypeError:
-            pass
-
-        try:
             self.notif = self.cparser.value('settings/notif', type=bool)
         except TypeError:
             pass
@@ -203,7 +197,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                              QCoreApplication.organizationName(),
                              QCoreApplication.applicationName())
 
-        settings.setValue('settings/delay', self.delay)
+        settings.setValue('settings/delay', '1.0')
         settings.setValue('settings/input', 'serato')
         settings.setValue('settings/initialized', False)
         settings.setValue('settings/loglevel', self.loglevel)
@@ -270,12 +264,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             qtwidget)
 
     # pylint: disable=too-many-arguments
-    def put(self, initialized, file, txttemplate, delay, notif, loglevel):
+    def put(self, initialized, file, txttemplate, notif, loglevel):
         ''' Save the configuration file '''
 
         ConfigFile.LOCK.acquire()
 
-        self.delay = float(delay)
         self.file = file
         self.initialized = initialized
         self.loglevel = loglevel
@@ -291,7 +284,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         ConfigFile.LOCK.acquire()
 
-        self.cparser.setValue('settings/delay', self.delay)
         self.cparser.setValue('settings/initialized', self.initialized)
         self.cparser.setValue('settings/loglevel', self.loglevel)
         self.cparser.setValue('settings/notif', self.notif)

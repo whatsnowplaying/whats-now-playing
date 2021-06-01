@@ -152,6 +152,7 @@ class MetadataDB:
         cursor.execute(sql, tuple(list(mdcopy.values())))
         connection.commit()
         connection.close()
+        logging.debug('releasing lock')
         MetadataDB.LOCK.release()
 
     def read_last_meta(self):

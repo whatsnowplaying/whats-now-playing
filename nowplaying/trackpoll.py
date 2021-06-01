@@ -2,7 +2,6 @@
 ''' thread to poll music player '''
 
 import logging
-import time
 import threading
 
 from PySide2.QtCore import Signal, QThread  # pylint: disable=no-name-in-module
@@ -13,7 +12,7 @@ import nowplaying.inputs
 import nowplaying.utils
 
 
-class TrackPoll(QThread):
+class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
     '''
         QThread that runs the main polling work.
         Uses a signal to tell the Tray when the
@@ -31,42 +30,31 @@ class TrackPoll(QThread):
         self.input = None
         self.inputname = None
         self.plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
+        self.previoustxttemplate = None
+        self.txttemplatehandler = None
 
     def run(self):
         ''' track polling process '''
 
         threading.current_thread().name = 'TrackPoll'
-        previoustxttemplate = None
         previousinput = None
 
         # sleep until we have something to write
         while not self.config.file and not self.endthread and not self.config.getpause(
         ):
-            time.sleep(5)
+            QThread.msleep(5000)
             self.config.get()
 
         while not self.endthread:
-            time.sleep(1)
+            QThread.msleep(1000)
             self.config.get()
-
-            if not previoustxttemplate or previoustxttemplate != self.config.txttemplate:
-                txttemplatehandler = nowplaying.utils.TemplateHandler(
-                    filename=self.config.txttemplate)
-                previoustxttemplate = self.config.txttemplate
 
             if not previousinput or previousinput != self.config.cparser.value(
                     'settings/input'):
                 previousinput = self.config.cparser.value('settings/input')
                 self.input = self.plugins[
                     f'nowplaying.inputs.{previousinput}'].Plugin()
-
-            if not self.gettrack():
-                continue
-            time.sleep(self.config.delay)
-            nowplaying.utils.writetxttrack(filename=self.config.file,
-                                           templatehandler=txttemplatehandler,
-                                           metadata=self.currentmeta)
-            self.currenttrack.emit(self.currentmeta)
+            self.gettrack()
 
     def __del__(self):
         logging.debug('TrackPoll is being killed!')
@@ -81,16 +69,16 @@ class TrackPoll(QThread):
         while True:
             if not self.config.getpause():
                 break
-            time.sleep(1)
+            QThread.msleep(1000)
 
         (artist, title) = self.input.getplayingtrack()
 
         if not artist and not title:
-            return False
+            return
 
         if artist == self.currentmeta['fetchedartist'] and \
            title == self.currentmeta['fetchedtitle']:
-            return False
+            return
 
         nextmeta = self.input.getplayingmetadata()
         nextmeta['fetchedtitle'] = title
@@ -119,6 +107,28 @@ class TrackPoll(QThread):
         logging.info('New track: %s / %s', self.currentmeta['artist'],
                      self.currentmeta['title'])
 
+        self._delay_write()
+
         metadb = nowplaying.db.MetadataDB()
         metadb.write_to_metadb(metadata=self.currentmeta)
-        return True
+        self._write_to_text()
+        self.currenttrack.emit(self.currentmeta)
+
+    def _write_to_text(self):
+        if not self.previoustxttemplate or self.previoustxttemplate != self.config.txttemplate:
+            self.txttemplatehandler = nowplaying.utils.TemplateHandler(
+                filename=self.config.txttemplate)
+            self.previoustxttemplate = self.config.txttemplate
+        nowplaying.utils.writetxttrack(filename=self.config.file,
+                                       templatehandler=self.txttemplatehandler,
+                                       metadata=self.currentmeta)
+
+    def _delay_write(self):
+        try:
+            delay = self.config.cparser.value('settings/delay',
+                                              type=float,
+                                              defaultValue=1.0)
+        except ValueError:
+            delay = 1.0
+        logging.debug('got delay of %s', delay)
+        QThread.msleep(int(delay * 1000))

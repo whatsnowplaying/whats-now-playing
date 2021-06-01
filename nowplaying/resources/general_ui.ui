@@ -42,7 +42,7 @@
     <enum>Qt::MarkdownText</enum>
    </property>
   </widget>
-  <widget class="QLabel" name="read_delay_label">
+  <widget class="QLabel" name="delay_label">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -52,13 +52,13 @@
     </rect>
    </property>
    <property name="text">
-    <string>**Read Delay**</string>
+    <string>**Write Delay**</string>
    </property>
    <property name="textFormat">
     <enum>Qt::MarkdownText</enum>
    </property>
   </widget>
-  <widget class="QLineEdit" name="read_delay_lineedit">
+  <widget class="QLineEdit" name="delay_lineedit">
    <property name="geometry">
     <rect>
      <x>380</x>
@@ -71,7 +71,7 @@
     <set>Qt::ImhPreferNumbers</set>
    </property>
   </widget>
-  <widget class="QLabel" name="read_delay_linedit_label">
+  <widget class="QLabel" name="delay_linedit_label">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -81,7 +81,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Amount of time in seconds to delay reading the new track info:</string>
+    <string>Amount of time in seconds to delay writing the new track info:</string>
    </property>
    <property name="wordWrap">
     <bool>true</bool>

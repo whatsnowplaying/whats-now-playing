@@ -8,11 +8,9 @@ import os
 import platform
 import sys
 
-
 from PyInstaller.utils.hooks import collect_submodules
 
 sys.path.insert(0, os.path.abspath('.'))
-
 
 import pyinstaller_versionfile
 import nowplaying.version
@@ -22,6 +20,7 @@ VERSION = nowplaying.version.get_versions()['version']
 WINVERSFILE = os.path.join('bincomponents', 'winvers.bin')
 
 INPUT_MODULES = collect_submodules('nowplaying.inputs')
+
 
 def geticon():
     ''' get the icon for this platform '''

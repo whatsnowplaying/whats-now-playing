@@ -148,8 +148,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.widgets['general'].texttemplate_lineedit.setText(
             self.config.txttemplate)
 
-        self.widgets['general'].read_delay_lineedit.setText(
-            str(self.config.delay))
+        self.widgets['general'].delay_lineedit.setText(
+            str(self.config.cparser.value('settings/delay')))
         self.widgets['general'].notify_checkbox.setChecked(self.config.notif)
 
         self._upd_win_input()
@@ -258,7 +258,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     def upd_conf(self):
         ''' update the configuration '''
 
-        delay = float(self.widgets['general'].read_delay_lineedit.text())
+        self.config.cparser.setValue(
+            'settings/delay', self.widgets['general'].delay_lineedit.text())
         loglevel = self.widgets['general'].logging_combobox.currentText()
 
         self._upd_conf_input()
@@ -267,7 +268,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             initialized=True,
             file=self.widgets['general'].textoutput_lineedit.text(),
             txttemplate=self.widgets['general'].texttemplate_lineedit.text(),
-            delay=delay,
             notif=self.widgets['general'].notify_checkbox.isChecked(),
             loglevel=loglevel)
 
