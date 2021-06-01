@@ -7,7 +7,7 @@ name: website
 # execute this workflow automatically when a we push to master
 on:  # yamllint disable-line rule:truthy
   push:
-    branches: [master]
+    branches: [main]
 
 jobs:
 
