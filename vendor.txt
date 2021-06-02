@@ -1,0 +1,2 @@
+git+http://github.com/aw-was-here/tinytag.git@nowplaying
+git+http://github.com/aw-was-here/audio-metadata.git@nowplaying

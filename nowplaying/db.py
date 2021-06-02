@@ -85,6 +85,7 @@ class MetadataDB:
         'filename',
         'genre',
         'key',
+        'label',
         'lang',
         'length',
         'publisher',

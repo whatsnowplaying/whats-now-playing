@@ -62,6 +62,7 @@ def main():
 
     config = nowplaying.config.ConfigFile(bundledir=bundledir)
     logging.getLogger().setLevel(config.loglevel)
+    logging.captureWarnings(True)
 
     tray = nowplaying.systemtray.Tray()  # pylint: disable=unused-variable
     qapp.setQuitOnLastWindowClosed(False)
