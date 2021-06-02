@@ -8,15 +8,14 @@
 #
 
 import importlib
-import io
 import logging
 import pkgutil
 import os
 import sys
 
 import jinja2
-import tinytag
-import PIL.Image
+
+import nowplaying.metadata
 
 
 class TemplateHandler():  # pylint: disable=too-few-public-methods
@@ -57,8 +56,6 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
 def getmoremetadata(metadata=None):
     ''' given a chunk of metadata, try to fill in more '''
 
-    tag = None
-
     logging.debug('getmoremetadata called')
 
     if not metadata or 'filename' not in metadata:
@@ -74,34 +71,13 @@ def getmoremetadata(metadata=None):
 
     logging.debug('getmoremetadata calling TinyTag for %s',
                   metadata['filename'])
-
     try:
-        tag = tinytag.TinyTag.get(metadata['filename'], image=True)
-    except tinytag.tinytag.TinyTagException:
-        logging.error('File format not supported')
+        myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata)
+        metadata = myclass.metadata
+    except Exception as error:  # pylint: disable=broad-except
+        logging.error('MetadtaProcessor failed for %s with %s',
+                      metadata['filename'], error)
 
-    if tag:
-        for key in [
-                'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'composer',
-                'disc', 'disc_total', 'genre', 'key', 'publisher', 'lang',
-                'title', 'track', 'track_total', 'year'
-        ]:
-            if key not in metadata and hasattr(tag, key) and getattr(tag, key):
-                metadata[key] = getattr(tag, key)
-
-        if 'coverimageraw' not in metadata:
-            metadata['coverimageraw'] = tag.get_image()
-
-    # always convert to png
-
-    if 'coverimageraw' in metadata and metadata['coverimageraw']:
-        coverimage = metadata['coverimageraw']
-        imgbuffer = io.BytesIO(coverimage)
-        image = PIL.Image.open(imgbuffer)
-        image.save(imgbuffer, format='png')
-        metadata['coverimageraw'] = imgbuffer.getvalue()
-        metadata['coverimagetype'] = 'png'
-        metadata['coverurl'] = 'cover.png'
     return metadata
 
 

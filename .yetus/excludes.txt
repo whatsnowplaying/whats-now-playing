@@ -1,5 +1,6 @@
 nowplaying/resources/
 nowplaying/version.py
+nowplaying/vendor/
 bincomponents/
 versioneer.py
 NowPlaying.spec

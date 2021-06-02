@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 ''' pytest for utils.py '''
 
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath('..'))
+
+# pylint: disable=wrong-import-position
+
 import nowplaying.bootstrap
-import nowplaying.utils
 import nowplaying.db
+import nowplaying.utils
 
 DBFILE = '/tmp/test.db'
 

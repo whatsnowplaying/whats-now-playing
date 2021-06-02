@@ -4,5 +4,6 @@ refactor:
     - assign-if-exp
 ignore:
   - versioneer.py
+  - nowplaying/vendor/*
   - nowplaying/version.py
   - NowPlaying.spec

@@ -34,6 +34,7 @@ logging.config.dictConfig({
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
+import nowplaying.utils
 
 INDEXREFRESH = \
     '<!doctype html><html lang="en">' \

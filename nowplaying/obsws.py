@@ -19,6 +19,7 @@ logging.config.dictConfig({
 
 import nowplaying.config
 import nowplaying.db
+import nowplaying.utils
 
 
 class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
