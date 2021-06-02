@@ -24,10 +24,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             func = getattr(self, f'_process_{processor}')
             func()
 
-        if 'publisher' in self.metadata and not 'label' in self.metadata:
+        if 'publisher' in self.metadata and 'label' not in self.metadata:
             metadata['label'] = metadata['publisher']
 
-        if 'label' in self.metadata and not 'publisher' in self.metadata:
+        if 'label' in self.metadata and 'publisher' not in self.metadata:
             self.metadata['publisher'] = self.metadata['label']
 
     def __dir__(self):
@@ -48,8 +48,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         ]:
             if key not in self.metadata and key in base.tags:
                 if isinstance(base.tags[key], list):
-                    self.metadata[key] = '/'.join(
-                        [str(x) for x in base.tags[key]])
+                    self.metadata[key] = '/'.join(str(x) for x in base.tags[key])
                 else:
                     self.metadata[key] = base.tags[key]
 
