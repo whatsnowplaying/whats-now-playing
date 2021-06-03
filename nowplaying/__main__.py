@@ -50,15 +50,14 @@ def main():
 
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     qapp = QApplication(sys.argv)
+    qapp.setQuitOnLastWindowClosed(False)
     nowplaying.bootstrap.set_qt_names()
     run_bootstrap(bundledir=bundledir)
 
     config = nowplaying.config.ConfigFile(bundledir=bundledir)
     logging.getLogger().setLevel(config.loglevel)
     logging.captureWarnings(True)
-
     tray = nowplaying.systemtray.Tray()  # pylint: disable=unused-variable
-    qapp.setQuitOnLastWindowClosed(False)
     exitval = qapp.exec_()
     logging.info('shutting down v%s',
                  nowplaying.version.get_versions()['version'])

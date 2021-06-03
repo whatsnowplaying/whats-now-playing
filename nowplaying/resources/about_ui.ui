@@ -13,17 +13,27 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="settings.qrc">
+    <normaloff>:/resources/icon.ico</normaloff>:/resources/icon.ico</iconset>
+  </property>
   <widget class="QLabel" name="program_label">
    <property name="geometry">
     <rect>
-     <x>100</x>
-     <y>30</y>
-     <width>251</width>
-     <height>16</height>
+     <x>140</x>
+     <y>10</y>
+     <width>451</width>
+     <height>41</height>
     </rect>
    </property>
+   <property name="frameShape">
+    <enum>QFrame::NoFrame</enum>
+   </property>
    <property name="text">
-    <string>Now Playing</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;img src=&quot;:/resources/icon.ico&quot;/&gt;&lt;span style=&quot; font-size:14pt;&quot;&gt; Now Playing&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="textFormat">
+    <enum>Qt::RichText</enum>
    </property>
   </widget>
   <widget class="QWidget" name="verticalLayoutWidget">
@@ -37,23 +47,12 @@
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QLabel" name="e1miran_label">
+     <widget class="QLabel" name="doc_label">
       <property name="text">
-       <string>Copyright (c) 2020-2021 Ely Miranda ( -&gt; v1.4.0)</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copyright © 2021 Allen Wittenauer &lt;/p&gt;&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Documentation: &lt;a href=&quot;https://whatsnowplaying.github.io/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://whatsnowplaying.github.io/&lt;/span&gt;&lt;/a&gt;&lt;/li&gt;&lt;li style=&quot; margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Twitch: &lt;a href=&quot;https://twitch.tv/modernmeerkat/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://twitch.tv/modernmeerkat&lt;/span&gt;&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Based on &lt;a href=&quot;https://github.com/e1miran/Now-Playing-Serato&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Now-Playing-Serato&lt;/span&gt;&lt;/a&gt; Copyright © 2020-2021 Ely Miranda &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="other_label">
-      <property name="text">
-       <string>Copyright (c) 2021 Allen Wittenauer (v2.0.0 -&gt;) http://twitch.tv/modernmeerkat</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="np_label">
-      <property name="text">
-       <string>Licensed under the MIT License.  Includes software licensed under other terms.  Please see the bundled NOTICE.txt file.</string>
+      <property name="textFormat">
+       <enum>Qt::RichText</enum>
       </property>
       <property name="wordWrap">
        <bool>true</bool>
@@ -61,9 +60,12 @@
      </widget>
     </item>
     <item>
-     <widget class="QLabel" name="aw_label">
+     <widget class="QLabel" name="np_label">
       <property name="text">
-       <string>All other product or company names are trademarks or registered trademarks of their respective owners.</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Licensed under the MIT License.  Includes software licensed under other terms.  Please see the bundled NOTICE.txt file.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;All other product or company names are trademarks or registered trademarks of their respective owners.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="textFormat">
+       <enum>Qt::RichText</enum>
       </property>
       <property name="wordWrap">
        <bool>true</bool>
@@ -73,6 +75,8 @@
    </layout>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="settings.qrc"/>
+ </resources>
  <connections/>
 </ui>
