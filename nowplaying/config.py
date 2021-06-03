@@ -56,7 +56,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.notif = False
         ConfigFile.PAUSED = False
         self.file = None
-        self.txttemplate = os.path.join(self.templatedir, "basic.txt")
+        self.txttemplate = os.path.join(self.templatedir, "basic-plain.txt")
         self.loglevel = 'DEBUG'
 
         self.input_plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
@@ -125,10 +125,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         settings.setValue('obsws/secret', '')
         settings.setValue('obsws/source', '')
         settings.setValue('obsws/template',
-                          os.path.join(self.templatedir, "basic.txt"))
+                          os.path.join(self.templatedir, "basic-plain.txt"))
 
         settings.setValue('weboutput/htmltemplate',
-                          os.path.join(self.templatedir, "basic.htm"))
+                          os.path.join(self.templatedir, "basic-web.htm"))
         settings.setValue('weboutput/httpenabled', False)
         settings.setValue('weboutput/httpport', '8899')
         settings.setValue('weboutput/once', True)

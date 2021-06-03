@@ -175,14 +175,13 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
         self.played = False
         self.playername = None
         self.playtime = None
-        self.publisher = None
         self.remixer = None
         self.row = 0
         self.sessionid = 0
         self.starttime = datetime.datetime.now()
         self.title = None
         self.updatedat = self.starttime
-        self.year = None
+        self.date = None
 
         self.field16 = None
         self.field39 = None
@@ -258,7 +257,7 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
             elif field == 22:
                 self.composer = self._string()
             elif field == 23:
-                self.year = self._string()
+                self.date = self._string()
             elif field == 28:
                 self.starttime = self._timestamp()
             elif field == 29:
@@ -302,11 +301,6 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
         # appears to be in pathstr
         if not self.filename:
             self.filename = self.pathstr
-
-        # what ID3 and friends call publisher, Serato
-        # calls label
-        if not self.publisher:
-            self.publisher = self.label
 
 
 class ChunkVRSN(ChunkParser):  #pylint: disable=too-many-instance-attributes, too-few-public-methods
@@ -708,9 +702,19 @@ class SeratoHandler():
         return {
             key: getattr(SeratoHandler.playingadat, key)
             for key in [
-                'album', 'artist', 'bitrate', 'bpm', 'composer', 'deck',
-                'filename', 'genre', 'key', 'publisher', 'lang', 'title',
-                'year'
+                'album',
+                'artist',
+                'bitrate',
+                'bpm',
+                'composer',
+                'date',
+                'deck',
+                'filename',
+                'genre',
+                'key',
+                'label',
+                'lang',
+                'title',
             ] if hasattr(SeratoHandler.playingadat, key)
             and getattr(SeratoHandler.playingadat, key)
         }

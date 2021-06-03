@@ -1,1 +1,1 @@
-{{ artist }} - "{{ title }}"
+{% if artist %}{{ artist }} - {% endif %}"{{ title }}"

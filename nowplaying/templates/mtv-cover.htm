@@ -33,16 +33,18 @@
   </head>
   <body>
     <div id="titlecard">
-      {% if coverurl is defined and coverurl is not none and coverurl|length %}
+      {% if coverurl %}
       <img src="{{ coverurl }}">
       {% endif %}
+      {% if artist %}
       <p>{{ artist }}</p>
+      {% endif %}
       <p>"{{ title }}"</p>
-      {% if album is defined and album is not none and album|length %}
+      {% if album is not none %}
       <p>{{ album }}</p>
       {% endif %}
-      {% if publisher is defined and publisher is not none and publisher|length %}
-      <p>{{ publisher }}</p>
+      {% if label is not none %}
+      <p>{{ label }}</p>
       {% endif %}
     </div>
     <script>

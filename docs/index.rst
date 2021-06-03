@@ -14,13 +14,14 @@ Compiled, standalone versions are available for:
 * Windows
 * macOS (10.13/High Sierra to 10.15/Catalina)
 
-For everyone else, you will need to build and install locally.  See `Developers <#Developers>`_ below.
+For everyone else, you will need to build and install locally.  See `Developers <Developers.html>`_ below.
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
    installation
+   upgrading
    usage
    settings
    input/m3u
