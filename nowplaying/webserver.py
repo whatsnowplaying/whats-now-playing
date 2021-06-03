@@ -86,11 +86,6 @@ class WebHandler():
             'weboutput/htmltemplate')
         once = request.app['config'].cparser.value('weboutput/once', type=bool)
 
-        logging.debug('once = %s', once)
-        request.app['config'].get()
-        once = request.app['config'].cparser.value('weboutput/once', type=bool)
-        logging.debug('once2 = %s', once)
-
         # | dbid  |  lastid | once |
         # |   x   |   NA    |      |  -> update lastid, send template
         # |   x   |  diff   |   NA |  -> update lastid, send template
