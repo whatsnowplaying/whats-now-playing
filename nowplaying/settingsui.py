@@ -203,11 +203,19 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     def _upd_win_twitchbot(self):
         ''' update the twitch settings '''
 
+        def clear_table(widget):
+            widget.clearContents()
+            rows = widget.rowCount()
+            for row in range(rows, -1, -1):
+                widget.removeRow(row)
+
         # needs to match ui file
         checkboxes = [
             'broadcaster', 'moderator', 'subscriber', 'founder', 'conductor',
             'vip', 'bits'
         ]
+
+        clear_table(self.widgets['twitchbot'].command_perm_table)
 
         for configitem in self.config.cparser.childGroups():
             setting = {}
