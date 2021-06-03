@@ -8,11 +8,12 @@ import sys
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
-from PySide2.QtCore import QCoreApplication, QDir, Qt  # pylint: disable=no-name-in-module
+from PySide2.QtCore import QDir  # pylint: disable=no-name-in-module
 from PySide2.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 from nowplaying.inputs import InputPlugin
 from nowplaying.exceptions import PluginVerifyError
+import nowplaying.bootstrap
 import nowplaying.utils
 
 # https://datatracker.ietf.org/doc/html/rfc8216
@@ -161,15 +162,11 @@ def main():
     ''' entry point as a standalone app'''
 
     logging.basicConfig(level=logging.DEBUG)
-    orgname = 'com.github.em1ran'
-
-    appname = 'NowPlaying'
 
     bundledir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
-    QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
-    QCoreApplication.setOrganizationName(orgname)
-    QCoreApplication.setApplicationName(appname)
+    nowplaying.bootstrap.set_qt_names()
+
     # need to make sure config is initialized with something
     config = nowplaying.config.ConfigFile(bundledir=bundledir)
     plugin = Plugin(config=config, m3udir=os.path.dirname(sys.argv[1]))

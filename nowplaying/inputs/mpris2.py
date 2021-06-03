@@ -8,7 +8,6 @@
 
 import collections
 import logging
-import os
 import sys
 import urllib
 import urllib.request
@@ -296,5 +295,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, os.path.abspath('../..'))
     main()

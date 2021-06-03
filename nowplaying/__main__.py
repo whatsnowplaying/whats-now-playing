@@ -28,6 +28,8 @@ def run_bootstrap(bundledir=None):
 
     nowplaying.bootstrap.setuplogging(logpath=logpath)
 
+    nowplaying.bootstrap.upgrade()
+
     # fail early if metadatadb can't be configured
     metadb = nowplaying.db.MetadataDB()
     metadb.setupsql()
@@ -56,8 +58,7 @@ def main():
 
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     qapp = QApplication(sys.argv)
-    qapp.setOrganizationName('com.github.em1ran')
-    qapp.setApplicationName('NowPlaying')
+    nowplaying.bootstrap.set_qt_names(qapp)
     run_bootstrap(bundledir=bundledir)
 
     config = nowplaying.config.ConfigFile(bundledir=bundledir)

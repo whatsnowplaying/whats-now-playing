@@ -32,7 +32,7 @@ import irc.bot
 import jinja2
 import requests
 
-from PySide2.QtCore import QCoreApplication, QStandardPaths, Qt  # pylint: disable=no-name-in-module
+from PySide2.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 
 #
 # quiet down our imports
@@ -45,6 +45,7 @@ logging.config.dictConfig({
 
 #pylint: disable=wrong-import-position
 
+import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
 
@@ -352,15 +353,9 @@ def stop(pid):
         pass
 
 
-def start(orgname, appname, bundledir):
+def start(bundledir):
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'TwitchBot'
-
-    if not orgname:
-        orgname = 'com.github.em1ran'
-
-    if not appname:
-        appname = 'NowPlaying'
 
     if not bundledir:
         if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
@@ -369,9 +364,8 @@ def start(orgname, appname, bundledir):
         else:
             bundledir = os.path.abspath(os.path.dirname(__file__))
 
-    QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
-    QCoreApplication.setOrganizationName(orgname)
-    QCoreApplication.setApplicationName(appname)
+    nowplaying.bootstrap.set_qt_names()
+
     config = nowplaying.config.ConfigFile(bundledir=bundledir)
     logging.info('boot up')
     twitchbot = TwitchBotHandler(config)  # pylint: disable=unused-variable
@@ -389,15 +383,9 @@ def main():
     token = sys.argv[3]
     channel = sys.argv[4]
 
-    orgname = 'com.github.em1ran'
-
-    appname = 'NowPlaying'
-
     bundledir = os.path.abspath(os.path.dirname(__file__))
 
-    QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
-    QCoreApplication.setOrganizationName(orgname)
-    QCoreApplication.setApplicationName(appname)
+    nowplaying.bootstrap.set_qt_names()
     # need to make sure config is initialized with something
     nowplaying.config.ConfigFile(bundledir=bundledir)
     bot = TwitchBot(username, client_id, token, channel)

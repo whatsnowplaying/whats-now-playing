@@ -140,14 +140,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         if not self.webprocess and self.config.cparser.value(
                 'weboutput/httpenabled', type=bool):
             logging.info('Starting web process')
-            app = QApplication.instance()
+            bundledir = self.config.getbundledir()
             self.webprocess = multiprocessing.Process(
-                target=nowplaying.webserver.start,
-                args=(
-                    app.organizationName(),
-                    app.applicationName(),
-                    self.config.getbundledir(),
-                ))
+                target=nowplaying.webserver.start, args=(bundledir, ))
             self.webprocess.start()
 
     def _stop_twitchbotprocess(self):
@@ -168,14 +163,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         logging.info('Starting twitchbot')
         if not self.twitchbotprocess and self.config.cparser.value(
                 'twitchbot/enabled', type=bool):
-            app = QApplication.instance()
+            bundledir = self.config.getbundledir()
             self.twitchbotprocess = multiprocessing.Process(
-                target=nowplaying.twitchbot.start,
-                args=(
-                    app.organizationName(),
-                    app.applicationName(),
-                    self.config.getbundledir(),
-                ))
+                target=nowplaying.twitchbot.start, args=(bundledir, ))
             self.twitchbotprocess.start()
 
     def restart_webprocess(self):

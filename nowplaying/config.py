@@ -6,14 +6,9 @@
 import multiprocessing
 import logging
 import os
-import pathlib
-import shutil
 import sys
-import time
 
-import pkg_resources
-# pylint: disable=no-name-in-module
-from PySide2.QtCore import QCoreApplication, QSettings, QStandardPaths
+from PySide2.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.inputs
 import nowplaying.utils
@@ -67,7 +62,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.input_plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
         self.input_pluginobjs = None
 
-        self._upgrade()
         self.defaults()
         if reset:
             self.cparser.clear()
@@ -81,87 +75,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         ''' forcibly go back to defaults '''
         logging.debug('config reset')
         self.__init__(bundledir=ConfigFile.BUNDLEDIR, reset=True)
-
-    def _backup_config(self):
-
-        source = self.cparser.fileName()
-        datestr = time.strftime("%Y%m%d-%H%M%S")
-        backupdir = os.path.join(
-            QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation)[0],
-            QCoreApplication.applicationName(), 'configbackup')
-
-        logging.info('Making a backup of config prior to upgrade.')
-        try:
-            pathlib.Path(backupdir).mkdir(parents=True, exist_ok=True)
-            backup = os.path.join(backupdir, f'{datestr}-config.bak')
-            shutil.copyfile(source, backup)
-        except Exception as error:  # pylint: disable=broad-except
-            logging.error('Failed to make a backup: %s', error)
-            sys.exit(0)
-
-    def _upgrade(self):
-
-        mapping = {
-            'settings/interval': 'serato/interval',
-            'settings/handler': 'settings/input'
-        }
-        source = self.cparser.fileName()
-
-        if not os.path.exists(source):
-            logging.debug('not exist?')
-            return
-
-        ConfigFile.LOCK.acquire()
-
-        try:
-            oldversstr = self.cparser.value('settings/configversion',
-                                            defaultValue='2.0.0')
-        except TypeError:
-            oldversstr = '2.0.0'
-
-        thisverstr = nowplaying.version.get_versions()['version']
-        oldversion = pkg_resources.parse_version(oldversstr)
-        thisversion = pkg_resources.parse_version(thisverstr)
-
-        logging.debug('versions %s vs %s', oldversion, thisverstr)
-
-        if oldversion == thisversion:
-            logging.debug('equivalent')
-            ConfigFile.LOCK.release()
-            return
-
-        if oldversion > thisversion:
-            logging.warning('Running an older version with a newer config...')
-            ConfigFile.LOCK.release()
-            return
-
-        self._backup_config()
-
-        logging.info('Upgrading config from %s to %s', oldversstr, thisverstr)
-        for oldkey, newkey in mapping.items():
-            try:
-                newval = self.cparser.value(newkey)
-            except:  # pylint: disable=bare-except
-                pass
-
-            if newval:
-                logging.debug('%s has a value already: %s', newkey, newval)
-                continue
-
-            try:
-                oldval = self.cparser.value(oldkey)
-            except:  # pylint: disable=bare-except
-                continue
-
-            if oldval:
-                logging.debug('Setting %s to %s', newkey, oldval)
-                self.cparser.setValue(newkey, oldval)
-
-        self.cparser.setValue('settings/configversion', thisverstr)
-        self.cparser.sync()
-
-        ConfigFile.LOCK.release()
 
     def get(self):
         ''' refresh values '''
