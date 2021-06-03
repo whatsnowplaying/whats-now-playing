@@ -202,7 +202,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def _upd_win_twitchbot(self):
         ''' update the twitch settings '''
-
         def clear_table(widget):
             widget.clearContents()
             rows = widget.rowCount()

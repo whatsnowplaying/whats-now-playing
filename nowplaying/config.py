@@ -167,7 +167,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         ''' refresh values '''
 
         ConfigFile.LOCK.acquire()
-
+        self.cparser.sync()
         try:
             self.loglevel = self.cparser.value('settings/loglevel')
         except TypeError:

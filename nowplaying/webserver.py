@@ -2,6 +2,7 @@
 ''' WebServer process '''
 
 import asyncio
+import base64
 import logging
 import logging.config
 import os
@@ -42,6 +43,11 @@ INDEXREFRESH = \
     '<body></body></html>\n'
 
 
+TRANSPARENT_PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC'\
+                                   '1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAA'\
+                                   'ASUVORK5CYII=')
+
+
 class WebHandler():
     ''' aiohttp built server that does both http and websocket '''
     def __init__(self, databasefile):
@@ -73,11 +79,17 @@ class WebHandler():
     async def indexhtm_handler(self, request):  # pylint: disable=unused-argument
         ''' handle static index.html '''
         htmloutput = ""
+        request.app['config'].get()
         metadata = request.app['metadb'].read_last_meta()
         lastid = await self.getlastid(request)
         template = request.app['config'].cparser.value(
             'weboutput/htmltemplate')
         once = request.app['config'].cparser.value('weboutput/once', type=bool)
+
+        logging.debug('once = %s', once)
+        request.app['config'].get()
+        once = request.app['config'].cparser.value('weboutput/once', type=bool)
+        logging.debug('once2 = %s', once)
 
         # | dbid  |  lastid | once |
         # |   x   |   NA    |      |  -> update lastid, send template
@@ -123,6 +135,7 @@ class WebHandler():
         metadata = request.app['metadb'].read_last_meta()
         txtoutput = ""
         if metadata:
+            request.app['config'].get()
             templatehandler = nowplaying.utils.TemplateHandler(
                 filename=request.app['config'].cparser.value(
                     'textoutput/txttemplate'))
@@ -139,7 +152,7 @@ class WebHandler():
         if 'coverimageraw' in metadata:
             return web.Response(content_type='image/png',
                                 body=metadata['coverimageraw'])
-        return web.Response(status=404)
+        return web.Response(content_type='image/png', body=TRANSPARENT_PNG)
 
     async def api_v1_last_handler(self, request):
         ''' handle static index.txt '''

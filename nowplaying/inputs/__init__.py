@@ -13,7 +13,6 @@ class InputPlugin():
         self.plugintype = 'input'
         if config:
             self.config = config
-            logging.debug('set config')
 
         if qsettings:
             self.defaults(qsettings)
