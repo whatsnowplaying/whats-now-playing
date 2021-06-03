@@ -28,19 +28,11 @@ def run_bootstrap(bundledir=None):
 
     nowplaying.bootstrap.setuplogging(logpath=logpath)
 
-    nowplaying.bootstrap.upgrade()
+    nowplaying.bootstrap.upgrade(bundledir=bundledir)
 
     # fail early if metadatadb can't be configured
     metadb = nowplaying.db.MetadataDB()
     metadb.setupsql()
-
-    templatedir = os.path.join(
-        QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
-        QCoreApplication.applicationName(), 'templates')
-
-    pathlib.Path(templatedir).mkdir(parents=True, exist_ok=True)
-    nowplaying.bootstrap.setuptemplates(bundledir=bundledir,
-                                        templatedir=templatedir)
 
 
 def main():
@@ -58,7 +50,7 @@ def main():
 
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     qapp = QApplication(sys.argv)
-    nowplaying.bootstrap.set_qt_names(qapp)
+    nowplaying.bootstrap.set_qt_names()
     run_bootstrap(bundledir=bundledir)
 
     config = nowplaying.config.ConfigFile(bundledir=bundledir)

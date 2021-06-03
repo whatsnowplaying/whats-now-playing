@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' bootstrap the app '''
 
+import hashlib
 import logging
 import logging.handlers
 import os
@@ -15,7 +16,7 @@ import pkg_resources
 import nowplaying.version
 
 
-class Upgrade:
+class UpgradeConfig:
     ''' methods to upgrade from old configs to new configs '''
     def __init__(self):
 
@@ -122,6 +123,73 @@ class Upgrade:
         self.cparser.sync()
 
 
+class UpgradeTemplates():
+    ''' Upgrade templates '''
+    def __init__(self, bundledir=None):
+        self.apptemplatedir = os.path.join(bundledir, 'templates')
+        self.usertemplatedir = os.path.join(
+            QStandardPaths.standardLocations(
+                QStandardPaths.DocumentsLocation)[0],
+            QCoreApplication.applicationName(), 'templates')
+        pathlib.Path(self.usertemplatedir).mkdir(parents=True, exist_ok=True)
+        self.alert = False
+        self.copied = []
+
+        self.setup_templates()
+
+        if self.alert:
+            self.trigger_alert()
+
+    def checksum(self, filename):  # pylint: disable=no-self-use
+        ''' generate sha512 '''
+        hashfunc = hashlib.sha512()
+        with open(filename, 'rb') as fileh:
+            while chunk := fileh.read(128 * hashfunc.block_size):
+                hashfunc.update(chunk)
+        return hashfunc.digest()
+
+    def setup_templates(self):
+        ''' copy templates to either existing or as a new one '''
+        for apppath in pathlib.Path(self.apptemplatedir).iterdir():
+            filename = os.path.basename(apppath)
+            userpath = os.path.join(self.usertemplatedir, filename)
+
+            if not os.path.exists(userpath):
+                shutil.copyfile(apppath, userpath)
+                logging.info('Added %s to %s', filename, self.usertemplatedir)
+                continue
+
+            apphash = self.checksum(apppath)
+            userhash = self.checksum(userpath)
+
+            if apphash == userhash:
+                continue
+
+            destpath = str(userpath).replace('.txt', '.new')
+            destpath = destpath.replace('.htm', '.new')
+            if os.path.exists(destpath):
+                userhash = self.checksum(destpath)
+                if apphash == userhash:
+                    continue
+                os.unlink(destpath)
+
+            self.alert = True
+            logging.info('New version of %s copied to %s', filename, destpath)
+            shutil.copyfile(apppath, destpath)
+            self.copied.append(filename)
+
+    def trigger_alert(self):  # pylint: disable=no-self-use
+        ''' throw a pop-up to let the user know '''
+        if sys.platform == "win32":
+            qsettingsformat = QSettings.IniFormat
+        else:
+            qsettingsformat = QSettings.NativeFormat
+        cparser = QSettings(qsettingsformat, QSettings.UserScope,
+                            QCoreApplication.organizationName(),
+                            QCoreApplication.applicationName())
+        cparser.setValue('settings/newtemplates', True)
+
+
 def set_qt_names(app=None):
     ''' bootstrap Qt for configuration '''
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
@@ -134,10 +202,11 @@ def set_qt_names(app=None):
     app.setApplicationName('NowPlaying')
 
 
-def upgrade():
+def upgrade(bundledir=None):
     ''' do an upgrade of an existing install '''
     logging.debug('Called upgrade')
-    myupgrade = Upgrade()  #pylint: disable=unused-variable
+    myupgrade = UpgradeConfig()  #pylint: disable=unused-variable
+    myupgrade = UpgradeTemplates(bundledir=bundledir)
 
 
 def setuplogging(logpath=None):
@@ -163,34 +232,3 @@ def setuplogging(logpath=None):
         level=logging.DEBUG)
     logging.info('starting up v%s',
                  nowplaying.version.get_versions()['version'])
-
-
-def setuptemplates(bundledir=None, templatedir=None):
-    ''' put the templates into place '''
-
-    # first, define a method for copytree to use to
-    # ignore files that already exist
-
-    def bootstrap_template_ignore(srcdir, srclist):  # pylint: disable=unused-argument
-        ''' do not copy template files that already exist '''
-        ignore = []
-        for src in srclist:
-            check = os.path.join(templatedir, src)
-            if os.path.exists(check):
-                ignore.append(src)
-            else:
-                logging.debug('Adding %s to templates dir', src)
-
-        return ignore
-
-    # and now the main work...
-
-    bundletemplatedir = os.path.join(bundledir, 'templates')
-
-    if os.path.exists(bundletemplatedir):
-        shutil.copytree(bundletemplatedir,
-                        templatedir,
-                        ignore=bootstrap_template_ignore,
-                        dirs_exist_ok=True)
-    else:
-        logging.error('Cannot locate templates dir during bootstrap!')

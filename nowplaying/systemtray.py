@@ -5,7 +5,8 @@ import logging
 import multiprocessing
 
 from PySide2.QtWidgets import (  # pylint: disable=no-name-in-module
-    QAction, QActionGroup, QApplication, QErrorMessage, QMenu, QSystemTrayIcon)
+    QAction, QActionGroup, QApplication, QErrorMessage, QMenu, QMessageBox,
+    QSystemTrayIcon)
 from PySide2.QtGui import QIcon  # pylint: disable=no-name-in-module
 
 import nowplaying.config
@@ -86,12 +87,20 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.fix_mixmode_menu()
 
         self.error_dialog = QErrorMessage()
-
+        self.regular_dialog = QMessageBox()
+        self._check_for_upgrade_alert()
         self.trackthread = None
         self.webprocess = None
         self.obswsobj = None
         self.twitchbotprocess = None
         self.threadstart()
+
+    def _check_for_upgrade_alert(self):
+        if self.config.cparser.value('settings/newtemplates', type=bool):
+            self.regular_dialog.setText(
+                'Updated example templates have been copied.')
+            self.config.cparser.setValue('settings/newtemplates', False)
+            self.regular_dialog.show()
 
     def threadstart(self):
         ''' start our various threads '''
