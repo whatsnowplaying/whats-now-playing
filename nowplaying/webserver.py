@@ -160,6 +160,7 @@ class WebHandler():
         logging.debug('metadata = %s', metadata)
         if 'coverimageraw' in metadata:
             del metadata['coverimageraw']
+        del metadata['dbid']
         await websocket.send_json(metadata)
         logging.debug('past send json')
 
@@ -172,6 +173,7 @@ class WebHandler():
             metadata = database.read_last_meta()
             if 'coverimageraw' in metadata:
                 del metadata['coverimageraw']
+            del metadata['dbid']
             await websocket.send_json(metadata)
             return time.time()
 

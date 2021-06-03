@@ -8,7 +8,7 @@
         margin: 3px;
         width: 1600px;
         display: none;
-        height: 1600px;
+        height: 300px;
         float: right;
         font-size: 48px;
         font-family: sans-serif;
@@ -18,27 +18,15 @@
         color: #000;
         text-indent: 5%;
       }
-      img {
-        max-height:600px;
-        max-width:1600px;
-        height:auto;
-        width:auto;
-      }
     </style>
     <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
   </head>
   <body>
     <div id="titlecard">
-      <img src="{{ coverurl }}" alt="{{ album }} cover">
-      <p>Title: {{ title }} [Track: {{ track }} / {{ track_total }}]</p>
-      <p>Language: {{ lang }}</p>
-      <p>Genre: {{ genre }} / BPM: {{ bpm }} / Key: {{ key }}</p>
+      <p>Title: {{ title }}</p>
+      {% if artist %}
       <p>Artist: {{ artist }}</p>
-      <p>Composer: {{ composer }}</p>
-      <p>Album: {{ album }} [Disc: {{ disc }} / {{ disc_total }} ]</p>
-      <p>Album Artist: {{ albumartist }}</p>
-      <p>Publisher: {{ publisher }}</p>
-      <p>Year: {{ year }}</p>
+      {% endif %}
     </div>
     <script>
       $(document).ready(function() {

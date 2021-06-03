@@ -81,10 +81,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             secrets.choice(string.ascii_letters) for i in range(32))
         logging.info('Secret command to quit twitchbot: %s', self.magiccommand)
 
-        self.jinja2 = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(self.templatedir),
-            autoescape=jinja2.select_autoescape(['htm', 'html', 'xml']))
-
+        self.jinja2 = self.setup_jinja2(self.templatedir)
         self.channel_id = self._get_channel_id()
 
         logging.debug('channel_id %s', self.channel_id)
@@ -95,6 +92,18 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         irc.bot.SingleServerIRCBot.__init__(
             self, [(server, port, 'oauth:' + self.token)], self.username,
             self.username)
+
+    def _finalize(self, variable):  # pylint: disable=no-self-use
+        ''' helper routine to avoid NoneType exceptions '''
+        if variable:
+            return variable
+        return ''
+
+    def setup_jinja2(self, directory):
+        ''' set up the environment '''
+        return jinja2.Environment(loader=jinja2.FileSystemLoader(directory),
+                                  finalize=self._finalize,
+                                  trim_blocks=True)
 
     def _get_channel_id(self):
         # Get the channel id, we will need this for v5 API calls
@@ -385,6 +394,7 @@ def main():
 
     bundledir = os.path.abspath(os.path.dirname(__file__))
 
+    logging.basicConfig(level=logging.DEBUG)
     nowplaying.bootstrap.set_qt_names()
     # need to make sure config is initialized with something
     nowplaying.config.ConfigFile(bundledir=bundledir)

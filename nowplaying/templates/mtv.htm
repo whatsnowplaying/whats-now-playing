@@ -27,13 +27,15 @@
   </head>
   <body>
     <div id="titlecard">
+      {% if artist %}
       <p>{{ artist }}</p>
+      {% endif %}
       <p>"{{ title }}"</p>
-      {% if album is defined and album is not none and album|length %}
+      {% if album %}
       <p>{{ album }}</p>
       {% endif %}
-      {% if publisher is defined and publisher is not none and publisher|length %}
-      <p>{{ publisher }}</p>
+      {% if label %}
+      <p>{{ label }}</p>
       {% endif %}
     </div>
     <script>

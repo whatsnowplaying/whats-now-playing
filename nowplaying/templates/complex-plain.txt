@@ -5,5 +5,5 @@ Artist: {{ artist }}
 Composer: {{ composer }}
 Album: {{ album }} [Disc: {{ disc }} / {{ disc_total }} ]
 Album Artist: {{ albumartist }}
-Publisher: {{ publisher }}
-Year: {{ year }}
+Label: {{ label }}
+Date: {{ date }}

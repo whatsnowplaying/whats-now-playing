@@ -3,3 +3,4 @@ build
 dist
 bincomponents/winvers.bin
 docs/_build
+nowplaying.pyproject.user

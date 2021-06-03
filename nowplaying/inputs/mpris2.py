@@ -274,7 +274,7 @@ class Plugin(InputPlugin):
 def main():
     ''' entry point as a standalone app'''
     global DBUS_STATUS  # pylint: disable=global-statement
-
+    logging.basicConfig(level=logging.DEBUG)
     if not DBUS_STATUS:
         print('No dbus')
         sys.exit(1)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' bootstrap the app '''
 
+import json
 import hashlib
 import logging
 import logging.handlers
@@ -126,7 +127,8 @@ class UpgradeConfig:
 class UpgradeTemplates():
     ''' Upgrade templates '''
     def __init__(self, bundledir=None):
-        self.apptemplatedir = os.path.join(bundledir, 'templates')
+        self.bundledir = bundledir
+        self.apptemplatedir = os.path.join(self.bundledir, 'templates')
         self.usertemplatedir = os.path.join(
             QStandardPaths.standardLocations(
                 QStandardPaths.DocumentsLocation)[0],
@@ -134,6 +136,7 @@ class UpgradeTemplates():
         pathlib.Path(self.usertemplatedir).mkdir(parents=True, exist_ok=True)
         self.alert = False
         self.copied = []
+        self.oldshas = {}
 
         self.setup_templates()
 
@@ -141,15 +144,37 @@ class UpgradeTemplates():
             self.trigger_alert()
 
     def checksum(self, filename):  # pylint: disable=no-self-use
-        ''' generate sha512 '''
+        ''' generate sha512 . See also build-update-sha.py '''
         hashfunc = hashlib.sha512()
         with open(filename, 'rb') as fileh:
             while chunk := fileh.read(128 * hashfunc.block_size):
                 hashfunc.update(chunk)
-        return hashfunc.digest()
+        return hashfunc.hexdigest()
+
+    def preload(self):
+        ''' preload the known hashes for bundled templates '''
+        shafile = os.path.join(self.bundledir, 'resources', 'updateshas.json')
+        if os.path.exists(shafile):
+            with open(shafile, 'r') as fhin:
+                self.oldshas = json.loads(fhin.read())
+
+    def check_preload(self, filename, userhash):
+        ''' check if the given file matches a known hash '''
+        found = None
+        hexdigest = None
+        if filename in self.oldshas:
+            for version, hexdigest in self.oldshas[filename].items():
+                if userhash == hexdigest:
+                    found = version
+        logging.debug('filename = %s, found = %s userhash = %s hexdigest = %s',
+                      filename, found, userhash, hexdigest)
+        return found
 
     def setup_templates(self):
         ''' copy templates to either existing or as a new one '''
+
+        self.preload()
+
         for apppath in pathlib.Path(self.apptemplatedir).iterdir():
             filename = os.path.basename(apppath)
             userpath = os.path.join(self.usertemplatedir, filename)
@@ -163,6 +188,14 @@ class UpgradeTemplates():
             userhash = self.checksum(userpath)
 
             if apphash == userhash:
+                continue
+
+            version = self.check_preload(filename, userhash)
+            if version:
+                os.unlink(userpath)
+                shutil.copyfile(apppath, userpath)
+                logging.info('Replaced %s from %s with %s', filename, version,
+                             self.usertemplatedir)
                 continue
 
             destpath = str(userpath).replace('.txt', '.new')

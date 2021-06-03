@@ -23,34 +23,47 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
     def __init__(self, filename=None):
         self.envdir = envdir = None
         self.template = None
-
-        if not filename:
-            return
-
-        if os.path.exists(filename):
-            envdir = os.path.dirname(filename)
-        else:
-            logging.debug('os.path.exists failed for %s', filename)
-            return
-
         self.filename = filename
+
+        if not self.filename:
+            return
+
+        if os.path.exists(self.filename):
+            envdir = os.path.dirname(self.filename)
+        else:
+            logging.error('%s does not exist!', self.filename)
+            return
 
         if not self.envdir or self.envdir != envdir:
             self.envdir = envdir
-            self.env = jinja2.Environment(
-                loader=jinja2.FileSystemLoader(self.envdir),
-                autoescape=jinja2.select_autoescape(['htm', 'html', 'xml']))
+            self.env = self.setup_jinja2(self.envdir)
 
         basename = os.path.basename(filename)
 
         self.template = self.env.get_template(basename)
 
+    def _finalize(self, variable):  # pylint: disable=no-self-use
+        ''' helper routine to avoid NoneType exceptions '''
+        if variable:
+            return variable
+        return ''
+
+    def setup_jinja2(self, directory):
+        ''' set up the environment '''
+        return jinja2.Environment(loader=jinja2.FileSystemLoader(directory),
+                                  finalize=self._finalize,
+                                  autoescape=jinja2.select_autoescape(
+                                      ['htm', 'html', 'xml']))
+
     def generate(self, metadatadict=None):
         ''' get the generated template '''
         logging.debug('generating data for %s', self.filename)
-        if self.template:
-            return self.template.render(metadatadict)
-        return "No template found; check your settings"
+
+        if not self.filename or not os.path.exists(
+                self.filename) or not self.template:
+            return " No template found; check Now Playing settings."
+
+        return self.template.render(metadatadict)
 
 
 def getmoremetadata(metadata=None):

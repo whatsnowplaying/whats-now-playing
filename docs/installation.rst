@@ -19,7 +19,7 @@ Mac
 
 * Download the latest macOS release zip package
   `here <https://github.com/whatsnowplaying/whats-now-playing/releases/latest>`_.
-* Unzip the archive and place the unzipped 'NowPlaying.app' file in your "Applications"
+* Unzip the archive and place the unzipped ``NowPlaying.app`` file in your ``Applications``
   folder or any other location that you desire.
 
 *Important note for macOS users*
@@ -32,8 +32,8 @@ the steps below. Versions before High Sierra have not been verified and are not 
 supported.
 
 * Do not unzip the downloaded zip package directly to the folder from where you will be
-  running it. Instead, unzip it in a location such as the "Downloads" folder
-  and then move the 'SeratoNowPlaying.app' to your destination folder (e.g.,
+  running it. Instead, unzip it in a location such as the ``Downloads`` folder
+  and then move the ``NowPlaying.app`` to your destination folder (e.g.,
   "Applications"). Then run the app from the destination folder.
 * If the app fails to open, try holding down the Control key and then double-clicking open.
 * If after following the step above the app does not open, open Terminal and type:
@@ -46,8 +46,8 @@ Windows
 * Download the latest Windows release zip package
   `here <https://github.com/whatsnowplaying/whats-now-playing/releases/latest>`_.
 * Unzip the package and copy the entire unzipped folder containing the
-  'NowPlaying.exe' file and supporting files to the directory you'd like the app to
-  run from (i.e., C:\Program Files).
+  ``NowPlaying.exe`` file and supporting files to the directory you'd like the app to
+  run from (i.e., ``C:\Program Files``).
 
 *Important note for Windows users*
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -24,11 +24,15 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             func = getattr(self, f'_process_{processor}')
             func()
 
-        if 'publisher' in self.metadata and 'label' not in self.metadata:
-            metadata['label'] = metadata['publisher']
+        if 'publisher' in self.metadata:
+            if 'label' not in self.metadata:
+                metadata['label'] = metadata['publisher']
+            del metadata['publisher']
 
-        if 'label' in self.metadata and 'publisher' not in self.metadata:
-            self.metadata['publisher'] = self.metadata['label']
+        if 'year' in self.metadata:
+            if 'date' not in self.metadata:
+                self.metadata['date'] = self.metadata['year']
+            del metadata['year']
 
     def _process_audio_metadata(self):
         try:
@@ -50,8 +54,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 else:
                     self.metadata[key] = base.tags[key]
 
-        if 'date' in base.tags and 'year' not in self.metadata:
-            self.metadata['year'] = base.tags['date'][0]
+        if 'date' in base.tags and 'date' not in self.metadata:
+            self.metadata['date'] = base.tags['date'][0]
 
         if 'discnumber' in base.tags and 'disc' not in self.metadata:
             text = base.tags['discnumber'][0].replace('[', '').replace(']', '')
@@ -96,6 +100,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 if key not in self.metadata and hasattr(tag, key) and getattr(
                         tag, key):
                     self.metadata[key] = getattr(tag, key)
+
+            if 'date' not in self.metadata and hasattr(
+                    tag, 'year') and getattr(tag, 'year'):
+                self.metadata['date'] = getattr(tag, 'year')
 
             if 'coverimageraw' not in self.metadata:
                 self.metadata['coverimageraw'] = tag.get_image()

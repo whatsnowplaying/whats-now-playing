@@ -1,14 +1,33 @@
 
 # Changelog
 
-## Version 2.1.0 - Unreleased
+## Version 3.0.0 - in progress
 
+* basic/complex.txt renamed to basic/complex-plain.txt
+* basic/complex.htm renamed to basic/complex-web.htm
+* template macros:
+  * year has been replaced with date
+  * publisher has been replaced with label
+* Rewrite the documentation and move it to ReStructuredText
+* Add upgrade code path.
+* Rebuild the webserver.
+* Add support for m3u files, which should enable Virtual DJ support.
+* Add a TwitchBot, including the ability to announce track changes.
+* Rework some of the templates.
+* Add support for MPRIS2 on Linux
+* Upgrade to pyinstaller 4.3 for better support on Apple M1
 * Added support for writing to the [OBS Web Socket
   plugin](https://github.com/Palakis/obs-websocket)
-* Revamped settings user interface to be tabbed
-  and easier to maintain by using a Qt UI file
-* Now write data to a sqlite DB while running
+* Revamped settings user interface
+* Now write data to a sqlite DB while running and switch all
+  output timing based upon writes, enabling multiprocess
+  handling
 * More code re-organization/cleanup
+
+## Version 2.0.1 - 2021-05-27
+
+* Better support for AIFF and FLAC
+* Major fix for processing Windows' Serato session files
 
 ## Version 2.0.0 - 2021-04-07
 

@@ -7,7 +7,6 @@ import os
 import pathlib
 import sys
 import multiprocessing
-import urllib
 import sqlite3
 import time
 
@@ -74,25 +73,20 @@ class MetadataDB:
         'bitrate',
         'bpm',
         'composer',
-        'coverimagetype',
         'coverurl',
-        'coverurldeck',
+        'date',
         'deck',
         'disc',
         'disc_total',
-        'fetchedartist',
-        'fetchedtitle',
         'filename',
         'genre',
         'key',
         'label',
         'lang',
         'length',
-        'publisher',
         'title',
         'track',
         'track_total',
-        'year',
     ]
 
     LOCK = multiprocessing.RLock()
@@ -116,6 +110,12 @@ class MetadataDB:
 
     def write_to_metadb(self, metadata=None):
         ''' update metadb '''
+        def filterkeys(mydict):
+            return {
+                key: mydict[key]
+                for key in MetadataDB.METADATALIST + ['coverimageraw']
+                if key in mydict
+            }
 
         logging.debug('Called write_to_metadb')
         if not metadata or not MetadataDB.METADATALIST:
@@ -130,6 +130,10 @@ class MetadataDB:
         # do not want to modify the original dictionary
         # otherwise Bad Things(tm) will happen
         mdcopy = copy.deepcopy(metadata)
+
+        # toss any keys we do not care about
+        mdcopy = filterkeys(mdcopy)
+
         connection = sqlite3.connect(self.databasefile)
         cursor = connection.cursor()
 
@@ -139,12 +143,9 @@ class MetadataDB:
         if 'coverimageraw' not in mdcopy:
             mdcopy['coverimageraw'] = None
 
-        for data in self.databasefile:
-            if data in metadata:
-                if isinstance(mdcopy[data], str):
-                    mdcopy[data] = urllib.parse.quote(mdcopy[data])
-                else:
-                    mdcopy[data] = str(mdcopy[data])
+        for data in mdcopy:
+            if isinstance(mdcopy[data], str) and len(mdcopy[data]) == 0:
+                mdcopy[data] = None
 
         sql = 'INSERT INTO currentmeta ('
         sql += ', '.join(mdcopy.keys()) + ') VALUES ('
@@ -158,7 +159,6 @@ class MetadataDB:
 
     def read_last_meta(self):
         ''' update metadb '''
-        metadata = {}
 
         if not os.path.exists(self.databasefile):
             logging.error('MetadataDB does not exist yet?')
@@ -180,12 +180,7 @@ class MetadataDB:
             MetadataDB.LOCK.release()
             return None
 
-        for data in MetadataDB.METADATALIST:
-            value = row[data]
-            if isinstance(value, str):
-                metadata[data] = urllib.parse.unquote(value)
-            else:
-                metadata[data] = value
+        metadata = {data: row[data] for data in MetadataDB.METADATALIST}
 
         metadata['coverimageraw'] = row['coverimageraw']
         if not metadata['coverimageraw']:
