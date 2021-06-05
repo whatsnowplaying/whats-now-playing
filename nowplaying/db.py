@@ -160,8 +160,6 @@ class MetadataDB:
 
     def read_last_meta(self):
         ''' update metadb '''
-        metadata = {}
-
         if not os.path.exists(self.databasefile):
             logging.error('MetadataDB does not exist yet?')
             return None
@@ -182,8 +180,7 @@ class MetadataDB:
             MetadataDB.LOCK.release()
             return None
 
-        for data in MetadataDB.METADATALIST:
-            metadata[data] = row[data]
+        metadata = {data: row[data] for data in MetadataDB.METADATALIST}
 
         metadata['coverimageraw'] = row['coverimageraw']
         if not metadata['coverimageraw']:
