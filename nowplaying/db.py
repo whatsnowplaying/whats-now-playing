@@ -181,7 +181,6 @@ class MetadataDB:
             return None
 
         metadata = {data: row[data] for data in MetadataDB.METADATALIST}
-
         metadata['coverimageraw'] = row['coverimageraw']
         if not metadata['coverimageraw']:
             del metadata['coverimageraw']

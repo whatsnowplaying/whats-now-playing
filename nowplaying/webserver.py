@@ -147,22 +147,31 @@ class WebHandler():
         if 'coverimageraw' in metadata:
             return web.Response(content_type='image/png',
                                 body=metadata['coverimageraw'])
+        # rather than return an error, just send a transparent PNG
+        # this makes the client code significantly easier
         return web.Response(content_type='image/png', body=TRANSPARENT_PNG)
 
     async def api_v1_last_handler(self, request):
         ''' handle static index.txt '''
         metadata = request.app['metadb'].read_last_meta()
+        # if there is an image, encode it as base64
+        if 'coverimageraw' in metadata:
+            metadata['coverimagebase64'] = base64.b64encode(
+                metadata['coverimageraw']).decode('utf-8')
+            del metadata['coverimageraw']
+        del metadata['dbid']
         return web.json_response(metadata)
 
     async def websocket_lastjson_handler(self, request, websocket):
         ''' handle singular websocket request '''
         metadata = request.app['metadb'].read_last_meta()
-        logging.debug('metadata = %s', metadata)
+        # if there is an image, encode it as base64
         if 'coverimageraw' in metadata:
+            metadata['coverimagebase64'] = base64.b64encode(
+                metadata['coverimageraw']).decode('utf-8')
             del metadata['coverimageraw']
         del metadata['dbid']
         await websocket.send_json(metadata)
-        logging.debug('past send json')
 
     async def websocket_streamer(self, request):
         ''' handle continually streamed updates '''
@@ -172,7 +181,11 @@ class WebHandler():
             await asyncio.sleep(1)
             metadata = database.read_last_meta()
             if 'coverimageraw' in metadata:
+                metadata['coverimagebase64'] = base64.b64encode(
+                    metadata['coverimageraw']).decode('utf-8')
                 del metadata['coverimageraw']
+            else:
+                metadata['coverimagebase64'] = TRANSPARENT_PNG
             del metadata['dbid']
             await websocket.send_json(metadata)
             return time.time()
@@ -186,9 +199,6 @@ class WebHandler():
             while True:
                 while mytime > request.app['watcher'].updatetime:
                     await asyncio.sleep(1)
-
-                logging.debug('%s > %s', mytime,
-                              request.app['watcher'].updatetime)
 
                 mytime = await do_update(websocket, request.app['metadb'])
                 await asyncio.sleep(1)
@@ -256,7 +266,6 @@ class WebHandler():
 
     async def on_startup(self, app):
         ''' setup app connections '''
-        threading.current_thread().name = 'WebServer-startup'
         app['config'] = nowplaying.config.ConfigFile()
         app['metadb'] = nowplaying.db.MetadataDB()
         app['watcher'] = app['metadb'].watcher()
