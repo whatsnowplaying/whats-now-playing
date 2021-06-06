@@ -1,1 +1,1 @@
-{% if artist %}{{ artist }} -{% endif %} {{ title }}
+{% if artist %} {{ artist }} -{% endif %} {{ title }}
