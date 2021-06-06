@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 ''' NowPlaying as run via python -m '''
-import faulthandler
+#import faulthandler
 import logging
 import multiprocessing
 import os
@@ -39,7 +39,7 @@ def main():
     ''' main entrypoint '''
 
     multiprocessing.freeze_support()
-    faulthandler.enable()
+    #faulthandler.enable()
 
     # set paths for bundled files
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
