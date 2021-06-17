@@ -71,7 +71,7 @@ def determine_format(data):
 
 	if (
 		d[4:8].lower() == b'ftyp'
-		and d[8:].lower().startswith((b'dash', b'm4a', b'mp4'))
+		and d[8:].lower().startswith((b'dash', b'm4a', b'm4b', b'm4v', b'mp4'))
 	):
 		return MP4
 
