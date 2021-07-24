@@ -49,12 +49,18 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.qtui = _load_ui('settings')
 
         baseuis = ['general', 'source', 'webserver', 'obsws', 'twitchbot']
-        inputpluginuis = [
-            key.replace('nowplaying.inputs.', '')
-            for key in self.config.input_plugins.keys()
-        ]
 
-        for uiname in baseuis + inputpluginuis + ['about']:
+        pluginuis = {}
+        pluginuinames = []
+        for plugintype in self.config.plugins:
+            pluginuis[plugintype] = []
+            for key in self.config.plugins[plugintype]:
+                pkey = key.replace(f'nowplaying.{plugintype}.', '')
+                pluginuis[plugintype].append(pkey)
+                pluginuinames.append(f'{plugintype}_{pkey}')
+
+
+        for uiname in baseuis + pluginuinames + ['about']:
             self.widgets[uiname] = _load_ui(f'{uiname}')
             try:
                 qobject_connector = getattr(self, f'_connect_{uiname}_widget')
@@ -65,10 +71,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             self.qtui.settings_stack.addWidget(self.widgets[uiname])
             self._load_list_item(f'{uiname}', self.widgets[uiname])
 
-        for uiname in inputpluginuis:
+        for uiname in pluginuinames:
             displayname = self.widgets[uiname].property('displayName')
             if not displayname:
-                displayname = uiname.capitalize()
+                displayname = uiname.split('_')[1].capitalize()
             self.widgets['source'].sourcelist.addItem(displayname)
             self.widgets['source'].sourcelist.currentRowChanged.connect(
                 self._set_source_description)
@@ -89,7 +95,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     def _load_list_item(self, name, qobject):
         displayname = qobject.property('displayName')
         if not displayname:
-            displayname = name.capitalize()
+            if '_' in name:
+                displayname = name.split('_')[1].capitalize()
+            else:
+                displayname = name.capitalize()
         self.qtui.settings_list.addItem(displayname)
 
     def _set_stacked_display(self, index):
@@ -134,7 +143,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     def _set_source_description(self, index):
         item = self.widgets['source'].sourcelist.item(index)
         plugin = item.text().lower()
-        self.config.plugins_description(plugin,
+        self.config.plugins_description('inputs', plugin,
                                         self.widgets['source'].description)
 
     def upd_win(self):

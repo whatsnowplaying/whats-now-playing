@@ -59,8 +59,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.txttemplate = os.path.join(self.templatedir, "basic-plain.txt")
         self.loglevel = 'DEBUG'
 
-        self.input_plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
-        self.input_pluginobjs = None
+        self.plugins = {}
+        self.pluginobjs = {}
+
+        self._initial_plugins()
 
         self.defaults()
         if reset:
@@ -135,45 +137,58 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         settings.setValue('twitchbot/enabled', False)
 
-        self._defaults_input_plugins(settings)
+        self._defaults_plugins(settings)
 
-    def _defaults_input_plugins(self, settings):
+    def _initial_plugins(self):
+
+        self.plugins['inputs'] = nowplaying.utils.import_plugins(nowplaying.inputs)
+        self.pluginobjs['inputs'] = {}
+
+    def _defaults_plugins(self, settings):
         ''' configure the defaults for input plugins '''
-        self.input_pluginobjs = {}
-        for key in self.input_plugins:
-            self.input_pluginobjs[key] = self.input_plugins[key].Plugin(
-                config=self, qsettings=settings)
-            self.input_pluginobjs[key].defaults(settings)
+        self.pluginobjs = {}
+        for plugintype in self.plugins:
+            self.pluginobjs[plugintype] = {}
+            for key in self.plugins[plugintype]:
+                self.pluginobjs[plugintype][key] = self.plugins[plugintype][key].Plugin(
+                    config=self, qsettings=settings)
+                self.pluginobjs[plugintype][key].defaults(settings)
 
     def plugins_connect_settingsui(self, qtwidgets):
-        ''' configure the defaults for input plugins '''
-        for key in self.input_pluginobjs:
-            widgetkey = key.split('.')[-1]
-            self.input_pluginobjs[key].connect_settingsui(qtwidgets[widgetkey])
+        ''' configure the defaults for plugins '''
+        # qtwidgets = list of qtwidgets, identified as [plugintype_pluginname]
+        for plugintype in self.plugins:
+            for key in self.plugins[plugintype]:
+                widgetkey = key.split('.')[-1]
+                self.pluginobjs[plugintype][key].connect_settingsui(qtwidgets[f'{plugintype}_{widgetkey}'])
 
     def plugins_load_settingsui(self, qtwidgets):
-        ''' configure the defaults for input plugins '''
-        for key in self.input_pluginobjs:
-            widgetkey = key.split('.')[-1]
-            self.input_pluginobjs[key].load_settingsui(qtwidgets[widgetkey])
+        ''' configure the defaults for plugins '''
+        for plugintype in self.plugins:
+            for key in self.plugins[plugintype]:
+                widgetkey = key.split('.')[-1]
+                self.pluginobjs[plugintype][key].load_settingsui(qtwidgets[f'{plugintype}_{widgetkey}'])
 
     def plugins_verify_settingsui(self, inputname, qtwidgets):
-        ''' configure the defaults for input plugins '''
-        for key in self.input_pluginobjs:
-            widgetkey = key.split('.')[-1]
-            if widgetkey == inputname:
-                self.input_pluginobjs[key].connect_settingsui(
-                    qtwidgets[inputname])
+        ''' configure the defaults for plugins '''
+        for plugintype in self.plugins:
+            for key in self.plugins[plugintype]:
+                widgetkey = key.split('.')[-1]
+                if widgetkey == inputname:
+                    self.pluginobjs[plugintype][key].connect_settingsui(
+                        qtwidgets[f'{plugintype}_{key}'])
 
     def plugins_save_settingsui(self, qtwidgets):
         ''' configure the defaults for input plugins '''
-        for key in self.input_pluginobjs:
-            widgetkey = key.split('.')[-1]
-            self.input_pluginobjs[key].save_settingsui(qtwidgets[widgetkey])
+        for plugintype in self.plugins:
+            for key in self.plugins[plugintype]:
+                widgetkey = key.split('.')[-1]
+                self.pluginobjs[plugintype][key].save_settingsui(qtwidgets[f'{plugintype}_{widgetkey}'])
 
-    def plugins_description(self, plugin, qtwidget):
+
+    def plugins_description(self, plugintype, plugin, qtwidget):
         ''' configure the defaults for input plugins '''
-        self.input_pluginobjs[f'nowplaying.inputs.{plugin}'].desc_settingsui(
+        self.pluginobjs[plugintype][f'nowplaying.{plugintype}.{plugin}'].desc_settingsui(
             qtwidget)
 
     # pylint: disable=too-many-arguments
@@ -254,7 +269,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     def validmixmodes(self):  # pylint: disable=no-self-use
         ''' unpause system '''
         plugin = self.cparser.value('settings/input')
-        inputplugin = self.input_plugins[f'nowplaying.inputs.{plugin}'].Plugin(
+        inputplugin = self.plugins['inputs'][f'nowplaying.inputs.{plugin}'].Plugin(
         )
         return inputplugin.getmixmode()
 
@@ -262,14 +277,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         ''' set the mixmode by calling the plugin '''
 
         plugin = self.cparser.value('settings/input')
-        inputplugin = self.input_plugins[f'nowplaying.inputs.{plugin}'].Plugin(
+        inputplugin = self.plugins['inputs'][f'nowplaying.inputs.{plugin}'].Plugin(
         )
         return inputplugin.setmixmode(mixmode)
 
     def getmixmode(self):  # pylint: disable=no-self-use
         ''' unpause system '''
         plugin = self.cparser.value('settings/input')
-        inputplugin = self.input_plugins[f'nowplaying.inputs.{plugin}'].Plugin(
+        inputplugin = self.plugins['inputs'][f'nowplaying.inputs.{plugin}'].Plugin(
         )
         return inputplugin.getmixmode()
 
