@@ -1,3 +1,5 @@
+pyacoustid==1.2.0
+musicbrainzngs==0.7.1
 aiohttp==3.7.4.post0
 aiosqlite==0.17.0
 audio_metadata==0.11.1

@@ -20,6 +20,7 @@ VERSION = nowplaying.version.get_versions()['version']
 WINVERSFILE = os.path.join('bincomponents', 'winvers.bin')
 
 INPUT_MODULES = collect_submodules('nowplaying.inputs')
+RECOGNITION_MODULES = collect_submodules('nowplaying.recognition')
 
 
 def geticon():
@@ -110,7 +111,7 @@ a = Analysis(['nppyi.py'],
              binaries=[],
              datas=[('nowplaying/resources/*', 'resources/'),
                     ('nowplaying/templates/*', 'templates/')],
-             hiddenimports=INPUT_MODULES,
+             hiddenimports=INPUT_MODULES + RECOGNITION_MODULES,
              hookspath=[],
              runtime_hooks=[],
              excludes=[],

@@ -6,6 +6,7 @@ import logging
 import sys
 
 import PIL.Image
+import nowplaying.config
 import nowplaying.vendor.audio_metadata
 import nowplaying.vendor.tinytag
 
@@ -14,12 +15,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
     ''' Run through a bunch of different metadata processors '''
     def __init__(self, metadata):
         self.metadata = metadata
+        self.config = nowplaying.config.ConfigFile()
 
         if 'filename' not in self.metadata:
             logging.debug('No filename')
             return
 
-        for processor in 'audio_metadata', 'tinytag', 'image2png':
+        for processor in 'audio_metadata', 'tinytag', 'image2png', 'plugins':
             logging.debug('running %s', processor)
             func = getattr(self, f'_process_{processor}')
             func()
@@ -122,6 +124,28 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self.metadata['coverimageraw'] = imgbuffer.getvalue()
         self.metadata['coverimagetype'] = 'png'
         self.metadata['coverurl'] = 'cover.png'
+
+    def _recogintion_replacement(self, addmeta):
+        for replacelist in ['artist', 'title']:
+            if self.config.cparser.value(f'recognition/replace{replacelist}',
+                                         type=bool) and replacelist in addmeta:
+                self.metadata[replacelist] = addmeta[replacelist]
+                del addmeta[replacelist]
+
+        for meta in addmeta:
+            if meta not in self.metadata:
+                self.metadata[meta] = addmeta[meta]
+
+    def _process_plugins(self):
+        for plugin in self.config.plugins['recognition']:
+            metalist = self.config.pluginobjs['recognition'][
+                plugin].providerinfo()
+            provider = any(meta not in self.metadata for meta in metalist)
+            if provider:
+                addmeta = self.config.pluginobjs['recognition'][
+                    plugin].parsefile(self.metadata['filename'])
+                if addmeta:
+                    self._recogintion_replacement(addmeta)
 
 
 def main():

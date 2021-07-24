@@ -29,6 +29,7 @@ jobs:
           python3 -m pip install --upgrade pip
           pip install .
           pip install -r requirements.txt
+          pip install -r requirements-macosx.txt
           vendoring sync
       - name: pyinstaller
         run: |

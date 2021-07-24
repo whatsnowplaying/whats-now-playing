@@ -29,6 +29,10 @@ Settings
   **Logging Level** - By default, **Now Playing** will write debug logs into your Documents/NowPlaying/Logs directory.
   This option lets you control the level of logging.
 
+*
+  **Recognition Replacement** - By default, if a Music Recognition service is enabled, it will only supplement
+   any missing information. These options forcibly replace title and artist from any enabled recognition services.
+
 At the bottom of every page will be the "Reset", "Cancel", and "Save" buttons:
 
 *
