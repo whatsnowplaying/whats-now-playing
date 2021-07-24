@@ -30,6 +30,7 @@ For everyone else, you will need to build and install locally.  See `Developers 
    output/obswebsocket
    output/twitchbot
    output/webserver
+   recoginition/acrcloud
    templatevariables
    developers
    comparisons

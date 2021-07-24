@@ -132,7 +132,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Browser for Folder ...</string>
+    <string>Browse for Folder ...</string>
    </property>
   </widget>
   <widget class="QLineEdit" name="local_dir_lineedit">

@@ -71,6 +71,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             self._load_list_item(f'{uiname}', self.widgets[uiname])
 
         for uiname in pluginuinames:
+            if 'inputs' not in uiname:
+                continue
             displayname = self.widgets[uiname].property('displayName')
             if not displayname:
                 displayname = uiname.split('_')[1].capitalize()
@@ -161,11 +163,18 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             str(self.config.cparser.value('settings/delay')))
         self.widgets['general'].notify_checkbox.setChecked(self.config.notif)
 
+        self._upd_win_recognition()
         self._upd_win_input()
         self._upd_win_plugins()
         self._upd_win_webserver()
         self._upd_win_obsws()
         self._upd_win_twitchbot()
+
+    def _upd_win_recognition(self):
+        self.widgets['general'].recog_title_checkbox.setChecked(
+            self.config.cparser.value('recognition/replacetitle', type=bool))
+        self.widgets['general'].recog_artist_checkbox.setChecked(
+            self.config.cparser.value('recognition/replaceartist', type=bool))
 
     def _upd_win_input(self):
         ''' this is totally wrong and will need to get dealt
@@ -277,7 +286,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.config.cparser.setValue(
             'settings/delay', self.widgets['general'].delay_lineedit.text())
         loglevel = self.widgets['general'].logging_combobox.currentText()
-
         self._upd_conf_input()
 
         self.config.put(
@@ -289,12 +297,21 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
         logging.getLogger().setLevel(loglevel)
 
+        self._upd_conf_recognition()
         self._upd_conf_input()
         self._upd_conf_webserver()
         self._upd_conf_obsws()
         self._upd_conf_twitchbot()
         self._upd_conf_plugins()
         self.config.cparser.sync()
+
+    def _upd_conf_recognition(self):
+        self.config.cparser.setValue(
+            'recognition/replacetitle',
+            self.widgets['general'].recog_title_checkbox.isChecked())
+        self.config.cparser.setValue(
+            'recognition/replaceartist',
+            self.widgets['general'].recog_artist_checkbox.isChecked())
 
     def _upd_conf_input(self):
         ''' find the text of the currently selected handler '''
