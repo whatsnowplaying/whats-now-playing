@@ -59,7 +59,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
                 pluginuis[plugintype].append(pkey)
                 pluginuinames.append(f'{plugintype}_{pkey}')
 
-
         for uiname in baseuis + pluginuinames + ['about']:
             self.widgets[uiname] = _load_ui(f'{uiname}')
             try:

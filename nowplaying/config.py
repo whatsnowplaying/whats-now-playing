@@ -141,7 +141,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
     def _initial_plugins(self):
 
-        self.plugins['inputs'] = nowplaying.utils.import_plugins(nowplaying.inputs)
+        self.plugins['inputs'] = nowplaying.utils.import_plugins(
+            nowplaying.inputs)
         self.pluginobjs['inputs'] = {}
 
     def _defaults_plugins(self, settings):
@@ -150,8 +151,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         for plugintype in self.plugins:
             self.pluginobjs[plugintype] = {}
             for key in self.plugins[plugintype]:
-                self.pluginobjs[plugintype][key] = self.plugins[plugintype][key].Plugin(
-                    config=self, qsettings=settings)
+                self.pluginobjs[plugintype][key] = self.plugins[plugintype][
+                    key].Plugin(config=self, qsettings=settings)
                 self.pluginobjs[plugintype][key].defaults(settings)
 
     def plugins_connect_settingsui(self, qtwidgets):
@@ -160,14 +161,16 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         for plugintype in self.plugins:
             for key in self.plugins[plugintype]:
                 widgetkey = key.split('.')[-1]
-                self.pluginobjs[plugintype][key].connect_settingsui(qtwidgets[f'{plugintype}_{widgetkey}'])
+                self.pluginobjs[plugintype][key].connect_settingsui(
+                    qtwidgets[f'{plugintype}_{widgetkey}'])
 
     def plugins_load_settingsui(self, qtwidgets):
         ''' configure the defaults for plugins '''
         for plugintype in self.plugins:
             for key in self.plugins[plugintype]:
                 widgetkey = key.split('.')[-1]
-                self.pluginobjs[plugintype][key].load_settingsui(qtwidgets[f'{plugintype}_{widgetkey}'])
+                self.pluginobjs[plugintype][key].load_settingsui(
+                    qtwidgets[f'{plugintype}_{widgetkey}'])
 
     def plugins_verify_settingsui(self, inputname, qtwidgets):
         ''' configure the defaults for plugins '''
@@ -183,13 +186,13 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         for plugintype in self.plugins:
             for key in self.plugins[plugintype]:
                 widgetkey = key.split('.')[-1]
-                self.pluginobjs[plugintype][key].save_settingsui(qtwidgets[f'{plugintype}_{widgetkey}'])
-
+                self.pluginobjs[plugintype][key].save_settingsui(
+                    qtwidgets[f'{plugintype}_{widgetkey}'])
 
     def plugins_description(self, plugintype, plugin, qtwidget):
         ''' configure the defaults for input plugins '''
-        self.pluginobjs[plugintype][f'nowplaying.{plugintype}.{plugin}'].desc_settingsui(
-            qtwidget)
+        self.pluginobjs[plugintype][
+            f'nowplaying.{plugintype}.{plugin}'].desc_settingsui(qtwidget)
 
     # pylint: disable=too-many-arguments
     def put(self, initialized, file, txttemplate, notif, loglevel):
@@ -269,23 +272,23 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     def validmixmodes(self):  # pylint: disable=no-self-use
         ''' unpause system '''
         plugin = self.cparser.value('settings/input')
-        inputplugin = self.plugins['inputs'][f'nowplaying.inputs.{plugin}'].Plugin(
-        )
+        inputplugin = self.plugins['inputs'][
+            f'nowplaying.inputs.{plugin}'].Plugin()
         return inputplugin.getmixmode()
 
     def setmixmode(self, mixmode):  # pylint: disable=no-self-use
         ''' set the mixmode by calling the plugin '''
 
         plugin = self.cparser.value('settings/input')
-        inputplugin = self.plugins['inputs'][f'nowplaying.inputs.{plugin}'].Plugin(
-        )
+        inputplugin = self.plugins['inputs'][
+            f'nowplaying.inputs.{plugin}'].Plugin()
         return inputplugin.setmixmode(mixmode)
 
     def getmixmode(self):  # pylint: disable=no-self-use
         ''' unpause system '''
         plugin = self.cparser.value('settings/input')
-        inputplugin = self.plugins['inputs'][f'nowplaying.inputs.{plugin}'].Plugin(
-        )
+        inputplugin = self.plugins['inputs'][
+            f'nowplaying.inputs.{plugin}'].Plugin()
         return inputplugin.getmixmode()
 
     def getbundledir(self):  # pylint: disable=no-self-use
