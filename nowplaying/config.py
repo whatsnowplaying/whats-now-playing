@@ -11,6 +11,7 @@ import sys
 from PySide2.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.inputs
+import nowplaying.recognition
 import nowplaying.utils
 import nowplaying.version
 
@@ -144,6 +145,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.plugins['inputs'] = nowplaying.utils.import_plugins(
             nowplaying.inputs)
         self.pluginobjs['inputs'] = {}
+        self.plugins['recognition'] = nowplaying.utils.import_plugins(
+            nowplaying.recognition)
+        self.pluginobjs['recognition'] = {}
 
     def _defaults_plugins(self, settings):
         ''' configure the defaults for input plugins '''
@@ -179,7 +183,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                 widgetkey = key.split('.')[-1]
                 if widgetkey == inputname:
                     self.pluginobjs[plugintype][key].connect_settingsui(
-                        qtwidgets[f'{plugintype}_{key}'])
+                        qtwidgets[f'{plugintype}_{widgetkey}'])
 
     def plugins_save_settingsui(self, qtwidgets):
         ''' configure the defaults for input plugins '''
