@@ -129,10 +129,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         for plugin in self.config.plugins['recognition']:
             metalist = self.config.pluginobjs['recognition'][
                 plugin].providerinfo()
-            provider = False
-            for meta in metalist:
-                if meta not in self.metadata:
-                    provider = True
+            provider = any(meta not in self.metadata for meta in metalist)
             if provider:
                 addmeta = self.config.pluginobjs['recognition'][
                     plugin].parsefile(self.metadata['filename'])
