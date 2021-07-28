@@ -127,11 +127,14 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     def _recogintion_replacement(self, addmeta):
         for replacelist in ['artist', 'title']:
-            if self.config.cparser.value(f'recognition/replace{replacelist}',
-                                         type=bool):
-                if replacelist in addmeta:
-                    self.metadata[replacelist] = addmeta[replacelist]
-                    del addmeta[replacelist]
+            if (
+                self.config.cparser.value(
+                    f'recognition/replace{replacelist}', type=bool
+                )
+                and replacelist in addmeta
+            ):
+                self.metadata[replacelist] = addmeta[replacelist]
+                del addmeta[replacelist]
 
         for meta in addmeta:
             if meta not in self.metadata:
