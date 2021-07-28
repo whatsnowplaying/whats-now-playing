@@ -10,7 +10,7 @@ AcoustID
 
 AcoustID is a project providing complete audio identification service, based entirely
 on open source software.  The service is completely free for non-commercial applications,
-all you need to do is `register your application <https://acoustid.org/new-application>_`.
+all you need to do is `register your application <https://acoustid.org/new-application>`_.
 
 MusicBrainz
 -----------
@@ -29,7 +29,7 @@ MusicBrainz is operated by the MetaBrainz Foundation, a California based 501(c)(
 Instructions
 ------------
 
-#. Install `Chromaprint <https://acoustid.org/chromaprint>_` as appropriate for your operating system.
+#. Install `Chromaprint <https://acoustid.org/chromaprint>`_ as appropriate for your operating system.
 #. Open Settings from the Now Playing icon
 #. Select Acoustidmb from left-hand column
 #. Enable the option
