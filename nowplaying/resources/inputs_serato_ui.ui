@@ -152,7 +152,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>210</y>
+     <y>280</y>
      <width>311</width>
      <height>16</height>
     </rect>
@@ -168,7 +168,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>240</y>
+     <y>320</y>
      <width>611</width>
      <height>80</height>
     </rect>
@@ -214,6 +214,53 @@
      <widget class="QLineEdit" name="remote_poll_lineedit">
       <property name="enabled">
        <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="horizontalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>210</y>
+     <width>601</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="ignoredecks_layout">
+    <item>
+     <widget class="QLabel" name="ignoredeck_label">
+      <property name="text">
+       <string>Ignore Deck(s)</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="deck1_checkbox">
+      <property name="text">
+       <string>1</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="deck2_checkbox">
+      <property name="text">
+       <string>2</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="deck3_checkbox">
+      <property name="text">
+       <string>3</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="deck4_checkbox">
+      <property name="text">
+       <string>4</string>
       </property>
      </widget>
     </item>
@@ -363,6 +410,86 @@
     <hint type="destinationlabel">
      <x>70</x>
      <y>177</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>deck1_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>189</x>
+     <y>235</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>deck2_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>310</x>
+     <y>235</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>deck3_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>431</x>
+     <y>235</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>deck4_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>552</x>
+     <y>235</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ignoredeck_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>68</x>
+     <y>235</y>
     </hint>
    </hints>
   </connection>

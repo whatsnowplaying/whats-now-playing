@@ -498,7 +498,7 @@ class SeratoHandler():
             logging.debug('processing %s', sessionfilename)
             SeratoHandler.parsedsessions.append(SessionFile(sessionfilename))
 
-    def computedecks(self):  # pylint: disable=no-self-use
+    def computedecks(self, deckskiplist=None):  # pylint: disable=no-self-use
         ''' based upon the session data, figure out what is actually
             on each deck '''
 
@@ -516,6 +516,8 @@ class SeratoHandler():
 
         for index in reversed(SeratoHandler.parsedsessions):
             for adat in index.adats:
+                if deckskiplist and str(adat.deck) in deckskiplist:
+                    continue
                 if 'playtime' in adat and adat.playtime > 0:
                     continue
                 if (adat.deck in SeratoHandler.decks and adat.updatedat <
@@ -592,7 +594,7 @@ class SeratoHandler():
                     SeratoHandler.playingadat.artist,
                     SeratoHandler.playingadat.title)
 
-    def getlocalplayingtrack(self):
+    def getlocalplayingtrack(self, deckskiplist=None):
         ''' parse out last track from binary session file
             get latest session file
         '''
@@ -604,7 +606,7 @@ class SeratoHandler():
         if not SeratoHandler.lastfetched or \
            SeratoHandler.lastprocessed >= SeratoHandler.lastfetched:
             SeratoHandler.lastfetched = SeratoHandler.lastprocessed + 1
-            self.computedecks()
+            self.computedecks(deckskiplist=deckskiplist)
             self.computeplaying()
 
         if SeratoHandler.playingadat:
@@ -686,11 +688,11 @@ class SeratoHandler():
 
         return artist, title
 
-    def getplayingtrack(self):
+    def getplayingtrack(self, deckskiplist=None):
         ''' generate a dict of data '''
 
         if SeratoHandler.mode == 'local':
-            return self.getlocalplayingtrack()
+            return self.getlocalplayingtrack(deckskiplist=deckskiplist)
         return self.getremoteplayingtrack()
 
     def getplayingmetadata(self):  #pylint: disable=no-self-use
@@ -800,7 +802,10 @@ class Plugin(InputPlugin):
         time.sleep(interval)
 
         if self.serato:
-            return self.serato.getplayingtrack()
+            deckskip = self.config.cparser.value('serato/deckskip')
+            if deckskip and not isinstance(deckskip, list):
+                deckskip = list(deckskip)
+            return self.serato.getplayingtrack(deckskiplist=deckskip)
         return None, None
 
     def getplayingmetadata(self):
@@ -819,6 +824,7 @@ class Plugin(InputPlugin):
         qsettings.setValue('serato/local', True)
         qsettings.setValue('serato/mixmode', "newest")
         qsettings.setValue('serato/url', None)
+        qsettings.setValue('serato/deckskip', None)
 
     def validmixmodes(self):
         ''' let the UI know which modes are valid '''
@@ -867,6 +873,32 @@ class Plugin(InputPlugin):
 
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
+
+        def handle_deckskip(cparser, qwidget):
+            deckskip = cparser.value('serato/deckskip')
+            qwidget.deck1_checkbox.setChecked(False)
+            qwidget.deck2_checkbox.setChecked(False)
+            qwidget.deck3_checkbox.setChecked(False)
+            qwidget.deck4_checkbox.setChecked(False)
+
+            if not deckskip:
+                return
+
+            if not isinstance(deckskip, list):
+                deckskip = list(deckskip)
+
+            if '1' in deckskip:
+                qwidget.deck1_checkbox.setChecked(True)
+
+            if '2' in deckskip:
+                qwidget.deck2_checkbox.setChecked(True)
+
+            if '3' in deckskip:
+                qwidget.deck3_checkbox.setChecked(True)
+
+            if '4' in deckskip:
+                qwidget.deck4_checkbox.setChecked(True)
+
         if self.config.cparser.value('serato/local', type=bool):
             qwidget.local_button.setChecked(True)
             qwidget.remote_button.setChecked(False)
@@ -879,6 +911,8 @@ class Plugin(InputPlugin):
             self.config.cparser.value('serato/url'))
         qwidget.remote_poll_lineedit.setText(
             str(self.config.cparser.value('serato/interval')))
+        handle_deckskip(self.config.cparser, qwidget)
+
 
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''
@@ -906,6 +940,18 @@ class Plugin(InputPlugin):
                                      qwidget.remote_url_lineedit.text())
         self.config.cparser.setValue('serato/interval',
                                      qwidget.remote_poll_lineedit.text())
+
+        deckskip = []
+        if qwidget.deck1_checkbox.isChecked():
+            deckskip.append('1')
+        if qwidget.deck2_checkbox.isChecked():
+            deckskip.append('2')
+        if qwidget.deck3_checkbox.isChecked():
+            deckskip.append('3')
+        if qwidget.deck4_checkbox.isChecked():
+            deckskip.append('4')
+
+        self.config.cparser.setValue('serato/deckskip', deckskip)
 
     def desc_settingsui(self, qwidget):
         ''' description '''
