@@ -61,6 +61,7 @@ jobs:
           python-version: 3.8
       - name: install dependencies
         run: |
+          python fix_win_ver.py
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install .
