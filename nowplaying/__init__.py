@@ -3,6 +3,9 @@
     Titles for streaming for Serato
 '''
 
+#from . import version
+#__version__ = version.get_versions()['version']
+
 import nowplaying.version
 
 __version__ = nowplaying.version.get_versions()['version']
