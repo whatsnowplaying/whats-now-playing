@@ -15,14 +15,18 @@
 * Add a TwitchBot, including the ability to announce track changes.
 * Rework some of the templates.
 * Add support for MPRIS2 on Linux
-* Upgrade to pyinstaller 4.3 for better support on Apple M1
+* Upgrade to pyinstaller 4.4 for better support on Apple M1
 * Added support for writing to the [OBS Web Socket
   plugin](https://github.com/Palakis/obs-websocket)
 * Revamped settings user interface
 * Now write data to a sqlite DB while running and switch all
   output timing based upon writes, enabling multiprocess
   handling
-* More code re-organization/cleanup
+* Add ability to ignore decks in Serato, especially useful
+  for scratch DJs
+* Ability to use two different music recognition services
+  so that untagged files now have metadata
+* More code re-organization/cleanup/minor bug fixes
 
 ## Version 2.0.1 - 2021-05-27
 
