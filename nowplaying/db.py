@@ -72,6 +72,7 @@ class MetadataDB:
         'artist',
         'bitrate',
         'bpm',
+        'comments',
         'composer',
         'coverurl',
         'date',

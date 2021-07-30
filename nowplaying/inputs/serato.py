@@ -708,6 +708,7 @@ class SeratoHandler():
                 'artist',
                 'bitrate',
                 'bpm',
+                'comments',
                 'composer',
                 'date',
                 'deck',
@@ -873,7 +874,6 @@ class Plugin(InputPlugin):
 
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
-
         def handle_deckskip(cparser, qwidget):
             deckskip = cparser.value('serato/deckskip')
             qwidget.deck1_checkbox.setChecked(False)
@@ -912,7 +912,6 @@ class Plugin(InputPlugin):
         qwidget.remote_poll_lineedit.setText(
             str(self.config.cparser.value('serato/interval')))
         handle_deckskip(self.config.cparser, qwidget)
-
 
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''

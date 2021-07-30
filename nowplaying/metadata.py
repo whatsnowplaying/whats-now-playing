@@ -46,8 +46,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         for key in [
-                'album', 'albumartist', 'artist', 'bpm', 'composer', 'genre',
-                'key', 'label', 'title'
+                'album', 'albumartist', 'artist', 'bpm', 'comments',
+                'composer', 'genre', 'key', 'label', 'title'
         ]:
             if key not in self.metadata and key in base.tags:
                 if isinstance(base.tags[key], list):
@@ -95,9 +95,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if tag:
             for key in [
                     'album', 'albumartist', 'artist', 'bitrate', 'bpm',
-                    'composer', 'disc', 'disc_total', 'genre', 'key',
-                    'publisher', 'lang', 'title', 'track', 'track_total',
-                    'year'
+                    'comments', 'composer', 'disc', 'disc_total', 'genre',
+                    'key', 'lang', 'publisher', 'title', 'track',
+                    'track_total', 'year'
             ]:
                 if key not in self.metadata and hasattr(tag, key) and getattr(
                         tag, key):

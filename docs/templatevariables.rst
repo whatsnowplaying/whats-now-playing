@@ -40,6 +40,8 @@ Support Variables
      - Bitrate the file was encoded at
    * - bpm
      - Beats per minute of the song
+   * - comments
+     - Comments from either the DJ software or the song file, whichever is discovered first
    * - composer
      - Composer of the song
    * - coverurl
