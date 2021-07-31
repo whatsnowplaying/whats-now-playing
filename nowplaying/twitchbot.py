@@ -124,6 +124,16 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         self.watcher.start(customhandler=self._announce_track)
         self._announce_track(None)
 
+    def _delay_write(self):
+        try:
+            delay = self.config.cparser.value('twitchbot/announcedelay',
+                                              type=float,
+                                              defaultValue=1.0)
+        except ValueError:
+            delay = 1.0
+        logging.debug('got delay of %s', delay)
+        time.sleep(delay)
+
     def _announce_track(self, event):  # pylint: disable=unused-argument
         ''' announce new tracks '''
         self.config.get()
@@ -136,6 +146,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
         self.lastannounced['artist'] = metadata['artist']
         self.lastannounced['title'] = metadata['title']
+
+        self._delay_write()
 
         logging.info('Announcing %s',
                      self.config.cparser.value('twitchbot/announce'))

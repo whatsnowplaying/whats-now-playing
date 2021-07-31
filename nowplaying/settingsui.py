@@ -258,6 +258,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             self.config.cparser.value('twitchbot/announce'))
         self.widgets['twitchbot'].commandchar_lineedit.setText(
             self.config.cparser.value('twitchbot/commandchar'))
+        self.widgets['twitchbot'].announce_delay_lineedit.setText(
+            self.config.cparser.value('twitchbot/announcedelay'))
 
     def _upd_win_plugins(self):
         ''' tell config to trigger plugins to update windows '''
@@ -420,6 +422,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.config.cparser.setValue(
             'twitchbot/commandchar',
             self.widgets['twitchbot'].commandchar_lineedit.text())
+
+        self.config.cparser.setValue(
+            'twitchbot/announcedelay',
+            self.widgets['twitchbot'].announce_delay_lineedit.text())
 
         reset_commands(self.widgets['twitchbot'].command_perm_table,
                        self.config.cparser)

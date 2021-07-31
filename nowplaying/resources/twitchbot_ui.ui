@@ -17,9 +17,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>40</y>
+     <y>20</y>
      <width>621</width>
-     <height>161</height>
+     <height>183</height>
     </rect>
    </property>
    <layout class="QFormLayout" name="settings_layout">
@@ -117,13 +117,30 @@
       </property>
      </widget>
     </item>
+    <item row="5" column="0">
+     <widget class="QLabel" name="announce_delay_label">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Announce Delay</string>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="1">
+     <widget class="QLineEdit" name="announce_delay_lineedit">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QCheckBox" name="enable_checkbox">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>10</y>
+     <y>0</y>
      <width>141</width>
      <height>23</height>
     </rect>
@@ -467,6 +484,38 @@
     <hint type="destinationlabel">
      <x>181</x>
      <y>352</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>announce_delay_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>80</x>
+     <y>11</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>64</x>
+     <y>188</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>clicked(bool)</signal>
+   <receiver>announce_delay_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>80</x>
+     <y>11</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>388</x>
+     <y>188</y>
     </hint>
    </hints>
   </connection>

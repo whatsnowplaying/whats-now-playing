@@ -43,9 +43,10 @@ INDEXREFRESH = \
     '<body></body></html>\n'
 
 
-TRANSPARENT_PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC'\
-                                   '1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAA'\
-                                   'ASUVORK5CYII=')
+TRANSPARENT_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC'\
+                  '1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAA'\
+                  'ASUVORK5CYII='
+TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
 
 
 class WebHandler():
@@ -149,7 +150,7 @@ class WebHandler():
                                 body=metadata['coverimageraw'])
         # rather than return an error, just send a transparent PNG
         # this makes the client code significantly easier
-        return web.Response(content_type='image/png', body=TRANSPARENT_PNG)
+        return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
 
     async def api_v1_last_handler(self, request):
         ''' handle static index.txt '''
@@ -179,7 +180,10 @@ class WebHandler():
             # early launch can be a bit weird so
             # pause a bit
             await asyncio.sleep(1)
-            metadata = database.read_last_meta()
+            metadata = None
+            while not metadata:
+                metadata = database.read_last_meta()
+                await asyncio.sleep(1)
             if 'coverimageraw' in metadata:
                 metadata['coverimagebase64'] = base64.b64encode(
                     metadata['coverimageraw']).decode('utf-8')
