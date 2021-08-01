@@ -505,7 +505,7 @@
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
-   <signal>clicked(bool)</signal>
+   <signal>toggled(bool)</signal>
    <receiver>announce_delay_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
