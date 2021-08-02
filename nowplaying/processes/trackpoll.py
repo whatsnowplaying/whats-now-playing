@@ -167,6 +167,13 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 return False
         return True
 
+    @staticmethod
+    def _isignored(metadata):
+        ''' bail out if the text NPIGNORE appears in the comment field '''
+        if metadata.get('comments') and 'NPIGNORE' in metadata['comments']:
+            return True
+        return False
+
     def _fillinmetadata(self, metadata):
         ''' keep a copy of our fetched data '''
 
@@ -219,6 +226,9 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             return
 
         if self._ismetasame(nextmeta):
+            return
+
+        if self._isignored(nextmeta):
             return
 
         # fill in the blanks and make it live
