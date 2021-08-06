@@ -10,9 +10,11 @@ Welcome to Now Playing's documentation!
 Virtual DJ and other software that writes M3U files, or MPRIS2-compatible software. It allows you
 to generate titles such as this one:
 
-.. image:: images/cover-artist-title.png
-   :target: images/cover-artist-title.png
-   :alt: Example cover-artist-title Image
+.. image:: gallery/images/mtv-with-cover.png
+   :target: gallery/images/mtv-with-cover.png
+   :alt: Example MTV-style with cover Image
+
+Checkout the `gallery <gallery.html>`_ to see more examples!
 
 Compiled, standalone versions are available for:
 
@@ -26,6 +28,7 @@ For everyone else, you will need to build and install locally.  See `Developers 
    :caption: Contents:
 
    installation
+   gallery
    upgrading
    usage
    settings
