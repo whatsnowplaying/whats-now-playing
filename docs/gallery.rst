@@ -19,6 +19,19 @@ and then writing to it via OBS WebSocket allows one to do:
    :target: gallery/images/videoloop.webp
    :alt: Scroll demo
 
+For the HTML templates, there are generally two varieties, one that use WebSockets (-ws) and those
+that do not.  WebSocket varieties are more likely to get updates closer in sync to the rest of your
+display but may not be supported by your software stack.
+
+Additionally, many of the templates are marked as 'fade' or 'nofade'.  'Nofade' generally stay on the
+screen for the duration of the song.  'Fade' will appear for a while and then disappear, only to
+reappear when the song changes:
+
+.. image:: gallery/images/mtvfade.webp
+   :target: gallery/images/mtvfade.webp
+   :alt: Fading example
+
+
 Here are some pictures of the bundled HTML template files
 being used with an OBS stream.
 
@@ -28,13 +41,13 @@ being used with an OBS stream.
    :target: gallery/images/cover-title-artist.png
    :alt: Example cover with just title and artist and solid background Image
 
-* mtv.htm:
+* mtv:
 
 .. image:: gallery/images/mtv-no-publisher.png
    :target: gallery/images/mtv-no-publisher.png
    :alt: Example MTV-style with no publisher Image
 
-* mtv-cover.htm:
+* mtv-cover:
 
 .. image:: gallery/images/mtv-with-cover.png
    :target: gallery/images/mtv-with-cover.png

@@ -17,7 +17,7 @@ Some examples:
 
 * An MP3 file missing ID3 tags may only have `title` available.
 * Serato in Remote mode, title and optionally artist are available.
-* MP4 files have very limited support currently in Now Playing so will not have the label
+* MP4/M4V files have very limited support currently in Now Playing so will not have the label
 
 Additionally, some outputs (e.g., TwitchBot) may provide additional variables that provide
 additional, context-sensitive features. See their individual pages for more information.
@@ -61,7 +61,7 @@ Support Variables
    * - key
      - Key of the song
    * - label
-     - Label of the media
+     - Label of the media.
    * - lang
      - Language used by the media
    * - title
