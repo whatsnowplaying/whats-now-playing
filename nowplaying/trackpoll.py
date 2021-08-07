@@ -42,11 +42,11 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         # sleep until we have something to write
         while not self.config.file and not self.endthread and not self.config.getpause(
         ):
-            QThread.msleep(5000)
+            QThread.msleep(1000)
             self.config.get()
 
         while not self.endthread:
-            QThread.msleep(1000)
+            QThread.msleep(500)
             self.config.get()
 
             if not previousinput or previousinput != self.config.cparser.value(
@@ -69,7 +69,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         while True:
             if not self.config.getpause():
                 break
-            QThread.msleep(1000)
+            QThread.msleep(500)
 
         (artist, title) = self.input.getplayingtrack()
 
