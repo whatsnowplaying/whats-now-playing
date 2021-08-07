@@ -38,26 +38,37 @@
       </div>
 
       <script type = "text/javascript">
-            if ("WebSocket" in window) {
-               // Let us open a web socket
-               var ws = new WebSocket("ws://localhost:8899/wsstream");
-               ws.onopen = function() {
-                  console.log('ws connected');
-               };
+            function start(websocketServerLocation){
+                  // Let us open a web socket
+                  var ws = new WebSocket(websocketServerLocation);
 
-               ws.onmessage = function (event) {
-                  var metadata = JSON.parse(event.data);
-                  console.log(metadata.title);
-                  var img = document.createElement("img")
-                  img.src = 'data:image/png;base64,' + metadata.coverimagebase64;
-                  img.className = "npimage"
-                  $("#cover").html(img);
-                  $("#title").html('\"'+metadata.title+'\"');
-                  $("#artist").html(metadata.artist);
-                  $("#album").html(metadata.album);
-                  $("#label").html(metadata.label);
-               };
+                  ws.onopen = function() {
+                     console.log('ws connected');
+                  };
+
+                  ws.onmessage = function (event) {
+                     var metadata = JSON.parse(event.data);
+                     console.log(metadata.title);
+                     var img = document.createElement("img")
+                     img.src = 'data:image/png;base64,' + metadata.coverimagebase64;
+                     img.className = "npimage"
+                     $("#cover").html(img);
+                     $("#title").html('\"'+metadata.title+'\"');
+                     $("#artist").html(metadata.artist);
+                     $("#album").html(metadata.album);
+                     $("#label").html(metadata.label);
+                  };
+
+                  ws.onclose = function(){
+                     // Try to reconnect in 5 seconds
+                     setTimeout(function(){start(websocketServerLocation)}, 5000);
+                };
             }
+
+            if ("WebSocket" in window) {
+               start("ws://localhost:8899/wsstream")
+            }
+
       </script>
 
    </body>
