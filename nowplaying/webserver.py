@@ -189,7 +189,9 @@ class WebHandler():
                     metadata['coverimageraw']).decode('utf-8')
                 del metadata['coverimageraw']
             else:
-                metadata['coverimagebase64'] = TRANSPARENT_PNG
+                # for some reason, just sending the string doesn't always work :shrug:
+                metadata['coverimagebase64'] = base64.b64encode(
+                    TRANSPARENT_PNG_BIN).decode('utf-8')
             del metadata['dbid']
             await websocket.send_json(metadata)
             return time.time()

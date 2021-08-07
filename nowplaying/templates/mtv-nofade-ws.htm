@@ -1,0 +1,64 @@
+<!DOCTYPE HTML>
+<html>
+   <head>
+      <meta charset="utf-8" >
+      <title>Titlecard</title>
+      <link href="https://db.onlinewebfonts.com/c/de58fdcb98299a76fccd3c0cb4e5a6c0?family=Kabel" rel="stylesheet" type="text/css"/>
+      <style>
+         .container {
+           margin: 1px;
+           width: 2500px;
+           height: 200px;
+           float: left;
+           font-size: 36px;
+           font-family: "Kabel";
+           line-height: 30%;
+           text-shadow: 4px 4px #000000;
+           color: #FFF;
+           text-indent: 1%;
+         }
+      </style>
+      <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
+  </head>
+   <body>
+
+
+      <div class="container" id="titlecard">
+         <p><div id="artist"></div></p>
+         <p><div id="title"></div></p>
+         <p><div id="album"></div></p>
+         <p><div id="label"></div></p>
+      </div>
+
+      <script type = "text/javascript">
+            function start(websocketServerLocation){
+                  // Let us open a web socket
+                  var ws = new WebSocket(websocketServerLocation);
+
+                  ws.onopen = function() {
+                     console.log('ws connected');
+                  };
+
+                  ws.onmessage = function (event) {
+                     var metadata = JSON.parse(event.data);
+                     console.log(metadata.title);
+                     $("#title").html('\"'+metadata.title+'\"');
+                     $("#artist").html(metadata.artist);
+                     $("#album").html(metadata.album);
+                     $("#label").html(metadata.label);
+                  };
+
+                  ws.onclose = function(){
+                     // Try to reconnect in 5 seconds
+                     setTimeout(function(){start(websocketServerLocation)}, 5000);
+                };
+            }
+
+            if ("WebSocket" in window) {
+               start("ws://localhost:8899/wsstream")
+            }
+
+      </script>
+
+   </body>
+</html>
