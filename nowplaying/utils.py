@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 ''' handler to read the metadata from various file formats '''
 
-#
-# For now, this module is primarily a wrapper around tinytag
-# with the idea that in the future there may be multiple
-# engines or custom handling (pull tags from mixxing software?)
-#
-
 import importlib
 import logging
 import pkgutil
@@ -74,21 +68,16 @@ def getmoremetadata(metadata=None):
     if not metadata or 'filename' not in metadata:
         return metadata
 
-    # tinytag is pure python and supports a wide variety of
-    # formats.  because of that, it doesn't necessarily
-    # have all the bells and whistles of other, more specific
-    # libraries.  But this is good enough for now.
-
     if not os.path.isfile(metadata['filename']):
         return metadata
 
-    logging.debug('getmoremetadata calling TinyTag for %s',
+    logging.debug('getmoremetadata calling metadata processor for %s',
                   metadata['filename'])
     try:
         myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata)
         metadata = myclass.metadata
     except Exception as error:  # pylint: disable=broad-except
-        logging.error('MetadtaProcessor failed for %s with %s',
+        logging.error('MetadataProcessor failed for %s with %s',
                       metadata['filename'], error)
 
     return metadata

@@ -46,7 +46,7 @@ class RecognitionPlugin():
 
 #### Recognition methods
 
-    def parsefile(self, filename):  #pylint: disable=no-self-use
+    def recognize(self, metadata):  #pylint: disable=no-self-use
         ''' return metadata '''
         raise NotImplementedError
 

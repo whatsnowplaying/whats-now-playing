@@ -44,14 +44,20 @@ class Plugin(RecognitionPlugin):
             logging.info('ACRCloud did not return a score. Ignoring')
             return False
 
-        if data['metadata']['music'][0]['score'] < 80:
-            logging.info('ACRCloud returned a score less than 80. Ignoring.')
+        logging.debug('ACRCloud confidence: %s',
+                      data['metadata']['music'][0]['score'])
+        if data['metadata']['music'][0]['score'] < 50:
+            logging.info('ACRCloud returned a score less than 50: %s',
+                         data['metadata']['music'])
             return False
 
         return True
 
-    def parsefile(self, filename):
+    def recognize(self, metadata):
         if not self.config.cparser.value('acrcloud/enabled', type=bool):
+            return None
+
+        if 'filename' not in metadata:
             return None
 
         if not ACRCLOUD_STATUS:
@@ -66,9 +72,10 @@ class Plugin(RecognitionPlugin):
             'timeout': 20  # seconds
         }
 
+        logging.debug('Trying ACRCloud on %s', metadata['filename'])
         try:
             recognizer = ACRCloudRecognizer(acrcloudconfig)
-            data = recognizer.recognize_by_file(filename, 0)
+            data = recognizer.recognize_by_file(metadata['filename'], 0)
         except Exception as error:  # pylint: disable=broad-except
             logging.error('Problem getting a response from ACRCloud: %s',
                           error)
@@ -161,7 +168,7 @@ def main():
     # need to make sure config is initialized with something
     nowplaying.config.ConfigFile(bundledir=bundledir)
     plugin = Plugin()
-    print(plugin.parsefile(filename))
+    print(plugin.recognize({'filename': filename}))
 
 
 if __name__ == "__main__":

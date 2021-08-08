@@ -3,7 +3,7 @@ import json
 import sys
 from os.path import splitext
 
-from nowplaying/vendor.tinytag import TinyTag, TinyTagException
+from nowplaying.vendor.tinytag import TinyTag, TinyTagException
 
 def usage():
     print('''tinytag [options] <filename...>

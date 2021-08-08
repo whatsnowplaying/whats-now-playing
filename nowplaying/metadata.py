@@ -142,10 +142,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 plugin].providerinfo()
             provider = any(meta not in self.metadata for meta in metalist)
             if provider:
-                addmeta = self.config.pluginobjs['recognition'][
-                    plugin].parsefile(self.metadata['filename'])
-                if addmeta:
-                    self._recogintion_replacement(addmeta)
+                try:
+                    addmeta = self.config.pluginobjs['recognition'][
+                        plugin].recognize(self.metadata)
+                    if addmeta:
+                        self._recogintion_replacement(addmeta)
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.debug('%s threw exception %s', plugin, error)
 
 
 def main():

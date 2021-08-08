@@ -4,5 +4,5 @@ requires = ["setuptools >= 40.6.0", "wheel"]
 [tool.vendoring]
 destination = "nowplaying/vendor"
 requirements = "vendor.txt"
-namespace = "nowplaying/vendor"
+namespace = "nowplaying.vendor"
 

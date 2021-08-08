@@ -130,6 +130,9 @@ class MPRIS2Handler():
         #     with urllib.request.urlopen(arturl) as coverart:
         #         builddata['coverimageraw'] = coverart.read()
         self.metadata = builddata
+
+        if not title and not artist and filename:
+            title = filename
         return artist, title
 
     def getplayingmetadata(self):

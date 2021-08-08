@@ -4,6 +4,7 @@
 
 import os
 import sys
+import time
 
 import logging
 import logging.config
@@ -28,9 +29,13 @@ class Plugin(RecognitionPlugin):
         super().__init__(config=config, qsettings=qsettings)
         self.qwidget = None
 
-    def parsefile(self, filename):  #pylint: disable=too-many-statements
+    def recognize(self, metadata):  #pylint: disable=too-many-statements
         #if not self.config.cparser.value('acoustidmb/enabled', type=bool):
         #   return None
+
+        if 'filename' not in metadata:
+            logging.debug('No filename in metadata')
+            return None
 
         def read_label(releasedata):
             if 'label-info-list' not in releasedata:
@@ -46,24 +51,49 @@ class Plugin(RecognitionPlugin):
             return None
 
         def fetch_from_acoustid(apikey, filename):
+            results = None
             try:
-                results = acoustid.match(apikey, filename)
-            except acoustid.NoBackendError:
-                logging.error("chromaprint library/tool not found")
-                return None
-            except acoustid.FingerprintGenerationError:
-                logging.error("fingerprint could not be calculated for %s",
-                              filename)
-                return None
-            except acoustid.WebServiceError as exc:
-                logging.error("web service request failed: %s", exc.message)
-                return None
+                (duration,
+                 fingerprint) = acoustid.fingerprint_file(filename,
+                                                          force_fpcalc=True)
             except Exception as error:  # pylint: disable=broad-except
-                logging.error('Problem getting a response from Acoustid: %s',
-                              error)
+                logging.error(
+                    "fingerprint could not be calculated for %s due to %s",
+                    filename, error)
                 return None
 
-            return results
+            try:
+                counter = 0
+                while counter < 3:
+                    results = acoustid.lookup(apikey, fingerprint, duration)
+                    if 'error' in results and 'rate limit' in results['error'][
+                            'message']:
+                        logging.info(
+                            'acoustid complaining about rate limiting. Sleeping then rying again.'
+                        )
+                        time.sleep(1)
+                        counter = counter + 1
+                    else:
+                        break
+            except acoustid.NoBackendError:
+                results = None
+                logging.error("chromaprint library/tool not found")
+            except acoustid.WebServiceError as error:
+                results = None
+                logging.error("web service request failed: %s", error)
+            except Exception as error:  # pylint: disable=broad-except
+                results = None
+                logging.error('Problem getting a response from Acoustid: %s',
+                              error)
+            if not results:
+                return None
+
+            if 'error' in results and 'rate limit' in results['error'][
+                    'message']:
+                logging.info('Giving up; rate limit exceeded')
+                return None
+
+            return acoustid.parse_lookup_result(results)
 
         def read_acoustid_tuples(results):
             metadata = {}
@@ -82,19 +112,19 @@ class Plugin(RecognitionPlugin):
             return None
 
         fpcalcexe = self.config.cparser.value('acoustidmb/fpcalcexe')
-        if fpcalcexe:
-            if not os.environ.get("FPCALC"):
-                os.environ.setdefault("FPCALC", fpcalcexe)
+        if not os.environ.get("FPCALC"):
+            os.environ.setdefault("FPCALC", fpcalcexe)
             os.environ["FPCALC"] = fpcalcexe
         apikey = self.config.cparser.value('acoustidmb/acoustidapikey')
         emailaddress = self.config.cparser.value('acoustidmb/emailaddress')
-        results = fetch_from_acoustid(apikey, filename)
+        results = fetch_from_acoustid(apikey, metadata['filename'])
         if not results:
             return None
 
-        metadata = read_acoustid_tuples(results)
-        if 'rid' not in metadata:
-            logging.info('acoustidmb did not find %s.', filename)
+        acoustidmd = read_acoustid_tuples(results)
+        if 'rid' not in acoustidmd:
+            logging.info('acoustidmb did not find a musicbrainz rid %s.',
+                         metadata['filename'])
             return None
         try:
             musicbrainzngs.set_useragent(
@@ -105,15 +135,15 @@ class Plugin(RecognitionPlugin):
             logging.error('Unable to use MusicBrainz: %s', error)
             return None
 
-        mbdata = musicbrainzngs.browse_releases(recording=metadata['rid'],
+        mbdata = musicbrainzngs.browse_releases(recording=acoustidmd['rid'],
                                                 includes=['labels'])
-        del metadata['rid']
+        del acoustidmd['rid']
         if 'release-list' in mbdata:
             musicdata = mbdata['release-list'][0]
             if 'title' in musicdata:
-                metadata['album'] = musicdata['title']
+                acoustidmd['album'] = musicdata['title']
             if 'date' in musicdata:
-                metadata['date'] = musicdata['date']
+                acoustidmd['date'] = musicdata['date']
             label = read_label(musicdata)
             if label:
                 metadata['label'] = label
@@ -121,12 +151,12 @@ class Plugin(RecognitionPlugin):
                     'cover-art-archive'] and musicdata['cover-art-archive'][
                         'artwork']:
                 try:
-                    metadata['coverimageraw'] = musicbrainzngs.get_image(
+                    acoustidmd['coverimageraw'] = musicbrainzngs.get_image(
                         musicdata['id'], 'front')
                 except Exception as error:  # pylint: disable=broad-except
                     logging.error('Failed to get cover art: %s', error)
 
-        return metadata
+        return acoustidmd
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this recognition system '''
@@ -171,10 +201,19 @@ class Plugin(RecognitionPlugin):
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''
         if qwidget.acoustidmb_checkbox.isChecked(
-        ) and not qwidget.apikey_lineedit.txt(
-        ) and not qwidget.emailaddress_lineedit.txt():
+        ) and not qwidget.apikey_lineedit.txt():
             raise PluginVerifyError(
                 'Acoustid enabled, but no API Key provided.')
+
+        if qwidget.acoustidmb_checkbox.isChecked(
+        ) and not qwidget.emailaddress_lineedit.txt():
+            raise PluginVerifyError(
+                'Acoustid enabled, but no email address provided.')
+
+        if qwidget.acoustidmb_checkbox.isChecked(
+        ) and not qwidget.fpcalcexe_lineedit.txt():
+            raise PluginVerifyError(
+                'Acoustid enabled, but no fpcalc binary provided.')
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
@@ -204,7 +243,7 @@ def main():
     # need to make sure config is initialized with something
     nowplaying.config.ConfigFile(bundledir=bundledir)
     plugin = Plugin()
-    metadata = plugin.parsefile(filename)
+    metadata = plugin.recognize({'filename': filename})
     if not metadata:
         print('No information')
         sys.exit(1)

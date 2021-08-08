@@ -21,8 +21,8 @@ import re
 
 from pytest import raises
 
-from nowplaying/vendor.tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac
-from nowplaying/vendor.tinytag.tinytag import Wma, MP4, Aiff
+from nowplaying.vendor.tinytag import TinyTagException, TinyTag, ID3, Ogg, Wave, Flac
+from nowplaying.vendor.tinytag.tinytag import Wma, MP4, Aiff
 
 try:
     from collections import OrderedDict
