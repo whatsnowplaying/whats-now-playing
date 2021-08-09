@@ -67,6 +67,7 @@ class MetadataDB:
     """ Metadata DB module"""
 
     METADATALIST = [
+        'acoustidid',
         'album',
         'albumartist',
         'artist',
@@ -78,13 +79,18 @@ class MetadataDB:
         'date',
         'deck',
         'disc',
+        'discsubtitle',
         'disc_total',
         'filename',
         'genre',
+        'isrc',
         'key',
         'label',
         'lang',
         'length',
+        'musicbrainzalbumid',
+        'musicbrainzartistid',
+        'musicbrainzrecordingid',
         'title',
         'track',
         'track_total',

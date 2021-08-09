@@ -213,7 +213,6 @@ class MP4FreeformTag(MP4Tag):
 					value=atom_data[position + 16 : position + size],
 				)
 			)
-
 			position += size
 
 		return cls(
