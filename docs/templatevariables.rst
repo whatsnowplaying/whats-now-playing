@@ -47,11 +47,13 @@ Support Variables
    * - coverurl
      - Relative location to fetch the cover. Note that this will only work when the webserver is active.
    * - date
-     - Date of the media
+     - Date (either release date or date of the media)
    * - deck
      - deck # this track is playing on
    * - disc
      - Disc number
+   * - discsubtitle
+     - disc subtitle (if there is one)
    * - disc_total
      - Total number of discs in album
    * - filename
@@ -64,6 +66,12 @@ Support Variables
      - Label of the media.
    * - lang
      - Language used by the media
+   * - musicbrainzalbumid
+     - MusicBrainz Album Id
+   * - musicbrainzartistid
+     - MusicBrainz Artist Id
+   * - musicbrainzrecordingid
+     - MusicBrainz Recording Id
    * - title
      - Title of the media
    * - track

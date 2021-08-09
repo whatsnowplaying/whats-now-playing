@@ -3,11 +3,13 @@
 
 import io
 import logging
+import os
 import sys
 
 import PIL.Image
 import nowplaying.config
 import nowplaying.vendor.audio_metadata
+from nowplaying.vendor.audio_metadata.formats.mp4_tags import MP4FreeformDecoders
 import nowplaying.vendor.tinytag
 
 
@@ -36,7 +38,51 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 self.metadata['date'] = self.metadata['year']
             del metadata['year']
 
-    def _process_audio_metadata(self):
+    def _process_audio_metadata_mp4_freeform(self, freeformparentlist):
+        for freeformlist in freeformparentlist:
+            for freeform in freeformlist:
+                if freeform.description == 'com.apple.iTunes':
+                    if freeform['name'] == 'originaldate':
+                        self.metadata['date'] = MP4FreeformDecoders[
+                            freeform.data_type](freeform.value)
+                    if freeform['name'] == 'LABEL':
+                        self.metadata['label'] = MP4FreeformDecoders[
+                            freeform.data_type](freeform.value)
+                    if freeform['name'] == 'DISCSUBTITLE':
+                        self.metadata['discsubtitle'] = MP4FreeformDecoders[
+                            freeform.data_type](freeform.value)
+                    if freeform['name'] == 'MusicBrainz Album Id':
+                        self.metadata[
+                            'musicbrainzalbumid'] = MP4FreeformDecoders[
+                                freeform.data_type](freeform.value)
+                    if freeform['name'] == 'MusicBrainz Artist Id':
+                        self.metadata[
+                            'musicbrainzartistid'] = MP4FreeformDecoders[
+                                freeform.data_type](freeform.value)
+                    if freeform['name'] == 'Acoustid Id':
+                        self.metadata['acoustidid'] = MP4FreeformDecoders[
+                            freeform.data_type](freeform.value)
+                    if freeform['name'] == 'MusicBrainz Track Id':
+                        self.metadata[
+                            'musicbrainzrecordingid'] = MP4FreeformDecoders[
+                                freeform.data_type](freeform.value)
+
+    def _process_audio_metadata_id3_usertext(self, usertextlist):
+        for usertext in usertextlist:
+            if usertext.description == 'Acoustid Id':
+                self.metadata['acoustidid'] = usertext.text[0]
+            elif usertext.description == 'DISCSUBTITLE':
+                self.metadata['discsubtitle'] = usertext.text[0]
+            elif usertext.description == 'MusicBrainz Album Id':
+                self.metadata['musicbrainzalbumid'] = usertext.text[0]
+            elif usertext.description == 'MusicBrainz Artist Id':
+                self.metadata['musicbrainzartistid'] = usertext.text[0]
+            elif usertext.description == 'MusicBrainz Release Track Id':
+                self.metadata['musicbrainzrecordingid'] = usertext.text[0]
+            elif usertext.description == 'originalyear':
+                self.metadata['date'] = usertext.text[0]
+
+    def _process_audio_metadata(self):  # pylint: disable=too-many-branches
         try:
             base = nowplaying.vendor.audio_metadata.load(
                 self.metadata['filename'])
@@ -47,7 +93,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         for key in [
                 'album', 'albumartist', 'artist', 'bpm', 'comments',
-                'composer', 'genre', 'key', 'label', 'title'
+                'composer', 'discsubtitle', 'genre', 'isrc', 'key', 'label',
+                'title'
         ]:
             if key not in self.metadata and key in base.tags:
                 if isinstance(base.tags[key], list):
@@ -75,6 +122,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     'track_total'] = text.split('/')
             except:  # pylint: disable=bare-except
                 pass
+
+        if 'freeform' in base.tags:
+            self._process_audio_metadata_mp4_freeform(base.tags.freeform)
+        elif 'usertext' in base.tags:
+            self._process_audio_metadata_id3_usertext(base.tags.usertext)
 
         if 'bitrate' not in self.metadata and getattr(base, 'streaminfo'):
             self.metadata['bitrate'] = base.streaminfo['bitrate']
@@ -137,6 +189,24 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 self.metadata[meta] = addmeta[meta]
 
     def _process_plugins(self):
+        if 'musicbrainzrecordingid' in self.metadata:
+            logging.debug('Preprocessing with musicbrainz recordingid')
+            musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
+                config=self.config)
+            metalist = musicbrainz.providerinfo()
+            if any(meta not in self.metadata for meta in metalist):
+                addmeta = musicbrainz.recordingid(
+                    self.metadata['musicbrainzrecordingid'])
+                self._recogintion_replacement(addmeta)
+        elif 'isrc' in self.metadata:
+            logging.debug('Preprocessing with musicbrainz isrc')
+            musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
+                config=self.config)
+            metalist = musicbrainz.providerinfo()
+            if any(meta not in self.metadata for meta in metalist):
+                addmeta = musicbrainz.isrc(self.metadata['isrc'])
+                self._recogintion_replacement(addmeta)
+
         for plugin in self.config.plugins['recognition']:
             metalist = self.config.pluginobjs['recognition'][
                 plugin].providerinfo()
@@ -155,6 +225,8 @@ def main():
     ''' entry point as a standalone app'''
     logging.basicConfig(level=logging.DEBUG)
     logging.captureWarnings(True)
+    bundledir = os.path.abspath(os.path.dirname(__file__))
+    nowplaying.config.ConfigFile(bundledir=bundledir)
     metadata = {'filename': sys.argv[1]}
     myclass = MetadataProcessors(metadata=metadata)
     metadata = myclass.metadata

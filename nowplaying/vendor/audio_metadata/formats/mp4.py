@@ -18,7 +18,7 @@ from tbm_utils import (
 	datareader,
 )
 
-from .mp4_tags import MP4Tag
+from .mp4_tags import MP4Tag, MP4FreeformTag
 from .tables import (
 	MP4AudioObjectTypes,
 	MP4SamplingFrequencies,
@@ -223,7 +223,10 @@ class MP4Tags(Tags):
 			if tag is None:  # TODO
 				continue
 
-			fields[tag.name] = tag.value
+			if isinstance(tag, MP4FreeformTag):
+				fields[tag.name].append(tag.value)
+			else:
+				fields[tag.name] = tag.value
 
 		return cls(**fields)
 

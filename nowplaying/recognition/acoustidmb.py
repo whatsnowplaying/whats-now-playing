@@ -14,12 +14,13 @@ from PySide2.QtCore import QDir  # pylint: disable=no-name-in-module
 from PySide2.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 import acoustid
-import musicbrainzngs
 
 import nowplaying.bootstrap
 import nowplaying.config
 from nowplaying.recognition import RecognitionPlugin
 from nowplaying.exceptions import PluginVerifyError
+import nowplaying.musicbrainz
+
 import nowplaying.version
 
 
@@ -28,146 +29,107 @@ class Plugin(RecognitionPlugin):
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.qwidget = None
+        self.musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
+            self.config)
+        self.acoustidmd = {}
+
+    def _fetch_from_acoustid(self, apikey, filename):
+        results = None
+        try:
+            (duration,
+             fingerprint) = acoustid.fingerprint_file(filename,
+                                                      force_fpcalc=True)
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error(
+                "fingerprint could not be calculated for %s due to %s",
+                filename, error)
+            return None
+
+        try:
+            counter = 0
+            while counter < 3:
+                results = acoustid.lookup(apikey, fingerprint, duration)
+                if 'error' in results and 'rate limit' in results['error'][
+                        'message']:
+                    logging.info(
+                        'acoustid complaining about rate limiting. Sleeping then rying again.'
+                    )
+                    time.sleep(1)
+                    counter = counter + 1
+                else:
+                    break
+        except acoustid.NoBackendError:
+            results = None
+            logging.error("chromaprint library/tool not found")
+        except acoustid.WebServiceError as error:
+            results = None
+            logging.error("web service request failed: %s", error)
+        except Exception as error:  # pylint: disable=broad-except
+            results = None
+            logging.error('Problem getting a response from Acoustid: %s',
+                          error)
+        if not results:
+            return None
+
+        if 'error' in results and 'rate limit' in results['error']['message']:
+            logging.info('Giving up; rate limit exceeded')
+            return None
+
+        if 'id' in results:
+            self.acoustidmd['acoustidid'] = results['id']
+        return acoustid.parse_lookup_result(results)
+
+    def _read_acoustid_tuples(self, results):
+        for score, rid, title, artist in results:
+            if score > .80:
+                if artist:
+                    self.acoustidmd['artist'] = artist
+                if title:
+                    self.acoustidmd['title'] = title
+                self.acoustidmd['musicbrainzrecordingid'] = rid
+                break
 
     def recognize(self, metadata):  #pylint: disable=too-many-statements
         #if not self.config.cparser.value('acoustidmb/enabled', type=bool):
         #   return None
 
-        if 'filename' not in metadata:
-            logging.debug('No filename in metadata')
-            return None
+        self.acoustidmd = metadata
 
-        def read_label(releasedata):
-            if 'label-info-list' not in releasedata:
+        if 'musicbrainzrecordingid' not in self.acoustidmd:
+
+            logging.debug(
+                'No musicbrainzrecordingid in metadata, so use acoustid')
+            if 'filename' not in metadata:
+                logging.debug('No filename in metadata')
                 return None
 
-            for labelinfo in releasedata['label-info-list']:
-                if 'type' not in labelinfo['label']:
-                    continue
-
-                if 'name' in labelinfo['label']:
-                    return labelinfo['label']['name']
-
-            return None
-
-        def fetch_from_acoustid(apikey, filename):
-            results = None
-            try:
-                (duration,
-                 fingerprint) = acoustid.fingerprint_file(filename,
-                                                          force_fpcalc=True)
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error(
-                    "fingerprint could not be calculated for %s due to %s",
-                    filename, error)
+            if not self.config.cparser.value('acoustidmb/enabled', type=bool):
                 return None
 
-            try:
-                counter = 0
-                while counter < 3:
-                    results = acoustid.lookup(apikey, fingerprint, duration)
-                    if 'error' in results and 'rate limit' in results['error'][
-                            'message']:
-                        logging.info(
-                            'acoustid complaining about rate limiting. Sleeping then rying again.'
-                        )
-                        time.sleep(1)
-                        counter = counter + 1
-                    else:
-                        break
-            except acoustid.NoBackendError:
-                results = None
-                logging.error("chromaprint library/tool not found")
-            except acoustid.WebServiceError as error:
-                results = None
-                logging.error("web service request failed: %s", error)
-            except Exception as error:  # pylint: disable=broad-except
-                results = None
-                logging.error('Problem getting a response from Acoustid: %s',
-                              error)
+            fpcalcexe = self.config.cparser.value('acoustidmb/fpcalcexe')
+            if not os.environ.get("FPCALC"):
+                os.environ.setdefault("FPCALC", fpcalcexe)
+                os.environ["FPCALC"] = fpcalcexe
+
+            apikey = self.config.cparser.value('acoustidmb/acoustidapikey')
+            results = self._fetch_from_acoustid(apikey, metadata['filename'])
             if not results:
-                return None
+                return self.acoustidmd
 
-            if 'error' in results and 'rate limit' in results['error'][
-                    'message']:
-                logging.info('Giving up; rate limit exceeded')
-                return None
-
-            return acoustid.parse_lookup_result(results)
-
-        def read_acoustid_tuples(results):
-            metadata = {}
-            for score, rid, title, artist in results:
-                if score > .80:
-                    if artist:
-                        metadata['artist'] = artist
-                    if title:
-                        metadata['title'] = title
-                    metadata['rid'] = rid
-                    break
-
-            return metadata
-
-        if not self.config.cparser.value('acoustidmb/enabled', type=bool):
-            return None
-
-        fpcalcexe = self.config.cparser.value('acoustidmb/fpcalcexe')
-        if not os.environ.get("FPCALC"):
-            os.environ.setdefault("FPCALC", fpcalcexe)
-            os.environ["FPCALC"] = fpcalcexe
-        apikey = self.config.cparser.value('acoustidmb/acoustidapikey')
-        emailaddress = self.config.cparser.value('acoustidmb/emailaddress')
-        results = fetch_from_acoustid(apikey, metadata['filename'])
-        if not results:
-            return None
-
-        acoustidmd = read_acoustid_tuples(results)
-        if 'rid' not in acoustidmd:
+            self._read_acoustid_tuples(results)
+        if 'musicbrainzrecordingid' not in self.acoustidmd:
             logging.info('acoustidmb did not find a musicbrainz rid %s.',
                          metadata['filename'])
             return None
-        try:
-            musicbrainzngs.set_useragent(
-                'whats-now-playing',
-                nowplaying.version.get_versions()['version'],
-                contact=emailaddress)
-        except Exception as error:  # pylint: disable=broad-except
-            logging.error('Unable to use MusicBrainz: %s', error)
-            return None
 
-        mbdata = musicbrainzngs.browse_releases(recording=acoustidmd['rid'],
-                                                includes=['labels'])
-        del acoustidmd['rid']
-        if 'release-list' in mbdata:
-            musicdata = mbdata['release-list'][0]
-            if 'title' in musicdata:
-                acoustidmd['album'] = musicdata['title']
-            if 'date' in musicdata:
-                acoustidmd['date'] = musicdata['date']
-            label = read_label(musicdata)
-            if label:
-                metadata['label'] = label
-            if 'cover-art-archive' in musicdata and 'artwork' in musicdata[
-                    'cover-art-archive'] and musicdata['cover-art-archive'][
-                        'artwork']:
-                try:
-                    acoustidmd['coverimageraw'] = musicbrainzngs.get_image(
-                        musicdata['id'], 'front')
-                except Exception as error:  # pylint: disable=broad-except
-                    logging.error('Failed to get cover art: %s', error)
-
-        return acoustidmd
+        self.acoustidmd.update(
+            self.musicbrainz.recordingid(
+                self.acoustidmd['musicbrainzrecordingid']))
+        return self.acoustidmd
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this recognition system '''
-        return [
-            'album',
-            'artist',
-            'coverimageraw',
-            'date',
-            'label',
-            'title',
-        ]
+        return self.musicbrainz.providerinfo()
 
     def connect_settingsui(self, qwidget):
         ''' connect m3u button to filename picker'''
