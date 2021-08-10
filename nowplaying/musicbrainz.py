@@ -56,7 +56,7 @@ class MusicBrainzHelper():
                     logging.info('musicbrainz cannot find this ISRC')
                     return None
 
-        if not ('isrc' in mbdata and 'recording-list' in mbdata['isrc']):
+        if 'isrc' not in mbdata or 'recording-list' not in mbdata['isrc']:
             return None
 
         recordinglist = sorted(mbdata['isrc']['recording-list'],

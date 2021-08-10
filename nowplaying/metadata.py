@@ -69,18 +69,18 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     def _process_audio_metadata_id3_usertext(self, usertextlist):
         for usertext in usertextlist:
-            if usertext.description == 'originalyear':
-                self.metadata['date'] = usertext.text[0]
-            if usertext.description == 'DISCSUBTITLE':
-                self.metadata['discsubtitle'] = usertext.text[0]
-            if usertext.description == 'MusicBrainz Album Id':
-                self.metadata['musicbrainzalbumid'] = usertext.text[0]
-            if usertext.description == 'MusicBrainz Artist Id':
-                self.metadata['musicbrainzartistid'] = usertext.text[0]
             if usertext.description == 'Acoustid Id':
                 self.metadata['acoustidid'] = usertext.text[0]
-            if usertext.description == 'MusicBrainz Release Track Id':
+            elif usertext.description == 'DISCSUBTITLE':
+                self.metadata['discsubtitle'] = usertext.text[0]
+            elif usertext.description == 'MusicBrainz Album Id':
+                self.metadata['musicbrainzalbumid'] = usertext.text[0]
+            elif usertext.description == 'MusicBrainz Artist Id':
+                self.metadata['musicbrainzartistid'] = usertext.text[0]
+            elif usertext.description == 'MusicBrainz Release Track Id':
                 self.metadata['musicbrainzrecordingid'] = usertext.text[0]
+            elif usertext.description == 'originalyear':
+                self.metadata['date'] = usertext.text[0]
 
     def _process_audio_metadata(self):  # pylint: disable=too-many-branches
         try:

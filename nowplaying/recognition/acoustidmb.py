@@ -117,10 +117,10 @@ class Plugin(RecognitionPlugin):
                 return self.acoustidmd
 
             self._read_acoustid_tuples(results)
-            if 'musicbrainzrecordingid' not in self.acoustidmd:
-                logging.info('acoustidmb did not find a musicbrainz rid %s.',
-                             metadata['filename'])
-                return None
+        if 'musicbrainzrecordingid' not in self.acoustidmd:
+            logging.info('acoustidmb did not find a musicbrainz rid %s.',
+                         metadata['filename'])
+            return None
 
         self.acoustidmd.update(
             self.musicbrainz.recordingid(
