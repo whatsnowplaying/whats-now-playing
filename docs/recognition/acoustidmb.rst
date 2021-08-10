@@ -1,5 +1,5 @@
-Acoustid + MusicBrainz Music Recognition
-========================================
+Acoustid + MusicBrainz
+======================
 
 The acoustidmb feature attempts to use two freely available resources to retrieve
 metadata for untagged files.

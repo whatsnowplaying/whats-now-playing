@@ -40,21 +40,14 @@ class MusicBrainzHelper():
 
         try:
             mbdata = musicbrainzngs.get_recordings_by_isrc(
-                isrc,
-                includes=['releases'],
-                release_status=['official'],
-                release_type=['single'])
+                isrc, includes=['releases'], release_status=['official'])
         except Exception:  # pylint: disable=broad-except
             try:
                 mbdata = musicbrainzngs.get_recordings_by_isrc(
-                    isrc, includes=['releases'], release_status=['official'])
+                    isrc, includes=['releases'])
             except Exception:  # pylint: disable=broad-except
-                try:
-                    mbdata = musicbrainzngs.get_recordings_by_isrc(
-                        isrc, includes=['releases'])
-                except Exception:  # pylint: disable=broad-except
-                    logging.info('musicbrainz cannot find this ISRC')
-                    return None
+                logging.info('musicbrainz cannot find this ISRC')
+                return None
 
         if 'isrc' not in mbdata or 'recording-list' not in mbdata['isrc']:
             return None
@@ -74,6 +67,9 @@ class MusicBrainzHelper():
                 return None
 
             for labelinfo in releasedata['label-info-list']:
+                if 'label' not in labelinfo:
+                    continue
+
                 if 'type' not in labelinfo['label']:
                     continue
 
@@ -82,28 +78,9 @@ class MusicBrainzHelper():
 
             return None
 
-        newdata = {}
-        try:
-            mbdata = musicbrainzngs.get_recording_by_id(recordingid)
-        except Exception:  # pylint: disable=broad-except
-            logging.error('MusicBrainz does not know recording id %s',
-                          recordingid)
-            return None
+        def releaselookup_noartist(recordingid):
+            mbdata = None
 
-        if 'recording' in mbdata and 'title' in mbdata['recording']:
-            newdata['title'] = mbdata['recording']['title']
-
-        try:
-            mbdata = musicbrainzngs.browse_releases(
-                recording=recordingid,
-                includes=['labels', 'artist-credits'],
-                release_status=['official'],
-                release_type=['single'])
-        except Exception as error:  # pylint: disable=broad-except
-            logging.debug('MusicBrainz threw an error: %s', error)
-            return None
-
-        if 'release-count' not in mbdata or mbdata['release-count'] == 0:
             try:
                 mbdata = musicbrainzngs.browse_releases(
                     recording=recordingid,
@@ -113,34 +90,53 @@ class MusicBrainzHelper():
                 logging.debug('MusicBrainz threw an error: %s', error)
                 return None
 
-        if 'release-count' not in mbdata or mbdata['release-count'] == 0:
-            try:
-                mbdata = musicbrainzngs.browse_releases(
-                    recording=recordingid,
-                    includes=['labels', 'artist-credits'])
-            except Exception:  # pylint: disable=broad-except
-                logging.debug('MusicBrainz threw an error: %s', error)
-                return None
+            if 'release-count' not in mbdata or mbdata['release-count'] == 0:
+                try:
+                    mbdata = musicbrainzngs.browse_releases(
+                        recording=recordingid,
+                        includes=['labels', 'artist-credits'])
+                except Exception:  # pylint: disable=broad-except
+                    logging.debug('MusicBrainz threw an error: %s', error)
+                    return None
+            return mbdata
+
+        newdata = {}
+        try:
+            mbdata = musicbrainzngs.get_recording_by_id(recordingid,
+                                                        includes=['artists'])
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error('MusicBrainz does not know recording id %s: %s',
+                          recordingid, error)
+            return None
+
+        if 'recording' in mbdata and 'title' in mbdata['recording']:
+            newdata['title'] = mbdata['recording']['title']
+        if 'recording' in mbdata and 'artist-credit-phrase' in mbdata[
+                'recording']:
+            newdata['artist'] = mbdata['recording']['artist-credit-phrase']
+            newdata['musicbrainzartistid'] = mbdata['recording'][
+                'artist-credit'][0]['artist']['id']
+
+        mbdata = releaselookup_noartist(recordingid)
 
         if 'release-count' not in mbdata or mbdata['release-count'] == 0:
             return newdata
 
-        musicdata = mbdata['release-list'][0]
-        if 'artist-credit-phrase' in musicdata:
-            newdata['artist'] = musicdata['artist-credit-phrase']
-        if 'title' in musicdata:
-            newdata['album'] = musicdata['title']
-        if 'date' in musicdata:
-            newdata['date'] = musicdata['date']
-        label = read_label(musicdata)
+        release = mbdata['release-list'][0]
+        if 'title' in release:
+            newdata['album'] = release['title']
+        if 'date' in release:
+            newdata['date'] = release['date']
+        label = read_label(release)
         if label:
             newdata['label'] = label
-        if 'cover-art-archive' in musicdata and 'artwork' in musicdata[
-                'cover-art-archive'] and musicdata['cover-art-archive'][
+
+        if 'cover-art-archive' in release and 'artwork' in release[
+                'cover-art-archive'] and release['cover-art-archive'][
                     'artwork']:
             try:
                 newdata['coverimageraw'] = musicbrainzngs.get_image(
-                    musicdata['id'], 'front')
+                    release['id'], 'front')
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('Failed to get cover art: %s', error)
 

@@ -1,5 +1,5 @@
-ACRCloud Music Recognition
-==========================
+ACRCloud
+========
 
 .. image:: images/ACRCloud-logo.png
    :target: images/ACRCloud-logo.png

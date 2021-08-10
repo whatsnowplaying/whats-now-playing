@@ -88,9 +88,14 @@ class Plugin(RecognitionPlugin):
         if not self._response_check(data):
             return None
 
-        musicdata = data['metadata']['music'][0]
+        try:
+            musicdata = sorted(data['metadata']['music'],
+                               key=lambda k: k['release_date'],
+                               reverse=False)[0]
+        except Exception:  # pylint: disable=broad-except
+            musicdata = data['metadata']['music'][0]
 
-        metadata = {}
+        logging.debug('Using %s', musicdata)
         if 'album' in musicdata:
             metadata['album'] = musicdata['album']['name']
         if 'artists' in musicdata:
@@ -102,6 +107,17 @@ class Plugin(RecognitionPlugin):
             metadata['date'] = musicdata['release_date']
         if 'title' in musicdata:
             metadata['title'] = musicdata['title']
+
+        # ACRCloud's musicbrainz data is slightly unreliable but... generally better than nothing.
+
+        if 'external_metadata' in musicdata and 'musicbrainz' in musicdata[
+                'external_metadata']:
+            if isinstance(musicdata['external_metadata']['musicbrainz'], list):
+                metadata['musicbrainzrecordingid'] = musicdata[
+                    'external_metadata']['musicbrainz'][0]['track']['id']
+            else:
+                metadata['musicbrainzrecordingid'] = musicdata[
+                    'external_metadata']['musicbrainz']['track']['id']
 
         return metadata
 

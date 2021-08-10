@@ -38,6 +38,7 @@ For everyone else, you will need to build and install locally.  See `Developers 
    output/obswebsocket
    output/twitchbot
    output/webserver
+   recognition/index
    recognition/acrcloud
    recognition/acoustidmb
    templatevariables

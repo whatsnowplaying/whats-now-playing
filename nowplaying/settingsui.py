@@ -40,9 +40,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             ''' load a UI file into a widget '''
             loader = QUiLoader()
             path = os.path.join(self.config.uidir, f'{name}_ui.ui')
+            if not os.path.exists(path):
+                return None
+
             ui_file = QFile(path)
             ui_file.open(QFile.ReadOnly)
-            qwidget = loader.load(ui_file)
+            try:
+                qwidget = loader.load(ui_file)
+            except RuntimeError as error:
+                logging.warning('Unable to load the UI for %s: %s', name,
+                                error)
             ui_file.close()
             return qwidget
 
@@ -61,6 +68,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
         for uiname in baseuis + pluginuinames + ['about']:
             self.widgets[uiname] = _load_ui(f'{uiname}')
+            if not self.widgets[uiname]:
+                continue
             try:
                 qobject_connector = getattr(self, f'_connect_{uiname}_widget')
                 qobject_connector(self.widgets[uiname])
@@ -71,7 +80,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             self._load_list_item(f'{uiname}', self.widgets[uiname])
 
         for uiname in pluginuinames:
-            if 'inputs' not in uiname:
+            if 'inputs' not in uiname or not self.widgets[uiname]:
                 continue
             displayname = self.widgets[uiname].property('displayName')
             if not displayname:

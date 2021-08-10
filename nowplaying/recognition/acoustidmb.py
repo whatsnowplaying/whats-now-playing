@@ -3,6 +3,7 @@
 ''' Use ACRCloud to recognize the file '''
 
 import os
+import string
 import sys
 import time
 
@@ -31,6 +32,8 @@ class Plugin(RecognitionPlugin):
         self.qwidget = None
         self.musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
             self.config)
+        self.wstrans = str.maketrans('', '',
+                                     string.whitespace + string.punctuation)
         self.acoustidmd = {}
 
     def _fetch_from_acoustid(self, apikey, filename):
@@ -54,7 +57,7 @@ class Plugin(RecognitionPlugin):
                     logging.info(
                         'acoustid complaining about rate limiting. Sleeping then rying again.'
                     )
-                    time.sleep(1)
+                    time.sleep(.5)
                     counter = counter + 1
                 else:
                     break
@@ -79,15 +82,37 @@ class Plugin(RecognitionPlugin):
             self.acoustidmd['acoustidid'] = results['id']
         return acoustid.parse_lookup_result(results)
 
+    def _simplestring(self, mystr):
+        if not mystr:
+            return None
+        if len(mystr) < 4:
+            return 'THIS TEXT IS TOO SMALL SO IGNORE IT'
+        return mystr.lower().translate(self.wstrans)
+
     def _read_acoustid_tuples(self, results):
+        fnstr = self._simplestring(self.acoustidmd['filename'])
+        if 'artist' in self.acoustidmd:
+            fnstr = fnstr + self._simplestring(self.acoustidmd['artist'])
+        if 'title' in self.acoustidmd:
+            fnstr = fnstr + self._simplestring(self.acoustidmd['title'])
+
+        lastscore = 0
         for score, rid, title, artist in results:
-            if score > .80:
+            if artist and self._simplestring(artist) in fnstr:
+                score = score + .10
+            if title and self._simplestring(title) in fnstr:
+                score = score + .10
+
+            logging.debug(
+                'weighted score = %s, rid = %s, title = %s, artist = %s',
+                score, rid, title, artist)
+            if score > .60 and score > lastscore:
                 if artist:
                     self.acoustidmd['artist'] = artist
                 if title:
                     self.acoustidmd['title'] = title
                 self.acoustidmd['musicbrainzrecordingid'] = rid
-                break
+                lastscore = score
 
     def recognize(self, metadata):  #pylint: disable=too-many-statements
         #if not self.config.cparser.value('acoustidmb/enabled', type=bool):
