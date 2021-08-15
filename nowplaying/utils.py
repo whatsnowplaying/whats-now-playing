@@ -8,6 +8,7 @@ import pkgutil
 import os
 
 import jinja2
+import normality
 import PIL.Image
 
 import nowplaying.metadata
@@ -182,3 +183,12 @@ def songpathsubst(config, filename):
 
     logging.debug('filename substitution: %s -> %s', origfilename, newname)
     return newname
+
+
+def normalize(crazystring):
+    ''' take a string and genericize it '''
+    if not crazystring:
+        return None
+    if len(crazystring) < 4:
+        return 'TEXT IS TOO SMALL IGNORE'
+    return normality.normalize(crazystring)

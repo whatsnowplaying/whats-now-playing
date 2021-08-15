@@ -24,10 +24,15 @@ jobs:
           python-version: 3.9
       - name: install dependencies
         run: |
+          brew update --preinstall
+          brew install pkg-config icu4c
+          export PATH="/usr/local/opt/icu4c/bin:/usr/local/opt/icu4c/sbin:${PATH}"
+          export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/opt/icu4c/lib/pkgconfig"
           python3 -m venv /tmp/venv
           source /tmp/venv/bin/activate
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -r requirements-macosx.txt
           vendoring sync
           pip install .
       - name: tests
@@ -69,10 +74,15 @@ jobs:
           python-version: 3.9
       - name: install dependencies
         run: |
+          brew update --preinstall
+          brew install pkg-config icu4c
+          export PATH="/usr/local/opt/icu4c/bin:/usr/local/opt/icu4c/sbin:${PATH}"
+          export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/opt/icu4c/lib/pkgconfig"
           python3 -m venv /tmp/venv
           source /tmp/venv/bin/activate
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -r requirements-macosx.txt
           vendoring sync
           pip install .
       - name: tests

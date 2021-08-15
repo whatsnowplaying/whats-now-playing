@@ -6,6 +6,7 @@ lxml==4.7.1
 netifaces==0.11.0
 musicbrainzngs==0.7.1
 netifaces==0.11.0
+normality==2.3.0
 obs-websocket-py==0.5.3
 pillow==9.0.0
 psutil==5.8.0

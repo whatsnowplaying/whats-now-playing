@@ -5,7 +5,6 @@
 import json
 import os
 import pathlib
-import string
 import subprocess
 import sys
 import time
@@ -24,6 +23,7 @@ import nowplaying.config
 from nowplaying.recognition import RecognitionPlugin
 from nowplaying.exceptions import PluginVerifyError
 import nowplaying.musicbrainz
+import nowplaying.utils
 
 import nowplaying.version
 
@@ -36,8 +36,6 @@ class Plugin(RecognitionPlugin):
         self.qwidget = None
         self.musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
             self.config)
-        self.wstrans = str.maketrans('', '',
-                                     string.whitespace + string.punctuation)
         self.acoustidmd = {}
         self.fpcalcexe = None
 
@@ -106,19 +104,14 @@ class Plugin(RecognitionPlugin):
 
         return results['results']
 
-    def _simplestring(self, mystr):
-        if not mystr:
-            return None
-        if len(mystr) < 4:
-            return 'THIS TEXT IS TOO SMALL SO IGNORE IT'
-        return mystr.lower().translate(self.wstrans)
-
     def _read_acoustid_tuples(self, results):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
-        fnstr = self._simplestring(self.acoustidmd['filename'])
+        fnstr = nowplaying.utils.normalize(self.acoustidmd['filename'])
         if 'artist' in self.acoustidmd and self.acoustidmd['artist']:
-            fnstr = fnstr + self._simplestring(self.acoustidmd['artist'])
+            fnstr = fnstr + nowplaying.utils.normalize(
+                self.acoustidmd['artist'])
         if 'title' in self.acoustidmd and self.acoustidmd['title']:
-            fnstr = fnstr + self._simplestring(self.acoustidmd['title'])
+            fnstr = fnstr + nowplaying.utils.normalize(
+                self.acoustidmd['title'])
 
         lastscore = 0
         artistlist = []
@@ -152,12 +145,12 @@ class Plugin(RecognitionPlugin):
                                 albumartist = artist
                             if albumartist == 'Various Artists':
                                 score = score - .10
-                            elif albumartist and self._simplestring(
+                            elif albumartist and nowplaying.utils.normalize(
                                     albumartist) in fnstr:
                                 score = score + .20
 
                     title = release['mediums'][0]['tracks'][0]['title']
-                    if title and self._simplestring(title) in fnstr:
+                    if title and nowplaying.utils.normalize(title) in fnstr:
                         score = score + .10
                     artistlist = []
                     for trackartist in release['mediums'][0]['tracks'][0][
@@ -166,7 +159,7 @@ class Plugin(RecognitionPlugin):
                             artistlist.append(trackartist['name'])
                         elif isinstance(trackartist, str):
                             artistlist.append(trackartist)
-                        if trackartist and self._simplestring(
+                        if trackartist and nowplaying.utils.normalize(
                                 trackartist) in fnstr:
                             score = score + .10
 
