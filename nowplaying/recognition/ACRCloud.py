@@ -53,7 +53,7 @@ class Plugin(RecognitionPlugin):
 
         return True
 
-    def recognize(self, metadata):
+    def recognize(self, metadata):  # pylint: disable=too-many-branches
         if not self.config.cparser.value('acrcloud/enabled', type=bool):
             return None
 

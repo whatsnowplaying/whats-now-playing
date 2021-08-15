@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' start of support fo audiodb '''
+''' start of support of theaudiodb '''
 
 from html.parser import HTMLParser
 import logging
@@ -16,10 +16,14 @@ from nowplaying.recognition import RecognitionPlugin
 
 
 class HTMLFilter(HTMLParser):
+    ''' simple class to strip HTML '''
     text = ""
 
     def handle_data(self, data):
         self.text += data
+
+    def error(self, message):
+        logging.debug('HTMLFilter: %s', message)
 
 
 class Plugin(RecognitionPlugin):
