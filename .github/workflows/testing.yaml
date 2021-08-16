@@ -6,12 +6,12 @@
 
 ---
 
-name: pyinstaller
+name: serato-reader
 
 on: [push]  # yamllint disable-line rule:truthy
 
 jobs:
-  pyinstaller-mac:
+  serato-mac:
     runs-on: macos-10.15
     steps:
       - name: checkout
@@ -31,23 +31,27 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-macosx.txt
           vendoring sync
-      - name: pyinstaller
+      - name: tests
+        shell: bash
+        env:
+          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}
+          ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
+          ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
+          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}
         run: |
-          /tmp/venv/bin/pyinstaller NowPlaying.spec
-      - name: manipulate the dist
-        run: |
-          cp -p CHANGELOG* README* LICENSE.txt NOTICE.txt dist
-          cd dist
-          rm -rf NowPLaying
-          zip -r NowPlaying.zip .
-      - name: artifact dist
-        uses: actions/upload-artifact@v2
-        with:
-          name: mac-dist
-          path: dist/NowPlaying.zip
+          if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
+            pushd /tmp
+            curl --location --output fpcalc.tgz \
+              https://github.com/acoustid/chromaprint/releases/download/v1.5.0/chromaprint-fpcalc-1.5.0-macos-x86_64.tar.gz
+            tar xvpf fpcalc.tgz
+            FPCALC=/tmp/chromaprint-fpcalc-1.5.0-macos-x86_64/fpcalc
+            export FPCALC
+            popd
+            source /tmp/venv/bin/activate
+            python3 -m pytest
+          fi
 
-
-  pyinstaller-win:
+  serato-win:
     runs-on: windows-2019
     steps:
       - name: checkout
@@ -75,15 +79,21 @@ jobs:
           #set PYTHONIOENCODING=utf-8
           #set PYTHONLEGACYWINDOWSSTDIO=utf-8
           #vendoring sync
-      - name: pyinstaller
+      - name: tests
+        shell: bash
+        env:
+          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}
+          ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
+          ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
+          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}
         run: |
-          pyinstaller NowPlaying.spec
-          copy CHANGELOG*.* dist
-          copy README*.* dist
-          copy LICENSE.txt dist\LICENSE.txt
-          copy NOTICE.txt dist\NOTICE.txt
-      - name: artifact dist
-        uses: actions/upload-artifact@v2
-        with:
-          name: win-dist
-          path: dist\
+          if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
+            pushd /tmp
+            curl --location --output fpcalc.zip \
+              https://github.com/acoustid/chromaprint/releases/download/v1.5.0/chromaprint-fpcalc-1.5.0-windows-x86_64.zip
+            unzip fpcalc.zip
+            FPCALC=/tmp/chromaprint-fpcalc-1.5.0-windows-x86_64/fpcalc.exe
+            export FPCALC
+            popd
+            python -m pytest
+          fi

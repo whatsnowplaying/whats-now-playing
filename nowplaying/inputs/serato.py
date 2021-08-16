@@ -423,6 +423,8 @@ class SeratoHandler():
             self.url = seratourl
             SeratoHandler.mode = 'remote'
             self.mixmode = 'oldest'  # there is only 1 deck so always newest
+        else:
+            self.url = None
 
         if self.mixmode not in ['newest', 'oldest']:
             self.mixmode = 'newest'
@@ -723,6 +725,12 @@ class SeratoHandler():
         }
 
     def __del__(self):
+        SeratoHandler.decks = {}
+        SeratoHandler.parsedsessions = []
+        SeratoHandler.playingadat = ChunkTrackADAT()
+        SeratoHandler.lastprocessed = 0
+        SeratoHandler.lastfetched = 0
+        SeratoHandler.mode = None
         if self.observer:
             self.observer.stop()
             self.observer.join()
@@ -746,7 +754,6 @@ class Plugin(InputPlugin):
 
     def gethandler(self):
         ''' setup the SeratoHandler for this session '''
-
         stilllocal = self.config.cparser.value('serato/local', type=bool)
 
         # now configured as remote!
