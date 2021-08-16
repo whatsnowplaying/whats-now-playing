@@ -17,9 +17,7 @@ def bootstrap():
     bundledir = os.path.abspath(os.path.dirname(__file__))
     logging.basicConfig(level=logging.DEBUG)
     nowplaying.bootstrap.set_qt_names(appname='testsuite')
-    # need to make sure config is initialized with something
-    config = nowplaying.config.ConfigFile(bundledir=bundledir, testmode=True)
-    return config
+    return nowplaying.config.ConfigFile(bundledir=bundledir, testmode=True)
 
 
 def test_15ghosts2_orig():
