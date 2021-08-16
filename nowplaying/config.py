@@ -26,10 +26,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     LOCK = multiprocessing.RLock()
     PAUSED = False
 
-    def __init__(self, bundledir=None, reset=False):
+    def __init__(self, bundledir=None, reset=False, testmode=False):
 
         ConfigFile.LOCK.acquire()
 
+        self.testmode = testmode
         self.initialized = False
         self.templatedir = os.path.join(
             QStandardPaths.standardLocations(
@@ -244,8 +245,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                 if os.path.exists(testfile):
                     logging.debug('iconfile at %s', testfile)
                     return testfile
-
-        logging.error('Unable to find the icon file. Death only follows.')
+        if not self.testmode:
+            logging.error('Unable to find the icon file. Death only follows.')
         return None
 
     def find_ui_file(self):  # pylint: disable=no-self-use
@@ -260,8 +261,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             if os.path.exists(testfile):
                 logging.debug('ui file at %s', testfile)
                 return testdir
-
-        logging.error('Unable to find the ui dir. Death only follows.')
+        if not self.testmode:
+            logging.error('Unable to find the ui dir. Death only follows.')
         return None
 
     def pause(self):  # pylint: disable=no-self-use

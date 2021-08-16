@@ -223,7 +223,7 @@ class UpgradeTemplates():
         cparser.setValue('settings/newtemplates', True)
 
 
-def set_qt_names(app=None):
+def set_qt_names(app=None, appname=None):
     ''' bootstrap Qt for configuration '''
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     if not app:
@@ -232,7 +232,10 @@ def set_qt_names(app=None):
         app = QCoreApplication()
     app.setOrganizationDomain('com.github.whatsnowplaying')
     app.setOrganizationName('whatsnowplaying')
-    app.setApplicationName('NowPlaying')
+    if not appname:
+        app.setApplicationName('NowPlaying')
+    else:
+        app.setApplicationName(appname)
 
 
 def upgrade(bundledir=None):

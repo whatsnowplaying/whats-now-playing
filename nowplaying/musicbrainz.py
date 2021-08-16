@@ -100,7 +100,7 @@ class MusicBrainzHelper():
                     return None
             return mbdata
 
-        newdata = {}
+        newdata = {'musicbrainzrecordingid': recordingid}
         try:
             mbdata = musicbrainzngs.get_recording_by_id(recordingid,
                                                         includes=['artists'])
