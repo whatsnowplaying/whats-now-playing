@@ -7,12 +7,9 @@ import logging
 import logging.config
 import logging.handlers
 
-import nowplaying.bootstrap
-import nowplaying.config
-import nowplaying.recognition.ACRCloud
-
-from acrcloud.recognizer import ACRCloudRecognizer
-
+import nowplaying.bootstrap # pylint: disable=import-error
+import nowplaying.config # pylint: disable=import-error
+import nowplaying.recognition.ACRCloud # pylint: disable=import-error
 
 def bootstrap():
     ''' bootstrap test '''

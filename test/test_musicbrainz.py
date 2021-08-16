@@ -7,9 +7,9 @@ import logging
 import logging.config
 import logging.handlers
 
-import nowplaying.bootstrap
-import nowplaying.config
-import nowplaying.metadata
+import nowplaying.bootstrap # pylint: disable=import-error
+import nowplaying.config # pylint: disable=import-error
+import nowplaying.metadata # pylint: disable=import-error
 
 
 def bootstrap():
