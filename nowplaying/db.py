@@ -128,7 +128,9 @@ class MetadataDB:
             }
 
         logging.debug('Called write_to_metadb')
-        if not metadata or not MetadataDB.METADATALIST:
+        if (not metadata or not MetadataDB.METADATALIST
+                or 'title' not in metadata or 'artist' not in metadata):
+            logging.debug('metadata is either empty or too incomplete')
             return
 
         if not os.path.exists(self.databasefile):

@@ -6,3 +6,17 @@ destination = "nowplaying/vendor"
 requirements = "vendor.txt"
 namespace = "nowplaying.vendor"
 
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+markers = [
+    "seratosettings: custom settings for serato ",
+]
+qt_api = "pyside2"
+log_cli = true
+addopts = [
+  "--cov=nowplaying",
+  "--cov-config=.coveragerc",
+  "--cov-report=html"
+]

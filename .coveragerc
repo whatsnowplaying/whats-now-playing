@@ -1,0 +1,23 @@
+[run]
+omit =
+  nowplaying/vendor/*
+  nowplaying/version.py
+  nowplaying/__pyinstaller/*
+concurrency = multiprocessing
+relative_files = True
+
+[report]
+ignore_errors = True
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+    raise AssertionError
+    raise NotImplementedError
+    raise PluginVerifyError
+
+[paths]
+source =
+      /home/runner/work/whats-now-playing/whats-now-playing/
+      D:\a\whats-now-playing\whats-now-playing\
+      /Users/runner/work/whats-now-playing/whats-now-playing/

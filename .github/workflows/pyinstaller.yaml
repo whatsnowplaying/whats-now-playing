@@ -27,10 +27,10 @@ jobs:
           python3 -m venv /tmp/venv
           source /tmp/venv/bin/activate
           python3 -m pip install --upgrade pip
-          pip install .
           pip install -r requirements.txt
           pip install -r requirements-macosx.txt
           vendoring sync
+          pip install .
       - name: pyinstaller
         run: |
           /tmp/venv/bin/pyinstaller NowPlaying.spec
@@ -45,6 +45,7 @@ jobs:
         with:
           name: mac-dist
           path: dist/NowPlaying.zip
+
 
   pyinstaller-win:
     runs-on: windows-2019
@@ -64,6 +65,7 @@ jobs:
           python fix_win_ver.py
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -r requirements-windows.txt
           pip install .
           #
           # we are going to have to rely upon the checked in version

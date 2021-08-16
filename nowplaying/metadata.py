@@ -15,9 +15,12 @@ import nowplaying.vendor.tinytag
 
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
     ''' Run through a bunch of different metadata processors '''
-    def __init__(self, metadata):
+    def __init__(self, metadata, config=None):
         self.metadata = metadata
-        self.config = nowplaying.config.ConfigFile()
+        if config:
+            self.config = config
+        else:
+            self.config = nowplaying.config.ConfigFile()
 
         if 'filename' not in self.metadata:
             logging.debug('No filename')
