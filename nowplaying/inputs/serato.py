@@ -423,6 +423,8 @@ class SeratoHandler():
             self.url = seratourl
             SeratoHandler.mode = 'remote'
             self.mixmode = 'oldest'  # there is only 1 deck so always newest
+        else:
+            self.url = None
 
         if self.mixmode not in ['newest', 'oldest']:
             self.mixmode = 'newest'
@@ -722,11 +724,21 @@ class SeratoHandler():
             and getattr(SeratoHandler.playingadat, key)
         }
 
-    def __del__(self):
+    def stop(self):  # pylint: disable=no-self-use
+        ''' stop serato handler '''
+        SeratoHandler.decks = {}
+        SeratoHandler.parsedsessions = []
+        SeratoHandler.playingadat = ChunkTrackADAT()
+        SeratoHandler.lastprocessed = 0
+        SeratoHandler.lastfetched = 0
+        SeratoHandler.mode = 'local'
         if self.observer:
             self.observer.stop()
             self.observer.join()
             self.observer = None
+
+    def __del__(self):
+        self.stop()
 
 
 class Plugin(InputPlugin):
@@ -746,7 +758,6 @@ class Plugin(InputPlugin):
 
     def gethandler(self):
         ''' setup the SeratoHandler for this session '''
-
         stilllocal = self.config.cparser.value('serato/local', type=bool)
 
         # now configured as remote!
@@ -854,7 +865,9 @@ class Plugin(InputPlugin):
         return 'newest'
 
     def stop(self):
-        ''' not needed for serato plugin '''
+        ''' stop the handler '''
+        if self.serato:
+            self.serato.stop()
 
     def on_serato_lib_button(self):
         ''' lib button clicked action'''

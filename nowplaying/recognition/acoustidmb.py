@@ -74,12 +74,15 @@ class Plugin(RecognitionPlugin):
         if not results:
             return None
 
-        if 'error' in results and 'rate limit' in results['error']['message']:
-            logging.info('Giving up; rate limit exceeded')
+        if 'error' in results:
+            logging.error('Aborting. acoustid responded with: %s',
+                          results['error']['message'])
             return None
 
-        if 'id' in results:
-            self.acoustidmd['acoustidid'] = results['id']
+        if isinstance(results['results'], list):
+            self.acoustidmd['acoustidid'] = results['results'][0]['id']
+        elif 'id' in results:
+            self.acoustidmd['acoustidid'] = results['results']['id']
         return acoustid.parse_lookup_result(results)
 
     def _simplestring(self, mystr):
@@ -132,7 +135,7 @@ class Plugin(RecognitionPlugin):
                 return None
 
             fpcalcexe = self.config.cparser.value('acoustidmb/fpcalcexe')
-            if not os.environ.get("FPCALC"):
+            if fpcalcexe and not os.environ.get("FPCALC"):
                 os.environ.setdefault("FPCALC", fpcalcexe)
                 os.environ["FPCALC"] = fpcalcexe
 
@@ -142,6 +145,7 @@ class Plugin(RecognitionPlugin):
                 return self.acoustidmd
 
             self._read_acoustid_tuples(results)
+
         if 'musicbrainzrecordingid' not in self.acoustidmd:
             logging.info('acoustidmb did not find a musicbrainz rid %s.',
                          metadata['filename'])

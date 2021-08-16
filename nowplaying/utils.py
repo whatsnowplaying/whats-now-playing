@@ -5,7 +5,6 @@ import importlib
 import logging
 import pkgutil
 import os
-import sys
 
 import jinja2
 
@@ -76,7 +75,7 @@ def getmoremetadata(metadata=None):
     try:
         myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata)
         metadata = myclass.metadata
-    except Exception as error:  # pylint: disable=broad-except
+    except IOError as error:  # pylint: disable=broad-except
         logging.error('MetadataProcessor failed for %s with %s',
                       metadata['filename'], error)
 
@@ -114,7 +113,8 @@ def import_plugins(namespace):
         '''
         prefix = ns_pkg.__name__ + "."
         for pkg in pkgutil.iter_modules(ns_pkg.__path__, prefix):
-            yield pkg[1]
+            if 'test' not in pkg[1]:
+                yield pkg[1]
 
         # special handling when the package is bundled with PyInstaller
         # See https://github.com/pyinstaller/pyinstaller/issues/1905#issuecomment-445787510
@@ -132,14 +132,3 @@ def import_plugins(namespace):
         for name in iter_ns(namespace)
     }
     return plugins
-
-
-def main():
-    ''' entry point as a standalone app'''
-    metadata = {'filename': sys.argv[1]}
-    metadata = getmoremetadata(metadata)
-    print(metadata)
-
-
-if __name__ == "__main__":
-    main()

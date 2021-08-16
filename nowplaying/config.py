@@ -26,10 +26,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     LOCK = multiprocessing.RLock()
     PAUSED = False
 
-    def __init__(self, bundledir=None, reset=False):
+    def __init__(self, bundledir=None, reset=False, testmode=False):
 
         ConfigFile.LOCK.acquire()
 
+        self.testmode = testmode
         self.initialized = False
         self.templatedir = os.path.join(
             QStandardPaths.standardLocations(
@@ -47,9 +48,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         else:
             self.qsettingsformat = QSettings.NativeFormat
 
-        self.iconfile = self.find_icon_file()
-        self.uidir = self.find_ui_file()
-
         self.cparser = QSettings(self.qsettingsformat, QSettings.UserScope,
                                  QCoreApplication.organizationName(),
                                  QCoreApplication.applicationName())
@@ -63,6 +61,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.plugins = {}
         self.pluginobjs = {}
 
+        if self.testmode:
+            self.cparser.setValue('testmode/enabled', True)
+
         self._initial_plugins()
 
         self.defaults()
@@ -71,6 +72,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             self.save()
         else:
             self.get()
+
+        self.iconfile = self.find_icon_file()
+        self.uidir = self.find_ui_file()
 
         ConfigFile.LOCK.release()
 
@@ -245,7 +249,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                     logging.debug('iconfile at %s', testfile)
                     return testfile
 
-        logging.error('Unable to find the icon file. Death only follows.')
+        if not self.testmode:
+            self.testmode = self.cparser.value('testmode/enabled')
+
+        if not self.testmode:
+            logging.error('Unable to find the icon file. Death only follows.')
         return None
 
     def find_ui_file(self):  # pylint: disable=no-self-use
@@ -261,7 +269,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                 logging.debug('ui file at %s', testfile)
                 return testdir
 
-        logging.error('Unable to find the ui dir. Death only follows.')
+        if not self.testmode:
+            self.testmode = self.cparser.value('testmode/enabled')
+
+        if not self.testmode:
+            logging.error('Unable to find the ui dir. Death only follows.')
         return None
 
     def pause(self):  # pylint: disable=no-self-use

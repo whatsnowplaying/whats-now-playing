@@ -1,0 +1,222 @@
+# This workflow file generates binaries for both Windows
+# and OS X.  However, https://github.com/actions/upload-artifact/issues/38
+# that basically says that it won't ever preserve permissions.
+# That means an archive in an archive since we need to preserve them
+# on OS X.  Still... better than doing this all by hand.
+
+---
+
+name: testing
+
+on: [push]  # yamllint disable-line rule:truthy
+
+jobs:
+  testing-mac:
+    runs-on: macos-10.15
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: install dependencies
+        run: |
+          python3 -m venv /tmp/venv
+          source /tmp/venv/bin/activate
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-macosx.txt
+          vendoring sync
+          pip install .
+      - name: tests
+        shell: bash
+        env:
+          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}
+          ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
+          ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
+          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}
+        run: |
+          if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
+            pushd /tmp
+            curl --location --output fpcalc.tgz \
+              https://github.com/acoustid/chromaprint/releases/download/v1.5.0/chromaprint-fpcalc-1.5.0-macos-x86_64.tar.gz
+            tar xvpf fpcalc.tgz
+            FPCALC=/tmp/chromaprint-fpcalc-1.5.0-macos-x86_64/fpcalc
+            export FPCALC
+            popd
+            source /tmp/venv/bin/activate
+            python3 -m pytest
+          fi
+      - name: artifact mac test
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: mac-coverage
+          path: |
+            .coverage
+            .coverage.*
+            htmlcov
+
+
+  testing-win:
+    runs-on: windows-2019
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: update tags
+        run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: install dependencies
+        run: |
+          python fix_win_ver.py
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-windows.txt
+          pip install .
+          #
+          # we are going to have to rely upon the checked in version
+          # for now since vendoring is broken on Windows
+          # see https://github.com/pradyunsg/vendoring/issues/33
+          #
+          #set PYTHONIOENCODING=utf-8
+          #set PYTHONLEGACYWINDOWSSTDIO=utf-8
+          #vendoring sync
+      - name: tests
+        shell: bash
+        env:
+          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}
+          ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
+          ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
+          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}
+        run: |
+          if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
+            pushd /tmp
+            curl --location --output fpcalc.zip \
+              https://github.com/acoustid/chromaprint/releases/download/v1.5.0/chromaprint-fpcalc-1.5.0-windows-x86_64.zip
+            unzip fpcalc.zip
+            FPCALC=/tmp/chromaprint-fpcalc-1.5.0-windows-x86_64/fpcalc.exe
+            export FPCALC
+            popd
+            python -m pytest
+          fi
+      - name: artifact windows test
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: win-coverage
+          path: |
+            .coverage
+            .coverage.*
+            htmlcov
+
+  testing-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            --no-install-recommends \
+            --no-install-suggests \
+            libchromaprint-tools \
+            libdbus-1-dev \
+            python3-dbus \
+            python3-pip
+
+          #
+          #
+          # dbus breaks venv so just skip it
+          # since we are just doing unit tests
+          #
+          #
+          # python3 -m venv /tmp/venv
+          # source /tmp/venv/bin/activate
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-linux.txt
+          vendoring sync
+          pip install .
+      - name: tests
+        shell: bash
+        env:
+          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}
+          ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
+          ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
+          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}
+        run: |
+          if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
+            pushd /tmp
+            FPCALC=/usr/bin/fpcalc
+            export FPCALC
+            popd
+            #source /tmp/venv/bin/activate
+            python3 -m pytest
+          fi
+      - name: artifact linux test
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: linux-coverage
+          path: |
+            .coverage
+            .coverage.*
+            htmlcov
+
+  merge:
+    if: always()
+    needs:
+      - testing-mac
+      - testing-win
+      - testing-linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: install dependencies
+        run: |
+          python3 -m venv /tmp/venv
+          source /tmp/venv/bin/activate
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: download coverage files
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+      - name: display artifacts
+        run: ls -aR
+        working-directory: artifacts
+      - name: merge coverage files
+        run: |
+          source /tmp/venv/bin/activate
+          coverage combine artifacts/*/.coverage artifacts/*/.coverage.*
+          coverage html
+      - name: artifact full tests
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: full-coverage
+          path: |
+            .coverage
+            htmlcov

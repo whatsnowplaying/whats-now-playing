@@ -3,7 +3,6 @@
 
 import logging
 import os
-import sys
 
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
@@ -13,8 +12,6 @@ from PySide2.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 from nowplaying.inputs import InputPlugin
 from nowplaying.exceptions import PluginVerifyError
-import nowplaying.bootstrap
-import nowplaying.utils
 
 # https://datatracker.ietf.org/doc/html/rfc8216
 
@@ -22,12 +19,15 @@ import nowplaying.utils
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
 
-    metadata = {'artist': None, 'title': None}
+    metadata = {'artist': None, 'title': None, 'filename': None}
 
     def __init__(self, config=None, m3udir=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
+        if m3udir and os.path.exists(m3udir):
+            self.m3udir = m3udir
+        else:
+            self.m3udir = None
 
-        self.m3udir = m3udir
         self.mixmode = "newest"
         self.event_handler = None
         self.observer = None
@@ -45,8 +45,11 @@ class Plugin(InputPlugin):
             return
 
         logging.info('Watching for changes on %s', self.m3udir)
+        #if len(os.listdir(self.m3udir)) < 1:
+        #    pathlib.Path(os.path.join(self.m3udir, 'empty.m3u')).touch()
+
         self.event_handler = PatternMatchingEventHandler(
-            patterns=['*.m3u'],
+            patterns=['*.m3u', '*.m3u8'],
             ignore_patterns=['.DS_Store'],
             ignore_directories=True,
             case_sensitive=False)
@@ -65,11 +68,28 @@ class Plugin(InputPlugin):
 
         filename = event.src_path
         logging.debug('got %s', filename)
-        with open(filename, 'r', errors='ignore') as m3ufh:
-            content = m3ufh.readlines()[-1]
 
-        logging.debug('attempting to read %s', content)
-        content = content.rstrip()
+        # file is empty so ignore it
+        if os.stat(filename).st_size == 0:
+            logging.debug('%s is empty, ignoring for now.', filename)
+            return
+
+        content = None
+        with open(filename, 'r', errors='ignore') as m3ufh:
+            while True:
+                newline = m3ufh.readline()
+                if not newline:
+                    break
+                newline = newline.strip()
+                if not newline or newline[0] == '#':
+                    continue
+                content = newline
+
+        logging.debug('attempting to read \'%s\'', content)
+
+        if not content:
+            return
+
         content = content.replace('file://', '')
         if not os.path.exists(content):
             dirpath = os.path.dirname(filename)
@@ -80,16 +100,11 @@ class Plugin(InputPlugin):
                 logging.error('Unable to read %s', content)
                 return
         newmeta = {'filename': content}
-        newmeta = nowplaying.utils.getmoremetadata(newmeta)
-        if 'artist' not in newmeta:
-            newmeta['artist'] = None
-        if 'title' not in newmeta:
-            newmeta['title'] = None
         Plugin.metadata = newmeta
 
     def getplayingtrack(self):  #pylint: disable=no-self-use
         ''' wrapper to call getplayingtrack '''
-        return Plugin.metadata['artist'], Plugin.metadata['title']
+        return None, Plugin.metadata['filename']
 
     def getplayingmetadata(self):  #pylint: disable=no-self-use
         ''' wrapper to call getplayingmetadata '''
@@ -112,6 +127,7 @@ class Plugin(InputPlugin):
 
     def stop(self):
         ''' stop the m3u plugin '''
+        Plugin.metadata = {'artist': None, 'title': None, 'filename': None}
         if self.observer:
             self.observer.stop()
             self.observer.join()
@@ -156,30 +172,3 @@ class Plugin(InputPlugin):
         ''' description '''
         qwidget.setText('M3U is a generic playlist format that is supported '
                         'by a wide variety of tools, including Virtual DJ.')
-
-
-def main():
-    ''' entry point as a standalone app'''
-
-    logging.basicConfig(level=logging.DEBUG)
-
-    bundledir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-
-    nowplaying.bootstrap.set_qt_names()
-
-    # need to make sure config is initialized with something
-    config = nowplaying.config.ConfigFile(bundledir=bundledir)
-    plugin = Plugin(config=config, m3udir=os.path.dirname(sys.argv[1]))
-    plugin._read_track(sys.argv[1])  # pylint: disable=protected-access
-    print('playing track:')
-    print(plugin.getplayingtrack())
-    print('metadata:')
-    metadata = plugin.getplayingmetadata()
-    if 'coverimageraw' in metadata:
-        print('got image')
-        del metadata['coverimageraw']
-    print(metadata)
-
-
-if __name__ == "__main__":
-    main()
