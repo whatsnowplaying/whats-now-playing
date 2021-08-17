@@ -56,18 +56,19 @@ def test_serato24_mac_oldest():
     plugin.serato.__del__()
     assert artist == 'LĪVE'
     assert title == 'Take My Anthem'
-    expected = {}
-    expected['album'] = 'Mental Jewelry'
-    expected['artist'] = artist
-    expected['bpm'] = 109
-    expected['date'] = '1991'
-    expected['deck'] = 2
-    expected[
-        'filename'] = '/Users/aw/Music/songs/LĪVE/Mental Jewelry/08 Take My Anthem.mp3'
-    expected['genre'] = 'Rock'
-    expected['key'] = 'G#m'
-    expected['label'] = 'Radioactive Records'
-    expected['title'] = title
+    expected = {
+        'album': 'Mental Jewelry',
+        'artist': artist,
+        'bpm': 109,
+        'date': '1991',
+        'deck': 2,
+        'filename': '/Users/aw/Music/songs/LĪVE/Mental Jewelry/08 Take My Anthem.mp3',
+        'genre': 'Rock',
+        'key': 'G#m',
+        'label': 'Radioactive Records',
+        'title': title,
+    }
+
     testresults(expected, metadata)
 
 
@@ -88,18 +89,19 @@ def test_serato24_mac_newest():
     plugin.serato.__del__()
     assert artist == 'LĪVE'
     assert title == 'Lakini\'s Juice'
-    expected = {}
-    expected['album'] = 'Secret Samadhi'
-    expected['artist'] = artist
-    expected['bpm'] = 91
-    expected['date'] = '1997'
-    expected['deck'] = 1
-    expected[
-        'filename'] = '/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini\'s Juice.mp3'
-    expected['genre'] = 'Rock'
-    expected['key'] = 'C#m'
-    expected['label'] = 'Radioactive Records'
-    expected['title'] = title
+    expected = {
+        'album': 'Secret Samadhi',
+        'artist': artist,
+        'bpm': 91,
+        'date': '1997',
+        'deck': 1,
+        'filename': "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3",
+        'genre': 'Rock',
+        'key': 'C#m',
+        'label': 'Radioactive Records',
+        'title': title,
+    }
+
     testresults(expected, metadata)
 
 
@@ -120,17 +122,17 @@ def test_serato25_win_oldest():
     plugin.serato.__del__()
     assert artist == 'Broke For Free'
     assert title == 'Night Owl'
-    expected = {}
-    expected['album'] = 'Directionless EP'
-    expected['artist'] = artist
-    expected[
-        'comments'] = 'URL: http://freemusicarchive.org/music/Broke_For_Free/Directionless_EP/Broke_For_Free_-_Directionless_EP_-_01_Night_Owl\r\nComments: http://freemusicarchive.org/\r\nCurator: WFMU\r\nCopyright: Creative Commons Attribution: http://creativecommons.org/licenses/by/3.0/'
-    expected['date'] = '2011-01-18T11:15:40'
-    expected['deck'] = 2
-    expected[
-        'filename'] = 'C:\\Users\\aw\\Music\\Broke For Free - Night Owl.mp3'
-    expected['genre'] = 'Electronic'
-    expected['title'] = title
+    expected = {
+        'album': 'Directionless EP',
+        'artist': artist,
+        'comments': 'URL: http://freemusicarchive.org/music/Broke_For_Free/Directionless_EP/Broke_For_Free_-_Directionless_EP_-_01_Night_Owl\r\nComments: http://freemusicarchive.org/\r\nCurator: WFMU\r\nCopyright: Creative Commons Attribution: http://creativecommons.org/licenses/by/3.0/',
+        'date': '2011-01-18T11:15:40',
+        'deck': 2,
+        'filename': 'C:\\Users\\aw\\Music\\Broke For Free - Night Owl.mp3',
+        'genre': 'Electronic',
+        'title': title,
+    }
+
     testresults(expected, metadata)
 
 
@@ -151,14 +153,16 @@ def test_serato25_win_newest():
     plugin.serato.__del__()
     assert artist == 'Bio Unit'
     assert title == 'Heaven'
-    expected = {}
-    expected['album'] = 'Ampex'
-    expected['artist'] = artist
-    expected['date'] = '2020'
-    expected['deck'] = 1
-    expected['filename'] = 'C:\\Users\\aw\\Music\\Bio Unit - Heaven.mp3'
-    expected['genre'] = 'Electronica'
-    expected['title'] = title
+    expected = {
+        'album': 'Ampex',
+        'artist': artist,
+        'date': '2020',
+        'deck': 1,
+        'filename': 'C:\\Users\\aw\\Music\\Bio Unit - Heaven.mp3',
+        'genre': 'Electronica',
+        'title': title,
+    }
+
     testresults(expected, metadata)
 
 
