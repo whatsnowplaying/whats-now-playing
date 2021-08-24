@@ -79,18 +79,15 @@ class Plugin(InputPlugin):
         logging.debug('got %s', filename)
 
         content = None
-        m3ufh = open(filename, 'r', errors='ignore')
-        while True:
-            newline = m3ufh.readline()
-            if not newline:
-                break
-            newline = newline.strip()
-            if not newline or newline[0] == '#':
-                continue
-            if newline:
+        with open(filename, 'r', errors='ignore') as m3ufh:
+            while True:
+                newline = m3ufh.readline()
+                if not newline:
+                    break
+                newline = newline.strip()
+                if not newline or newline[0] == '#':
+                    continue
                 content = newline
-        m3ufh.close()
-
         logging.debug('attempting to read %s', content)
         content = content.rstrip()
         content = content.replace('file://', '')
