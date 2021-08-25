@@ -120,10 +120,10 @@ def import_plugins(namespace):
         # See https://github.com/pyinstaller/pyinstaller/issues/1905#issuecomment-445787510
         toc = set()
         for importer in pkgutil.iter_importers(
-                ns_pkg.__name__.partition(".")[0]):
+                ns_pkg.__name__.partition(".")[0]): # pragma: no cover
             if hasattr(importer, 'toc'):
                 toc |= importer.toc
-        for name in toc:
+        for name in toc:                            # pragma: no cover
             if name.startswith(prefix):
                 yield name
 

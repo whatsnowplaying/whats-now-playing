@@ -19,7 +19,7 @@ import nowplaying.version
 
 class UpgradeConfig:
     ''' methods to upgrade from old configs to new configs '''
-    def __init__(self):
+    def __init__(self, testdir=None):
 
         if sys.platform == "win32":
             self.qsettingsformat = QSettings.IniFormat
@@ -30,6 +30,7 @@ class UpgradeConfig:
                                  QCoreApplication.applicationName())
         logging.info('configuration: %s', self.cparser.fileName())
 
+        self.testdir = testdir
         self.copy_old_2_new()
         self.upgrade()
 
@@ -37,10 +38,13 @@ class UpgradeConfig:
         ''' back up the old config '''
         source = self.cparser.fileName()
         datestr = time.strftime("%Y%m%d-%H%M%S")
-        backupdir = os.path.join(
-            QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation)[0],
-            QCoreApplication.applicationName(), 'configbackup')
+        if self.testdir:
+            docpath = self.testdir
+        else:  # pragma: no cover
+            docpath = QStandardPaths.standardLocations(
+                QStandardPaths.DocumentsLocation)[0]
+        backupdir = os.path.join(docpath, QCoreApplication.applicationName(),
+                                 'configbackup')
 
         logging.info('Making a backup of config prior to upgrade.')
         try:
@@ -126,13 +130,17 @@ class UpgradeConfig:
 
 class UpgradeTemplates():
     ''' Upgrade templates '''
-    def __init__(self, bundledir=None):
+    def __init__(self, bundledir=None, testdir=None):
         self.bundledir = bundledir
         self.apptemplatedir = os.path.join(self.bundledir, 'templates')
-        self.usertemplatedir = os.path.join(
-            QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation)[0],
-            QCoreApplication.applicationName(), 'templates')
+        if testdir:
+            self.usertemplatedir = os.path.join(
+                testdir, QCoreApplication.applicationName(), 'templates')
+        else:  # pragma: no cover
+            self.usertemplatedir = os.path.join(
+                QStandardPaths.standardLocations(
+                    QStandardPaths.DocumentsLocation)[0],
+                QCoreApplication.applicationName(), 'templates')
         pathlib.Path(self.usertemplatedir).mkdir(parents=True, exist_ok=True)
         self.alert = False
         self.copied = []

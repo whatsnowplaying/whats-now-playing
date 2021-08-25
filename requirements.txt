@@ -14,6 +14,7 @@ PySide2==5.15.2
 pytest==6.2.4
 pytest-qt==4.0.2
 pytest-cov==2.12.1
+pytest-httpserver==1.0.1
 requests==2.26.0
 Sphinx==4.1.2
 tinytag==1.5.0

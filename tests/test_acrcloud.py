@@ -6,15 +6,15 @@ import pytest
 
 import nowplaying.recognition.ACRCloud  # pylint: disable=import-error
 
-if not os.environ['ACRCLOUD_TEST_KEY']:
+if 'ACRCLOUD_TEST_KEY' not in os.environ:
     pytest.skip("skipping, ACRCLOUD_TEST_KEY is not set",
                 allow_module_level=True)
 
-if not os.environ['ACRCLOUD_TEST_SECRET']:
+if 'ACRCLOUD_TEST_SECRET' not in os.environ:
     pytest.skip("skipping, ACRCLOUD_TEST_SECRET is not set",
                 allow_module_level=True)
 
-if not os.environ['ACRCLOUD_TEST_HOST']:
+if 'ACRCLOUD_TEST_HOST' not in os.environ:
     pytest.skip("skipping, ACRCLOUD_TEST_HOST is not set",
                 allow_module_level=True)
 
