@@ -7,3 +7,4 @@ nowplaying.pyproject.user
 .coverage
 .coverage.*
 htmlcov/
+.pytest_cache

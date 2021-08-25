@@ -15,29 +15,13 @@ import nowplaying.utils  # pylint: disable=import-error
 
 
 @pytest.fixture
-def m3udir():
-    ''' create a temporary directory '''
-    with tempfile.TemporaryDirectory() as newpath:
-        old_cwd = os.getcwd()
-        os.chdir(newpath)
-        yield newpath
-        os.chdir(old_cwd)
-
-
-@pytest.fixture
-def m3u_bootstrap(bootstrap, m3udir):  # pylint: disable=redefined-outer-name
+def m3u_bootstrap(bootstrap):  # pylint: disable=redefined-outer-name
     ''' bootstrap test '''
-    config = bootstrap
-    config.cparser.setValue('m3u/directory', m3udir)
-    config.cparser.sync()
-    yield config
-
-
-def touchdir(directory):
-    ''' serato requires current session files to process '''
-    for file in os.listdir(directory):
-        filename = os.path.join(directory, file)
-        pathlib.Path(filename).touch()
+    with tempfile.TemporaryDirectory() as newpath:
+        config = bootstrap
+        config.cparser.setValue('m3u/directory', newpath)
+        config.cparser.sync()
+        yield config
 
 
 def results(expected, metadata):
@@ -71,6 +55,38 @@ def test_nom3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     assert title is None
 
 
+def test_emptym3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config = m3u_bootstrap
+    mydir = config.cparser.value('m3u/directory')
+    if not os.path.exists(mydir):
+        logging.error('mydir does not exist!')
+    pathlib.Path(os.path.join(mydir, 'fake.m3u')).touch()
+    plugin = nowplaying.inputs.m3u.Plugin(config=config)
+    (artist, title) = plugin.getplayingtrack()
+    plugin.stop()
+    time.sleep(5)
+    assert artist is None
+    assert title is None
+
+
+def test_emptym3u2(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config = m3u_bootstrap
+    mydir = config.cparser.value('m3u/directory')
+    if not os.path.exists(mydir):
+        logging.error('mydir does not exist!')
+    with open(os.path.join(mydir, 'fake.m3u'), 'w') as m3ufh:
+        m3ufh.write(os.linesep)
+        m3ufh.write(os.linesep)
+    plugin = nowplaying.inputs.m3u.Plugin(config=config)
+    (artist, title) = plugin.getplayingtrack()
+    plugin.stop()
+    time.sleep(5)
+    assert artist is None
+    assert title is None
+
+
 def test_no2newm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
@@ -89,15 +105,6 @@ def test_no2newm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-n
     (artist, title) = plugin.getplayingtrack()
     assert artist is None
     assert '15_Ghosts_II_64kb_orig.mp3' in title
-    metadata = plugin.getplayingmetadata()
-    assert '15_Ghosts_II_64kb_orig.mp3' in metadata['filename']
-    metadata = nowplaying.utils.getmoremetadata(metadata)
-    assert metadata['album'] == 'Ghosts I - IV'
-    assert metadata['artist'] == 'Nine Inch Nails'
-    assert metadata['title'] == '15 Ghosts II'
-    assert metadata['bitrate'] == 64000
-    assert metadata['track'] == '15'
-
     plugin.stop()
     time.sleep(2)
 
@@ -116,9 +123,69 @@ def test_no2newm3u8(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-
     m3ufile = os.path.join(mym3udir, 'test.m3u8')
     write_m3u(m3ufile, filename)
     # need to give some time for watcher it pick it up
-    time.sleep(1)
+    time.sleep(2)
     (artist, title) = plugin.getplayingtrack()
     assert artist is None
     assert '15_Ghosts_II_64kb_orig.mp3' in title
+    assert 'tests' in title
+    assert 'audio' in title
+    plugin.stop()
+    time.sleep(2)
+
+
+def test_m3urelative(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config = m3u_bootstrap
+    mym3udir = config.cparser.value('m3u/directory')
+    plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
+    (artist, title) = plugin.getplayingtrack()
+    assert artist is None
+    assert title is None
+
+    filename = os.path.join('fakedir', '15_Ghosts_II_64kb_orig.mp3')
+    pathlib.Path(os.path.join(mym3udir, 'fakedir')).mkdir(parents=True,
+                                                          exist_ok=True)
+    pathlib.Path(os.path.join(mym3udir, filename)).touch()
+    m3ufile = os.path.join(mym3udir, 'test.m3u8')
+    write_m3u(m3ufile, filename)
+    # need to give some time for watcher it pick it up
+    time.sleep(1)
+    (artist, title) = plugin.getplayingtrack()
+    assert artist is None
+    assert filename in title
+
+    plugin.stop()
+    time.sleep(2)
+
+
+def test_m3ustream(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config = m3u_bootstrap
+    mym3udir = config.cparser.value('m3u/directory')
+    plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
+    (artist, title) = plugin.getplayingtrack()
+    assert artist is None
+    assert title is None
+
+    m3ufile = os.path.join(mym3udir, 'test.m3u')
+    write_m3u(m3ufile, 'http://somecooltrack')
+    # need to give some time for watcher it pick it up
+    time.sleep(1)
+    (artist, title) = plugin.getplayingtrack()
+    assert artist is None
+    assert title is None
+
+    plugin.stop()
+    time.sleep(2)
+
+
+def test_m3umixmode(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+    ''' make sure mix mode is always newest '''
+    config = m3u_bootstrap
+    plugin = nowplaying.inputs.m3u.Plugin(config=config)
+    time.sleep(1)
+    assert plugin.validmixmodes()[0] == 'newest'
+    assert plugin.setmixmode('fred') == 'newest'
+    assert plugin.getmixmode() == 'newest'
     plugin.stop()
     time.sleep(2)

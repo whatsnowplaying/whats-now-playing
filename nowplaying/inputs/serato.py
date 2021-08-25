@@ -8,7 +8,6 @@ import logging
 import os
 import pathlib
 import struct
-import sys
 import time
 import traceback
 
@@ -120,14 +119,14 @@ class ChunkParser():  #pylint: disable=too-few-public-methods
     def process(self):
         ''' overridable function meant to process the chunk '''
 
-    def _debug(self):
+    def _debug(self):  # pragma: no cover
         ''' a dumb function to help debug stuff when writing a new chunk '''
         hexbytes = binascii.hexlify(self.data[self.bytecounter:])
         total = len(hexbytes)
         for j in range(1, total + 1, 8):
             logging.debug('_debug: %s', hexbytes[j:j + 7])
 
-    def importantvalues(self):
+    def importantvalues(self):  # pragma: no cover
         ''' another debug function to see when these fields change '''
         for key, value in self.__dict__.items():
             # if key in [
@@ -242,7 +241,7 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
                 self.frequency = self._string()
             elif field == 15:
                 self.bpm = self._numfield()
-            elif field == 16:
+            elif field == 16:  # pragma: no cover
                 self.field16 = self._hex()
             elif field == 17:
                 self.comments = self._string()
@@ -321,7 +320,7 @@ class ChunkVRSN(ChunkParser):  #pylint: disable=too-many-instance-attributes, to
                                      self.data)[0].decode('utf-16-be')
 
 
-class SessionFile():  # pylint: disable=too-few-public-methods
+class SessionFile():  #pylint: disable=too-few-public-methods
     ''' process a session file '''
     def __init__(self, filename=None):
         self.filename = filename
@@ -381,48 +380,41 @@ class SessionFile():  # pylint: disable=too-few-public-methods
                     logging.warning('Skipping chunktype: %s', header.chunktype)
                     break
 
-    def __iter__(self):
+    def __iter__(self):  # pragma: no cover
         yield self
 
 
-class SeratoHandler():
+class SeratoHandler():  #pylint: disable=too-many-instance-attributes
     ''' Generic handler to get the currently playing track.
 
         To use Serato Live Playlits, construct with:
-            SeratoHandler(seratourl='url')
+            self.seratourl='url')
 
 
         To use local Serato directory, construct with:
-            SeratoHandler(seratodir='/path/to/_Serato_/History/Sessions')
+            self.seratodir='/path/to/_Serato_/History/Sessions')
 
     '''
-
-    # These class globals are for trying to keep track of what is
-    # actually on the decks
-
-    decks = {}
-    parsedsessions = []
-    playingadat = ChunkTrackADAT()
-    lastprocessed = 0
-    lastfetched = 0
-    mode = None
-
     def __init__(self, mixmode='oldest', seratodir=None, seratourl=None):
         self.event_handler = None
         self.observer = None
-
+        self.decks = {}
+        self.parsedsessions = []
+        self.playingadat = ChunkTrackADAT()
+        self.lastprocessed = 0
+        self.lastfetched = 0
         if seratodir:
             self.seratodir = seratodir
             self.watchdeck = None
-            SeratoHandler.parsedsessions = []
-            SeratoHandler.mode = 'local'
+            self.parsedsessions = []
+            self.mode = 'local'
             self.mixmode = mixmode
             self._setup_watcher()
 
         if seratourl:
             self.url = seratourl
-            SeratoHandler.mode = 'remote'
-            self.mixmode = 'oldest'  # there is only 1 deck so always newest
+            self.mode = 'remote'
+            self.mixmode = 'newest'  # there is only 1 deck so always newest
         else:
             self.url = None
 
@@ -451,11 +443,11 @@ class SeratoHandler():
 
         logging.debug('processing %s path', path)
 
-        if SeratoHandler.mode == 'remote':
+        if self.mode == 'remote':
             return
 
         logging.debug('triggered by watcher')
-        SeratoHandler.parsedsessions = []
+        self.parsedsessions = []
 
         # Just nuke the OS X metadata file rather than
         # work around it
@@ -496,18 +488,18 @@ class SeratoHandler():
                 logging.debug('ignoring %s; too old', file)
                 continue
 
-            SeratoHandler.lastprocessed = filetimestamp
+            self.lastprocessed = filetimestamp
             logging.debug('processing %s', sessionfilename)
-            SeratoHandler.parsedsessions.append(SessionFile(sessionfilename))
+            self.parsedsessions.append(SessionFile(sessionfilename))
 
     def computedecks(self, deckskiplist=None):  # pylint: disable=no-self-use
         ''' based upon the session data, figure out what is actually
             on each deck '''
 
-        if SeratoHandler.mode == 'remote':
+        if self.mode == 'remote':
             return
 
-        SeratoHandler.decks = {}
+        self.decks = {}
 
         # keep track of each deck. run through
         # the session files trying to find
@@ -516,28 +508,28 @@ class SeratoHandler():
         # playtime is _ONLY_ set when that deck
         # has been reloaded!
 
-        for index in reversed(SeratoHandler.parsedsessions):
+        for index in reversed(self.parsedsessions):
             for adat in index.adats:
                 if deckskiplist and str(adat.deck) in deckskiplist:
                     continue
                 if 'playtime' in adat and adat.playtime > 0:
                     continue
-                if (adat.deck in SeratoHandler.decks and adat.updatedat <
-                        SeratoHandler.decks[adat.deck].updatedat):
+                if (adat.deck in self.decks
+                        and adat.updatedat < self.decks[adat.deck].updatedat):
                     continue
                 logging.debug('Setting deck: %d artist: %s title: %s',
                               adat.deck, adat.artist, adat.title)
-                SeratoHandler.decks[adat.deck] = adat
+                self.decks[adat.deck] = adat
 
     def computeplaying(self):  # pylint: disable=no-self-use
         ''' set the adat for the playing track based upon the
             computed decks '''
 
-        if SeratoHandler.mode == 'remote':
+        if self.mode == 'remote':
             logging.debug('in remote mode; skipping')
             return
 
-        # at this point, SeratoHandler.decks should have
+        # at this point, self.decks should have
         # all decks with their _most recent_ unplayed tracks
 
         # under most normal operations, we should expect
@@ -565,60 +557,55 @@ class SeratoHandler():
         # e.g., unless you are changing more than two decks at
         # once, this behavior should be the expected result
 
-        SeratoHandler.playingadat = ChunkTrackADAT()
+        self.playingadat = ChunkTrackADAT()
 
         logging.debug('mixmode: %s', self.mixmode)
 
         if self.mixmode == 'newest':
-            SeratoHandler.playingadat.starttime = datetime.datetime.fromtimestamp(
-                0)
-            SeratoHandler.playingadat.updatedat = SeratoHandler.playingadat.starttime
+            self.playingadat.starttime = datetime.datetime.fromtimestamp(0)
+            self.playingadat.updatedat = self.playingadat.starttime
 
         logging.debug('Find the current playing deck. Starting at time: %s',
-                      SeratoHandler.playingadat.starttime)
-        for deck in SeratoHandler.decks:
-            if self.mixmode == 'newest' and SeratoHandler.decks[
-                    deck].starttime > SeratoHandler.playingadat.starttime:
-                SeratoHandler.playingadat = SeratoHandler.decks[deck]
+                      self.playingadat.starttime)
+        for deck in self.decks:
+            if self.mixmode == 'newest' and self.decks[
+                    deck].starttime > self.playingadat.starttime:
+                self.playingadat = self.decks[deck]
                 logging.debug(
                     'Playing = time: %s deck: %d artist: %s title %s',
-                    SeratoHandler.playingadat.starttime,
-                    SeratoHandler.playingadat.deck,
-                    SeratoHandler.playingadat.artist,
-                    SeratoHandler.playingadat.title)
-            elif self.mixmode == 'oldest' and SeratoHandler.decks[
-                    deck].starttime < SeratoHandler.playingadat.starttime:
-                SeratoHandler.playingadat = SeratoHandler.decks[deck]
+                    self.playingadat.starttime, self.playingadat.deck,
+                    self.playingadat.artist, self.playingadat.title)
+            elif self.mixmode == 'oldest' and self.decks[
+                    deck].starttime < self.playingadat.starttime:
+                self.playingadat = self.decks[deck]
                 logging.debug(
                     'Playing = time: %s deck: %d artist: %s title %s',
-                    SeratoHandler.playingadat.starttime,
-                    SeratoHandler.playingadat.deck,
-                    SeratoHandler.playingadat.artist,
-                    SeratoHandler.playingadat.title)
+                    self.playingadat.starttime, self.playingadat.deck,
+                    self.playingadat.artist, self.playingadat.title)
 
     def getlocalplayingtrack(self, deckskiplist=None):
         ''' parse out last track from binary session file
             get latest session file
         '''
 
-        if SeratoHandler.mode == 'remote':
+        if self.mode == 'remote':
             logging.debug('in remote mode; skipping')
             return None, None
 
-        if not SeratoHandler.lastfetched or \
-           SeratoHandler.lastprocessed >= SeratoHandler.lastfetched:
-            SeratoHandler.lastfetched = SeratoHandler.lastprocessed + 1
+        if not self.lastfetched or \
+           self.lastprocessed >= self.lastfetched:
+            self.lastfetched = self.lastprocessed + 1
             self.computedecks(deckskiplist=deckskiplist)
             self.computeplaying()
 
-        if SeratoHandler.playingadat:
-            return SeratoHandler.playingadat.artist, SeratoHandler.playingadat.title
+        if self.playingadat:
+            return self.playingadat.artist, self.playingadat.title
         return None, None
 
     def getremoteplayingtrack(self):  # pylint: disable=too-many-return-statements, too-many-branches
         ''' get the currently playing title from Live Playlists '''
 
-        if SeratoHandler.mode == 'local':
+        if self.mode == 'local':
             logging.debug('in local mode; skipping')
             return None, None
 
@@ -658,7 +645,7 @@ class SeratoHandler():
         tdat = tdat.strip()
 
         if not tdat:
-            SeratoHandler.playingadat = ChunkTrackADAT()
+            self.playingadat = ChunkTrackADAT()
             return None, None
 
         if ' - ' not in tdat:
@@ -676,35 +663,35 @@ class SeratoHandler():
         else:
             artist = artist.strip()
 
-        SeratoHandler.playingadat.artist = artist
+        self.playingadat.artist = artist
 
         if not title or title == '.':
             title = None
         else:
             title = title.strip()
 
-        SeratoHandler.playingadat.title = title
+        self.playingadat.title = title
 
         if not title and not artist:
-            SeratoHandler.playingadat = ChunkTrackADAT()
+            self.playingadat = ChunkTrackADAT()
 
         return artist, title
 
     def getplayingtrack(self, deckskiplist=None):
         ''' generate a dict of data '''
 
-        if SeratoHandler.mode == 'local':
+        if self.mode == 'local':
             return self.getlocalplayingtrack(deckskiplist=deckskiplist)
         return self.getremoteplayingtrack()
 
     def getplayingmetadata(self):  #pylint: disable=no-self-use
         ''' take the current adat and generate a media dict '''
 
-        if not SeratoHandler.playingadat:
+        if not self.playingadat:
             return None
 
         return {
-            key: getattr(SeratoHandler.playingadat, key)
+            key: getattr(self.playingadat, key)
             for key in [
                 'album',
                 'artist',
@@ -720,18 +707,17 @@ class SeratoHandler():
                 'label',
                 'lang',
                 'title',
-            ] if hasattr(SeratoHandler.playingadat, key)
-            and getattr(SeratoHandler.playingadat, key)
+            ] if hasattr(self.playingadat, key)
+            and getattr(self.playingadat, key)
         }
 
     def stop(self):  # pylint: disable=no-self-use
         ''' stop serato handler '''
-        SeratoHandler.decks = {}
-        SeratoHandler.parsedsessions = []
-        SeratoHandler.playingadat = ChunkTrackADAT()
-        SeratoHandler.lastprocessed = 0
-        SeratoHandler.lastfetched = 0
-        SeratoHandler.mode = 'local'
+        self.decks = {}
+        self.parsedsessions = []
+        self.playingadat = ChunkTrackADAT()
+        self.lastprocessed = 0
+        self.lastfetched = 0
         if self.observer:
             self.observer.stop()
             self.observer.join()
@@ -758,6 +744,7 @@ class Plugin(InputPlugin):
 
     def gethandler(self):
         ''' setup the SeratoHandler for this session '''
+
         stilllocal = self.config.cparser.value('serato/local', type=bool)
 
         # now configured as remote!
@@ -771,6 +758,8 @@ class Plugin(InputPlugin):
             logging.debug('new url = %s', stillurl)
             self.local = stilllocal
             self.url = stillurl
+            if self.serato:
+                self.serato.stop()
             self.serato = SeratoHandler(seratourl=self.url)
             return
 
@@ -847,13 +836,14 @@ class Plugin(InputPlugin):
 
     def setmixmode(self, mixmode):
         ''' set the mixmode '''
+        if mixmode not in ['newest', 'oldest']:
+            mixmode = self.config.cparser.value('serato/mixmode')
 
-        if self.config.cparser.value('serato/local', type=bool):
-            self.config.cparser.setValue('serato/mixmode', mixmode)
-            return mixmode
+        if not self.config.cparser.value('serato/local', type=bool):
+            mixmode = 'newest'
 
-        self.config.cparser.setValue('serato/mixmode', 'newest')
-        return 'newest'
+        self.config.cparser.setValue('serato/mixmode', mixmode)
+        return mixmode
 
     def getmixmode(self):
         ''' get the mixmode '''
@@ -969,20 +959,3 @@ class Plugin(InputPlugin):
         ''' description '''
         qwidget.setText('This plugin provides support for Serato '
                         'in both a local and remote capacity.')
-
-
-def main():
-    ''' entry point as a standalone app'''
-
-    logging.basicConfig(level=logging.DEBUG)
-    serato = SeratoHandler(mixmode='oldest', seratodir=sys.argv[1])
-    serato.process_sessions(path=sys.argv[1])
-    serato.getplayingtrack()
-    if serato.playingadat:
-        serato.playingadat.importantvalues()
-    else:
-        logging.info('No title currently suspecting of playing.')
-
-
-if __name__ == "__main__":
-    main()

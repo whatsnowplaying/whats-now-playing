@@ -18,7 +18,7 @@ class InputPlugin():
             self.defaults(qsettings)
             return
 
-        if not config:
+        if not config:  # pragma: no cover
             self.config = nowplaying.config.ConfigFile()
 
 #### Settings UI methods

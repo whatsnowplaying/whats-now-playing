@@ -13,9 +13,7 @@ import nowplaying.inputs.serato  # pylint: disable=import-error
 def serato_bootstrap(bootstrap):
     ''' bootstrap test '''
     config = bootstrap
-    config.cparser.setValue('serato/interval', 10.0)
-    config.cparser.setValue('serato/local', True)
-    config.cparser.setValue('serato/url', None)
+    config.cparser.setValue('serato/interval', 0.0)
     config.cparser.setValue('serato/deckskip', None)
     config.cparser.sync()
     yield config
@@ -25,7 +23,6 @@ def touchdir(directory):
     ''' serato requires current session files to process '''
     for file in os.listdir(directory):
         filename = os.path.join(directory, file)
-        print(f'Touching {filename}')
         pathlib.Path(filename).touch()
 
 
@@ -34,12 +31,19 @@ def getseratoplugin(serato_bootstrap, getroot, request):  # pylint: disable=rede
     ''' automated integration test '''
     config = serato_bootstrap
     mark = request.node.get_closest_marker("seratosettings")
-    datadir = mark.kwargs['datadir']
-    mixmode = mark.kwargs['mixmode']
-    config.cparser.setValue('serato/libpath',
-                            os.path.join(getroot, 'tests', datadir))
-    config.cparser.setValue('serato/mixmode', mixmode)
-    touchdir(os.path.join(getroot, 'tests', datadir))
+    if 'mode' in mark.kwargs and 'remote' in mark.kwargs['mode']:
+        config.cparser.setValue('serato/local', False)
+        config.cparser.setValue('serato/url', mark.kwargs['url'])
+    else:
+        datadir = mark.kwargs['datadir']
+        config.cparser.setValue('serato/local', True)
+        config.cparser.setValue('serato/libpath',
+                                os.path.join(getroot, 'tests', datadir))
+        if 'mixmode' in mark.kwargs:
+            config.cparser.setValue('serato/mixmode', mark.kwargs['mixmode'])
+        touchdir(os.path.join(getroot, 'tests', datadir, 'History',
+                              'Sessions'))
+    config.cparser.sync()
     plugin = nowplaying.inputs.serato.Plugin(config=config)
     yield plugin
     plugin.stop()
@@ -52,6 +56,26 @@ def results(expected, metadata):
         assert expected[expkey] == metadata[expkey]
         del metadata[expkey]
     assert metadata == {}
+
+
+@pytest.mark.seratosettings(mode='remote', url='https://localhost')
+def test_serato_remote2(getseratoplugin, getroot, httpserver):  # pylint: disable=redefined-outer-name
+    ''' test serato remote '''
+    plugin = getseratoplugin
+    with open(os.path.join(getroot, 'tests', 'seratolive',
+                           '2021_08_25_pong.html'),
+              'r',
+              encoding='utf8') as inputfh:
+        content = inputfh.readlines()
+    httpserver.expect_request('/index.html').respond_with_data(
+        ''.join(content))
+    plugin.config.cparser.setValue('serato/url',
+                                   httpserver.url_for('/index.html'))
+    plugin.config.cparser.sync()
+    (artist, title) = plugin.getplayingtrack()
+
+    assert artist == 'Chris McClenney'
+    assert title == 'Tuning Up'
 
 
 @pytest.mark.seratosettings(datadir='serato-2.4-mac', mixmode='oldest')
@@ -152,3 +176,41 @@ def test_serato25_win_newest(getseratoplugin):  # pylint: disable=redefined-oute
         'title': title,
     }
     results(expected, metadata)
+
+
+@pytest.mark.seratosettings(datadir='serato-2.5-win')
+def test_serato_nomixmode(getseratoplugin):  # pylint: disable=redefined-outer-name
+    ''' test default mixmode '''
+    plugin = getseratoplugin
+    assert plugin.getmixmode() == 'newest'
+
+
+@pytest.mark.seratosettings(datadir='serato-2.5-win')
+def test_serato_localmixmodes(getseratoplugin):  # pylint: disable=redefined-outer-name
+    ''' test local mixmodes '''
+    plugin = getseratoplugin
+    validmodes = plugin.validmixmodes()
+    assert 'newest' in validmodes
+    assert 'oldest' in validmodes
+    mode = plugin.setmixmode('oldest')
+    assert mode == 'oldest'
+    mode = plugin.setmixmode('fred')
+    assert mode == 'oldest'
+    mode = plugin.setmixmode('newest')
+    mode = plugin.getmixmode()
+    assert mode == 'newest'
+
+
+@pytest.mark.seratosettings(mode='remote', url='https://localhost.example.com')
+def test_serato_remote1(getseratoplugin):  # pylint: disable=redefined-outer-name
+    ''' test local mixmodes '''
+    plugin = getseratoplugin
+    validmodes = plugin.validmixmodes()
+    assert 'newest' in validmodes
+    assert 'oldest' not in validmodes
+    mode = plugin.setmixmode('oldest')
+    assert mode == 'newest'
+    mode = plugin.setmixmode('fred')
+    assert mode == 'newest'
+    mode = plugin.getmixmode()
+    assert mode == 'newest'

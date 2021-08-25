@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ''' bootstrap the app '''
 
-import json
 import hashlib
+import json
 import logging
 import logging.handlers
 import os
@@ -11,38 +11,46 @@ import shutil
 import sys
 import time
 
-from PySide2.QtCore import QCoreApplication, QSettings, QStandardPaths, Qt  # pylint: disable=no-name-in-module
 import pkg_resources
+
+from PySide2.QtCore import QCoreApplication, QSettings, QStandardPaths, Qt  # pylint: disable=no-name-in-module
 
 import nowplaying.version
 
 
 class UpgradeConfig:
     ''' methods to upgrade from old configs to new configs '''
-    def __init__(self):
+    def __init__(self, testdir=None):
 
         if sys.platform == "win32":
             self.qsettingsformat = QSettings.IniFormat
         else:
             self.qsettingsformat = QSettings.NativeFormat
-        self.cparser = QSettings(self.qsettingsformat, QSettings.UserScope,
-                                 QCoreApplication.organizationName(),
-                                 QCoreApplication.applicationName())
-        logging.info('configuration: %s', self.cparser.fileName())
 
+        self.testdir = testdir
         self.copy_old_2_new()
         self.upgrade()
 
+    def _getconfig(self):
+        return QSettings(self.qsettingsformat, QSettings.UserScope,
+                         QCoreApplication.organizationName(),
+                         QCoreApplication.applicationName())
+
     def backup_config(self):
         ''' back up the old config '''
-        source = self.cparser.fileName()
+        config = self._getconfig()
+        source = config.fileName()
         datestr = time.strftime("%Y%m%d-%H%M%S")
-        backupdir = os.path.join(
-            QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation)[0],
-            QCoreApplication.applicationName(), 'configbackup')
+        if self.testdir:
+            docpath = self.testdir
+        else:  # pragma: no cover
+            docpath = QStandardPaths.standardLocations(
+                QStandardPaths.DocumentsLocation)[0]
+        backupdir = os.path.join(docpath, QCoreApplication.applicationName(),
+                                 'configbackup')
 
-        logging.info('Making a backup of config prior to upgrade.')
+        logging.info('Making a backup of config prior to upgrade: %s',
+                     backupdir)
         try:
             pathlib.Path(backupdir).mkdir(parents=True, exist_ok=True)
             backup = os.path.join(backupdir, f'{datestr}-config.bak')
@@ -53,34 +61,44 @@ class UpgradeConfig:
 
     def copy_old_2_new(self):
         ''' copy old config file name to new config file name '''
-        if os.path.exists(self.cparser.fileName()):
-            return
 
         othersettings = QSettings(self.qsettingsformat, QSettings.UserScope,
                                   'com.github.em1ran', 'NowPlaying')
         if not os.path.exists(othersettings.fileName()):
             return
+
+        config = self._getconfig()
+        if os.path.exists(config.fileName()):
+            logging.debug(
+                'new style config %s already exists; skipping em1ran copy',
+                config.fileName())
+            return
+
         logging.debug(
             'Upgrading from old em1ran config to whatsnowplaying config')
-        pathlib.Path(os.path.dirname(self.cparser.fileName())).mkdir(
-            parents=True, exist_ok=True)
-        shutil.copyfile(othersettings.fileName(), self.cparser.fileName())
+        pathlib.Path(os.path.dirname(config.fileName())).mkdir(parents=True,
+                                                               exist_ok=True)
+        shutil.copyfile(othersettings.fileName(), config.fileName())
+        config.sync()
 
     def upgrade(self):
         ''' variable re-mapping '''
+        config = self._getconfig()
+        config.sync()
+
         mapping = {
             'settings/interval': 'serato/interval',
             'settings/handler': 'settings/input'
         }
-        source = self.cparser.fileName()
+        source = config.fileName()
 
         if not os.path.exists(source):
             logging.debug('new install!')
             return
 
         try:
-            oldversstr = self.cparser.value('settings/configversion',
-                                            defaultValue='2.0.0')
+            oldversstr = config.value('settings/configversion',
+                                      defaultValue='2.0.0')
         except TypeError:
             oldversstr = '2.0.0'
 
@@ -88,10 +106,8 @@ class UpgradeConfig:
         oldversion = pkg_resources.parse_version(oldversstr)
         thisversion = pkg_resources.parse_version(thisverstr)
 
-        logging.debug('versions %s vs %s', oldversion, thisverstr)
-
         if oldversion == thisversion:
-            logging.debug('equivalent')
+            logging.debug('equivalent config file versions')
             return
 
         if oldversion > thisversion:
@@ -101,38 +117,50 @@ class UpgradeConfig:
         self.backup_config()
 
         logging.info('Upgrading config from %s to %s', oldversstr, thisverstr)
+
+        rawconfig = QSettings(source, self.qsettingsformat)
+
         for oldkey, newkey in mapping.items():
+            logging.debug('processing %s - %s', oldkey, newkey)
             try:
-                newval = self.cparser.value(newkey)
+                newval = rawconfig.value(newkey)
             except:  # pylint: disable=bare-except
                 pass
 
             if newval:
-                logging.debug('%s has a value already: %s', newkey, newval)
+                logging.debug('%s already has value %s', newkey, newval)
                 continue
 
             try:
-                oldval = self.cparser.value(oldkey)
+                oldval = rawconfig.value(oldkey)
             except:  # pylint: disable=bare-except
+                logging.debug('%s vs %s: skipped, no new value', oldkey,
+                              newkey)
                 continue
 
             if oldval:
                 logging.debug('Setting %s to %s', newkey, oldval)
-                self.cparser.setValue(newkey, oldval)
+                config.setValue(newkey, oldval)
+            else:
+                logging.debug('%s does not exist', oldkey)
 
-        self.cparser.setValue('settings/configversion', thisverstr)
-        self.cparser.sync()
+        config.setValue('settings/configversion', thisverstr)
+        config.sync()
 
 
 class UpgradeTemplates():
     ''' Upgrade templates '''
-    def __init__(self, bundledir=None):
+    def __init__(self, bundledir=None, testdir=None):
         self.bundledir = bundledir
         self.apptemplatedir = os.path.join(self.bundledir, 'templates')
-        self.usertemplatedir = os.path.join(
-            QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation)[0],
-            QCoreApplication.applicationName(), 'templates')
+        if testdir:
+            self.usertemplatedir = os.path.join(
+                testdir, QCoreApplication.applicationName(), 'templates')
+        else:  # pragma: no cover
+            self.usertemplatedir = os.path.join(
+                QStandardPaths.standardLocations(
+                    QStandardPaths.DocumentsLocation)[0],
+                QCoreApplication.applicationName(), 'templates')
         pathlib.Path(self.usertemplatedir).mkdir(parents=True, exist_ok=True)
         self.alert = False
         self.copied = []

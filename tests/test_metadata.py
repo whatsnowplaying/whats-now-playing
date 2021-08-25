@@ -9,6 +9,8 @@ import nowplaying.metadata  # pylint: disable=import-error
 def test_15ghosts2_orig(bootstrap, getroot):
     ''' automated integration test '''
     config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('acrcloud/enabled', False)
     metadata = {
         'filename':
         os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.mp3')
@@ -26,6 +28,8 @@ def test_15ghosts2_orig(bootstrap, getroot):
 def test_15ghosts2_fullytagged(bootstrap, getroot):
     ''' automated integration test '''
     config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('acrcloud/enabled', False)
     metadata = {
         'filename':
         os.path.join(getroot, 'tests', 'audio',

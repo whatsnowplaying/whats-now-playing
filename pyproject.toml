@@ -12,11 +12,14 @@ testpaths = [
 ]
 markers = [
     "seratosettings: custom settings for serato ",
+    "templatesettings: custom settings for templates",
 ]
 qt_api = "pyside2"
 log_cli = true
 addopts = [
   "--cov=nowplaying",
   "--cov-config=.coveragerc",
-  "--cov-report=html"
+  "--cov-report=html",
+  "-ra",
 ]
+log_level = "DEBUG"

@@ -105,7 +105,7 @@ class MetadataDB:
 
         if databasefile:
             self.databasefile = databasefile
-        else:
+        else:  # pragma: no cover
             self.databasefile = os.path.join(
                 QStandardPaths.standardLocations(
                     QStandardPaths.CacheLocation)[0], 'npsql.db')

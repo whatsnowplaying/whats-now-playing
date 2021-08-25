@@ -58,6 +58,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
 
     def __del__(self):
         logging.debug('TrackPoll is being killed!')
+        self.input.stop()
         self.endthread = True
         self.plugins = None
 

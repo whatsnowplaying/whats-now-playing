@@ -16,6 +16,11 @@ import nowplaying.config
 import nowplaying.db
 import nowplaying.systemtray
 
+# pragma: no cover
+#
+# as of now, there isn't really much here to test... basic bootstrap stuff
+#
+
 
 def run_bootstrap(bundledir=None):
     ''' bootstrap the app '''
