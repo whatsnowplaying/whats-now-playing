@@ -64,16 +64,20 @@ def results(expected, metadata):
 def test_serato_remote2(getseratoplugin, getroot, httpserver):  # pylint: disable=redefined-outer-name
     ''' test serato remote '''
     plugin = getseratoplugin
-    with open(os.path.join(getroot, 'tests', 'seratolive', '2021_08_25_pong.html'), 'r') as inputfh:
+    with open(os.path.join(getroot, 'tests', 'seratolive',
+                           '2021_08_25_pong.html'),
+              'r',
+              encoding='utf8') as inputfh:
         content = inputfh.readlines()
-    httpserver.expect_request('/index.html').respond_with_data(''.join(content))
-    plugin.config.cparser.setValue('serato/url', httpserver.url_for('/index.html'))
+    httpserver.expect_request('/index.html').respond_with_data(
+        ''.join(content))
+    plugin.config.cparser.setValue('serato/url',
+                                   httpserver.url_for('/index.html'))
     plugin.config.cparser.sync()
     (artist, title) = plugin.getplayingtrack()
 
     assert artist == 'Chris McClenney'
     assert title == 'Tuning Up'
-
 
 
 @pytest.mark.seratosettings(datadir='serato-2.4-mac', mixmode='oldest')

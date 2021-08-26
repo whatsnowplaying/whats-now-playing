@@ -15,14 +15,16 @@ def gettemplatehandler(getroot, bootstrap, request):
     config = bootstrap
     mark = request.node.get_closest_marker("templatesettings")
     if mark and 'template' in mark.kwargs:
-        template = os.path.join(getroot, 'tests', 'templates', mark.kwargs['template'])
+        template = os.path.join(getroot, 'tests', 'templates',
+                                mark.kwargs['template'])
     else:
         template = None
     handler = nowplaying.utils.TemplateHandler(filename=template)
     return handler
 
+
 @pytest.mark.templatesettings(template='simple.txt')
-def test_writingmeta(gettemplatehandler): # pylint: disable=redefined-outer-name
+def test_writingmeta(gettemplatehandler):  # pylint: disable=redefined-outer-name
     ''' try writing a text '''
     with tempfile.TemporaryDirectory() as newpath:
         filename = os.path.join(newpath, 'test.txt')
@@ -41,8 +43,9 @@ def test_writingmeta(gettemplatehandler): # pylint: disable=redefined-outer-name
         assert 'this is an artist' in content[0]
         assert 'this is the title' in content[1]
 
+
 @pytest.mark.templatesettings(template='simple.txt')
-def test_missingmeta(gettemplatehandler): # pylint: disable=redefined-outer-name
+def test_missingmeta(gettemplatehandler):  # pylint: disable=redefined-outer-name
     ''' empty metadata '''
     with tempfile.TemporaryDirectory() as newpath:
         filename = os.path.join(newpath, 'test.txt')
@@ -57,8 +60,9 @@ def test_missingmeta(gettemplatehandler): # pylint: disable=redefined-outer-name
 
         assert content[0].strip() is ''
 
+
 @pytest.mark.templatesettings(template='missing.txt')
-def test_missingtemplate(gettemplatehandler): # pylint: disable=redefined-outer-name
+def test_missingtemplate(gettemplatehandler):  # pylint: disable=redefined-outer-name
     ''' template is missing '''
     with tempfile.TemporaryDirectory() as newpath:
         filename = os.path.join(newpath, 'test.txt')
@@ -76,7 +80,8 @@ def test_missingtemplate(gettemplatehandler): # pylint: disable=redefined-outer-
 
         assert 'No template found' in content[0]
 
-def test_missingfilename(gettemplatehandler): # pylint: disable=redefined-outer-name
+
+def test_missingfilename(gettemplatehandler):  # pylint: disable=redefined-outer-name
     ''' no template '''
     with tempfile.TemporaryDirectory() as newpath:
         filename = os.path.join(newpath, 'test.txt')
@@ -94,7 +99,8 @@ def test_missingfilename(gettemplatehandler): # pylint: disable=redefined-outer-
 
         assert 'No template found' in content[0]
 
-def test_cleartemplate(): # pylint: disable=redefined-outer-name
+
+def test_cleartemplate():  # pylint: disable=redefined-outer-name
     ''' try writing a text '''
     with tempfile.TemporaryDirectory() as newpath:
         filename = os.path.join(newpath, 'test.txt')
@@ -104,7 +110,8 @@ def test_cleartemplate(): # pylint: disable=redefined-outer-name
 
         assert not content
 
-def test_justafile(): # pylint: disable=redefined-outer-name
+
+def test_justafile():  # pylint: disable=redefined-outer-name
     ''' try writing a text '''
     with tempfile.TemporaryDirectory() as newpath:
         filename = os.path.join(newpath, 'test.txt')

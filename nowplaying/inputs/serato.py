@@ -119,14 +119,14 @@ class ChunkParser():  #pylint: disable=too-few-public-methods
     def process(self):
         ''' overridable function meant to process the chunk '''
 
-    def _debug(self): # pragma: no cover
+    def _debug(self):  # pragma: no cover
         ''' a dumb function to help debug stuff when writing a new chunk '''
         hexbytes = binascii.hexlify(self.data[self.bytecounter:])
         total = len(hexbytes)
         for j in range(1, total + 1, 8):
             logging.debug('_debug: %s', hexbytes[j:j + 7])
 
-    def importantvalues(self): # pragma: no cover
+    def importantvalues(self):  # pragma: no cover
         ''' another debug function to see when these fields change '''
         for key, value in self.__dict__.items():
             # if key in [
@@ -241,7 +241,7 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
                 self.frequency = self._string()
             elif field == 15:
                 self.bpm = self._numfield()
-            elif field == 16: # pragma: no cover
+            elif field == 16:  # pragma: no cover
                 self.field16 = self._hex()
             elif field == 17:
                 self.comments = self._string()
@@ -380,9 +380,8 @@ class SessionFile():  #pylint: disable=too-many-instance-attributes, too-few-pub
                     logging.warning('Skipping chunktype: %s', header.chunktype)
                     break
 
-    def __iter__(self): # pragma: no cover
+    def __iter__(self):  # pragma: no cover
         yield self
-
 
 
 class SeratoHandler():
@@ -396,7 +395,6 @@ class SeratoHandler():
             self.seratodir='/path/to/_Serato_/History/Sessions')
 
     '''
-
     def __init__(self, mixmode='oldest', seratodir=None, seratourl=None):
         self.event_handler = None
         self.observer = None
@@ -516,8 +514,8 @@ class SeratoHandler():
                     continue
                 if 'playtime' in adat and adat.playtime > 0:
                     continue
-                if (adat.deck in self.decks and adat.updatedat <
-                        self.decks[adat.deck].updatedat):
+                if (adat.deck in self.decks
+                        and adat.updatedat < self.decks[adat.deck].updatedat):
                     continue
                 logging.debug('Setting deck: %d artist: %s title: %s',
                               adat.deck, adat.artist, adat.title)
@@ -564,8 +562,7 @@ class SeratoHandler():
         logging.debug('mixmode: %s', self.mixmode)
 
         if self.mixmode == 'newest':
-            self.playingadat.starttime = datetime.datetime.fromtimestamp(
-                0)
+            self.playingadat.starttime = datetime.datetime.fromtimestamp(0)
             self.playingadat.updatedat = self.playingadat.starttime
 
         logging.debug('Find the current playing deck. Starting at time: %s',
@@ -576,19 +573,15 @@ class SeratoHandler():
                 self.playingadat = self.decks[deck]
                 logging.debug(
                     'Playing = time: %s deck: %d artist: %s title %s',
-                    self.playingadat.starttime,
-                    self.playingadat.deck,
-                    self.playingadat.artist,
-                    self.playingadat.title)
+                    self.playingadat.starttime, self.playingadat.deck,
+                    self.playingadat.artist, self.playingadat.title)
             elif self.mixmode == 'oldest' and self.decks[
                     deck].starttime < self.playingadat.starttime:
                 self.playingadat = self.decks[deck]
                 logging.debug(
                     'Playing = time: %s deck: %d artist: %s title %s',
-                    self.playingadat.starttime,
-                    self.playingadat.deck,
-                    self.playingadat.artist,
-                    self.playingadat.title)
+                    self.playingadat.starttime, self.playingadat.deck,
+                    self.playingadat.artist, self.playingadat.title)
 
     def getlocalplayingtrack(self, deckskiplist=None):
         ''' parse out last track from binary session file
@@ -733,6 +726,7 @@ class SeratoHandler():
     def __del__(self):
         self.stop()
 
+
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
     def __init__(self, config=None, qsettings=None):
@@ -849,7 +843,6 @@ class Plugin(InputPlugin):
 
         self.config.cparser.setValue('serato/mixmode', mixmode)
         return mixmode
-
 
     def getmixmode(self):
         ''' get the mixmode '''
