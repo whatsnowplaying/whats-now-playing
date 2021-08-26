@@ -8,7 +8,6 @@ import logging
 import os
 import pathlib
 import struct
-import sys
 import time
 import traceback
 
@@ -321,7 +320,7 @@ class ChunkVRSN(ChunkParser):  #pylint: disable=too-many-instance-attributes, to
                                      self.data)[0].decode('utf-16-be')
 
 
-class SessionFile():  # pylint: disable=too-few-public-methods
+class SessionFile():  #pylint: disable=too-many-instance-attributes, too-few-public-methods
     ''' process a session file '''
     def __init__(self, filename=None):
         self.filename = filename

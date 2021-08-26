@@ -4,3 +4,4 @@ nowplaying/vendor/
 bincomponents/
 versioneer.py
 NowPlaying.spec
+tests/seratolive/2021_08_25_pong.html
