@@ -19,8 +19,7 @@ def gettemplatehandler(getroot, bootstrap, request):
                                 mark.kwargs['template'])
     else:
         template = None
-    handler = nowplaying.utils.TemplateHandler(filename=template)
-    return handler
+    return nowplaying.utils.TemplateHandler(filename=template)
 
 
 @pytest.mark.templatesettings(template='simple.txt')
