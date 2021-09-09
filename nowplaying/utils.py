@@ -75,7 +75,7 @@ def getmoremetadata(metadata=None):
     try:
         myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata)
         metadata = myclass.metadata
-    except IOError as error:  # pragma: no cover
+    except OSError as error:  # pragma: no cover
         logging.error('MetadataProcessor failed for %s with %s',
                       metadata['filename'], error)
 

@@ -65,7 +65,6 @@ def test_serato_remote2(getseratoplugin, getroot, httpserver):  # pylint: disabl
     plugin = getseratoplugin
     with open(os.path.join(getroot, 'tests', 'seratolive',
                            '2021_08_25_pong.html'),
-              'r',
               encoding='utf8') as inputfh:
         content = inputfh.readlines()
     httpserver.expect_request('/index.html').respond_with_data(

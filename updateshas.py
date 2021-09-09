@@ -25,7 +25,7 @@ def main():
     oldshas = {}
 
     if os.path.exists(shafile):
-        with open(shafile, 'r') as fhin:
+        with open(shafile) as fhin:
             oldshas = json.loads(fhin.read())
 
     for version in sys.argv[2:]:
