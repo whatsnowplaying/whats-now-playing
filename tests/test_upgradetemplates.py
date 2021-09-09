@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 ''' test m3u '''
 
-import io
 import os
 import pathlib
 import logging
@@ -56,11 +55,10 @@ def compare_content(srcdir, destdir, conflict=None):
             newname = filename.replace('.txt', '.new')
             newname = newname.replace('.htm', '.new')
             newdestfn = os.path.join(destdir, newname)
-            assert filename and list(io.open(srcfn)) != list(io.open(destfn))
-            assert filename and list(io.open(srcfn)) == list(
-                io.open(newdestfn))
+            assert filename and list(open(srcfn)) != list(open(destfn))
+            assert filename and list(open(srcfn)) == list(open(newdestfn))
         else:
-            assert filename and list(io.open(srcfn)) == list(io.open(destfn))
+            assert filename and list(open(srcfn)) == list(open(destfn))
 
 
 def test_upgrade_blank(upgrade_bootstrap):  # pylint: disable=redefined-outer-name
@@ -118,6 +116,6 @@ def test_upgrade_old(upgrade_bootstrap, getroot):  # pylint: disable=redefined-o
     pathlib.Path(touchfile).touch()
     nowplaying.bootstrap.UpgradeTemplates(bundledir=bundledir,
                                           testdir=testpath)
-    assert list(io.open(os.path.join(srcdir, 'songquotes.txt'))) == list(
-        io.open(os.path.join(destdir, 'songquotes.new')))
+    assert list(open(os.path.join(srcdir, 'songquotes.txt'))) == list(
+        open(os.path.join(destdir, 'songquotes.new')))
     compare_content(srcdir, destdir, conflict=touchfile)

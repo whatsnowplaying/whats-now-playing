@@ -24,7 +24,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.iconfile = self.config.iconfile
         self.tray = tray
         self.version = version
-        super(SettingsUI, self).__init__()
+        super().__init__()
         self.qtui = None
         self.errormessage = None
         self.widgets = {}

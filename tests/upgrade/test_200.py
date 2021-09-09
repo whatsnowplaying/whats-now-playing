@@ -87,7 +87,7 @@ def test_version200_to_current():  # pylint: disable=redefined-outer-name
         reboot_macosx_prefs()
         if sys.platform != 'darwin':
             logging.debug('old file')
-            with open(filename, 'r') as configfh:
+            with open(filename) as configfh:
                 logging.debug(configfh.readlines())
         nowplaying.bootstrap.set_qt_names(appname='testsuite')
         upgrade = nowplaying.bootstrap.UpgradeConfig(testdir=newpath)  #pylint: disable=unused-variable
@@ -99,7 +99,7 @@ def test_version200_to_current():  # pylint: disable=redefined-outer-name
 
         if sys.platform != 'darwin':
             logging.debug('new file')
-            with open(config.fileName(), 'r') as configfh:
+            with open(config.fileName()) as configfh:
                 logging.debug(configfh.readlines())
         os.unlink(filename)
         reboot_macosx_prefs()

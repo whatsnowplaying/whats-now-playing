@@ -34,7 +34,8 @@ class Plugin(InputPlugin):
         self.qwidget = None
 
     def _setup_watcher(self):
-
+        ''' set up a custom watch on the m3u dir so meta info
+            can update on change'''
         if self.observer:
             return
 
@@ -190,11 +191,11 @@ class Plugin(InputPlugin):
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
-        self.config.cparser.setValue('m3u/directory',
-                                     qwidget.dir_lineedit.text())
-        self.m3udir = None
-        self.stop()
-        self._setup_watcher()
+        configdir = qwidget.dir_lineedit.text()
+        self.config.cparser.setValue('m3u/directory', configdir)
+        if self.m3udir and self.m3udir != configdir:
+            self.m3udir = None
+            self.stop()
 
     def desc_settingsui(self, qwidget):
         ''' description '''

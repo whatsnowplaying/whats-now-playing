@@ -36,7 +36,7 @@ def test_writingmeta(gettemplatehandler):  # pylint: disable=redefined-outer-nam
         nowplaying.utils.writetxttrack(filename=filename,
                                        templatehandler=gettemplatehandler,
                                        metadata=metadata)
-        with open(filename, 'r') as tempfn:
+        with open(filename) as tempfn:
             content = tempfn.readlines()
 
         assert 'this is an artist' in content[0]
@@ -54,7 +54,7 @@ def test_missingmeta(gettemplatehandler):  # pylint: disable=redefined-outer-nam
         nowplaying.utils.writetxttrack(filename=filename,
                                        templatehandler=gettemplatehandler,
                                        metadata=metadata)
-        with open(filename, 'r') as tempfn:
+        with open(filename) as tempfn:
             content = tempfn.readlines()
 
         assert content[0].strip() == ''
@@ -74,7 +74,7 @@ def test_missingtemplate(gettemplatehandler):  # pylint: disable=redefined-outer
         nowplaying.utils.writetxttrack(filename=filename,
                                        templatehandler=gettemplatehandler,
                                        metadata=metadata)
-        with open(filename, 'r') as tempfn:
+        with open(filename) as tempfn:
             content = tempfn.readlines()
 
         assert 'No template found' in content[0]
@@ -93,7 +93,7 @@ def test_missingfilename(gettemplatehandler):  # pylint: disable=redefined-outer
         nowplaying.utils.writetxttrack(filename=filename,
                                        templatehandler=gettemplatehandler,
                                        metadata=metadata)
-        with open(filename, 'r') as tempfn:
+        with open(filename) as tempfn:
             content = tempfn.readlines()
 
         assert 'No template found' in content[0]
@@ -104,7 +104,7 @@ def test_cleartemplate():  # pylint: disable=redefined-outer-name
     with tempfile.TemporaryDirectory() as newpath:
         filename = os.path.join(newpath, 'test.txt')
         nowplaying.utils.writetxttrack(filename=filename, clear=True)
-        with open(filename, 'r') as tempfn:
+        with open(filename) as tempfn:
             content = tempfn.readlines()
 
         assert not content
@@ -115,7 +115,7 @@ def test_justafile():  # pylint: disable=redefined-outer-name
     with tempfile.TemporaryDirectory() as newpath:
         filename = os.path.join(newpath, 'test.txt')
         nowplaying.utils.writetxttrack(filename=filename)
-        with open(filename, 'r') as tempfn:
+        with open(filename) as tempfn:
             content = tempfn.readlines()
 
         assert content[0] == '{{ artist }} - {{ title }}'

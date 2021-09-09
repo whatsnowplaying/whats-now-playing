@@ -188,8 +188,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         for plugintype in self.plugins:
             for key in self.plugins[plugintype]:
                 widgetkey = key.split('.')[-1]
-                if widgetkey == inputname:
-                    self.pluginobjs[plugintype][key].connect_settingsui(
+                if (widgetkey == inputname and plugintype
+                        == 'inputs') or (plugintype != 'inputs'):
+                    self.pluginobjs[plugintype][key].verify_settingsui(
                         qtwidgets[f'{plugintype}_{widgetkey}'])
 
     def plugins_save_settingsui(self, qtwidgets):

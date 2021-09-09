@@ -13,7 +13,7 @@ from PySide2.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
 class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods
     ''' test class '''
     def __init__(self):
-        super(SettingsUI, self).__init__()
+        super().__init__()
         self.qtui = None
         self.widgets = {}
         self.load_qtui()

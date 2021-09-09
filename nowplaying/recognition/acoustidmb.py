@@ -3,6 +3,7 @@
 ''' Use ACRCloud to recognize the file '''
 
 import os
+import pathlib
 import string
 import sys
 import time
@@ -35,6 +36,7 @@ class Plugin(RecognitionPlugin):
         self.wstrans = str.maketrans('', '',
                                      string.whitespace + string.punctuation)
         self.acoustidmd = {}
+        self.fpcalcexe = None
 
     def _fetch_from_acoustid(self, apikey, filename):
         results = None
@@ -122,6 +124,53 @@ class Plugin(RecognitionPlugin):
                 self.acoustidmd['musicbrainzrecordingid'] = rid
                 lastscore = score
 
+    def _configure_fpcalc(self, fpcalcexe=None):  # pylint: disable=too-many-return-statements
+        ''' deal with all the potential issues of finding and running fpcalc '''
+
+        if fpcalcexe and not os.environ.get("FPCALC"):
+            os.environ.setdefault("FPCALC", fpcalcexe)
+            os.environ["FPCALC"] = fpcalcexe
+
+        try:
+            fpcalcexe = os.environ["FPCALC"]
+        except NameError:
+            logging.error('fpcalc is not configured')
+            return False
+
+        if not fpcalcexe:
+            logging.error('fpcalc is not configured')
+            return False
+
+        fpcalcexepath = pathlib.Path(fpcalcexe)
+
+        if not fpcalcexepath.exists():
+            logging.error('defined fpcalc [%s] does not exist.', fpcalcexe)
+            return False
+
+        if not fpcalcexepath.is_file():
+            logging.error('defined fpcalc [%s] is not a file.', fpcalcexe)
+            return False
+
+        if sys.platform == 'win32':
+            try:
+                exts = [
+                    ext.lower() for ext in os.environ["PATHEXT"].split(";")
+                ]
+                testex = '.' + fpcalcexepath.name.split('.')[1].lower()
+                logging.debug('Checking %s against %s', testex, exts)
+                if testex not in exts:
+                    logging.error('defined fpcalc [%s] is not executable.',
+                                  fpcalcexe)
+                    return False
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error('Testing fpcalc on windows hit: %s', error)
+        elif not os.access(fpcalcexe, os.X_OK):
+            logging.error('defined fpcalc [%s] is not executable.', fpcalcexe)
+            return False
+
+        self.fpcalcexe = fpcalcexe
+        return True
+
     def recognize(self, metadata):  #pylint: disable=too-many-statements
         #if not self.config.cparser.value('acoustidmb/enabled', type=bool):
         #   return None
@@ -139,10 +188,9 @@ class Plugin(RecognitionPlugin):
             if not self.config.cparser.value('acoustidmb/enabled', type=bool):
                 return None
 
-            fpcalcexe = self.config.cparser.value('acoustidmb/fpcalcexe')
-            if fpcalcexe and not os.environ.get("FPCALC"):
-                os.environ.setdefault("FPCALC", fpcalcexe)
-                os.environ["FPCALC"] = fpcalcexe
+            if not self._configure_fpcalc(fpcalcexe=self.config.cparser.value(
+                    'acoustidmb/fpcalcexe')):
+                return None
 
             apikey = self.config.cparser.value('acoustidmb/acoustidapikey')
             results = self._fetch_from_acoustid(apikey, metadata['filename'])
@@ -197,19 +245,26 @@ class Plugin(RecognitionPlugin):
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''
         if qwidget.acoustidmb_checkbox.isChecked(
-        ) and not qwidget.apikey_lineedit.txt():
+        ) and not qwidget.apikey_lineedit.text():
             raise PluginVerifyError(
                 'Acoustid enabled, but no API Key provided.')
 
         if qwidget.acoustidmb_checkbox.isChecked(
-        ) and not qwidget.emailaddress_lineedit.txt():
+        ) and not qwidget.emailaddress_lineedit.text():
             raise PluginVerifyError(
                 'Acoustid enabled, but no email address provided.')
 
         if qwidget.acoustidmb_checkbox.isChecked(
-        ) and not qwidget.fpcalcexe_lineedit.txt():
+        ) and not qwidget.fpcalcexe_lineedit.text():
             raise PluginVerifyError(
                 'Acoustid enabled, but no fpcalc binary provided.')
+
+        if qwidget.acoustidmb_checkbox.isChecked(
+        ) and qwidget.fpcalcexe_lineedit.text():
+            fpcalcexe = qwidget.fpcalcexe_lineedit.text()
+            if not self._configure_fpcalc(fpcalcexe=fpcalcexe):
+                raise PluginVerifyError(
+                    'Acoustid enabled, but fpcalc is not executable.')
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
