@@ -122,7 +122,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         try:
             hostname = socket.gethostname()
             hostip = socket.gethostbyname(hostname)
-        except Exception as error:  # pylint: disable = bare-except
+        except Exception as error:  # pylint: disable = broad-except
             logging.error('Getting IP information failed: %s', error)
 
         if hostname:
