@@ -116,11 +116,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def _connect_webserver_widget(self, qobject):
         ''' file in the hostname/ip and connect the template button'''
+        hostname = None
+        hostip = None
+
         try:
             hostname = socket.gethostname()
             hostip = socket.gethostbyname(hostname)
-        except:  # pylint: disable = bare-except
-            pass
+        except Exception as error:  # pylint: disable = bare-except
+            logging.error('Getting IP information failed: %s', error)
 
         if hostname:
             qobject.hostname_label.setText(hostname)
