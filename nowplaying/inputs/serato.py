@@ -25,6 +25,10 @@ from nowplaying.exceptions import PluginVerifyError
 
 Header = collections.namedtuple('Header', 'chunktype size')
 
+# when in local mode, these are shared variables between threads
+LASTPROCESSED = 0
+PARSEDSESSIONS = []
+
 
 class ChunkParser():  #pylint: disable=too-few-public-methods
     ''' Basic Chunk Parser '''
@@ -121,7 +125,7 @@ class ChunkParser():  #pylint: disable=too-few-public-methods
 
     def _debug(self):  # pragma: no cover
         ''' a dumb function to help debug stuff when writing a new chunk '''
-        hexbytes = binascii.hexlify(self.data[self.bytecounter:])
+        hexbytes = binascii.hexlify(self.data[self.bytecounter:])  # pylint: disable=c-extension-no-member
         total = len(hexbytes)
         for j in range(1, total + 1, 8):
             logging.debug('_debug: %s', hexbytes[j:j + 7])
@@ -379,6 +383,7 @@ class SessionFile():  #pylint: disable=too-few-public-methods
                 else:
                     logging.warning('Skipping chunktype: %s', header.chunktype)
                     break
+        logging.debug('finished reading %s', self.filename)
 
     def __iter__(self):  # pragma: no cover
         yield self
@@ -396,17 +401,18 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
     '''
     def __init__(self, mixmode='oldest', seratodir=None, seratourl=None):
+        global LASTPROCESSED, PARSEDSESSIONS  #pylint: disable=global-statement
         self.event_handler = None
         self.observer = None
         self.decks = {}
-        self.parsedsessions = []
+        PARSEDSESSIONS = []
         self.playingadat = ChunkTrackADAT()
-        self.lastprocessed = 0
+        LASTPROCESSED = 0
         self.lastfetched = 0
         if seratodir:
             self.seratodir = seratodir
             self.watchdeck = None
-            self.parsedsessions = []
+            PARSEDSESSIONS = []
             self.mode = 'local'
             self.mixmode = mixmode
             self._setup_watcher()
@@ -440,6 +446,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
     def process_sessions(self, path):  # pylint: disable=unused-argument
         ''' read and process all of the relevant session files '''
+        global LASTPROCESSED, PARSEDSESSIONS  #pylint: disable=global-statement
 
         logging.debug('processing %s path', path)
 
@@ -447,7 +454,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             return
 
         logging.debug('triggered by watcher')
-        self.parsedsessions = []
+        PARSEDSESSIONS = []
 
         # Just nuke the OS X metadata file rather than
         # work around it
@@ -488,13 +495,17 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                 logging.debug('ignoring %s; too old', file)
                 continue
 
-            self.lastprocessed = filetimestamp
+            LASTPROCESSED = filetimestamp
             logging.debug('processing %s', sessionfilename)
-            self.parsedsessions.append(SessionFile(sessionfilename))
+            PARSEDSESSIONS.append(SessionFile(sessionfilename))
+        logging.debug('finished processing')
 
     def computedecks(self, deckskiplist=None):  # pylint: disable=no-self-use
         ''' based upon the session data, figure out what is actually
             on each deck '''
+        global PARSEDSESSIONS  #pylint: disable=global-statement
+
+        logging.debug('called computedecks')
 
         if self.mode == 'remote':
             return
@@ -508,7 +519,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         # playtime is _ONLY_ set when that deck
         # has been reloaded!
 
-        for index in reversed(self.parsedsessions):
+        for index in reversed(PARSEDSESSIONS):
             for adat in index.adats:
                 if deckskiplist and str(adat.deck) in deckskiplist:
                     continue
@@ -524,6 +535,8 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
     def computeplaying(self):  # pylint: disable=no-self-use
         ''' set the adat for the playing track based upon the
             computed decks '''
+
+        logging.debug('called computeplaying')
 
         if self.mode == 'remote':
             logging.debug('in remote mode; skipping')
@@ -567,34 +580,33 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
         logging.debug('Find the current playing deck. Starting at time: %s',
                       self.playingadat.starttime)
-        for deck in self.decks:
-            if self.mixmode == 'newest' and self.decks[
-                    deck].starttime > self.playingadat.starttime:
-                self.playingadat = self.decks[deck]
+        for deck, adat in self.decks.items():
+            if self.mixmode == 'newest' and adat.starttime > self.playingadat.starttime:
+                self.playingadat = adat
                 logging.debug(
                     'Playing = time: %s deck: %d artist: %s title %s',
-                    self.playingadat.starttime, self.playingadat.deck,
-                    self.playingadat.artist, self.playingadat.title)
-            elif self.mixmode == 'oldest' and self.decks[
-                    deck].starttime < self.playingadat.starttime:
-                self.playingadat = self.decks[deck]
+                    self.playingadat.starttime, deck, self.playingadat.artist,
+                    self.playingadat.title)
+            elif self.mixmode == 'oldest' and adat.starttime < self.playingadat.starttime:
+                self.playingadat = adat
                 logging.debug(
                     'Playing = time: %s deck: %d artist: %s title %s',
-                    self.playingadat.starttime, self.playingadat.deck,
-                    self.playingadat.artist, self.playingadat.title)
+                    self.playingadat.starttime, deck, self.playingadat.artist,
+                    self.playingadat.title)
 
     def getlocalplayingtrack(self, deckskiplist=None):
         ''' parse out last track from binary session file
             get latest session file
         '''
+        global LASTPROCESSED  #pylint: disable=global-statement
 
         if self.mode == 'remote':
             logging.debug('in remote mode; skipping')
             return None, None
 
         if not self.lastfetched or \
-           self.lastprocessed >= self.lastfetched:
-            self.lastfetched = self.lastprocessed + 1
+           LASTPROCESSED >= self.lastfetched:
+            self.lastfetched = LASTPROCESSED + 1
             self.computedecks(deckskiplist=deckskiplist)
             self.computeplaying()
 
@@ -713,10 +725,12 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
     def stop(self):  # pylint: disable=no-self-use
         ''' stop serato handler '''
+        global LASTPROCESSED, PARSEDSESSIONS  #pylint: disable=global-statement
+
         self.decks = {}
-        self.parsedsessions = []
+        PARSEDSESSIONS = []
         self.playingadat = ChunkTrackADAT()
-        self.lastprocessed = 0
+        LASTPROCESSED = 0
         self.lastfetched = 0
         if self.observer:
             self.observer.stop()
