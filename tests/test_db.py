@@ -2,17 +2,12 @@
 ''' test metadata DB '''
 
 import os
-import sys
 import tempfile
 
 import pytest
 
 import nowplaying.db  # pylint: disable=import-error
 import nowplaying.utils  # pylint: disable=import-error
-
-if sys.platform.startswith("win"):
-    pytest.skip("skipping on windows", allow_module_level=True)
-
 
 @pytest.fixture
 def getmetadb(bootstrap):
