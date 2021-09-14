@@ -79,11 +79,16 @@ class Plugin(RecognitionPlugin):
                           results['error']['message'])
             return None
 
-        if isinstance(results['results'], list):
-            self.acoustidmd['acoustidid'] = results['results'][0]['id']
-        elif 'id' in results:
-            self.acoustidmd['acoustidid'] = results['results']['id']
-        return acoustid.parse_lookup_result(results)
+        try:
+            if isinstance(results['results'], list):
+                self.acoustidmd['acoustidid'] = results['results'][0]['id']
+            elif 'id' in results:
+                self.acoustidmd['acoustidid'] = results['results']['id']
+            return acoustid.parse_lookup_result(results)
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error('acoustid plugin threw %s over %s', error, results)
+
+        return None
 
     def _simplestring(self, mystr):
         if not mystr:

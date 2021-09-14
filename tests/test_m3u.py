@@ -41,6 +41,13 @@ def write_m3u(m3u, filename):
         m3ufn.write(f'{filename}' + os.linesep)
 
 
+def write_m3u8(m3u, filename):
+    ''' create m3u file with content '''
+    with open(m3u, 'w', encoding='utf-8') as m3ufn:
+        m3ufn.write('#EXTM3U' + os.linesep)
+        m3ufn.write(f'{filename}' + os.linesep)
+
+
 def test_nom3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
@@ -109,6 +116,46 @@ def test_no2newm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-n
     time.sleep(2)
 
 
+def test_noencodingm3u8(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config = m3u_bootstrap
+    mym3udir = config.cparser.value('m3u/directory')
+    plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
+    (artist, title) = plugin.getplayingtrack()
+
+    filename = os.path.join(getroot, 'tests', 'audio',
+                            '15_Ghosts_II_64kb_orig.mp3')
+    m3ufile = os.path.join(mym3udir, 'test.m3u')
+    write_m3u8(m3ufile, filename)
+    # need to give some time for watcher it pick it up
+    time.sleep(1)
+    (artist, title) = plugin.getplayingtrack()
+    assert artist is None
+    assert '15_Ghosts_II_64kb_orig.mp3' in title
+    plugin.stop()
+    time.sleep(2)
+
+
+def test_encodingm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config = m3u_bootstrap
+    mym3udir = config.cparser.value('m3u/directory')
+    plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
+    filename = os.path.join(getroot, 'tests', 'audio',
+                            '15_Ghosts_II_64kb_füllytâgged.mp3')
+    m3ufile = os.path.join(mym3udir, 'test.m3u')
+    write_m3u(m3ufile, filename)
+    # need to give some time for watcher it pick it up
+    time.sleep(2)
+    (artist, title) = plugin.getplayingtrack()
+    assert artist is None
+    assert '15_Ghosts_II_64kb_füllytâgged.mp3' in title
+    assert 'tests' in title
+    assert 'audio' in title
+    plugin.stop()
+    time.sleep(2)
+
+
 def test_no2newm3u8(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
@@ -119,14 +166,14 @@ def test_no2newm3u8(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-
     assert title is None
 
     filename = os.path.join(getroot, 'tests', 'audio',
-                            '15_Ghosts_II_64kb_orig.mp3')
+                            '15_Ghosts_II_64kb_füllytâgged.mp3')
     m3ufile = os.path.join(mym3udir, 'test.m3u8')
-    write_m3u(m3ufile, filename)
+    write_m3u8(m3ufile, filename)
     # need to give some time for watcher it pick it up
     time.sleep(2)
     (artist, title) = plugin.getplayingtrack()
     assert artist is None
-    assert '15_Ghosts_II_64kb_orig.mp3' in title
+    assert '15_Ghosts_II_64kb_füllytâgged.mp3' in title
     assert 'tests' in title
     assert 'audio' in title
     plugin.stop()

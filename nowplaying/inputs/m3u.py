@@ -3,6 +3,7 @@
 
 import logging
 import os
+import sys
 
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
@@ -61,45 +62,65 @@ class Plugin(InputPlugin):
                                recursive=False)
         self.observer.start()
 
+    def _read_track_default(self, filename):  #pylint: disable=no-self-use
+        content = None
+        with open(filename, 'rb') as m3ufh:
+            while True:
+                newline = m3ufh.readline()
+                if not newline:
+                    break
+                newline = newline.rstrip()
+                if not newline or newline[0] == '#':
+                    continue
+                content = newline
+        return content
+
     def _read_track(self, event):  #pylint: disable=no-self-use
 
         if event.is_directory:
             return
 
         filename = event.src_path
-        logging.debug('got %s', filename)
+        logging.debug('event type: %s, syn: %s, path: %s', event.event_type,
+                      event.is_synthetic, filename)
 
         # file is empty so ignore it
         if os.stat(filename).st_size == 0:
             logging.debug('%s is empty, ignoring for now.', filename)
             return
 
-        content = None
-        with open(filename, 'r', errors='ignore') as m3ufh:
-            while True:
-                newline = m3ufh.readline()
-                if not newline:
-                    break
-                newline = newline.strip()
-                if not newline or newline[0] == '#':
-                    continue
-                content = newline
+        content = self._read_track_default(filename)
 
-        logging.debug('attempting to read \'%s\'', content)
+        logging.debug('attempting to parse \'%s\' with various encodings',
+                      content)
 
         if not content:
             return
 
-        content = content.replace('file://', '')
-        if not os.path.exists(content):
+        found = None
+        for encoding in ['utf-8', 'ascii', 'cp1252', 'utf-16']:
+            try:
+                location = content.decode(encoding)
+            except UnicodeDecodeError:
+                logging.debug('Definitely not %s', encoding)
+                continue
+            location = location.replace('file://', '')
+            if os.path.exists(location):
+                found = location
+                break
+
             dirpath = os.path.dirname(filename)
-            attempt2 = os.path.join(dirpath, content)
+            attempt2 = os.path.join(dirpath, location)
             if os.path.exists(attempt2):
-                content = attempt2
-            else:
-                logging.error('Unable to read %s', content)
-                return
-        newmeta = {'filename': content}
+                found = attempt2
+                break
+
+        if not found:
+            logging.error('Cannot find or decode %s', content)
+            return
+
+        logging.debug('Used %s and found %s', encoding, found)
+        newmeta = {'filename': found}
         Plugin.metadata = newmeta
 
     def getplayingtrack(self):  #pylint: disable=no-self-use

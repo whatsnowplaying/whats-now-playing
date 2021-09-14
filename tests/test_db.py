@@ -9,6 +9,7 @@ import pytest
 import nowplaying.db  # pylint: disable=import-error
 import nowplaying.utils  # pylint: disable=import-error
 
+
 @pytest.fixture
 def getmetadb(bootstrap):
     ''' create a temporary directory '''

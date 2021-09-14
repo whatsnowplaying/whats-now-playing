@@ -33,7 +33,7 @@ def test_15ghosts2_fullytagged(bootstrap, getroot):
     metadata = {
         'filename':
         os.path.join(getroot, 'tests', 'audio',
-                     '15_Ghosts_II_64kb_fullytagged.mp3')
+                     '15_Ghosts_II_64kb_füllytâgged.mp3')
     }
     myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
                                                      config=config)

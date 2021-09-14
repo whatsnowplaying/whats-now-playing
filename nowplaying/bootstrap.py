@@ -286,7 +286,8 @@ def setuplogging(logpath=None):
     # this loglevel should eventually be tied into config
     # but for now, hard-set at info
     logging.basicConfig(
-        format='%(asctime)s %(process)d %(threadName)s %(module)s:%(funcName)s:%(lineno)d '
+        format=
+        '%(asctime)s %(process)d %(threadName)s %(module)s:%(funcName)s:%(lineno)d '
         + '%(levelname)s %(message)s',
         datefmt='%Y-%m-%dT%H:%M:%S%z',
         handlers=[logfhandler],

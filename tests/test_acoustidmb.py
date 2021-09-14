@@ -49,7 +49,7 @@ def test_15ghosts2_fullytagged(getacoustidmbplugin, getroot):  # pylint: disable
     metadata = plugin.recognize({
         'filename':
         os.path.join(getroot, 'tests', 'audio',
-                     '15_Ghosts_II_64kb_fullytagged.mp3')
+                     '15_Ghosts_II_64kb_füllytâgged.mp3')
     })
     assert metadata['album'] == 'Ghosts I–IV'
     assert metadata['artist'] == 'Nine Inch Nails'
