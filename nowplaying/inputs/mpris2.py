@@ -185,9 +185,6 @@ class Plugin(InputPlugin):
         self.mpris2 = MPRIS2Handler()
         self.dbus_status = True
 
-        if not qsettings:
-            self.gethandler()
-
     def gethandler(self):
         ''' setup the MPRIS2Handler for this session '''
 
@@ -208,6 +205,10 @@ class Plugin(InputPlugin):
         self.service = sameservice
         self.mpris2.resetservice(service=sameservice)
         return
+
+    def start(self):
+        ''' configure MPRIS2 client '''
+        self.gethandler()
 
     def getplayingtrack(self):
         ''' wrapper to call getplayingtrack '''

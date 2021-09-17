@@ -753,9 +753,6 @@ class Plugin(InputPlugin):
         self.mixmode = "newest"
         self.qwidget = None
 
-        if not qsettings:
-            self.gethandler()
-
     def gethandler(self):
         ''' setup the SeratoHandler for this session '''
 
@@ -802,6 +799,10 @@ class Plugin(InputPlugin):
                                         mixmode=self.mixmode)
             #if self.serato:
             #    self.serato.process_sessions()
+
+    def start(self):
+        ''' get a handler '''
+        self.gethandler()
 
     def getplayingtrack(self):
         ''' wrapper to call getplayingtrack '''

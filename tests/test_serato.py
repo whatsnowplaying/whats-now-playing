@@ -45,6 +45,7 @@ def getseratoplugin(serato_bootstrap, getroot, request):  # pylint: disable=rede
                               'Sessions'))
     config.cparser.sync()
     plugin = nowplaying.inputs.serato.Plugin(config=config)
+    plugin.start()
     yield plugin
     plugin.stop()
 

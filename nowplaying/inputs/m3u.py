@@ -33,10 +33,11 @@ class Plugin(InputPlugin):
         self.observer = None
         self.qwidget = None
 
-        if not qsettings:
-            self._setup_watcher()
-
     def _setup_watcher(self):
+
+        if self.observer:
+            return
+
         if not self.m3udir:
             self.m3udir = self.config.cparser.value('m3u/directory')
 
@@ -122,8 +123,15 @@ class Plugin(InputPlugin):
         newmeta = {'filename': found}
         Plugin.metadata = newmeta
 
+    def start(self):
+        ''' setup the watcher to run in a separate thread '''
+        self._setup_watcher()
+
     def getplayingtrack(self):  #pylint: disable=no-self-use
         ''' wrapper to call getplayingtrack '''
+
+        # just in case called without calling start...
+        self._setup_watcher()
         return None, Plugin.metadata['filename']
 
     def getplayingmetadata(self):  #pylint: disable=no-self-use

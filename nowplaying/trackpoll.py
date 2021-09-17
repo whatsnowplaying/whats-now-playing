@@ -54,6 +54,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                 previousinput = self.config.cparser.value('settings/input')
                 self.input = self.plugins[
                     f'nowplaying.inputs.{previousinput}'].Plugin()
+                self.input.start()
             self.gettrack()
 
     def __del__(self):

@@ -85,6 +85,10 @@ class InputPlugin():
 
 #### Control methods
 
+    def start(self):
+        ''' any initialization before actual polling starts '''
+        raise NotImplementedError
+
     def stop(self):
         ''' stopping either the entire program or just this
             input '''
