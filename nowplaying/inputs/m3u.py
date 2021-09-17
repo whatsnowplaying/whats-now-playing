@@ -3,7 +3,6 @@
 
 import logging
 import os
-import sys
 
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
