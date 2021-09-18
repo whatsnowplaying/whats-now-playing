@@ -45,7 +45,8 @@ class Plugin(RecognitionPlugin):
         try:
             logging.debug('Fetching %s', api)
             page = requests.get(
-                f'https://theaudiodb.com/api/v1/json/{apikey}/{api}')
+                f'https://theaudiodb.com/api/v1/json/{apikey}/{api}',
+                timeout=5)
         except Exception as error:  # pylint: disable=broad-except
             logging.error('TheAudioDB hit %s', error)
             return None

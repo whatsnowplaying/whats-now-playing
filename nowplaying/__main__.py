@@ -5,6 +5,7 @@ import logging
 import multiprocessing
 import os
 import pathlib
+import socket
 import sys
 
 from PySide2.QtCore import QCoreApplication, QStandardPaths, Qt  # pylint: disable=no-name-in-module
@@ -31,6 +32,10 @@ def run_bootstrap(bundledir=None):
     pathlib.Path(logpath).mkdir(parents=True, exist_ok=True)
     logpath = os.path.join(logpath, "debug.log")
 
+    # we are in a hurry to get results.  If it takes longer than
+    # 5 seconds, consider it a failure and move on.  At some
+    # point this should be configurable but this is good enough for now
+    socket.setdefaulttimeout(5.0)
     nowplaying.bootstrap.setuplogging(logpath=logpath)
 
     nowplaying.bootstrap.upgrade(bundledir=bundledir)

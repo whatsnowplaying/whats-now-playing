@@ -4,6 +4,7 @@ audio_metadata==0.11.1
 irc==19.0.1
 jinja2==3.0.1
 lxml==4.6.3
+netifaces==0.11.0
 musicbrainzngs==0.7.1
 obs-websocket-py==0.5.3
 pillow==8.3.1
@@ -13,6 +14,7 @@ pyinstaller==4.4
 pyinstaller_versionfile==2.0.0
 PySide2==5.15.2
 pytest==6.2.4
+pytest-asyncio==0.15.1
 pytest-qt==4.0.2
 pytest-cov==2.12.1
 pytest-httpserver==1.0.1

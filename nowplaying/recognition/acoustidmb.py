@@ -80,7 +80,7 @@ class Plugin(RecognitionPlugin):
             return None
 
         try:
-            if isinstance(results['results'], list):
+            if isinstance(results['results'], list) and results['results']:
                 self.acoustidmd['acoustidid'] = results['results'][0]['id']
             elif 'id' in results:
                 self.acoustidmd['acoustidid'] = results['results']['id']

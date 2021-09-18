@@ -28,6 +28,7 @@
     <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
   </head>
   <body>
+    {% if title %}
     <div id="titlecard">
       {% if coverurl %}
       <img src="{{ coverurl }}">
@@ -43,5 +44,6 @@
         $('#titlecard').delay(6000).fadeOut(2000);
       });
     </script>
+    {% endif %}
   </body>
 </html>

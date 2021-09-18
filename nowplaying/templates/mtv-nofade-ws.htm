@@ -42,10 +42,17 @@
                   ws.onmessage = function (event) {
                      var metadata = JSON.parse(event.data);
                      console.log(metadata.title);
-                     $("#title").html('\"'+metadata.title+'\"');
-                     $("#artist").html(metadata.artist);
-                     $("#album").html(metadata.album);
-                     $("#label").html(metadata.label);
+                     if (metadata.title) {
+                        $("#title").html('\"'+metadata.title+'\"');
+                        $("#artist").html(metadata.artist);
+                        $("#album").html(metadata.album);
+                        $("#label").html(metadata.label);
+                     } else {
+                        $("#title").html('');
+                        $("#artist").html('');
+                        $("#album").html('');
+                        $("#label").html('');
+                     }
                   };
 
                   ws.onclose = function(){

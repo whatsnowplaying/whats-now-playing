@@ -20,6 +20,7 @@ limitations under the License.
 import logging
 import logging.config
 import logging.handlers
+import multiprocessing
 import os
 import secrets
 import signal
@@ -27,6 +28,7 @@ import string
 import sys
 import threading
 import time
+import traceback
 
 import irc.bot
 import jinja2
@@ -61,6 +63,9 @@ import nowplaying.db
 # token comes from http://twitchapps.com/tmi/
 #
 
+LOCK = multiprocessing.RLock()
+LASTANNOUNCED = {'artist': None, 'title': None}
+
 
 class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instance-attributes
     ''' twitch bot '''
@@ -76,7 +81,6 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             QCoreApplication.applicationName(), 'templates')
         self.metadb = nowplaying.db.MetadataDB()
         self.config = nowplaying.config.ConfigFile()
-        self.lastannounced = {'artist': None, 'title': None}
         self.magiccommand = ''.join(
             secrets.choice(string.ascii_letters) for i in range(32))
         logging.info('Secret command to quit twitchbot: %s', self.magiccommand)
@@ -112,7 +116,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             'Client-ID': self.client_id,
             'Accept': 'application/vnd.twitchtv.v5+json'
         }
-        req = requests.get(url, headers=headers).json()
+        req = requests.get(url, headers=headers, timeout=5).json()
         if 'error' in req:
             logging.error('%s %s: %s', req['status'], req['error'],
                           req['message'])
@@ -136,25 +140,47 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
     def _announce_track(self, event):  # pylint: disable=unused-argument
         ''' announce new tracks '''
+        global LASTANNOUNCED, LOCK  # pylint: disable=global-statement
+
+        LOCK.acquire()
+
         self.config.get()
 
         metadata = self.metadb.read_last_meta()
 
-        if not metadata or metadata['artist'] == self.lastannounced['artist'] and \
-           metadata['title'] == self.lastannounced['title']:
+        if not metadata:
+            LOCK.release()
             return
 
-        self.lastannounced['artist'] = metadata['artist']
-        self.lastannounced['title'] = metadata['title']
+        # don't announce empty content
+        if not metadata['artist'] and not metadata['title']:
+            logging.warning(
+                'Both artist and title are empty; skipping announcement')
+            LOCK.release()
+            return
+
+        if metadata['artist'] == LASTANNOUNCED['artist'] and \
+           metadata['title'] == LASTANNOUNCED['title']:
+            logging.warning(
+                'Same artist and title or doubled event notification; skipping announcement.'
+            )
+            LOCK.release()
+            return
+
+        LASTANNOUNCED['artist'] = metadata['artist']
+        LASTANNOUNCED['title'] = metadata['title']
 
         self._delay_write()
 
         logging.info('Announcing %s',
                      self.config.cparser.value('twitchbot/announce'))
         if not self.config.cparser.value('twitchbot/enabled', type=bool):
+            LOCK.release()
             self.shutdown()
         self._post_template(
             os.path.basename(self.config.cparser.value('twitchbot/announce')))
+
+        LOCK.release()
 
     def on_welcome(self, connection, event):  # pylint: disable=unused-argument
         ''' join the IRC channel and set up our stuff '''
@@ -200,7 +226,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         #
         # in any case, this code takes the badges field and breaks
         # it apart and tries to make it easier to deal with later on
-        if 'badges' in result:
+        if 'badges' in result and result['badges']:
             result['badgesdict'] = {}
             for badge in result['badges'].split(','):
                 badgetype, number = badge.split('/')
@@ -226,6 +252,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             message = template.render(metadata)
             message = message.replace('\n', '')
             message = message.replace('\r', '')
+
             try:
                 self.connection.privmsg(self.channel, str(message).strip())
             except Exception as error:  # pylint: disable=broad-except
@@ -340,6 +367,7 @@ class TwitchBotHandler():
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('TwitchBot threw exception after forever: %s',
                               error)
+                logging.error(traceback.print_stack())
             finally:
                 if self.server:
                     self.server.shutdown()

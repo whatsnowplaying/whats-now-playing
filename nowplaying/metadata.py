@@ -8,6 +8,7 @@ import sys
 
 import PIL.Image
 import nowplaying.config
+import nowplaying.hostmeta
 import nowplaying.vendor.audio_metadata
 from nowplaying.vendor.audio_metadata.formats.mp4_tags import MP4FreeformDecoders
 import nowplaying.vendor.tinytag
@@ -26,7 +27,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             logging.debug('No filename')
             return
 
-        for processor in 'audio_metadata', 'tinytag', 'image2png', 'plugins':
+        for processor in 'hostmeta', 'audio_metadata', 'tinytag', 'image2png', 'plugins':
             logging.debug('running %s', processor)
             func = getattr(self, f'_process_{processor}')
             func()
@@ -40,6 +41,12 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             if 'date' not in self.metadata:
                 self.metadata['date'] = self.metadata['year']
             del metadata['year']
+
+    def _process_hostmeta(self):
+        ''' add the host metadata so other subsystems can use it '''
+        hostmeta = nowplaying.hostmeta.gethostmeta()
+        for key, value in hostmeta.items():
+            self.metadata[key] = value
 
     def _process_audio_metadata_mp4_freeform(self, freeformparentlist):
         for freeformlist in freeformparentlist:
@@ -201,7 +208,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     def _process_plugins(self):
         if 'musicbrainzrecordingid' in self.metadata:
-            logging.debug('Preprocessing with musicbrainz recordingid')
+            logging.debug(
+                'musicbrainz recordingid detected; attempting shortcuts')
             musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
                 config=self.config)
             metalist = musicbrainz.providerinfo()

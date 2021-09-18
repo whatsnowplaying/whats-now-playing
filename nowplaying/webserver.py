@@ -12,6 +12,7 @@ import string
 import sys
 import threading
 import time
+import traceback
 import weakref
 
 import requests
@@ -51,9 +52,10 @@ TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
 
 class WebHandler():
     ''' aiohttp built server that does both http and websocket '''
-    def __init__(self, databasefile):
+    def __init__(self, databasefile, testmode=False):
         threading.current_thread().name = 'WebServer'
-        config = nowplaying.config.ConfigFile()
+        self.testmode = testmode
+        config = nowplaying.config.ConfigFile(testmode=testmode)
         self.port = config.cparser.value('weboutput/httpport', type=int)
         enabled = config.cparser.value('weboutput/httpenabled', type=bool)
         self.databasefile = databasefile
@@ -282,8 +284,14 @@ class WebHandler():
 
     async def on_startup(self, app):
         ''' setup app connections '''
-        app['config'] = nowplaying.config.ConfigFile()
-        app['metadb'] = nowplaying.db.MetadataDB()
+        app['config'] = nowplaying.config.ConfigFile(testmode=self.testmode)
+        if self.testmode:
+            app['config'].templatedir = os.path.join(
+                os.path.dirname(self.databasefile), 'templates')
+            app['metadb'] = nowplaying.db.MetadataDB(databasefile=os.path.join(
+                os.path.dirname(self.databasefile), 'test.db'))
+        else:
+            app['metadb'] = nowplaying.db.MetadataDB()
         app['watcher'] = app['metadb'].watcher()
         app['watcher'].start()
         app['statedb'] = await aiosqlite.connect(self.databasefile)
@@ -318,7 +326,8 @@ class WebHandler():
         ''' caught an int signal so tell the world to stop '''
         try:
             logging.debug('telling webserver to stop via http')
-            requests.get(f'http://localhost:{self.port}/{self.magicstopurl}')
+            requests.get(f'http://localhost:{self.port}/{self.magicstopurl}',
+                         timeout=5)
         except Exception as error:  # pylint: disable=broad-except
             logging.info(error)
 
@@ -332,7 +341,7 @@ def stop(pid):
         pass
 
 
-def start(bundledir):
+def start(bundledir, testdir=None):
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'WebServer'
 
@@ -343,25 +352,38 @@ def start(bundledir):
         else:
             bundledir = os.path.abspath(os.path.dirname(__file__))
 
-    nowplaying.bootstrap.set_qt_names()
-    databasefile = os.path.join(
-        QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0],
-        'web.db')
+    if testdir:
+        nowplaying.bootstrap.set_qt_names(appname='testsuite')
+        databasefile = os.path.join(testdir, 'web.db')
+        testmode = True
+    else:
+        testmode = False
+        nowplaying.bootstrap.set_qt_names()
+        databasefile = os.path.join(
+            QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0],
+            'web.db')
+
+    logging.debug('Using %s as web databasefile', databasefile)
     if os.path.exists(databasefile):
         try:
             os.unlink(databasefile)
         except PermissionError as error:
             logging.error('WebServer process already running?')
             logging.error(error)
-            sys.exit(0)
+            sys.exit(1)
 
-    config = nowplaying.config.ConfigFile(bundledir=bundledir)  # pylint: disable=unused-variable
+    config = nowplaying.config.ConfigFile(bundledir=bundledir,
+                                          testmode=testmode)
+    if testdir:
+        config.templatedir = os.path.join(testdir, 'templates')
     logging.info('boot up')
     try:
-        webserver = WebHandler(databasefile)  # pylint: disable=unused-variable
+        webserver = WebHandler(databasefile, testmode=testmode)  # pylint: disable=unused-variable
     except Exception as error:  #pylint: disable=broad-except
         logging.error('Webserver crashed: %s', error)
-        sys.exit(0)
+        logging.error(traceback.print_stack())
+        sys.exit(1)
+    sys.exit(0)
 
 
 if __name__ == "__main__":

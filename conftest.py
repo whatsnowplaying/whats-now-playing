@@ -15,6 +15,13 @@ import nowplaying.config
 if sys.platform == 'darwin':
     import pwd
 
+try:
+    from pytest_cov.embed import cleanup_on_sigterm
+except ImportError:
+    pass
+else:
+    cleanup_on_sigterm()
+
 
 def reboot_macosx_prefs():
     ''' work around Mac OS X's preference caching '''

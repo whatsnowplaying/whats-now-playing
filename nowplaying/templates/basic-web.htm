@@ -23,7 +23,9 @@
   </head>
   <body>
     <div id="titlecard">
+      {% if title %}
       <p>Title: {{ title }}</p>
+      {% endif %}
       {% if artist %}
       <p>Artist: {{ artist }}</p>
       {% endif %}

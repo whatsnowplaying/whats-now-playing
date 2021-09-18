@@ -3,7 +3,6 @@
 
 import logging
 import os
-import socket
 
 from PySide2.QtCore import Slot, QFile, Qt  # pylint: disable=no-name-in-module
 from PySide2.QtWidgets import QCheckBox, QErrorMessage, QFileDialog, QTableWidgetItem, QWidget  # pylint: disable=no-name-in-module
@@ -12,6 +11,7 @@ from PySide2.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
 import PySide2.QtXml  # pylint: disable=unused-import, import-error, no-name-in-module
 
 import nowplaying.config
+import nowplaying.hostmeta
 from nowplaying.exceptions import PluginVerifyError
 
 
@@ -116,19 +116,13 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def _connect_webserver_widget(self, qobject):
         ''' file in the hostname/ip and connect the template button'''
-        hostname = None
-        hostip = None
 
-        try:
-            hostname = socket.gethostname()
-            hostip = socket.gethostbyname(hostname)
-        except Exception as error:  # pylint: disable = broad-except
-            logging.error('Getting IP information failed: %s', error)
+        data = nowplaying.hostmeta.gethostmeta()
 
-        if hostname:
-            qobject.hostname_label.setText(hostname)
-        if hostip:
-            qobject.hostip_label.setText(hostip)
+        if data['hostfqdn']:
+            qobject.hostname_label.setText(data['hostfqdn'])
+        if data['hostip']:
+            qobject.hostip_label.setText(data['hostip'])
 
         qobject.template_button.clicked.connect(self.on_html_template_button)
 

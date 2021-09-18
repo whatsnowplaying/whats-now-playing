@@ -21,6 +21,7 @@
            margin: 10px;
            float: left;
            max-height: 190px;
+           min-height: 190px;
            width: auto;
          }
       </style>
@@ -52,13 +53,21 @@
                      var img = document.createElement("img")
                      img.src = 'data:image/png;base64,' + metadata.coverimagebase64;
                      img.className = "npimage"
-                     $("#cover").html(img);
-                     $("#title").html('\"'+metadata.title+'\"');
-                     $("#artist").html(metadata.artist);
-                     $("#album").html(metadata.album);
-                     $("#label").html(metadata.label);
-                     $('#titlecard').delay(2000).fadeIn(2000);
-                     $('#titlecard').delay(5000).fadeOut(2000);
+                     if (metadata.title) {
+                        $("#cover").html(img);
+                        $("#title").html('\"'+metadata.title+'\"');
+                        $("#artist").html(metadata.artist);
+                        $("#album").html(metadata.album);
+                        $("#label").html(metadata.label);
+                        $('#titlecard').delay(2000).fadeIn(2000);
+                        $('#titlecard').delay(10000).fadeOut(2000);
+                     } else {
+                        $("#cover").html('');
+                        $("#title").html('');
+                        $("#artist").html('');
+                        $("#album").html('');
+                        $("#label").html('');
+                     }
                   };
 
                   ws.onclose = function(){

@@ -626,7 +626,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         # and companies don't have APIs for data.
         #
         try:
-            page = requests.get(self.url)
+            page = requests.get(self.url, timeout=5)
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Cannot process %s: %s", self.url, error)
             return None, None

@@ -26,6 +26,7 @@
     <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
   </head>
   <body>
+    {% if title %}
     <div id="titlecard">
       {% if artist %}
       <p>{{ artist }}</p>
@@ -44,5 +45,6 @@
         $('#titlecard').delay(2000).fadeOut(2000);
       });
     </script>
+    {% endif %}
   </body>
 </html>

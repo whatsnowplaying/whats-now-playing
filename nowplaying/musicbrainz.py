@@ -24,9 +24,7 @@ class MusicBrainzHelper():
         else:
             self.config = nowplaying.config.ConfigFile()
 
-
         self.emailaddressset = False
-
 
     def _setemail(self):
         ''' make sure the musicbrainz fetch has an email address set
