@@ -101,9 +101,13 @@ class WebHandler():
 
         if lastid == 0 or lastid != metadata['dbid'] or not once:
             await self.setlastid(request, metadata['dbid'])
-            templatehandler = nowplaying.utils.TemplateHandler(
-                filename=template)
-            htmloutput = templatehandler.generate(metadata)
+            try:
+                templatehandler = nowplaying.utils.TemplateHandler(
+                    filename=template)
+                htmloutput = templatehandler.generate(metadata)
+            except Exception as error:  #pylint: disable=broad-except
+                logging.error('indexhtm_handler: %s', error)
+                htmloutput = INDEXREFRESH
             return web.Response(content_type='text/html', text=htmloutput)
 
         return web.Response(content_type='text/html', text=INDEXREFRESH)
@@ -132,10 +136,14 @@ class WebHandler():
         txtoutput = ""
         if metadata:
             request.app['config'].get()
-            templatehandler = nowplaying.utils.TemplateHandler(
-                filename=request.app['config'].cparser.value(
-                    'textoutput/txttemplate'))
-            txtoutput = templatehandler.generate(metadata)
+            try:
+                templatehandler = nowplaying.utils.TemplateHandler(
+                    filename=request.app['config'].cparser.value(
+                        'textoutput/txttemplate'))
+                txtoutput = templatehandler.generate(metadata)
+            except Exception as error:  #pylint: disable=broad-except
+                logging.error('indextxt_handler: %s', error)
+                txtoutput = ''
         return web.Response(text=txtoutput)
 
     async def favicon_handler(self, request):
@@ -209,7 +217,7 @@ class WebHandler():
                 mytime = await do_update(websocket, request.app['metadb'])
                 await asyncio.sleep(1)
         except Exception as error:  #pylint: disable=broad-except
-            logging.debug(error)
+            logging.error('websocket streamer exception: %s', error)
         finally:
             logging.debug('ended in finally')
             await websocket.close()
@@ -236,6 +244,8 @@ class WebHandler():
                 elif msg.type == aiohttp.WSMsgType.ERROR:
                     logging.error('ws connection closed with exception %s',
                                   websocket.exception())
+        except Exception as error:  #pylint: disable=broad-except
+            logging.error('Websocket handler error: %s', error)
         finally:
             request.app['websockets'].discard(websocket)
 
@@ -347,7 +357,11 @@ def start(bundledir):
 
     config = nowplaying.config.ConfigFile(bundledir=bundledir)  # pylint: disable=unused-variable
     logging.info('boot up')
-    webserver = WebHandler(databasefile)  # pylint: disable=unused-variable
+    try:
+        webserver = WebHandler(databasefile)  # pylint: disable=unused-variable
+    except Exception as error:  #pylint: disable=broad-except
+        logging.error('Webserver crashed: %s', error)
+        sys.exit(0)
 
 
 if __name__ == "__main__":
