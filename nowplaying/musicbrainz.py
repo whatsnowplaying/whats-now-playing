@@ -23,21 +23,32 @@ class MusicBrainzHelper():
             self.config = config
         else:
             self.config = nowplaying.config.ConfigFile()
-        emailaddress = self.config.cparser.value('acoustidmb/emailaddress')
 
-        if not emailaddress:
-            emailaddress = 'aw@effectivemachines.com'
 
-        musicbrainzngs.set_useragent(
-            'whats-now-playing',
-            nowplaying.version.get_versions()['version'],
-            contact=emailaddress)
+        self.emailaddressset = False
+
+
+    def _setemail(self):
+        ''' make sure the musicbrainz fetch has an email address set
+            according to their requirements '''
+        if not self.emailaddressset:
+            emailaddress = self.config.cparser.value('acoustidmb/emailaddress')
+
+            if not emailaddress:
+                emailaddress = 'aw@effectivemachines.com'
+
+            musicbrainzngs.set_useragent(
+                'whats-now-playing',
+                nowplaying.version.get_versions()['version'],
+                contact=emailaddress)
+            self.emailaddressset = True
 
     def isrc(self, isrc):
         ''' lookup musicbrainz information based upon isrc '''
         if not self.config.cparser.value('acoustidmb/enabled', type=bool):
             return None
 
+        self._setemail()
         try:
             mbdata = musicbrainzngs.get_recordings_by_isrc(
                 isrc, includes=['releases'], release_status=['official'])
@@ -61,6 +72,8 @@ class MusicBrainzHelper():
         ''' lookup the musicbrainz information based upon recording id '''
         if not self.config.cparser.value('acoustidmb/enabled', type=bool):
             return None
+
+        self._setemail()
 
         def read_label(releasedata):
             if 'label-info-list' not in releasedata:
