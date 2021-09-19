@@ -180,13 +180,21 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self.metadata['coverimagetype'] = 'png'
         self.metadata['coverurl'] = 'cover.png'
 
-    def _recogintion_replacement(self, addmeta):
+    def _recognition_replacement(self, addmeta):
+
+        # if there is nothing in addmeta, then just bail early
+        if not addmeta:
+            return
+
+        # look if the user wants us to specifically change these two
+        # if so, and we have it, do it.
         for replacelist in ['artist', 'title']:
             if self.config.cparser.value(f'recognition/replace{replacelist}',
                                          type=bool) and replacelist in addmeta:
                 self.metadata[replacelist] = addmeta[replacelist]
                 del addmeta[replacelist]
 
+        # now run through everything else
         for meta in addmeta:
             if meta not in self.metadata:
                 self.metadata[meta] = addmeta[meta]
@@ -200,7 +208,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             if any(meta not in self.metadata for meta in metalist):
                 addmeta = musicbrainz.recordingid(
                     self.metadata['musicbrainzrecordingid'])
-                self._recogintion_replacement(addmeta)
+                self._recognition_replacement(addmeta)
         elif 'isrc' in self.metadata:
             logging.debug('Preprocessing with musicbrainz isrc')
             musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
@@ -208,7 +216,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             metalist = musicbrainz.providerinfo()
             if any(meta not in self.metadata for meta in metalist):
                 addmeta = musicbrainz.isrc(self.metadata['isrc'])
-                self._recogintion_replacement(addmeta)
+                self._recognition_replacement(addmeta)
 
         for plugin in self.config.plugins['recognition']:
             metalist = self.config.pluginobjs['recognition'][
@@ -219,7 +227,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     addmeta = self.config.pluginobjs['recognition'][
                         plugin].recognize(self.metadata)
                     if addmeta:
-                        self._recogintion_replacement(addmeta)
+                        self._recognition_replacement(addmeta)
                 except Exception as error:  # pylint: disable=broad-except
                     logging.debug('%s threw exception %s', plugin, error)
 

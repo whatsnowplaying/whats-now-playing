@@ -56,7 +56,10 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                     f'nowplaying.inputs.{previousinput}'].Plugin()
                 logging.debug('Starting %s plugin', previousinput)
                 self.input.start()
-            self.gettrack()
+            try:
+                self.gettrack()
+            except Exception as error:  #pylint: disable=broad-except
+                logging.debug('Failed attempting to get a track: %s', error)
 
     def __del__(self):
         logging.debug('TrackPoll is being killed!')
