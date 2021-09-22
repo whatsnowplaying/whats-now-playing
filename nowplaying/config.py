@@ -8,7 +8,7 @@ import logging
 import os
 import sys
 
-from PySide2.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.inputs
 import nowplaying.recognition

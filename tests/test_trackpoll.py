@@ -5,7 +5,7 @@ import logging
 
 import pytest
 
-from PySide2.QtCore import QThread  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QThread  # pylint: disable=no-name-in-module
 
 import nowplaying.trackpoll  # pylint: disable=import-error
 import nowplaying.inputs  # pylint: disable=import-error

@@ -4,11 +4,11 @@
 import logging
 import os
 
-from PySide2.QtCore import Slot, QFile, Qt  # pylint: disable=no-name-in-module
-from PySide2.QtWidgets import QCheckBox, QErrorMessage, QFileDialog, QTableWidgetItem, QWidget  # pylint: disable=no-name-in-module
-from PySide2.QtGui import QIcon  # pylint: disable=no-name-in-module
-from PySide2.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
-import PySide2.QtXml  # pylint: disable=unused-import, import-error, no-name-in-module
+from PySide6.QtCore import Slot, QFile, Qt  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QCheckBox, QErrorMessage, QFileDialog, QTableWidgetItem, QWidget  # pylint: disable=no-name-in-module
+from PySide6.QtGui import QIcon  # pylint: disable=no-name-in-module
+from PySide6.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
+import PySide6.QtXml  # pylint: disable=unused-import, import-error, no-name-in-module
 
 import nowplaying.config
 import nowplaying.hostmeta

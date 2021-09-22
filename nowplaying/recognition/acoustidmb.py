@@ -14,8 +14,8 @@ import logging
 import logging.config
 import logging.handlers
 
-from PySide2.QtCore import QDir  # pylint: disable=no-name-in-module
-from PySide2.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QDir  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 import acoustid
 

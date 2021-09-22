@@ -7,7 +7,7 @@ import sys
 
 import psutil
 import pytest
-from PySide2.QtCore import QCoreApplication, QSettings  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QCoreApplication, QSettings  # pylint: disable=no-name-in-module
 
 import nowplaying.bootstrap
 import nowplaying.config

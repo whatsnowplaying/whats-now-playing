@@ -19,7 +19,7 @@ try:
 except ImportError:
     DBUS_STATUS = False
 
-from PySide2.QtCore import Qt  # pylint: disable=no-name-in-module
+from PySide6.QtCore import Qt  # pylint: disable=no-name-in-module
 from nowplaying.inputs import InputPlugin
 
 MPRIS2_BASE = 'org.mpris.MediaPlayer2'

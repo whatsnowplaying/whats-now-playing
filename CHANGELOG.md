@@ -4,6 +4,7 @@
 ## Version 3.1.0 - in progress
 
 * Removed ACRCloud support
+* Upgraded to Qt 6
 
 ## Version 3.0.0 - 2021-11-27
 

@@ -13,7 +13,7 @@ import time
 
 import pkg_resources
 
-from PySide2.QtCore import QCoreApplication, QSettings, QStandardPaths, Qt  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.version
 
@@ -253,7 +253,7 @@ class UpgradeTemplates():
 
 def set_qt_names(app=None, appname='NowPlaying'):
     ''' bootstrap Qt for configuration '''
-    QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
+    #QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     if not app:
         app = QCoreApplication.instance()
     if not app:

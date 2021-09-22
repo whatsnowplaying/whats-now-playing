@@ -33,7 +33,7 @@ fi
 "${PYTHON}" setup.py build
 mv nowplaying/version.py nowplaying/version.py.old
 mv build/lib/nowplaying/version.py nowplaying/version.py
-pyside2-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
+pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
 pyinstaller NowPlaying.spec
 cp -p CHANGELOG* README* LICENSE.txt NOTICE.txt dist
 mv dist "${DISTDIR}"

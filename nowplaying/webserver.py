@@ -19,7 +19,7 @@ import aiohttp
 from aiohttp import web, WSCloseCode
 import aiosqlite
 
-from PySide2.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 #
 # quiet down our imports

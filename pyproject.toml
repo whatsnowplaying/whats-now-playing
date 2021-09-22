@@ -14,7 +14,7 @@ markers = [
     "seratosettings: custom settings for serato ",
     "templatesettings: custom settings for templates",
 ]
-qt_api = "pyside2"
+qt_api = "pyside6"
 log_cli = true
 addopts = [
   "--cov=nowplaying",

@@ -172,6 +172,7 @@ jobs:
             --no-install-suggests \
             libchromaprint-tools \
             libdbus-1-dev \
+            libegl1 \
             python3-dbus \
             python3-pip
 

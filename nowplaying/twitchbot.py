@@ -34,7 +34,7 @@ import time
 import irc.bot
 import jinja2
 
-from PySide2.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 
 #
 # quiet down our imports

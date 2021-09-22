@@ -5,9 +5,9 @@ import sys
 import os
 import socket
 
-from PySide2.QtWidgets import QApplication, QWidget  # pylint: disable=no-name-in-module
-from PySide2.QtCore import QFile  # pylint: disable=no-name-in-module
-from PySide2.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QApplication, QWidget  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QFile  # pylint: disable=no-name-in-module
+from PySide6.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
 
 
 class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods

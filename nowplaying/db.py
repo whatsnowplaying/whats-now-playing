@@ -13,7 +13,7 @@ import time
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
-from PySide2.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 
 class DBWatcher:

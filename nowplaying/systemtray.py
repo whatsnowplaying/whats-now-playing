@@ -4,10 +4,8 @@
 import logging
 import multiprocessing
 
-from PySide2.QtWidgets import (  # pylint: disable=no-name-in-module
-    QAction, QActionGroup, QApplication, QErrorMessage, QMenu, QMessageBox,
-    QSystemTrayIcon)
-from PySide2.QtGui import QIcon  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QApplication, QErrorMessage, QMenu, QMessageBox, QSystemTrayIcon  # pylint: disable=no-name-in-module
+from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module
 
 import nowplaying.config
 import nowplaying.db
