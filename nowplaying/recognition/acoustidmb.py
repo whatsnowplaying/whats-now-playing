@@ -123,7 +123,7 @@ class Plugin(RecognitionPlugin):
                 self.acoustidmd['musicbrainzrecordingid'] = rid
                 lastscore = score
 
-    def _configure_fpcalc(self, fpcalcexe=None):  # pylint: disable=too-many-return-statements
+    def _configure_fpcalc(self, fpcalcexe=None):    # pylint: disable=too-many-return-statements
         ''' deal with all the potential issues of finding and running fpcalc '''
 
         if fpcalcexe and not os.environ.get("FPCALC"):
@@ -154,17 +154,16 @@ class Plugin(RecognitionPlugin):
                     ext.lower() for ext in os.environ["PATHEXT"].split(";")
                 ]
                 testex = os.path.basename(fpcalcexe).split('.')[1]
-                if not testex in exts:
+                if testex not in exts:
                     logging.error('defined fpcalc [%s] is not executable.',
                                   fpcalcexe)
                     return False
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('Testing fpcalc on windows hit: %s', error)
-        else:
-            if not os.access(fpcalcexe, os.X_OK):
-                logging.error('defined fpcalc [%s] is not executable.',
-                              fpcalcexe)
-                return False
+        elif not os.access(fpcalcexe, os.X_OK):
+            logging.error('defined fpcalc [%s] is not executable.',
+                          fpcalcexe)
+            return False
 
         self.fpcalcexe = fpcalcexe
         return True
