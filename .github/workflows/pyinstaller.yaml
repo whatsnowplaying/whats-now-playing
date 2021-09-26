@@ -11,7 +11,7 @@ name: pyinstaller
 on: [push]  # yamllint disable-line rule:truthy
 
 jobs:
-  pyinstaller-mac:
+  pyinstaller-mac-10-15:
     runs-on: macos-10.15
     steps:
       - name: checkout
@@ -46,6 +46,40 @@ jobs:
           name: mac-dist
           path: dist/NowPlaying.zip
 
+  pyinstaller-mac-11:
+    runs-on: macos-11
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: install dependencies
+        run: |
+          python3 -m venv /tmp/venv
+          source /tmp/venv/bin/activate
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-macosx.txt
+          vendoring sync
+          pip install .
+      - name: pyinstaller
+        run: |
+          /tmp/venv/bin/pyinstaller NowPlaying.spec
+      - name: manipulate the dist
+        run: |
+          cp -p CHANGELOG* README* LICENSE.txt NOTICE.txt dist
+          cd dist
+          rm -rf NowPLaying
+          zip -r NowPlaying.zip .
+      - name: artifact dist
+        uses: actions/upload-artifact@v2
+        with:
+          name: mac-dist
+          path: dist/NowPlaying.zip
 
   pyinstaller-win:
     runs-on: windows-2019
