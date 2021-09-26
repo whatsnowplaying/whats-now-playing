@@ -36,12 +36,15 @@ class Plugin(InputPlugin):
     def _setup_watcher(self):
         ''' set up a custom watch on the m3u dir so meta info
             can update on change'''
+
+        m3udir = self.config.cparser.value('m3u/directory')
+        if not self.m3udir or self.m3udir != m3udir:
+            self.stop()
+
         if self.observer:
             return
 
-        if not self.m3udir:
-            self.m3udir = self.config.cparser.value('m3u/directory')
-
+        self.m3udir = m3udir
         if not self.m3udir:
             logging.error('M3U Directory Path does not exist: %s', self.m3udir)
             return
@@ -193,9 +196,6 @@ class Plugin(InputPlugin):
         ''' take the settings page and save it '''
         configdir = qwidget.dir_lineedit.text()
         self.config.cparser.setValue('m3u/directory', configdir)
-        if self.m3udir and self.m3udir != configdir:
-            self.m3udir = None
-            self.stop()
 
     def desc_settingsui(self, qwidget):
         ''' description '''
