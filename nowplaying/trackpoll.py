@@ -75,9 +75,12 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         #logging.debug('called gettrack')
         # check paused state
         while True:
-            if not self.config.getpause():
+            if not self.config.getpause() or self.endthread:
                 break
             QThread.msleep(500)
+
+        if self.endthread:
+            return
 
         (artist, title) = self.input.getplayingtrack()
 
