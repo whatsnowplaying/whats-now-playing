@@ -38,7 +38,7 @@ class Plugin(RecognitionPlugin):
         self.acoustidmd = {}
         self.fpcalcexe = None
 
-    def _fetch_from_acoustid(self, apikey, filename):
+    def _fetch_from_acoustid(self, apikey, filename):  # pylint: disable=no-self-use
         results = None
         try:
             (duration,
@@ -53,16 +53,21 @@ class Plugin(RecognitionPlugin):
         try:
             counter = 0
             while counter < 3:
-                results = acoustid.lookup(apikey, fingerprint, duration)
-                if 'error' in results and 'rate limit' in results['error'][
-                        'message']:
-                    logging.info(
-                        'acoustid complaining about rate limiting. Sleeping then rying again.'
-                    )
-                    time.sleep(.5)
-                    counter = counter + 1
-                else:
+                results = acoustid.lookup(apikey,
+                                          fingerprint,
+                                          duration,
+                                          meta=[
+                                              'recordings', 'recordingids',
+                                              'releases', 'tracks', 'usermeta'
+                                          ])
+                if ('error' not in results
+                        or 'rate limit' not in results['error']['message']):
                     break
+                logging.info(
+                    'acoustid complaining about rate limiting. Sleeping then rying again.'
+                )
+                time.sleep(.5)
+                counter += 1
         except acoustid.NoBackendError:
             results = None
             logging.error("chromaprint library/tool not found")
@@ -81,16 +86,7 @@ class Plugin(RecognitionPlugin):
                           results['error']['message'])
             return None
 
-        try:
-            if isinstance(results['results'], list) and results['results']:
-                self.acoustidmd['acoustidid'] = results['results'][0]['id']
-            elif 'id' in results:
-                self.acoustidmd['acoustidid'] = results['results']['id']
-            return acoustid.parse_lookup_result(results)
-        except Exception as error:  # pylint: disable=broad-except
-            logging.error('acoustid plugin threw %s over %s', error, results)
-
-        return None
+        return results['results']
 
     def _simplestring(self, mystr):
         if not mystr:
@@ -99,7 +95,7 @@ class Plugin(RecognitionPlugin):
             return 'THIS TEXT IS TOO SMALL SO IGNORE IT'
         return mystr.lower().translate(self.wstrans)
 
-    def _read_acoustid_tuples(self, results):
+    def _read_acoustid_tuples(self, results):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
         fnstr = self._simplestring(self.acoustidmd['filename'])
         if 'artist' in self.acoustidmd:
             fnstr = fnstr + self._simplestring(self.acoustidmd['artist'])
@@ -107,22 +103,71 @@ class Plugin(RecognitionPlugin):
             fnstr = fnstr + self._simplestring(self.acoustidmd['title'])
 
         lastscore = 0
-        for score, rid, title, artist in results:
-            if artist and self._simplestring(artist) in fnstr:
-                score = score + .10
-            if title and self._simplestring(title) in fnstr:
-                score = score + .10
+        artistlist = []
+        title = None
+        rid = None
 
-            logging.debug(
-                'weighted score = %s, rid = %s, title = %s, artist = %s',
-                score, rid, title, artist)
-            if score > .60 and score > lastscore:
-                if artist:
-                    self.acoustidmd['artist'] = artist
-                if title:
-                    self.acoustidmd['title'] = title
-                self.acoustidmd['musicbrainzrecordingid'] = rid
-                lastscore = score
+        logging.debug(results)
+
+        for result in results:  # pylint: disable=too-many-nested-blocks
+            acoustidid = result['id']
+            score = result['score']
+            if 'recordings' not in result:
+                continue
+
+            for recording in result['recordings']:
+                score = result['score']
+                if 'id' in recording:
+                    rid = recording['id']
+                if 'releases' not in recording:
+                    logging.debug('Skipping acoustid record %s', recording)
+                    continue
+
+                releasecount = 0
+                for release in recording['releases']:
+                    releasecount += 1
+                    if 'artists' in release:
+                        for artist in release['artists']:
+                            if 'name' in artist:
+                                albumartist = artist['name']
+                            elif isinstance(artist, str):
+                                albumartist = artist
+                            if albumartist == 'Various Artists':
+                                score = score - .20
+                            elif albumartist and self._simplestring(
+                                    albumartist) in fnstr:
+                                score = score + .20
+
+                    title = release['mediums'][0]['tracks'][0]['title']
+                    if title and self._simplestring(title) in fnstr:
+                        score = score + .10
+                    artistlist = []
+                    for trackartist in release['mediums'][0]['tracks'][0][
+                            'artists']:
+                        if 'name' in trackartist:
+                            artistlist.append(trackartist['name'])
+                        elif isinstance(trackartist, str):
+                            artistlist.append(trackartist)
+                        if trackartist and self._simplestring(
+                                trackartist) in fnstr:
+                            score = score + .10
+
+                    artist = ' & '.join(artistlist)
+
+                score = score + (releasecount * 0.10)
+                logging.debug(
+                    'weighted score = %s, rid = %s, title = %s, artist = %s',
+                    score, rid, title, artist)
+
+                if score > lastscore:
+                    self.acoustidmd['acoustidid'] = acoustidid
+                    if artistlist:
+                        self.acoustidmd['artist'] = ' & '.join(artistlist)
+                    if title:
+                        self.acoustidmd['title'] = title
+                    if rid:
+                        self.acoustidmd['musicbrainzrecordingid'] = rid
+                    lastscore = score
 
     def _configure_fpcalc(self, fpcalcexe=None):  # pylint: disable=too-many-return-statements
         ''' deal with all the potential issues of finding and running fpcalc '''
@@ -172,37 +217,38 @@ class Plugin(RecognitionPlugin):
         return True
 
     def recognize(self, metadata):  #pylint: disable=too-many-statements
-        #if not self.config.cparser.value('acoustidmb/enabled', type=bool):
-        #   return None
-
         self.acoustidmd = metadata
+        if not self.config.cparser.value('acoustidmb/enabled', type=bool):
+            return None
 
         if 'musicbrainzrecordingid' not in self.acoustidmd:
 
             logging.debug(
                 'No musicbrainzrecordingid in metadata, so use acoustid')
             if 'filename' not in metadata:
-                logging.debug('No filename in metadata')
-                return None
-
-            if not self.config.cparser.value('acoustidmb/enabled', type=bool):
+                logging.warning('No filename in metadata')
                 return None
 
             if not self._configure_fpcalc(fpcalcexe=self.config.cparser.value(
                     'acoustidmb/fpcalcexe')):
+                logging.error('fpcalc is not configured')
                 return None
 
             apikey = self.config.cparser.value('acoustidmb/acoustidapikey')
             results = self._fetch_from_acoustid(apikey, metadata['filename'])
             if not results:
+                logging.info(
+                    'acoustid could not recognize %s. Will need to be tagged.',
+                    metadata['filename'])
                 return self.acoustidmd
 
             self._read_acoustid_tuples(results)
 
         if 'musicbrainzrecordingid' not in self.acoustidmd:
-            logging.info('acoustidmb did not find a musicbrainz rid %s.',
-                         metadata['filename'])
-            return None
+            logging.info(
+                'acoustidmb: no musicbrainz rid %s. Returning everything else.',
+                metadata['filename'])
+            return self.acoustidmd
 
         self.acoustidmd.update(
             self.musicbrainz.recordingid(

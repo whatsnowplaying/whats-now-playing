@@ -9,7 +9,7 @@ musicbrainzngs==0.7.1
 obs-websocket-py==0.5.3
 pillow==8.3.2
 psutil==5.8.0
-pyacoustid==1.2.0
+pyacoustid==1.2.2
 pyinstaller==4.5.1
 pyinstaller_versionfile==2.0.0
 PySide2==5.15.2
