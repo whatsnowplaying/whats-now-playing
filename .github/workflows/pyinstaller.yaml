@@ -38,12 +38,12 @@ jobs:
         run: |
           cp -p CHANGELOG* README* LICENSE.txt NOTICE.txt dist
           cd dist
-          rm -rf NowPLaying
+          rm -rf NowPlaying
           zip -r NowPlaying.zip .
       - name: artifact dist
         uses: actions/upload-artifact@v2
         with:
-          name: mac-dist
+          name: mac-10-15-dist
           path: dist/NowPlaying.zip
 
   pyinstaller-mac-11:
@@ -78,7 +78,7 @@ jobs:
       - name: artifact dist
         uses: actions/upload-artifact@v2
         with:
-          name: mac-dist
+          name: mac-11-dist
           path: dist/NowPlaying.zip
 
   pyinstaller-win:
