@@ -111,6 +111,21 @@ class MusicBrainzHelper():
                     return None
             return mbdata
 
+        def _pickarelease(newdata, mbdata):
+            namedartist = []
+            variousartist = []
+            for release in mbdata['release-list']:
+                if 'artist' in newdata and release[
+                        'artist-credit-phrase'] == newdata['artist']:
+                    namedartist.append(release)
+                elif release['artist-credit-phrase'] == 'Various Artists':
+                    variousartist.append(release)
+
+            if len(namedartist) < 1:
+                return variousartist
+
+            return namedartist
+
         newdata = {'musicbrainzrecordingid': recordingid}
         try:
             mbdata = musicbrainzngs.get_recording_by_id(recordingid,
@@ -133,7 +148,11 @@ class MusicBrainzHelper():
         if 'release-count' not in mbdata or mbdata['release-count'] == 0:
             return newdata
 
-        release = mbdata['release-list'][0]
+        mbdata = _pickarelease(newdata, mbdata)
+        if not mbdata:
+            return None
+
+        release = mbdata[0]
         if 'title' in release:
             newdata['album'] = release['title']
         if 'date' in release:
@@ -176,7 +195,7 @@ def main():
     nowplaying.config.ConfigFile(bundledir=bundledir)
     musicbrainz = MusicBrainzHelper(config=nowplaying.config.ConfigFile(
         bundledir=bundledir))
-    metadata = musicbrainz.isrc(isrc)
+    metadata = musicbrainz.recordingid(isrc)
     if not metadata:
         print('No information')
         sys.exit(1)
