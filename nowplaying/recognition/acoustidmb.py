@@ -60,15 +60,16 @@ class Plugin(RecognitionPlugin):
                                               'recordings', 'recordingids',
                                               'releases', 'tracks', 'usermeta'
                                           ])
-                if 'error' in results and 'rate limit' in results['error'][
-                        'message']:
-                    logging.info(
-                        'acoustid complaining about rate limiting. Sleeping then rying again.'
-                    )
-                    time.sleep(.5)
-                    counter = counter + 1
-                else:
+                if (
+                    'error' not in results
+                    or 'rate limit' not in results['error']['message']
+                ):
                     break
+                logging.info(
+                    'acoustid complaining about rate limiting. Sleeping then rying again.'
+                )
+                time.sleep(.5)
+                counter += 1
         except acoustid.NoBackendError:
             results = None
             logging.error("chromaprint library/tool not found")
@@ -126,7 +127,7 @@ class Plugin(RecognitionPlugin):
 
                 releasecount = 0
                 for release in recording['releases']:
-                    releasecount = releasecount + 1
+                    releasecount += 1
                     if 'artists' in release:
                         for artist in release['artists']:
                             if 'name' in artist:

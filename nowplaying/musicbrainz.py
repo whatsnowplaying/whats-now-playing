@@ -121,7 +121,7 @@ class MusicBrainzHelper():
                 elif release['artist-credit-phrase'] == 'Various Artists':
                     variousartist.append(release)
 
-            if len(namedartist) < 1:
+            if not namedartist:
                 return variousartist
 
             return namedartist
