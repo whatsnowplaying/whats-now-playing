@@ -114,13 +114,13 @@ class WebHandler():
 
         return web.Response(content_type='text/html', text=INDEXREFRESH)
 
-    async def setlastid(self, request, lastid):
+    async def setlastid(self, request, lastid):  # pylint: disable=no-self-use
         ''' get the lastid sent by http/html '''
         await request.app['statedb'].execute(
             'UPDATE lastprocessed SET lastid = ? WHERE id=1', [lastid])
         await request.app['statedb'].commit()
 
-    async def getlastid(self, request):
+    async def getlastid(self, request):  # pylint: disable=no-self-use
         ''' get the lastid sent by http/html '''
         cursor = await request.app['statedb'].execute(
             'SELECT lastid FROM lastprocessed WHERE id=1')
@@ -132,7 +132,7 @@ class WebHandler():
         await cursor.close()
         return lastid
 
-    async def indextxt_handler(self, request):
+    async def indextxt_handler(self, request):  # pylint: disable=no-self-use
         ''' handle static index.txt '''
         metadata = request.app['metadb'].read_last_meta()
         txtoutput = ""
@@ -148,11 +148,11 @@ class WebHandler():
                 txtoutput = ''
         return web.Response(text=txtoutput)
 
-    async def favicon_handler(self, request):
+    async def favicon_handler(self, request):  # pylint: disable=no-self-use
         ''' handle favicon.ico '''
         return web.FileResponse(path=request.app['config'].iconfile)
 
-    async def cover_handler(self, request):
+    async def cover_handler(self, request):  # pylint: disable=no-self-use
         ''' handle cover image '''
         metadata = request.app['metadb'].read_last_meta()
         if 'coverimageraw' in metadata:
@@ -162,7 +162,7 @@ class WebHandler():
         # this makes the client code significantly easier
         return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
 
-    async def api_v1_last_handler(self, request):
+    async def api_v1_last_handler(self, request):  # pylint: disable=no-self-use
         ''' handle static index.txt '''
         metadata = request.app['metadb'].read_last_meta()
         # if there is an image, encode it as base64
@@ -173,7 +173,7 @@ class WebHandler():
         del metadata['dbid']
         return web.json_response(metadata)
 
-    async def websocket_lastjson_handler(self, request, websocket):
+    async def websocket_lastjson_handler(self, request, websocket):  # pylint: disable=no-self-use
         ''' handle singular websocket request '''
         metadata = request.app['metadb'].read_last_meta()
         # if there is an image, encode it as base64
@@ -184,7 +184,7 @@ class WebHandler():
         del metadata['dbid']
         await websocket.send_json(metadata)
 
-    async def websocket_streamer(self, request):
+    async def websocket_streamer(self, request):  # pylint: disable=no-self-use
         ''' handle continually streamed updates '''
         async def do_update(websocket, database):
             # early launch can be a bit weird so
@@ -305,13 +305,13 @@ class WebHandler():
             'INSERT INTO lastprocessed (id, lastid) VALUES (1,0)')
         await app['statedb'].commit()
 
-    async def on_shutdown(self, app):
+    async def on_shutdown(self, app):  # pylint: disable=no-self-use
         ''' handle shutdown '''
         for websocket in set(app['websockets']):
             await websocket.close(code=WSCloseCode.GOING_AWAY,
                                   message='Server shutdown')
 
-    async def on_cleanup(self, app):
+    async def on_cleanup(self, app):  # pylint: disable=no-self-use
         ''' cleanup the app '''
         await app['statedb'].close()
         app['watcher'].stop()

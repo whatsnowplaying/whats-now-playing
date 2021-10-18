@@ -59,9 +59,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
         pluginuis = {}
         pluginuinames = []
-        for plugintype in self.config.plugins:
+        for plugintype, pluginlist in self.config.plugins.items():
             pluginuis[plugintype] = []
-            for key in self.config.plugins[plugintype]:
+            for key in pluginlist:
                 pkey = key.replace(f'nowplaying.{plugintype}.', '')
                 pluginuis[plugintype].append(pkey)
                 pluginuinames.append(f'{plugintype}_{pkey}')

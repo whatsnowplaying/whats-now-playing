@@ -183,7 +183,7 @@ class UpgradeTemplates():
         ''' preload the known hashes for bundled templates '''
         shafile = os.path.join(self.bundledir, 'resources', 'updateshas.json')
         if os.path.exists(shafile):
-            with open(shafile) as fhin:
+            with open(shafile, encoding='utf-8') as fhin:
                 self.oldshas = json.loads(fhin.read())
 
     def check_preload(self, filename, userhash):

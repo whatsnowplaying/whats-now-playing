@@ -31,7 +31,7 @@ def trysocket():
 
 def trynetifaces():
     ''' try using socket.*; this works most of the time '''
-    global HOSTFQDN, HOSTNAME, HOSTIP  #pylint: disable=global-statement
+    global HOSTIP  #pylint: disable=global-statement
 
     try:
         gws = netifaces.gateways()
