@@ -12,7 +12,7 @@ Compiled, standalone versions are available for:
 
 * Windows
 * macOS (10.13/High Sierra to 10.15/Catalina)
-  * We do not yet have binaries for 10.11/Big Sur or M1.
+  * Binaries for 10.11/Big Sur+ and/or M1 are available from the 3.x releases.
 
 For everyone else, you will need to build and install locally.  See [Developers](#Developers) below.
 

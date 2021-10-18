@@ -140,7 +140,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
     def _announce_track(self, event):  # pylint: disable=unused-argument
         ''' announce new tracks '''
-        global LASTANNOUNCED, LOCK  # pylint: disable=global-statement
+        global LASTANNOUNCED, LOCK  # pylint: disable=global-statement, global-variable-not-assigned
 
         LOCK.acquire()
 

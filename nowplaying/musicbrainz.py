@@ -97,7 +97,7 @@ class MusicBrainzHelper():
                     recording=recordingid,
                     includes=['labels', 'artist-credits'],
                     release_status=['official'])
-            except Exception:  # pylint: disable=broad-except
+            except Exception as error:  # pylint: disable=broad-except
                 logging.debug('MusicBrainz threw an error: %s', error)
                 return None
 

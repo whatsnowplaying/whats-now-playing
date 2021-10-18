@@ -503,7 +503,6 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
     def computedecks(self, deckskiplist=None):  # pylint: disable=no-self-use
         ''' based upon the session data, figure out what is actually
             on each deck '''
-        global PARSEDSESSIONS  #pylint: disable=global-statement
 
         logging.debug('called computedecks')
 
@@ -598,7 +597,6 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         ''' parse out last track from binary session file
             get latest session file
         '''
-        global LASTPROCESSED  #pylint: disable=global-statement
 
         if self.mode == 'remote':
             logging.debug('in remote mode; skipping')

@@ -55,10 +55,10 @@ def compare_content(srcdir, destdir, conflict=None):
             newname = filename.replace('.txt', '.new')
             newname = newname.replace('.htm', '.new')
             newdestfn = os.path.join(destdir, newname)
-            assert filename and list(open(srcfn)) != list(open(destfn))
-            assert filename and list(open(srcfn)) == list(open(newdestfn))
+            assert filename and list(open(srcfn)) != list(open(destfn)) #pylint: disable=consider-using-with, unspecified-encoding
+            assert filename and list(open(srcfn)) == list(open(newdestfn)) #pylint: disable=consider-using-with, unspecified-encoding
         else:
-            assert filename and list(open(srcfn)) == list(open(destfn))
+            assert filename and list(open(srcfn)) == list(open(destfn)) #pylint: disable=consider-using-with, unspecified-encoding
 
 
 def test_upgrade_blank(upgrade_bootstrap):  # pylint: disable=redefined-outer-name
@@ -116,6 +116,6 @@ def test_upgrade_old(upgrade_bootstrap, getroot):  # pylint: disable=redefined-o
     pathlib.Path(touchfile).touch()
     nowplaying.bootstrap.UpgradeTemplates(bundledir=bundledir,
                                           testdir=testpath)
-    assert list(open(os.path.join(srcdir, 'songquotes.txt'))) == list(
-        open(os.path.join(destdir, 'songquotes.new')))
+    assert list(open(os.path.join(srcdir, 'songquotes.txt'))) == list( #pylint: disable=consider-using-with, unspecified-encoding
+        open(os.path.join(destdir, 'songquotes.new'))) #pylint: disable=consider-using-with, unspecified-encoding
     compare_content(srcdir, destdir, conflict=touchfile)

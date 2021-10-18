@@ -22,7 +22,7 @@ def get_versions():
 
   '''
 
-    with open(filename, 'w') as fileh:
+    with open(filename, 'w', encoding='utf-8') as fileh:
         fileh.write(routine)
 
 

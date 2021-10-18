@@ -45,7 +45,7 @@ def test_empty_db(getmetadb):  # pylint: disable=redefined-outer-name
     assert readdata is None
 
 
-def test_data_db1(getmetadb):    # pylint: disable=redefined-outer-name
+def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
     ''' simple data test '''
     metadb = getmetadb
 

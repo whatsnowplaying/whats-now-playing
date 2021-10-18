@@ -36,7 +36,7 @@ def results(expected, metadata):
 
 def write_m3u(m3u, filename):
     ''' create m3u file with content '''
-    with open(m3u, 'w') as m3ufn:
+    with open(m3u, 'w') as m3ufn:  # pylint: disable=unspecified-encoding
         m3ufn.write('#EXTM3U' + os.linesep)
         m3ufn.write(f'{filename}' + os.linesep)
 
@@ -87,7 +87,7 @@ def test_emptym3u2(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     mydir = config.cparser.value('m3u/directory')
     if not os.path.exists(mydir):
         logging.error('mydir does not exist!')
-    with open(os.path.join(mydir, 'fake.m3u'), 'w') as m3ufh:
+    with open(os.path.join(mydir, 'fake.m3u'), 'w') as m3ufh:  # pylint: disable=unspecified-encoding
         m3ufh.write(os.linesep)
         m3ufh.write(os.linesep)
     plugin = nowplaying.inputs.m3u.Plugin(config=config)

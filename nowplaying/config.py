@@ -159,9 +159,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     def _defaults_plugins(self, settings):
         ''' configure the defaults for input plugins '''
         self.pluginobjs = {}
-        for plugintype in self.plugins:
+        for plugintype, plugtypelist in self.plugins.items():
             self.pluginobjs[plugintype] = {}
-            for key in self.plugins[plugintype]:
+            for key in plugtypelist:
                 self.pluginobjs[plugintype][key] = self.plugins[plugintype][
                     key].Plugin(config=self, qsettings=settings)
                 self.pluginobjs[plugintype][key].defaults(settings)
@@ -169,24 +169,24 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     def plugins_connect_settingsui(self, qtwidgets):
         ''' configure the defaults for plugins '''
         # qtwidgets = list of qtwidgets, identified as [plugintype_pluginname]
-        for plugintype in self.plugins:
-            for key in self.plugins[plugintype]:
+        for plugintype, plugtypelist in self.plugins.items():
+            for key in plugtypelist:
                 widgetkey = key.split('.')[-1]
                 self.pluginobjs[plugintype][key].connect_settingsui(
                     qtwidgets[f'{plugintype}_{widgetkey}'])
 
     def plugins_load_settingsui(self, qtwidgets):
         ''' configure the defaults for plugins '''
-        for plugintype in self.plugins:
-            for key in self.plugins[plugintype]:
+        for plugintype, plugtypelist in self.plugins.items():
+            for key in plugtypelist:
                 widgetkey = key.split('.')[-1]
                 self.pluginobjs[plugintype][key].load_settingsui(
                     qtwidgets[f'{plugintype}_{widgetkey}'])
 
     def plugins_verify_settingsui(self, inputname, qtwidgets):
         ''' configure the defaults for plugins '''
-        for plugintype in self.plugins:
-            for key in self.plugins[plugintype]:
+        for plugintype, plugtypelist in self.plugins.items():
+            for key in plugtypelist:
                 widgetkey = key.split('.')[-1]
                 if (widgetkey == inputname and plugintype
                         == 'inputs') or (plugintype != 'inputs'):
@@ -195,8 +195,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
     def plugins_save_settingsui(self, qtwidgets):
         ''' configure the defaults for input plugins '''
-        for plugintype in self.plugins:
-            for key in self.plugins[plugintype]:
+        for plugintype, plugtypelist in self.plugins.items():
+            for key in plugtypelist:
                 widgetkey = key.split('.')[-1]
                 self.pluginobjs[plugintype][key].save_settingsui(
                     qtwidgets[f'{plugintype}_{widgetkey}'])

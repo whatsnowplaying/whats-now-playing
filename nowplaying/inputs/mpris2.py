@@ -27,8 +27,6 @@ MPRIS2_BASE = 'org.mpris.MediaPlayer2'
 class MPRIS2Handler():
     ''' Read metadata from MPRIS2 '''
     def __init__(self, service=None):
-        global DBUS_STATUS  # pylint: disable=global-statement
-
         self.service = None
         self.bus = None
         self.proxy = None
@@ -60,7 +58,6 @@ class MPRIS2Handler():
 
     def getplayingtrack(self):
         ''' get the currently playing song '''
-        global DBUS_STATUS  # pylint: disable=global-statement
 
         # start with a blank slate to prevent
         # data bleeding
@@ -172,7 +169,6 @@ class MPRIS2Handler():
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
     def __init__(self, config=None, qsettings=None):
-        global DBUS_STATUS  # pylint: disable=global-statement
 
         super().__init__(config=config, qsettings=qsettings)
         self.mpris2 = None
@@ -283,7 +279,6 @@ class Plugin(InputPlugin):
 
 def main():
     ''' entry point as a standalone app'''
-    global DBUS_STATUS  # pylint: disable=global-statement
     logging.basicConfig(level=logging.DEBUG)
     if not DBUS_STATUS:
         print('No dbus')

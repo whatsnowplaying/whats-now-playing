@@ -15,7 +15,7 @@ jobs:
           path: src
           fetch-depth: 0
       - name: test-patch
-        uses: apache/yetus-test-patch-action@0.13.0
+        uses: apache/yetus-test-patch-action@main
         with:
           basedir: ./src
           patchdir: ./out

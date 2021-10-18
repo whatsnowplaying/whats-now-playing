@@ -25,7 +25,7 @@ def main():
     oldshas = {}
 
     if os.path.exists(shafile):
-        with open(shafile) as fhin:
+        with open(shafile, encoding='utf-8') as fhin:
             oldshas = json.loads(fhin.read())
 
     for version in sys.argv[2:]:
@@ -44,7 +44,7 @@ def main():
                 continue
 
             oldshas[filename][version] = hexd
-    with open(shafile, 'w') as fhout:
+    with open(shafile, 'w', encoding='utf-8') as fhout:
         fhout.write(json.dumps(oldshas, indent=2))
 
 
