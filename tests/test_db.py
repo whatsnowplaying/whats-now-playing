@@ -45,7 +45,7 @@ def test_empty_db(getmetadb):  # pylint: disable=redefined-outer-name
     assert readdata is None
 
 
-def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
+def test_data_db1(getmetadb):    # pylint: disable=redefined-outer-name
     ''' simple data test '''
     metadb = getmetadb
 
@@ -85,7 +85,7 @@ def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
     metadb.write_to_metadb(metadata=expected)
     readdata = metadb.read_last_meta()
 
-    expected.update({'dbid': 1})
+    expected['dbid'] = 1
     results(expected, readdata)
 
 

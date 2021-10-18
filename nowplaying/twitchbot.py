@@ -212,10 +212,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
     def _build_user_profile(self, event):  #pylint: disable=no-self-use
         # Get the channel id, we will need this for v5 API calls
         tags = event.tags
-        result = {}
-        for entry in tags:
-            result.update({entry['key']: entry['value']})
-
+        result = {entry['key']: entry['value'] for entry in tags}
         logging.debug('chat profile: %s', result)
         # frankly, twitch's information that they share on IRC
         # seems pretty dumb. the only way to figure out the status
