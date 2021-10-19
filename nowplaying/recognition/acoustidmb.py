@@ -54,15 +54,16 @@ class Plugin(RecognitionPlugin):
             counter = 0
             while counter < 3:
                 results = acoustid.lookup(apikey, fingerprint, duration)
-                if 'error' in results and 'rate limit' in results['error'][
-                        'message']:
-                    logging.info(
-                        'acoustid complaining about rate limiting. Sleeping then rying again.'
-                    )
-                    time.sleep(.5)
-                    counter = counter + 1
-                else:
+                if (
+                    'error' not in results
+                    or 'rate limit' not in results['error']['message']
+                ):
                     break
+                logging.info(
+                    'acoustid complaining about rate limiting. Sleeping then rying again.'
+                )
+                time.sleep(.5)
+                counter += 1
         except acoustid.NoBackendError:
             results = None
             logging.error("chromaprint library/tool not found")
