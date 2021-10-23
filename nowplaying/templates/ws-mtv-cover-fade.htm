@@ -59,6 +59,8 @@
                         $("#artist").html(metadata.artist);
                         $("#album").html(metadata.album);
                         $("#label").html(metadata.label);
+                        $('#titlecard').delay(2000).fadeIn(2000);
+                        $('#titlecard').delay(10000).fadeOut(2000);
                      } else {
                         $("#cover").html('');
                         $("#title").html('');
@@ -75,7 +77,7 @@
             }
 
             if ("WebSocket" in window) {
-               start("ws://localhost:8899/wsstream")
+               start("ws://{{ hostip }}:{{ hostport }}/wsstream")
             }
 
       </script>

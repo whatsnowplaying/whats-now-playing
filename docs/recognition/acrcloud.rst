@@ -18,7 +18,9 @@ of the biggest in the world.
 You can learn more and sign up for ACRCloud's commercial services at https://www.acrcloud.com .
 
 
-This feature is only available on Linux and Mac OS X.
+In order for this feature to work on Windows, you will need to install the
+`Windows Runtime Library <https://github.com/acrcloud/acrcloud_sdk_python#windows-runtime-library>`.
+Linux and Mac OS X users do not need any extra software installed.
 
 
 Instructions

@@ -1,6 +1,10 @@
 Installation
 ============
 
+These directions cover the basic downloading and installation of the core funcionality.
+Music `recognition <recognition/index.html>`_ requires additional software to be installed.  Please see
+the plug-in specific page on those requirements.
+
 Linux
 -----
 
@@ -50,7 +54,7 @@ Windows
   run from (i.e., ``C:\Program Files``).
 
 *Important note for Windows users*
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Microsoft has beefed up Windows security and you may now get prompted about an unsigned
-binary.  Click on 'More Info' and then 'Run Anyway' to launch Now Playing.
+* Microsoft has beefed up Windows security and you may now get prompted about an unsigned
+  binary.  Click on 'More Info' and then 'Run Anyway' to launch Now Playing.

@@ -1,6 +1,15 @@
 Webserver
 =========
 
+**Now Playing**\ has a built-in web server that allows for a wide variety of customization and
+deployments, including complex ones involving multiple hosts.  In general, the files in
+`templates` should be treated as examples; copy them to new names and modify until
+you are happy.  Change the font, change the output order, do whatever it is you need to do.
+
+It is *recommend* to use one of the WebSocket examples as your starting point as they
+are generally more predictable. They update when the song updates vs. the
+others that use a timer to check for updates.  See more about WebSockets below.
+
 Installation
 ------------
 
@@ -75,7 +84,8 @@ WebSockets
 ----------
 
 New with version 3.0.0 is a continual feed via WebSockets. The feed is a JSON-formatted stream that
-will get an update on every title change.  To connect, use the URL ``ws://hostname:port/wsstream``
+will get an update on every title change.  To connect, use the URL ``ws://hostname:port/wsstream``.
+The files that begin with `ws-` in the `templates` directory use WebSockets.
 
 Variables set should match what is on the `Templates <../templatevariables.html>`_ page. Be aware that
 values may be null.

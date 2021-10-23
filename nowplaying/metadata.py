@@ -44,6 +44,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     def _process_hostmeta(self):
         ''' add the host metadata so other subsystems can use it '''
+        if self.config.cparser.value('weboutput/httpenabled', type=bool):
+            self.metadata['httpport'] = self.config.cparser.value('weboutput/httpport', type=int)
         hostmeta = nowplaying.hostmeta.gethostmeta()
         for key, value in hostmeta.items():
             self.metadata[key] = value

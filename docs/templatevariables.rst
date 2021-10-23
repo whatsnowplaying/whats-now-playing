@@ -60,6 +60,14 @@ Support Variables
      - Local filename of the media
    * - genre
      - Genre of the song
+   * - hostip
+     - IP address of the machine running Now Playing
+   * - hostfqdn
+     - Fully qualified hostname of the machine running Now Playing
+   * - hostname
+     - Short hostname of the machine running Now Playing
+   * - httpport
+     - Port number that is running the web server
    * - key
      - Key of the song
    * - label
@@ -94,13 +102,13 @@ Undefined
 When rendering templates, Now Playing will set any undefined variables to the empty string.
 Instead of having to render a template as:
 
-.. code-block:: jinja2
+.. code-block:: jinja
 
   {% if variable is defined and variable is not none and variable|length %}
 
 This can be short-cut to:
 
-.. code-block:: jinja2
+.. code-block:: jinja
 
   {% if variable %}
 
