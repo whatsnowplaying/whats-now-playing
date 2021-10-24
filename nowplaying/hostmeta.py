@@ -19,6 +19,7 @@ HOSTIP = None
 TIMESTAMP = None
 TIMEDELTA = datetime.timedelta(minutes=10)
 
+
 def trysocket():
     ''' try using socket.*; this works most of the time '''
     global HOSTFQDN, HOSTNAME, HOSTIP  #pylint: disable=global-statement
@@ -29,6 +30,7 @@ def trysocket():
     except Exception as error:  # pylint: disable = broad-except
         logging.error('Getting host or IP information via socket failed: %s',
                       error)
+
 
 def trynetifaces():
     ''' try using socket.*; this works most of the time '''
@@ -45,9 +47,10 @@ def trynetifaces():
     except Exception as error:  # pylint: disable = broad-except
         logging.error('Getting IP information via netifaces failed: %s', error)
 
+
 def fallback():
     ''' worst case? put in 127.0.0.1 '''
-    global HOSTIP, HOSTNAME, HOSTFQDN #pylint: disable=global-statement
+    global HOSTIP, HOSTNAME, HOSTFQDN  #pylint: disable=global-statement
 
     if not HOSTIP:
         HOSTIP = '127.0.0.1'
@@ -58,11 +61,13 @@ def fallback():
     if not HOSTFQDN:
         HOSTFQDN = 'localhost'
 
+
 def gethostmeta():
     ''' resolve hostname/ip of this machine '''
-    global TIMESTAMP   #pylint: disable=global-statement
+    global TIMESTAMP  #pylint: disable=global-statement
 
-    if not TIMESTAMP or (datetime.datetime.now() - TIMESTAMP > TIMEDELTA)  or not HOSTNAME:
+    if not TIMESTAMP or (datetime.datetime.now() - TIMESTAMP >
+                         TIMEDELTA) or not HOSTNAME:
         trysocket()
         if not HOSTIP and IFACES:
             trynetifaces()
