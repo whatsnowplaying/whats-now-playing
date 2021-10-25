@@ -106,7 +106,6 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
                                   finalize=self._finalize,
                                   trim_blocks=True)
 
-
     def _setup_timer(self):
         self.watcher = self.metadb.watcher()
         self.watcher.start(customhandler=self._announce_track)
