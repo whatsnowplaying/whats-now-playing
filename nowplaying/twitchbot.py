@@ -32,7 +32,6 @@ import traceback
 
 import irc.bot
 import jinja2
-import requests
 
 from PySide2.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 
@@ -71,10 +70,10 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
     ''' twitch bot '''
     def __init__(self, username, client_id, token, channel):
         self.username = username
-        self.client_id = client_id
         self.token = token.removeprefix("oauth:")
         self.channel = '#' + channel.lower()
         self.watcher = None
+        self.client_id = client_id
         self.templatedir = os.path.join(
             QStandardPaths.standardLocations(
                 QStandardPaths.DocumentsLocation)[0],
@@ -86,9 +85,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         logging.info('Secret command to quit twitchbot: %s', self.magiccommand)
 
         self.jinja2 = self.setup_jinja2(self.templatedir)
-        self.channel_id = self._get_channel_id()
 
-        logging.debug('channel_id %s', self.channel_id)
         # Create IRC bot connection
         server = 'irc.chat.twitch.tv'
         port = 6667
@@ -109,19 +106,6 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
                                   finalize=self._finalize,
                                   trim_blocks=True)
 
-    def _get_channel_id(self):
-        # Get the channel id, we will need this for v5 API calls
-        url = 'https://api.twitch.tv/kraken/users?login=' + self.channel[1:]
-        headers = {
-            'Client-ID': self.client_id,
-            'Accept': 'application/vnd.twitchtv.v5+json'
-        }
-        req = requests.get(url, headers=headers, timeout=5).json()
-        if 'error' in req:
-            logging.error('%s %s: %s', req['status'], req['error'],
-                          req['message'])
-            sys.exit(0)
-        return req['users'][0]['_id']
 
     def _setup_timer(self):
         self.watcher = self.metadb.watcher()
