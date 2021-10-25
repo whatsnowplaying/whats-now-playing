@@ -8,3 +8,5 @@ nowplaying.pyproject.user
 .coverage.*
 htmlcov/
 .pytest_cache
+NowPlaying*.zip
+nowplaying/version.py.old
