@@ -1,6 +1,7 @@
 nowplaying/resources/
 nowplaying/version.py
 nowplaying/vendor/
+nowplaying/qtrc.py
 bincomponents/
 versioneer.py
 NowPlaying.spec

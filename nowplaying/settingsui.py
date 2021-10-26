@@ -12,6 +12,7 @@ import PySide2.QtXml  # pylint: disable=unused-import, import-error, no-name-in-
 
 import nowplaying.config
 import nowplaying.hostmeta
+import nowplaying.qtrc
 from nowplaying.exceptions import PluginVerifyError
 
 
