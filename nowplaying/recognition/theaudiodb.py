@@ -82,6 +82,8 @@ class Plugin(RecognitionPlugin):
     def artistdatafromname(self, artist):
         ''' get artist data from name '''
         metadata = {}
+        if not artist:
+            return None
         urlart = requests.utils.requote_uri(artist)
         data = self._fetch(f'search.php?s={urlart}')
         if not data or 'artists' not in data or not data['artists']:

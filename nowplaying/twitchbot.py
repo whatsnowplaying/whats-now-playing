@@ -29,7 +29,6 @@ import sys
 import textwrap
 import threading
 import time
-import traceback
 
 import irc.bot
 import jinja2
@@ -350,8 +349,8 @@ class TwitchBotHandler():
                 pass
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('TwitchBot threw exception after forever: %s',
-                              error)
-                logging.error(traceback.print_stack())
+                              error,
+                              exc_info=True)
             finally:
                 if self.server:
                     self.server.shutdown()

@@ -9,7 +9,6 @@ import os
 import pathlib
 import struct
 import time
-import traceback
 
 import lxml.html
 import requests
@@ -93,8 +92,7 @@ class ChunkParser():  #pylint: disable=too-few-public-methods
             # strip ending null character at the end
             decoded = decoded[:-1]
         except UnicodeDecodeError:
-            logging.error('Blew up on %s:', encoded)
-            logging.error(traceback.print_stack())
+            logging.error('Blew up on %s:', encoded, exc_info=True)
             # just take out all the nulls this time and hope for the best
             decoded = encoded.replace(b'\x00', b'')
         return decoded
@@ -609,15 +607,15 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             self.computeplaying()
 
         if self.playingadat:
-            return self.playingadat.artist, self.playingadat.title
-        return None, None
+            return self.playingadat.artist, self.playingadat.title, self.playingadat.filename
+        return None, None, None
 
     def getremoteplayingtrack(self):  # pylint: disable=too-many-return-statements, too-many-branches
         ''' get the currently playing title from Live Playlists '''
 
         if self.mode == 'local':
             logging.debug('in local mode; skipping')
-            return None, None
+            return None, None, None
 
         #
         # It is hard to believe in 2021, we are still scraping websites
@@ -627,10 +625,10 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             page = requests.get(self.url, timeout=5)
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Cannot process %s: %s", self.url, error)
-            return None, None
+            return None, None, None
 
         if not page:
-            return None, None
+            return None, None, None
 
         try:
             tree = lxml.html.fromstring(page.text)
@@ -639,10 +637,10 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                 '(//div[@class="playlist-trackname"]/text())[last()]')
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Cannot process %s: %s", self.url, error)
-            return None, None
+            return None, None, None
 
         if not item:
-            return None, None
+            return None, None, None
 
         # cleanup
         tdat = str(item)
@@ -656,7 +654,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
         if not tdat:
             self.playingadat = ChunkTrackADAT()
-            return None, None
+            return None, None, None
 
         if ' - ' not in tdat:
             artist = None
@@ -685,7 +683,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         if not title and not artist:
             self.playingadat = ChunkTrackADAT()
 
-        return artist, title
+        return artist, title, None
 
     def getplayingtrack(self, deckskiplist=None):
         ''' generate a dict of data '''

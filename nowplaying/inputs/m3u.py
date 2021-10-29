@@ -19,7 +19,7 @@ from nowplaying.exceptions import PluginVerifyError
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
 
-    metadata = {'artist': None, 'title': None, 'filename': None}
+    metadata = {}
 
     def __init__(self, config=None, m3udir=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
@@ -32,6 +32,10 @@ class Plugin(InputPlugin):
         self.event_handler = None
         self.observer = None
         self.qwidget = None
+        self._reset_meta()
+
+    def _reset_meta(self):  #pylint: disable=no-self-use
+        Plugin.metadata = {'artist': None, 'title': None, 'filename': None}
 
     def _setup_watcher(self):
         ''' set up a custom watch on the m3u dir so meta info
@@ -91,6 +95,7 @@ class Plugin(InputPlugin):
         # file is empty so ignore it
         if os.stat(filename).st_size == 0:
             logging.debug('%s is empty, ignoring for now.', filename)
+            self._reset_meta()
             return
 
         content = self._read_track_default(filename)
@@ -99,6 +104,7 @@ class Plugin(InputPlugin):
                       content)
 
         if not content:
+            self._reset_meta()
             return
 
         found = None
@@ -121,6 +127,7 @@ class Plugin(InputPlugin):
 
         if not found:
             logging.error('Cannot find or decode %s', content)
+            self._reset_meta()
             return
 
         logging.debug('Used %s and found %s', encoding, found)
@@ -136,7 +143,7 @@ class Plugin(InputPlugin):
 
         # just in case called without calling start...
         self._setup_watcher()
-        return None, Plugin.metadata['filename']
+        return None, None, Plugin.metadata['filename']
 
     def getplayingmetadata(self):  #pylint: disable=no-self-use
         ''' wrapper to call getplayingmetadata '''

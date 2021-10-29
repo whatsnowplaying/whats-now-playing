@@ -57,11 +57,12 @@ def test_nom3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     plugin = nowplaying.inputs.m3u.Plugin(config=config)
     plugin.start()
     time.sleep(5)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     plugin.stop()
     time.sleep(5)
     assert artist is None
     assert title is None
+    assert filename is None
 
 
 def test_emptym3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
@@ -74,11 +75,12 @@ def test_emptym3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     plugin = nowplaying.inputs.m3u.Plugin(config=config)
     plugin.start()
     time.sleep(5)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     plugin.stop()
     time.sleep(5)
     assert artist is None
     assert title is None
+    assert filename is None
 
 
 def test_emptym3u2(m3u_bootstrap):  # pylint: disable=redefined-outer-name
@@ -93,11 +95,12 @@ def test_emptym3u2(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     plugin = nowplaying.inputs.m3u.Plugin(config=config)
     plugin.start()
     time.sleep(5)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     plugin.stop()
     time.sleep(5)
     assert artist is None
     assert title is None
+    assert filename is None
 
 
 def test_no2newm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
@@ -105,20 +108,22 @@ def test_no2newm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-n
     config = m3u_bootstrap
     mym3udir = config.cparser.value('m3u/directory')
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     plugin.start()
     time.sleep(5)
     assert artist is None
     assert title is None
+    assert filename is None
 
-    filename = os.path.join(getroot, 'tests', 'audio',
-                            '15_Ghosts_II_64kb_orig.mp3')
+    testmp3 = os.path.join(getroot, 'tests', 'audio',
+                           '15_Ghosts_II_64kb_orig.mp3')
     m3ufile = os.path.join(mym3udir, 'test.m3u')
-    write_m3u(m3ufile, filename)
+    write_m3u(m3ufile, testmp3)
     time.sleep(1)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     assert artist is None
-    assert '15_Ghosts_II_64kb_orig.mp3' in title
+    assert title is None
+    assert testmp3 == filename
     plugin.stop()
     time.sleep(5)
 
@@ -130,16 +135,17 @@ def test_noencodingm3u8(m3u_bootstrap, getroot):  # pylint: disable=redefined-ou
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
     plugin.start()
     time.sleep(5)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
 
-    filename = os.path.join(getroot, 'tests', 'audio',
-                            '15_Ghosts_II_64kb_orig.mp3')
+    testmp3 = os.path.join(getroot, 'tests', 'audio',
+                           '15_Ghosts_II_64kb_orig.mp3')
     m3ufile = os.path.join(mym3udir, 'test.m3u')
-    write_m3u8(m3ufile, filename)
+    write_m3u8(m3ufile, testmp3)
     time.sleep(1)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     assert artist is None
-    assert '15_Ghosts_II_64kb_orig.mp3' in title
+    assert title is None
+    assert testmp3 == filename
     plugin.stop()
     time.sleep(5)
 
@@ -151,16 +157,15 @@ def test_encodingm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
     plugin.start()
     time.sleep(5)
-    filename = os.path.join(getroot, 'tests', 'audio',
-                            '15_Ghosts_II_64kb_füllytâgged.mp3')
+    testmp3 = os.path.join(getroot, 'tests', 'audio',
+                           '15_Ghosts_II_64kb_füllytâgged.mp3')
     m3ufile = os.path.join(mym3udir, 'test.m3u')
-    write_m3u(m3ufile, filename)
+    write_m3u(m3ufile, testmp3)
     time.sleep(1)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     assert artist is None
-    assert '15_Ghosts_II_64kb_füllytâgged.mp3' in title
-    assert 'tests' in title
-    assert 'audio' in title
+    assert title is None
+    assert testmp3 == filename
     plugin.stop()
     time.sleep(5)
 
@@ -172,20 +177,20 @@ def test_no2newm3u8(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
     plugin.start()
     time.sleep(5)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     assert artist is None
     assert title is None
+    assert filename is None
 
-    filename = os.path.join(getroot, 'tests', 'audio',
-                            '15_Ghosts_II_64kb_füllytâgged.mp3')
+    testmp3 = os.path.join(getroot, 'tests', 'audio',
+                           '15_Ghosts_II_64kb_füllytâgged.mp3')
     m3ufile = os.path.join(mym3udir, 'test.m3u8')
-    write_m3u8(m3ufile, filename)
+    write_m3u8(m3ufile, testmp3)
     time.sleep(1)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     assert artist is None
-    assert '15_Ghosts_II_64kb_füllytâgged.mp3' in title
-    assert 'tests' in title
-    assert 'audio' in title
+    assert title is None
+    assert testmp3 == filename
     plugin.stop()
     time.sleep(5)
 
@@ -197,20 +202,22 @@ def test_m3urelative(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
     plugin.start()
     time.sleep(5)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     assert artist is None
     assert title is None
+    assert filename is None
 
-    filename = os.path.join('fakedir', '15_Ghosts_II_64kb_orig.mp3')
+    testmp3 = os.path.join('fakedir', '15_Ghosts_II_64kb_orig.mp3')
     pathlib.Path(os.path.join(mym3udir, 'fakedir')).mkdir(parents=True,
                                                           exist_ok=True)
-    pathlib.Path(os.path.join(mym3udir, filename)).touch()
+    pathlib.Path(os.path.join(mym3udir, testmp3)).touch()
     m3ufile = os.path.join(mym3udir, 'test.m3u8')
-    write_m3u(m3ufile, filename)
+    write_m3u(m3ufile, testmp3)
     time.sleep(1)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     assert artist is None
-    assert filename in title
+    assert title is None
+    assert testmp3 in filename
 
     plugin.stop()
     time.sleep(5)
@@ -223,16 +230,18 @@ def test_m3ustream(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
     plugin.start()
     time.sleep(5)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     assert artist is None
     assert title is None
+    assert filename is None
 
     m3ufile = os.path.join(mym3udir, 'test.m3u')
     write_m3u(m3ufile, 'http://somecooltrack')
     time.sleep(1)
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     assert artist is None
     assert title is None
+    assert filename is None
 
     plugin.stop()
     time.sleep(5)

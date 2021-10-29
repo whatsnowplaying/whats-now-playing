@@ -240,7 +240,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     if addmeta:
                         self._recognition_replacement(addmeta)
                 except Exception as error:  # pylint: disable=broad-except
-                    logging.debug('%s threw exception %s', plugin, error)
+                    logging.debug('%s threw exception %s',
+                                  plugin,
+                                  error,
+                                  exc_info=True)
 
 
 def main():

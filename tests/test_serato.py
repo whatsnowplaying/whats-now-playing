@@ -72,20 +72,22 @@ def test_serato_remote2(getseratoplugin, getroot, httpserver):  # pylint: disabl
     plugin.config.cparser.setValue('serato/url',
                                    httpserver.url_for('/index.html'))
     plugin.config.cparser.sync()
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
 
     assert artist == 'Chris McClenney'
     assert title == 'Tuning Up'
+    assert filename is None
 
 
 @pytest.mark.seratosettings(datadir='serato-2.4-mac', mixmode='oldest')
 def test_serato24_mac_oldest(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getseratoplugin
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     metadata = plugin.getplayingmetadata()
     assert artist == 'LĪVE'
     assert title == 'Take My Anthem'
+    assert filename == '/Users/aw/Music/songs/LĪVE/Mental Jewelry/08 Take My Anthem.mp3'
     expected = {
         'album': 'Mental Jewelry',
         'artist': artist,
@@ -106,10 +108,11 @@ def test_serato24_mac_oldest(getseratoplugin):  # pylint: disable=redefined-oute
 def test_serato24_mac_newest(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getseratoplugin
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     metadata = plugin.getplayingmetadata()
     assert artist == 'LĪVE'
     assert title == 'Lakini\'s Juice'
+    assert filename == "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3"
     expected = {
         'album': 'Secret Samadhi',
         'artist': artist,
@@ -130,10 +133,11 @@ def test_serato24_mac_newest(getseratoplugin):  # pylint: disable=redefined-oute
 def test_serato25_win_oldest(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getseratoplugin
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     metadata = plugin.getplayingmetadata()
     assert artist == 'Broke For Free'
     assert title == 'Night Owl'
+    assert filename == 'C:\\Users\\aw\\Music\\Broke For Free - Night Owl.mp3'
     expected = {
         'album':
         'Directionless EP',
@@ -162,10 +166,11 @@ def test_serato25_win_oldest(getseratoplugin):  # pylint: disable=redefined-oute
 def test_serato25_win_newest(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getseratoplugin
-    (artist, title) = plugin.getplayingtrack()
+    (artist, title, filename) = plugin.getplayingtrack()
     metadata = plugin.getplayingmetadata()
     assert artist == 'Bio Unit'
     assert title == 'Heaven'
+    assert filename == 'C:\\Users\\aw\\Music\\Bio Unit - Heaven.mp3'
     expected = {
         'album': 'Ampex',
         'artist': artist,

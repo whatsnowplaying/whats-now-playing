@@ -8,6 +8,7 @@
 
 import collections
 import logging
+import pathlib
 import sys
 import urllib
 import urllib.request
@@ -56,14 +57,14 @@ class MPRIS2Handler():
         self.meta = None
         self.metadata = {}
 
-    def getplayingtrack(self):
+    def getplayingtrack(self):  # pylint: disable=too-many-branches
         ''' get the currently playing song '''
 
         # start with a blank slate to prevent
         # data bleeding
-        builddata = {}
+        builddata = {'artist': None, 'title': None, 'filename': None}
         if not DBUS_STATUS:
-            return None, None
+            return None, None, None
 
         artist = None
 
@@ -72,13 +73,13 @@ class MPRIS2Handler():
             self.resetservice(self.service)
         if not self.proxy:
             logging.error('Unknown service: %s', self.service)
-            return None, None
+            return None, None, None
 
         properties = dbus.Interface(
             self.proxy, dbus_interface='org.freedesktop.DBus.Properties')
         if not properties:
             logging.error('Unknown service: %s', self.service)
-            return None, None
+            return None, None, None
 
         try:
             self.meta = properties.GetAll(MPRIS2_BASE + '.Player')['Metadata']
@@ -88,7 +89,7 @@ class MPRIS2Handler():
             self.metadata = {}
             self.proxy = None
             self.bus = None
-            return None, None
+            return None, None, None
 
         artists = self.meta.get('xesam:artist')
         if artists:
@@ -96,15 +97,16 @@ class MPRIS2Handler():
             artist = str(artists.popleft())
             while len(artists) > 0:
                 artist = artist + '/' + str(artists.popleft())
+            if artist:
+                builddata['artist'] = artist
 
         title = self.meta.get('xesam:title')
         if title:
             title = str(title)
-            builddata = {
-                'album': str(self.meta.get('xesam:album')),
-                'artist': artist,
-                'title': title,
-            }
+            builddata['title'] = title
+
+        if self.meta.get('xesam:album'):
+            builddata['album'] = self.meta.get('xesam:album')
 
         length = self.meta.get('mpris:length')
         if length:
@@ -119,6 +121,12 @@ class MPRIS2Handler():
             filename = urllib.parse.unquote(filename)
             builddata['filename'] = filename.replace('file://', '')
 
+        # some MPRIS2 implementations will give the filename as the title
+        # if it doesn't have one. We need to avoid that.
+        if title == filename or pathlib.Path(title).exists():
+            builddata['title'] = None
+            title = None
+
         # it looks like there is a race condition in mixxx
         # probably should make this an option in the MPRIS2
         # handler but for now just comment it out
@@ -127,10 +135,7 @@ class MPRIS2Handler():
         #     with urllib.request.urlopen(arturl) as coverart:
         #         builddata['coverimageraw'] = coverart.read()
         self.metadata = builddata
-
-        if not title and not artist and filename:
-            title = filename
-        return artist, title
+        return builddata['artist'], builddata['title'], builddata['filename']
 
     def getplayingmetadata(self):
         ''' add more metadata -- currently non-functional '''
@@ -212,7 +217,7 @@ class Plugin(InputPlugin):
 
         if self.mpris2:
             return self.mpris2.getplayingtrack()
-        return None, None
+        return None, None, None
 
     def getplayingmetadata(self):
         ''' wrapper to call getplayingmetadata '''
@@ -287,8 +292,8 @@ def main():
 
     if len(sys.argv) == 2:
         mpris2.resetservice(sys.argv[1])
-        (artist, title) = mpris2.getplayingtrack()
-        print(f'Artist: {artist} | Title: {title}')
+        (artist, title, filename) = mpris2.getplayingtrack()
+        print(f'Artist: {artist} | Title: {title} | Filename: {filename}')
         data = mpris2.getplayingmetadata()
         if 'coverimageraw' in data:
             print('Got coverart')

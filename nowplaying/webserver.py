@@ -12,7 +12,6 @@ import string
 import sys
 import threading
 import time
-import traceback
 import weakref
 
 import requests
@@ -380,8 +379,7 @@ def start(bundledir, testdir=None):
     try:
         webserver = WebHandler(databasefile, testmode=testmode)  # pylint: disable=unused-variable
     except Exception as error:  #pylint: disable=broad-except
-        logging.error('Webserver crashed: %s', error)
-        logging.error(traceback.print_stack())
+        logging.error('Webserver crashed: %s', error, exc_info=True)
         sys.exit(1)
     sys.exit(0)
 

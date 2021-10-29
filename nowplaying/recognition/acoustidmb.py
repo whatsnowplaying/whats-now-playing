@@ -97,9 +97,9 @@ class Plugin(RecognitionPlugin):
 
     def _read_acoustid_tuples(self, results):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
         fnstr = self._simplestring(self.acoustidmd['filename'])
-        if 'artist' in self.acoustidmd:
+        if 'artist' in self.acoustidmd and self.acoustidmd['artist']:
             fnstr = fnstr + self._simplestring(self.acoustidmd['artist'])
-        if 'title' in self.acoustidmd:
+        if 'title' in self.acoustidmd and self.acoustidmd['title']:
             fnstr = fnstr + self._simplestring(self.acoustidmd['title'])
 
         lastscore = 0

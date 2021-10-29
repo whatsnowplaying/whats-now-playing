@@ -2,8 +2,8 @@
 ''' thread to poll music player '''
 
 import logging
+import pathlib
 import threading
-import traceback
 
 from PySide2.QtCore import Signal, QThread  # pylint: disable=no-name-in-module
 
@@ -27,7 +27,11 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         self.endthread = False
         self.setObjectName('TrackPoll')
         self.config = nowplaying.config.ConfigFile()
-        self.currentmeta = {'fetchedartist': None, 'fetchedtitle': None}
+        self.currentmeta = {
+            'fetchedartist': None,
+            'fetchedtitle': None,
+            'filename': None
+        }
         self.input = None
         self.inputname = None
         self.plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
@@ -60,8 +64,9 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
             try:
                 self.gettrack()
             except Exception as error:  #pylint: disable=broad-except
-                logging.debug('Failed attempting to get a track: %s', error)
-                logging.debug(traceback.print_stack())
+                logging.debug('Failed attempting to get a track: %s',
+                              error,
+                              exc_info=True)
 
     def __del__(self):
         logging.debug('TrackPoll is being killed!')
@@ -82,18 +87,27 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         if self.endthread:
             return
 
-        (artist, title) = self.input.getplayingtrack()
+        (artist, title, filename) = self.input.getplayingtrack()
 
-        if not artist and not title:
+        # if we get a filename instead of a title
+        # move it
+        if pathlib.Path(title).exists():
+            if not filename:
+                filename = title
+            title = None
+
+        if not artist and not title and not filename:
             return
 
         if artist == self.currentmeta['fetchedartist'] and \
-           title == self.currentmeta['fetchedtitle']:
+           title == self.currentmeta['fetchedtitle'] and \
+           filename == self.currentmeta['filename']:
             return
 
         nextmeta = self.input.getplayingmetadata()
         nextmeta['fetchedtitle'] = title
         nextmeta['fetchedartist'] = artist
+        nextmeta['filename'] = filename
 
         if 'filename' in nextmeta:
             nextmeta = nowplaying.utils.getmoremetadata(nextmeta)
