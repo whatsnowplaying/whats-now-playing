@@ -26,6 +26,7 @@ import secrets
 import signal
 import string
 import sys
+import textwrap
 import threading
 import time
 import traceback
@@ -72,6 +73,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         self.username = username
         self.token = token.removeprefix("oauth:")
         self.channel = '#' + channel.lower()
+        self.maxsize = 512 - len(self.username) - len(self.channel)
         self.watcher = None
         self.client_id = client_id
         self.templatedir = os.path.join(
@@ -232,11 +234,13 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             message = template.render(metadata)
             message = message.replace('\n', '')
             message = message.replace('\r', '')
+            message = str(message).strip()
 
-            try:
-                self.connection.privmsg(self.channel, str(message).strip())
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error(error)
+            for text in textwrap.TextWrapper(width=self.maxsize).wrap(message):
+                try:
+                    self.connection.privmsg(self.channel, text)
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.error(error)
 
     def do_command(self, event, command):  # pylint: disable=unused-argument
         ''' process a command '''
