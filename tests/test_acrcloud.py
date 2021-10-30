@@ -34,7 +34,7 @@ def getacrcloudplugin(bootstrap):
     yield plugin
 
 
-def test_15ghosts2_orig(getacrcloudplugin, getroot):  # pylint: disable=redefined-outer-name
+def test_15ghosts2_orig(getacrcloudplugin, getroot):    # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getacrcloudplugin
     metadata = plugin.recognize({
@@ -43,7 +43,7 @@ def test_15ghosts2_orig(getacrcloudplugin, getroot):  # pylint: disable=redefine
     })
     assert metadata['album'] == 'Ghosts I-IV'
     assert metadata['artist'] == 'Nine Inch Nails'
-    assert metadata['label'] == 'The Null Corporation' or metadata['label'] == 'UMG - FAB'
+    assert metadata['label'] in ['The Null Corporation', 'UMG - FAB']
     assert metadata['title'] == '15 Ghosts II'
     assert metadata[
         'musicbrainzrecordingid'] == 'e0632d22-f355-41dd-ae01-9bcd87aaacf6'
