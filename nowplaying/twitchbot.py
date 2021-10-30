@@ -72,7 +72,10 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         self.username = username
         self.token = token.removeprefix("oauth:")
         self.channel = '#' + channel.lower()
-        self.maxsize = 512 - len(self.username) - len(self.channel)
+        # some counter is wildly inaccurate and sometimes text bigger than
+        # this will be let through.  safety first though and under 450 appears
+        # to be safe.
+        self.maxsize = 450
         self.watcher = None
         self.client_id = client_id
         self.templatedir = os.path.join(

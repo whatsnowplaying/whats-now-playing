@@ -2,11 +2,13 @@
 ''' handler to read the metadata from various file formats '''
 
 import importlib
+import io
 import logging
 import pkgutil
 import os
 
 import jinja2
+import PIL.Image
 
 import nowplaying.metadata
 
@@ -132,3 +134,16 @@ def import_plugins(namespace):
         for name in iter_ns(namespace)
     }
     return plugins
+
+
+def image2png(rawdata):
+    ''' convert an image to png '''
+
+    if not rawdata:
+        return None
+
+    origimage = rawdata
+    imgbuffer = io.BytesIO(origimage)
+    image = PIL.Image.open(imgbuffer)
+    image.save(imgbuffer, format='png')
+    return imgbuffer.getvalue()

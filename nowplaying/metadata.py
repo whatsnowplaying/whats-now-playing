@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 ''' pull out metadata '''
 
-import io
 import logging
 import os
 import sys
 
-import PIL.Image
 import nowplaying.config
 import nowplaying.hostmeta
 import nowplaying.vendor.audio_metadata
@@ -182,11 +180,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 'coverimageraw']:
             return
 
-        coverimage = self.metadata['coverimageraw']
-        imgbuffer = io.BytesIO(coverimage)
-        image = PIL.Image.open(imgbuffer)
-        image.save(imgbuffer, format='png')
-        self.metadata['coverimageraw'] = imgbuffer.getvalue()
+        self.metadata['coverimageraw'] = nowplaying.utils.image2png(
+            self.metadata['coverimageraw'])
         self.metadata['coverimagetype'] = 'png'
         self.metadata['coverurl'] = 'cover.png'
 

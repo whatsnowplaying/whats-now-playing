@@ -14,9 +14,9 @@ and then writing to it via OBS WebSocket allows one to do:
    :target: gallery/images/videoloop.webp
    :alt: Scroll demo
 
-For the HTML templates, there are generally two varieties, one that use WebSockets (-ws) and those
-that do not.  WebSocket varieties are more likely to get updates closer in sync to the rest of your
-display but may not be supported by your software stack.
+For the HTML templates, there are generally two varieties, one that use WebSockets (start with ws-)
+and those that do not.  WebSocket varieties are more likely to get updates closer in sync to the
+rest of your display but may not be supported by your software stack.
 
 Additionally, many of the templates are marked as 'fade' or 'nofade'.  'Nofade' generally stay on the
 screen for the duration of the song.  'Fade' will appear for a while and then disappear, only to

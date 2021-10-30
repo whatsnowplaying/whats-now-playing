@@ -91,7 +91,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
 
         # if we get a filename instead of a title
         # move it
-        if pathlib.Path(title).exists():
+        if title and pathlib.Path(title).exists():
             if not filename:
                 filename = title
             title = None

@@ -15,7 +15,7 @@
 * Add a TwitchBot, including the ability to announce track changes.
 * Rework some of the templates.
 * Add support for MPRIS2 on Linux
-* Upgrade to pyinstaller 4.4 for better support on Apple M1
+* Support Big Sur and Monterey
 * Added support for writing to the [OBS Web Socket
   plugin](https://github.com/Palakis/obs-websocket)
 * Revamped settings user interface
@@ -26,7 +26,7 @@
   for scratch DJs
 * Ability to use two different music recognition services
   so that untagged files now have metadata
-* More code re-organization/cleanup/minor bug fixes
+* Significant code re-organization/cleanup/bug fixes/unit tests ...
 
 ## Version 2.0.1 - 2021-05-27
 

@@ -25,7 +25,9 @@ rm -rf build dist || true
 
 "${PYTHON}" -m pip install --upgrade pip
 pip install -r requirements.txt
-pip install -r requirements-"${SYSTEM}".txt
+if [[ -f  "requirements-${SYSTEM}.txt" ]]; then
+  pip install -r requirements-"${SYSTEM}".txt
+fi
 pyside2-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
 "${PYTHON}" setup.py build
 mv nowplaying/version.py nowplaying/version.py.old

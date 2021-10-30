@@ -52,8 +52,12 @@ class MPRIS2Handler():
             return
 
         self.bus = dbus.SessionBus()
-        self.proxy = self.bus.get_object(f'{MPRIS2_BASE}.{self.service}',
-                                         '/org/mpris/MediaPlayer2')
+        try:
+            self.proxy = self.bus.get_object(f'{MPRIS2_BASE}.{self.service}',
+                                             '/org/mpris/MediaPlayer2')
+        except dbus.exceptions.DBusException as error:
+            logging.error(error)
+
         self.meta = None
         self.metadata = {}
 

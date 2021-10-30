@@ -150,7 +150,7 @@ class Plugin(RecognitionPlugin):
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''
         if qwidget.acrcloud_checkbox.isChecked(
-        ) and not qwidget.acrcrloud_host_lineedit.txt(
+        ) and not qwidget.host_lineedit.text(
         ) and not qwidget.access_key_lineedit.text(
         ) and not qwidget.acess_secret_lineedit.text():
             raise PluginVerifyError(
