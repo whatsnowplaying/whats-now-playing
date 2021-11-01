@@ -3,7 +3,7 @@
 # that basically says that it won't ever preserve permissions.
 # That means an archive in an archive since we need to preserve them
 # on OS X.  Still... better than doing this all by hand.
-
+# yamllint disable rule:line-length
 ---
 
 name: testing
@@ -33,10 +33,10 @@ jobs:
       - name: tests
         shell: bash
         env:
-          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}
+          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
           ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
           ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
-          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}
+          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}  # pragma: allowlist secret
         run: |
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp
@@ -81,10 +81,10 @@ jobs:
       - name: tests
         shell: bash
         env:
-          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}
+          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
           ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
           ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
-          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}
+          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}  # pragma: allowlist secret
         run: |
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp
@@ -137,10 +137,10 @@ jobs:
       - name: tests
         shell: bash
         env:
-          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}
+          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
           ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
           ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
-          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}
+          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}  # pragma: allowlist secret
         run: |
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp
@@ -200,10 +200,10 @@ jobs:
       - name: tests
         shell: bash
         env:
-          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}
+          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
           ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
           ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
-          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}
+          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}  # pragma: allowlist secret
         run: |
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp
