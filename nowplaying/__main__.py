@@ -9,6 +9,7 @@ import socket
 import sys
 
 from PySide2.QtCore import QCoreApplication, QStandardPaths, Qt  # pylint: disable=no-name-in-module
+from PySide2.QtGui import QIcon  # pylint: disable=no-name-in-module
 from PySide2.QtWidgets import QApplication  # pylint: disable=no-name-in-module
 
 import nowplaying
@@ -68,6 +69,8 @@ def main():
     logging.getLogger().setLevel(config.loglevel)
     logging.captureWarnings(True)
     tray = nowplaying.systemtray.Tray()  # pylint: disable=unused-variable
+    icon = QIcon(config.iconfile)
+    qapp.setWindowIcon(icon)
     exitval = qapp.exec_()
     logging.info('shutting down v%s',
                  nowplaying.version.get_versions()['version'])

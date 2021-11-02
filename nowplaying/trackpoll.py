@@ -109,7 +109,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         nextmeta['fetchedartist'] = artist
         nextmeta['filename'] = filename
 
-        if 'filename' in nextmeta:
+        if 'filename' in nextmeta and nextmeta['filename']:
             nextmeta = nowplaying.utils.getmoremetadata(nextmeta)
 
         # At this point, we have as much data as we can get from
