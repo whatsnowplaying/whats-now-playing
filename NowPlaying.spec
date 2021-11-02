@@ -92,8 +92,7 @@ def windows_version_file():
     rawmetadata = {
         'output_file': WINVERSFILE,
         'company_name': 'NowPlaying',
-        'file_description':
-        'Titling for DJs - https://github.com/aw-was-here/Now-Playing-Serato',
+        'file_description': 'NowPlaying',
         'internal_name': 'NowPlaying',
         'legal_copyright':
         f'{VERSION} (c) 2020-2021 Ely Miranda, (c) 2021 Allen Wittenauer',

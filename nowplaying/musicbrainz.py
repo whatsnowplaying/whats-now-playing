@@ -145,7 +145,8 @@ class MusicBrainzHelper():
 
         mbdata = releaselookup_noartist(recordingid)
 
-        if not mbdata or 'release-count' not in mbdata or mbdata['release-count'] == 0:
+        if not mbdata or 'release-count' not in mbdata or mbdata[
+                'release-count'] == 0:
             return newdata
 
         mbdata = _pickarelease(newdata, mbdata)
