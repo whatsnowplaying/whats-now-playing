@@ -267,9 +267,10 @@ class Plugin(RecognitionPlugin):
                 metadata['filename'])
             return self.acoustidmd
 
-        self.acoustidmd.update(
-            self.musicbrainz.recordingid(
-                self.acoustidmd['musicbrainzrecordingid']))
+        musicbrainzlookup = self.musicbrainz.recordingid(
+            self.acoustidmd['musicbrainzrecordingid'])
+        if musicbrainzlookup:
+            self.acoustidmd.update(musicbrainzlookup)
         return self.acoustidmd
 
     def providerinfo(self):  # pylint: disable=no-self-use

@@ -5,6 +5,7 @@ import logging
 import os
 
 from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
 from watchdog.events import PatternMatchingEventHandler
 
 from PySide2.QtCore import QDir  # pylint: disable=no-name-in-module
@@ -12,6 +13,7 @@ from PySide2.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 from nowplaying.inputs import InputPlugin
 from nowplaying.exceptions import PluginVerifyError
+import nowplaying.utils
 
 # https://datatracker.ietf.org/doc/html/rfc8216
 
@@ -19,7 +21,7 @@ from nowplaying.exceptions import PluginVerifyError
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
 
-    metadata = {}
+    metadata = {'artist': None, 'title': None, 'filename': None}
 
     def __init__(self, config=None, m3udir=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
@@ -64,7 +66,13 @@ class Plugin(InputPlugin):
             case_sensitive=False)
         self.event_handler.on_modified = self._read_track
         self.event_handler.on_created = self._read_track
-        self.observer = Observer()
+
+        if self.config.cparser.value('quirks/pollingobserver', type=bool):
+            logging.debug('Using polling observer')
+            self.observer = PollingObserver(timeout=5)
+        else:
+            logging.debug('Using fsevent observer')
+            self.observer = Observer()
         self.observer.schedule(self.event_handler,
                                self.m3udir,
                                recursive=False)
@@ -115,12 +123,14 @@ class Plugin(InputPlugin):
                 logging.debug('Definitely not %s', encoding)
                 continue
             location = location.replace('file://', '')
+            location = nowplaying.utils.songpathsubst(self.config, location)
             if os.path.exists(location):
                 found = location
                 break
 
             dirpath = os.path.dirname(filename)
             attempt2 = os.path.join(dirpath, location)
+            attempt2 = nowplaying.utils.songpathsubst(self.config, attempt2)
             if os.path.exists(attempt2):
                 found = attempt2
                 break
@@ -166,7 +176,7 @@ class Plugin(InputPlugin):
 
     def stop(self):
         ''' stop the m3u plugin '''
-        Plugin.metadata = {'artist': None, 'title': None, 'filename': None}
+        self._reset_meta()
         if self.observer:
             self.observer.stop()
             self.observer.join()

@@ -147,3 +147,29 @@ def image2png(rawdata):
     image = PIL.Image.open(imgbuffer)
     image.save(imgbuffer, format='png')
     return imgbuffer.getvalue()
+
+
+def songpathsubst(config, filename):
+    ''' if needed, change the pathing of a file '''
+
+    if not config.cparser.value('quirks/filesubst', type=bool):
+        return filename
+
+    songin = config.cparser.value('quirks/filesubstin')
+    if not songin:
+        logging.error('File substitution requested, but no starting path.')
+        return filename
+
+    songout = config.cparser.value('quirks/filesubstout')
+    if not songout:
+        songout = ''
+
+    try:
+        newname = filename.replace(songin, songout)
+    except Exception as error:  # pylint: disable=broad-except
+        logging.error('Unable to do path replacement (%s -> %s on %s): %s',
+                      songin, songout, filename, error)
+        return filename
+
+    logging.debug('filename substitution: %s -> %s', filename, newname)
+    return newname

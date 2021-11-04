@@ -56,7 +56,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
         self.qtui = _load_ui('settings')
 
-        baseuis = ['general', 'source', 'webserver', 'obsws', 'twitchbot']
+        baseuis = [
+            'general', 'source', 'webserver', 'obsws', 'twitchbot', 'quirks'
+        ]
 
         pluginuis = {}
         pluginuinames = []
@@ -176,6 +178,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self._upd_win_webserver()
         self._upd_win_obsws()
         self._upd_win_twitchbot()
+        self._upd_win_quirks()
 
     def _upd_win_recognition(self):
         self.widgets['general'].recog_title_checkbox.setChecked(
@@ -268,6 +271,25 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.widgets['twitchbot'].announce_delay_lineedit.setText(
             self.config.cparser.value('twitchbot/announcedelay'))
 
+    def _upd_win_quirks(self):
+        ''' update the quirks settings to match config '''
+
+        # file system notification method
+        if self.config.cparser.value('quirks/pollingobserver', type=bool):
+            self.widgets['quirks'].fs_events_button.setChecked(False)
+            self.widgets['quirks'].fs_poll_button.setChecked(True)
+        else:
+            self.widgets['quirks'].fs_events_button.setChecked(True)
+            self.widgets['quirks'].fs_poll_button.setChecked(False)
+
+        # s,in,out,g
+        self.widgets['quirks'].song_subst_checkbox.setChecked(
+            self.config.cparser.value('quirks/filesubst', type=bool))
+        self.widgets['quirks'].song_in_path_lineedit.setText(
+            self.config.cparser.value('quirks/filesubstin'))
+        self.widgets['quirks'].song_out_path_lineedit.setText(
+            self.config.cparser.value('quirks/filesubstout'))
+
     def _upd_win_plugins(self):
         ''' tell config to trigger plugins to update windows '''
         self.config.plugins_load_settingsui(self.widgets)
@@ -311,6 +333,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self._upd_conf_webserver()
         self._upd_conf_obsws()
         self._upd_conf_twitchbot()
+        self._upd_conf_quirks()
         self._upd_conf_plugins()
         self.config.cparser.sync()
 
@@ -439,6 +462,25 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
         if oldenabled != newenabled:
             self.tray.restart_twitchbotprocess()
+
+    def _upd_conf_quirks(self):
+        ''' update the quirks settings to match config '''
+
+        # file system notification method
+        self.config.cparser.value(
+            'quirks/pollingobserver',
+            self.widgets['quirks'].fs_poll_button.isChecked())
+
+        # s,in,out,g
+        self.config.cparser.setValue(
+            'quirks/filesubst',
+            self.widgets['quirks'].song_subst_checkbox.isChecked())
+        self.config.cparser.setValue(
+            'quirks/filesubstin',
+            self.widgets['quirks'].song_in_path_lineedit.text())
+        self.config.cparser.setValue(
+            'quirks/filesubstout',
+            self.widgets['quirks'].song_out_path_lineedit.text())
 
     @Slot()
     def on_text_saveas_button(self):

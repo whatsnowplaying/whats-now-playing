@@ -22,3 +22,13 @@ def test_getmoremetadata_brokenmd():
 
     metadataout = nowplaying.utils.getmoremetadata(metadatain.copy())
     results(metadatain, metadataout)
+
+
+def test_songsubst1(bootstrap):
+    ''' test file name substition1 '''
+    config = bootstrap
+    config.cparser.setValue('quirks/filesubst', True)
+    config.cparser.setValue('quirks/filesubstin', '/songs')
+    config.cparser.setValue('quirks/filesubstout', '/newlocation')
+    location = nowplaying.utils.songpathsubst(config, '/songs/mysong')
+    assert location == '/newlocation/mysong'
