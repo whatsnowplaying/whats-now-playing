@@ -37,7 +37,7 @@ def getacrcloudplugin(bootstrap):
     yield plugin
 
 
-def test_15ghosts2_orig(getacrcloudplugin, getroot):  # pylint: disable=redefined-outer-name
+def test_15ghosts2_orig(getacrcloudplugin, getroot):    # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getacrcloudplugin
     counter = 3
@@ -50,10 +50,9 @@ def test_15ghosts2_orig(getacrcloudplugin, getroot):  # pylint: disable=redefine
         })
         counter -= 1
 
-    if not metadata:
-        if plugin.secondarystatus == 'empty':
-            logging.debug('ACRCloud is busted')
-            return
+    if not metadata and plugin.secondarystatus == 'empty':
+        logging.debug('ACRCloud is busted')
+        return
 
     assert metadata['album'] == 'Ghosts I-IV'
     assert metadata['artist'] == 'Nine Inch Nails'
@@ -63,7 +62,7 @@ def test_15ghosts2_orig(getacrcloudplugin, getroot):  # pylint: disable=redefine
         'musicbrainzrecordingid'] == 'e0632d22-f355-41dd-ae01-9bcd87aaacf6'
 
 
-def test_15ghosts2_fullytagged(getacrcloudplugin, getroot):  # pylint: disable=redefined-outer-name
+def test_15ghosts2_fullytagged(getacrcloudplugin, getroot):    # pylint: disable=redefined-outer-name
     ''' automated integration test '''
 
     # for some reason, this test doesn't work on Windows
@@ -82,10 +81,9 @@ def test_15ghosts2_fullytagged(getacrcloudplugin, getroot):  # pylint: disable=r
         })
         counter -= 1
 
-    if not metadata:
-        if plugin.secondarystatus == 'empty':
-            logging.debug('ACRCloud is busted')
-            return
+    if not metadata and plugin.secondarystatus == 'empty':
+        logging.debug('ACRCloud is busted')
+        return
 
     assert metadata['album'] == 'Ghosts I-IV'
     assert metadata['artist'] == 'Nine Inch Nails'
