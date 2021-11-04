@@ -134,14 +134,14 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
         self.config.get()
 
-
         anntemplate = self.config.cparser.value('twitchbot/announce')
         if not anntemplate:
             LOCK.release()
             return
 
         if not pathlib.Path(anntemplate).exists():
-            logging.error('Annoucement template %s does not exist.', anntemplate)
+            logging.error('Annoucement template %s does not exist.',
+                          anntemplate)
             LOCK.release()
             return
 

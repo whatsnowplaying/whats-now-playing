@@ -26,22 +26,27 @@ class Plugin(RecognitionPlugin):
     ''' handler for NowPlaying '''
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
+        self.secondarystatus = None
 
     def _response_check(self, data):  # pylint: disable=no-self-use
         if not data or 'status' not in data or 'metadata' not in data:
             logging.warning('Empty response from ACRCloud')
+            self.secondarystatus = 'empty'
             return False
 
         if 'msg' not in data['status'] or data['status']['msg'] != 'Success':
             logging.info('ACRCloud does not know this track')
+            self.secondarystatus = 'unknown'
             return False
 
         if 'music' not in data['metadata']:
             logging.info('ACRCloud did not return a music identifier.')
+            self.secondarystatus = 'noident'
             return False
 
         if 'score' not in data['metadata']['music'][0]:
             logging.info('ACRCloud did not return a score. Ignoring')
+            self.secondarystatus = 'noscore'
             return False
 
         logging.debug('ACRCloud confidence: %s',
