@@ -127,7 +127,7 @@ class MPRIS2Handler():
 
         # some MPRIS2 implementations will give the filename as the title
         # if it doesn't have one. We need to avoid that.
-        if title == filename or pathlib.Path(title).exists():
+        if title == filename or title and pathlib.Path(title).exists():
             builddata['title'] = None
             title = None
 
