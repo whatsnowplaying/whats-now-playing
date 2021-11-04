@@ -3,12 +3,14 @@
 
 import pathlib
 import os
+import sys
 import time
 
 import logging
 import tempfile
 
 import pytest
+import watchdog.observers.polling  # pylint: disable=import-error
 
 import nowplaying.inputs.m3u  # pylint: disable=import-error
 import nowplaying.utils  # pylint: disable=import-error
@@ -128,6 +130,34 @@ def test_no2newm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-n
     time.sleep(5)
 
 
+def test_no2newm3upolltest(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config = m3u_bootstrap
+    mym3udir = config.cparser.value('m3u/directory')
+    config.cparser.setValue('quirks/pollingobserver', True)
+    plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
+    (artist, title, filename) = plugin.getplayingtrack()
+    plugin.start()
+    time.sleep(5)
+    assert artist is None
+    assert title is None
+    assert filename is None
+    assert isinstance(plugin.observer,
+                      watchdog.observers.polling.PollingObserver)
+
+    testmp3 = os.path.join(getroot, 'tests', 'audio',
+                           '15_Ghosts_II_64kb_orig.mp3')
+    m3ufile = os.path.join(mym3udir, 'test.m3u')
+    write_m3u(m3ufile, testmp3)
+    time.sleep(10)  # needs to be long enough that the poller finds the update!
+    (artist, title, filename) = plugin.getplayingtrack()
+    assert artist is None
+    assert title is None
+    assert testmp3 == filename
+    plugin.stop()
+    time.sleep(5)
+
+
 def test_noencodingm3u8(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
@@ -219,6 +249,36 @@ def test_m3urelative(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     assert title is None
     assert testmp3 in filename
 
+    plugin.stop()
+    time.sleep(5)
+
+
+def test_m3urelativesubst(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config = m3u_bootstrap
+    audiodir = getroot.joinpath('tests', 'audio')
+    mym3udir = pathlib.Path(config.cparser.value('m3u/directory'))
+    if sys.platform == 'darwin':
+        mym3udir = mym3udir.resolve()
+    config.cparser.setValue('quirks/filesubst', True)
+    config.cparser.setValue('quirks/filesubstin', str(mym3udir.joinpath('fakedir')))
+    config.cparser.setValue('quirks/filesubstout', str(audiodir))
+    plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=str(mym3udir))
+    plugin.start()
+    time.sleep(5)
+    (artist, title, filename) = plugin.getplayingtrack()
+    assert artist is None
+    assert title is None
+    assert filename is None
+
+    testmp3 = str(pathlib.Path('fakedir').joinpath('15_Ghosts_II_64kb_orig.mp3'))
+    mym3udir.joinpath('fakedir').mkdir(parents=True, exist_ok=True)
+    mym3udir.joinpath(testmp3).touch()
+    m3ufile = str(mym3udir.joinpath('test.m3u8'))
+    write_m3u(m3ufile, testmp3)
+    time.sleep(5)
+    (artist, title, filename) = plugin.getplayingtrack()
+    assert filename == str(audiodir.joinpath('15_Ghosts_II_64kb_orig.mp3'))
     plugin.stop()
     time.sleep(5)
 

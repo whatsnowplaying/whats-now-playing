@@ -12,6 +12,8 @@ import nowplaying.db
 import nowplaying.inputs
 import nowplaying.utils
 
+COREMETA = ['artist', 'filename', 'title']
+
 
 class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
     '''
@@ -22,21 +24,31 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
 
     currenttrack = Signal(dict)
 
-    def __init__(self, parent=None):
+    def __init__(self,
+                 config=None,
+                 inputplugin=None,
+                 testmode=False,
+                 parent=None):
         QThread.__init__(self, parent)
         self.endthread = False
         self.setObjectName('TrackPoll')
-        self.config = nowplaying.config.ConfigFile()
-        self.currentmeta = {
-            'fetchedartist': None,
-            'fetchedtitle': None,
-            'filename': None
-        }
-        self.input = None
+        if testmode and config:
+            self.config = config
+        else:
+            self.config = nowplaying.config.ConfigFile()
+        self.currentmeta = {}
+        self._resetcurrent()
+        self.testmode = testmode
+        self.input = inputplugin
         self.inputname = None
         self.plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
         self.previoustxttemplate = None
         self.txttemplatehandler = None
+
+    def _resetcurrent(self):
+        ''' reset the currentmeta to blank '''
+        for key in COREMETA:
+            self.currentmeta[f'fetched{key}'] = None
 
     def run(self):
         ''' track polling process '''
@@ -57,8 +69,9 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
             if not previousinput or previousinput != self.config.cparser.value(
                     'settings/input'):
                 previousinput = self.config.cparser.value('settings/input')
-                self.input = self.plugins[
-                    f'nowplaying.inputs.{previousinput}'].Plugin()
+                if not self.testmode:
+                    self.input = self.plugins[
+                        f'nowplaying.inputs.{previousinput}'].Plugin()
                 logging.debug('Starting %s plugin', previousinput)
                 self.input.start()
             try:
@@ -74,6 +87,80 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         self.endthread = True
         self.plugins = None
 
+    def _check_title_for_path(self, title, filename):
+        ''' if title actually contains a filename, move it to filename '''
+
+        if not title:
+            return title, filename
+
+        if title == filename:
+            return None, filename
+
+        if ('\\' in title or '/' in title) and pathlib.Path(
+                nowplaying.utils.songpathsubst(self.config, title)).exists():
+            if not filename:
+                logging.debug('Copied title to filename')
+                filename = title
+            logging.debug('Wiping title because it is actually a filename')
+            title = None
+
+        return title, filename
+
+    def _ismetaempty(self, metadata):  # pylint: disable=no-self-use
+        ''' need at least one value '''
+
+        if not metadata:
+            return True
+
+        return not any(key in metadata and metadata[key] for key in COREMETA)
+
+    def _ismetasame(self, metadata):
+        ''' same as current check '''
+        if not self.currentmeta:
+            return False
+
+        for key in COREMETA:
+            fetched = f'fetched{key}'
+            if key in metadata and fetched in self.currentmeta and metadata[
+                    key] != self.currentmeta[fetched]:
+                return False
+        return True
+
+    def _fillinmetadata(self, metadata):  # pylint: disable=no-self-use
+        ''' keep a copy of our fetched data '''
+
+        # Fill in as much metadata as possible. everything
+        # after this expects artist, filename, and title are expected to exist
+        # so if they don't, make them at least an empty string, keeping what
+        # the input actually gave as 'fetched' to compare with what
+        # was given before to shortcut all of this work in the future
+
+        for key in COREMETA:
+            fetched = f'fetched{key}'
+            if key in metadata:
+                metadata[fetched] = metadata[key]
+            else:
+                metadata[fetched] = None
+
+        if 'title' in metadata and metadata['title']:
+            (metadata['title'],
+             metadata['filename']) = self._check_title_for_path(
+                 metadata['title'], metadata['filename'])
+
+        for key in COREMETA:
+            if key in metadata and not metadata[key]:
+                del metadata[key]
+
+        if 'filename' in metadata and metadata['filename']:
+            metadata = nowplaying.utils.getmoremetadata(metadata)
+
+        for key in COREMETA:
+            if key not in metadata:
+                logging.info('Track missing %s data, setting it to blank.',
+                             key)
+                metadata[key] = ''
+        return metadata
+
     def gettrack(self):  # pylint: disable=too-many-branches
         ''' get currently playing track, returns None if not new or not found '''
 
@@ -87,55 +174,24 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         if self.endthread:
             return
 
-        (artist, title, filename) = self.input.getplayingtrack()
-
-        # if we get a filename instead of a title
-        # move it
-        if title and pathlib.Path(title).exists():
-            if not filename:
-                filename = title
-            title = None
-
-        if not artist and not title and not filename:
-            return
-
-        if artist == self.currentmeta['fetchedartist'] and \
-           title == self.currentmeta['fetchedtitle'] and \
-           filename == self.currentmeta['filename']:
-            return
-
         nextmeta = self.input.getplayingmetadata()
-        nextmeta['fetchedtitle'] = title
-        nextmeta['fetchedartist'] = artist
-        nextmeta['filename'] = filename
 
-        if 'filename' in nextmeta and nextmeta['filename']:
-            nextmeta = nowplaying.utils.getmoremetadata(nextmeta)
+        if self._ismetaempty(nextmeta):
+            return
 
-        # At this point, we have as much data as we can get from
-        # either the input or from reading the file directly.
-        # There is still a possibility that artist and title
-        # are empty because the user never provided it to anything
-        # In this worst case, put in empty strings since
-        # everything from here on out will expect them to
-        # exist.  If we do not do this, we risk a crash.
+        if self._ismetasame(nextmeta):
+            return
 
-        if 'artist' not in nextmeta:
-            nextmeta['artist'] = ''
-            logging.error('Track missing artist data, setting it to blank.')
-
-        if 'title' not in nextmeta:
-            nextmeta['title'] = ''
-            logging.error('Track missing title data, setting it to blank.')
-
-        self.currentmeta = nextmeta
+        # fill in the blanks and make it live
+        self.currentmeta = self._fillinmetadata(nextmeta)
         logging.info('New track: %s / %s', self.currentmeta['artist'],
                      self.currentmeta['title'])
 
         self._delay_write()
 
-        metadb = nowplaying.db.MetadataDB()
-        metadb.write_to_metadb(metadata=self.currentmeta)
+        if not self.testmode:
+            metadb = nowplaying.db.MetadataDB()
+            metadb.write_to_metadb(metadata=self.currentmeta)
         self._write_to_text()
         self.currenttrack.emit(self.currentmeta)
 

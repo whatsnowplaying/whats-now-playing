@@ -31,6 +31,7 @@ For everyone else, you will need to build and install locally.  See `Developers 
    input/index
    output/index
    recognition/index
+   quirks
    templatevariables
    developers
    comparisons

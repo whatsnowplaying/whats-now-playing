@@ -1,5 +1,6 @@
 [run]
 omit =
+  nowplaying/qtrc.py
   nowplaying/vendor/*
   nowplaying/version.py
   nowplaying/__pyinstaller/*

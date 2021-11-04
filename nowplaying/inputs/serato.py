@@ -14,6 +14,7 @@ import lxml.html
 import requests
 
 from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
 from watchdog.events import PatternMatchingEventHandler
 
 from PySide2.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
@@ -398,8 +399,13 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             self.seratodir='/path/to/_Serato_/History/Sessions')
 
     '''
-    def __init__(self, mixmode='oldest', seratodir=None, seratourl=None):
+    def __init__(self,
+                 mixmode='oldest',
+                 pollingobserver=False,
+                 seratodir=None,
+                 seratourl=None):
         global LASTPROCESSED, PARSEDSESSIONS  #pylint: disable=global-statement
+        self.pollingobserver = pollingobserver
         self.event_handler = None
         self.observer = None
         self.decks = {}
@@ -433,7 +439,14 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             ignore_directories=True,
             case_sensitive=False)
         self.event_handler.on_modified = self.process_sessions
-        self.observer = Observer()
+
+        if self.pollingobserver:
+            self.observer = PollingObserver(timeout=5)
+            logging.debug('Using polling observer')
+        else:
+            self.observer = Observer()
+            logging.debug('Using fsevent observer')
+
         self.observer.schedule(self.event_handler,
                                self.seratodir,
                                recursive=False)
@@ -694,6 +707,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
     def getplayingmetadata(self):  #pylint: disable=no-self-use
         ''' take the current adat and generate a media dict '''
+        self.getplayingtrack()
 
         if not self.playingadat:
             return None
@@ -753,6 +767,8 @@ class Plugin(InputPlugin):
         ''' setup the SeratoHandler for this session '''
 
         stilllocal = self.config.cparser.value('serato/local', type=bool)
+        usepoll = self.config.cparser.value('quirks/pollingobserver',
+                                            type=bool)
 
         # now configured as remote!
         if not stilllocal:
@@ -767,7 +783,8 @@ class Plugin(InputPlugin):
             self.url = stillurl
             if self.serato:
                 self.serato.stop()
-            self.serato = SeratoHandler(seratourl=self.url)
+            self.serato = SeratoHandler(pollingobserver=usepoll,
+                                        seratourl=self.url)
             return
 
         # configured as local!
@@ -792,7 +809,8 @@ class Plugin(InputPlugin):
         if os.path.isdir(sess_dir):
             logging.debug('new session path = %s', sess_dir)
             self.serato = SeratoHandler(seratodir=sess_dir,
-                                        mixmode=self.mixmode)
+                                        mixmode=self.mixmode,
+                                        pollingobserver=usepoll)
             #if self.serato:
             #    self.serato.process_sessions()
 
@@ -823,6 +841,7 @@ class Plugin(InputPlugin):
     def getplayingmetadata(self):
         ''' wrapper to call getplayingmetadata '''
         if self.serato:
+            self.getplayingtrack()
             return self.serato.getplayingmetadata()
         return {}
 
