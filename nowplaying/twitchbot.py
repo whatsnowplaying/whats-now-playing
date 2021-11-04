@@ -22,6 +22,7 @@ import logging.config
 import logging.handlers
 import multiprocessing
 import os
+import pathlib
 import secrets
 import signal
 import string
@@ -132,6 +133,17 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         LOCK.acquire()
 
         self.config.get()
+
+
+        anntemplate = self.config.cparser.value('twitchbot/announce')
+        if not anntemplate:
+            LOCK.release()
+            return
+
+        if not pathlib.Path(anntemplate).exists():
+            logging.error('Annoucement template %s does not exist.', anntemplate)
+            LOCK.release()
+            return
 
         metadata = self.metadb.read_last_meta()
 
