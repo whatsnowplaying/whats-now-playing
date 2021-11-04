@@ -2,9 +2,11 @@
 # pylint: disable=invalid-name
 ''' Use ACRCloud to recognize the file '''
 
+import json
 import os
 import pathlib
 import string
+import subprocess
 import sys
 import time
 
@@ -40,22 +42,37 @@ class Plugin(RecognitionPlugin):
 
     def _fetch_from_acoustid(self, apikey, filename):  # pylint: disable=no-self-use
         results = None
+        fpcalc = os.environ.get('FPCALC', 'fpcalc')
+        command = [fpcalc, '-json', "-length", '120', filename]
         try:
-            (duration,
-             fingerprint) = acoustid.fingerprint_file(filename,
-                                                      force_fpcalc=True)
+            if sys.platform == "win32":
+                completedprocess = subprocess.run(
+                    command,
+                    stdin=subprocess.DEVNULL,
+                    capture_output=True,
+                    check=True,
+                    creationflags=subprocess.CREATE_NO_WINDOW)
+            else:
+                completedprocess = subprocess.run(command,
+                                                  stdin=subprocess.DEVNULL,
+                                                  capture_output=True,
+                                                  check=True)
         except Exception as error:  # pylint: disable=broad-except
-            logging.error(
-                "fingerprint could not be calculated for %s due to %s",
-                filename, error)
+            logging.error('Exception: %s stderr: %s', error,
+                          completedprocess.stderr)
             return None
+
+        if not completedprocess or not completedprocess.stdout:
+            return None
+
+        data = json.loads(completedprocess.stdout.decode('utf-8'))
 
         try:
             counter = 0
             while counter < 3:
                 results = acoustid.lookup(apikey,
-                                          fingerprint,
-                                          duration,
+                                          data['fingerprint'],
+                                          data['duration'],
                                           meta=[
                                               'recordings', 'recordingids',
                                               'releases', 'tracks', 'usermeta'
