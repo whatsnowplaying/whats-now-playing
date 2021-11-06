@@ -95,9 +95,8 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         if (('\\' in title or '/' in title) and not filename and title and
                 pathlib.Path(nowplaying.utils.songpathsubst(
                     self.config, title)).exists()):
-            if not filename:
-                logging.debug('Copied title to filename')
-                filename = title
+            logging.debug('Copied title to filename')
+            filename = title
             logging.debug('Wiping title because it is actually a filename')
             title = None
 
