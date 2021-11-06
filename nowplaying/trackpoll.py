@@ -142,16 +142,16 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
             else:
                 metadata[fetched] = None
 
-        if 'title' in metadata and metadata['title']:
+        if metadata.get('title'):
             (metadata['title'],
              metadata['filename']) = self._check_title_for_path(
-                 metadata['title'], metadata['filename'])
+                 metadata['title'], metadata.get('filename'))
 
         for key in COREMETA:
             if key in metadata and not metadata[key]:
                 del metadata[key]
 
-        if 'filename' in metadata and metadata['filename']:
+        if metadata.get('filename'):
             metadata = nowplaying.utils.getmoremetadata(metadata)
 
         for key in COREMETA:

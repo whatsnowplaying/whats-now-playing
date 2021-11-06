@@ -261,7 +261,8 @@ def test_m3urelativesubst(m3u_bootstrap, getroot):  # pylint: disable=redefined-
     if sys.platform == 'darwin':
         mym3udir = mym3udir.resolve()
     config.cparser.setValue('quirks/filesubst', True)
-    config.cparser.setValue('quirks/filesubstin', str(mym3udir.joinpath('fakedir')))
+    config.cparser.setValue('quirks/filesubstin',
+                            str(mym3udir.joinpath('fakedir')))
     config.cparser.setValue('quirks/filesubstout', str(audiodir))
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=str(mym3udir))
     plugin.start()
@@ -271,7 +272,8 @@ def test_m3urelativesubst(m3u_bootstrap, getroot):  # pylint: disable=redefined-
     assert title is None
     assert filename is None
 
-    testmp3 = str(pathlib.Path('fakedir').joinpath('15_Ghosts_II_64kb_orig.mp3'))
+    testmp3 = str(
+        pathlib.Path('fakedir').joinpath('15_Ghosts_II_64kb_orig.mp3'))
     mym3udir.joinpath('fakedir').mkdir(parents=True, exist_ok=True)
     mym3udir.joinpath(testmp3).touch()
     m3ufile = str(mym3udir.joinpath('test.m3u8'))
