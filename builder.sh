@@ -3,6 +3,8 @@
 set -ex
 
 SYSTEM=$1
+VERSION=$(git describe --tags)
+DISTDIR=NowPlaying-"${VERSION}-${SYSTEM}"
 
 if [[ -z "${SYSTEM}" ]]; then
   echo "Provide extra requirements"
@@ -28,16 +30,19 @@ pip install -r requirements.txt
 if [[ -f  "requirements-${SYSTEM}.txt" ]]; then
   pip install -r requirements-"${SYSTEM}".txt
 fi
-pyside2-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
 "${PYTHON}" setup.py build
 mv nowplaying/version.py nowplaying/version.py.old
 mv build/lib/nowplaying/version.py nowplaying/version.py
+pyside2-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
 pyinstaller NowPlaying.spec
 cp -p CHANGELOG* README* LICENSE.txt NOTICE.txt dist
-mv dist NowPlaying-"${SYSTEM}"
+mv dist "${DISTDIR}"
 mv nowplaying/version.py.old nowplaying/version.py
 
 if [[ "${SYSTEM}" == "macosx" ]]; then
-  rm -rf NowPlaying-macosx/NowPlaying || true
-  zip -r NowPlaying-macosx.zip NowPlaying-macosx
+  rm -rf "${DISTDIR}"/NowPlaying || true
+fi
+
+if [[ ${SYSTEM} != "windows" ]]; then
+  zip -r "${DISTDIR}".zip "${DISTDIR}"
 fi

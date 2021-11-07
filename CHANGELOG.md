@@ -26,6 +26,8 @@
   for scratch DJs
 * Ability to use two different music recognition services
   so that untagged files now have metadata
+* Ability to select which file system event method is to be used
+* Ability to change how files are referenced
 * Significant code re-organization/cleanup/bug fixes/unit tests ...
 
 ## Version 2.0.1 - 2021-05-27

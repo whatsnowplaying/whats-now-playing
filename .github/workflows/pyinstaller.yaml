@@ -31,7 +31,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: mac-10-15-dist
-          path: NowPlaying-macosx.zip
+          path: "*.zip"
 
   pyinstaller-mac-11:
     runs-on: macos-11
@@ -53,7 +53,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: mac-11-dist
-          path: NowPlaying-macosx.zip
+          path: "*.zip"
 
 
   pyinstaller-win:
@@ -77,4 +77,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: windows-dist
-          path: NowPlaying-windows
+          path: "NowPlaying*windows"
