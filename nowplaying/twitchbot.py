@@ -274,7 +274,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         cmdfile = f'twitchbot_{commands[0]}.txt'
 
         self.config.get()
-        self.config.cparser.beginGroup(f'twitchbot-commands-{commands[0]}')
+        self.config.cparser.beginGroup(f'twitchbot-command-{commands[0]}')
         perms = {
             key: self.config.cparser.value(key, type=bool)
             for key in self.config.cparser.childKeys()
