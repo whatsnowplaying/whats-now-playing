@@ -19,7 +19,7 @@
 3.
 4.
 
-# Context (Environment)
+# Environment
 
 Software Version:
 Operating System and Version:
@@ -45,4 +45,3 @@ Any other relevant details:
 
 # Possible Implementation
 <!--- Not obligatory, but suggest an idea for implementing addition or change -->
-
