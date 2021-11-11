@@ -1,47 +1,38 @@
+---
+name: Bug report
+about: Create a report to help us improve
+title: ''
+labels: ''
+assignees: ''
 
-<!--- Provide a general summary of the issue in the Title above -->
+---
 
-# Expected Behavior
-<!--- Tell us what should happen -->
+**Describe the bug**
+A clear and concise description of what the bug is.
 
-# Current Behavior
-<!--- Tell us what happens instead of the expected behavior -->
+**To Reproduce**
+Steps to reproduce the behavior:
+1. Go to '...'
+2. Click on '....'
+3. Scroll down to '....'
+4. See error
 
-# Possible Solution
-<!--- Not obligatory, but suggest a fix/reason for the bug, -->
+**Expected behavior**
+A clear and concise description of what you expected to happen.
 
-# Steps to Reproduce
-<!--- Provide a link to a live example, or an unambiguous set of steps to -->
-<!--- reproduce this bug. Include code to reproduce, if relevant -->
+**Screenshots**
+If applicable, add screenshots to help explain your problem.
 
-1.
-2.
-3.
-4.
+**Desktop (please complete the following information):**
+ - OS: [e.g. iOS]
+ - Browser [e.g. chrome, safari]
+ - Version [e.g. 22]
 
-# Environment
+**Smartphone (please complete the following information):**
+ - Device: [e.g. iPhone6]
+ - OS: [e.g. iOS8.1]
+ - Browser [e.g. stock browser, safari]
+ - Version [e.g. 22]
 
-Software Version:
-Operating System and Version:
-
-* Mac: x86 or M1
-
-DJ Software:
-
-* Serato: Local or Remote
-
-Relevant enabled features:
-
-<!-- Quirks? Twitchbot?  Audio recogition? OBS WebSocket? -->
-
-Any other relevant details:
-
-<!-- USB stick in use?  Music coming from a network?  -->
-
-# Detailed Description
-<!--- Provide a detailed description of the change or addition you are proposing -->
-
-<!-- if possible, please attach or copy/paste relevant debug.log entries to help debug issues -->
-
-# Possible Implementation
-<!--- Not obligatory, but suggest an idea for implementing addition or change -->
+**Additional context**
+Add any other context about the problem here.
