@@ -156,22 +156,23 @@ def songpathsubst(config, filename):
         return filename
 
     songin = config.cparser.value('quirks/filesubstin')
+    slashmode = config.cparser.value('quirks/slashmode')
+
+    if slashmode == 'toforward':
+        newname = filename.replace('\\', '/')
+        logging.debug('filename substitution: %s -> %s', filename, newname)
+        filename = newname
+    elif slashmode == 'toback':
+        newname = filename.replace('/', '\\')
+        logging.debug('filename substitution: %s -> %s', filename, newname)
+        filename = newname
+
     if not songin:
-        logging.error('File substitution requested, but no starting path.')
         return filename
 
     songout = config.cparser.value('quirks/filesubstout')
     if not songout:
         songout = ''
-
-    slashmode = config.cparser.value('quirks/slashmode', 'nochange')
-
-    if slashmode == 'toforward':
-        newname = filename.replace('\\', '/')
-        filename = newname
-    elif slashmode == 'toback':
-        newname = filename.replace('/', '\\')
-        filename = newname
 
     try:
         newname = filename.replace(songin, songout)
