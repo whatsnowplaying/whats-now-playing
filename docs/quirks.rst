@@ -29,29 +29,29 @@ to do a 'search and replace' of any song files that are referenced.
 
 For example:
 
-  - Starting File Path is set to `/Volumes/Music/`
-  - Replacement File Path is set to `/Macintosh HD/Music/`
+  - Starting File Path is set to ``/Volumes/Music/``
+  - Replacement File Path is set to ``/Macintosh HD/Music/``
 
-The DJ software says that it read `/Volumes/Music/Blondie/Heart_of_Glass.mp3`.  ``Now Playing``
+The DJ software says that it read ``/Volumes/Music/Blondie/Heart_of_Glass.mp3``.  ``Now Playing``
 will instead interpret that the filename is actually
-`/Macintosh HD/Music/Blondie/Heart_of_Glass.mp3` when reading extra tags, performing recognition, etc.
+``/Macintosh HD/Music/Blondie/Heart_of_Glass.mp3`` when reading extra tags, performing recognition, etc.
 
 The Slash Handlnig setting allows you to switch the direction of all slashes in the filenames.
 This setting is particularly useful when substituting filenames from Windows to other operating
 systems and vice-versa.  The slash changes happen prior to path substitution, so keep that in
 mind.  For example,
 
-Slash Handling: \ to / is set
-Starting File Path: Z:/av
-Replacement File Path: /av
+  - Slash Handling: ``\ to /`` is set
+  - Starting File Path: ``Z:/av``
+  - Replacement File Path: ``/av``
 
-If the original file was `Z:\av\Music\Band\Cool Song.mp3`, the above settings will change that
-to `/av/Music/Band/Cool Song.mp3`.  Another example:
+If the original file was ``Z:\av\Music\Band\Cool Song.mp3``, the above settings will change that
+to ``/av/Music/Band/Cool Song.mp3``.  Another example:
 
-Slash Handling: / to \ is set
-Starting File Path: \\\\av
-Replacement File Path: Z:\\av
+  - Slash Handling: ``/ to \`` is set
+  - Starting File Path: ``\av``
+  - Replacement File Path: ``Z:\av``
 
-will do the reverse, from `/av/Music/Band/Cool Song.mp3` to `Z:\\av\\Music\\Band\\Cool Song.mp3`
+will do the reverse, from ``/av/Music/Band/Cool Song.mp3`` to ``Z:\av\Music\Band\Cool Song.mp3``
 
       NOTE: This quirk is not supported with MPRIS2.
