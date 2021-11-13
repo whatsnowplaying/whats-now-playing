@@ -52,6 +52,7 @@ def test_songsubst2backward(bootstrap):
                                               '\\songs\\myband\\mysong')
     assert location == '/songs/myband/mysong'
 
+
 def test_songsubst_tounix(bootstrap):
     ''' test file name substition1 '''
     config = bootstrap
@@ -61,6 +62,7 @@ def test_songsubst_tounix(bootstrap):
     config.cparser.setValue('quirks/slashmode', 'toforward')
     location = nowplaying.utils.songpathsubst(config, 'Z:\\Music\\Band\\Song')
     assert location == '/Music/Band/Song'
+
 
 def test_songsubst_towindows(bootstrap):
     ''' test file name substition1 '''
