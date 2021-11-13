@@ -46,6 +46,12 @@ Starting File Path: Z:/av
 Replacement File Path: /av
 
 If the original file was `Z:\av\Music\Band\Cool Song.mp3`, the above settings will change that
-to `/av/Music/Band/Cool Song.mp3`
+to `/av/Music/Band/Cool Song.mp3`.  Another example:
+
+Slash Handling: / to \ is set
+Starting File Path: \\\\av
+Replacement File Path: Z:\\av
+
+will do the reverse, from `/av/Music/Band/Cool Song.mp3` to `Z:\\av\\Music\\Band\\Cool Song.mp3`
 
       NOTE: This quirk is not supported with MPRIS2.
