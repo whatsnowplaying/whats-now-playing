@@ -164,6 +164,15 @@ def songpathsubst(config, filename):
     if not songout:
         songout = ''
 
+    slashmode = config.cparser.value('quirks/slashmode', 'nochange')
+
+    if slashmode == 'toforward':
+        newname = filename.replace('\\', '/')
+        filename = newname
+    elif slashmode == 'toback':
+        newname = filename.replace('/', '\\')
+        filename = newname
+
     try:
         newname = filename.replace(songin, songout)
     except Exception as error:  # pylint: disable=broad-except

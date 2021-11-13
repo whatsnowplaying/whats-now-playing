@@ -36,4 +36,16 @@ The DJ software says that it read `/Volumes/Music/Blondie/Heart_of_Glass.mp3`.  
 will instead interpret that the filename is actually
 `/Macintosh HD/Music/Blondie/Heart_of_Glass.mp3` when reading extra tags, performing recognition, etc.
 
+The Slash Handlnig setting allows you to switch the direction of all slashes in the filenames.
+This setting is particularly useful when substituting filenames from Windows to other operating
+systems and vice-versa.  The slash changes happen prior to path substitution, so keep that in
+mind.  For example,
+
+Slash Handling: \ to / is set
+Starting File Path: Z:/av
+Replacement File Path: /av
+
+If the original file was `Z:\av\Music\Band\Cool Song.mp3`, the above settings will change that
+to `/av/Music/Band/Cool Song.mp3`
+
       NOTE: This quirk is not supported with MPRIS2.

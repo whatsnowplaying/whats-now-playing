@@ -14,7 +14,7 @@ import nowplaying.config
 import nowplaying.hostmeta
 from nowplaying.exceptions import PluginVerifyError
 try:
-    import nowplaying.qtrc # pylint: disable=import-error, no-name-in-module
+    import nowplaying.qtrc  # pylint: disable=import-error, no-name-in-module
 except ModuleNotFoundError:
     pass
 
@@ -293,6 +293,26 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.widgets['quirks'].song_out_path_lineedit.setText(
             self.config.cparser.value('quirks/filesubstout'))
 
+        slashmode = self.config.cparser.value('quirks/slashmode')
+
+        if not slashmode:
+            slashmode = 'nochange'
+
+        if slashmode == 'nochange':
+            self.widgets['quirks'].slash_nochange.setChecked(True)
+            self.widgets['quirks'].slash_toback.setChecked(False)
+            self.widgets['quirks'].slash_toforward.setChecked(False)
+
+        if slashmode == 'toforward':
+            self.widgets['quirks'].slash_nochange.setChecked(False)
+            self.widgets['quirks'].slash_toback.setChecked(False)
+            self.widgets['quirks'].slash_toforward.setChecked(True)
+
+        if slashmode == 'toback':
+            self.widgets['quirks'].slash_nochange.setChecked(False)
+            self.widgets['quirks'].slash_toback.setChecked(True)
+            self.widgets['quirks'].slash_toforward.setChecked(False)
+
     def _upd_win_plugins(self):
         ''' tell config to trigger plugins to update windows '''
         self.config.plugins_load_settingsui(self.widgets)
@@ -478,6 +498,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.config.cparser.setValue(
             'quirks/filesubst',
             self.widgets['quirks'].song_subst_checkbox.isChecked())
+
+        if self.widgets['quirks'].slash_toback.isChecked():
+            self.config.cparser.setValue('quirks/slashmode', 'toback')
+        if self.widgets['quirks'].slash_toforward.isChecked():
+            self.config.cparser.setValue('quirks/slashmode', 'toforward')
+        if self.widgets['quirks'].slash_nochange.isChecked():
+            self.config.cparser.setValue('quirks/slashmode', 'nochange')
+
         self.config.cparser.setValue(
             'quirks/filesubstin',
             self.widgets['quirks'].song_in_path_lineedit.text())

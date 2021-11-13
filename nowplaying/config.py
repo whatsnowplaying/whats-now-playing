@@ -145,6 +145,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         settings.setValue('twitchbot/enabled', False)
 
+        settings.setValue('quirks/pollingobserver', False)
+        settings.setValue('quirks/filesubst', False)
+        settings.setValue('quirks/slashmode', 'nochange')
+
         self._defaults_plugins(settings)
 
     def _initial_plugins(self):
