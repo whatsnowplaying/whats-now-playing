@@ -68,7 +68,7 @@ class MPRIS2Handler():
         # data bleeding
         builddata = {'artist': None, 'title': None, 'filename': None}
         if not DBUS_STATUS:
-            return None, None, None
+            return builddata
 
         artist = None
 
@@ -77,13 +77,13 @@ class MPRIS2Handler():
             self.resetservice(self.service)
         if not self.proxy:
             logging.error('Unknown service: %s', self.service)
-            return None, None, None
+            return builddata
 
         properties = dbus.Interface(
             self.proxy, dbus_interface='org.freedesktop.DBus.Properties')
         if not properties:
             logging.error('Unknown service: %s', self.service)
-            return None, None, None
+            return builddata
 
         try:
             self.meta = properties.GetAll(MPRIS2_BASE + '.Player')['Metadata']
@@ -93,7 +93,7 @@ class MPRIS2Handler():
             self.metadata = {}
             self.proxy = None
             self.bus = None
-            return None, None, None
+            return builddata
 
         artists = self.meta.get('xesam:artist')
         if artists:
@@ -139,12 +139,6 @@ class MPRIS2Handler():
         #     with urllib.request.urlopen(arturl) as coverart:
         #         builddata['coverimageraw'] = coverart.read()
         self.metadata = builddata
-        return builddata['artist'], builddata['title'], builddata['filename']
-
-    def getplayingmetadata(self):
-        ''' add more metadata -- currently non-functional '''
-        self.getplayingtrack()
-
         return self.metadata
 
     def get_mpris2_services(self):
@@ -221,12 +215,6 @@ class Plugin(InputPlugin):
 
         if self.mpris2:
             return self.mpris2.getplayingtrack()
-        return None, None, None
-
-    def getplayingmetadata(self):
-        ''' wrapper to call getplayingmetadata '''
-        if self.mpris2:
-            return self.mpris2.getplayingmetadata()
         return {}
 
     def defaults(self, qsettings):

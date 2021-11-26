@@ -152,11 +152,7 @@ class Plugin(InputPlugin):
         ''' wrapper to call getplayingtrack '''
 
         # just in case called without calling start...
-        self._setup_watcher()
-        return None, None, Plugin.metadata['filename']
-
-    def getplayingmetadata(self):  #pylint: disable=no-self-use
-        ''' wrapper to call getplayingmetadata '''
+        self.start()
         return Plugin.metadata
 
     def defaults(self, qsettings):  #pylint: disable=no-self-use

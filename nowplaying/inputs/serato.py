@@ -628,7 +628,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
         if self.mode == 'local':
             logging.debug('in local mode; skipping')
-            return None, None, None
+            return
 
         #
         # It is hard to believe in 2021, we are still scraping websites
@@ -638,10 +638,10 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             page = requests.get(self.url, timeout=5)
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Cannot process %s: %s", self.url, error)
-            return None, None, None
+            return
 
         if not page:
-            return None, None, None
+            return
 
         try:
             tree = lxml.html.fromstring(page.text)
@@ -650,10 +650,10 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                 '(//div[@class="playlist-trackname"]/text())[last()]')
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Cannot process %s: %s", self.url, error)
-            return None, None, None
+            return
 
         if not item:
-            return None, None, None
+            return
 
         # cleanup
         tdat = str(item)
@@ -667,7 +667,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
         if not tdat:
             self.playingadat = ChunkTrackADAT()
-            return None, None, None
+            return
 
         if ' - ' not in tdat:
             artist = None
@@ -696,21 +696,18 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         if not title and not artist:
             self.playingadat = ChunkTrackADAT()
 
-        return artist, title, None
+        return
 
     def getplayingtrack(self, deckskiplist=None):
         ''' generate a dict of data '''
 
         if self.mode == 'local':
-            return self.getlocalplayingtrack(deckskiplist=deckskiplist)
-        return self.getremoteplayingtrack()
-
-    def getplayingmetadata(self):  #pylint: disable=no-self-use
-        ''' take the current adat and generate a media dict '''
-        self.getplayingtrack()
+            self.getlocalplayingtrack(deckskiplist=deckskiplist)
+        else:
+            self.getremoteplayingtrack()
 
         if not self.playingadat:
-            return None
+            return {}
 
         return {
             key: getattr(self.playingadat, key)
@@ -836,13 +833,6 @@ class Plugin(InputPlugin):
             if deckskip and not isinstance(deckskip, list):
                 deckskip = list(deckskip)
             return self.serato.getplayingtrack(deckskiplist=deckskip)
-        return None, None
-
-    def getplayingmetadata(self):
-        ''' wrapper to call getplayingmetadata '''
-        if self.serato:
-            self.getplayingtrack()
-            return self.serato.getplayingmetadata()
         return {}
 
     def defaults(self, qsettings):

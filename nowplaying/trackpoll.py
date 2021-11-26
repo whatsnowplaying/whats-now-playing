@@ -83,7 +83,8 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
 
     def __del__(self):
         logging.debug('TrackPoll is being killed!')
-        self.input.stop()
+        if self.input:
+            self.input.stop()
         self.endthread = True
         self.plugins = None
 
@@ -174,7 +175,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         if self.endthread:
             return
 
-        nextmeta = self.input.getplayingmetadata()
+        nextmeta = self.input.getplayingtrack()
 
         if self._ismetaempty(nextmeta):
             return

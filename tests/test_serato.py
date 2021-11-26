@@ -72,25 +72,21 @@ def test_serato_remote2(getseratoplugin, getroot, httpserver):  # pylint: disabl
     plugin.config.cparser.setValue('serato/url',
                                    httpserver.url_for('/index.html'))
     plugin.config.cparser.sync()
-    (artist, title, filename) = plugin.getplayingtrack()
+    metadata = plugin.getplayingtrack()
 
-    assert artist == 'Chris McClenney'
-    assert title == 'Tuning Up'
-    assert filename is None
+    assert metadata['artist'] == 'Chris McClenney'
+    assert metadata['title'] == 'Tuning Up'
+    assert 'filename' not in metadata
 
 
 @pytest.mark.seratosettings(datadir='serato-2.4-mac', mixmode='oldest')
 def test_serato24_mac_oldest(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getseratoplugin
-    (artist, title, filename) = plugin.getplayingtrack()
-    metadata = plugin.getplayingmetadata()
-    assert artist == 'LĪVE'
-    assert title == 'Take My Anthem'
-    assert filename == '/Users/aw/Music/songs/LĪVE/Mental Jewelry/08 Take My Anthem.mp3'
+    metadata = plugin.getplayingtrack()
     expected = {
         'album': 'Mental Jewelry',
-        'artist': artist,
+        'artist': 'LĪVE',
         'bpm': 109,
         'date': '1991',
         'deck': 2,
@@ -99,7 +95,7 @@ def test_serato24_mac_oldest(getseratoplugin):  # pylint: disable=redefined-oute
         'genre': 'Rock',
         'key': 'G#m',
         'label': 'Radioactive Records',
-        'title': title,
+        'title': 'Take My Anthem',
     }
     results(expected, metadata)
 
@@ -108,14 +104,10 @@ def test_serato24_mac_oldest(getseratoplugin):  # pylint: disable=redefined-oute
 def test_serato24_mac_newest(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getseratoplugin
-    (artist, title, filename) = plugin.getplayingtrack()
-    metadata = plugin.getplayingmetadata()
-    assert artist == 'LĪVE'
-    assert title == 'Lakini\'s Juice'
-    assert filename == "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3"
+    metadata = plugin.getplayingtrack()
     expected = {
         'album': 'Secret Samadhi',
-        'artist': artist,
+        'artist': 'LĪVE',
         'bpm': 91,
         'date': '1997',
         'deck': 1,
@@ -124,7 +116,7 @@ def test_serato24_mac_newest(getseratoplugin):  # pylint: disable=redefined-oute
         'genre': 'Rock',
         'key': 'C#m',
         'label': 'Radioactive Records',
-        'title': title,
+        'title': 'Lakini\'s Juice',
     }
     results(expected, metadata)
 
@@ -133,16 +125,12 @@ def test_serato24_mac_newest(getseratoplugin):  # pylint: disable=redefined-oute
 def test_serato25_win_oldest(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getseratoplugin
-    (artist, title, filename) = plugin.getplayingtrack()
-    metadata = plugin.getplayingmetadata()
-    assert artist == 'Broke For Free'
-    assert title == 'Night Owl'
-    assert filename == 'C:\\Users\\aw\\Music\\Broke For Free - Night Owl.mp3'
+    metadata = plugin.getplayingtrack()
     expected = {
         'album':
         'Directionless EP',
         'artist':
-        artist,
+        'Broke For Free',
         'comments':
         'URL: http://freemusicarchive.org/music/Broke_For_Free/'
         'Directionless_EP/Broke_For_Free_-_Directionless_EP_-_01_Night_Owl\r\n'
@@ -157,7 +145,7 @@ def test_serato25_win_oldest(getseratoplugin):  # pylint: disable=redefined-oute
         'genre':
         'Electronic',
         'title':
-        title,
+        'Night Owl',
     }
     results(expected, metadata)
 
@@ -166,19 +154,15 @@ def test_serato25_win_oldest(getseratoplugin):  # pylint: disable=redefined-oute
 def test_serato25_win_newest(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getseratoplugin
-    (artist, title, filename) = plugin.getplayingtrack()
-    metadata = plugin.getplayingmetadata()
-    assert artist == 'Bio Unit'
-    assert title == 'Heaven'
-    assert filename == 'C:\\Users\\aw\\Music\\Bio Unit - Heaven.mp3'
+    metadata = plugin.getplayingtrack()
     expected = {
         'album': 'Ampex',
-        'artist': artist,
+        'artist': 'Bio Unit',
         'date': '2020',
         'deck': 1,
         'filename': 'C:\\Users\\aw\\Music\\Bio Unit - Heaven.mp3',
         'genre': 'Electronica',
-        'title': title,
+        'title': 'Heaven',
     }
     results(expected, metadata)
 

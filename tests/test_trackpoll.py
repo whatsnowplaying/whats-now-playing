@@ -34,7 +34,7 @@ class InputStub(nowplaying.inputs.InputPlugin):
     def stop(self):
         ''' dummy stop '''
 
-    def getplayingmetadata(self):  # pylint: disable=no-self-use
+    def getplayingtrack(self):  # pylint: disable=no-self-use
         ''' dummy meta -> just return globals '''
         return {'artist': ARTIST, 'filename': FILENAME, 'title': TITLE}
 

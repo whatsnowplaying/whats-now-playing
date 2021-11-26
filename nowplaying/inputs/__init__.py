@@ -78,10 +78,6 @@ class InputPlugin():
         ''' Get the currently playing track '''
         raise NotImplementedError
 
-    def getplayingmetadata(self):
-        ''' Get the metadata of the currently playing track '''
-        raise NotImplementedError
-
 
 #### Control methods
 
