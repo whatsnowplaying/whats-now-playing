@@ -1,0 +1,88 @@
+---
+name: "🐛 Bug Report"
+description: "Submit a bug report to help us improve"
+title: "🐛 Bug Report: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out our bug report form 🙏
+  - type: textarea
+    id: description
+    validations:
+      required: true
+    attributes:
+      label: "📜 Description"
+      description: "A clear and concise description of what the bug is."
+      placeholder: "It bugs out when ..."
+  - type: textarea
+    id: steps-to-reproduce
+    validations:
+      required: true
+    attributes:
+      label: "👟 Reproduction steps"
+      description: "How do you trigger this bug? Please walk us through it step by step."  # yamllint disable rule:line-length
+      placeholder: "1. When I ..."
+  - type: textarea
+    id: expected-behavior
+    validations:
+      required: true
+    attributes:
+      label: "👍 Expected behavior"
+      description: "What did you think would happen?"
+      placeholder: "It should ..."
+  - type: textarea
+    id: actual-behavior
+    validations:
+      required: true
+    attributes:
+      label: "👎 Actual Behavior"
+      description: "What did actually happen? Add screenshots, if applicable."
+      placeholder: "It actually ..."
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: "💻 Operating system"
+      description: "What OS is your app running on?"
+      options:
+        - Linux
+        - MacOS
+        - Windows
+        - Something else
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: "💻 Chipset/CPU"
+      description: "Which chipset is your CPU?"
+      options:
+        - Intel
+        - AMD
+        - ARM
+        - Apple M1
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: inputsource
+    attributes:
+      label: "💻 Input source"
+      description: "What input source/DJ software are you using?"
+      options:
+        - M3U
+        - MPRIS2
+        - Serato
+        - Virtual DJ
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    validations:
+      required: false
+    attributes:
+      label: "🧱 Your Environment"
+      description: "Anything other relevant info about your environment?"
+      placeholder: "I use XYZ for ..."
