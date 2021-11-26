@@ -29,7 +29,6 @@
   </head>
    <body>
 
-
       <div class="container" id="titlecard">
          <div class="npimage" id="cover"></div>
          <p><div id="artist"></div></p>
@@ -53,6 +52,7 @@
                      var img = document.createElement("img")
                      img.src = 'data:image/png;base64,' + metadata.coverimagebase64;
                      img.className = "npimage"
+                     $('#titlecard').hide()
                      if (metadata.title) {
                         $("#cover").html(img);
                         $("#title").html('\"'+metadata.title+'\"');
@@ -68,6 +68,7 @@
                         $("#album").html('');
                         $("#label").html('');
                      }
+                     $('#titlecard').hide()
                   };
 
                   ws.onclose = function(){

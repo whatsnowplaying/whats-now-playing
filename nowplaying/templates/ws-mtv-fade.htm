@@ -48,6 +48,7 @@
                   ws.onmessage = function (event) {
                      var metadata = JSON.parse(event.data);
                      console.log(metadata.title);
+                     $('#titlecard').hide()
                      if (metadata.title) {
                         $("#title").html('\"'+metadata.title+'\"');
                         $("#artist").html(metadata.artist);
@@ -61,6 +62,7 @@
                         $("#album").html('');
                         $("#label").html('');
                      }
+                     $('#titlecard').hide()
                   };
 
                   ws.onclose = function(){
