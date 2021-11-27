@@ -1,28 +1,26 @@
 TwitchBot
 =========
 
-Now Playing support direct integration with Twitch chat by incorporating a very simple
-bot. It takes any command and looks for an equivalent twitchbot template
-file.
+Now Playing integrates with Twitch chat by incorporating a simple
+bot. It takes any command and looks for an equivalent `twitchbot` template file.
 
-For example, in chat if the user types::
+For example, in chat, if the user types::
 
 !track
 
-it will look for a file called ``twitchbot_track.txt``.  Permissions for commands may be set
-in the Twitchbot settings section.
+Now Playing will read a file called ``twitchbot_track.txt`` and expand any
+template values in it.  The Twitchbot settings section sets permissions
+for commands.
 
-Additionally, Twitchbot has the ability to send an announcement template to chat when
-Now Playing detects a song change.
+Additionally, the Twitchbot can send an announcement template to chat when Now Playing detects a song change.
 
 Creating a Bot Account
 ----------------------
 
-#. In order to get the most out of the Twitchbot, it is recommended to setup another
-   account on Twitch.  Create the account and be sure to enable:
+#. Create a new, dedicated Twitch account for Now Playing. Be sure to enable:
 
    * Multiple logins per email
-   * Two factor authentication (2FA)
+   * Two-factor authentication (2FA)
 
 .. image:: images/twitchbot-account-settings.png
    :target: images/twitchbot-account-settings.png
@@ -47,9 +45,6 @@ Creating a Bot Account
    #. Authentication
    #. Copy the Token down
 
-#. Make the bot account a moderator of your channel so that it does not have chat
-   time limits, etc on it.
-
 At the end of this process, you should have four pieces of information:
 
 * Bot's Username:
@@ -57,7 +52,9 @@ At the end of this process, you should have four pieces of information:
 * Bot's Token:
 * Your Twitch Stream/Channel:
 
-You will need to provide all four to the Twitchbot Settings.
+You will need to provide all four to the Twitchbot Settings.  Additionally,
+you should consider making the bot a moderator to avoid limits, such as
+the message posting rate.
 
 Installation
 ------------
@@ -71,22 +68,23 @@ Installation
 
 #. Check Enable
 #. Provide the four pieces of authentication information above.
-#. If you would like to have the bot announce new tracks in chat, select the template.
+#. To have the bot announce new tracks in chat, select the template.
 #. Click Save
 
 Setting Permissions
 -------------------
 
-By default, all commands are available to everyone on your channel's chat.  If you wish to
-limit commands, add the command to the Twitchbot settings and check the types of users
-who should be able to execute them.
+By default, all commands are available to everyone on your channel's chat.
+If you wish to limit a command, add the command to the Twitchbot settings,
+and check the types of users who should execute those commands.
 
 Adding New Commands
 -------------------
 
-Sipmly create a new file in the ``Documents/Now Playing/template`` directory called
-``twitchbot_yourcommand.txt`` where ``yourcommand`` is the actual command that will be
-executed by users that has the appropriate template code inside it.
+Create a new file in Now Playing's``templates`` directory
+(``Documents/Now Playing/template``) called ``twitchbot_yourcommand.txt``
+where ``yourcommand`` is the actual command that will be
+executed by users that have the appropriate template code inside it.
 Note that all text will be smashed together as a single line when sent to Twitch, so
 be mindful of where to put spaces.
 
@@ -96,13 +94,13 @@ Troubleshooting
 * If the bot never connects, try getting a new OAuth token.
 
 * Be aware that the bot may have trouble connecting if you restart Now Playing too
-  quickly.  It should eventually rejoin but it may take several minutes.
+  quickly.  It should eventually rejoin, but it may take several minutes.
 
 
 Additional Variables
 --------------------
 
-For the purposes of templating, the TwitchBot provides the following additional features:
+The TwitchBot adds the following additional values for templating purposes:
 
 .. list-table::
    :header-rows: 1

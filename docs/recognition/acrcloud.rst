@@ -17,10 +17,11 @@ of the biggest in the world.
 
 You can learn more and sign up for ACRCloud's commercial services at https://www.acrcloud.com .
 
+NOTES:
 
-In order for this feature to work on Windows, you will need to install the
-`Windows Runtime Library <https://github.com/acrcloud/acrcloud_sdk_python#windows-runtime-library>`.
-Linux and Mac OS X users do not need any extra software installed.
+  * For this feature to work on Windows, you will need to install the `Windows Runtime Library <https://github.com/acrcloud/acrcloud_sdk_python#windows-runtime-library>`_. Linux and Mac OS X users do not need any extra software installed.
+
+  * ACRCloud is not supported natively on Apple M1 but will work with the x86_64 build via Rosetta 2.
 
 
 Instructions

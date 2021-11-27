@@ -18,7 +18,7 @@ Instructions
 ------------
 
 #. Open Settings from the Now Playing icon
-#. Select Input Source from left-hand column
+#. Select Input Source from the left-hand column
 
 .. image:: images/serato-source-selection.png
    :target: images/serato-source-selection.png
@@ -49,10 +49,9 @@ Remote Mode
    :target: images/serato-remote.png
    :alt: Remote Mode Settings
 
-
-Remote mode is useful when the streaming computer is not the same as the Serato DJ computer but the HTTP Server
-Mode cannot be used.
-
+Remote mode is useful when the streaming computer is not the same as the
+Serato DJ computer by utilizing Serato Live Playlists. It should be only
+used when Now Playing's web server mode also cannot be used.
 
 #.
    In Serato, make sure you enable Live Playlists and start a new session. From the `Serato website <https://support.serato.com/hc/en-us/articles/228019568-Live-Playlists>`_\ :
@@ -73,4 +72,4 @@ Mode cannot be used.
    Start the **Now Playing** app.  The app can be controlled and configured by accessing the menu from the icon in the Windows system tray or Mac menu bar.
 
 Be aware that as of this writing (2021-03-05), the only information available via Live Playlists is the artist and the title
-due to limitations on the Serato-side.
+due to limitations iin Serato's offering.

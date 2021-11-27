@@ -1,26 +1,29 @@
 Gallery of Templates
 ====================
 
-**Now Playing** has quite a bit of flexibility in what kind of output you can generate to the point that
-there is a nearly infinite possible of combinations. The text versions are primarily meant to be used to
-feed other systems and are rather basic.  E.g., the basic text template generates:
+**Now Playing** has quite a bit of flexibility in what kind of output
+you can generate to the point that there are nearly infinite possibilities.
+The text versions are meant to be used to feed other systems and are rather
+basic.  E.g., the basic text template generates:
 
  Utah Saints - Something Good '08
 
-Picking that template, configuring a text source, configuring a scroll filter on that source,
-and then writing to it via OBS WebSocket allows one to do:
+Picking that template, configuring a text source, configuring a scroll filter
+on that source, and then writing to it via OBS WebSocket allows one to do:
 
 .. image:: gallery/images/videoloop.webp
    :target: gallery/images/videoloop.webp
    :alt: Scroll demo
 
-For the HTML templates, there are generally two varieties, one that use WebSockets (start with ws-)
-and those that do not.  WebSocket varieties are more likely to get updates closer in sync to the
-rest of your display but may not be supported by your software stack.
+For the HTML templates, there are generally two varieties, one that uses
+WebSockets (start with ws-)
+and those that do not.  WebSocket varieties are more likely to get updates closer
+in sync with the rest of your display. However, older software stacks may
+not support WebSockets.
 
-Additionally, many of the templates are marked as 'fade' or 'nofade'.  'Nofade' generally stay on the
-screen for the duration of the song.  'Fade' will appear for a while and then disappear, only to
-reappear when the song changes:
+AAdditionally, the templates are typically named to have 'fade' or 'nofade'.
+'Nofade' generally stay on the screen for the duration of the song.  'Fade'
+will appear for a while and then disappear, only to reappear when the song changes:
 
 .. image:: gallery/images/mtvfade.webp
    :target: gallery/images/mtvfade.webp

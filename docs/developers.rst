@@ -14,7 +14,7 @@ Development Requirements
 
 To locally build and install **Now Playing**\ , you will need the following:
 
-#. Python for your operating system (3.8 or higher is recommended)
+#. Python for your operating system (3.9 or higher is recommended)
 #. Access to a development shell (e.g., /Applications/Utility/Terminal on OS X)
 #. ``git`` installed and working
 
@@ -22,7 +22,7 @@ Linux Pre-work
 ^^^^^^^^^^^^^^
 
 If you are on Linux, it is recommended that you install dbus-python at
-the system level first in order to get the basic OS requirements put in
+the system level first to get the basic OS requirements put in
 place first.  For example, for Debian-style systems:
 
 .. code-block:: bash

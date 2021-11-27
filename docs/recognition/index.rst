@@ -7,15 +7,15 @@ Music Recognition
 In general, music recognition is primarily for DJs that do not have their music fully tagged.
 This feature may have some significant impacts on Now Playing's general performance:
 
-* Extra network bandwidth and access is required to consult with online databases.
-* Extra CPU and RAM will be required in order to generate the 'fingerprint' that helps
+* Extra network bandwidth and access are required to consult with online databases.
+* Extra CPU and RAM will be required to generate the 'fingerprint' that helps
   identify the song.
-* Extra time will be required in order to all of this extra work, adding delays to
+* Extra time will be required for all of this extra work, adding delays to
   the display.
 
-The results of the music recognition feature are constantly being improved. However, such
-technologies will never be perfect and will still likely provide surprising results.
-The more information in the actual music files, the better the results.
+Music recognition technologies will never be perfect and will occasionally
+provide surprising results. Tagging your files, even with minimal information,
+will give the best outcome.
 
 .. toctree::
    :maxdepth: 2

@@ -1,22 +1,22 @@
 Installation
 ============
 
-These directions cover the basic downloading and installation of the core funcionality.
-Music `recognition <recognition/index.html>`_ requires additional software to be installed.  Please see
-the plug-in specific page on those requirements.
+These directions cover the basic downloading and installation of the
+core functionality.
+Music `recognition <recognition/index.html>`_ beyond essential file tag
+reading requires installing
+additional software.  Please see the specific plug-in page for those requirements.
 
 Linux
 -----
 
 Binaries are not provided because of dbus-python, so please follow the developer guide
-to install in a Python virtual environment.  Note that currently, this software does
-not run headless.
+to install in a Python virtual environment.  Note that currently, this software does not run headless.
 
 *Important note for Linux users*
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In order to use MPRIS2, you *must* have dbus-python installed in your Python virtual
-environment.
+To use MPRIS2, you *must* have dbus-python installed in your Python virtual environment.
 
 Mac
 ---

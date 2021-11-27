@@ -1,12 +1,13 @@
 Webserver
 =========
 
-**Now Playing**\ has a built-in web server that allows for a wide variety of customization and
-deployments, including complex ones involving multiple hosts.  In general, the files in
-`templates` should be treated as examples; copy them to new names and modify until
+**Now Playing**\ has a built-in web server that allows for a wide
+variety of customization and
+deployments, including complex ones involving multiple hosts.  Treat the files in
+`templates` as examples; copy them to new names and modify them until
 you are happy.  Change the font, change the output order, do whatever it is you need to do.
 
-It is *recommend* to use one of the WebSocket examples as your starting point as they
+Using one of the WebSocket examples as your starting point is recommended as they
 are generally more predictable. They update when the song updates vs. the
 others that use a timer to check for updates.  See more about WebSockets below.
 
@@ -32,14 +33,15 @@ Settings
    * - Setting
      - Description
    * - Port
-     - The HTTP server's TCP port.  For security reasons, a firewall should protect this port to limit which hosts
-       will be permitted to connect.
+     - The HTTP server's TCP port.   A firewall should protect this port for
+       security reasons to limit which hosts will be permitted to connect. Now Playing does not limit what systems may connect to it.
    * - HTML Template
-     - The `Jinja2 template <https://jinja.palletsprojects.com/en/2.11.x/templates/>`_ file that will be used when the song
-       updates when fetching index.html. See `Templates <../templatevariables.html>`_ for more information.
+     - The `Jinja2 template <https://jinja.palletsprojects.com/en/2.11.x/templates/>`_ file to use when fetching
+     index.html. See `Templates <../templatevariables.html>`_ for more information.
    * - Once
-     - Only give index.html once per title, then giving a page that does nothing but refresh until the next song change.
-       This setting is very useful to provide a simple way to do fade-in, fade-out using very simple HTML.
+     - Only give index.html once per title, then return an empty refresh page
+       until the next song change. This setting is handy for providing a
+       simple way to do fade-in and fade-out using simple HTML.
 
 
 OBS Settings

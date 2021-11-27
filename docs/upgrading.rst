@@ -14,10 +14,10 @@ From 2.x.x
 #. Many templates have been added and updated. New templates will be copied into
    the templates directory. For updated templates, there are two outcomes:
 
-   * If there have been no changes to the one in the template directory, the updated
-     template file will overwrite the existing one.
+   * If there have been no changes to the same one in the template directory,
+     the updated template file will overwrite the existing one.
    * If there have been changes to the one in the template directory, the updated one
-     will be be put in as ``.new`` and will likely require you to take action. The existing
+     will be put in as ``.new`` and will likely require you to take action. The existing
      one will be left there, however.  A pop-up on program launch will also inform you
      that the conflict has happened.
 

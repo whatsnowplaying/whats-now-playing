@@ -1,8 +1,9 @@
 Source
 ======
 
-In order for Now Playing to work, it needs to know what is being used to play music.  In the UI, this setting
-is called the Source.  There are many sources available and each has its own screen to configure them.
+For Now Playing to work, it needs to know what software is playing music.  In
+the UI, this setting is called the Source.  There are many sources available.
+Each has its own screen to configure them.
 
 .. toctree::
    :maxdepth: 2

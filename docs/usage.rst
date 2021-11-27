@@ -5,7 +5,7 @@ Start the Now Playing app from the location where you placed it. The app is cont
 configured by accessing the menu from the icon in the Windows system tray or Mac
 menu bar after configuration.
 
-However, the first time you run the app a `Settings <settings.html>`_ window will appear.
+However, the first time you run the app, a `Settings <settings.html>`_ window will appear.
 Populate the fields accordingly, and press Save. Once saved, the app will start polling
 for new songs. The app can be controlled and exited from...
 

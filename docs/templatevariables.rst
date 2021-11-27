@@ -6,24 +6,25 @@ Now Playing handles almost all output via the
 includes an extremely `powerful language <https://jinja2docs.readthedocs.io/en/stable/templates.html>`_
 that enables you a full range of customizing the output.
 
-In general, Now Playing provides a generic set of variables that can be used in any template. These
-values are filled in dependent on a few factors:
+In general, Now Playing provides a generic set of variables for use in any template. These
+values are filled based on a few factors:
 
-* the input source providing its own data
-* whether the media has been appropriately tagged
-* Now Playing's ability to read those tags
+* the input source providing its data
+* media tag quality
+* Now Playing's file type and tag compatibility
 
 Some examples:
 
 * An MP3 file missing ID3 tags may only have `title` available.
-* Serato in Remote mode, title and optionally artist are available.
-* MP4/M4V files have very limited support currently in Now Playing so will not have the label
+* Serato in Remote mode, title, and optionally artist are available.
+* MP4/M4V files have minimal support currently in Now Playing, so will not have the label
+* VOBS files do not support tagging and will only have information available from the DJ software, if possible
 
-Additionally, some outputs (e.g., TwitchBot) may provide additional variables that provide
-additional, context-sensitive features. See their individual pages for more information.
+Some outputs (e.g., TwitchBot) may provide additional variables that offer
+other, context-sensitive features. See their pages for more information.
 
-Support Variables
------------------
+Supported Variables
+--------------------
 
 .. list-table::
    :header-rows: 1
@@ -94,7 +95,7 @@ Implementation Notes
 Arrays
 ^^^^^^
 
-Fields that are may be multi-valued (e.g., genre) will be merged into one.
+Fields that are might be multi-valued (e.g., genre) will be merged into one.
 
 Undefined
 ^^^^^^^^^
@@ -112,5 +113,6 @@ This can be short-cut to:
 
   {% if variable %}
 
-Since variable will always be defined. This fact also means that templates that mistakenly use the
-wrong variable name will render, just with an empty string in place of the expected text.
+since the variable will always be defined. This also means that templates
+that incorrectly use the wrong variable name will render, just with an empty
+string in place of the expected text.

@@ -1,14 +1,13 @@
 M3U Support
 ===========
 
-M3U is a fairly standardized file format that is used by a variety of software, such as
-Virtual DJ.
+M3U is a somewhat standardized file format that many different applications write. In particular, Virtual DJ uses this file format for its history.
 
 Instructions
 ------------
 
 #. Open Settings from the Now Playing icon
-#. Select Input Source from left-hand column
+#. Select Input Source from the left-hand column
 
 .. image:: images/m3u-source-selection.png
    :target: images/m3u-source-selection.png
@@ -25,5 +24,5 @@ Instructions
 
 #. Click Save
 
-Now Playing will now read that directory, reading the most current m3u file for the
-currently playing track information.
+Now Playing will read that directory, reading the most current m3u file
+for the currently playing track information.

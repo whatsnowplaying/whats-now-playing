@@ -8,9 +8,10 @@ metadata for untagged files.
 AcoustID
 --------
 
-AcoustID is a project providing complete audio identification service, based entirely
-on open source software.  The service is completely free for non-commercial applications,
-all you need to do is `register your application <https://acoustid.org/new-application>`_.
+AcoustID is a project providing a complete audio identification service
+based entirely on open-source software.  The service is completely free
+for non-commercial applications. All you need to do is
+`register your application <https://acoustid.org/new-application>`_.
 
 MusicBrainz
 -----------
@@ -31,7 +32,7 @@ Instructions
 
 #. Install `Chromaprint <https://acoustid.org/chromaprint>`_ as appropriate for your operating system.
 #. Open Settings from the Now Playing icon
-#. Select Acoustidmb from left-hand column
+#. Select Acoustidmb from the left-hand column
 #. Enable the option
 #. Fill in the API Key you received from Acoustid
 #. Fill in an email address that MusicBrainz uses as an emergency contact (i.e., too many queries).

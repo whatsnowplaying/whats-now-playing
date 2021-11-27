@@ -10,7 +10,7 @@ Settings
 
   * This is useful for verifying that the app is polling and retrieving data.
   * The notification displays the track information after detection.
-  * Some software (such as Serato) will not show notifications in full screen mode. You may need to take it
+  * Some software (such as Serato) will not show notifications in full-screen mode. You may need to take it
     out of full screen node to see the notification.
 
 *

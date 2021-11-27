@@ -1,9 +1,8 @@
 Versus Comparisons
 ==================
 
-There are a lot of different solutions to provide titling for your stream. While
-we would love for you to choose and and work with us, we are realistic that this software
-may not be the one for you.
+There are a lot of different solutions to provide titling for your stream. Here
+are some comparisons of other projects related to what this software offers.
 
 Serato's Now Playing Twitch Extension
 -------------------------------------

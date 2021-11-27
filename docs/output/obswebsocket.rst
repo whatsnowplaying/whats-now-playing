@@ -1,7 +1,7 @@
 OBS WebSocket Plug-in
 =====================
 
-Now Playing has the capability to use the
+Now Playing can use the
 `OBS WebSocket Plug-in <https://github.com/Palakis/obs-websocket/>`_ to send results
 directly to OBS Studio.
 

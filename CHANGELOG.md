@@ -3,32 +3,49 @@
 
 ## Version 3.0.0 - in progress
 
-* basic/complex.txt renamed to basic/complex-plain.txt
-* basic/complex.htm renamed to basic/complex-web.htm
-* template macros:
-  * year has been replaced with date
-  * publisher has been replaced with label
-* Rewrite the documentation and move it to ReStructuredText
-* Add upgrade code path.
-* Rebuild the webserver.
-* Add support for m3u files, which should enable Virtual DJ support.
-* Add a TwitchBot, including the ability to announce track changes.
-* Rework some of the templates.
-* Add support for MPRIS2 on Linux
-* Support Big Sur and Monterey
-* Added support for writing to the [OBS Web Socket
-  plugin](https://github.com/Palakis/obs-websocket)
-* Revamped settings user interface
-* Now write data to a sqlite DB while running and switch all
-  output timing based upon writes, enabling multiprocess
-  handling
-* Add ability to ignore decks in Serato, especially useful
-  for scratch DJs
+* Significant reworking of the code base that allows
+  for many more features to be added and be much less
+  crash-prone.
+* Completely revamped user settings to handle all
+  of the new features
+* Settings should now move from one version to another when upgrading.
+* Bundled example template changes:
+  * Most of the examples have been rewritten
+  * basic/complex.txt renamed to basic/complex-plain.txt
+  * basic/complex.htm renamed to basic/complex-web.htm
+  * New WebSocket-based examples (ws-) allow for near realtime
+    updates
+* Template macro changes:
+  * `year` has been replaced with `date`
+  * `publisher` has been replaced with `label`
+  * `hostfqdn`, `hostip`, `hostname`, `httpport` have been added for
+    better webserver support
+  * `musicbrainzalbumid`, `musicbrainzartistid`, `musicbrainzrecordingid`
+    have been added when either audio recognition is enabled or
+    already present in tags
+  * `discsubtitle` has been added
 * Ability to use two different music recognition services
-  so that untagged files now have metadata
-* Ability to select which file system event method is to be used
-* Ability to change how files are referenced
-* Significant code re-organization/cleanup/bug fixes/unit tests ...
+  so that untagged or even tagged files now have metadata
+* Documentation updates:
+  * [New home](https://whatsnowplaying.github.io/)!
+  * Major documentation overhaul
+  * Move it from Markdown to ReStructuredText
+* Outputs:
+  * Rewritten webserver backend to be more efficient and support
+    WebSockets.
+  * Add a TwitchBot, including the ability to announce track changes
+  * Added support for writing to the [OBS Web Socket
+    plugin](https://github.com/Palakis/obs-websocket)
+  * Now write data to a sqlite DB while running and switch all
+    output timing based upon writes, enabling multiprocess
+    handling
+* Inputs:
+  * Added ability to support more than just Serato
+  * Add support for m3u files, which should enable Virtual DJ support
+  * Add support for MPRIS2 on Linux
+  * Add ability to ignore some decks in Serato local mode
+* macOS support for Big Sur, Monterey, and Apple M1
+* Improved support for `mp4` and `m4v` files
 
 ## Version 2.0.1 - 2021-05-27
 
