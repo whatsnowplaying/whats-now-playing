@@ -1,7 +1,7 @@
 
 # Changelog
 
-## Version 3.0.0 - in progress
+## Version 3.0.0 - 2021-11-27
 
 * Significant reworking of the code base that allows
   for many more features to be added and be much less
