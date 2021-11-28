@@ -11,7 +11,7 @@ File System Notification Method
 
 By default, ``Now Playing`` uses operating system facilities to know when input
 files have changed.  If ``Now Playing`` is running on a different host than the
-DJ software and ``Now Playing``have been configured to read the DJ
+DJ software and ``Now Playing`` have been configured to read the DJ
 software's directory
 over a network mount (such as SMB) ``Now Playing`` may not get notified that
 a file

@@ -36,8 +36,7 @@ Settings
      - The HTTP server's TCP port.   A firewall should protect this port for
        security reasons to limit which hosts will be permitted to connect. Now Playing does not limit what systems may connect to it.
    * - HTML Template
-     - The `Jinja2 template <https://jinja.palletsprojects.com/en/2.11.x/templates/>`_ file to use when fetching
-     index.html. See `Templates <../templatevariables.html>`_ for more information.
+     - The `Jinja2 template <https://jinja.palletsprojects.com/en/2.11.x/templates/>`_ file to use when fetching index.html. See `Templates <../templatevariables.html>`_ for more information.
    * - Once
      - Only give index.html once per title, then return an empty refresh page
        until the next song change. This setting is handy for providing a

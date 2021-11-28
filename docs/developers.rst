@@ -2,8 +2,6 @@
 Developers
 ==========
 
-.. code-block:: text
-
        NOTE: For people familiar with Python, it is HIGHLY RECOMMENDED that you use and
        build with venv due to the restrictive requirements of the tested packages listing.
        While newer versions MAY work, there is no guarantee that PyInstaller and other
