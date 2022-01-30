@@ -8,7 +8,7 @@ lxml==4.7.1
 netifaces==0.11.0
 musicbrainzngs==0.7.1
 obs-websocket-py==0.5.3
-pillow==8.3.2
+pillow==9.0.0
 psutil==5.8.0
 pyacoustid==1.2.2
 pyinstaller==4.5.1
