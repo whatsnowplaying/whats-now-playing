@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # pylint: disable=invalid-name
-''' Use ACRCloud to recognize the file '''
+''' support for musicbrainz '''
 
 import os
 import sys

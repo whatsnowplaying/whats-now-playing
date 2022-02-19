@@ -1,6 +1,5 @@
 <RCC>
     <qresource prefix="/resources">
         <file>icon.ico</file>
-        <file>ACRCloud-logo.png</file>
     </qresource>
 </RCC>

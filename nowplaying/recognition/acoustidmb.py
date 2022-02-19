@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # pylint: disable=invalid-name
-''' Use ACRCloud to recognize the file '''
+''' Use acoustid w/help from musicbrainz to recognize the file '''
 
 import json
 import os

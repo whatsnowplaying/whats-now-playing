@@ -21,5 +21,4 @@ will give the best outcome.
    :maxdepth: 2
    :caption: Contents:
 
-   acrcloud
    acoustidmb
