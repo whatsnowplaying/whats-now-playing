@@ -8,7 +8,6 @@
         "nowplaying/resources/obsws_ui.ui",
         "nowplaying/resources/quirks_ui.ui",
         "nowplaying/resources/recognition_acoustidmb_ui.ui",
-        "nowplaying/resources/recognition_ACRCloud_ui.ui",
         "nowplaying/resources/settings.qrc",
         "nowplaying/resources/settings_ui.ui",
         "nowplaying/resources/source_ui.ui",

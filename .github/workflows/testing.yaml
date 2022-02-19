@@ -34,9 +34,6 @@ jobs:
         shell: bash
         env:
           ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
-          ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
-          ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
-          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}  # pragma: allowlist secret
         run: |
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp
@@ -82,9 +79,6 @@ jobs:
         shell: bash
         env:
           ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
-          ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
-          ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
-          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}  # pragma: allowlist secret
         run: |
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp
@@ -138,9 +132,6 @@ jobs:
         shell: bash
         env:
           ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
-          ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
-          ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
-          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}  # pragma: allowlist secret
         run: |
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp
@@ -201,9 +192,6 @@ jobs:
         shell: bash
         env:
           ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
-          ACRCLOUD_TEST_HOST: ${{ secrets.ACRCLOUD_TEST_HOST }}
-          ACRCLOUD_TEST_KEY: ${{ secrets.ACRCLOUD_TEST_KEY }}
-          ACRCLOUD_TEST_SECRET: ${{ secrets.ACRCLOUD_TEST_SECRET }}  # pragma: allowlist secret
         run: |
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp

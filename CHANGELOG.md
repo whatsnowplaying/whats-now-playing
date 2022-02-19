@@ -1,6 +1,10 @@
 
 # Changelog
 
+## Version 3.1.0 - in progress
+
+* Removed ACRCloud support
+
 ## Version 3.0.0 - 2021-11-27
 
 * Significant reworking of the code base that allows

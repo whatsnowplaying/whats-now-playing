@@ -46,7 +46,6 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
     nowplaying.bootstrap.set_qt_names(appname='testsuite')
     config = nowplaying.config.ConfigFile(bundledir=bundledir, testmode=True)
     config.cparser.setValue('acoustidmb/enabled', False)
-    config.cparser.setValue('acrcloud/enabled', False)
     config.cparser.sync()
     yield config
 

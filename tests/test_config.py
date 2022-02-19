@@ -24,7 +24,6 @@ def test_reset2(getroot):
     nowplaying.bootstrap.set_qt_names(appname='testsuite')
     config = nowplaying.config.ConfigFile(bundledir=bundledir, testmode=True)
     config.cparser.setValue('acoustidmb/enabled', False)
-    config.cparser.setValue('acrcloud/enabled', False)
     config.cparser.setValue('fake/setting', True)
     config.cparser.sync()
     assert config.cparser.value('fake/setting')
