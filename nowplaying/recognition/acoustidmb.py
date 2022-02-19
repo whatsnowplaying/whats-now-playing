@@ -267,9 +267,9 @@ class Plugin(RecognitionPlugin):
                 metadata['filename'])
             return self.acoustidmd
 
-        musicbrainzlookup = self.musicbrainz.recordingid(
-            self.acoustidmd['musicbrainzrecordingid'])
-        if musicbrainzlookup:
+        if musicbrainzlookup := self.musicbrainz.recordingid(
+            self.acoustidmd['musicbrainzrecordingid']
+        ):
             self.acoustidmd.update(musicbrainzlookup)
         return self.acoustidmd
 
