@@ -218,8 +218,7 @@ class UpgradeTemplates():
             if apphash == userhash:
                 continue
 
-            version = self.check_preload(filename, userhash)
-            if version:
+            if version := self.check_preload(filename, userhash):
                 os.unlink(userpath)
                 shutil.copyfile(apppath, userpath)
                 logging.info('Replaced %s from %s with %s', filename, version,

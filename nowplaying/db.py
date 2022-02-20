@@ -226,8 +226,7 @@ class MetadataDB:
         connection = sqlite3.connect(self.databasefile)
         cursor = connection.cursor()
 
-        sql = 'CREATE TABLE currentmeta ('
-        sql += 'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+        sql = 'CREATE TABLE currentmeta (' + 'id INTEGER PRIMARY KEY AUTOINCREMENT, '
         sql += ' TEXT, '.join(
             MetadataDB.METADATALIST) + ' TEXT,  coverimageraw BLOB'
         sql += ')'
