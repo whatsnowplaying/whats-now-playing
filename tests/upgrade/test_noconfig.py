@@ -47,7 +47,7 @@ def move_old_config():
     yield
     if renamed:
         logging.warning('Moving old em1ran back')
-        os.rename(othersettings.fileName() + '.bak', othersettings.fileName())
+        os.rename(f'{othersettings.fileName()}.bak', othersettings.fileName())
     reboot_macosx_prefs()
 
 

@@ -69,7 +69,9 @@ class WebHandler():
                 sys.exit(0)
 
         self.magicstopurl = ''.join(
-            secrets.choice(string.ascii_letters) for i in range(32))
+            secrets.choice(string.ascii_letters) for _ in range(32)
+        )
+
         logging.info('Secret url to quit websever: %s', self.magicstopurl)
 
         signal.signal(signal.SIGINT, self.forced_stop)
