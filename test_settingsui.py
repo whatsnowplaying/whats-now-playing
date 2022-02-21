@@ -12,6 +12,7 @@ from PySide6.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
 
 class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods
     ''' test class '''
+
     def __init__(self):
         super().__init__()
         self.qtui = None
@@ -20,6 +21,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods
 
     def load_qtui(self):
         ''' load the base UI and wire it up '''
+
         def _load_ui(name):
             ''' load a UI file into a widget '''
             loader = QUiLoader()

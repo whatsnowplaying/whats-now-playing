@@ -27,6 +27,7 @@ MPRIS2_BASE = 'org.mpris.MediaPlayer2'
 
 class MPRIS2Handler():
     ''' Read metadata from MPRIS2 '''
+
     def __init__(self, service=None):
         self.service = None
         self.bus = None
@@ -86,7 +87,7 @@ class MPRIS2Handler():
             return builddata
 
         try:
-            self.meta = properties.GetAll(MPRIS2_BASE + '.Player')['Metadata']
+            self.meta = properties.GetAll(f'{MPRIS2_BASE}.Player')['Metadata']
         except dbus.exceptions.DBusException as error:
             # likely had a service and but now it is gone
             logging.error(error)
@@ -95,12 +96,11 @@ class MPRIS2Handler():
             self.bus = None
             return builddata
 
-        artists = self.meta.get('xesam:artist')
-        if artists:
+        if artists := self.meta.get('xesam:artist'):
             artists = collections.deque(artists)
             artist = str(artists.popleft())
             while len(artists) > 0:
-                artist = artist + '/' + str(artists.popleft())
+                artist = f'{artist}/{str(artists.popleft())}'
             if artist:
                 builddata['artist'] = artist
 
@@ -112,12 +112,10 @@ class MPRIS2Handler():
         if self.meta.get('xesam:album'):
             builddata['album'] = self.meta.get('xesam:album')
 
-        length = self.meta.get('mpris:length')
-        if length:
+        if length := self.meta.get('mpris:length'):
             builddata['length'] = int(length)
 
-        tracknumber = self.meta.get('xesam:tracknumber')
-        if tracknumber:
+        if tracknumber := self.meta.get('xesam:tracknumber'):
             builddata['track'] = int(tracknumber)
 
         filename = self.meta.get('xesam:url')
@@ -171,6 +169,7 @@ class MPRIS2Handler():
 
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
+
     def __init__(self, config=None, qsettings=None):
 
         super().__init__(config=config, qsettings=qsettings)
@@ -246,9 +245,8 @@ class Plugin(InputPlugin):
         servicelist = self.mpris2.get_mpris2_services()
         qwidget.list_widget.clear()
         qwidget.list_widget.addItems(servicelist)
-        curbutton = qwidget.list_widget.findItems(currentservice,
-                                                  Qt.MatchContains)
-        if curbutton:
+        if curbutton := qwidget.list_widget.findItems(currentservice,
+                                                      Qt.MatchContains):
             curbutton[0].setSelected(True)
 
     def verify_settingsui(self, qwidget):
@@ -258,8 +256,7 @@ class Plugin(InputPlugin):
         ''' save the combobox '''
         if not self.dbus_status:
             return
-        curitem = qwidget.list_widget.currentItem()
-        if curitem:
+        if curitem := qwidget.list_widget.currentItem():
             curtext = curitem.text()
             self.config.cparser.setValue('mpris2/service', curtext)
 

@@ -15,6 +15,7 @@ import nowplaying.metadata
 
 class TemplateHandler():  # pylint: disable=too-few-public-methods
     ''' Set up a template  '''
+
     def __init__(self, filename=None):
         self.envdir = envdir = None
         self.template = None
@@ -109,11 +110,12 @@ def writetxttrack(filename=None,
 def import_plugins(namespace):
     ''' import plugins and return an object
         with all of them '''
+
     def iter_ns(ns_pkg):
         ''' iterate over a package and return children.
             used to monkey patch in plugins
         '''
-        prefix = ns_pkg.__name__ + "."
+        prefix = f'{ns_pkg.__name__}.'
         for pkg in pkgutil.iter_modules(ns_pkg.__path__, prefix):
             if 'test' not in pkg[1]:
                 yield pkg[1]
@@ -166,8 +168,7 @@ def songpathsubst(config, filename):
         newname = filename.replace('/', '\\')
         filename = newname
 
-    songin = config.cparser.value('quirks/filesubstin')
-    if songin:
+    if songin := config.cparser.value('quirks/filesubstin'):
         songout = config.cparser.value('quirks/filesubstout')
         if not songout:
             songout = ''

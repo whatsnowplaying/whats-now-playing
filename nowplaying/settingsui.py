@@ -22,6 +22,7 @@ except ModuleNotFoundError:
 # settings UI
 class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     ''' create settings form window '''
+
     def __init__(self, tray, version):
 
         self.config = nowplaying.config.ConfigFile()
@@ -40,6 +41,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def load_qtui(self):
         ''' load the base UI and wire it up '''
+
         def _load_ui(name):
             ''' load a UI file into a widget '''
             loader = QUiLoader()
@@ -193,9 +195,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         ''' this is totally wrong and will need to get dealt
             with as part of ui code redesign '''
         currentinput = self.config.cparser.value('settings/input')
-        curbutton = self.widgets['source'].sourcelist.findItems(
-            currentinput, Qt.MatchContains)
-        if curbutton:
+        if curbutton := self.widgets['source'].sourcelist.findItems(
+                currentinput, Qt.MatchContains):
             self.widgets['source'].sourcelist.setCurrentItem(curbutton[0])
 
     def _upd_win_webserver(self):
@@ -233,6 +234,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def _upd_win_twitchbot(self):
         ''' update the twitch settings '''
+
         def clear_table(widget):
             widget.clearContents()
             rows = widget.rowCount()
@@ -370,8 +372,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def _upd_conf_input(self):
         ''' find the text of the currently selected handler '''
-        curbutton = self.widgets['source'].sourcelist.currentItem()
-        if curbutton:
+        if curbutton := self.widgets['source'].sourcelist.currentItem():
             inputtext = curbutton.text().lower()
             self.config.cparser.setValue('settings/input', inputtext)
 
@@ -432,6 +433,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def _upd_conf_twitchbot(self):
         ''' update the twitch settings '''
+
         def reset_commands(widget, config):
 
             # needs to match ui file
@@ -516,14 +518,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     @Slot()
     def on_text_saveas_button(self):
         ''' file button clicked action '''
-        startfile = self.widgets['general'].textoutput_lineedit.text()
-        if startfile:
+        if startfile := self.widgets['general'].textoutput_lineedit.text():
             startdir = os.path.dirname(startfile)
         else:
             startdir = '.'
-        filename = QFileDialog.getSaveFileName(self, 'Open file', startdir,
-                                               '*.txt')
-        if filename:
+        if filename := QFileDialog.getSaveFileName(self, 'Open file', startdir,
+                                                   '*.txt'):
             self.widgets['general'].textoutput_lineedit.setText(filename[0])
 
     def template_picker(self, startfile=None, startdir=None, limit='*.txt'):
@@ -532,16 +532,15 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             startdir = os.path.dirname(startfile)
         elif not startdir:
             startdir = os.path.join(self.config.templatedir, "templates")
-        filename = QFileDialog.getOpenFileName(self.qtui, 'Open file',
-                                               startdir, limit)
-        if filename:
+        if filename := QFileDialog.getOpenFileName(self.qtui, 'Open file',
+                                                   startdir, limit):
             return filename[0]
         return None
 
     def template_picker_lineedit(self, qwidget, limit='*.txt'):
         ''' generic code to pick a template file '''
-        filename = self.template_picker(startfile=qwidget.text(), limit=limit)
-        if filename:
+        if filename := self.template_picker(startfile=qwidget.text(),
+                                            limit=limit):
             qwidget.setText(filename)
 
     @Slot()
@@ -608,8 +607,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     @Slot()
     def on_twitchbot_del_button(self):
         ''' twitchbot del button clicked action '''
-        items = self.widgets['twitchbot'].command_perm_table.selectedIndexes()
-        if items:
+        if items := self.widgets[
+                'twitchbot'].command_perm_table.selectedIndexes():
             self.widgets['twitchbot'].command_perm_table.removeRow(
                 items[0].row())
 
@@ -638,8 +637,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     def on_save_button(self):
         ''' save button clicked action '''
         inputtext = None
-        curbutton = self.widgets['source'].sourcelist.currentItem()
-        if curbutton:
+        if curbutton := self.widgets['source'].sourcelist.currentItem():
             inputtext = curbutton.text().lower()
 
         try:

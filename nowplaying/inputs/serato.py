@@ -325,6 +325,7 @@ class ChunkVRSN(ChunkParser):  #pylint: disable=too-many-instance-attributes, to
 
 class SessionFile():  #pylint: disable=too-few-public-methods
     ''' process a session file '''
+
     def __init__(self, filename=None):
         self.filename = filename
         self.adats = []
@@ -399,6 +400,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             self.seratodir='/path/to/_Serato_/History/Sessions')
 
     '''
+
     def __init__(self,
                  mixmode='oldest',
                  pollingobserver=False,
@@ -750,6 +752,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
+
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
 
@@ -884,9 +887,9 @@ class Plugin(InputPlugin):
         startdir = self.qwidget.local_dir_lineedit.text()
         if not startdir:
             startdir = str(pathlib.Path.home())
-        libdir = QFileDialog.getExistingDirectory(self.qwidget,
-                                                  'Select directory', startdir)
-        if libdir:
+        if libdir := QFileDialog.getExistingDirectory(self.qwidget,
+                                                      'Select directory',
+                                                      startdir):
             self.qwidget.local_dir_lineedit.setText(libdir)
 
     def connect_settingsui(self, qwidget):
@@ -897,6 +900,7 @@ class Plugin(InputPlugin):
 
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
+
         def handle_deckskip(cparser, qwidget):
             deckskip = cparser.value('serato/deckskip')
             qwidget.deck1_checkbox.setChecked(False)

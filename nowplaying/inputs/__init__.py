@@ -9,6 +9,7 @@ from nowplaying.exceptions import PluginVerifyError
 
 class InputPlugin():
     ''' base class of input plugins '''
+
     def __init__(self, config=None, qsettings=None):
         self.plugintype = 'input'
         if config:

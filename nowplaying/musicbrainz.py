@@ -18,6 +18,7 @@ import nowplaying.version
 
 class MusicBrainzHelper():
     ''' handler for NowPlaying '''
+
     def __init__(self, config=None):
         if config:
             self.config = config

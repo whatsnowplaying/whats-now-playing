@@ -24,6 +24,7 @@ import nowplaying.utils
 
 class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
     ''' Talk to OBS directly via WebSocket '''
+
     def __init__(self, tray=None):
         self.config = nowplaying.config.ConfigFile()
         self.client = None
@@ -47,8 +48,7 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
     def process_update(self, event):  # pylint: disable=unused-argument
         ''' watcher picked up an update, so execute on it '''
 
-        source = self.config.cparser.value('obsws/source')
-        if source:
+        if source := self.config.cparser.value('obsws/source'):
             self.check_reconnect()
             self.text = self.generate_text()
             if self.text:
@@ -74,8 +74,8 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
             return None
 
         template = self.config.cparser.value('obsws/template')
-        templatehandler = nowplaying.utils.TemplateHandler(filename=template)
-        if templatehandler:
+        if templatehandler := nowplaying.utils.TemplateHandler(
+                filename=template):
             return templatehandler.generate(metadatadict=metadata)
 
         if clear:

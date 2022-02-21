@@ -5,6 +5,7 @@
 
 * Removed ACRCloud support
 * Upgraded to Qt 6
+* Fix link to quirks doc
 
 ## Version 3.0.0 - 2021-11-27
 

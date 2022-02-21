@@ -51,6 +51,7 @@ TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
 
 class WebHandler():
     ''' aiohttp built server that does both http and websocket '''
+
     def __init__(self, databasefile, testmode=False):
         threading.current_thread().name = 'WebServer'
         self.testmode = testmode
@@ -69,7 +70,8 @@ class WebHandler():
                 sys.exit(0)
 
         self.magicstopurl = ''.join(
-            secrets.choice(string.ascii_letters) for i in range(32))
+            secrets.choice(string.ascii_letters) for _ in range(32))
+
         logging.info('Secret url to quit websever: %s', self.magicstopurl)
 
         signal.signal(signal.SIGINT, self.forced_stop)
@@ -185,6 +187,7 @@ class WebHandler():
 
     async def websocket_streamer(self, request):  # pylint: disable=no-self-use
         ''' handle continually streamed updates '''
+
         async def do_update(websocket, database):
             # early launch can be a bit weird so
             # pause a bit

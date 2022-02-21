@@ -20,6 +20,7 @@ import nowplaying.version
 
 class UpgradeConfig:
     ''' methods to upgrade from old configs to new configs '''
+
     def __init__(self, testdir=None):
 
         if sys.platform == "win32":
@@ -150,6 +151,7 @@ class UpgradeConfig:
 
 class UpgradeTemplates():
     ''' Upgrade templates '''
+
     def __init__(self, bundledir=None, testdir=None):
         self.bundledir = bundledir
         self.apptemplatedir = os.path.join(self.bundledir, 'templates')
@@ -218,8 +220,7 @@ class UpgradeTemplates():
             if apphash == userhash:
                 continue
 
-            version = self.check_preload(filename, userhash)
-            if version:
+            if version := self.check_preload(filename, userhash):
                 os.unlink(userpath)
                 shutil.copyfile(apppath, userpath)
                 logging.info('Replaced %s from %s with %s', filename, version,

@@ -50,7 +50,7 @@ def move_old_config():
     yield
     if renamed:
         logging.warning('Moving old em1ran back')
-        os.rename(othersettings.fileName() + '.bak', othersettings.fileName())
+        os.rename(f'{othersettings.fileName()}.bak', othersettings.fileName())
     reboot_macosx_prefs()
 
 
@@ -95,7 +95,7 @@ def test_version_300rc1_to_current():  # pylint: disable=redefined-outer-name
         else:
             qsettingsformat = QSettings.NativeFormat
         teststr = ''.join(
-            random.choice(string.ascii_lowercase) for i in range(5))
+            random.choice(string.ascii_lowercase) for _ in range(5))
         oldfilename = make_fake_300_config(teststr)
         oldchecksum = checksum(oldfilename)
         backupdir = os.path.join(newpath, 'testsuite', 'configbackup')

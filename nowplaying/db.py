@@ -18,6 +18,7 @@ from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 class DBWatcher:
     ''' utility to watch for database changes '''
+
     def __init__(self, databasefile):
         self.observer = None
         self.event_handler = None
@@ -124,6 +125,7 @@ class MetadataDB:
 
     def write_to_metadb(self, metadata=None):
         ''' update metadb '''
+
         def filterkeys(mydict):
             return {
                 key: mydict[key]
@@ -226,10 +228,9 @@ class MetadataDB:
         connection = sqlite3.connect(self.databasefile)
         cursor = connection.cursor()
 
-        sql = 'CREATE TABLE currentmeta ('
-        sql += 'id INTEGER PRIMARY KEY AUTOINCREMENT, '
-        sql += ' TEXT, '.join(
-            MetadataDB.METADATALIST) + ' TEXT,  coverimageraw BLOB'
+        sql = 'CREATE TABLE currentmeta (id INTEGER PRIMARY KEY AUTOINCREMENT, '
+        sql += ' TEXT, '.join(MetadataDB.METADATALIST)
+        sql += ' TEXT,  coverimageraw BLOB'
         sql += ')'
 
         cursor.execute(sql)
