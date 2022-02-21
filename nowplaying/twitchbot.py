@@ -69,6 +69,7 @@ LASTANNOUNCED = {'artist': None, 'title': None}
 
 class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instance-attributes
     ''' twitch bot '''
+
     def __init__(self, username, client_id, token, channel):
         self.username = username
         self.token = token.removeprefix("oauth:")
@@ -86,8 +87,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         self.metadb = nowplaying.db.MetadataDB()
         self.config = nowplaying.config.ConfigFile()
         self.magiccommand = ''.join(
-            secrets.choice(string.ascii_letters) for _ in range(32)
-        )
+            secrets.choice(string.ascii_letters) for _ in range(32))
 
         logging.info('Secret command to quit twitchbot: %s', self.magiccommand)
 
@@ -309,6 +309,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
 class TwitchBotHandler():
     ''' Now Playing built-in web server using custom handler '''
+
     def __init__(self, config=None):
         self.config = config
         self.server = None

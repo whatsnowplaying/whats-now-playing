@@ -27,6 +27,7 @@ MPRIS2_BASE = 'org.mpris.MediaPlayer2'
 
 class MPRIS2Handler():
     ''' Read metadata from MPRIS2 '''
+
     def __init__(self, service=None):
         self.service = None
         self.bus = None
@@ -61,7 +62,7 @@ class MPRIS2Handler():
         self.meta = None
         self.metadata = {}
 
-    def getplayingtrack(self):    # pylint: disable=too-many-branches
+    def getplayingtrack(self):  # pylint: disable=too-many-branches
         ''' get the currently playing song '''
 
         # start with a blank slate to prevent
@@ -168,6 +169,7 @@ class MPRIS2Handler():
 
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
+
     def __init__(self, config=None, qsettings=None):
 
         super().__init__(config=config, qsettings=qsettings)
@@ -243,9 +245,8 @@ class Plugin(InputPlugin):
         servicelist = self.mpris2.get_mpris2_services()
         qwidget.list_widget.clear()
         qwidget.list_widget.addItems(servicelist)
-        if curbutton := qwidget.list_widget.findItems(
-            currentservice, Qt.MatchContains
-        ):
+        if curbutton := qwidget.list_widget.findItems(currentservice,
+                                                      Qt.MatchContains):
             curbutton[0].setSelected(True)
 
     def verify_settingsui(self, qwidget):

@@ -20,6 +20,7 @@ import nowplaying.webserver
 
 class Tray:  # pylint: disable=too-many-instance-attributes
     ''' System Tray object '''
+
     def __init__(self):  #pylint: disable=too-many-statements
         self.config = nowplaying.config.ConfigFile()
         self.version = nowplaying.version.get_versions()['version']

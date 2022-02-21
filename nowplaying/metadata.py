@@ -14,6 +14,7 @@ import nowplaying.vendor.tinytag
 
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
     ''' Run through a bunch of different metadata processors '''
+
     def __init__(self, metadata, config=None):
         self.metadata = metadata
         if config:

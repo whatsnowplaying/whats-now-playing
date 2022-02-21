@@ -30,6 +30,7 @@ import nowplaying.version
 
 class Plugin(RecognitionPlugin):
     ''' handler for NowPlaying '''
+
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.qwidget = None
@@ -268,8 +269,7 @@ class Plugin(RecognitionPlugin):
             return self.acoustidmd
 
         if musicbrainzlookup := self.musicbrainz.recordingid(
-            self.acoustidmd['musicbrainzrecordingid']
-        ):
+                self.acoustidmd['musicbrainzrecordingid']):
             self.acoustidmd.update(musicbrainzlookup)
         return self.acoustidmd
 

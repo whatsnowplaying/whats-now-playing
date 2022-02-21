@@ -18,6 +18,7 @@ from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 class DBWatcher:
     ''' utility to watch for database changes '''
+
     def __init__(self, databasefile):
         self.observer = None
         self.event_handler = None
@@ -124,6 +125,7 @@ class MetadataDB:
 
     def write_to_metadb(self, metadata=None):
         ''' update metadb '''
+
         def filterkeys(mydict):
             return {
                 key: mydict[key]

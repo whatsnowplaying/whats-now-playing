@@ -184,9 +184,9 @@ class Plugin(InputPlugin):
             startdir = self.qwidget.dir_lineedit.text()
         else:
             startdir = QDir.homePath()
-        if dirname := QFileDialog.getExistingDirectory(
-            self.qwidget, 'Select directory', startdir
-        ):
+        if dirname := QFileDialog.getExistingDirectory(self.qwidget,
+                                                       'Select directory',
+                                                       startdir):
             self.qwidget.dir_lineedit.setText(dirname)
 
     def connect_settingsui(self, qwidget):
