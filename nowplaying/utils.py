@@ -115,7 +115,7 @@ def import_plugins(namespace):
         ''' iterate over a package and return children.
             used to monkey patch in plugins
         '''
-        prefix = ns_pkg.__name__ + "."
+        prefix = f'{ns_pkg.__name__}.'
         for pkg in pkgutil.iter_modules(ns_pkg.__path__, prefix):
             if 'test' not in pkg[1]:
                 yield pkg[1]
@@ -168,8 +168,7 @@ def songpathsubst(config, filename):
         newname = filename.replace('/', '\\')
         filename = newname
 
-    songin = config.cparser.value('quirks/filesubstin')
-    if songin:
+    if songin := config.cparser.value('quirks/filesubstin'):
         songout = config.cparser.value('quirks/filesubstout')
         if not songout:
             songout = ''
