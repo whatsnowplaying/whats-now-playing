@@ -34,6 +34,7 @@ For everyone else, you will need to build and install locally.  See `Developers 
    recognition/index
    quirks
    templatevariables
+   troubleshooting
    developers
    comparisons
    gallery
