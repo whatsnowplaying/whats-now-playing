@@ -25,13 +25,13 @@ some tips and tricks to help you out:
 * You do not need to be streaming to participate in your channel's Twitch chat. This
   fact means that Now Playing can be running and sending track information to
   Twitch but your users won't be alerted.  Extremely useful for working out the
-  aformentioned timing issues.
+  aforementioned timing issues.
 
 Bug Reports and Feature Requests
 ================================
 
 Now Playing is `open source software <https://opensource.com/resources/what-open-source>`_ .
-That means unlike commercial software individuals have the capablity to
+That means unlike commercial software individuals have the capability to
 contribute in a variety of ways.  Currently this project is hosted
 on  `Github <https://github.com/whatsnowplaying/whats-now-playing>`_ which provides
 access to the source code, bugs and feature requests (issues), and a discussion
