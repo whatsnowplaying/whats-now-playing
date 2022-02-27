@@ -1,6 +1,5 @@
 aiohttp==3.7.4.post0
 aiosqlite==0.17.0
-audio_metadata==0.11.1
 irc==19.0.1
 jinja2==3.0.1
 lxml==4.7.1
@@ -25,3 +24,14 @@ tinytag==1.5.0
 urllib3==1.26.6
 vendoring==1.0.2
 watchdog==2.1.5
+
+#
+# audio-metadata and tbm-utils
+#
+attrs>=18.2
+bidict==0.*
+bitstruct>=6.0,<9.0
+more-itertools>=4.0,<9.0
+pendulum>=2.0,<=3.0,!=2.0.5,!=2.1.0  # Work around https://github.com/sdispater/pendulum/issues/454
+pprintpp==0.*
+wrapt==1.13.3
