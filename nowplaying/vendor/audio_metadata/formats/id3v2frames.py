@@ -81,7 +81,7 @@ from attr import (
 )
 from pendulum.parsing import ParserError
 from pendulum.parsing.iso8601 import parse_iso8601
-from tbm_utils import (
+from nowplaying.vendor.tbm_utils import (
 	AttrMapping,
 	datareader,
 )

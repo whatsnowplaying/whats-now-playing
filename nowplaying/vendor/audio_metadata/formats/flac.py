@@ -23,7 +23,7 @@ from attr import (
 	attrib,
 	attrs,
 )
-from tbm_utils import (
+from nowplaying.vendor.tbm_utils import (
 	AttrMapping,
 	LabelList,
 	datareader,

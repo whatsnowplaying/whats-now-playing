@@ -17,7 +17,7 @@ from attr import (
 	attrs,
 )
 from bidict import frozenbidict
-from tbm_utils import (
+from nowplaying.vendor.tbm_utils import (
 	AttrMapping,
 	datareader,
 )

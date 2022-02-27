@@ -10,7 +10,7 @@ from io import (
 	FileIO,
 )
 
-from tbm_utils import DataReader
+from nowplaying.vendor.tbm_utils import DataReader
 
 from .exceptions import (
 	FormatError,

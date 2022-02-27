@@ -6,8 +6,8 @@ from codecs import (
 )
 from functools import reduce
 
-from tbm_utils import datareader
-from tbm_utils import humanize_duration as tbm_humanize_duration
+from nowplaying.vendor.tbm_utils import datareader
+from nowplaying.vendor.tbm_utils import humanize_duration as tbm_humanize_duration
 
 
 def apply_unsynchronization(data):

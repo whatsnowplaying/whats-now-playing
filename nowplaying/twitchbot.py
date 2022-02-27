@@ -308,7 +308,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
 
 class TwitchBotHandler():
-    ''' Now Playing built-in web server using custom handler '''
+    ''' Now Playing built-in twitch bot custom handler '''
 
     def __init__(self, config=None):
         self.config = config
