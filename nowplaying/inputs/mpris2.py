@@ -110,7 +110,7 @@ class MPRIS2Handler():
             builddata['title'] = title
 
         if self.meta.get('xesam:album'):
-            builddata['album'] = self.meta.get('xesam:album')
+            builddata['album'] = str(self.meta.get('xesam:album'))
 
         if length := self.meta.get('mpris:length'):
             builddata['length'] = int(length)

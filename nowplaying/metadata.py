@@ -15,8 +15,9 @@ import nowplaying.vendor.tinytag
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
     ''' Run through a bunch of different metadata processors '''
 
-    def __init__(self, metadata, config=None):
+    def __init__(self, metadata, caches=None, config=None):
         self.metadata = metadata
+        self.caches = caches
         if config:
             self.config = config
         else:
@@ -26,6 +27,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             logging.debug('No filename')
             return
 
+        if 'artistfanarturls' not in self.metadata:
+            self.metadata['artistfanarturls'] = []
+
         for processor in 'hostmeta', 'audio_metadata', 'tinytag', 'image2png', 'plugins':
             logging.debug('running %s', processor)
             func = getattr(self, f'_process_{processor}')
@@ -33,13 +37,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         if 'publisher' in self.metadata:
             if 'label' not in self.metadata:
-                metadata['label'] = metadata['publisher']
-            del metadata['publisher']
+                self.metadata['label'] = self.metadata['publisher']
+            del self.metadata['publisher']
 
         if 'year' in self.metadata:
             if 'date' not in self.metadata:
                 self.metadata['date'] = self.metadata['year']
-            del metadata['year']
+            del self.metadata['year']
 
     def _process_hostmeta(self):
         ''' add the host metadata so other subsystems can use it '''
@@ -232,7 +236,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             if provider:
                 try:
                     if addmeta := self.config.pluginobjs['recognition'][
-                            plugin].recognize(self.metadata):
+                            plugin].recognize(self.metadata, self.caches):
                         self._recognition_replacement(addmeta)
                 except Exception as error:  # pylint: disable=broad-except
                     logging.debug('%s threw exception %s',

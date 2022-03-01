@@ -1,5 +1,6 @@
 aiohttp==3.7.4.post0
 aiosqlite==0.17.0
+diskcache==5.4.0
 irc==19.0.1
 jinja2==3.0.1
 lxml==4.7.1
@@ -8,7 +9,7 @@ musicbrainzngs==0.7.1
 netifaces==0.11.0
 normality==2.3.0
 obs-websocket-py==0.5.3
-pillow==9.0.0
+pillow==9.0.1
 psutil==5.8.0
 pyacoustid==1.2.2
 pyinstaller==4.9
@@ -20,6 +21,7 @@ pytest-cov==2.12.1
 pytest-httpserver==1.0.1
 pytest-qt==4.0.2
 requests==2.26.0
+requests-cache==0.9.3
 Sphinx==4.2.0
 tinytag==1.5.0
 urllib3==1.26.6
@@ -36,3 +38,8 @@ more-itertools>=4.0,<9.0
 pendulum>=2.0,<=3.0,!=2.0.5,!=2.1.0  # Work around https://github.com/sdispater/pendulum/issues/454
 pprintpp==0.*
 wrapt==1.13.3
+
+#
+# discogs_client
+#
+oauthlib==3.2.0

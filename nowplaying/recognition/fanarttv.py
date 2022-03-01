@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+''' start of support of fanarttv '''
+
+import logging
+import logging.config
+import logging.handlers
+
+import requests
+
+import nowplaying.config
+import nowplaying.imagecache
+from nowplaying.recognition import RecognitionPlugin
+import nowplaying.version
+import nowplaying.utils
+
+
+class Plugin(RecognitionPlugin):
+    ''' handler for fanart.tv '''
+
+    def __init__(self, config=None, qsettings=None):
+        self.client = None
+        self.version = nowplaying.version.get_versions()['version']
+        super().__init__(config=config, qsettings=qsettings)
+
+    def recognize(self, metadata=None, caches=None):  # pylint: disable=too-many-branches
+        apikey = self.config.cparser.value('fanarttv/apikey')
+
+        if not apikey or not self.config.cparser.value('fanarttv/enabled',
+                                                       type=bool):
+            return None
+
+        if not metadata.get('musicbrainzartistid'):
+            return None
+
+        fnstr = nowplaying.utils.normalize(metadata['artist'])
+
+        for artistid in metadata['musicbrainzartistid'].split('/'):
+            try:
+                baseurl = f'http://webservice.fanart.tv/v3/music/{artistid}'
+                logging.debug('fanarttv: calling %s', baseurl)
+                artistrequest = requests.get(f'{baseurl}?api_key={apikey}')
+            except Exception as error:  # pylint: disable=broad-except
+                logging.debug('fanart.tv: %s', error)
+                return None
+            artist = artistrequest.json()
+
+            if artist.get('name') and nowplaying.utils.normalize(
+                    artist['name']) in fnstr:
+                logging.debug("fanarttv Trusting : %s", artist['name'])
+            else:
+                logging.debug("fanarttv Not trusting: %s vs %s",
+                              artist.get('name'), fnstr)
+                continue
+
+            if artist.get('musicbanner') and self.config.cparser.value(
+                    'fanarttv/banners', type=bool):
+                banner = sorted(artist['musicbanner'],
+                                key=lambda x: x['likes'],
+                                reverse=True)
+                caches['artistbannerraw'].fill_queue(
+                    metadata['artist'], [x['url'] for x in banner])
+
+            if self.config.cparser.value('fanarttv/logos', type=bool):
+                logo = None
+                if artist.get('hdmusiclogo'):
+                    logo = sorted(artist['hdmusiclogo'],
+                                  key=lambda x: x['likes'],
+                                  reverse=True)
+                elif artist.get('musiclogo'):
+                    logo = sorted(artist['musiclogo'],
+                                  key=lambda x: x['likes'],
+                                  reverse=True)
+                if logo:
+                    caches['artistlogoraw'].fill_queue(
+                        metadata['artist'], [x['url'] for x in logo])
+
+            if artist.get('artistthumb') and self.config.cparser.value(
+                    'fanarttv/thumbnails', type=bool):
+                thumbnail = sorted(artist['artistthumb'],
+                                   key=lambda x: x['likes'],
+                                   reverse=True)
+                caches['artistthumbraw'].fill_queue(
+                    metadata['artist'], [x['url'] for x in thumbnail])
+
+            if artist.get('artistbackground'):
+                for image in artist['artistbackground']:
+                    metadata['artistfanarturls'].append(image['url'])
+
+        return metadata
+
+    def providerinfo(self):  # pylint: disable=no-self-use
+        ''' return list of what is provided by this recognition system '''
+        return [
+            'artistbannerraw', 'artistlogoraw', 'artistthumbraw',
+            'fanarttv-artistfanarturls'
+        ]
+
+    def connect_settingsui(self, qwidget):
+        ''' pass '''
+
+    def load_settingsui(self, qwidget):
+        ''' draw the plugin's settings page '''
+        if self.config.cparser.value('fanarttv/enabled', type=bool):
+            qwidget.fanarttv_checkbox.setChecked(True)
+        else:
+            qwidget.fanarttv_checkbox.setChecked(False)
+        qwidget.apikey_lineedit.setText(
+            self.config.cparser.value('fanarttv/apikey'))
+
+        for field in ['banners', 'logos', 'fanart', 'thumbnails']:
+            func = getattr(qwidget, f'{field}_checkbox')
+            func.setChecked(
+                self.config.cparser.value(f'fanarttv/{field}', type=bool))
+
+    def verify_settingsui(self, qwidget):
+        ''' pass '''
+
+    def save_settingsui(self, qwidget):
+        ''' take the settings page and save it '''
+
+        self.config.cparser.setValue('fanarttv/enabled',
+                                     qwidget.fanarttv_checkbox.isChecked())
+        self.config.cparser.setValue('fanarttv/apikey',
+                                     qwidget.apikey_lineedit.text())
+
+        for field in ['banners', 'logos', 'fanart', 'thumbnails']:
+            func = getattr(qwidget, f'{field}_checkbox')
+            self.config.cparser.setValue(f'fanarttv/{field}', func.isChecked())
+
+    def defaults(self, qsettings):
+        for field in ['banners', 'logos', 'fanart', 'thumbnails']:
+            qsettings.setValue(f'fanarttv/{field}', False)
+
+        qsettings.setValue('fanarttv/enabled', False)
+        qsettings.setValue('fanarttv/apikey', '')
