@@ -139,6 +139,18 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         settings.setValue('weboutput/htmltemplate',
                           os.path.join(self.templatedir, "basic-web.htm"))
+        settings.setValue(
+            'weboutput/artistbannertemplate',
+            os.path.join(self.templatedir, "ws-artistbanner-nofade.htm"))
+        settings.setValue(
+            'weboutput/artistlogotemplate',
+            os.path.join(self.templatedir, "ws-artistlogo-nofade.htm"))
+        settings.setValue(
+            'weboutput/artistthumbtemplate',
+            os.path.join(self.templatedir, "ws-artistthumb-nofade.htm"))
+        settings.setValue(
+            'weboutput/artistfanarttemplate',
+            os.path.join(self.templatedir, "ws-artistfanart-nofade.htm"))
         settings.setValue('weboutput/httpenabled', False)
         settings.setValue('weboutput/httpport', '8899')
         settings.setValue('weboutput/once', True)
