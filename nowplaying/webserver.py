@@ -93,7 +93,7 @@ class WebHandler():
     def _transparentifier(self, metadata):
         ''' base64 encoding + transparent missing '''
         for key in nowplaying.db.MetadataDB.METADATABLOBLIST:
-            if not key in metadata:
+            if key not in metadata:
                 metadata[key] = TRANSPARENT_PNG_BIN
         return self._base64ifier(metadata)
 
