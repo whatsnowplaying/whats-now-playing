@@ -43,6 +43,7 @@ class Plugin(RecognitionPlugin):
         results = None
         fpcalc = os.environ.get('FPCALC', 'fpcalc')
         command = [fpcalc, '-json', "-length", '120', filename]
+        completedprocess = None
         try:
             if sys.platform == "win32":
                 completedprocess = subprocess.run(
@@ -227,7 +228,7 @@ class Plugin(RecognitionPlugin):
         self.fpcalcexe = fpcalcexe
         return True
 
-    def recognize(self, metadata):  #pylint: disable=too-many-statements
+    def recognize(self, metadata=None, caches=None):  #pylint: disable=too-many-statements
         self.acoustidmd = metadata
         if not self.config.cparser.value('acoustidmb/enabled', type=bool):
             return None

@@ -6,11 +6,13 @@ import base64
 import logging
 import logging.config
 import os
+import random
 import secrets
 import signal
 import string
 import sys
 import threading
+import traceback
 import time
 import weakref
 
@@ -35,6 +37,7 @@ logging.config.dictConfig({
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
+import nowplaying.imagecache
 import nowplaying.utils
 
 INDEXREFRESH = \
@@ -49,7 +52,7 @@ TRANSPARENT_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC'\
 TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
 
 
-class WebHandler():
+class WebHandler():  # pylint: disable=too-many-public-methods
     ''' aiohttp built server that does both http and websocket '''
 
     def __init__(self, databasefile, testmode=False):
@@ -80,14 +83,61 @@ class WebHandler():
             self.start_server(host='0.0.0.0', port=self.port))
         self.loop.run_forever()
 
-    async def indexhtm_handler(self, request):  # pylint: disable=unused-argument
-        ''' handle static index.html '''
+    def _base64ifier(self, metadata):  # pylint: disable=no-self-use
+        ''' replace all the binary data with base64 data '''
+        for key in nowplaying.db.MetadataDB.METADATABLOBLIST:
+            if metadata.get(key):
+                newkey = key.replace('raw', 'base64')
+                metadata[newkey] = base64.b64encode(
+                    metadata[key]).decode('utf-8')
+            del metadata[key]
+        return metadata
+
+    def _transparentifier(self, metadata):
+        ''' base64 encoding + transparent missing '''
+        for key in nowplaying.db.MetadataDB.METADATABLOBLIST:
+            if not metadata.get(key):
+                metadata[key] = TRANSPARENT_PNG_BIN
+        return self._base64ifier(metadata)
+
+    async def indexhtm_handler(self, request):
+        ''' handle web output '''
+        return await self.htm_handler(
+            request,
+            request.app['config'].cparser.value('weboutput/htmltemplate'))
+
+    async def artistbannerhtm_handler(self, request):
+        ''' handle web output '''
+        return await self.htm_handler(
+            request, request.app['config'].cparser.value(
+                'weboutput/artistbannertemplate'))
+
+    async def artistlogohtm_handler(self, request):
+        ''' handle web output '''
+        return await self.htm_handler(
+            request, request.app['config'].cparser.value(
+                'weboutput/artistlogotemplate'))
+
+    async def artistthumbhtm_handler(self, request):
+        ''' handle web output '''
+        return await self.htm_handler(
+            request, request.app['config'].cparser.value(
+                'weboutput/artistthumbtemplate'))
+
+    async def artistfanartlaunchhtm_handler(self, request):
+        ''' handle web output '''
+        return await self.htm_handler(
+            request, request.app['config'].cparser.value(
+                'weboutput/artistfanarttemplate'))
+
+    async def htm_handler(self, request, template):  # pylint: disable=unused-argument
+        ''' handle static html files'''
+
+        source = os.path.basename(template)
         htmloutput = ""
         request.app['config'].get()
         metadata = request.app['metadb'].read_last_meta()
-        lastid = await self.getlastid(request)
-        template = request.app['config'].cparser.value(
-            'weboutput/htmltemplate')
+        lastid = await self.getlastid(request, source)
         once = request.app['config'].cparser.value('weboutput/once', type=bool)
 
         # | dbid  |  lastid | once |
@@ -97,13 +147,13 @@ class WebHandler():
         # |   x   |  same   |   x  |  -> send refresh
         # |       |   NA    |      |  -> send refresh because not ready or something broke
 
-        if not metadata or 'dbid' not in metadata or not template:
+        if not metadata or not metadata.get('dbid') or not template:
             return web.Response(status=202,
                                 content_type='text/html',
                                 text=INDEXREFRESH)
 
         if lastid == 0 or lastid != metadata['dbid'] or not once:
-            await self.setlastid(request, metadata['dbid'])
+            await self.setlastid(request, metadata['dbid'], source)
             try:
                 templatehandler = nowplaying.utils.TemplateHandler(
                     filename=template)
@@ -115,16 +165,17 @@ class WebHandler():
 
         return web.Response(content_type='text/html', text=INDEXREFRESH)
 
-    async def setlastid(self, request, lastid):  # pylint: disable=no-self-use
+    async def setlastid(self, request, lastid, source):  # pylint: disable=no-self-use
         ''' get the lastid sent by http/html '''
         await request.app['statedb'].execute(
-            'UPDATE lastprocessed SET lastid = ? WHERE id=1', [lastid])
+            'INSERT OR REPLACE INTO lastprocessed(lastid, source) VALUES (?,?) ',
+            [lastid, source])
         await request.app['statedb'].commit()
 
-    async def getlastid(self, request):  # pylint: disable=no-self-use
+    async def getlastid(self, request, source):  # pylint: disable=no-self-use
         ''' get the lastid sent by http/html '''
         cursor = await request.app['statedb'].execute(
-            'SELECT lastid FROM lastprocessed WHERE id=1')
+            f'SELECT lastid FROM lastprocessed WHERE source="{source}"')
         row = await cursor.fetchone()
         if not row:
             lastid = 0
@@ -163,27 +214,84 @@ class WebHandler():
         # this makes the client code significantly easier
         return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
 
+    async def artistbanner_handler(self, request):  # pylint: disable=no-self-use
+        ''' handle cover image '''
+        metadata = request.app['metadb'].read_last_meta()
+        if 'artistbannerraw' in metadata:
+            return web.Response(content_type='image/png',
+                                body=metadata['artistbannerraw'])
+        # rather than return an error, just send a transparent PNG
+        # this makes the client code significantly easier
+        return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
+
+    async def artistlogo_handler(self, request):  # pylint: disable=no-self-use
+        ''' handle cover image '''
+        metadata = request.app['metadb'].read_last_meta()
+        if 'artistlogoraw' in metadata:
+            return web.Response(content_type='image/png',
+                                body=metadata['artistlogoraw'])
+        # rather than return an error, just send a transparent PNG
+        # this makes the client code significantly easier
+        return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
+
+    async def artistthumb_handler(self, request):  # pylint: disable=no-self-use
+        ''' handle cover image '''
+        metadata = request.app['metadb'].read_last_meta()
+        if 'artistthumbraw' in metadata:
+            return web.Response(content_type='image/png',
+                                body=metadata['artistthumbraw'])
+        # rather than return an error, just send a transparent PNG
+        # this makes the client code significantly easier
+        return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
+
     async def api_v1_last_handler(self, request):  # pylint: disable=no-self-use
         ''' handle static index.txt '''
         metadata = request.app['metadb'].read_last_meta()
-        # if there is an image, encode it as base64
-        if 'coverimageraw' in metadata:
-            metadata['coverimagebase64'] = base64.b64encode(
-                metadata['coverimageraw']).decode('utf-8')
-            del metadata['coverimageraw']
         del metadata['dbid']
-        return web.json_response(metadata)
+        return web.json_response(self._base64ifier(metadata))
+
+    async def websocket_artistfanart_streamer(self, request):  # pylint: disable=no-self-use
+        ''' handle continually streamed updates '''
+        websocket = web.WebSocketResponse()
+        await websocket.prepare(request)
+        request.app['websockets'].add(websocket)
+
+        try:
+            while True:
+                metadata = request.app['metadb'].read_last_meta()
+                if not metadata or not metadata.get('artist'):
+                    await asyncio.sleep(5)
+                    continue
+
+                artist = metadata['artist']
+                imagedata = None
+                try:
+                    imagedata = request.app[
+                        'artistfanartcache'].random_image_fetch(artist)
+                except KeyError:
+                    pass
+
+                if metadata:
+                    metadata['artistfanartraw'] = imagedata
+                else:
+                    metadata['artistfanartraw'] = TRANSPARENT_PNG_BIN
+                await websocket.send_json(self._transparentifier(metadata))
+                await asyncio.sleep(5)
+        except Exception as error:  #pylint: disable=broad-except
+            logging.error('websocket artistfanart streamer exception: %s',
+                          error)
+            logging.error(traceback.print_exc())
+        finally:
+            logging.debug('artistfanart ended in finally')
+            await websocket.close()
+            request.app['websockets'].discard(websocket)
+        return websocket
 
     async def websocket_lastjson_handler(self, request, websocket):  # pylint: disable=no-self-use
         ''' handle singular websocket request '''
         metadata = request.app['metadb'].read_last_meta()
-        # if there is an image, encode it as base64
-        if 'coverimageraw' in metadata:
-            metadata['coverimagebase64'] = base64.b64encode(
-                metadata['coverimageraw']).decode('utf-8')
-            del metadata['coverimageraw']
         del metadata['dbid']
-        await websocket.send_json(metadata)
+        await websocket.send_json(self._base64ifier(metadata))
 
     async def websocket_streamer(self, request):  # pylint: disable=no-self-use
         ''' handle continually streamed updates '''
@@ -196,16 +304,8 @@ class WebHandler():
             while not metadata:
                 metadata = database.read_last_meta()
                 await asyncio.sleep(1)
-            if 'coverimageraw' in metadata:
-                metadata['coverimagebase64'] = base64.b64encode(
-                    metadata['coverimageraw']).decode('utf-8')
-                del metadata['coverimageraw']
-            else:
-                # for some reason, just sending the string doesn't always work :shrug:
-                metadata['coverimagebase64'] = base64.b64encode(
-                    TRANSPARENT_PNG_BIN).decode('utf-8')
             del metadata['dbid']
-            await websocket.send_json(metadata)
+            await websocket.send_json(self._transparentifier(metadata))
             return time.time()
 
         websocket = web.WebSocketResponse()
@@ -267,12 +367,21 @@ class WebHandler():
             web.get('/', self.indexhtm_handler),
             web.get('/v1/last', self.api_v1_last_handler),
             web.get('/cover.png', self.cover_handler),
+            web.get('/artistfanart.htm', self.artistfanartlaunchhtm_handler),
+            web.get('/artistbanner.png', self.artistbanner_handler),
+            web.get('/artistbanner.htm', self.artistbannerhtm_handler),
+            web.get('/artistlogo.png', self.artistlogo_handler),
+            web.get('/artistlogo.htm', self.artistlogohtm_handler),
+            web.get('/artistthumb.png', self.artistthumb_handler),
+            web.get('/artistthumb.htm', self.artistthumbhtm_handler),
             web.get('/favicon.ico', self.favicon_handler),
             web.get('/index.htm', self.indexhtm_handler),
             web.get('/index.html', self.indexhtm_handler),
             web.get('/index.txt', self.indextxt_handler),
             web.get('/ws', self.websocket_handler),
             web.get('/wsstream', self.websocket_streamer),
+            web.get('/wsartistfanartstream',
+                    self.websocket_artistfanart_streamer),
             web.get(f'/{self.magicstopurl}', self.stop_server)
         ])
         return web.AppRunner(app)
@@ -294,17 +403,16 @@ class WebHandler():
                 os.path.dirname(self.databasefile), 'test.db'))
         else:
             app['metadb'] = nowplaying.db.MetadataDB()
+        app['artistfanartcache'] = nowplaying.imagecache.ArtistFanartCache()
         app['watcher'] = app['metadb'].watcher()
         app['watcher'].start()
         app['statedb'] = await aiosqlite.connect(self.databasefile)
         app['statedb'].row_factory = aiosqlite.Row
         cursor = await app['statedb'].cursor()
         await cursor.execute('CREATE TABLE IF NOT EXISTS lastprocessed ('
-                             'id INTEGER, '
+                             'source TEXT PRIMARY KEY, '
                              'lastid INTEGER '
                              ')')
-        await cursor.execute(
-            'INSERT INTO lastprocessed (id, lastid) VALUES (1,0)')
         await app['statedb'].commit()
 
     async def on_shutdown(self, app):  # pylint: disable=no-self-use

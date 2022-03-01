@@ -44,6 +44,8 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         self.plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
         self.previoustxttemplate = None
         self.txttemplatehandler = None
+        self.caches = {}
+        self._setup_caches()
 
     def _resetcurrent(self):
         ''' reset the currentmeta to blank '''
@@ -85,6 +87,8 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         logging.debug('TrackPoll is being killed!')
         if self.input:
             self.input.stop()
+        for key, func in self.caches.items():  # pylint: disable=unused-variable
+            func.stop_pool()
         self.endthread = True
         self.plugins = None
 
@@ -153,7 +157,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                 del metadata[key]
 
         if metadata.get('filename'):
-            metadata = nowplaying.utils.getmoremetadata(metadata)
+            metadata = nowplaying.utils.getmoremetadata(metadata, self.caches)
 
         for key in COREMETA:
             if key not in metadata:
@@ -188,7 +192,10 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         logging.info('New track: %s / %s', self.currentmeta['artist'],
                      self.currentmeta['title'])
 
+        # fire off the artist fan art processing prior to wait
+        self._start_artistfanartpool()
         self._delay_write()
+        self._process_imagecache()
 
         if not self.testmode:
             metadb = nowplaying.db.MetadataDB()
@@ -214,3 +221,32 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
             delay = 1.0
         logging.debug('got delay of %s', delay)
         QThread.msleep(int(delay * 1000))
+
+    def _setup_caches(self):
+        if not self.config.cparser.value('acoustidmb/enabled', type=bool):
+            return
+
+        self.caches = {
+            'artistbannerraw': nowplaying.imagecache.ArtistBannerCache(),
+            'artistfanart': nowplaying.imagecache.ArtistFanartCache(),
+            'artistlogoraw': nowplaying.imagecache.ArtistLogoCache(),
+            'artistthumbraw': nowplaying.imagecache.ArtistThumbCache(),
+        }
+        for _, func in self.caches.items():
+            func.start_pool()
+
+    def _start_artistfanartpool(self):
+        if self.currentmeta.get('artistfanarturls'):
+            dedupe = list(dict.fromkeys(self.currentmeta['artistfanarturls']))
+            self.currentmeta['artistfanarturls'] = dedupe
+            self.caches['artistfanart'].fill_queue(
+                self.currentmeta['artist'],
+                self.currentmeta['artistfanarturls'])
+            del self.currentmeta['artistfanarturls']
+
+    def _process_imagecache(self):
+        for key, func in self.caches.items():
+            logging.debug('Calling %s', key)
+            if key not in self.currentmeta and key != 'artistfanart':
+                self.currentmeta[key] = func.random_image_fetch(
+                    self.currentmeta['artist'])
