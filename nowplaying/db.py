@@ -73,8 +73,6 @@ class MetadataDB:
         'albumartist',
         'artist',
         'artistbio',
-        'artistlogo',
-        'artistthumb',
         'bitrate',
         'bpm',
         'comments',
@@ -104,6 +102,8 @@ class MetadataDB:
         'track_total',
     ]
 
+    METADATABLOBLIST = ['artistlogoraw', 'artistthumbraw', 'coverimageraw']
+
     LOCK = multiprocessing.RLock()
 
     def __init__(self, databasefile=None, initialize=False):
@@ -129,8 +129,8 @@ class MetadataDB:
         def filterkeys(mydict):
             return {
                 key: mydict[key]
-                for key in MetadataDB.METADATALIST + ['coverimageraw']
-                if key in mydict
+                for key in MetadataDB.METADATALIST +
+                MetadataDB.METADATABLOBLIST if key in mydict
             }
 
         logging.debug('Called write_to_metadb')
@@ -158,8 +158,9 @@ class MetadataDB:
         logging.debug('Adding record with %s/%s', mdcopy['artist'],
                       mdcopy['title'])
 
-        if 'coverimageraw' not in mdcopy:
-            mdcopy['coverimageraw'] = None
+        for key in MetadataDB.METADATABLOBLIST:
+            if key not in mdcopy:
+                mdcopy[key] = None
 
         for data in mdcopy:
             if isinstance(mdcopy[data], str) and len(mdcopy[data]) == 0:
@@ -169,7 +170,8 @@ class MetadataDB:
         sql += ', '.join(mdcopy.keys()) + ') VALUES ('
         sql += '?,' * (len(mdcopy.keys()) - 1) + '?)'
 
-        cursor.execute(sql, tuple(list(mdcopy.values())))
+        datatuple = tuple(list(mdcopy.values()))
+        cursor.execute(sql, datatuple)
         connection.commit()
         connection.close()
         logging.debug('releasing lock')
@@ -199,9 +201,10 @@ class MetadataDB:
             return None
 
         metadata = {data: row[data] for data in MetadataDB.METADATALIST}
-        metadata['coverimageraw'] = row['coverimageraw']
-        if not metadata['coverimageraw']:
-            del metadata['coverimageraw']
+        for key in MetadataDB.METADATABLOBLIST:
+            metadata[key] = row[key]
+            if not metadata[key]:
+                del metadata[key]
 
         metadata['dbid'] = row['id']
         connection.commit()
@@ -230,7 +233,9 @@ class MetadataDB:
 
         sql = 'CREATE TABLE currentmeta (id INTEGER PRIMARY KEY AUTOINCREMENT, '
         sql += ' TEXT, '.join(MetadataDB.METADATALIST)
-        sql += ' TEXT,  coverimageraw BLOB'
+        sql += ' TEXT, '
+        sql += ' BLOB, '.join(MetadataDB.METADATABLOBLIST)
+        sql += ' BLOB'
         sql += ')'
 
         cursor.execute(sql)

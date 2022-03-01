@@ -12,6 +12,7 @@ import requests.utils
 
 import nowplaying.bootstrap
 import nowplaying.config
+import nowplaying.imagecache
 from nowplaying.recognition import RecognitionPlugin
 
 
@@ -53,16 +54,41 @@ class Plugin(RecognitionPlugin):
             return None
         return page.json()
 
-    def recognize(self, metadata):
+    def pick_recognize(self, metadata):
         ''' do data lookup '''
         if not self.config.cparser.value('theaudiodb/enabled', type=bool):
-            return None
+            return metadata
+
+        extradata = None
 
         if 'musicbrainzartistid' in metadata:
-            return self.artistdatafrommbid(metadata['musicbrainzartistid'])
-        if 'artist' in metadata:
-            return self.artistdatafromname(metadata['artist'])
-        return None
+            extradata = self.artistdatafrommbid(
+                metadata['musicbrainzartistid'])
+        elif 'artist' in metadata:
+            extradata = self.artistdatafromname(metadata['artist'])
+        if extradata:
+            return metadata | extradata
+        return metadata
+
+    def recognize(self, metadata):
+        ''' route and lookup '''
+        metadata = self.pick_recognize(metadata)
+        if not metadata:
+            return None
+        if 'artistthumb' in metadata:
+            cache = nowplaying.imagecache.ArtistThumbCache()
+            thumb = cache.image_fetch(metadata['artist'],
+                                      metadata['artistthumb'])
+            if thumb and thumb['status_code'] == 200:
+                metadata['artistthumbraw'] = thumb['image']
+
+        if 'artistlogo' in metadata:
+            cache = nowplaying.imagecache.ArtistLogoCache()
+            logo = cache.image_fetch(metadata['artist'],
+                                     metadata['artistlogo'])
+            if logo and logo['status_code'] == 200:
+                metadata['artistlogoraw'] = logo['image']
+        return metadata
 
     def artistdatafrommbid(self, mbartistid):
         ''' get artist data from mbid '''
@@ -101,7 +127,7 @@ class Plugin(RecognitionPlugin):
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this recognition system '''
-        return ['artistbio', 'artistlogo', 'artistthumb']
+        return ['artistbio', 'artistlogoraw', 'artistthumbraw']
 
     def connect_settingsui(self, qwidget):
         ''' pass '''

@@ -22,9 +22,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         else:
             self.config = nowplaying.config.ConfigFile()
 
+        self.caches = {}
+
         if 'filename' not in self.metadata:
             logging.debug('No filename')
             return
+
+        self._setup_caches()
 
         for processor in 'hostmeta', 'audio_metadata', 'tinytag', 'image2png', 'plugins':
             logging.debug('running %s', processor)
@@ -40,6 +44,21 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             if 'date' not in self.metadata:
                 self.metadata['date'] = self.metadata['year']
             del metadata['year']
+
+    def _setup_caches(self):
+        if not self.config.cparser.value('acoustidmb/enabled', type=bool):
+            return
+
+        self.caches = {
+            'artistthumb': nowplaying.imagecache.ArtistThumbCache(),
+            'artistlogo': nowplaying.imagecache.ArtistLogoCache(),
+        }
+
+    def _process_imagecache(self):
+        for key, func in self.caches.items():
+            if key not in self.metadata:
+                image = func.cache[self.metadata['artist']]
+                self.metadata[key] = image
 
     def _process_hostmeta(self):
         ''' add the host metadata so other subsystems can use it '''
