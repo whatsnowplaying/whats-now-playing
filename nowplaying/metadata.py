@@ -26,6 +26,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             logging.debug('No filename')
             return
 
+        if 'artistfanarturls' not in self.metadata:
+            self.metadata['artistfanarturls'] = []
+
         for processor in 'hostmeta', 'audio_metadata', 'tinytag', 'image2png', 'plugins':
             logging.debug('running %s', processor)
             func = getattr(self, f'_process_{processor}')
@@ -33,13 +36,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         if 'publisher' in self.metadata:
             if 'label' not in self.metadata:
-                metadata['label'] = metadata['publisher']
-            del metadata['publisher']
+                self.metadata['label'] = self.metadata['publisher']
+            del self.metadata['publisher']
 
         if 'year' in self.metadata:
             if 'date' not in self.metadata:
                 self.metadata['date'] = self.metadata['year']
-            del metadata['year']
+            del self.metadata['year']
 
     def _process_hostmeta(self):
         ''' add the host metadata so other subsystems can use it '''

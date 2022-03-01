@@ -1,0 +1,68 @@
+<!DOCTYPE HTML>
+<html>
+   <head>
+      <meta charset="utf-8" >
+      <title>artistthumb</title>
+      <style>
+         .container {
+           margin: 1px;
+           width: 2500px;
+           height: 200px;
+           float: left;
+           font-size: 36px;
+           line-height: 30%;
+           text-shadow: 4px 4px #000000;
+           color: #FFF;
+           text-indent: 1%;
+         }
+         .npimage {
+           margin: 10px;
+           float: left;
+           max-height: 190px;
+           min-height: 190px;
+           width: auto;
+         }
+      </style>
+      <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
+  </head>
+   <body>
+
+
+      <div class="container" id="artistthumb">
+         <div class="npimage" id="artistthumb"></div>
+      </div>
+
+      <script type = "text/javascript">
+            function start(websocketServerLocation){
+                  // Let us open a web socket
+                  var ws = new WebSocket(websocketServerLocation);
+
+                  ws.onopen = function() {
+                     console.log('ws connected');
+                  };
+
+                  ws.onmessage = function (event) {
+                     var metadata = JSON.parse(event.data);
+                     console.log(metadata.artist);
+                     var img = document.createElement("img")
+                     img.src = 'data:image/png;base64,' + metadata.artistthumbbase64;
+                     img.className = "npimage"
+                     if (metadata.artist) {
+                        $("#artistthumb").html(img);
+                     }
+                  };
+
+                  ws.onclose = function(){
+                     // Try to reconnect in 5 seconds
+                     setTimeout(function(){start(websocketServerLocation)}, 5000);
+                };
+            }
+
+            if ("WebSocket" in window) {
+               start("ws://{{ hostip }}:{{ httpport }}/wsstream")
+            }
+
+      </script>
+
+   </body>
+</html>

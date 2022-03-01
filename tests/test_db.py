@@ -55,8 +55,6 @@ def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
         'albumartist': None,
         'artist': 'Nine Inch Nails',
         'artistbio': None,
-        'artistlogo': None,
-        'artistthumb': None,
         'bitrate': '64000',
         'bpm': None,
         'comments': None,
@@ -100,7 +98,10 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
     expected = {
         'album': 'Secret Samadhi',
         'artist': 'LĪVE',
+        'artistlogoraw': "Rawr! I'm an image!",
+        'artistthumbraw': "Quack! Am I duck?",
         'bpm': 91,
+        'coverimageraw': "Grr! I'm an image!",
         'date': '1997',
         'deck': 1,
         'filename':
@@ -109,7 +110,6 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'key': 'C#m',
         'label': 'Radioactive Records',
         'title': 'Lakini\'s Juice',
-        'coverimageraw': "Grr! I'm an image!",
     }
 
     metadb.write_to_metadb(metadata=expected)
@@ -121,8 +121,8 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'albumartist': None,
         'artist': 'LĪVE',
         'artistbio': None,
-        'artistlogo': None,
-        'artistthumb': None,
+        'artistlogoraw': "Rawr! I'm an image!",
+        'artistthumbraw': "Quack! Am I duck?",
         'bitrate': None,
         'bpm': '91',
         'comments': None,
@@ -132,8 +132,8 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'date': '1997',
         'deck': '1',
         'disc': None,
-        'discsubtitle': None,
         'disc_total': None,
+        'discsubtitle': None,
         'filename':
         "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3",
         'genre': 'Rock',

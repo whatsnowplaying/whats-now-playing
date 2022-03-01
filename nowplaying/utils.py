@@ -147,7 +147,8 @@ def image2png(rawdata):
     origimage = rawdata
     imgbuffer = io.BytesIO(origimage)
     image = PIL.Image.open(imgbuffer)
-    image.save(imgbuffer, format='png')
+    if image.format != 'PNG':
+        image.save(imgbuffer, format='png')
     return imgbuffer.getvalue()
 
 

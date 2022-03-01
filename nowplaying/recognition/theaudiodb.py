@@ -12,6 +12,7 @@ import requests.utils
 
 import nowplaying.bootstrap
 import nowplaying.config
+import nowplaying.imagecache
 from nowplaying.recognition import RecognitionPlugin
 
 
@@ -53,55 +54,79 @@ class Plugin(RecognitionPlugin):
             return None
         return page.json()
 
-    def recognize(self, metadata):
+    def pick_recognize(self, metadata):
         ''' do data lookup '''
         if not self.config.cparser.value('theaudiodb/enabled', type=bool):
-            return None
+            return metadata
+
+        extradata = None
 
         if 'musicbrainzartistid' in metadata:
-            return self.artistdatafrommbid(metadata['musicbrainzartistid'])
-        if 'artist' in metadata:
-            return self.artistdatafromname(metadata['artist'])
-        return None
+            extradata = self.artistdatafrommbid(
+                metadata['musicbrainzartistid'])
+        elif 'artist' in metadata:
+            extradata = self.artistdatafromname(metadata['artist'])
+        if not extradata:
+            return metadata
+
+        for artdata in extradata['artists']:
+            if artdata['strArtist'] != metadata['artist']:
+                continue
+            if 'strBiographyEN' in artdata:
+                metadata['artistbio'] = self._filter(artdata['strBiographyEN'])
+            if 'strArtistThumb' in artdata:
+                metadata['artistthumb'] = artdata['strArtistThumb']
+            if 'strArtistLogo' in artdata:
+                metadata['artistlogo'] = artdata['strArtistLogo']
+            for num in ['', '2', '3', '4']:
+                artstring = f'strArtistFanart{num}'
+                if artdata.get(artstring):
+                    metadata['artistfanarturls'].append(artdata[artstring])
+        return metadata
+
+    def recognize(self, metadata):
+        ''' route and lookup '''
+        metadata = self.pick_recognize(metadata)
+        if not metadata:
+            return None
+
+        if 'artistthumb' in metadata:
+            cache = nowplaying.imagecache.ArtistThumbCache()
+            thumb = cache.image_fetch(metadata['artist'],
+                                      metadata['artistthumb'])
+            if thumb:
+                metadata['artistthumbraw'] = thumb
+
+        if 'artistlogo' in metadata:
+            cache = nowplaying.imagecache.ArtistLogoCache()
+            logo = cache.image_fetch(metadata['artist'],
+                                     metadata['artistlogo'])
+            if logo:
+                metadata['artistlogoraw'] = logo
+        return metadata
 
     def artistdatafrommbid(self, mbartistid):
         ''' get artist data from mbid '''
-        metadata = {}
         data = self._fetch(f'artist-mb.php?i={mbartistid}')
-        if not data or 'artists' not in data or not data['artists']:
+        if not data or not data.get('artists'):
             return None
-
-        artdata = data['artists'][0]
-        if 'strBiographyEN' in artdata:
-            metadata['artistbio'] = self._filter(artdata['strBiographyEN'])
-        if 'strArtistThumb' in artdata:
-            metadata['artistthumb'] = artdata['strArtistThumb']
-        if 'strArtistLogo' in artdata:
-            metadata['artistlogo'] = artdata['strArtistLogo']
-        return metadata
+        return data
 
     def artistdatafromname(self, artist):
         ''' get artist data from name '''
-        metadata = {}
         if not artist:
             return None
         urlart = requests.utils.requote_uri(artist)
         data = self._fetch(f'search.php?s={urlart}')
-        if not data or 'artists' not in data or not data['artists']:
+        if not data or not data.get('artists'):
             return None
-
-        artdata = data['artists'][0]
-        if 'strBiographyEN' in artdata:
-            metadata['artistbio'] = self._filter(artdata['strBiographyEN'])
-        if 'strArtistThumb' in artdata:
-            metadata['artistthumb'] = artdata['strArtistThumb']
-        if 'strArtistLogo' in artdata:
-            metadata['artistlogo'] = artdata['strArtistLogo']
-        return metadata
+        return data
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this recognition system '''
-        return ['artistbio', 'artistlogo', 'artistthumb']
+        return [
+            'artistbio', 'artistlogoraw', 'artistthumbraw', 'artistfanarturls'
+        ]
 
     def connect_settingsui(self, qwidget):
         ''' pass '''
