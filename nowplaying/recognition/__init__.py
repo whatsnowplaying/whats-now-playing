@@ -47,7 +47,7 @@ class RecognitionPlugin():
 
 #### Recognition methods
 
-    def recognize(self, metadata):  #pylint: disable=no-self-use
+    def recognize(self, metadata=None, caches=None):  #pylint: disable=no-self-use
         ''' return metadata '''
         raise NotImplementedError
 

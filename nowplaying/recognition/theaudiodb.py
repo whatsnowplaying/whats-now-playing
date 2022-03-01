@@ -1,29 +1,18 @@
 #!/usr/bin/env python3
 ''' start of support of theaudiodb '''
 
-from html.parser import HTMLParser
 import logging
 import logging.config
 import logging.handlers
-import os
 
 import requests
 import requests.utils
 
 import nowplaying.bootstrap
 import nowplaying.config
+import nowplaying.imagecache
 from nowplaying.recognition import RecognitionPlugin
-
-
-class HTMLFilter(HTMLParser):
-    ''' simple class to strip HTML '''
-    text = ""
-
-    def handle_data(self, data):
-        self.text += data
-
-    def error(self, message):
-        logging.debug('HTMLFilter: %s', message)
+import nowplaying.utils
 
 
 class Plugin(RecognitionPlugin):
@@ -31,18 +20,14 @@ class Plugin(RecognitionPlugin):
 
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
-        self.htmlfilter = HTMLFilter()
+        self.htmlfilter = nowplaying.utils.HTMLFilter()
+        self.fnstr = None
 
     def _filter(self, text):
         self.htmlfilter.feed(text)
         return self.htmlfilter.text
 
-    def _fetch(self, api):
-        apikey = self.config.cparser.value('theaudiodb/apikey')
-
-        if not apikey:
-            return None
-
+    def _fetch(self, apikey, api):  # pylint: disable=no-self-use
         try:
             logging.debug('Fetching %s', api)
             page = requests.get(
@@ -53,85 +38,165 @@ class Plugin(RecognitionPlugin):
             return None
         return page.json()
 
-    def recognize(self, metadata):
-        ''' do data lookup '''
-        if not self.config.cparser.value('theaudiodb/enabled', type=bool):
-            return None
+    def _check_artist(self, artdata):
+        ''' is this actually the artist we are looking for? '''
+        found = False
+        for fieldname in ['strArtist', 'strArtistAlternate']:
+            if artdata.get(fieldname) and nowplaying.utils.normalize(
+                    artdata[fieldname]) in self.fnstr:
+                logging.debug('theaudiodb Trusting %s: %s', fieldname,
+                              artdata[fieldname])
+                found = True
+            else:
+                logging.debug(
+                    'theaudiodb not Trusting %s vs. %s', self.fnstr,
+                    nowplaying.utils.normalize(artdata.get(fieldname)))
+        return found
 
-        if 'musicbrainzartistid' in metadata:
-            return self.artistdatafrommbid(metadata['musicbrainzartistid'])
-        if 'artist' in metadata:
-            return self.artistdatafromname(metadata['artist'])
-        return None
+    def _handle_extradata(self, extradata, metadata, caches):  # pylint: disable=too-many-branches
+        ''' deal with the various bits of data '''
+        lang1 = self.config.cparser.value('theaudiodb/bio_iso')
 
-    def artistdatafrommbid(self, mbartistid):
-        ''' get artist data from mbid '''
-        metadata = {}
-        data = self._fetch(f'artist-mb.php?i={mbartistid}')
-        if not data or 'artists' not in data or not data['artists']:
-            return None
+        bio = ''
 
-        artdata = data['artists'][0]
-        if 'strBiographyEN' in artdata:
-            metadata['artistbio'] = self._filter(artdata['strBiographyEN'])
-        if 'strArtistThumb' in artdata:
-            metadata['artistthumb'] = artdata['strArtistThumb']
-        if 'strArtistLogo' in artdata:
-            metadata['artistlogo'] = artdata['strArtistLogo']
+        for artdata in extradata['artists']:
+
+            if not self._check_artist(artdata):
+                continue
+
+            if not metadata.get('artistbio') and self.config.cparser.value(
+                    'theaudiodb/bio', type=bool):
+                if f'strBiography{lang1}' in artdata:
+                    bio += self._filter(artdata[f'strBiography{lang1}'])
+                elif self.config.cparser.value(
+                        'theaudiodb/bio_iso_en_fallback',
+                        type=bool) and 'strBiographyEN' in artdata:
+                    bio += self._filter(artdata['strBiographyEN'])
+
+            if not metadata.get('artistbannerraw') and artdata.get(
+                    'strArtistBanner') and self.config.cparser.value(
+                        'theaudiodb/banners', type=bool):
+                caches['artistbannerraw'].fill_queue(
+                    metadata['artist'], [artdata['strArtistBanner']])
+
+            if not metadata.get('artistlogoraw') and artdata.get(
+                    'strArtistLogo') and self.config.cparser.value(
+                        'theaudiodb/logos', type=bool):
+                caches['artistlogoraw'].fill_queue(metadata['artist'],
+                                                   [artdata['strArtistLogo']])
+
+            if not metadata.get('artistthumbraw') and artdata.get(
+                    'strArtistThumb') and self.config.cparser.value(
+                        'theaudiodb/thumbnails', type=bool):
+                caches['artistthumbraw'].fill_queue(
+                    metadata['artist'], [artdata['strArtistThumb']])
+
+            if self.config.cparser.value('theaudiodb/fanart', type=bool):
+                for num in ['', '2', '3', '4']:
+                    artstring = f'strArtistFanart{num}'
+                    if artdata.get(artstring):
+                        metadata['artistfanarturls'].append(artdata[artstring])
+
+        if bio:
+            metadata['artistbio'] = bio
+
         return metadata
 
-    def artistdatafromname(self, artist):
+    def recognize(self, metadata=None, caches=None):
+        ''' do data lookup '''
+        if not self.config.cparser.value('theaudiodb/enabled', type=bool):
+            return metadata
+
+        apikey = self.config.cparser.value('theaudiodb/apikey')
+        if not apikey:
+            return metadata
+
+        extradata = []
+        self.fnstr = nowplaying.utils.normalize(metadata['artist'])
+
+        if metadata.get('musicbrainzartistid') and apikey:
+            for mbid in metadata['musicbrainzartistid'].split('/'):
+                if newdata := self.artistdatafrommbid(apikey, mbid):
+                    for artist in newdata['artists']:
+                        if self._check_artist(artist):
+                            extradata = extradata.append(artist)
+        elif metadata.get('artist'):
+            for artist in self.artistdatafromname(apikey, metadata['artist']):
+                if self._check_artist(artist):
+                    extradata = extradata.append(artist)
+        if not extradata:
+            return metadata
+
+        return self._handle_extradata(extradata, metadata, caches)
+
+    def artistdatafrommbid(self, apikey, mbartistid):
+        ''' get artist data from mbid '''
+        data = self._fetch(apikey, f'artist-mb.php?i={mbartistid}')
+        if not data or not data.get('artists'):
+            return None
+        return data
+
+    def artistdatafromname(self, apikey, artist):
         ''' get artist data from name '''
-        metadata = {}
         if not artist:
             return None
         urlart = requests.utils.requote_uri(artist)
-        data = self._fetch(f'search.php?s={urlart}')
-        if not data or 'artists' not in data or not data['artists']:
+        data = self._fetch(apikey, f'search.php?s={urlart}')
+        if not data or not data.get('artists'):
             return None
-
-        artdata = data['artists'][0]
-        if 'strBiographyEN' in artdata:
-            metadata['artistbio'] = self._filter(artdata['strBiographyEN'])
-        if 'strArtistThumb' in artdata:
-            metadata['artistthumb'] = artdata['strArtistThumb']
-        if 'strArtistLogo' in artdata:
-            metadata['artistlogo'] = artdata['strArtistLogo']
-        return metadata
+        return data
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this recognition system '''
-        return ['artistbio', 'artistlogo', 'artistthumb']
+        return [
+            'artistbannerraw', 'artistbio', 'artistlogoraw', 'artistthumbraw',
+            'theaudiodb-artistfanarturls'
+        ]
 
     def connect_settingsui(self, qwidget):
         ''' pass '''
 
     def load_settingsui(self, qwidget):
-        ''' pass '''
+        ''' draw the plugin's settings page '''
+        if self.config.cparser.value('theaudiodb/enabled', type=bool):
+            qwidget.theaudiodb_checkbox.setChecked(True)
+        else:
+            qwidget.theaudiodb_checkbox.setChecked(False)
+        qwidget.apikey_lineedit.setText(
+            self.config.cparser.value('theaudiodb/apikey'))
+        qwidget.bio_iso_lineedit.setText(
+            self.config.cparser.value('theaudiodb/bio_iso'))
+
+        for field in ['banners', 'bio', 'fanart', 'logos', 'thumbnails']:
+            func = getattr(qwidget, f'{field}_checkbox')
+            func.setChecked(
+                self.config.cparser.value(f'theaudiodb/{field}', type=bool))
 
     def verify_settingsui(self, qwidget):
         ''' pass '''
 
     def save_settingsui(self, qwidget):
-        ''' pass '''
+        ''' take the settings page and save it '''
+
+        self.config.cparser.setValue('theaudiodb/enabled',
+                                     qwidget.theaudiodb_checkbox.isChecked())
+        self.config.cparser.setValue('theaudiodb/apikey',
+                                     qwidget.apikey_lineedit.text())
+        self.config.cparser.setValue('theaudiodb/bio_iso',
+                                     qwidget.bio_iso_lineedit.text())
+        self.config.cparser.setValue('theaudiodb/bio_iso_en_fallback',
+                                     qwidget.bio_iso_en_checkbox.isChecked())
+
+        for field in ['banners', 'bio', 'fanart', 'logos', 'thumbnails']:
+            func = getattr(qwidget, f'{field}_checkbox')
+            self.config.cparser.setValue(f'theaudiodb/{field}',
+                                         func.isChecked())
 
     def defaults(self, qsettings):
-        ''' pass '''
+        for field in ['banners', 'bio', 'fanart', 'logos', 'thumbnails']:
+            qsettings.setValue(f'theaudiodb/{field}', False)
 
-
-def main():
-    ''' entry point as a standalone app'''
-
-    bundledir = os.path.abspath(os.path.dirname(__file__))
-    logging.basicConfig(level=logging.DEBUG)
-    nowplaying.bootstrap.set_qt_names()
-    # need to make sure config is initialized with something
-    config = nowplaying.config.ConfigFile(bundledir=bundledir)
-    theaudiodb = Plugin(config=config)
-    print(
-        theaudiodb.artistdatafrommbid('45074d7c-5307-44a8-854f-ae072e1622ae'))
-    print(theaudiodb.artistdatafromname('Cee Farrow'))
-
-
-if __name__ == "__main__":
-    main()
+        qsettings.setValue('theaudiodb/enabled', False)
+        qsettings.setValue('theaudiodb/apikey', '')
+        qsettings.setValue('theaudiodb/bio_iso', 'EN')
+        qsettings.setValue('theaudiodb/bio_iso_en_fallback', True)
