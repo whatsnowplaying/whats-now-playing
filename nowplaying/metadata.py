@@ -15,8 +15,9 @@ import nowplaying.vendor.tinytag
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
     ''' Run through a bunch of different metadata processors '''
 
-    def __init__(self, metadata, config=None):
+    def __init__(self, metadata, imagecache=None, config=None):
         self.metadata = metadata
+        self.imagecache = imagecache
         if config:
             self.config = config
         else:
@@ -26,6 +27,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             logging.debug('No filename')
             return
 
+        if 'artistfanarturls' not in self.metadata:
+            self.metadata['artistfanarturls'] = []
+
         for processor in 'hostmeta', 'audio_metadata', 'tinytag', 'image2png', 'plugins':
             logging.debug('running %s', processor)
             func = getattr(self, f'_process_{processor}')
@@ -33,13 +37,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         if 'publisher' in self.metadata:
             if 'label' not in self.metadata:
-                metadata['label'] = metadata['publisher']
-            del metadata['publisher']
+                self.metadata['label'] = self.metadata['publisher']
+            del self.metadata['publisher']
 
         if 'year' in self.metadata:
             if 'date' not in self.metadata:
                 self.metadata['date'] = self.metadata['year']
-            del metadata['year']
+            del self.metadata['year']
 
     def _process_hostmeta(self):
         ''' add the host metadata so other subsystems can use it '''
@@ -225,21 +229,17 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if not addmeta:
             return
 
-        # look if the user wants us to specifically change these two
-        # if so, and we have it, do it.
-        for replacelist in ['artist', 'title']:
-            if self.config.cparser.value(f'recognition/replace{replacelist}',
-                                         type=bool) and replacelist in addmeta:
-                self.metadata[replacelist] = addmeta[replacelist]
-                del addmeta[replacelist]
-
-        # now run through everything else
         for meta in addmeta:
-            if meta not in self.metadata:
+            if meta in ['artist', 'title']:
+                if self.config.cparser.value(f'recognition/replace{meta}',
+                                             type=bool) and addmeta.get(meta):
+                    self.metadata[meta] = addmeta[meta]
+
+            elif not self.metadata.get(meta) and addmeta.get(meta):
                 self.metadata[meta] = addmeta[meta]
 
     def _process_plugins(self):
-        if 'musicbrainzrecordingid' in self.metadata:
+        if self.metadata.get('musicbrainzartistid'):
             logging.debug(
                 'musicbrainz recordingid detected; attempting shortcuts')
             musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
@@ -265,8 +265,24 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             if provider:
                 try:
                     if addmeta := self.config.pluginobjs['recognition'][
-                            plugin].recognize(self.metadata):
+                            plugin].recognize(metadata=self.metadata):
                         self._recognition_replacement(addmeta)
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.debug('%s threw exception %s',
+                                  plugin,
+                                  error,
+                                  exc_info=True)
+
+        if self.config.cparser.value('artistextras/enabled', type=bool):
+            for plugin in self.config.plugins['artistextras']:
+                metalist = self.config.pluginobjs['artistextras'][
+                    plugin].providerinfo()
+                try:
+                    if addmeta := self.config.pluginobjs['artistextras'][
+                            plugin].download(metadata=self.metadata,
+                                             imagecache=self.imagecache):
+                        self._recognition_replacement(addmeta)
+
                 except Exception as error:  # pylint: disable=broad-except
                     logging.debug('%s threw exception %s',
                                   plugin,

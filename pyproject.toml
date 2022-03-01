@@ -10,7 +10,6 @@ namespace = "nowplaying.vendor"
 testpaths = [
     "tests",
 ]
-asyncio_mode = "strict"
 markers = [
     "seratosettings: custom settings for serato ",
     "templatesettings: custom settings for templates",
@@ -24,3 +23,4 @@ addopts = [
   "-ra",
 ]
 log_level = "DEBUG"
+asyncio_mode = "strict"

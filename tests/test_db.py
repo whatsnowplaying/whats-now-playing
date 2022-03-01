@@ -15,10 +15,9 @@ def getmetadb(bootstrap):
     ''' create a temporary directory '''
     config = bootstrap  # pylint: disable=unused-variable
     with tempfile.TemporaryDirectory() as newpath:
-        metadb = nowplaying.db.MetadataDB(databasefile=os.path.join(
+        yield nowplaying.db.MetadataDB(databasefile=os.path.join(
             newpath, 'test.db'),
-                                          initialize=True)
-        yield metadb
+                                       initialize=True)
 
 
 def results(expected, metadata):
@@ -54,9 +53,7 @@ def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
         'album': 'Ghosts I - IV',
         'albumartist': None,
         'artist': 'Nine Inch Nails',
-        'artistbio': None,
-        'artistlogo': None,
-        'artistthumb': None,
+        'artistlongbio': None,
         'bitrate': '64000',
         'bpm': None,
         'comments': None,
@@ -100,7 +97,10 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
     expected = {
         'album': 'Secret Samadhi',
         'artist': 'LĪVE',
+        'artistlogoraw': "Rawr! I'm an image!",
+        'artistthumbraw': "Quack! Am I duck?",
         'bpm': 91,
+        'coverimageraw': "Grr! I'm an image!",
         'date': '1997',
         'deck': 1,
         'filename':
@@ -109,7 +109,6 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'key': 'C#m',
         'label': 'Radioactive Records',
         'title': 'Lakini\'s Juice',
-        'coverimageraw': "Grr! I'm an image!",
     }
 
     metadb.write_to_metadb(metadata=expected)
@@ -120,9 +119,9 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'album': 'Secret Samadhi',
         'albumartist': None,
         'artist': 'LĪVE',
-        'artistbio': None,
-        'artistlogo': None,
-        'artistthumb': None,
+        'artistlongbio': None,
+        'artistlogoraw': "Rawr! I'm an image!",
+        'artistthumbraw': "Quack! Am I duck?",
         'bitrate': None,
         'bpm': '91',
         'comments': None,
@@ -132,8 +131,8 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'date': '1997',
         'deck': '1',
         'disc': None,
-        'discsubtitle': None,
         'disc_total': None,
+        'discsubtitle': None,
         'filename':
         "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3",
         'genre': 'Rock',

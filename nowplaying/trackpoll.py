@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' thread to poll music player '''
 
+import multiprocessing
 import logging
 import pathlib
 import threading
@@ -11,6 +12,7 @@ import nowplaying.config
 import nowplaying.db
 import nowplaying.inputs
 import nowplaying.utils
+import nowplaying.imagecache
 
 COREMETA = ['artist', 'filename', 'title']
 
@@ -44,6 +46,9 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         self.plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
         self.previoustxttemplate = None
         self.txttemplatehandler = None
+        self.imagecache = None
+        self.icprocess = None
+        self._setup_imagecache()
 
     def _resetcurrent(self):
         ''' reset the currentmeta to blank '''
@@ -80,11 +85,25 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                 logging.debug('Failed attempting to get a track: %s',
                               error,
                               exc_info=True)
+        logging.debug('Exited main trackpool loop')
+        self.stop()
+        logging.debug('Trackpoll stopped gracefully.')
 
     def __del__(self):
         logging.debug('TrackPoll is being killed!')
+        self.stop()
+
+    def stop(self):
+        ''' stop trackpoll thread gracefully '''
+        logging.debug('Stopping trackpoll')
+        if self.icprocess:
+            logging.debug('stopping imagecache')
+            self.imagecache.stop_process()
+            logging.debug('joining imagecache')
+            self.icprocess.join()
         if self.input:
             self.input.stop()
+
         self.endthread = True
         self.plugins = None
 
@@ -153,7 +172,8 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                 del metadata[key]
 
         if metadata.get('filename'):
-            metadata = nowplaying.utils.getmoremetadata(metadata)
+            metadata = nowplaying.utils.getmoremetadata(
+                metadata, self.imagecache)
 
         for key in COREMETA:
             if key not in metadata:
@@ -188,7 +208,13 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         logging.info('Potential new track: %s / %s',
                      self.currentmeta['artist'], self.currentmeta['title'])
 
-        self._delay_write()
+        # try to interleave downloads in-between the delay
+        self._half_delay_write()
+        self._process_imagecache()
+        self._start_artistfanartpool()
+        self._half_delay_write()
+        self._process_imagecache()
+        self._start_artistfanartpool()
 
         # checkagain
         nextcheck = self.input.getplayingtrack()
@@ -213,12 +239,69 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                                        templatehandler=self.txttemplatehandler,
                                        metadata=self.currentmeta)
 
-    def _delay_write(self):
+    def _half_delay_write(self):
         try:
             delay = self.config.cparser.value('settings/delay',
                                               type=float,
                                               defaultValue=1.0)
         except ValueError:
             delay = 1.0
-        logging.debug('got delay of %s', delay)
-        QThread.msleep(int(delay * 1000))
+        delay = int(delay * 500)
+        logging.debug('got half-delay of %sms', delay)
+        QThread.msleep(delay)
+
+    def _setup_imagecache(self):
+        if not self.config.cparser.value('artistextras/enabled', type=bool):
+            return
+
+        workers = self.config.cparser.value('artistextras/processes', type=int)
+
+        self.imagecache = nowplaying.imagecache.ImageCache()
+        self.icprocess = multiprocessing.Process(
+            target=self.imagecache.queue_process,
+            name='ICProcess',
+            args=(
+                self.config.logpath,
+                workers,
+            ))
+        self.icprocess.start()
+
+    def _start_artistfanartpool(self):
+        if not self.config.cparser.value('artistextras/enabled', type=bool):
+            return
+
+        if self.currentmeta.get('artistfanarturls'):
+            dedupe = list(dict.fromkeys(self.currentmeta['artistfanarturls']))
+            self.currentmeta['artistfanarturls'] = dedupe
+            self.imagecache.fill_queue(
+                config=self.config,
+                artist=self.currentmeta['artist'],
+                imagetype='artistfanart',
+                urllist=self.currentmeta['artistfanarturls'])
+            del self.currentmeta['artistfanarturls']
+
+    def _process_imagecache(self):
+        if not self.currentmeta.get('artist'):
+            return
+
+        if not self.config.cparser.value('artistextras/enabled', type=bool):
+            return
+
+        def fillin(self):
+            tryagain = False
+            for key in ['artistthumb', 'artistlogo', 'artistbanner']:
+                logging.debug('Calling %s', key)
+                rawkey = f'{key}raw'
+                if not self.currentmeta.get(rawkey):
+                    image = self.imagecache.random_image_fetch(
+                        artist=self.currentmeta['artist'], imagetype=key)
+                    if not image:
+                        logging.debug('did not get an image for %s %s %s', key,
+                                      rawkey, self.currentmeta['artist'])
+                        tryagain = True
+                    self.currentmeta[rawkey] = image
+            return tryagain
+
+        # try to give it a bit more time if it doesn't complete the first time
+        if not fillin(self):
+            fillin(self)

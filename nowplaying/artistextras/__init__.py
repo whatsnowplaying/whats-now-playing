@@ -7,7 +7,7 @@ import nowplaying.config
 from nowplaying.exceptions import PluginVerifyError
 
 
-class RecognitionPlugin():
+class ArtistExtrasPlugin():
     ''' base class of input plugins '''
 
     def __init__(self, config=None, qsettings=None):
@@ -47,7 +47,7 @@ class RecognitionPlugin():
 
 #### Recognition methods
 
-    def recognize(self, metadata=None):  #pylint: disable=no-self-use
+    def download(self, metadata=None, imagecache=None):  #pylint: disable=no-self-use
         ''' return metadata '''
         raise NotImplementedError
 

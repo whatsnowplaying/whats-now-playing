@@ -37,6 +37,8 @@ Supported Variables
      - Artist listed on the album
    * - artist
      - Artist for the song
+   * - artistlongbio
+     - Full biography of the artist
    * - bitrate
      - Bitrate the file was encoded at
    * - bpm

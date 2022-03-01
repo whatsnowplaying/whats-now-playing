@@ -9,6 +9,7 @@ import sys
 
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
 
+import nowplaying.artistextras
 import nowplaying.inputs
 import nowplaying.recognition
 import nowplaying.utils
@@ -24,10 +25,23 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     BUNDLEDIR = None
     PAUSED = False
 
-    def __init__(self, bundledir=None, reset=False, testmode=False):
+    def __init__(self,
+                 bundledir=None,
+                 logpath=None,
+                 reset=False,
+                 testmode=False):
 
         self.testmode = testmode
+        self.logpath = logpath
         self.initialized = False
+        if logpath:
+            self.logpath = logpath
+        else:
+            self.logpath = os.path.join(
+                QStandardPaths.standardLocations(
+                    QStandardPaths.DocumentsLocation)[0],
+                QCoreApplication.applicationName(), 'logs', 'debug.log')
+
         self.templatedir = os.path.join(
             QStandardPaths.standardLocations(
                 QStandardPaths.DocumentsLocation)[0],
@@ -108,6 +122,13 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                              QCoreApplication.organizationName(),
                              QCoreApplication.applicationName())
 
+        settings.setValue('artistextras/enabled', False)
+        for field in ['banners', 'logos', 'thumbnails']:
+            settings.setValue(f'artistextras/{field}', 2)
+
+        settings.setValue('artistextras/fanart', 10)
+        settings.setValue('artistextras/processes', 5)
+
         settings.setValue('recognition/replacetitle', False)
         settings.setValue('recognition/replaceartist', False)
 
@@ -130,6 +151,18 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         settings.setValue('weboutput/htmltemplate',
                           os.path.join(self.templatedir, "basic-web.htm"))
+        settings.setValue(
+            'weboutput/artistbannertemplate',
+            os.path.join(self.templatedir, "ws-artistbanner-nofade.htm"))
+        settings.setValue(
+            'weboutput/artistlogotemplate',
+            os.path.join(self.templatedir, "ws-artistlogo-nofade.htm"))
+        settings.setValue(
+            'weboutput/artistthumbtemplate',
+            os.path.join(self.templatedir, "ws-artistthumb-nofade.htm"))
+        settings.setValue(
+            'weboutput/artistfanarttemplate',
+            os.path.join(self.templatedir, "ws-artistfanart-nofade.htm"))
         settings.setValue('weboutput/httpenabled', False)
         settings.setValue('weboutput/httpport', '8899')
         settings.setValue('weboutput/once', True)
@@ -150,6 +183,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.plugins['recognition'] = nowplaying.utils.import_plugins(
             nowplaying.recognition)
         self.pluginobjs['recognition'] = {}
+
+        self.plugins['artistextras'] = nowplaying.utils.import_plugins(
+            nowplaying.artistextras)
+        self.pluginobjs['artistextras'] = {}
 
     def _defaults_plugins(self, settings):
         ''' configure the defaults for input plugins '''

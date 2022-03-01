@@ -32,6 +32,7 @@ For everyone else, you will need to build and install locally.  See `Developers 
    input/index
    output/index
    recognition/index
+   extras/index
    quirks
    templatevariables
    troubleshooting

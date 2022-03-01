@@ -44,6 +44,7 @@ class Plugin(RecognitionPlugin):
         completedprocess = None
         fpcalc = os.environ.get('FPCALC', 'fpcalc')
         command = [fpcalc, '-json', "-length", '120', filename]
+        completedprocess = None
         try:
             if sys.platform == "win32":
                 completedprocess = subprocess.run(
@@ -110,10 +111,10 @@ class Plugin(RecognitionPlugin):
 
     def _read_acoustid_tuples(self, results):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
         fnstr = nowplaying.utils.normalize(self.acoustidmd['filename'])
-        if 'artist' in self.acoustidmd and self.acoustidmd['artist']:
+        if self.acoustidmd.get('artist'):
             fnstr = fnstr + nowplaying.utils.normalize(
                 self.acoustidmd['artist'])
-        if 'title' in self.acoustidmd and self.acoustidmd['title']:
+        if self.acoustidmd.get('title'):
             fnstr = fnstr + nowplaying.utils.normalize(
                 self.acoustidmd['title'])
 
@@ -154,6 +155,10 @@ class Plugin(RecognitionPlugin):
                                 score = score + .20
 
                     title = release['mediums'][0]['tracks'][0]['title']
+                    if release.get('title'):
+                        album = release['title']
+                    else:
+                        album = None
                     if title and nowplaying.utils.normalize(title) in fnstr:
                         score = score + .10
                     artistlist = []
@@ -171,8 +176,8 @@ class Plugin(RecognitionPlugin):
 
                 score = score + (releasecount * 0.10)
                 logging.debug(
-                    'weighted score = %s, rid = %s, title = %s, artist = %s',
-                    score, rid, title, artist)
+                    'weighted score = %s, rid = %s, title = %s, artist = %s album = %s',
+                    score, rid, title, artist, album)
 
                 if score > lastscore:
                     self.acoustidmd['acoustidid'] = acoustidid
@@ -180,6 +185,8 @@ class Plugin(RecognitionPlugin):
                         self.acoustidmd['artist'] = ' & '.join(artistlist)
                     if title:
                         self.acoustidmd['title'] = title
+                    if album:
+                        self.acoustidmd['album'] = album
                     if rid:
                         self.acoustidmd['musicbrainzrecordingid'] = rid
                     lastscore = score
@@ -231,12 +238,12 @@ class Plugin(RecognitionPlugin):
         self.fpcalcexe = fpcalcexe
         return True
 
-    def recognize(self, metadata):  #pylint: disable=too-many-statements
+    def recognize(self, metadata=None):  #pylint: disable=too-many-statements
         self.acoustidmd = metadata
         if not self.config.cparser.value('acoustidmb/enabled', type=bool):
             return None
 
-        if 'musicbrainzrecordingid' not in self.acoustidmd:
+        if not self.acoustidmd.get('musicbrainzrecordingid'):
 
             logging.debug(
                 'No musicbrainzrecordingid in metadata, so use acoustid')
@@ -259,7 +266,7 @@ class Plugin(RecognitionPlugin):
 
             self._read_acoustid_tuples(results)
 
-        if 'musicbrainzrecordingid' not in self.acoustidmd:
+        if not self.acoustidmd.get('musicbrainzrecordingid'):
             logging.info(
                 'acoustidmb: no musicbrainz rid %s. Returning everything else.',
                 metadata['filename'])

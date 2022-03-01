@@ -404,7 +404,7 @@ def stop(pid):
         pass
 
 
-def start(bundledir):
+def start(logpath, bundledir):
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'TwitchBot'
 
@@ -416,6 +416,7 @@ def start(bundledir):
             bundledir = os.path.abspath(os.path.dirname(__file__))
 
     nowplaying.bootstrap.set_qt_names()
+    nowplaying.bootstrap.setuplogging(logpath)
 
     config = nowplaying.config.ConfigFile(bundledir=bundledir)
     logging.info('boot up')

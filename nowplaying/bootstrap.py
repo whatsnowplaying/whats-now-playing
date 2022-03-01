@@ -271,11 +271,11 @@ def upgrade(bundledir=None):
     myupgrade = UpgradeTemplates(bundledir=bundledir)
 
 
-def setuplogging(logpath=None):
+def setuplogging(logpath=None, rotate=False):
     ''' configure logging '''
     besuretorotate = False
 
-    if os.path.exists(logpath):
+    if os.path.exists(logpath) and rotate:
         besuretorotate = True
 
     logfhandler = logging.handlers.RotatingFileHandler(filename=logpath,

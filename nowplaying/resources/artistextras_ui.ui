@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>artistextras_ui</class>
+ <widget class="QWidget" name="artistextras_ui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Artist Extras</string>
+  </property>
+  <property name="displayName" stdset="0">
+   <string>Artist Extras</string>
+  </property>
+  <widget class="QCheckBox" name="artistextras_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>50</x>
+     <y>80</y>
+     <width>82</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enabled</string>
+   </property>
+  </widget>
+  <widget class="QWidget" name="formLayoutWidget_2">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>270</y>
+     <width>591</width>
+     <height>167</height>
+    </rect>
+   </property>
+   <layout class="QFormLayout" name="artistextras_layout">
+    <item row="0" column="0">
+     <widget class="QLabel" name="banenrs_label">
+      <property name="text">
+       <string>Maximum artist banners </string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QSpinBox" name="banners_spin">
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="value">
+       <number>3</number>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QSpinBox" name="thumbnails_spin">
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="value">
+       <number>3</number>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="thumbnails_label">
+      <property name="text">
+       <string>Maximum artist thumbnails</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="logos_label">
+      <property name="text">
+       <string>Maximum artist logos</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QSpinBox" name="logos_spin">
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="value">
+       <number>3</number>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="1">
+     <widget class="QSpinBox" name="fanart_spin">
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="value">
+       <number>20</number>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <widget class="QLabel" name="fanart_label">
+      <property name="text">
+       <string>Maximum artist fanart</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0">
+     <widget class="QLabel" name="processes_label">
+      <property name="text">
+       <string>Download processes</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="1">
+     <widget class="QSpinBox" name="processes_spin"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QLabel" name="artistextras_desc_label">
+   <property name="geometry">
+    <rect>
+     <x>50</x>
+     <y>150</y>
+     <width>511</width>
+     <height>81</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Banners, logos, and thumbnails are downloaded and configured prior to the track being announced.  Setting these values too high will result in  missing artwork the first time an artist is picked.  See the documentation for more details.</string>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

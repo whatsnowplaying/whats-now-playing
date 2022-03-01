@@ -37,13 +37,14 @@ def run_bootstrap(bundledir=None):
     # 5 seconds, consider it a failure and move on.  At some
     # point this should be configurable but this is good enough for now
     socket.setdefaulttimeout(5.0)
-    nowplaying.bootstrap.setuplogging(logpath=logpath)
+    nowplaying.bootstrap.setuplogging(logpath=logpath, rotate=True)
 
     nowplaying.bootstrap.upgrade(bundledir=bundledir)
 
     # fail early if metadatadb can't be configured
     metadb = nowplaying.db.MetadataDB()
     metadb.setupsql()
+    return logpath
 
 
 def main():
@@ -63,9 +64,9 @@ def main():
     qapp = QApplication(sys.argv)
     qapp.setQuitOnLastWindowClosed(False)
     nowplaying.bootstrap.set_qt_names()
-    run_bootstrap(bundledir=bundledir)
+    logpath = run_bootstrap(bundledir=bundledir)
 
-    config = nowplaying.config.ConfigFile(bundledir=bundledir)
+    config = nowplaying.config.ConfigFile(logpath=logpath, bundledir=bundledir)
     logging.getLogger().setLevel(config.loglevel)
     logging.captureWarnings(True)
     tray = nowplaying.systemtray.Tray()  # pylint: disable=unused-variable

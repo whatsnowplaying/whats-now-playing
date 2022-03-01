@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 ''' handler to read the metadata from various file formats '''
 
+from html.parser import HTMLParser
+
 import importlib
 import io
 import logging
@@ -12,6 +14,18 @@ import normality
 import PIL.Image
 
 import nowplaying.metadata
+
+
+class HTMLFilter(HTMLParser):
+    ''' simple class to strip HTML '''
+    text = ""
+
+    def handle_data(self, data):
+        self.text += data
+
+    def error(self, message):  # pylint: disable=no-self-use
+        ''' handle error messages '''
+        logging.debug('HTMLFilter: %s', message)
 
 
 class TemplateHandler():  # pylint: disable=too-few-public-methods
@@ -63,7 +77,7 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
         return self.template.render(metadatadict)
 
 
-def getmoremetadata(metadata=None):
+def getmoremetadata(metadata=None, imagecache=None):
     ''' given a chunk of metadata, try to fill in more '''
 
     logging.debug('getmoremetadata called')
@@ -77,7 +91,8 @@ def getmoremetadata(metadata=None):
     logging.debug('getmoremetadata calling metadata processor for %s',
                   metadata['filename'])
     try:
-        myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata)
+        myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
+                                                         imagecache=imagecache)
         metadata = myclass.metadata
     except OSError as error:  # pragma: no cover
         logging.error('MetadataProcessor failed for %s with %s',

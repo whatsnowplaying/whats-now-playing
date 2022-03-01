@@ -62,7 +62,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.qtui = _load_ui('settings')
 
         baseuis = [
-            'general', 'source', 'webserver', 'obsws', 'twitchbot', 'quirks'
+            'general', 'artistextras', 'source', 'webserver', 'obsws',
+            'twitchbot', 'quirks'
         ]
 
         pluginuis = {}
@@ -177,6 +178,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             str(self.config.cparser.value('settings/delay')))
         self.widgets['general'].notify_checkbox.setChecked(self.config.notif)
 
+        self._upd_win_artistextras()
         self._upd_win_recognition()
         self._upd_win_input()
         self._upd_win_plugins()
@@ -184,6 +186,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self._upd_win_obsws()
         self._upd_win_twitchbot()
         self._upd_win_quirks()
+
+    def _upd_win_artistextras(self):
+        self.widgets['artistextras'].artistextras_checkbox.setChecked(
+            self.config.cparser.value('artistextras/enabled', type=bool))
+        for art in ['banners', 'processes', 'fanart', 'logos', 'thumbnails']:
+            guiattr = getattr(self.widgets['artistextras'], f'{art}_spin')
+            guiattr.setValue(
+                self.config.cparser.value(f'artistextras/{art}', type=int))
 
     def _upd_win_recognition(self):
         self.widgets['general'].recog_title_checkbox.setChecked(
@@ -353,6 +363,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
         logging.getLogger().setLevel(loglevel)
 
+        self._upd_conf_artistextras()
         self._upd_conf_recognition()
         self._upd_conf_input()
         self._upd_conf_webserver()
@@ -361,6 +372,15 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self._upd_conf_quirks()
         self._upd_conf_plugins()
         self.config.cparser.sync()
+
+    def _upd_conf_artistextras(self):
+        self.config.cparser.setValue(
+            'artistextras/enabled',
+            self.widgets['artistextras'].artistextras_checkbox.isChecked())
+        for art in ['banners', 'processes', 'fanart', 'logos', 'thumbnails']:
+            guiattr = getattr(self.widgets['artistextras'], f'{art}_spin')
+            self.config.cparser.setValue(f'artistextras/{art}',
+                                         guiattr.value())
 
     def _upd_conf_recognition(self):
         self.config.cparser.setValue(

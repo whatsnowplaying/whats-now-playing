@@ -172,8 +172,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         if not self.twitchbotprocess and self.config.cparser.value(
                 'twitchbot/enabled', type=bool):
             bundledir = self.config.getbundledir()
+            logpath = self.config.logpath
             self.twitchbotprocess = multiprocessing.Process(
-                target=nowplaying.twitchbot.start, args=(bundledir, ))
+                target=nowplaying.twitchbot.start, args=(
+                    logpath,
+                    bundledir,
+                ))
             self.twitchbotprocess.start()
 
     def restart_webprocess(self):
