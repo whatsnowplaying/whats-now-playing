@@ -15,10 +15,9 @@ def getmetadb(bootstrap):
     ''' create a temporary directory '''
     config = bootstrap  # pylint: disable=unused-variable
     with tempfile.TemporaryDirectory() as newpath:
-        metadb = nowplaying.db.MetadataDB(databasefile=os.path.join(
+        yield nowplaying.db.MetadataDB(databasefile=os.path.join(
             newpath, 'test.db'),
                                           initialize=True)
-        yield metadb
 
 
 def results(expected, metadata):

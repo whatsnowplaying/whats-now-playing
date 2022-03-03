@@ -92,16 +92,16 @@ class Plugin(RecognitionPlugin):
 
         if 'artistthumb' in metadata:
             cache = nowplaying.imagecache.ArtistThumbCache()
-            thumb = cache.image_fetch(metadata['artist'],
-                                      metadata['artistthumb'])
-            if thumb:
+            if thumb := cache.image_fetch(
+                metadata['artist'], metadata['artistthumb']
+            ):
                 metadata['artistthumbraw'] = thumb
 
         if 'artistlogo' in metadata:
             cache = nowplaying.imagecache.ArtistLogoCache()
-            logo = cache.image_fetch(metadata['artist'],
-                                     metadata['artistlogo'])
-            if logo:
+            if logo := cache.image_fetch(
+                metadata['artist'], metadata['artistlogo']
+            ):
                 metadata['artistlogoraw'] = logo
         return metadata
 
