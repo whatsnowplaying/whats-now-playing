@@ -238,8 +238,11 @@ class MetadataDB:
         connection = sqlite3.connect(self.databasefile)
         cursor = connection.cursor()
 
-        sql = 'CREATE TABLE currentmeta (id INTEGER PRIMARY KEY AUTOINCREMENT, '
-        sql += ' TEXT, '.join(MetadataDB.METADATALIST)
+        sql = (
+            'CREATE TABLE currentmeta (id INTEGER PRIMARY KEY AUTOINCREMENT, '
+            + ' TEXT, '.join(MetadataDB.METADATALIST)
+        )
+
         sql += ' TEXT, '
         sql += ' BLOB, '.join(MetadataDB.METADATABLOBLIST)
         sql += ' BLOB'
