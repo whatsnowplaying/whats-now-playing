@@ -16,7 +16,6 @@ import nowplaying.utils
 
 class Plugin(RecognitionPlugin):
     ''' handler for fanart.tv '''
-
     def __init__(self, config=None, qsettings=None):
         self.client = None
         self.version = nowplaying.version.get_versions()['version']

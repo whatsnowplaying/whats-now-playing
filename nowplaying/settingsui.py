@@ -22,7 +22,6 @@ except ModuleNotFoundError:
 # settings UI
 class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     ''' create settings form window '''
-
     def __init__(self, tray, version):
 
         self.config = nowplaying.config.ConfigFile()
@@ -41,7 +40,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def load_qtui(self):
         ''' load the base UI and wire it up '''
-
         def _load_ui(name):
             ''' load a UI file into a widget '''
             loader = QUiLoader()
@@ -234,7 +232,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def _upd_win_twitchbot(self):
         ''' update the twitch settings '''
-
         def clear_table(widget):
             widget.clearContents()
             rows = widget.rowCount()
@@ -433,7 +430,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
     def _upd_conf_twitchbot(self):
         ''' update the twitch settings '''
-
         def reset_commands(widget, config):
 
             # needs to match ui file

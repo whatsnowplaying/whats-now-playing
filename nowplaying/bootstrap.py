@@ -20,7 +20,6 @@ import nowplaying.version
 
 class UpgradeConfig:
     ''' methods to upgrade from old configs to new configs '''
-
     def __init__(self, testdir=None):
 
         if sys.platform == "win32":
@@ -151,7 +150,6 @@ class UpgradeConfig:
 
 class UpgradeTemplates():
     ''' Upgrade templates '''
-
     def __init__(self, bundledir=None, testdir=None):
         self.bundledir = bundledir
         self.apptemplatedir = os.path.join(self.bundledir, 'templates')

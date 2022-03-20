@@ -53,7 +53,6 @@ TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
 
 class WebHandler():  # pylint: disable=too-many-public-methods
     ''' aiohttp built server that does both http and websocket '''
-
     def __init__(self, databasefile, testmode=False):
         threading.current_thread().name = 'WebServer'
         self.testmode = testmode
@@ -294,7 +293,6 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
     async def websocket_streamer(self, request):  # pylint: disable=no-self-use
         ''' handle continually streamed updates '''
-
         async def do_update(websocket, database):
             # early launch can be a bit weird so
             # pause a bit
