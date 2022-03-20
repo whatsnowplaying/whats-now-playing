@@ -17,7 +17,6 @@ import nowplaying.utils
 
 class Plugin(RecognitionPlugin):
     ''' handler for TheAudioDB '''
-
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.htmlfilter = nowplaying.utils.HTMLFilter()

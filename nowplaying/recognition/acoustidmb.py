@@ -30,7 +30,6 @@ import nowplaying.version
 
 class Plugin(RecognitionPlugin):
     ''' handler for NowPlaying '''
-
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.qwidget = None

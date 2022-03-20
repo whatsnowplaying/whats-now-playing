@@ -30,7 +30,6 @@ class HTMLFilter(HTMLParser):
 
 class TemplateHandler():  # pylint: disable=too-few-public-methods
     ''' Set up a template  '''
-
     def __init__(self, filename=None):
         self.envdir = envdir = None
         self.template = None
@@ -126,7 +125,6 @@ def writetxttrack(filename=None,
 def import_plugins(namespace):
     ''' import plugins and return an object
         with all of them '''
-
     def iter_ns(ns_pkg):
         ''' iterate over a package and return children.
             used to monkey patch in plugins

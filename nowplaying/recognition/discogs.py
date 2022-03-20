@@ -15,7 +15,6 @@ import nowplaying.version
 
 class Plugin(RecognitionPlugin):
     ''' handler for discogs '''
-
     def __init__(self, config=None, qsettings=None):
         self.client = None
         self.version = nowplaying.version.get_versions()['version']

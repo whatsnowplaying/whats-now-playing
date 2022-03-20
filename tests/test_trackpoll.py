@@ -28,7 +28,6 @@ def trackpollbootstrap(bootstrap, tmp_path):  # pylint: disable=redefined-outer-
 
 class InputStub(nowplaying.inputs.InputPlugin):
     ''' stupid input plugin '''
-
     def start(self):
         ''' dummy start '''
 
