@@ -1,3 +1,3 @@
-git+https://github.com/whatsnowplaying/tinytag.git@update
+git+https://github.com/whatsnowplaying/tinytag.git@nowplaying
 git+https://github.com/whatsnowplaying/audio-metadata.git@nowplaying
 git+https://github.com/whatsnowplaying/tbm-utils@nowplaying
