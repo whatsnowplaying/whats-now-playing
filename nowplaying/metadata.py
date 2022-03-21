@@ -157,6 +157,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         if tag:
+            logging.debug(tag)
+            logging.debug(getattr(tag, 'extra'))
             for key in [
                     'album', 'albumartist', 'artist', 'bitrate', 'bpm',
                     'comments', 'composer', 'disc', 'disc_total', 'genre',
@@ -166,6 +168,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 if key not in self.metadata and hasattr(tag, key) and getattr(
                         tag, key):
                     self.metadata[key] = getattr(tag, key)
+
+            if getattr(tag, 'extra'):
+                extra = getattr(tag, 'extra')
+                for key in 'isrc':
+                    self.metadata[key] = extra['isrc']
 
             if 'date' not in self.metadata and hasattr(
                     tag, 'year') and getattr(tag, 'year'):
