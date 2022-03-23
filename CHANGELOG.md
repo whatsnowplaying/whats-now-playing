@@ -1,11 +1,14 @@
 
 # Changelog
 
-## Version 3.1.0 - in progress
+## Version 3.0.1 - in progress
 
 * Removed ACRCloud support
 * Upgraded to Qt 6
 * Fix link to quirks doc
+* If the track changes during the delay, do not report it.
+  Instead, repeat the cycle and make sure it is consistent
+  for the entirety of the delay period.
 
 ## Version 3.0.0 - 2021-11-27
 

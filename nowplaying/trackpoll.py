@@ -165,7 +165,6 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
     def gettrack(self):  # pylint: disable=too-many-branches
         ''' get currently playing track, returns None if not new or not found '''
 
-        #logging.debug('called gettrack')
         # check paused state
         while True:
             if not self.config.getpause() or self.endthread:
@@ -184,11 +183,20 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
             return
 
         # fill in the blanks and make it live
+        oldmeta = self.currentmeta
         self.currentmeta = self._fillinmetadata(nextmeta)
-        logging.info('New track: %s / %s', self.currentmeta['artist'],
-                     self.currentmeta['title'])
+        logging.info('Potential new track: %s / %s',
+                     self.currentmeta['artist'], self.currentmeta['title'])
 
         self._delay_write()
+
+        # checkagain
+        nextcheck = self.input.getplayingtrack()
+        if not self._ismetaempty(nextcheck) and not self._ismetasame(
+                nextcheck):
+            logging.info('Track changed during delay, skipping')
+            self.currentmeta = oldmeta
+            return
 
         if not self.testmode:
             metadb = nowplaying.db.MetadataDB()
