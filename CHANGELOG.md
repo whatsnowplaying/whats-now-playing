@@ -3,12 +3,19 @@
 
 ## Version 3.0.1 - in progress
 
-* Removed ACRCloud support
-* Upgraded to Qt 6
-* Fix link to quirks doc
+* Removed ACRCloud support.
+* Upgraded to Qt 6.
+* Fix link to quirks doc.
+* Slightly different name matching logic that should be
+  more consistent for some tracks when trying to use
+  recognition tools.
 * If the track changes during the delay, do not report it.
   Instead, repeat the cycle and make sure it is consistent
   for the entirety of the delay period.
+* Updated various dependencies to fix some security
+  and reliability issues.
+* Some documentation updates.
+* Python version updated to 3.9
 
 ## Version 3.0.0 - 2021-11-27
 
