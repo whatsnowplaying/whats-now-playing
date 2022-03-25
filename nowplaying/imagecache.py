@@ -2,6 +2,7 @@
 # pylint: disable=invalid-name
 ''' image cache '''
 
+
 import multiprocessing
 import os
 import pathlib
@@ -33,9 +34,15 @@ CREATE TABLE artistsha
 
 MAX_FANART_DOWNLOADS = 15
 
-LOCK = {}
-for arttype in ['artistbanner', 'artistfanart', 'artistlogo', 'artistthumb']:
-    LOCK[arttype] = multiprocessing.RLock()
+LOCK = {
+    arttype: multiprocessing.RLock()
+    for arttype in [
+        'artistbanner',
+        'artistfanart',
+        'artistlogo',
+        'artistthumb',
+    ]
+}
 
 
 class ImageCacheDatabase:
@@ -397,15 +404,12 @@ class ImageCache:  # pylint: disable=too-many-instance-attributes
                 [0]).joinpath(f'{imagetype}-cache')
         self.cachedir.resolve().mkdir(parents=True, exist_ok=True)
         logging.debug('Setting cachedir to %s', self.cachedir)
-        if databasefile:
-            self.database = ImageCacheDatabase(databasefile=databasefile,
-                                               imagetype=imagetype)
-        else:  # pragma: no cover
+        if not databasefile:
             databasefile = pathlib.Path(
                 QStandardPaths.standardLocations(QStandardPaths.CacheLocation)
                 [0]).joinpath(f'{imagetype}.db')
-            self.database = ImageCacheDatabase(databasefile=databasefile,
-                                               imagetype=imagetype)
+        self.database = ImageCacheDatabase(databasefile=databasefile,
+                                           imagetype=imagetype)
         self.queue = multiprocessing.Queue()
         self.pool = None
         self.poolsize = poolsize

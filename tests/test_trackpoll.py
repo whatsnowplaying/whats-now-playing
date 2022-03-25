@@ -52,7 +52,7 @@ def wait_for_output(filename):
     counter = 0
     while (not pathlib.Path(filename).exists()) or counter > 5:
         QThread.msleep(2000)
-        counter = counter + 1
+        counter += 1
         logging.debug('waiting for %s: %s', filename, counter)
     assert counter < 6
 
