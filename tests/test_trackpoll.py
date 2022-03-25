@@ -2,6 +2,7 @@
 ''' test the trackpoller '''
 
 import logging
+import pathlib
 
 import pytest
 
@@ -19,6 +20,8 @@ TITLE = None
 def trackpollbootstrap(bootstrap, tmp_path):  # pylint: disable=redefined-outer-name
     ''' bootstrap a configuration '''
     txtfile = tmp_path.joinpath('output.txt')
+    if pathlib.Path(txtfile).exists():
+        pathlib.Path(txtfile).unlink()
     config = bootstrap
     config.cparser.setValue('textoutput/file', str(txtfile))
     config.file = str(txtfile)
@@ -38,6 +41,20 @@ class InputStub(nowplaying.inputs.InputPlugin):
     def getplayingtrack(self):  # pylint: disable=no-self-use
         ''' dummy meta -> just return globals '''
         return {'artist': ARTIST, 'filename': FILENAME, 'title': TITLE}
+
+
+def wait_for_output(filename):
+    ''' wait for the output to appear '''
+
+    # these tests tend to be a bit flaky/racy esp on github
+    # runners so add some protection
+    QThread.msleep(2000)
+    counter = 0
+    while (not pathlib.Path(filename).exists()) or counter > 5:
+        QThread.msleep(2000)
+        counter += 1
+        logging.debug('waiting for %s: %s', filename, counter)
+    assert counter < 6
 
 
 def tracknotify(metadata):
@@ -98,13 +115,13 @@ def test_trackpoll_basic(trackpollbootstrap, getroot):  # pylint: disable=redefi
     assert text[0].strip() == ''
 
     ARTIST = 'NIN'
-    QThread.msleep(2000)
+    wait_for_output(config.file)
     with open(config.file, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == 'NIN'
 
     TITLE = 'Ghosts'
-    QThread.msleep(2000)
+    wait_for_output(config.file)
     with open(config.file, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == 'NIN'
@@ -133,7 +150,7 @@ def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=red
     trackthread.currenttrack[dict].connect(tracknotify)
     trackthread.start()
 
-    QThread.msleep(2000)
+    wait_for_output(config.file)
     with open(config.file, encoding='utf-8') as filein:
         text = filein.readlines()
 
@@ -151,7 +168,7 @@ def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=red
 
     ARTIST = None
     TITLE = 'Ghosts'
-    QThread.msleep(2000)
+    wait_for_output(config.file)
     with open(config.file, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == FILENAME
@@ -181,7 +198,7 @@ def test_trackpoll_titleisfile(trackpollbootstrap, getroot):  # pylint: disable=
     trackthread.currenttrack[dict].connect(tracknotify)
     trackthread.start()
 
-    QThread.msleep(2000)
+    wait_for_output(config.file)
     with open(config.file, encoding='utf-8') as filein:
         text = filein.readlines()
 
@@ -212,7 +229,7 @@ def test_trackpoll_nofile(trackpollbootstrap, getroot):  # pylint: disable=redef
     trackthread.currenttrack[dict].connect(tracknotify)
     trackthread.start()
 
-    QThread.msleep(2000)
+    wait_for_output(config.file)
     with open(config.file, encoding='utf-8') as filein:
         text = filein.readlines()
 
