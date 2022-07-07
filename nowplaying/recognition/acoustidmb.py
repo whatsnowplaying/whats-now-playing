@@ -39,8 +39,9 @@ class Plugin(RecognitionPlugin):
         self.acoustidmd = {}
         self.fpcalcexe = None
 
-    def _fetch_from_acoustid(self, apikey, filename):  # pylint: disable=no-self-use
+    def _fetch_from_acoustid(self, apikey, filename):  # pylint: disable=no-self-use,too-many-branches
         results = None
+        completedprocess = None
         fpcalc = os.environ.get('FPCALC', 'fpcalc')
         command = [fpcalc, '-json', "-length", '120', filename]
         try:
@@ -57,8 +58,11 @@ class Plugin(RecognitionPlugin):
                                                   capture_output=True,
                                                   check=True)
         except Exception as error:  # pylint: disable=broad-except
-            logging.error('Exception: %s stderr: %s', error,
-                          completedprocess.stderr)
+            if completedprocess:
+                logging.error('Exception: %s stderr: %s', error,
+                              completedprocess.stderr)
+            else:
+                logging.error('Exception: %s', error)
             return None
 
         if not completedprocess or not completedprocess.stdout:
