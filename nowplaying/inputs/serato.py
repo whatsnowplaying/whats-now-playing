@@ -273,7 +273,7 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
             elif field == 48:
                 self.sessionid = self._numfield()
             elif field == 50:
-                self.played = self._bytes()
+                self.played = self._bool()
             elif field == 51:
                 self.key = self._string()
             elif field == 52:
@@ -372,7 +372,10 @@ class SessionFile():  #pylint: disable=too-few-public-methods
                 data = self.sessionfile.read(header.size)
 
                 if header.chunktype == b'adat' and containertype == b'oent':
-                    self.adats.append(ChunkTrackADAT(data=data))
+                    chunk = ChunkTrackADAT(data=data)
+                    if not chunk.played:
+                        continue
+                    self.adats.append(chunk)
                     self.decks[self.adats[-1].deck] = self.adats[-1]
                     self.lastreaddeck = self.adats[-1].deck
                 elif header.chunktype == b'adat' and containertype == b'oren':
@@ -536,6 +539,8 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                 if deckskiplist and str(adat.deck) in deckskiplist:
                     continue
                 if 'playtime' in adat and adat.playtime > 0:
+                    continue
+                if not adat.played:
                     continue
                 if (adat.deck in self.decks
                         and adat.updatedat < self.decks[adat.deck].updatedat):
