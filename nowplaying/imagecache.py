@@ -372,15 +372,12 @@ class ImageCache:  # pylint: disable=too-many-instance-attributes
                 QStandardPaths.standardLocations(QStandardPaths.CacheLocation)
                 [0]).joinpath(f'{imagetype}-cache')
         logging.debug('Setting cachedir to %s', self.cachedir)
-        if databasefile:
-            self.database = ImageCacheDatabase(databasefile=databasefile,
-                                               imagetype=imagetype)
-        else:  # pragma: no cover
+        if not databasefile:
             databasefile = pathlib.Path(
                 QStandardPaths.standardLocations(QStandardPaths.CacheLocation)
                 [0]).joinpath(f'{imagetype}.db')
-            self.database = ImageCacheDatabase(databasefile=databasefile,
-                                               imagetype=imagetype)
+        self.database = ImageCacheDatabase(databasefile=databasefile,
+                                           imagetype=imagetype)
         self.queue = multiprocessing.Queue()
         self.pool = None
         self.poolsize = poolsize

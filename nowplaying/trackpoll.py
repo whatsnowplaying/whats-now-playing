@@ -166,14 +166,12 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                 metadata[key] = ''
         return metadata
 
-    def gettrack(self):  # pylint: disable=too-many-branches
+    def gettrack(self):    # pylint: disable=too-many-branches
         ''' get currently playing track, returns None if not new or not found '''
 
         #logging.debug('called gettrack')
         # check paused state
-        while True:
-            if not self.config.getpause() or self.endthread:
-                break
+        while not (not self.config.getpause() or self.endthread):
             QThread.msleep(500)
 
         if self.endthread:
