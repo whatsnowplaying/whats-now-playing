@@ -26,7 +26,7 @@ jobs:
       - name: update tags
         run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.9
       - name: run builder
@@ -35,7 +35,7 @@ jobs:
           export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/opt/icu4c/lib/pkgconfig"
           ./builder.sh macosx
       - name: artifact dist
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: mac-10-15-dist
           path: "*.zip"
@@ -48,21 +48,22 @@ jobs:
           brew update --preinstall
           brew install pkg-config icu4c
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: update tags
         run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.9
       - name: run builder
         run: |
           export PATH="/usr/local/opt/icu4c/bin:/usr/local/opt/icu4c/sbin:${PATH}"
           export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/opt/icu4c/lib/pkgconfig"
-          ./builder.sh macosx      - name: artifact dist
-      - uses: actions/upload-artifact@v2
+          ./builder.sh macosx
+      - name: artifact dist
+        uses: actions/upload-artifact@v2
         with:
           name: mac-11-dist
           path: "*.zip"
@@ -72,13 +73,13 @@ jobs:
     runs-on: windows-2019
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: update tags
         run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.9
       - name: run builder
@@ -86,7 +87,7 @@ jobs:
         run: |
           ./builder.sh windows
       - name: artifact dist
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: windows-dist
           path: "NowPlaying*windows"

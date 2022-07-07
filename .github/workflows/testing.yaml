@@ -15,11 +15,11 @@ jobs:
     runs-on: macos-10.15
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.9
       - name: install dependencies
@@ -52,7 +52,7 @@ jobs:
             pytest
           fi
       - name: artifact mac test
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: mac-10-15-coverage
@@ -65,11 +65,11 @@ jobs:
     runs-on: macos-11
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.9
       - name: install dependencies
@@ -102,7 +102,7 @@ jobs:
             pytest
           fi
       - name: artifact mac test
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: mac-11-coverage
@@ -115,13 +115,13 @@ jobs:
     runs-on: windows-2019
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: update tags
         run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.9
       - name: install dependencies
@@ -154,7 +154,7 @@ jobs:
             pytest
           fi
       - name: artifact windows test
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: win-coverage
@@ -167,11 +167,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.9
       - name: install dependencies
@@ -213,7 +213,7 @@ jobs:
             pytest
           fi
       - name: artifact linux test
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: linux-coverage
@@ -232,11 +232,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.9
       - name: install dependencies
@@ -258,7 +258,7 @@ jobs:
           coverage combine artifacts/*/.coverage artifacts/*/.coverage.*
           coverage html
       - name: artifact full tests
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: full-coverage
