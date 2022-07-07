@@ -25,12 +25,19 @@ def trysocket():
     global HOSTFQDN, HOSTNAME, HOSTIP  #pylint: disable=global-statement
     try:
         HOSTNAME = socket.gethostname()
+    except Exception as error:  # pylint: disable = broad-except
+        logging.error('Getting hostname via socket failed: %s',
+                      error)
+    try:
         HOSTFQDN = socket.getfqdn()
+    except Exception as error:  # pylint: disable = broad-except
+        logging.error('Getting hostfqdn via socket failed: %s',
+                      error)
+    try:
         HOSTIP = socket.gethostbyname(HOSTFQDN)
     except Exception as error:  # pylint: disable = broad-except
-        logging.error('Getting host or IP information via socket failed: %s',
+        logging.error('Getting IP information via socket failed: %s',
                       error)
-
 
 def trynetifaces():
     ''' try using socket.*; this works most of the time '''
