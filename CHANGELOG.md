@@ -1,10 +1,13 @@
 
 # Changelog
 
-## Version 3.0.1 - in progress
+## Version 3.0.1 - 2022-07-12
 
+* Serato will no longer register tracks that
+  aren't marked as 'played' in the Serato session files.
 * Removed ACRCloud support.
-* Upgraded to Qt 6.
+* MPRIS2 albums are now properly handled as strings.
+* Upgraded to Qt 6, which appears to have fixed a few UI issues.
 * Fix link to quirks doc.
 * Slightly different name matching logic that should be
   more consistent for some tracks when trying to use
@@ -16,6 +19,7 @@
   and reliability issues.
 * Some documentation updates.
 * Python version updated to 3.9
+* Upgrades for some CI bits.
 
 ## Version 3.0.0 - 2021-11-27
 
