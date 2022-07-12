@@ -5,5 +5,5 @@
 
 from PyInstaller.utils.hooks import collect_submodules
 
-hiddenimports = collect_submodules('nowplaying.inputs') + collect_submodules(
+hiddenimports = collect_submodules('nowplaying.artistextras') + collect_submodules('nowplaying.inputs') + collect_submodules(
     'nowplaying.recognition')

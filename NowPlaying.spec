@@ -19,6 +19,7 @@ NUMERICDATE = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
 VERSION = nowplaying.version.get_versions()['version']
 WINVERSFILE = os.path.join('bincomponents', 'winvers.bin')
 
+ARTEXTRAS_MODULES = collect_submodules('nowplaying.artistextras')
 INPUT_MODULES = collect_submodules('nowplaying.inputs')
 RECOGNITION_MODULES = collect_submodules('nowplaying.recognition')
 
@@ -110,7 +111,7 @@ a = Analysis(['nppyi.py'],
              binaries=[],
              datas=[('nowplaying/resources/*', 'resources/'),
                     ('nowplaying/templates/*', 'templates/')],
-             hiddenimports=INPUT_MODULES + RECOGNITION_MODULES,
+             hiddenimports=ARTEXTRAS_MODULES + INPUT_MODULES + RECOGNITION_MODULES,
              hookspath=[('nowplaying/__pyinstaller')],
              runtime_hooks=[],
              excludes=[],
