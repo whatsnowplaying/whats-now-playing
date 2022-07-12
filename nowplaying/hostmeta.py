@@ -26,13 +26,11 @@ def trysocket():
     try:
         HOSTNAME = socket.gethostname()
     except Exception as error:  # pylint: disable = broad-except
-        logging.error('Getting hostname via socket failed: %s',
-                      error)
+        logging.error('Getting hostname via socket failed: %s', error)
     try:
         HOSTFQDN = socket.getfqdn()
     except Exception as error:  # pylint: disable = broad-except
-        logging.error('Getting hostfqdn via socket failed: %s',
-                      error)
+        logging.error('Getting hostfqdn via socket failed: %s', error)
 
     if HOSTFQDN:
         try:
@@ -40,6 +38,7 @@ def trysocket():
         except Exception as error:  # pylint: disable = broad-except
             logging.error('Getting IP information via socket failed: %s',
                           error)
+
 
 def trynetifaces():
     ''' try using socket.*; this works most of the time '''
