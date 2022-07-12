@@ -1,6 +1,10 @@
 
 # Changelog
 
+## Version 3.0.2 - 2022-07-12
+
+* Fix some PyInstaller binary packaging issues
+
 ## Version 3.0.1 - 2022-07-12
 
 * Serato will no longer register tracks that
