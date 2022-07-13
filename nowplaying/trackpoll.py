@@ -231,8 +231,8 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         QThread.msleep(int(delay * 1000))
 
     def _setup_caches(self):
-        if not self.config.cparser.value('acoustidmb/enabled', type=bool):
-            return
+        #if not self.config.cparser.value('acoustidmb/enabled', type=bool):
+        #    return
 
         self.caches = {
             'artistbannerraw': nowplaying.imagecache.ArtistBannerCache(),
@@ -240,7 +240,8 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
             'artistlogoraw': nowplaying.imagecache.ArtistLogoCache(),
             'artistthumbraw': nowplaying.imagecache.ArtistThumbCache(),
         }
-        for _, func in self.caches.items():
+        for cachename, func in self.caches.items():
+            logging.debug('calling start_pool for %s', cachename)
             func.start_pool()
 
     def _start_artistfanartpool(self):

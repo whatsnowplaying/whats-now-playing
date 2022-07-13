@@ -193,7 +193,8 @@ VALUES (?,?,?,0);
                     name,
                     cachekey,
                 ))
-            except sqlite3.OperationalError:
+            except sqlite3.OperationalError as error:
+                logging.debug('%s', error)
                 return
 
             connection.commit()
@@ -340,7 +341,9 @@ class ImageCacheQueueProcess:
         logging.debug('Launched queue %s process %s', self.imagetype,
                       os.getpid())
         while True:
+            print('in queue')
             (name, cachekey, url) = self.queue.get(block=True, timeout=None)
+            logging.debug('queue fetch: %s %s %s', name, cachekey, url)
             if not self.image_dl(f'{name}/{cachekey}', url):
                 self.database.erase_url(url)
                 logging.debug('Queue %s %s: failed', self.imagetype,
@@ -404,6 +407,9 @@ class ImageCache:  # pylint: disable=too-many-instance-attributes
             try:
                 image = self.cache[f'{artist}/' + data['cachekey']]
             except KeyError:
+                logging.debug('hit cachekey keyerror for %s: %s', artist, data['cachekey'])
+                if image:
+                    logging.debug('but did get an image?')
                 self.database.erase_key(artist, data['cachekey'])
             if image:
                 self.database.reset_strikes(artist, data['cachekey'])
