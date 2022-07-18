@@ -1,22 +1,18 @@
 #!/usr/bin/env python3
 ''' WebServer process '''
-
 import asyncio
 import base64
 import logging
 import logging.config
 import os
-import secrets
-import signal
-import string
 import sys
-import threading
 import time
 import weakref
 
-import requests
 import aiohttp
 from aiohttp import web, WSCloseCode
+#import aiohttp_debugtoolbar
+#from aiohttp_debugtoolbar import toolbar_middleware_factory
 import aiosqlite
 
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
@@ -48,37 +44,54 @@ TRANSPARENT_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC'\
                   'ASUVORK5CYII='
 TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
 
+MAGICSTOPURL = 'STOPSERVER'
 
-class WebHandler():
+
+class WebHandler():  # pylint: disable=too-many-instance-attributes
     ''' aiohttp built server that does both http and websocket '''
 
-    def __init__(self, databasefile, testmode=False):
-        threading.current_thread().name = 'WebServer'
+    def __init__(self, event, metadbfile=None, webdbfile=None, testmode=False):
         self.testmode = testmode
+        self.webdbfile = webdbfile
+        self.metadbfile = metadbfile
         config = nowplaying.config.ConfigFile(testmode=testmode)
         self.port = config.cparser.value('weboutput/httpport', type=int)
-        enabled = config.cparser.value('weboutput/httpenabled', type=bool)
-        self.databasefile = databasefile
+        self.runner = None
+        self.app = self.create_app()
+        self.tasks = set()
+        self.event = event
+        self.create_database()
 
-        while not enabled:
+        logging.info('Secret url to quit websever: %s', MAGICSTOPURL)
+
+        if not testmode:
+            task = asyncio.create_task(
+                self.start_server(host='0.0.0.0', port=self.port))
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.remove)
+            task = asyncio.create_task(self.stopevent())
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.remove)
+
+    def create_database(self):
+        ''' create the web db for tracking what has been sent '''
+        if not self.webdbfile:
+            self.webdbfile = os.path.join(
+                QStandardPaths.standardLocations(
+                    QStandardPaths.CacheLocation)[0], 'web.db')
+        logging.debug('Using %s as web databasefile', self.webdbfile)
+        if os.path.exists(self.webdbfile):
             try:
-                time.sleep(5)
-                config.get()
-                enabled = config.cparser.value('weboutput/httpenabled',
-                                               type=bool)
-            except KeyboardInterrupt:
-                sys.exit(0)
+                os.unlink(self.webdbfile)
+            except PermissionError as error:
+                logging.error('WebServer process already running?')
+                logging.error(error)
+                sys.exit(1)
 
-        self.magicstopurl = ''.join(
-            secrets.choice(string.ascii_letters) for _ in range(32))
-
-        logging.info('Secret url to quit websever: %s', self.magicstopurl)
-
-        signal.signal(signal.SIGINT, self.forced_stop)
-        self.loop = asyncio.get_event_loop()
-        self.loop.run_until_complete(
-            self.start_server(host='0.0.0.0', port=self.port))
-        self.loop.run_forever()
+    async def stopevent(self):
+        ''' task to wait for the stop event '''
+        await self.event.wait()
+        await self.forced_stop()
 
     async def indexhtm_handler(self, request):  # pylint: disable=unused-argument
         ''' handle static index.html '''
@@ -135,6 +148,7 @@ class WebHandler():
 
     async def indextxt_handler(self, request):  # pylint: disable=no-self-use
         ''' handle static index.txt '''
+        logging.debug('Called /index.txt')
         metadata = request.app['metadb'].read_last_meta()
         txtoutput = ""
         if metadata:
@@ -223,9 +237,12 @@ class WebHandler():
         except Exception as error:  #pylint: disable=broad-except
             logging.error('websocket streamer exception: %s', error)
         finally:
-            logging.debug('ended in finally')
+            logging.debug('ws-streamer: ended in finally')
             await websocket.close()
+            logging.debug('ws-streamer: discarding websocket')
             request.app['websockets'].discard(websocket)
+            logging.debug('ws-streamer: ending finally block')
+        logging.debug('ws-streamer: ending session')
         return websocket
 
     async def websocket_handler(self, request):
@@ -251,17 +268,20 @@ class WebHandler():
         except Exception as error:  #pylint: disable=broad-except
             logging.error('Websocket handler error: %s', error)
         finally:
+            logging.debug('ended in finally')
+            await websocket.close()
+            logging.debug('ws-handler closed; calling discard')
             request.app['websockets'].discard(websocket)
-
+            logging.debug('ws-handler exited finally')
+        logging.debug('ws-handler: ending session')
         return websocket
 
-    def create_runner(self):
+    def create_app(self):
         ''' setup http routing '''
-        threading.current_thread().name = 'WebServer-runner'
         app = web.Application()
+        #aiohttp_debugtoolbar.setup(app)
         app['websockets'] = weakref.WeakSet()
         app.on_startup.append(self.on_startup)
-        app.on_cleanup.append(self.on_cleanup)
         app.on_shutdown.append(self.on_shutdown)
         app.add_routes([
             web.get('/', self.indexhtm_handler),
@@ -273,30 +293,41 @@ class WebHandler():
             web.get('/index.txt', self.indextxt_handler),
             web.get('/ws', self.websocket_handler),
             web.get('/wsstream', self.websocket_streamer),
-            web.get(f'/{self.magicstopurl}', self.stop_server)
+            web.get(f'/{MAGICSTOPURL}', self.stop_server)
         ])
-        return web.AppRunner(app)
+        return app
 
     async def start_server(self, host="127.0.0.1", port=8899):
         ''' start our server '''
-        runner = self.create_runner()
-        await runner.setup()
-        site = web.TCPSite(runner, host, port)
+        if not self.app:
+            self.app = self.create_app()
+        self.runner = web.AppRunner(self.app)
+        await self.runner.setup()
+        site = web.TCPSite(self.runner, host, port)
         await site.start()
+        logging.debug('webserver here')
+        await self.event.wait()
+        await self.runner.cleanup()
 
     async def on_startup(self, app):
         ''' setup app connections '''
         app['config'] = nowplaying.config.ConfigFile(testmode=self.testmode)
         if self.testmode:
+            logging.debug('TESTMODE: templatedir=%s, metadb=%s webdb=%s',
+                          app['config'].templatedir, self.metadbfile,
+                          self.webdbfile)
             app['config'].templatedir = os.path.join(
-                os.path.dirname(self.databasefile), 'templates')
-            app['metadb'] = nowplaying.db.MetadataDB(databasefile=os.path.join(
-                os.path.dirname(self.databasefile), 'test.db'))
+                os.path.dirname(self.metadbfile), 'templates')
+            app['metadb'] = nowplaying.db.MetadataDB(
+                databasefile=self.metadbfile)
         else:
             app['metadb'] = nowplaying.db.MetadataDB()
+            logging.debug(' templatedir=%s, metadb=%s webdb=%s',
+                          app['config'].templatedir,
+                          app['metadb'].databasefile, self.webdbfile)
         app['watcher'] = app['metadb'].watcher()
         app['watcher'].start()
-        app['statedb'] = await aiosqlite.connect(self.databasefile)
+        app['statedb'] = await aiosqlite.connect(self.webdbfile)
         app['statedb'].row_factory = aiosqlite.Row
         cursor = await app['statedb'].cursor()
         await cursor.execute('CREATE TABLE IF NOT EXISTS lastprocessed ('
@@ -312,81 +343,17 @@ class WebHandler():
         for websocket in set(app['websockets']):
             await websocket.close(code=WSCloseCode.GOING_AWAY,
                                   message='Server shutdown')
-
-    async def on_cleanup(self, app):  # pylint: disable=no-self-use
-        ''' cleanup the app '''
         await app['statedb'].close()
         app['watcher'].stop()
+        logging.debug('finished on_shutdown')
 
-    async def stop_server(self, request):  # pylint: disable=unused-argument
+    async def stop_server(self, request):  # pylint: disable=unused-argument, no-self-use
         ''' stop our server '''
         await request.app.shutdown()
         await request.app.cleanup()
-        self.loop.stop()
+        logging.debug('finished stop_server')
 
-    def forced_stop(self, signum, frame):  # pylint: disable=unused-argument
-        ''' caught an int signal so tell the world to stop '''
-        try:
-            logging.debug('telling webserver to stop via http')
-            requests.get(f'http://localhost:{self.port}/{self.magicstopurl}',
-                         timeout=5)
-        except Exception as error:  # pylint: disable=broad-except
-            logging.info(error)
-
-
-def stop(pid):
-    ''' stop the web server -- called from Tray '''
-    logging.info('sending INT to %s', pid)
-    try:
-        os.kill(pid, signal.SIGINT)
-    except ProcessLookupError:
-        pass
-
-
-def start(bundledir, testdir=None):
-    ''' multiprocessing start hook '''
-    threading.current_thread().name = 'WebServer'
-
-    if not bundledir:
-        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-            bundledir = getattr(sys, '_MEIPASS',
-                                os.path.abspath(os.path.dirname(__file__)))
-        else:
-            bundledir = os.path.abspath(os.path.dirname(__file__))
-
-    if testdir:
-        nowplaying.bootstrap.set_qt_names(appname='testsuite')
-        databasefile = os.path.join(testdir, 'web.db')
-        testmode = True
-    else:
-        testmode = False
-        nowplaying.bootstrap.set_qt_names()
-        databasefile = os.path.join(
-            QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0],
-            'web.db')
-
-    logging.debug('Using %s as web databasefile', databasefile)
-    if os.path.exists(databasefile):
-        try:
-            os.unlink(databasefile)
-        except PermissionError as error:
-            logging.error('WebServer process already running?')
-            logging.error(error)
-            sys.exit(1)
-
-    config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                          testmode=testmode)
-    if testdir:
-        config.templatedir = os.path.join(testdir, 'templates')
-    logging.info('boot up')
-    try:
-        webserver = WebHandler(databasefile, testmode=testmode)  # pylint: disable=unused-variable
-    except Exception as error:  #pylint: disable=broad-except
-        logging.error('Webserver crashed: %s', error, exc_info=True)
-        sys.exit(1)
-    sys.exit(0)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    start(None)
+    async def forced_stop(self):
+        ''' trigger a stop '''
+        await self.runner.cleanup()
+        logging.debug('finished forced_stop')

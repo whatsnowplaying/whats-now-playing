@@ -135,56 +135,49 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         ''' announce new tracks '''
         global LASTANNOUNCED, LOCK  # pylint: disable=global-statement, global-variable-not-assigned
 
-        LOCK.acquire()
+        with LOCK:
 
-        self.config.get()
+            self.config.get()
 
-        anntemplate = self.config.cparser.value('twitchbot/announce')
-        if not anntemplate:
-            LOCK.release()
-            return
+            anntemplate = self.config.cparser.value('twitchbot/announce')
+            if not anntemplate:
+                return
 
-        if not pathlib.Path(anntemplate).exists():
-            logging.error('Annoucement template %s does not exist.',
-                          anntemplate)
-            LOCK.release()
-            return
+            if not pathlib.Path(anntemplate).exists():
+                logging.error('Annoucement template %s does not exist.',
+                              anntemplate)
+                return
 
-        metadata = self.metadb.read_last_meta()
+            metadata = self.metadb.read_last_meta()
 
-        if not metadata:
-            LOCK.release()
-            return
+            if not metadata:
+                return
 
-        # don't announce empty content
-        if not metadata['artist'] and not metadata['title']:
-            logging.warning(
-                'Both artist and title are empty; skipping announcement')
-            LOCK.release()
-            return
+            # don't announce empty content
+            if not metadata['artist'] and not metadata['title']:
+                logging.warning(
+                    'Both artist and title are empty; skipping announcement')
+                return
 
-        if metadata['artist'] == LASTANNOUNCED['artist'] and \
-           metadata['title'] == LASTANNOUNCED['title']:
-            logging.warning(
-                'Same artist and title or doubled event notification; skipping announcement.'
-            )
-            LOCK.release()
-            return
+            if metadata['artist'] == LASTANNOUNCED['artist'] and \
+               metadata['title'] == LASTANNOUNCED['title']:
+                logging.warning(
+                    'Same artist and title or doubled event notification; skipping announcement.'
+                )
+                return
 
-        LASTANNOUNCED['artist'] = metadata['artist']
-        LASTANNOUNCED['title'] = metadata['title']
+            LASTANNOUNCED['artist'] = metadata['artist']
+            LASTANNOUNCED['title'] = metadata['title']
 
-        self._delay_write()
+            self._delay_write()
 
-        logging.info('Announcing %s',
-                     self.config.cparser.value('twitchbot/announce'))
-        if not self.config.cparser.value('twitchbot/enabled', type=bool):
-            LOCK.release()
-            self.shutdown()
-        self._post_template(
-            os.path.basename(self.config.cparser.value('twitchbot/announce')))
-
-        LOCK.release()
+            logging.info('Announcing %s',
+                         self.config.cparser.value('twitchbot/announce'))
+            if not self.config.cparser.value('twitchbot/enabled', type=bool):
+                self.shutdown()
+            self._post_template(
+                os.path.basename(
+                    self.config.cparser.value('twitchbot/announce')))
 
     def on_welcome(self, connection, event):  # pylint: disable=unused-argument
         ''' join the IRC channel and set up our stuff '''
@@ -300,11 +293,10 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
         self._post_template(cmdfile, moremetadata=metadata)
 
-    def shutdown(self):  # pylint: disable=no-self-use
+    def shutdown(self):
         ''' shutdown '''
         if self.watcher:
             self.watcher.stop()
-        sys.exit(0)
 
 
 class TwitchBotHandler():
@@ -375,6 +367,7 @@ class TwitchBotHandler():
             finally:
                 if self.server:
                     self.server.shutdown()
+        self.stop()
 
     def isconfigured(self):
         ''' need everything configured! '''

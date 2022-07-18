@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 ''' thread to poll music player '''
 
+import asyncio
 import logging
 import pathlib
-import threading
 
-from PySide6.QtCore import Signal, QThread  # pylint: disable=no-name-in-module
+from PySide6.QtGui import QIcon  # pylint: disable=no-name-in-module
 
 import nowplaying.config
 import nowplaying.db
@@ -15,23 +15,19 @@ import nowplaying.utils
 COREMETA = ['artist', 'filename', 'title']
 
 
-class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
-    '''
-        QThread that runs the main polling work.
-        Uses a signal to tell the Tray when the
-        song has changed for notification
-    '''
+class TrackPoll():  # pylint: disable=too-many-instance-attributes
+    ''' handle track changes and update global metadb '''
 
-    currenttrack = Signal(dict)
-
+    # pylint: disable=too-many-arguments
     def __init__(self,
+                 event,
+                 tray=None,
                  config=None,
                  inputplugin=None,
-                 testmode=False,
-                 parent=None):
-        QThread.__init__(self, parent)
+                 testmode=False):
+        self.tray = tray
         self.endthread = False
-        self.setObjectName('TrackPoll')
+        self.loop = asyncio.get_running_loop()
         if testmode and config:
             self.config = config
         else:
@@ -44,26 +40,36 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         self.plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
         self.previoustxttemplate = None
         self.txttemplatehandler = None
+        self.tasks = set()
+        self.create_tasks(event)
+
+    def create_tasks(self, event):
+        ''' create the asyncio tasks '''
+        task = asyncio.create_task(self.run())
+        task.add_done_callback(self.tasks.remove)
+        self.tasks.add(task)
+        task = asyncio.create_task(self.stopevent(event))
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.remove)
 
     def _resetcurrent(self):
         ''' reset the currentmeta to blank '''
         for key in COREMETA:
             self.currentmeta[f'fetched{key}'] = None
 
-    def run(self):
+    async def run(self):
         ''' track polling process '''
 
-        threading.current_thread().name = 'TrackPoll'
         previousinput = None
 
         # sleep until we have something to write
         while not self.config.file and not self.endthread and not self.config.getpause(
         ):
-            QThread.msleep(1000)
+            await asyncio.sleep(5)
             self.config.get()
 
         while not self.endthread:
-            QThread.msleep(500)
+            await asyncio.sleep(.5)
             self.config.get()
 
             if not previousinput or previousinput != self.config.cparser.value(
@@ -75,14 +81,15 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                 logging.debug('Starting %s plugin', previousinput)
                 self.input.start()
             try:
-                self.gettrack()
+                await self.gettrack()
             except Exception as error:  #pylint: disable=broad-except
                 logging.debug('Failed attempting to get a track: %s',
                               error,
                               exc_info=True)
 
-    def __del__(self):
-        logging.debug('TrackPoll is being killed!')
+    async def stopevent(self, event):
+        ''' when told of the stop event, shut things down '''
+        await event.wait()
         if self.input:
             self.input.stop()
         self.endthread = True
@@ -127,7 +134,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                 return False
         return True
 
-    def _fillinmetadata(self, metadata):  # pylint: disable=no-self-use
+    async def _fillinmetadata(self, metadata):  # pylint: disable=no-self-use
         ''' keep a copy of our fetched data '''
 
         # Fill in as much metadata as possible. everything
@@ -162,14 +169,14 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                 metadata[key] = ''
         return metadata
 
-    def gettrack(self):  # pylint: disable=too-many-branches
+    async def gettrack(self):  # pylint: disable=too-many-branches
         ''' get currently playing track, returns None if not new or not found '''
 
         # check paused state
         while True:
             if not self.config.getpause() or self.endthread:
                 break
-            QThread.msleep(500)
+            await asyncio.sleep(.5)
 
         if self.endthread:
             return
@@ -184,11 +191,11 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
 
         # fill in the blanks and make it live
         oldmeta = self.currentmeta
-        self.currentmeta = self._fillinmetadata(nextmeta)
+        self.currentmeta = await self._fillinmetadata(nextmeta)
         logging.info('Potential new track: %s / %s',
                      self.currentmeta['artist'], self.currentmeta['title'])
 
-        self._delay_write()
+        await self._delay_write()
 
         # checkagain
         nextcheck = self.input.getplayingtrack()
@@ -201,10 +208,10 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         if not self.testmode:
             metadb = nowplaying.db.MetadataDB()
             metadb.write_to_metadb(metadata=self.currentmeta)
-        self._write_to_text()
-        self.currenttrack.emit(self.currentmeta)
+        await self._write_to_text()
+        await self.tracknotify(self.currentmeta)
 
-    def _write_to_text(self):
+    async def _write_to_text(self):
         if not self.previoustxttemplate or self.previoustxttemplate != self.config.txttemplate:
             self.txttemplatehandler = nowplaying.utils.TemplateHandler(
                 filename=self.config.txttemplate)
@@ -213,7 +220,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                                        templatehandler=self.txttemplatehandler,
                                        metadata=self.currentmeta)
 
-    def _delay_write(self):
+    async def _delay_write(self):
         try:
             delay = self.config.cparser.value('settings/delay',
                                               type=float,
@@ -221,4 +228,25 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         except ValueError:
             delay = 1.0
         logging.debug('got delay of %s', delay)
-        QThread.msleep(int(delay * 1000))
+        await asyncio.sleep(delay)
+
+    async def tracknotify(self, metadata):
+        ''' signal handler to update the tooltip '''
+
+        self.config.get()
+        if self.config.notif:
+            icon = QIcon(self.config.iconfile)
+            if 'artist' in metadata:
+                artist = metadata['artist']
+            else:
+                artist = ''
+
+            if 'title' in metadata:
+                title = metadata['title']
+            else:
+                title = ''
+
+            tip = f'{artist} - {title}'
+            self.tray.setIcon(icon)
+            self.tray.showMessage('Now Playing ▶ ', tip, icon)
+            self.tray.setIcon(icon)

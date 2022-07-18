@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' system tray '''
 
+import asyncio
 import logging
 import multiprocessing
 
@@ -88,6 +89,10 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.error_dialog = QErrorMessage()
         self.regular_dialog = QMessageBox()
         self._check_for_upgrade_alert()
+        self.stopevents = {}
+        self.stopevents['web'] = asyncio.Event()
+        self.stopevents['trackpoll'] = asyncio.Event()
+
         self.trackthread = None
         self.webprocess = None
         self.obswsobj = None
@@ -108,10 +113,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         if self.config.cparser.value('obsws/enabled', type=bool):
             self._start_obsws()
 
-        # Start the polling thread
-        self.trackthread = nowplaying.trackpoll.TrackPoll()
-        self.trackthread.currenttrack[dict].connect(self.tracknotify)
-        self.trackthread.start()
+        self.trackthread = nowplaying.trackpoll.TrackPoll(
+            self.stopevents['trackpoll'], tray=self.tray)
 
         if self.config.cparser.value('weboutput/httpenabled', type=bool):
             self._start_webprocess()
@@ -134,24 +137,15 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         ''' stop the web process '''
         if self.webprocess:
             logging.debug('Notifying webserver')
-            nowplaying.webserver.stop(self.webprocess.pid)
-            logging.debug('Waiting for webserver')
-            if not self.webprocess.join(5):
-                logging.info('Terminating webprocess forcefully')
-                self.webprocess.terminate()
-            self.webprocess.join(5)
-            self.webprocess.close()
-            self.webprocess = None
+            self.stopevents['web'].set()
 
     def _start_webprocess(self):
         ''' Start the webserver '''
         if not self.webprocess and self.config.cparser.value(
                 'weboutput/httpenabled', type=bool):
             logging.info('Starting web process')
-            bundledir = self.config.getbundledir()
-            self.webprocess = multiprocessing.Process(
-                target=nowplaying.webserver.start, args=(bundledir, ))
-            self.webprocess.start()
+            self.webprocess = nowplaying.webserver.WebHandler(
+                self.stopevents['web'])
 
     def _stop_twitchbotprocess(self):
         ''' stop the twitchbot process '''
@@ -185,25 +179,6 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         ''' handle starting or restarting the webserver process '''
         self._stop_twitchbotprocess()
         self._start_twitchbotprocess()
-
-    def tracknotify(self, metadata):
-        ''' signal handler to update the tooltip '''
-
-        self.config.get()
-        if self.config.notif:
-            if 'artist' in metadata:
-                artist = metadata['artist']
-            else:
-                artist = ''
-
-            if 'title' in metadata:
-                title = metadata['title']
-            else:
-                title = ''
-
-            tip = f'{artist} - {title}'
-            self.tray.setIcon(self.icon)
-            self.tray.showMessage('Now Playing ▶ ', tip)
 
     def webenable(self, status):
         ''' If the web server gets in trouble, we need to tell the user '''
@@ -269,7 +244,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         if self.trackthread:
             logging.debug('Notifying trackthread')
-            self.trackthread.exit()
+            self.stopevents['trackpoll'].set()
 
         if self.config:
             self.config.get()
@@ -277,16 +252,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
                 logging.debug('Writing empty file')
                 nowplaying.utils.writetxttrack(filename=self.config.file,
                                                clear=True)
-
-        logging.debug('Shutting down webprocess')
-        self._stop_webprocess()
         self._stop_twitchbotprocess()
-
-        # calling exit should call __del__ on all of our QThreads
-        if self.trackthread:
-            logging.debug('Waiting for trackthread')
-            self.trackthread.endthread = True
-            self.trackthread.wait()
-
+        self._stop_webprocess()
         app = QApplication.instance()
         app.exit(0)

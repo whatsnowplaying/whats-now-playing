@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 ''' NowPlaying as run via python -m '''
 #import faulthandler
+import asyncio
+import functools
 import logging
 import multiprocessing
 import os
@@ -11,6 +13,8 @@ import sys
 from PySide6.QtCore import QCoreApplication, QStandardPaths, Qt  # pylint: disable=no-name-in-module
 from PySide6.QtGui import QIcon  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QApplication  # pylint: disable=no-name-in-module
+
+import qasync
 
 import nowplaying
 import nowplaying.bootstrap
@@ -46,6 +50,35 @@ def run_bootstrap(bundledir=None):
     metadb.setupsql()
 
 
+async def asyncmain(bundledir):
+    ''' entrypoint post asyncio run '''
+
+    def close_future(future, loop):
+        loop.call_later(10, future.cancel)
+        future.cancel()
+
+    loop = asyncio.get_event_loop()
+    qapp = QApplication.instance()
+    qapp.setQuitOnLastWindowClosed(False)
+    nowplaying.bootstrap.set_qt_names()
+    run_bootstrap(bundledir=bundledir)
+    future = asyncio.Future()
+    config = nowplaying.config.ConfigFile(bundledir=bundledir)
+    logging.getLogger().setLevel(config.loglevel)
+    logging.captureWarnings(True)
+    tray = nowplaying.systemtray.Tray()  # pylint: disable=unused-variable
+    icon = QIcon(config.iconfile)
+    qapp.setWindowIcon(icon)
+
+    if hasattr(qapp, "aboutToQuit"):
+        getattr(qapp, "aboutToQuit").connect(
+            functools.partial(close_future, future, loop))
+
+    logging.info('shutting down v%s',
+                 nowplaying.version.get_versions()['version'])
+    await future
+
+
 def main():
     ''' main entrypoint '''
 
@@ -60,21 +93,11 @@ def main():
         bundledir = os.path.abspath(os.path.dirname(__file__))
 
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
-    qapp = QApplication(sys.argv)
-    qapp.setQuitOnLastWindowClosed(False)
-    nowplaying.bootstrap.set_qt_names()
-    run_bootstrap(bundledir=bundledir)
 
-    config = nowplaying.config.ConfigFile(bundledir=bundledir)
-    logging.getLogger().setLevel(config.loglevel)
-    logging.captureWarnings(True)
-    tray = nowplaying.systemtray.Tray()  # pylint: disable=unused-variable
-    icon = QIcon(config.iconfile)
-    qapp.setWindowIcon(icon)
-    exitval = qapp.exec_()
-    logging.info('shutting down v%s',
-                 nowplaying.version.get_versions()['version'])
-    sys.exit(exitval)
+    try:
+        qasync.run(asyncmain(bundledir))
+    except asyncio.exceptions.CancelledError:
+        sys.exit(0)
 
 
 if __name__ == '__main__':
