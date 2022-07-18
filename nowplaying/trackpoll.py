@@ -169,13 +169,11 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 metadata[key] = ''
         return metadata
 
-    async def gettrack(self):  # pylint: disable=too-many-branches
+    async def gettrack(self):    # pylint: disable=too-many-branches
         ''' get currently playing track, returns None if not new or not found '''
 
         # check paused state
-        while True:
-            if not self.config.getpause() or self.endthread:
-                break
+        while not (not self.config.getpause() or self.endthread):
             await asyncio.sleep(.5)
 
         if self.endthread:
