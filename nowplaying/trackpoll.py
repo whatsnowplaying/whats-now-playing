@@ -173,9 +173,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         ''' get currently playing track, returns None if not new or not found '''
 
         # check paused state
-        while True:
-            if not self.config.getpause() or self.endthread:
-                break
+        while self.config.getpause() and not self.endthread:
             await asyncio.sleep(.5)
 
         if self.endthread:

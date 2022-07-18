@@ -13,6 +13,7 @@ import nowplaying.webserver  # pylint: disable=import-error
 if sys.platform.startswith('win'):
     pytest.skip('These do not work on Windows', allow_module_level=True)
 
+
 @pytest.fixture
 async def getwebserver(bootstrap, aiohttp_client):
     ''' configure the webserver, dependents with prereqs '''
@@ -39,6 +40,7 @@ async def getwebserver(bootstrap, aiohttp_client):
         await asyncio.sleep(5)
         event.set()
         await asyncio.sleep(10)
+
 
 @pytest.mark.asyncio
 async def test_startstopwebserver(getwebserver):  # pylint: disable=redefined-outer-name
