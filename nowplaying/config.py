@@ -3,7 +3,6 @@
    config file parsing/handling
 '''
 
-import multiprocessing
 import logging
 import os
 import sys
@@ -23,12 +22,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     ## let's use boring old Python threading
 
     BUNDLEDIR = None
-    LOCK = multiprocessing.RLock()
     PAUSED = False
 
     def __init__(self, bundledir=None, reset=False, testmode=False):
-
-        ConfigFile.LOCK.acquire()
 
         self.testmode = testmode
         self.initialized = False
@@ -76,8 +72,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.iconfile = self.find_icon_file()
         self.uidir = self.find_ui_file()
 
-        ConfigFile.LOCK.release()
-
     def reset(self):
         ''' forcibly go back to defaults '''
         logging.debug('config reset')
@@ -86,7 +80,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     def get(self):
         ''' refresh values '''
 
-        ConfigFile.LOCK.acquire()
         self.cparser.sync()
         try:
             self.loglevel = self.cparser.value('settings/loglevel')
@@ -106,8 +99,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
                                                   type=bool)
         except TypeError:
             pass
-
-        ConfigFile.LOCK.release()
 
     def defaults(self):
         ''' default values for things '''
@@ -214,8 +205,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     def put(self, initialized, file, txttemplate, notif, loglevel):
         ''' Save the configuration file '''
 
-        ConfigFile.LOCK.acquire()
-
         self.file = file
         self.initialized = initialized
         self.loglevel = loglevel
@@ -224,12 +213,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         self.save()
 
-        ConfigFile.LOCK.release()
-
     def save(self):
         ''' save the current set '''
-
-        ConfigFile.LOCK.acquire()
 
         self.cparser.setValue('settings/initialized', self.initialized)
         self.cparser.setValue('settings/loglevel', self.loglevel)
@@ -237,8 +222,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         self.cparser.setValue('textoutput/file', self.file)
         self.cparser.setValue('textoutput/txttemplate', self.txttemplate)
         self.cparser.sync()
-
-        ConfigFile.LOCK.release()
 
     def find_icon_file(self):  # pylint: disable=no-self-use
         ''' try to find our icon '''
@@ -299,7 +282,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         ''' unpause system '''
         plugin = self.cparser.value('settings/input')
         inputplugin = self.plugins['inputs'][
-            f'nowplaying.inputs.{plugin}'].Plugin()
+            f'nowplaying.inputs.{plugin}'].Plugin(config=self)
         return inputplugin.getmixmode()
 
     def setmixmode(self, mixmode):  # pylint: disable=no-self-use
@@ -307,14 +290,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         plugin = self.cparser.value('settings/input')
         inputplugin = self.plugins['inputs'][
-            f'nowplaying.inputs.{plugin}'].Plugin()
+            f'nowplaying.inputs.{plugin}'].Plugin(config=self)
         return inputplugin.setmixmode(mixmode)
 
     def getmixmode(self):  # pylint: disable=no-self-use
         ''' unpause system '''
         plugin = self.cparser.value('settings/input')
         inputplugin = self.plugins['inputs'][
-            f'nowplaying.inputs.{plugin}'].Plugin()
+            f'nowplaying.inputs.{plugin}'].Plugin(config=self)
         return inputplugin.getmixmode()
 
     def getbundledir(self):  # pylint: disable=no-self-use

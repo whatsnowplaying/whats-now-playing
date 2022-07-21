@@ -6,7 +6,6 @@ import logging
 import os
 import pathlib
 import sys
-import multiprocessing
 import sqlite3
 import time
 
@@ -104,8 +103,6 @@ class MetadataDB:
         'track_total',
     ]
 
-    LOCK = multiprocessing.RLock()
-
     def __init__(self, databasefile=None, initialize=False):
 
         if databasefile:
@@ -142,38 +139,31 @@ class MetadataDB:
         if not os.path.exists(self.databasefile):
             self.setupsql()
 
-        logging.debug('Waiting for lock')
-        MetadataDB.LOCK.acquire()
+        with sqlite3.connect(self.databasefile) as connection:
+            # do not want to modify the original dictionary
+            # otherwise Bad Things(tm) will happen
+            mdcopy = copy.deepcopy(metadata)
 
-        # do not want to modify the original dictionary
-        # otherwise Bad Things(tm) will happen
-        mdcopy = copy.deepcopy(metadata)
+            # toss any keys we do not care about
+            mdcopy = filterkeys(mdcopy)
 
-        # toss any keys we do not care about
-        mdcopy = filterkeys(mdcopy)
+            connection =         cursor = connection.cursor()
 
-        connection = sqlite3.connect(self.databasefile)
-        cursor = connection.cursor()
+            logging.debug('Adding record with %s/%s', mdcopy['artist'],
+                          mdcopy['title'])
 
-        logging.debug('Adding record with %s/%s', mdcopy['artist'],
-                      mdcopy['title'])
+            if 'coverimageraw' not in mdcopy:
+                mdcopy['coverimageraw'] = None
 
-        if 'coverimageraw' not in mdcopy:
-            mdcopy['coverimageraw'] = None
+            for data in mdcopy:
+                if isinstance(mdcopy[data], str) and len(mdcopy[data]) == 0:
+                    mdcopy[data] = None
 
-        for data in mdcopy:
-            if isinstance(mdcopy[data], str) and len(mdcopy[data]) == 0:
-                mdcopy[data] = None
+            sql = 'INSERT INTO currentmeta ('
+            sql += ', '.join(mdcopy.keys()) + ') VALUES ('
+            sql += '?,' * (len(mdcopy.keys()) - 1) + '?)'
 
-        sql = 'INSERT INTO currentmeta ('
-        sql += ', '.join(mdcopy.keys()) + ') VALUES ('
-        sql += '?,' * (len(mdcopy.keys()) - 1) + '?)'
-
-        cursor.execute(sql, tuple(list(mdcopy.values())))
-        connection.commit()
-        connection.close()
-        logging.debug('releasing lock')
-        MetadataDB.LOCK.release()
+            cursor.execute(sql, tuple(list(mdcopy.values())))
 
     def read_last_meta(self):
         ''' update metadb '''
@@ -182,31 +172,25 @@ class MetadataDB:
             logging.error('MetadataDB does not exist yet?')
             return None
 
-        MetadataDB.LOCK.acquire()
-        connection = sqlite3.connect(self.databasefile)
-        connection.row_factory = sqlite3.Row
-        cursor = connection.cursor()
-        try:
-            cursor.execute(
-                '''SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1''')
-        except sqlite3.OperationalError:
-            MetadataDB.LOCK.release()
-            return None
+        with sqlite3.connect(self.databasefile) as connection:
+            connection.row_factory = sqlite3.Row
+            cursor = connection.cursor()
+            try:
+                cursor.execute(
+                    '''SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1''')
+            except sqlite3.OperationalError:
+                return None
 
-        row = cursor.fetchone()
-        if not row:
-            MetadataDB.LOCK.release()
-            return None
+            row = cursor.fetchone()
+            if not row:
+                return None
 
-        metadata = {data: row[data] for data in MetadataDB.METADATALIST}
-        metadata['coverimageraw'] = row['coverimageraw']
-        if not metadata['coverimageraw']:
-            del metadata['coverimageraw']
+            metadata = {data: row[data] for data in MetadataDB.METADATALIST}
+            metadata['coverimageraw'] = row['coverimageraw']
+            if not metadata['coverimageraw']:
+                del metadata['coverimageraw']
 
-        metadata['dbid'] = row['id']
-        connection.commit()
-        connection.close()
-        MetadataDB.LOCK.release()
+            metadata['dbid'] = row['id']
         return metadata
 
     def setupsql(self):
@@ -216,7 +200,6 @@ class MetadataDB:
             logging.error('No dbfile')
             sys.exit(1)
 
-        MetadataDB.LOCK.acquire()
 
         pathlib.Path(os.path.dirname(self.databasefile)).mkdir(parents=True,
                                                                exist_ok=True)
@@ -224,17 +207,15 @@ class MetadataDB:
             logging.info('Clearing cache file %s', self.databasefile)
             os.unlink(self.databasefile)
 
-        logging.info('Create cache db file %s', self.databasefile)
-        connection = sqlite3.connect(self.databasefile)
-        cursor = connection.cursor()
+        with sqlite3.connect(self.databasefile) as connection:
+            logging.info('Create cache db file %s', self.databasefile)
+            cursor = connection.cursor()
 
-        sql = 'CREATE TABLE currentmeta (id INTEGER PRIMARY KEY AUTOINCREMENT, '
-        sql += ' TEXT, '.join(MetadataDB.METADATALIST)
-        sql += ' TEXT,  coverimageraw BLOB'
-        sql += ')'
+            sql = 'CREATE TABLE currentmeta (id INTEGER PRIMARY KEY AUTOINCREMENT, '
+            sql += ' TEXT, '.join(MetadataDB.METADATALIST)
+            sql += ' TEXT,  coverimageraw BLOB'
+            sql += ')'
 
-        cursor.execute(sql)
-        connection.commit()
-        connection.close()
-        logging.debug('Cache db file created')
-        MetadataDB.LOCK.release()
+            cursor.execute(sql)
+
+            logging.debug('Cache db file created')

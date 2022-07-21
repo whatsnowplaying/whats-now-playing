@@ -20,7 +20,6 @@ limitations under the License.
 import logging
 import logging.config
 import logging.handlers
-import multiprocessing
 import os
 import pathlib
 import secrets
@@ -63,7 +62,6 @@ import nowplaying.db
 # token comes from http://twitchapps.com/tmi/
 #
 
-LOCK = multiprocessing.RLock()
 LASTANNOUNCED = {'artist': None, 'title': None}
 
 
@@ -133,34 +131,28 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
     def _announce_track(self, event):  # pylint: disable=unused-argument
         ''' announce new tracks '''
-        global LASTANNOUNCED, LOCK  # pylint: disable=global-statement, global-variable-not-assigned
-
-        LOCK.acquire()
+        global LASTANNOUNCED  # pylint: disable=global-statement, global-variable-not-assigned
 
         self.config.get()
 
         anntemplate = self.config.cparser.value('twitchbot/announce')
         if not anntemplate:
-            LOCK.release()
             return
 
         if not pathlib.Path(anntemplate).exists():
             logging.error('Annoucement template %s does not exist.',
                           anntemplate)
-            LOCK.release()
             return
 
         metadata = self.metadb.read_last_meta()
 
         if not metadata:
-            LOCK.release()
             return
 
         # don't announce empty content
         if not metadata['artist'] and not metadata['title']:
             logging.warning(
                 'Both artist and title are empty; skipping announcement')
-            LOCK.release()
             return
 
         if metadata['artist'] == LASTANNOUNCED['artist'] and \
@@ -168,7 +160,6 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             logging.warning(
                 'Same artist and title or doubled event notification; skipping announcement.'
             )
-            LOCK.release()
             return
 
         LASTANNOUNCED['artist'] = metadata['artist']
@@ -179,12 +170,9 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         logging.info('Announcing %s',
                      self.config.cparser.value('twitchbot/announce'))
         if not self.config.cparser.value('twitchbot/enabled', type=bool):
-            LOCK.release()
             self.shutdown()
         self._post_template(
             os.path.basename(self.config.cparser.value('twitchbot/announce')))
-
-        LOCK.release()
 
     def on_welcome(self, connection, event):  # pylint: disable=unused-argument
         ''' join the IRC channel and set up our stuff '''
