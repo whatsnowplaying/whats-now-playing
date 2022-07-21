@@ -211,8 +211,11 @@ class MetadataDB:
             logging.info('Create cache db file %s', self.databasefile)
             cursor = connection.cursor()
 
-            sql = 'CREATE TABLE currentmeta (id INTEGER PRIMARY KEY AUTOINCREMENT, '
-            sql += ' TEXT, '.join(MetadataDB.METADATALIST)
+            sql = (
+                'CREATE TABLE currentmeta (id INTEGER PRIMARY KEY AUTOINCREMENT, '
+                + ' TEXT, '.join(MetadataDB.METADATALIST)
+            )
+
             sql += ' TEXT,  coverimageraw BLOB'
             sql += ')'
 
