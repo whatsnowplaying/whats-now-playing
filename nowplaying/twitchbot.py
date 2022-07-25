@@ -292,7 +292,6 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         ''' shutdown '''
         if self.watcher:
             self.watcher.stop()
-        sys.exit(0)
 
 
 class TwitchBotHandler():
