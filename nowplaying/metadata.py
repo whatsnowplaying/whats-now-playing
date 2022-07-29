@@ -94,6 +94,25 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             elif usertext.description == 'originalyear':
                 self.metadata['date'] = usertext.text[0]
 
+    def _process_audio_metadata_specials(self, tags):
+
+        convdict = {
+            'acoustid id': 'acoustidid',
+            'date': 'date',
+            'musicbrainz album id': 'musicbrainzalbumid',
+            'musicbrainz artist id': 'musicbrainzartistid',
+            'musicbrainz release track id': 'musicbrainzrecordingid',
+            'publisher': 'label',
+            'tsrc': 'isrc',
+        }
+
+        for src, dest in convdict.items():
+            if dest not in self.metadata and src in tags:
+                if isinstance(tags[src], list):
+                    self.metadata[dest] = '/'.join(str(x) for x in tags[src])
+                else:
+                    self.metadata[dest] = tags[src]
+
     def _process_audio_metadata(self):  # pylint: disable=too-many-branches
         try:
             base = nowplaying.vendor.audio_metadata.load(
@@ -104,9 +123,18 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         for key in [
-                'album', 'albumartist', 'artist', 'bpm', 'comments',
-                'composer', 'discsubtitle', 'genre', 'isrc', 'key', 'label',
-                'title'
+                'album',
+                'albumartist',
+                'artist',
+                'bpm',
+                'comments',
+                'composer',
+                'discsubtitle',
+                'genre',
+                'isrc',
+                'key',
+                'label',
+                'title',
         ]:
             if key not in self.metadata and key in base.tags:
                 if isinstance(base.tags[key], list):
@@ -115,8 +143,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 else:
                     self.metadata[key] = base.tags[key]
 
-        if 'date' in base.tags and 'date' not in self.metadata:
-            self.metadata['date'] = base.tags['date'][0]
+        self._process_audio_metadata_specials(base.tags)
 
         if 'discnumber' in base.tags and 'disc' not in self.metadata:
             text = base.tags['discnumber'][0].replace('[', '').replace(']', '')
