@@ -1,1 +1,0 @@
-Hello @{{ cmduser }}! Here are the commands I know: !track, !trackdetail, and !hug .

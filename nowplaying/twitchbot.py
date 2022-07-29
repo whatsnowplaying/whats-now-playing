@@ -49,6 +49,7 @@ logging.config.dictConfig({
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
+import nowplaying.version
 
 # 1. create a bot account, be sure to enable multiple logins per email
 # 2. enable 2FA
@@ -223,6 +224,16 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
                 result['badgesdict'][badgetype.lower()] = number
         return result
 
+    def _send_text(self, message):
+        message = message.replace('\n', '')
+        message = message.replace('\r', '')
+        message = str(message).strip()
+        for text in textwrap.TextWrapper(width=self.maxsize).wrap(message):
+            try:
+                self.connection.privmsg(self.channel, text)
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error(error)
+
     def _post_template(self, template=None, moremetadata=None):
         if not template:
             return
@@ -239,15 +250,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         if os.path.isfile(os.path.join(self.templatedir, template)):
             template = self.jinja2.get_template(template)
             message = template.render(metadata)
-            message = message.replace('\n', '')
-            message = message.replace('\r', '')
-            message = str(message).strip()
-
-            for text in textwrap.TextWrapper(width=self.maxsize).wrap(message):
-                try:
-                    self.connection.privmsg(self.channel, text)
-                except Exception as error:  # pylint: disable=broad-except
-                    logging.error(error)
+            self._send_text(message)
 
     def do_command(self, event, command):  # pylint: disable=unused-argument
         ''' process a command '''
@@ -256,6 +259,14 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         metadata = {'cmduser': profile['display-name']}
         commands = fullstring.split()
         commands[0] = commands[0][1:]
+
+        if commands[0] == 'whatsnowplayingversion':
+            inputsource = self.config.cparser.value('settings/input')
+            version = nowplaying.version.get_versions()['version']
+            self._send_text(f'whatsnowplaying v{version} by @modernmeerkat. ' +
+                            f'Using {inputsource} on {sys.platform}.')
+            return
+
         metadata['cmdtarget'] = []
         if len(commands) > 1:
             for usercheck in commands[1:]:

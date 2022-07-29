@@ -2,8 +2,8 @@
 "{{ title }}"
 {% if artist %} by {{ artist }}.{% endif %}
 {% if track %} It is track #{{ track }}
-{% if track_total %} out of {{ track_total }} {% endif %}{% endif %}
-{% if album %} on the album _{{ album }}_ {% endif %}
+{% if track_total %} out of {{ track_total }} {% endif %}.{% endif %}
+{% if album %} This song was on the album _{{ album }}_ {% endif %}
 {% if disc %} on disc #{{ disc }}
 {% if disc_total %} out of {{ disc_total }}{% endif %}. {% endif %}
 {% if albumartist %} The album artist is listed as {{ albumartist }}. {% endif %}

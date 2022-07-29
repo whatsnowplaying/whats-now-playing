@@ -1,2 +1,0 @@
-{% if cmdtarget[1] %}Hey @{{ cmdtarget[1] }}! {% endif %}
- Shout out to @{{ cmdtarget[0] }}! Go checkout their channel at https://twitch.tv/{{ cmdtarget[0] }}!

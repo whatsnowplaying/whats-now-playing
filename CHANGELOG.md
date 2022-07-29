@@ -1,6 +1,18 @@
 
 # Changelog
 
+## Version 3.1.0 - In-progress
+
+* Changed the default set of twitchbot commands:
+
+  * so and help have been removed. Removing those from your
+    local install will not re-install on relaunch.
+  * whatsnowplayingversion has been added.  This command is
+    a built into the source code to help with debugging
+    installs.
+
+* Fixed some leaks that would prevent multiple launches
+
 ## Version 3.0.2 - 2022-07-12
 
 * Fix some PyInstaller binary packaging issues

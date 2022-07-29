@@ -78,6 +78,12 @@ By default, all commands are available to everyone on your channel's chat.
 If you wish to limit a command, add the command to the Twitchbot settings,
 and check the types of users who should execute those commands.
 
+Built-in Commands
+-----------------
+
+Post-v3.0.2, the Twitchbot will always respond to the command 'whatsnowplayingversion' . It will report
+the version that is running.
+
 Adding New Commands
 -------------------
 
