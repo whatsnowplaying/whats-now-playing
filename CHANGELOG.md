@@ -5,7 +5,7 @@
 
 * Changed the default set of twitchbot commands:
 
-  * so and help have been removed. Removing those from your
+  * help, hug, and so have been removed. Removing those from your
     local install will not re-install on relaunch.
   * whatsnowplayingversion has been added.  This command is
     a built into the source code to help with debugging
