@@ -144,11 +144,17 @@ def image2png(rawdata):
 
     if not rawdata:
         return None
-
-    origimage = rawdata
-    imgbuffer = io.BytesIO(origimage)
-    image = PIL.Image.open(imgbuffer)
-    image.save(imgbuffer, format='png')
+    try:
+        origimage = rawdata
+        imgbuffer = io.BytesIO(origimage)
+        logging.getLogger('PIL.TiffImagePlugin').setLevel(logging.CRITICAL + 1)
+        logging.getLogger('PIL.PngImagePlugin').setLevel(logging.CRITICAL + 1)
+        image = PIL.Image.open(imgbuffer)
+        if image.format != 'PNG':
+            image.convert('RGB').save(imgbuffer, format='png', optimize=True)
+    except Exception as error:  #pylint: disable=broad-except
+        logging.debug(error)
+        return None
     return imgbuffer.getvalue()
 
 
@@ -191,4 +197,4 @@ def normalize(crazystring):
         return None
     if len(crazystring) < 4:
         return 'TEXT IS TOO SMALL IGNORE'
-    return normality.normalize(crazystring)
+    return normality.normalize(crazystring).replace(' ', '')
