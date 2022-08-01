@@ -110,7 +110,7 @@ class Plugin(ArtistExtrasPlugin):
 
         return metadata
 
-    def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches
+    def download(self, metadata=None, imagecache=None):    # pylint: disable=too-many-branches
         ''' do data lookup '''
 
         if not self.config.cparser.value('theaudiodb/enabled', type=bool):
@@ -132,17 +132,23 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug('got mbid')
             for mbid in metadata['musicbrainzartistid'].split('/'):
                 if newdata := self.artistdatafrommbid(apikey, mbid):
-                    for artist in newdata['artists']:
-                        if self._check_artist(artist):
-                            extradata.append(artist)
+                    extradata.extend(
+                        artist
+                        for artist in newdata['artists']
+                        if self._check_artist(artist)
+                    )
+
         elif metadata.get('artist'):
             logging.debug('got artist')
-            artistdata = self.artistdatafromname(apikey, metadata['artist'])
-            if not artistdata:
+            if artistdata := self.artistdatafromname(apikey, metadata['artist']):
+                extradata.extend(
+                    artist
+                    for artist in artistdata.get('artists')
+                    if self._check_artist(artist)
+                )
+
+            else:
                 return None
-            for artist in artistdata.get('artists'):
-                if self._check_artist(artist):
-                    extradata.append(artist)
         if not extradata:
             return None
 

@@ -165,18 +165,18 @@ class ImageCache:
                               error_name)
                 return None
 
-            row = cursor.fetchone()
-            if not row:
+            if row := cursor.fetchone():
+                data = {
+                    'artist': row['artist'],
+                    'cachekey': row['cachekey'],
+                    'imagetype': row['imagetype'],
+                    'url': row['url'],
+                    'strikes': row['strikes'],
+                    'timestamp': row['timestamp']
+                }
+            else:
                 return None
 
-            data = {
-                'artist': row['artist'],
-                'cachekey': row['cachekey'],
-                'imagetype': row['imagetype'],
-                'url': row['url'],
-                'strikes': row['strikes'],
-                'timestamp': row['timestamp']
-            }
         return data
 
     def find_cachekey(self, cachekey):
@@ -196,18 +196,18 @@ class ImageCache:
             except sqlite3.OperationalError:
                 return None
 
-            row = cursor.fetchone()
-            if not row:
-                return None
+            if row := cursor.fetchone():
+                data = {
+                    'artist': row['artist'],
+                    'cachekey': row['cachekey'],
+                    'url': row['url'],
+                    'imagetype': row['imagetype'],
+                    'strikes': row['strikes'],
+                    'timestamp': row['timestamp']
+                }
 
-            data = {
-                'artist': row['artist'],
-                'cachekey': row['cachekey'],
-                'url': row['url'],
-                'imagetype': row['imagetype'],
-                'strikes': row['strikes'],
-                'timestamp': row['timestamp']
-            }
+            else:
+                return None
 
         return data
 
@@ -457,10 +457,9 @@ VALUES (?,?,?,0);
         self.erase_url('STOPWNP')
         endloop = False
         with concurrent.futures.ProcessPoolExecutor(
-                max_workers=maxworkers) as executor:
+                    max_workers=maxworkers) as executor:
             while not endloop:
-                dataset = self.get_next_dlset()
-                if dataset:
+                if dataset := self.get_next_dlset():
                     for stopcheck in dataset:
                         if stopcheck['url'] == 'STOPWNP':
                             endloop = True
