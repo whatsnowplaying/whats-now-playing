@@ -132,17 +132,14 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug('got mbid')
             for mbid in metadata['musicbrainzartistid'].split('/'):
                 if newdata := self.artistdatafrommbid(apikey, mbid):
-                    for artist in newdata['artists']:
-                        if self._check_artist(artist):
-                            extradata.append(artist)
+                    extradata.extend(artist for artist in newdata['artists']
+                                     if self._check_artist(artist))
         elif metadata.get('artist'):
             logging.debug('got artist')
-            artistdata = self.artistdatafromname(apikey, metadata['artist'])
-            if not artistdata:
-                return None
-            for artist in artistdata.get('artists'):
-                if self._check_artist(artist):
-                    extradata.append(artist)
+            if artistdata := self.artistdatafromname(apikey,
+                                                     metadata['artist']):
+                extradata.extend(artist for artist in artistdata.get('artists')
+                                 if self._check_artist(artist))
         if not extradata:
             return None
 
