@@ -8,7 +8,7 @@ from nowplaying.exceptions import PluginVerifyError
 
 
 class ArtistExtrasPlugin():
-    ''' base class of input plugins '''
+    ''' base class of plugins '''
 
     def __init__(self, config=None, qsettings=None):
         self.plugintype = 'input'
@@ -45,7 +45,7 @@ class ArtistExtrasPlugin():
         raise NotImplementedError
 
 
-#### Recognition methods
+#### Plug-in methods
 
     def download(self, metadata=None, imagecache=None):  #pylint: disable=no-self-use
         ''' return metadata '''

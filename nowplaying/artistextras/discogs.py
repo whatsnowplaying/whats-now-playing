@@ -28,6 +28,10 @@ class Plugin(ArtistExtrasPlugin):
         if not apikey or not self.config.cparser.value('discogs/enabled',
                                                        type=bool):
             return None
+
+
+        # discogs basically works by search for a combination of
+        # artist and album so we need both
         if not metadata.get('artist') or not metadata.get('album'):
             logging.debug('artist or album is empty, skipping')
             return None
@@ -35,6 +39,7 @@ class Plugin(ArtistExtrasPlugin):
         if not self.client:
             self.client = nowplaying.vendor.discogs_client.Client(
                 f'whatsnowplaying/{self.version}', user_token=apikey)
+
 
         try:
             logging.debug('Fetching %s - %s', metadata['artist'],
@@ -83,7 +88,7 @@ class Plugin(ArtistExtrasPlugin):
         return metadata
 
     def providerinfo(self):  # pylint: disable=no-self-use
-        ''' return list of what is provided by this recognition system '''
+        ''' return list of what is provided by this plug-in '''
         return ['artistlongbio', 'artistthumbraw', 'discogs-artistfanarturls']
 
     def connect_settingsui(self, qwidget):

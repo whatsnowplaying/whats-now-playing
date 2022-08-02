@@ -3,6 +3,14 @@
 
 ## Version 3.1.0 - In-progress
 
+* New experimental feature: artist extras
+
+  * Banners
+  * Biographies
+  * Fan art
+  * Logos
+  * Thumbnails
+
 * Changed the default set of twitchbot commands:
 
   * help, hug, and so have been removed. Removing those from your

@@ -163,7 +163,7 @@ class Plugin(ArtistExtrasPlugin):
         return data
 
     def providerinfo(self):  # pylint: disable=no-self-use
-        ''' return list of what is provided by this recognition system '''
+        ''' return list of what is provided by this plug-in '''
         return [
             'artistbannerraw', 'artistlongbio', 'artistlogoraw',
             'artistthumbraw', 'theaudiodb-artistfanarturls'

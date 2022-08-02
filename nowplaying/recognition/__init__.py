@@ -8,7 +8,7 @@ from nowplaying.exceptions import PluginVerifyError
 
 
 class RecognitionPlugin():
-    ''' base class of input plugins '''
+    ''' base class of plugins '''
 
     def __init__(self, config=None, qsettings=None):
         self.plugintype = 'input'

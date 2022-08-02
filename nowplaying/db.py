@@ -112,13 +112,14 @@ class MetadataDB:
     def __init__(self, databasefile=None, initialize=False):
 
         if databasefile:
-            self.databasefile = databasefile
+            self.databasefile = pathlib.Path(databasefile)
         else:  # pragma: no cover
-            self.databasefile = os.path.join(
+            self.databasefile = pathlib.Path(
                 QStandardPaths.standardLocations(
-                    QStandardPaths.CacheLocation)[0], 'npsql.db')
+                    QStandardPaths.CacheLocation)[0]).joinpath('metadb', 'npsql.db')
 
-        if not os.path.exists(self.databasefile) or initialize:
+
+        if not self.databasefile.exists() or initialize:
             logging.debug('Setting up a new DB')
             self.setupsql()
 
@@ -142,7 +143,7 @@ class MetadataDB:
             logging.debug('metadata is either empty or too incomplete')
             return
 
-        if not os.path.exists(self.databasefile):
+        if not self.databasefile.exists():
             self.setupsql()
 
         with sqlite3.connect(self.databasefile) as connection:
@@ -177,7 +178,7 @@ class MetadataDB:
     def read_last_meta(self):
         ''' update metadb '''
 
-        if not os.path.exists(self.databasefile):
+        if not self.databasefile.exists():
             logging.error('MetadataDB does not exist yet?')
             return None
 
@@ -210,9 +211,8 @@ class MetadataDB:
             logging.error('No dbfile')
             sys.exit(1)
 
-        pathlib.Path(os.path.dirname(self.databasefile)).mkdir(parents=True,
-                                                               exist_ok=True)
-        if os.path.exists(self.databasefile):
+        self.databasefile.parent.mkdir(parents=True, exist_ok=True)
+        if self.databasefile.exists():
             logging.info('Clearing cache file %s', self.databasefile)
             os.unlink(self.databasefile)
 

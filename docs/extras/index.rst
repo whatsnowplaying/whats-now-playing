@@ -20,6 +20,7 @@ Notes:
 
   - Raw image URLs are not scaled and represent the original format as downloaded.
   - Most fan art tends to be in widescreen.
+  - Enabling this feature may cause a slowdown during the Exit of the app in order to save work.
 
 Additionally, a biography of the artist may now be provided in the 'artistlongbio' macro. These biographies are
 also written by fans and may be brief or fairly detailed.
@@ -28,10 +29,10 @@ also written by fans and may be brief or fairly detailed.
 Timing
 ------
 
-In some cases, this may be a lot of extra content and significant effort has been made
-to keep the delays as low as possible while also offering all the content.
-In particular, most of it is downloaded during the write delay time period as set in the
-`general settings <../settings.html>`_ . In general:
+
+Most of the content is downloaded during the write delay time period as set in the
+`general settings <../settings.html>`_ . You may need to bump up the delay to give enough time to not have
+'empty' graphics.  In general:
 
 
 * Every time an artist is loaded as a track, the system will try to download any new art that was either skipped or missed. So all limits that are set are for that track's downloads.  All previously downloaded content will is saved locally for long periods of time.  (They will eventually be removed.)
@@ -40,9 +41,6 @@ In particular, most of it is downloaded during the write delay time period as se
 * Switching to a different track from the same artist pick new banners, logos, and thumbnails if they are available.
 * Collaborations will attempt (but it is not guaranteed!) to pull extras for both artists if the metadata of the track has more than one set of artists listed. For example, a track labeled with both David Bowie and Lou Reed should have both Bowie and Reed's images.
 
-
-There are several different places that extra content may be downloaded.
-Each location has their own section to discuss the pros and cons:
 
 Generic Settings
 ----------------
