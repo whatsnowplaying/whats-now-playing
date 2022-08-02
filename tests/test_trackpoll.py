@@ -51,9 +51,7 @@ def wait_for_output(filename):
     # runners so add some protection
     QThread.msleep(2000)
     counter = 0
-    while counter < 5:
-        if pathlib.Path(filename).exists():
-            break
+    while counter < 5 and not pathlib.Path(filename).exists():
         QThread.msleep(2000)
         counter += 1
         logging.debug('waiting for %s: %s', filename, counter)
