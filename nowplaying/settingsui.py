@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' user interface to configure '''
 
+import fnmatch
 import logging
 import os
 
@@ -17,6 +18,12 @@ try:
     import nowplaying.qtrc  # pylint: disable=import-error, no-name-in-module
 except ModuleNotFoundError:
     pass
+
+# needs to match ui file
+TWITCHBOT_CHECKBOXES = [
+    'broadcaster', 'moderator', 'subscriber', 'founder', 'conductor', 'vip',
+    'bits'
+]
 
 
 # settings UI
@@ -251,12 +258,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             for row in range(rows, -1, -1):
                 widget.removeRow(row)
 
-        # needs to match ui file
-        checkboxes = [
-            'broadcaster', 'moderator', 'subscriber', 'founder', 'conductor',
-            'vip', 'bits'
-        ]
-
         clear_table(self.widgets['twitchbot'].command_perm_table)
 
         for configitem in self.config.cparser.childGroups():
@@ -264,7 +265,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             if 'twitchbot-command-' in configitem:
                 command = configitem.replace('twitchbot-command-', '')
                 setting['command'] = command
-                for box in checkboxes:
+                for box in TWITCHBOT_CHECKBOXES:
                     setting[box] = self.config.cparser.value(
                         f'{configitem}/{box}', defaultValue=True, type=bool)
                 self._twitchbot_command_load(**setting)
@@ -456,12 +457,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
         def reset_commands(widget, config):
 
-            # needs to match ui file
-            checkboxes = [
-                'broadcaster', 'moderator', 'subscriber', 'founder',
-                'conductor', 'vip', 'bits'
-            ]
-
             for configitem in config.allKeys():
                 if 'twitchbot-command-' in configitem:
                     config.remove(configitem)
@@ -471,7 +466,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
                 item = widget.item(row, 0)
                 cmd = item.text()
                 cmd = f'twitchbot-command-{cmd}'
-                for column, cbtype in enumerate(checkboxes):
+                for column, cbtype in enumerate(TWITCHBOT_CHECKBOXES):
                     item = widget.cellWidget(row, column + 1)
                     value = item.isChecked()
                     config.setValue(f'{cmd}/{cbtype}', value)
@@ -596,13 +591,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         cmditem = QTableWidgetItem(command)
         self.widgets['twitchbot'].command_perm_table.setItem(row, 0, cmditem)
 
-        # needs to match ui file
-        checkboxes = [
-            'broadcaster', 'moderator', 'subscriber', 'founder', 'conductor',
-            'vip', 'bits'
-        ]
         checkbox = []
-        for column, cbtype in enumerate(checkboxes):  # pylint: disable=unused-variable
+        for column, cbtype in enumerate(TWITCHBOT_CHECKBOXES):  # pylint: disable=unused-variable
             checkbox = QCheckBox()
             if cbtype in kwargs:
                 checkbox.setChecked(kwargs[cbtype])
@@ -693,3 +683,22 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     def exit(self):
         ''' exit the tray '''
         self.qtui.close()
+
+
+def update_twitchbot_commands(config):
+    ''' make sure all twitchbot_ files have a config entry '''
+    filelist = os.listdir(config.templatedir)
+    existing = config.cparser.childGroups()
+
+    for file in filelist:
+        if not fnmatch.fnmatch(file, 'twitchbot_*.txt'):
+            continue
+
+        command = file.replace('twitchbot_', '').replace('.txt', '')
+        command = f'twitchbot-command-{command}'
+
+        if command not in existing:
+            config.cparser.setValue('settings/newtwitchbot', True)
+            logging.debug('creating %s', command)
+            for box in TWITCHBOT_CHECKBOXES:
+                config.cparser.setValue(f'{command}/{box}', False)

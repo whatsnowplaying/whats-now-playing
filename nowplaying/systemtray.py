@@ -95,10 +95,16 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.threadstart()
 
     def _check_for_upgrade_alert(self):
+        nowplaying.settingsui.update_twitchbot_commands(self.config)
         if self.config.cparser.value('settings/newtemplates', type=bool):
-            self.regular_dialog.setText(
-                'Updated example templates have been copied.')
+            self.regular_dialog.setText('Updated templates have been placed.')
             self.config.cparser.setValue('settings/newtemplates', False)
+            self.regular_dialog.show()
+
+        if self.config.cparser.value('settings/newtwitchbot', type=bool):
+            self.regular_dialog.setText(
+                'Twitchbot permissions have been added or changed.')
+            self.config.cparser.setValue('settings/newtwitchbot', False)
             self.regular_dialog.show()
 
     def threadstart(self):

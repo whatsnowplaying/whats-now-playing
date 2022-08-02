@@ -3,6 +3,19 @@
 
 ## Version 3.1.0 - In-progress
 
+* IMPORTANT! Big Twichbot changes:
+
+  * help, hug, and so have been removed. Removing those from your
+    local install will not re-install on relaunch.
+  * whatsnowplayingversion command has been added.  This command is
+    a built into the source code to help with debugging
+    installs. It cannot be removed or disabled.
+  * On startup, all of the existing twitchbot_ files will be analyzed
+    and added to the preferences pane with a default of **DISABLED**.
+    You will need to re-enable any that you wish to use.  Command files
+    added while the software is running will be available immediately
+    but then next startup will be disabled.
+
 * New experimental feature: artist extras
 
   * Banners
@@ -10,14 +23,6 @@
   * Fan art
   * Logos
   * Thumbnails
-
-* Changed the default set of twitchbot commands:
-
-  * help, hug, and so have been removed. Removing those from your
-    local install will not re-install on relaunch.
-  * whatsnowplayingversion has been added.  This command is
-    a built into the source code to help with debugging
-    installs.
 
 * Fixed some leaks that would prevent multiple launches
 * Metadata for date and label wasn't always correct
