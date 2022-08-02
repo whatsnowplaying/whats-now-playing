@@ -186,7 +186,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         ''' get currently playing track, returns None if not new or not found '''
 
         # check paused state
-        while self.config.getpause() or not self.endthread:
+        while self.config.getpause() and not self.endthread:
             QThread.msleep(500)
 
         if self.endthread:
