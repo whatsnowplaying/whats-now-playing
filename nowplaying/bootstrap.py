@@ -303,4 +303,3 @@ def setuplogging(logpath=None, rotate=False):
         datefmt='%Y-%m-%dT%H:%M:%S%z',
         handlers=[logfhandler],
         level=logging.DEBUG)
-
