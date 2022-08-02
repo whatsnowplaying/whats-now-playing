@@ -139,6 +139,7 @@ def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=red
 
     config = trackpollbootstrap
     config.cparser.setValue('settings/input', 'InputStub')
+    config.cparser.setValue('artistextras/enabled', False)
     template = getroot.joinpath('tests', 'templates', 'simplewfn.txt')
     config.txttemplate = str(template)
     config.cparser.setValue('textoutput/txttemplate', str(template))
