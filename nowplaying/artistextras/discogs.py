@@ -29,7 +29,6 @@ class Plugin(ArtistExtrasPlugin):
                                                        type=bool):
             return None
 
-
         # discogs basically works by search for a combination of
         # artist and album so we need both
         if not metadata.get('artist') or not metadata.get('album'):
@@ -39,7 +38,6 @@ class Plugin(ArtistExtrasPlugin):
         if not self.client:
             self.client = nowplaying.vendor.discogs_client.Client(
                 f'whatsnowplaying/{self.version}', user_token=apikey)
-
 
         try:
             logging.debug('Fetching %s - %s', metadata['artist'],

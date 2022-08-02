@@ -54,7 +54,7 @@ class ImageCache:
         if not self.databasefile.exists():
             initialize = True
         self.httpcachefile = self.cachedir.joinpath('http')
-        self.cache = diskcache.Cache(directory=self.cachedir,
+        self.cache = diskcache.Cache(directory=self.cachedir.joinpath('diskcache'),
                                      eviction_policy='least-frequently-used',
                                      size_limit=sizelimit * 1024 * 1024 * 1024)
         if initialize:

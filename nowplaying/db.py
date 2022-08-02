@@ -116,8 +116,8 @@ class MetadataDB:
         else:  # pragma: no cover
             self.databasefile = pathlib.Path(
                 QStandardPaths.standardLocations(
-                    QStandardPaths.CacheLocation)[0]).joinpath('metadb', 'npsql.db')
-
+                    QStandardPaths.CacheLocation)[0]).joinpath(
+                        'metadb', 'npsql.db')
 
         if not self.databasefile.exists() or initialize:
             logging.debug('Setting up a new DB')

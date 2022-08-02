@@ -20,6 +20,9 @@
     installs.
 
 * Fixed some leaks that would prevent multiple launches
+* Metadata for date and label wasn't always correct
+* More metadata information from FLAC files
+* Some logging tuning, but likely lost due to new features
 
 ## Version 3.0.2 - 2022-07-12
 

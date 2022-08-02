@@ -38,7 +38,8 @@ def run_bootstrap(bundledir=None):
     # point this should be configurable but this is good enough for now
     socket.setdefaulttimeout(5.0)
     nowplaying.bootstrap.setuplogging(logpath=logpath, rotate=True)
-
+    logging.info('starting up v%s',
+                 nowplaying.version.get_versions()['version'])
     nowplaying.bootstrap.upgrade(bundledir=bundledir)
 
     # fail early if metadatadb can't be configured

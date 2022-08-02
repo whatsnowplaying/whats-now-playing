@@ -6,6 +6,7 @@ import base64
 import logging
 import logging.config
 import os
+import pathlib
 import secrets
 import signal
 import string
@@ -463,24 +464,26 @@ def start(bundledir, testdir=None):
 
     if testdir:
         nowplaying.bootstrap.set_qt_names(appname='testsuite')
-        databasefile = os.path.join(testdir, 'web.db')
+        databasefile = pathlib.Path(testdir).joinpath('web.db')
         testmode = True
     else:
         testmode = False
         nowplaying.bootstrap.set_qt_names()
-        databasefile = os.path.join(
-            QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0],
-            'web.db')
+        databasefile = pathlib.Path(
+            QStandardPaths.standardLocations(
+                QStandardPaths.CacheLocation)[0]).joinpath(
+                    'webserver', 'web.db')
 
     logging.debug('Using %s as web databasefile', databasefile)
-    if os.path.exists(databasefile):
+    if databasefile.exists():
         try:
-            os.unlink(databasefile)
+            databasefile.unlink()
         except PermissionError as error:
             logging.error('WebServer process already running?')
             logging.error(error)
             sys.exit(1)
 
+    databasefile.parent.mkdir(parents=True, exist_ok=True)
     config = nowplaying.config.ConfigFile(bundledir=bundledir,
                                           testmode=testmode)
     if testdir:

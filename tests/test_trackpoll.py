@@ -109,7 +109,6 @@ def test_trackpoll_basic(trackpollbootstrap, getroot):  # pylint: disable=redefi
     trackthread.currenttrack[dict].connect(tracknotify)
     trackthread.start()
 
-
     QThread.msleep(2000)
     with open(config.file, encoding='utf-8') as filein:
         text = filein.readlines()
