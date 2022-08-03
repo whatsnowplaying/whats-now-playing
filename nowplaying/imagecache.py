@@ -28,7 +28,6 @@ CREATE TABLE artistsha
 (url TEXT PRIMARY KEY,
  cachekey TEXT DEFAULT NULL,
  artist TEXT NOT NULL,
- strikes INT DEFAULT 0,
  imagetype TEXT NOT NULL,
  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
  );
@@ -123,7 +122,6 @@ class ImageCache:
                 'artist': row['artist'],
                 'cachekey': row['cachekey'],
                 'url': row['url'],
-                'strikes': row['strikes']
             }
             logging.debug('random got %s/%s/%s', imagetype, row['artist'],
                           row['cachekey'])
@@ -140,7 +138,6 @@ class ImageCache:
                 logging.debug('random: %s', error)
                 self.erase_cachekey(data['cachekey'])
             if image:
-                self.reset_strikes(data['cachekey'])
                 break
         return image
 
@@ -172,7 +169,6 @@ class ImageCache:
                     'cachekey': row['cachekey'],
                     'imagetype': row['imagetype'],
                     'url': row['url'],
-                    'strikes': row['strikes'],
                     'timestamp': row['timestamp']
                 }
         return data
@@ -200,7 +196,6 @@ class ImageCache:
                     'cachekey': row['cachekey'],
                     'url': row['url'],
                     'imagetype': row['imagetype'],
-                    'strikes': row['strikes'],
                     'timestamp': row['timestamp']
                 }
 
@@ -286,7 +281,7 @@ class ImageCache:
 
             sql = '''
 INSERT OR REPLACE INTO
- artistsha(url, artist, cachekey, imagetype, strikes) VALUES(?, ?, ?, ?, 0);
+ artistsha(url, artist, cachekey, imagetype) VALUES(?, ?, ?, ?);
 '''
             try:
                 cursor.execute(sql, (
@@ -316,8 +311,8 @@ INSERT OR REPLACE INTO
 
             sql = '''
 INSERT INTO
-artistsha(url, artist, imagetype, strikes)
-VALUES (?,?,?,0);
+artistsha(url, artist, imagetype)
+VALUES (?,?,?);
 '''
             try:
                 cursor.execute(sql, (
@@ -363,53 +358,10 @@ VALUES (?,?,?,0);
 
         # It was retrieved once before so put it back in the queue
         # if it fails in the queue, it will be deleted
-        if data['strikes'] > 3:
-            self.erase_url(data['url'])
-            self.put_db_url(artist=data['artist'], imagetype=data['imagetype'], url=data['url'])
-            return
-
-        logging.debug('Update %s %s/%s strikes, was %s', data['imagetype'],
-                      data['artist'], cachekey, data['strikes'])
-
-        with sqlite3.connect(self.databasefile) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = connection.cursor()
-            try:
-                cursor.execute(
-                    'UPDATE artistsha SET strikes=? WHERE cachekey=?;', (
-                        data['strikes'] + 1,
-                        cachekey,
-                    ))
-            except sqlite3.OperationalError:
-                return
-
-    def reset_strikes(self, cachekey):
-        ''' update metadb '''
-
-        if not self.databasefile.exists():
-            logging.error('imagecache does not exist yet?')
-            return
-
-        data = self.find_cachekey(cachekey)
-        if not data:
-            logging.debug('Already deleted')
-            return
-
-        if data.get('strikes') == 0:
-            return
-
-        logging.debug('Resetting strikes on %s %s/%s', data['imagetype'],
-                      data['artist'], cachekey)
-        with sqlite3.connect(self.databasefile) as connection:
-            cursor = connection.cursor()
-            try:
-                cursor.execute(
-                    'UPDATE artistsha SET strikes=? WHERE cachekey=?;', (
-                        0,
-                        cachekey,
-                    ))
-            except sqlite3.OperationalError:
-                return
+        logging.debug('Cache %s  url %s has left cache, requeue it.', cachekey, data['url'])
+        self.erase_url(data['url'])
+        self.put_db_url(artist=data['artist'], imagetype=data['imagetype'], url=data['url'])
+        return
 
     def image_dl(self, imagedict):
         ''' fetch an image and store it '''
