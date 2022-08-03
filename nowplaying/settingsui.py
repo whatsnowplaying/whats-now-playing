@@ -69,8 +69,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.qtui = _load_ui('settings')
 
         baseuis = [
-            'general', 'artistextras', 'source', 'webserver', 'obsws',
-            'twitchbot', 'quirks'
+            'general', 'source', 'webserver', 'twitchbot', 'artistextras',
+            'obsws', 'quirks'
         ]
 
         pluginuis = {}

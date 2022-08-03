@@ -10,6 +10,8 @@
   * whatsnowplayingversion command has been added.  This command is
     a built into the source code to help with debugging
     installs. It cannot be removed or disabled.
+  * A new example !artistshortbio command for the biographies
+    support
   * On startup, all of the existing twitchbot_ files will be analyzed
     and added to the preferences pane with a default of **DISABLED**.
     You will need to re-enable any that you wish to use.  Command files
@@ -27,7 +29,7 @@
 * Fixed some leaks that would prevent multiple launches
 * Metadata for date and label wasn't always correct
 * More metadata information from FLAC files
-* Some logging tuning, but likely lost due to new features
+* Some log tuning, but also produce more logs with new features ...
 
 ## Version 3.0.2 - 2022-07-12
 
