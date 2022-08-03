@@ -12,34 +12,6 @@ name: pyinstaller
 on: [push]  # yamllint disable-line rule:truthy
 
 jobs:
-  pyinstaller-mac-10-15:
-    runs-on: macos-10.15
-    steps:
-      - name: icu
-        run: |
-          brew update --preinstall
-          brew install pkg-config icu4c
-      - name: checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: update tags
-        run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
-      - name: setup python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-      - name: run builder
-        run: |
-          export PATH="/usr/local/opt/icu4c/bin:/usr/local/opt/icu4c/sbin:${PATH}"
-          export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/opt/icu4c/lib/pkgconfig"
-          ./builder.sh macosx
-      - name: artifact dist
-        uses: actions/upload-artifact@v3
-        with:
-          name: mac-10-15-dist
-          path: "*.zip"
-
   pyinstaller-mac-11:
     runs-on: macos-11
     steps:
