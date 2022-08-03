@@ -254,7 +254,6 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
     def check_command_perms(self, profile, command):
         ''' given the profile, check if the command is allowed to be executed '''
-        allowed = True
         self.config.get()
 
         # shortcut the 'anyone' commands
@@ -270,11 +269,13 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         self.config.cparser.endGroup()
 
         if perms:
-            allowed = any(
+            return any(
                 'badgesdict' in profile and usertype in profile['badgesdict']
-                for usertype in perms.items())
+                for usertype in perms.items()
+            )
 
-        return allowed
+        else:
+            return True
 
     def do_command(self, event, command):  # pylint: disable=unused-argument
         ''' process a command '''
