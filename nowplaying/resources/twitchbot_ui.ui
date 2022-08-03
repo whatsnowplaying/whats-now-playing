@@ -19,7 +19,7 @@
      <x>10</x>
      <y>20</y>
      <width>621</width>
-     <height>183</height>
+     <height>188</height>
     </rect>
    </property>
    <layout class="QFormLayout" name="settings_layout">
@@ -212,6 +212,11 @@
    <column>
     <property name="text">
      <string>Command</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Anyone</string>
     </property>
    </column>
    <column>

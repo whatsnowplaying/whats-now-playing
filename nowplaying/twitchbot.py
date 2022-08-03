@@ -252,6 +252,30 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             message = template.render(metadata)
             self._send_text(message)
 
+    def check_command_perms(self, profile, command):
+        ''' given the profile, check if the command is allowed to be executed '''
+        allowed = True
+        self.config.get()
+
+        # shortcut the 'anyone' commands
+        if self.config.cparser.value(f'twitchbot-command-{command}/anyone',
+                                     type=bool):
+            return True
+
+        self.config.cparser.beginGroup(f'twitchbot-command-{command}')
+        perms = {
+            key: self.config.cparser.value(key, type=bool)
+            for key in self.config.cparser.childKeys()
+        }
+        self.config.cparser.endGroup()
+
+        if perms:
+            allowed = any(
+                'badgesdict' in profile and usertype in profile['badgesdict']
+                for usertype in perms.items())
+
+        return allowed
+
     def do_command(self, event, command):  # pylint: disable=unused-argument
         ''' process a command '''
         fullstring = event.arguments[0]
@@ -277,21 +301,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
         cmdfile = f'twitchbot_{commands[0]}.txt'
 
-        self.config.get()
-        self.config.cparser.beginGroup(f'twitchbot-command-{commands[0]}')
-        perms = {
-            key: self.config.cparser.value(key, type=bool)
-            for key in self.config.cparser.childKeys()
-        }
-        self.config.cparser.endGroup()
-
-        allowed = True
-        if perms:
-            allowed = any(
-                'badgesdict' in profile and usertype in profile['badgesdict']
-                for usertype in perms.items())
-
-        if not allowed:
+        if not self.check_command_perms(profile, commands[0]):
             return
 
         if commands[0] == self.magiccommand:

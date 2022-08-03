@@ -21,8 +21,8 @@ except ModuleNotFoundError:
 
 # needs to match ui file
 TWITCHBOT_CHECKBOXES = [
-    'broadcaster', 'moderator', 'subscriber', 'founder', 'conductor', 'vip',
-    'bits'
+    'anyone', 'broadcaster', 'moderator', 'subscriber', 'founder', 'conductor',
+    'vip', 'bits'
 ]
 
 
@@ -267,7 +267,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
                 setting['command'] = command
                 for box in TWITCHBOT_CHECKBOXES:
                     setting[box] = self.config.cparser.value(
-                        f'{configitem}/{box}', defaultValue=True, type=bool)
+                        f'{configitem}/{box}', defaultValue=False, type=bool)
                 self._twitchbot_command_load(**setting)
 
         self.widgets['twitchbot'].enable_checkbox.setChecked(
