@@ -2,6 +2,7 @@
 '''
    setup nowplaying w/versioneer
 '''
+
 from setuptools import setup
 import versioneer
 

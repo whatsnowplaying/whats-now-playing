@@ -35,6 +35,7 @@ jobs:
           pip install -r requirements-macosx.txt
           vendoring sync
           pip install .
+          python setupnltk.py
       - name: tests
         shell: bash
         env:
@@ -88,6 +89,7 @@ jobs:
           #set PYTHONIOENCODING=utf-8
           #set PYTHONLEGACYWINDOWSSTDIO=utf-8
           #vendoring sync
+          python setupnltk.py
       - name: tests
         shell: bash
         env:
@@ -149,6 +151,8 @@ jobs:
           pip install -r requirements-linux.txt
           vendoring sync
           pip install .
+          python setupnltk.py
+
       - name: tests
         shell: bash
         env:

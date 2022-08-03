@@ -30,6 +30,8 @@ pip install -r requirements.txt
 if [[ -f  "requirements-${SYSTEM}.txt" ]]; then
   pip install -r requirements-"${SYSTEM}".txt
 fi
+
+"${PYTHON}"  setupnltk.py
 "${PYTHON}" setup.py build
 mv nowplaying/version.py nowplaying/version.py.old
 mv build/lib/nowplaying/version.py nowplaying/version.py

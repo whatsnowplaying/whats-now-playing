@@ -72,6 +72,7 @@ class MetadataDB:
         'albumartist',
         'artist',
         'artistlongbio',
+        'artistshortbio',
         'bitrate',
         'bpm',
         'comments',

@@ -225,8 +225,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         return result
 
     def _send_text(self, message):
-        message = message.replace('\n', '')
-        message = message.replace('\r', '')
+        message = message.replace('\n', ' ')
+        message = message.replace('\r', ' ')
         message = str(message).strip()
         for text in textwrap.TextWrapper(width=self.maxsize).wrap(message):
             try:

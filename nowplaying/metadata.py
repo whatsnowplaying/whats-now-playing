@@ -3,7 +3,11 @@
 
 import logging
 import os
+import string
 import sys
+import textwrap
+
+import nltk
 
 import nowplaying.config
 import nowplaying.hostmeta
@@ -44,6 +48,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             if 'date' not in self.metadata:
                 self.metadata['date'] = self.metadata['year']
             del self.metadata['year']
+
+        if self.metadata.get(
+                'artistlongbio') and not self.metadata.get('artistshortbio'):
+            self._generate_short_bio()
 
     def _process_hostmeta(self):
         ''' add the host metadata so other subsystems can use it '''
@@ -288,6 +296,19 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                                   plugin,
                                   error,
                                   exc_info=True)
+
+    def _generate_short_bio(self):
+        message = self.metadata['artistlongbio']
+        message = message.replace('\n', ' ')
+        message = message.replace('\r', ' ')
+        message = str(message).strip()
+        text = textwrap.TextWrapper(width=450).wrap(message)[0]
+        tokens = nltk.sent_tokenize(text)
+
+        if tokens[-1][-1] in string.punctuation:
+            self.metadata['artistshortbio'] = ' '.join(tokens)
+        else:
+            self.metadata['artistshortbio'] = ' '.join(tokens[:-1])
 
 
 def main():
