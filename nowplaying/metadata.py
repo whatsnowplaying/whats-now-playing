@@ -305,7 +305,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         text = textwrap.TextWrapper(width=450).wrap(message)[0]
         tokens = nltk.sent_tokenize(text)
 
-        if tokens[-1][-1] in string.punctuation and tokens[-1][-1] not in [':']:
+        if tokens[-1][-1] in string.punctuation and tokens[-1][-1] not in [':', ',', ';']:
             self.metadata['artistshortbio'] = ' '.join(tokens)
         else:
             self.metadata['artistshortbio'] = ' '.join(tokens[:-1])
