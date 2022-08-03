@@ -361,8 +361,11 @@ VALUES (?,?,?,0);
         if not data:
             return
 
+        # It was retrieved once before so put it back in the queue
+        # if it fails in the queue, it will be deleted
         if data['strikes'] > 3:
             self.erase_url(data['url'])
+            self.put_db_url(artist=data['artist'], imagetype=data['imagetype'], url=data['url'])
             return
 
         logging.debug('Update %s %s/%s strikes, was %s', data['imagetype'],
@@ -439,6 +442,7 @@ VALUES (?,?,?,0);
                                  cachekey=cachekey)
         else:
             logging.debug('image_dl: status_code %s', dlimage.status_code)
+            self.erase_url(imagedict['url'])
             return
 
         return
