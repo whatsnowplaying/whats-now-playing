@@ -19,8 +19,8 @@
   <widget class="QCheckBox" name="artistextras_checkbox">
    <property name="geometry">
     <rect>
-     <x>50</x>
-     <y>80</y>
+     <x>40</x>
+     <y>30</y>
      <width>82</width>
      <height>24</height>
     </rect>
@@ -33,9 +33,9 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>270</y>
+     <y>160</y>
      <width>591</width>
-     <height>167</height>
+     <height>194</height>
     </rect>
    </property>
    <layout class="QFormLayout" name="artistextras_layout">
@@ -80,16 +80,6 @@
       </property>
      </widget>
     </item>
-    <item row="1" column="1">
-     <widget class="QSpinBox" name="logos_spin">
-      <property name="minimum">
-       <number>1</number>
-      </property>
-      <property name="value">
-       <number>3</number>
-      </property>
-     </widget>
-    </item>
     <item row="3" column="1">
      <widget class="QSpinBox" name="fanart_spin">
       <property name="minimum">
@@ -115,7 +105,41 @@
      </widget>
     </item>
     <item row="4" column="1">
-     <widget class="QSpinBox" name="processes_spin"/>
+     <widget class="QSpinBox" name="processes_spin">
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="value">
+       <number>5</number>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QSpinBox" name="logos_spin">
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="value">
+       <number>3</number>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="0">
+     <widget class="QLabel" name="sizelimit_label">
+      <property name="text">
+       <string>Image cache size in GB</string>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="1">
+     <widget class="QSpinBox" name="sizelimit_spin">
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="value">
+       <number>5</number>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -123,7 +147,7 @@
    <property name="geometry">
     <rect>
      <x>50</x>
-     <y>150</y>
+     <y>70</y>
      <width>511</width>
      <height>81</height>
     </rect>
@@ -133,6 +157,19 @@
    </property>
    <property name="wordWrap">
     <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>30</y>
+     <width>281</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>All changes on this page require a restart. Sorry.</string>
    </property>
   </widget>
  </widget>

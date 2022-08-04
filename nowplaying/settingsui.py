@@ -197,7 +197,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     def _upd_win_artistextras(self):
         self.widgets['artistextras'].artistextras_checkbox.setChecked(
             self.config.cparser.value('artistextras/enabled', type=bool))
-        for art in ['banners', 'processes', 'fanart', 'logos', 'thumbnails']:
+        for art in ['banners', 'processes', 'fanart', 'logos', 'thumbnails', 'sizelimit']:
             guiattr = getattr(self.widgets['artistextras'], f'{art}_spin')
             guiattr.setValue(
                 self.config.cparser.value(f'artistextras/{art}', type=int))
