@@ -49,7 +49,7 @@ class ImageCache:
             self.cachedir = pathlib.Path(cachedir)
 
         self.cachedir.resolve().mkdir(parents=True, exist_ok=True)
-        self.databasefile = self.cachedir.joinpath('imagecache.db')
+        self.databasefile = self.cachedir.joinpath('imagecachev1.db')
         if not self.databasefile.exists():
             initialize = True
         self.httpcachefile = self.cachedir.joinpath('http')
