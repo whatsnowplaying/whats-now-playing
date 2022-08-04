@@ -253,8 +253,9 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
             return
 
         workers = self.config.cparser.value('artistextras/processes', type=int)
+        sizelimit = self.config.cparser.value('artistextras/cachesize', type=int)
 
-        self.imagecache = nowplaying.imagecache.ImageCache()
+        self.imagecache = nowplaying.imagecache.ImageCache(sizelimit=sizelimit)
         self.icprocess = multiprocessing.Process(
             target=self.imagecache.queue_process,
             name='ICProcess',
