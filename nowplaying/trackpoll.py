@@ -4,6 +4,7 @@
 import multiprocessing
 import logging
 import pathlib
+import socket
 import threading
 
 from PySide6.QtCore import Signal, QThread  # pylint: disable=no-name-in-module
@@ -59,6 +60,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         ''' track polling process '''
 
         threading.current_thread().name = 'TrackPoll'
+        socket.setdefaulttimeout(5.0)
         previousinput = None
 
         # sleep until we have something to write
@@ -253,7 +255,8 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
             return
 
         workers = self.config.cparser.value('artistextras/processes', type=int)
-        sizelimit = self.config.cparser.value('artistextras/cachesize', type=int)
+        sizelimit = self.config.cparser.value('artistextras/cachesize',
+                                              type=int)
 
         self.imagecache = nowplaying.imagecache.ImageCache(sizelimit=sizelimit)
         self.icprocess = multiprocessing.Process(

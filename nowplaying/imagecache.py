@@ -248,7 +248,7 @@ class ImageCache:
                     '''SELECT * FROM artistsha WHERE cachekey IS NULL
  AND EXISTS (SELECT * FROM artistsha
  WHERE imagetype='artistthumb' OR imagetype='artistbanner' OR imagetype='artistlogo')
- ORDER BY TIMESTAMP DESC LIMIT 10''')
+ ORDER BY TIMESTAMP DESC''')
             except sqlite3.OperationalError as error:
                 logging.debug(error)
                 return None
@@ -259,7 +259,7 @@ class ImageCache:
                 try:
                     cursor.execute(
                         '''SELECT * FROM artistsha WHERE cachekey IS NULL
- ORDER BY TIMESTAMP DESC LIMIT 10''')
+ ORDER BY TIMESTAMP DESC''')
                 except sqlite3.OperationalError as error:
                     logging.debug(error)
                     return None
@@ -358,9 +358,12 @@ VALUES (?,?,?);
 
         # It was retrieved once before so put it back in the queue
         # if it fails in the queue, it will be deleted
-        logging.debug('Cache %s  url %s has left cache, requeue it.', cachekey, data['url'])
+        logging.debug('Cache %s  url %s has left cache, requeue it.', cachekey,
+                      data['url'])
         self.erase_url(data['url'])
-        self.put_db_url(artist=data['artist'], imagetype=data['imagetype'], url=data['url'])
+        self.put_db_url(artist=data['artist'],
+                        imagetype=data['imagetype'],
+                        url=data['url'])
         return
 
     def image_dl(self, imagedict):
@@ -407,18 +410,33 @@ VALUES (?,?,?);
         self.logpath = logpath
         self.erase_url('STOPWNP')
         endloop = False
+        oldset = []
         with concurrent.futures.ProcessPoolExecutor(
                 max_workers=maxworkers) as executor:
             while not endloop:
                 if dataset := self.get_next_dlset():
-                    for stopcheck in dataset:
-                        if stopcheck['url'] == 'STOPWNP':
+                    # sometimes images are downloaded but not
+                    # written to sql yet so don't try to resend
+                    # same data
+                    newset = []
+                    newdataset = []
+                    for entry in dataset:
+                        newset.append(entry['url'])
+                        if entry['url'] == 'STOPWNP':
                             endloop = True
+                            break
+                        if entry['url'] in oldset:
+                            logging.debug('skipping in-progress url %s ',
+                                          entry['url'])
+                        else:
+                            newdataset.append(entry)
+                    oldset = newset
 
                     if endloop:
                         break
-                    executor.map(self.image_dl, dataset)
-                time.sleep(1)
+
+                    executor.map(self.image_dl, newdataset)
+                time.sleep(2)
                 if not self.databasefile.exists():
                     logging.error('imagecache db does not exist yet?')
                     break

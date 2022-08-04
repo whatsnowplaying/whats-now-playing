@@ -276,7 +276,9 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 else:
                     metadata['artistfanartraw'] = TRANSPARENT_PNG_BIN
                 await websocket.send_json(self._transparentifier(metadata))
-                await asyncio.sleep(8)
+                delay = request.app['config'].cparser.value(
+                    'artistextras/fanartdelay', type=int)
+                await asyncio.sleep(delay)
         except Exception as error:  #pylint: disable=broad-except
             logging.error('websocket artistfanart streamer exception: %s',
                           error)

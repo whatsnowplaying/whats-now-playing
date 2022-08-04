@@ -52,7 +52,7 @@ class Fetcher:
 
     @backoff
     def request(self, method, url, data, headers, params=None):
-        response = request(method=method, url=url, data=data, headers=headers, params=params)
+        response = request(method=method, url=url, data=data, headers=headers, params=params, timeout=3)
         return response
 
 

@@ -129,6 +129,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         settings.setValue('artistextras/fanart', 10)
         settings.setValue('artistextras/processes', 5)
         settings.setValue('artistextras/cachesize', 5)
+        settings.setValue('artistextras/fanartdelay', 8)
 
         settings.setValue('recognition/replacetitle', False)
         settings.setValue('recognition/replaceartist', False)
