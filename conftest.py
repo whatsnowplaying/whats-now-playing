@@ -27,10 +27,13 @@ def reboot_macosx_prefs():
     ''' work around Mac OS X's preference caching '''
     if sys.platform == 'darwin':
         for process in psutil.process_iter():
-            if 'cfprefsd' in process.name() and pwd.getpwuid(
-                    os.getuid()).pw_name == process.username():
-                process.terminate()
-                process.wait()
+            try:
+                if 'cfprefsd' in process.name() and pwd.getpwuid(
+                        os.getuid()).pw_name == process.username():
+                    process.terminate()
+                    process.wait()
+            except psutil.NoSuchProcess:
+                pass
 
 
 @pytest.fixture
