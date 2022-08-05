@@ -15,6 +15,7 @@ import logging.config
 import logging.handlers
 
 import diskcache
+import normality
 import requests_cache
 
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
@@ -64,6 +65,9 @@ class ImageCache:
         self.session = None
         self.logpath = None
 
+    def _normalize_artist(self, artist):
+        return normality.normalize(artist).replace(' ', '')
+
     def setup_sql(self, initialize=False):
         ''' create the database '''
 
@@ -88,6 +92,7 @@ class ImageCache:
 
     def random_fetch(self, artist, imagetype):
         ''' fetch a random row from a cache for the artist '''
+        normalartist = self._normalize_artist(artist)
         data = None
         if not self.databasefile.exists():
             logging.error('imagecache db does not exist yet?')
@@ -103,7 +108,7 @@ class ImageCache:
  AND imagetype=?
  AND cachekey NOT NULL
  ORDER BY random() LIMIT 1;''', (
-                        artist,
+                        normalartist,
                         imagetype,
                     ))
             except sqlite3.OperationalError as error:
@@ -223,8 +228,9 @@ class ImageCache:
 
         logging.debug('Putting %s unfiltered for %s/%s',
                       min(len(urllist), maxart), imagetype, artist)
+        normalartist = self._normalize_artist(artist)
         for url in random.sample(urllist, min(len(urllist), maxart)):
-            self.put_db_url(artist=artist, imagetype=imagetype, url=url)
+            self.put_db_url(artist=normalartist, imagetype=imagetype, url=url)
 
     def get_next_dlset(self):
         ''' update metadb '''
@@ -275,6 +281,7 @@ class ImageCache:
             logging.error('imagecache does not exist yet?')
             return
 
+        normalartist = self._normalize_artist(artist)
         with sqlite3.connect(self.databasefile) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
@@ -286,7 +293,7 @@ INSERT OR REPLACE INTO
             try:
                 cursor.execute(sql, (
                     url,
-                    artist,
+                    normalartist,
                     cachekey,
                     imagetype,
                 ))
