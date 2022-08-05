@@ -65,7 +65,7 @@ class ImageCache:
         self.session = None
         self.logpath = None
 
-    def _normalize_artist(self, artist):
+    def _normalize_artist(self, artist):  # pylint: disable=no-self-use
         return normality.normalize(artist).replace(' ', '')
 
     def setup_sql(self, initialize=False):
