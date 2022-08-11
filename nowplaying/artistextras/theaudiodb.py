@@ -129,7 +129,8 @@ class Plugin(ArtistExtrasPlugin):
         self.fnstr = nowplaying.utils.normalize(metadata['artist'])
 
         if metadata.get('musicbrainzartistid'):
-            logging.debug('got mbid')
+            logging.debug('got musicbrainzartistid: %s',
+                          metadata['musicbrainzartistid'])
             for mbid in metadata['musicbrainzartistid'].split('/'):
                 if newdata := self.artistdatafrommbid(apikey, mbid):
                     extradata.extend(artist for artist in newdata['artists']

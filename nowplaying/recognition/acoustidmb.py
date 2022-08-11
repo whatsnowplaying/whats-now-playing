@@ -162,10 +162,12 @@ class Plugin(RecognitionPlugin):
                     if title and nowplaying.utils.normalize(title) in fnstr:
                         score = score + .10
                     artistlist = []
+                    artistidlist = []
                     for trackartist in release['mediums'][0]['tracks'][0][
                             'artists']:
                         if 'name' in trackartist:
                             artistlist.append(trackartist['name'])
+                            artistidlist.append(trackartist['id'])
                         elif isinstance(trackartist, str):
                             artistlist.append(trackartist)
                         if trackartist and nowplaying.utils.normalize(
@@ -189,6 +191,9 @@ class Plugin(RecognitionPlugin):
                         self.acoustidmd['album'] = album
                     if rid:
                         self.acoustidmd['musicbrainzrecordingid'] = rid
+                    if artistidlist:
+                        self.acoustidmd['musicbrainzartistid'] = '/'.join(
+                            artistidlist)
                     lastscore = score
 
     def _configure_fpcalc(self, fpcalcexe=None):  # pylint: disable=too-many-return-statements
@@ -274,6 +279,10 @@ class Plugin(RecognitionPlugin):
 
         if musicbrainzlookup := self.musicbrainz.recordingid(
                 self.acoustidmd['musicbrainzrecordingid']):
+            if self.acoustidmd.get(
+                    'musicbrainzartistid') and musicbrainzlookup.get(
+                        'musicbrainzartistid'):
+                del musicbrainzlookup['musicbrainzartistid']
             self.acoustidmd.update(musicbrainzlookup)
         return self.acoustidmd
 

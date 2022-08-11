@@ -38,6 +38,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             logging.debug('running %s', processor)
             func = getattr(self, f'_process_{processor}')
             func()
+            logging.debug('mbaid: %s',
+                          self.metadata.get('musicbrainzartistid'))
 
         if 'publisher' in self.metadata:
             if 'label' not in self.metadata:
@@ -63,33 +65,42 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata[key] = value
 
     def _process_audio_metadata_mp4_freeform(self, freeformparentlist):
+        tempdata = {}
         for freeformlist in freeformparentlist:
             for freeform in freeformlist:
                 if freeform.description == 'com.apple.iTunes':
                     if freeform['name'] == 'originaldate':
-                        self.metadata['date'] = MP4FreeformDecoders[
+                        tempdata['date'] = MP4FreeformDecoders[
                             freeform.data_type](freeform.value)
                     if freeform['name'] == 'LABEL':
-                        self.metadata['label'] = MP4FreeformDecoders[
+                        tempdata['label'] = MP4FreeformDecoders[
                             freeform.data_type](freeform.value)
                     if freeform['name'] == 'DISCSUBTITLE':
-                        self.metadata['discsubtitle'] = MP4FreeformDecoders[
+                        tempdata['discsubtitle'] = MP4FreeformDecoders[
                             freeform.data_type](freeform.value)
                     if freeform['name'] == 'MusicBrainz Album Id':
-                        self.metadata[
-                            'musicbrainzalbumid'] = MP4FreeformDecoders[
-                                freeform.data_type](freeform.value)
+                        tempdata['musicbrainzalbumid'] = MP4FreeformDecoders[
+                            freeform.data_type](freeform.value)
                     if freeform['name'] == 'MusicBrainz Artist Id':
-                        self.metadata[
-                            'musicbrainzartistid'] = MP4FreeformDecoders[
-                                freeform.data_type](freeform.value)
+                        if tempdata.get('musicbrainzartistid'):
+                            tempdata['musicbrainzartistid'] = '/'.join([
+                                tempdata.get('musicbrainzartistid'),
+                                MP4FreeformDecoders[freeform.data_type](
+                                    freeform.value)
+                            ])
+                        else:
+                            tempdata[
+                                'musicbrainzartistid'] = MP4FreeformDecoders[
+                                    freeform.data_type](freeform.value)
+
                     if freeform['name'] == 'Acoustid Id':
-                        self.metadata['acoustidid'] = MP4FreeformDecoders[
+                        tempdata['acoustidid'] = MP4FreeformDecoders[
                             freeform.data_type](freeform.value)
                     if freeform['name'] == 'MusicBrainz Track Id':
-                        self.metadata[
+                        tempdata[
                             'musicbrainzrecordingid'] = MP4FreeformDecoders[
                                 freeform.data_type](freeform.value)
+        self._recognition_replacement(tempdata)
 
     def _process_audio_metadata_id3_usertext(self, usertextlist):
         for usertext in usertextlist:
@@ -100,7 +111,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             elif usertext.description == 'MusicBrainz Album Id':
                 self.metadata['musicbrainzalbumid'] = usertext.text[0]
             elif usertext.description == 'MusicBrainz Artist Id':
-                self.metadata['musicbrainzartistid'] = usertext.text[0]
+                self.metadata['musicbrainzartistid'] = '/'.join(usertext.text)
             elif usertext.description == 'MusicBrainz Release Track Id':
                 self.metadata['musicbrainzrecordingid'] = usertext.text[0]
             elif usertext.description == 'originalyear':

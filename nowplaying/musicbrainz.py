@@ -112,11 +112,14 @@ class MusicBrainzHelper():
                     return None
             return mbdata
 
-        def _pickarelease(newdata, mbdata):
+        def _pickarelease(newdata, mbdata, multipleartists):
             namedartist = []
             variousartist = []
             for release in mbdata['release-list']:
-                if 'artist' in newdata and release[
+                if multipleartists and newdata.get('artist') and release[
+                        'artist-credit-phrase'] in newdata['artist']:
+                    namedartist.append(release)
+                elif 'artist' in newdata and release[
                         'artist-credit-phrase'] == newdata['artist']:
                     namedartist.append(release)
                 elif release['artist-credit-phrase'] == 'Various Artists':
@@ -136,13 +139,22 @@ class MusicBrainzHelper():
                           recordingid, error)
             return None
 
+        multipleartists = False
         if 'recording' in mbdata and 'title' in mbdata['recording']:
             newdata['title'] = mbdata['recording']['title']
         if 'recording' in mbdata and 'artist-credit-phrase' in mbdata[
                 'recording']:
             newdata['artist'] = mbdata['recording']['artist-credit-phrase']
-            newdata['musicbrainzartistid'] = mbdata['recording'][
-                'artist-credit'][0]['artist']['id']
+            for artist in mbdata['recording']['artist-credit']:
+                if not isinstance(artist, dict):
+                    continue
+                if newdata.get('musicbrainzartistid'):
+                    newdata['musicbrainzartistid'] = '/'.join([
+                        newdata['musicbrainzartistid'], artist['artist']['id']
+                    ])
+                    multipleartists = True
+                else:
+                    newdata['musicbrainzartistid'] = artist['artist']['id']
 
         mbdata = releaselookup_noartist(recordingid)
 
@@ -150,7 +162,7 @@ class MusicBrainzHelper():
                 'release-count'] == 0:
             return newdata
 
-        mbdata = _pickarelease(newdata, mbdata)
+        mbdata = _pickarelease(newdata, mbdata, multipleartists)
         if not mbdata:
             return None
 

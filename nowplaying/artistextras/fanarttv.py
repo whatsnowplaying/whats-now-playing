@@ -41,7 +41,8 @@ class Plugin(ArtistExtrasPlugin):
             return None
 
         fnstr = nowplaying.utils.normalize(metadata['artist'])
-
+        logging.debug('got musicbrainzartistid: %s',
+                      metadata['musicbrainzartistid'])
         for artistid in metadata['musicbrainzartistid'].split('/'):
             try:
                 baseurl = f'http://webservice.fanart.tv/v3/music/{artistid}'
