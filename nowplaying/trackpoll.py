@@ -224,11 +224,28 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
             self.currentmeta = oldmeta
             return
 
+        self._artfallbacks()
+
         if not self.testmode:
             metadb = nowplaying.db.MetadataDB()
             metadb.write_to_metadb(metadata=self.currentmeta)
         self._write_to_text()
         self.currenttrack.emit(self.currentmeta)
+
+    def _artfallbacks(self):
+        if self.config.cparser.value(
+                'artistextras/coverfornologos',
+                type=bool) and not self.currentmeta.get(
+                    'artistlogoraw') and self.currentmeta.get('coverimageraw'):
+            self.currentmeta['artistlogoraw'] = self.currentmeta[
+                'coverimageraw']
+
+        if self.config.cparser.value(
+                'artistextras/coverfornothumbs', type=bool
+        ) and not self.currentmeta.get(
+                'artistthumbraw') and self.currentmeta.get('coverimageraw'):
+            self.currentmeta['artistthumbraw'] = self.currentmeta[
+                'coverimageraw']
 
     def _write_to_text(self):
         if not self.previoustxttemplate or self.previoustxttemplate != self.config.txttemplate:

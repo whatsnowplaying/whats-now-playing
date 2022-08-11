@@ -271,10 +271,14 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 except KeyError:
                     pass
 
-                if metadata:
+                if imagedata:
                     metadata['artistfanartraw'] = imagedata
+                elif request.app['config'].cparser.value(
+                        'artistextras/coverfornofanart', type=bool):
+                    metadata['artistfanartraw'] = metadata.get('coverimageraw')
                 else:
                     metadata['artistfanartraw'] = TRANSPARENT_PNG_BIN
+
                 await websocket.send_json(self._transparentifier(metadata))
                 delay = request.app['config'].cparser.value(
                     'artistextras/fanartdelay', type=int)

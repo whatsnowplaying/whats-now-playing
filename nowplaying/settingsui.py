@@ -197,6 +197,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     def _upd_win_artistextras(self):
         self.widgets['artistextras'].artistextras_checkbox.setChecked(
             self.config.cparser.value('artistextras/enabled', type=bool))
+        self.widgets['artistextras'].missingfanart_checkbox.setChecked(
+            self.config.cparser.value('artistextras/coverfornofanart',
+                                      type=bool))
+        self.widgets['artistextras'].missinglogos_checkbox.setChecked(
+            self.config.cparser.value('artistextras/coverfornologos',
+                                      type=bool))
+        self.widgets['artistextras'].missingthumbs_checkbox.setChecked(
+            self.config.cparser.value('artistextras/coverfornothumbs',
+                                      type=bool))
+
         for art in [
                 'banners', 'processes', 'fanart', 'logos', 'thumbnails',
                 'sizelimit'
@@ -381,6 +391,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.config.cparser.setValue(
             'artistextras/enabled',
             self.widgets['artistextras'].artistextras_checkbox.isChecked())
+        self.config.cparser.setValue(
+            'artistextras/coverfornofanart',
+            self.widgets['artistextras'].missingfanart_checkbox.isChecked())
+        self.config.cparser.setValue(
+            'artistextras/coverfornologos',
+            self.widgets['artistextras'].missinglogos_checkbox.isChecked())
+        self.config.cparser.setValue(
+            'artistextras/coverfornothumbs',
+            self.widgets['artistextras'].missingthumbs_checkbox.isChecked())
+
         for art in [
                 'banners', 'processes', 'fanart', 'logos', 'thumbnails',
                 'fanartdelay'
