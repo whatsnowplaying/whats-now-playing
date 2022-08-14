@@ -5,7 +5,6 @@ import fnmatch
 import logging
 import os
 import pathlib
-import shutil
 
 from PySide6.QtCore import Slot, QFile, Qt  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QCheckBox, QErrorMessage, QFileDialog, QTableWidgetItem, QWidget  # pylint: disable=no-name-in-module
