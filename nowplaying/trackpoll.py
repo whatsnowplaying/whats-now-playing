@@ -276,6 +276,8 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                                               type=int)
 
         self.imagecache = nowplaying.imagecache.ImageCache(sizelimit=sizelimit)
+        self.config.cparser.setValue('artistextras/cachedbfile',
+                                     self.imagecache.databasefile)
         self.icprocess = multiprocessing.Process(
             target=self.imagecache.queue_process,
             name='ICProcess',

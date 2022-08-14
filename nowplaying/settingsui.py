@@ -4,6 +4,8 @@
 import fnmatch
 import logging
 import os
+import pathlib
+import shutil
 
 from PySide6.QtCore import Slot, QFile, Qt  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QCheckBox, QErrorMessage, QFileDialog, QTableWidgetItem, QWidget  # pylint: disable=no-name-in-module
@@ -147,6 +149,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         qobject.texttemplate_button.clicked.connect(
             self.on_text_template_button)
         qobject.textoutput_button.clicked.connect(self.on_text_saveas_button)
+
+    def _connect_artistextras_widget(self, qobject):
+        ''' connect the artistextras buttons to non-built-ins '''
+        qobject.clearcache_button.clicked.connect(
+            self.on_artistextras_clearcache_button)
 
     def _connect_obsws_widget(self, qobject):
         ''' connect obsws button to template picker'''
@@ -566,6 +573,18 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         if filename := QFileDialog.getSaveFileName(self, 'Open file', startdir,
                                                    '*.txt'):
             self.widgets['general'].textoutput_lineedit.setText(filename[0])
+
+    @Slot()
+    def on_artistextras_clearcache_button(self):
+        ''' clear the cache button was pushed '''
+        cachedbfile = self.config.cparser.value('artistextras/cachedbfile')
+        if not cachedbfile:
+            return
+
+        cachedbfilepath = pathlib.Path(cachedbfile)
+        if cachedbfilepath.exists() and 'imagecache' in str(cachedbfile):
+            logging.debug('Deleting %s', cachedbfilepath)
+            cachedbfilepath.unlink()
 
     def template_picker(self, startfile=None, startdir=None, limit='*.txt'):
         ''' generic code to pick a template file '''

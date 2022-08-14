@@ -173,19 +173,6 @@
     <bool>true</bool>
    </property>
   </widget>
-  <widget class="QLabel" name="changeswarning_label">
-   <property name="geometry">
-    <rect>
-     <x>240</x>
-     <y>30</y>
-     <width>281</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>All changes on this page require a restart. Sorry.</string>
-   </property>
-  </widget>
   <widget class="QCheckBox" name="missingfanart_checkbox">
    <property name="geometry">
     <rect>
@@ -245,6 +232,19 @@
    </property>
    <property name="checked">
     <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="clearcache_button">
+   <property name="geometry">
+    <rect>
+     <x>330</x>
+     <y>30</y>
+     <width>80</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Clear Cache</string>
    </property>
   </widget>
  </widget>

@@ -59,8 +59,6 @@ class ImageCache:
             eviction_policy='least-frequently-used',
             size_limit=sizelimit * 1024 * 1024 * 1024)
         if initialize:
-            logging.debug('initialize imagecache')
-            self.cache.clear()
             self.setup_sql(initialize=True)
         self.session = None
         self.logpath = None
@@ -90,12 +88,16 @@ class ImageCache:
                 cursor.execute('DROP TABLE artistsha;')
                 cursor.execute(TABLEDEF)
 
+        logging.debug('initialize imagecache')
+        self.cache.clear()
+        self.cache.cull()
+
     def random_fetch(self, artist, imagetype):
         ''' fetch a random row from a cache for the artist '''
         normalartist = self._normalize_artist(artist)
         data = None
         if not self.databasefile.exists():
-            logging.error('imagecache db does not exist yet?')
+            self.setup_sql()
             return None
 
         with sqlite3.connect(self.databasefile) as connection:
@@ -151,7 +153,7 @@ class ImageCache:
 
         data = None
         if not self.databasefile.exists():
-            logging.error('imagecache does not exist yet?')
+            self.setup_sql()
             return None
 
         with sqlite3.connect(self.databasefile) as connection:
@@ -183,7 +185,7 @@ class ImageCache:
 
         data = None
         if not self.databasefile.exists():
-            logging.error('imagecache does not exist yet?')
+            self.setup_sql()
             return None
 
         with sqlite3.connect(self.databasefile) as connection:
@@ -208,6 +210,9 @@ class ImageCache:
 
     def fill_queue(self, config, artist, imagetype, urllist):
         ''' fill the queue '''
+
+        if not self.databasefile.exists():
+            self.setup_sql()
 
         if 'logo' in imagetype:
             maxart = config.cparser.value('artistextras/logos',
@@ -339,7 +344,7 @@ VALUES (?,?,?);
         ''' update metadb '''
 
         if not self.databasefile.exists():
-            logging.error('imagecache does not exist yet?')
+            self.setup_sql()
             return
 
         logging.debug('Erasing %s', url)
@@ -356,7 +361,7 @@ VALUES (?,?,?);
         ''' update metadb '''
 
         if not self.databasefile.exists():
-            logging.error('imagecache does not exist yet?')
+            self.setup_sql()
             return
 
         data = self.find_cachekey(cachekey)
@@ -445,8 +450,7 @@ VALUES (?,?,?);
                     executor.map(self.image_dl, newdataset)
                 time.sleep(2)
                 if not self.databasefile.exists():
-                    logging.error('imagecache db does not exist yet?')
-                    break
+                    self.setup_sql()
 
         logging.debug('stopping download processes')
         self.erase_url('STOPWNP')
