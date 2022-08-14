@@ -12,6 +12,8 @@ AcoustID is a project providing a complete audio identification service
 based entirely on open-source software.  The service is completely free
 for non-commercial applications. All you need to do is
 `register your application <https://acoustid.org/new-application>`_.
+As part of the identification, AcoustID will also provide the
+related MusicBrainz information required for some functionality.
 
 MusicBrainz
 -----------

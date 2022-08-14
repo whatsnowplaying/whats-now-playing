@@ -71,7 +71,8 @@ Provides: Biographies, Fan art, and Thumbnails
 `Discogs <https://www.discogs.com>`_ is a well-known source for music release information, a
 marketplace, and more. Be aware of Discogs Terms of Use as linked to on
 their `API Page <https://www.discogs.com/developers>`_. All you need to do is
-`Get a personal access token <https://www.discogs.com/settings/developers>`_.
+`Get a personal access token <https://www.discogs.com/settings/developers>`_. Discogs uses a
+pure text-search; results may be somewhat unreliable.
 
 fanart.tv
 -----------
@@ -80,9 +81,9 @@ Provides: Banners, Fan art, Logos, and Thumbnails
 
 `fanart.tv <https://www.fanart.tv>`_ is a community project to provide high quality
 artwork for music and other media. It requires music be tagged with
-`MusicBrainz <https://www.musicbrainz.org>`_ artist ids or for the audio recognition
-system to try to find them for you in real-time. You will need a
+`MusicBrainz <https://www.musicbrainz.org>`_ artist ids. You will need a
 `Fanart API Key <https://fanart.tv/get-an-api-key/>`_ in order to use this service.
+
 
 TheAudioDB
 -----------
