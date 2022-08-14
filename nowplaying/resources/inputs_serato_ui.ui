@@ -195,6 +195,12 @@
       <property name="enabled">
        <bool>false</bool>
       </property>
+      <property name="minimumSize">
+       <size>
+        <width>515</width>
+        <height>0</height>
+       </size>
+      </property>
       <property name="inputMethodHints">
        <set>Qt::ImhPreferNumbers|Qt::ImhUrlCharactersOnly</set>
       </property>
@@ -214,6 +220,12 @@
      <widget class="QLineEdit" name="remote_poll_lineedit">
       <property name="enabled">
        <bool>false</bool>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>515</width>
+        <height>0</height>
+       </size>
       </property>
      </widget>
     </item>

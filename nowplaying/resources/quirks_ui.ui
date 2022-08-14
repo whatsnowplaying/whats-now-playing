@@ -107,12 +107,24 @@ p, li { white-space: pre-wrap; }
       <property name="enabled">
        <bool>false</bool>
       </property>
+      <property name="minimumSize">
+       <size>
+        <width>445</width>
+        <height>0</height>
+       </size>
+      </property>
      </widget>
     </item>
     <item row="1" column="1">
      <widget class="QLineEdit" name="song_out_path_lineedit">
       <property name="enabled">
        <bool>false</bool>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>445</width>
+        <height>0</height>
+       </size>
       </property>
      </widget>
     </item>

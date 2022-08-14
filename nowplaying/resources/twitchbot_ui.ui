@@ -38,6 +38,12 @@
       <property name="enabled">
        <bool>false</bool>
       </property>
+      <property name="minimumSize">
+       <size>
+        <width>496</width>
+        <height>0</height>
+       </size>
+      </property>
      </widget>
     </item>
     <item row="1" column="0">
@@ -54,6 +60,12 @@
      <widget class="QLineEdit" name="username_lineedit">
       <property name="enabled">
        <bool>false</bool>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>496</width>
+        <height>0</height>
+       </size>
       </property>
      </widget>
     </item>
@@ -72,6 +84,12 @@
       <property name="enabled">
        <bool>false</bool>
       </property>
+      <property name="minimumSize">
+       <size>
+        <width>496</width>
+        <height>0</height>
+       </size>
+      </property>
      </widget>
     </item>
     <item row="3" column="0">
@@ -88,6 +106,12 @@
      <widget class="QLineEdit" name="token_lineedit">
       <property name="enabled">
        <bool>false</bool>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>496</width>
+        <height>0</height>
+       </size>
       </property>
       <property name="echoMode">
        <enum>QLineEdit::Password</enum>
@@ -108,6 +132,12 @@
      <widget class="QLineEdit" name="commandchar_lineedit">
       <property name="enabled">
        <bool>false</bool>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>496</width>
+        <height>0</height>
+       </size>
       </property>
       <property name="text">
        <string>!</string>
@@ -131,6 +161,12 @@
      <widget class="QLineEdit" name="announce_delay_lineedit">
       <property name="enabled">
        <bool>false</bool>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>496</width>
+        <height>0</height>
+       </size>
       </property>
      </widget>
     </item>
@@ -176,6 +212,12 @@
      <width>381</width>
      <height>25</height>
     </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>381</width>
+     <height>0</height>
+    </size>
    </property>
   </widget>
   <widget class="QPushButton" name="announce_button">
