@@ -65,52 +65,49 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata[key] = value
 
     def _process_audio_metadata_mp4_freeform(self, freeformparentlist):
+
+        def _itunes(tempdata, freeform):
+            convdict = {
+                'LABEL': 'label',
+                'originaldate': 'date',
+                'DISCSUBTITLE': 'discsubtitle',
+                'MusicBrainz Album Id': 'musicbrainzalbumid',
+                'MusicBrainz Artist Id': 'musicbrainzartistid',
+                'Acoustid Id': 'acoustidid',
+                'MusicBrainz Track Id': 'musicbrainzrecordingid',
+                'tsrc': 'isrc',
+            }
+
+            for src, dest in convdict.items():
+                if freeform['name'] == src:
+                    if tempdata.get(dest):
+                        tempdata[dest] = '/'.join([
+                            tempdata.get(dest),
+                            MP4FreeformDecoders[freeform.data_type](
+                                freeform.value)
+                        ])
+                    else:
+                        tempdata[dest] = MP4FreeformDecoders[
+                            freeform.data_type](freeform.value)
+
+            if freeform['name'] == 'website':
+                if tempdata.get('artistwebsite'):
+                    tempdata['artistwebsite'] = ' ; '.join([
+                        tempdata.get('artistwebsite'),
+                        MP4FreeformDecoders[freeform.data_type](freeform.value)
+                    ])
+                else:
+                    tempdata['artistwebsite'] = MP4FreeformDecoders[
+                        freeform.data_type](freeform.value)
+
+            return tempdata
+
         tempdata = {}
         for freeformlist in freeformparentlist:
             for freeform in freeformlist:
                 if freeform.description == 'com.apple.iTunes':
-                    if freeform['name'] == 'originaldate':
-                        tempdata['date'] = MP4FreeformDecoders[
-                            freeform.data_type](freeform.value)
-                    if freeform['name'] == 'LABEL':
-                        tempdata['label'] = MP4FreeformDecoders[
-                            freeform.data_type](freeform.value)
-                    if freeform['name'] == 'DISCSUBTITLE':
-                        tempdata['discsubtitle'] = MP4FreeformDecoders[
-                            freeform.data_type](freeform.value)
-                    if freeform['name'] == 'MusicBrainz Album Id':
-                        tempdata['musicbrainzalbumid'] = MP4FreeformDecoders[
-                            freeform.data_type](freeform.value)
-                    if freeform['name'] == 'MusicBrainz Artist Id':
-                        if tempdata.get('musicbrainzartistid'):
-                            tempdata['musicbrainzartistid'] = '/'.join([
-                                tempdata.get('musicbrainzartistid'),
-                                MP4FreeformDecoders[freeform.data_type](
-                                    freeform.value)
-                            ])
-                        else:
-                            tempdata[
-                                'musicbrainzartistid'] = MP4FreeformDecoders[
-                                    freeform.data_type](freeform.value)
+                    tempdata = _itunes(tempdata, freeform)
 
-                    if freeform['name'] == 'website':
-                        if tempdata.get('artistwebsite'):
-                            tempdata['artistwebsite'] = ' ; '.join([
-                                tempdata.get('artistwebsite'),
-                                MP4FreeformDecoders[freeform.data_type](
-                                    freeform.value)
-                            ])
-                        else:
-                            tempdata['artistwebsite'] = MP4FreeformDecoders[
-                                freeform.data_type](freeform.value)
-
-                    if freeform['name'] == 'Acoustid Id':
-                        tempdata['acoustidid'] = MP4FreeformDecoders[
-                            freeform.data_type](freeform.value)
-                    if freeform['name'] == 'MusicBrainz Track Id':
-                        tempdata[
-                            'musicbrainzrecordingid'] = MP4FreeformDecoders[
-                                freeform.data_type](freeform.value)
         self._recognition_replacement(tempdata)
 
     def _process_audio_metadata_id3_usertext(self, usertextlist):
