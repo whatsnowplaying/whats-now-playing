@@ -128,7 +128,37 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             elif usertext.description == 'originalyear':
                 self.metadata['date'] = usertext.text[0]
 
-    def _process_audio_metadata_specials(self, tags):
+    def _process_audio_metadata_othertags(self, tags):
+        if 'discnumber' in tags and 'disc' not in self.metadata:
+            text = tags['discnumber'][0].replace('[', '').replace(']', '')
+            try:
+                self.metadata['disc'], self.metadata[
+                    'disc_total'] = text.split('/')
+            except:  # pylint: disable=bare-except
+                pass
+
+        if 'tracknumber' in tags and 'track' not in self.metadata:
+            text = tags['tracknumber'][0].replace('[', '').replace(']', '')
+            try:
+                self.metadata['track'], self.metadata[
+                    'track_total'] = text.split('/')
+            except:  # pylint: disable=bare-except
+                pass
+
+        for websitetag in ['WOAR', 'website']:
+            if websitetag in tags and 'artistwebsite' not in self.metadata:
+                if isinstance(tags[websitetag], list):
+                    self.metadata['artistwebsite'] = ' ; '.join(
+                        str(x) for x in tags[websitetag])
+                else:
+                    self.metadata['artistwebsite'] = tags[websitetag]
+
+        if 'freeform' in tags:
+            self._process_audio_metadata_mp4_freeform(tags.freeform)
+        elif 'usertext' in tags:
+            self._process_audio_metadata_id3_usertext(tags.usertext)
+
+    def _process_audio_metadata_remaps(self, tags):
 
         convdict = {
             'acoustid id': 'acoustidid',
@@ -177,37 +207,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 else:
                     self.metadata[key] = base.tags[key]
 
-        self._process_audio_metadata_specials(base.tags)
-
-        if 'discnumber' in base.tags and 'disc' not in self.metadata:
-            text = base.tags['discnumber'][0].replace('[', '').replace(']', '')
-            try:
-                self.metadata['disc'], self.metadata[
-                    'disc_total'] = text.split('/')
-            except:  # pylint: disable=bare-except
-                pass
-
-        if 'tracknumber' in base.tags and 'track' not in self.metadata:
-            text = base.tags['tracknumber'][0].replace('[',
-                                                       '').replace(']', '')
-            try:
-                self.metadata['track'], self.metadata[
-                    'track_total'] = text.split('/')
-            except:  # pylint: disable=bare-except
-                pass
-
-        for websitetag in ['WOAR', 'website']:
-            if websitetag in base.tags and 'artistwebsite' not in self.metadata:
-                if isinstance(base.tags[websitetag], list):
-                    self.metadata['artistwebsite'] = ' ; '.join(
-                        str(x) for x in base.tags[websitetag])
-                else:
-                    self.metadata['artistwebsite'] = base.tags[websitetag]
-
-        if 'freeform' in base.tags:
-            self._process_audio_metadata_mp4_freeform(base.tags.freeform)
-        elif 'usertext' in base.tags:
-            self._process_audio_metadata_id3_usertext(base.tags.usertext)
+        self._process_audio_metadata_remaps(base.tags)
+        self._process_audio_metadata_othertags(base.tags)
 
         if 'bitrate' not in self.metadata and getattr(base, 'streaminfo'):
             self.metadata['bitrate'] = base.streaminfo['bitrate']
