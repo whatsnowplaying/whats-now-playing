@@ -93,6 +93,17 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                                 'musicbrainzartistid'] = MP4FreeformDecoders[
                                     freeform.data_type](freeform.value)
 
+                    if freeform['name'] == 'website':
+                        if tempdata.get('artistwebsite'):
+                            tempdata['artistwebsite'] = ' ; '.join([
+                                tempdata.get('artistwebsite'),
+                                MP4FreeformDecoders[freeform.data_type](
+                                    freeform.value)
+                            ])
+                        else:
+                            tempdata['artistwebsite'] = MP4FreeformDecoders[
+                                freeform.data_type](freeform.value)
+
                     if freeform['name'] == 'Acoustid Id':
                         tempdata['acoustidid'] = MP4FreeformDecoders[
                             freeform.data_type](freeform.value)
@@ -184,6 +195,14 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     'track_total'] = text.split('/')
             except:  # pylint: disable=bare-except
                 pass
+
+        for websitetag in ['WOAR', 'website']:
+            if websitetag in base.tags and 'artistwebsite' not in self.metadata:
+                if isinstance(base.tags[websitetag], list):
+                    self.metadata['artistwebsite'] = ' ; '.join(
+                        str(x) for x in base.tags[websitetag])
+                else:
+                    self.metadata['artistwebsite'] = base.tags[websitetag]
 
         if 'freeform' in base.tags:
             self._process_audio_metadata_mp4_freeform(base.tags.freeform)

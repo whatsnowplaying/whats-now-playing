@@ -38,9 +38,11 @@ Supported Variables
    * - artist
      - Artist for the song
    * - artistlongbio
-     - Full biography of the artist
+     - Full biography of the artist (from "Artist Extras")
    * - artistshortbio
-     - First paragraph of the long bio
+     - First paragraph of the long bio (from "Artist Extras")
+   * - artistwebsite
+     - List of URLs (separated by ; ) for the artist (from the file)
    * - bitrate
      - Bitrate the file was encoded at
    * - bpm

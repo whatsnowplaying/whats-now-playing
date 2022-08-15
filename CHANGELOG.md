@@ -26,6 +26,8 @@
   * Logos
   * Thumbnails
 
+* 'artistwebsite' variable now reports the Artist Website information
+  in the tag
 * Fixed some leaks that would prevent multiple launches
 * Metadata for date and label wasn't always correct
 * More metadata information from FLAC files
