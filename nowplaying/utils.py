@@ -159,6 +159,11 @@ def image2png(rawdata):
 
     if not rawdata:
         return None
+
+    if rawdata.startswith(b'\211PNG\r\n\032\n'):
+        logging.debug('already PNG, skipping convert')
+        return rawdata
+
     try:
         origimage = rawdata
         imgbuffer = io.BytesIO(origimage)
@@ -166,10 +171,11 @@ def image2png(rawdata):
         logging.getLogger('PIL.PngImagePlugin').setLevel(logging.CRITICAL + 1)
         image = PIL.Image.open(imgbuffer)
         if image.format != 'PNG':
-            image.convert('RGB').save(imgbuffer, format='png', optimize=True)
+            image.convert(mode='RGB').save(imgbuffer, format='png')
     except Exception as error:  #pylint: disable=broad-except
         logging.debug(error)
         return None
+    logging.debug("Leaving image2png")
     return imgbuffer.getvalue()
 
 
