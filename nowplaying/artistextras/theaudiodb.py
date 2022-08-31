@@ -73,6 +73,13 @@ class Plugin(ArtistExtrasPlugin):
                         type=bool) and 'strBiographyEN' in artdata:
                     bio += self._filter(artdata['strBiographyEN'])
 
+            if self.config.cparser.value('theaudiodb/websites', type=bool):
+                if artdata.get('strWebsite'):
+                    webstr = 'https://' + artdata['strWebsite']
+                    if not metadata.get('artistwebsites'):
+                        metadata['artistwebsites'] = []
+                    metadata['artistwebsites'].append(webstr)
+
             if imagecache:
                 if not metadata.get('artistbannerraw') and artdata.get(
                         'strArtistBanner') and self.config.cparser.value(
@@ -131,7 +138,7 @@ class Plugin(ArtistExtrasPlugin):
         if metadata.get('musicbrainzartistid'):
             logging.debug('got musicbrainzartistid: %s',
                           metadata['musicbrainzartistid'])
-            for mbid in metadata['musicbrainzartistid'].split('/'):
+            for mbid in metadata['musicbrainzartistid']:
                 if newdata := self.artistdatafrommbid(apikey, mbid):
                     extradata.extend(artist for artist in newdata['artists']
                                      if self._check_artist(artist))
@@ -204,13 +211,17 @@ class Plugin(ArtistExtrasPlugin):
         self.config.cparser.setValue('theaudiodb/bio_iso_en_fallback',
                                      qwidget.bio_iso_en_checkbox.isChecked())
 
-        for field in ['banners', 'bio', 'fanart', 'logos', 'thumbnails']:
+        for field in [
+                'banners', 'bio', 'fanart', 'logos', 'thumbnails', 'websites'
+        ]:
             func = getattr(qwidget, f'{field}_checkbox')
             self.config.cparser.setValue(f'theaudiodb/{field}',
                                          func.isChecked())
 
     def defaults(self, qsettings):
-        for field in ['banners', 'bio', 'fanart', 'logos', 'thumbnails']:
+        for field in [
+                'banners', 'bio', 'fanart', 'logos', 'thumbnails', 'websites'
+        ]:
             qsettings.setValue(f'theaudiodb/{field}', False)
 
         qsettings.setValue('theaudiodb/enabled', False)

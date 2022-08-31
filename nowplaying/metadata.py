@@ -38,8 +38,6 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             logging.debug('running %s', processor)
             func = getattr(self, f'_process_{processor}')
             func()
-            logging.debug('mbaid: %s',
-                          self.metadata.get('musicbrainzartistid'))
 
         if 'publisher' in self.metadata:
             if 'label' not in self.metadata:
@@ -54,6 +52,16 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if self.metadata.get(
                 'artistlongbio') and not self.metadata.get('artistshortbio'):
             self._generate_short_bio()
+
+        self._uniqlists()
+
+    def _uniqlists(self):
+        lists = ['artistwebsites', 'isrc', 'musicbrainzartistid']
+
+        for listname in lists:
+            if self.metadata.get(listname):
+                newlist = sorted(set(self.metadata[listname]))
+                self.metadata[listname] = newlist
 
     def _process_hostmeta(self):
         ''' add the host metadata so other subsystems can use it '''
@@ -71,34 +79,35 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 'LABEL': 'label',
                 'originaldate': 'date',
                 'DISCSUBTITLE': 'discsubtitle',
-                'MusicBrainz Album Id': 'musicbrainzalbumid',
-                'MusicBrainz Artist Id': 'musicbrainzartistid',
                 'Acoustid Id': 'acoustidid',
+                'MusicBrainz Album Id': 'musicbrainzalbumid',
                 'MusicBrainz Track Id': 'musicbrainzrecordingid',
+            }
+
+            for src, dest in convdict.items():
+                if freeform['name'] == src:
+                    if not tempdata.get(dest):
+                        tempdata[dest] = MP4FreeformDecoders[
+                            freeform.data_type](freeform.value)
+
+            convdict = {
+                'MusicBrainz Artist Id': 'musicbrainzartistid',
+                'website': 'artistwebsites',
                 'tsrc': 'isrc',
             }
 
             for src, dest in convdict.items():
                 if freeform['name'] == src:
                     if tempdata.get(dest):
-                        tempdata[dest] = '/'.join([
-                            tempdata.get(dest),
-                            MP4FreeformDecoders[freeform.data_type](
-                                freeform.value)
-                        ])
-                    else:
-                        tempdata[dest] = MP4FreeformDecoders[
-                            freeform.data_type](freeform.value)
+                        tempdata[dest].append(
+                            str(MP4FreeformDecoders[freeform.data_type](
+                                freeform.value)))
 
-            if freeform['name'] == 'website':
-                if tempdata.get('artistwebsite'):
-                    tempdata['artistwebsite'] = ' ; '.join([
-                        tempdata.get('artistwebsite'),
-                        MP4FreeformDecoders[freeform.data_type](freeform.value)
-                    ])
-                else:
-                    tempdata['artistwebsite'] = MP4FreeformDecoders[
-                        freeform.data_type](freeform.value)
+                    else:
+                        tempdata[dest] = [
+                            str(MP4FreeformDecoders[freeform.data_type](
+                                freeform.value))
+                        ]
 
             return tempdata
 
@@ -119,7 +128,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             elif usertext.description == 'MusicBrainz Album Id':
                 self.metadata['musicbrainzalbumid'] = usertext.text[0]
             elif usertext.description == 'MusicBrainz Artist Id':
-                self.metadata['musicbrainzartistid'] = '/'.join(usertext.text)
+                self.metadata['musicbrainzartistid'] = usertext.text
             elif usertext.description == 'MusicBrainz Release Track Id':
                 self.metadata['musicbrainzrecordingid'] = usertext.text[0]
             elif usertext.description == 'originalyear':
@@ -143,12 +152,14 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 pass
 
         for websitetag in ['WOAR', 'website']:
-            if websitetag in tags and 'artistwebsite' not in self.metadata:
+            if websitetag in tags and 'artistwebsites' not in self.metadata:
                 if isinstance(tags[websitetag], list):
-                    self.metadata['artistwebsite'] = ' ; '.join(
-                        str(x) for x in tags[websitetag])
+                    if not self.metadata.get('artistwebsites'):
+                        self.metadata['artistwebsites'] = []
+                    for tag in tags[websitetag]:
+                        self.metadata['artistwebsites'].append(str(tag))
                 else:
-                    self.metadata['artistwebsite'] = tags[websitetag]
+                    self.metadata['artistwebsites'] = [str(tags[websitetag])]
 
         if 'freeform' in tags:
             self._process_audio_metadata_mp4_freeform(tags.freeform)
@@ -157,22 +168,35 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     def _process_audio_metadata_remaps(self, tags):
 
+        # single:
+
         convdict = {
             'acoustid id': 'acoustidid',
             'date': 'date',
             'musicbrainz album id': 'musicbrainzalbumid',
-            'musicbrainz artist id': 'musicbrainzartistid',
             'musicbrainz release track id': 'musicbrainzrecordingid',
             'publisher': 'label',
+        }
+
+        for src, dest in convdict.items():
+            if not self.metadata.get(dest) and src in tags:
+                self.metadata[dest] = str(tags[src][0])
+
+        # lists
+        convdict = {
+            'musicbrainz artist id': 'musicbrainzartistid',
             'tsrc': 'isrc',
         }
 
         for src, dest in convdict.items():
             if dest not in self.metadata and src in tags:
                 if isinstance(tags[src], list):
-                    self.metadata[dest] = '/'.join(str(x) for x in tags[src])
+                    if not self.metadata.get(dest):
+                        self.metadata[dest] = []
+                    for tag in tags[src]:
+                        self.metadata[dest].append(str(tag))
                 else:
-                    self.metadata[dest] = tags[src]
+                    self.metadata[dest] = [str(tags[src])]
 
     def _process_audio_metadata(self):  # pylint: disable=too-many-branches
         try:
@@ -192,7 +216,6 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 'composer',
                 'discsubtitle',
                 'genre',
-                'isrc',
                 'key',
                 'label',
                 'title',
@@ -202,7 +225,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     self.metadata[key] = '/'.join(
                         str(x) for x in base.tags[key])
                 else:
-                    self.metadata[key] = base.tags[key]
+                    self.metadata[key] = str(base.tags[key])
 
         self._process_audio_metadata_remaps(base.tags)
         self._process_audio_metadata_othertags(base.tags)
@@ -238,7 +261,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 extra = getattr(tag, 'extra')
                 for key in ['isrc']:
                     if extra.get(key):
-                        self.metadata[key] = extra[key]
+                        self.metadata[key] = extra[key].split('/')
 
             if 'date' not in self.metadata and hasattr(
                     tag, 'year') and getattr(tag, 'year'):
@@ -266,11 +289,12 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         for meta in addmeta:
-            if meta in ['artist', 'title']:
+            if meta in ['artist', 'title', 'artistwebsites']:
                 if self.config.cparser.value(f'recognition/replace{meta}',
                                              type=bool) and addmeta.get(meta):
                     self.metadata[meta] = addmeta[meta]
-
+                elif not self.metadata.get(meta) and addmeta.get(meta):
+                    self.metadata[meta] = addmeta[meta]
             elif not self.metadata.get(meta) and addmeta.get(meta):
                 self.metadata[meta] = addmeta[meta]
 
@@ -291,7 +315,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 config=self.config)
             metalist = musicbrainz.providerinfo()
             if any(meta not in self.metadata for meta in metalist):
-                addmeta = musicbrainz.isrc(self.metadata['isrc'].split('/'))
+                addmeta = musicbrainz.isrc(self.metadata['isrc'])
                 self._recognition_replacement(addmeta)
 
         for plugin in self.config.plugins['recognition']:
@@ -343,7 +367,12 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
 def main():
     ''' entry point as a standalone app'''
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(
+        format=
+        '%(asctime)s %(process)d %(threadName)s %(module)s:%(funcName)s:%(lineno)d '
+        + '%(levelname)s %(message)s',
+        datefmt='%Y-%m-%dT%H:%M:%S%z',
+        level=logging.DEBUG)
     logging.captureWarnings(True)
     bundledir = os.path.abspath(os.path.dirname(__file__))
     nowplaying.config.ConfigFile(bundledir=bundledir)

@@ -62,6 +62,9 @@ class Plugin(ArtistExtrasPlugin):
         if self.config.cparser.value('discogs/bio', type=bool):
             metadata['artistlongbio'] = artistresultlist.profile_plaintext
 
+        if self.config.cparser.value('discogs/websites', type=bool):
+            metadata['artistwebsites'] = artistresultlist.urls
+
         if not imagecache:
             return metadata
 
@@ -87,7 +90,10 @@ class Plugin(ArtistExtrasPlugin):
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this plug-in '''
-        return ['artistlongbio', 'artistthumbraw', 'discogs-artistfanarturls']
+        return [
+            'artistlongbio', 'artistthumbraw', 'discogs-artistfanarturls',
+            'artistwebsites'
+        ]
 
     def connect_settingsui(self, qwidget):
         ''' pass '''
@@ -101,7 +107,7 @@ class Plugin(ArtistExtrasPlugin):
         qwidget.apikey_lineedit.setText(
             self.config.cparser.value('discogs/apikey'))
 
-        for field in ['bio', 'fanart', 'thumbnails']:
+        for field in ['bio', 'fanart', 'thumbnails', 'websites']:
             func = getattr(qwidget, f'{field}_checkbox')
             func.setChecked(
                 self.config.cparser.value(f'discogs/{field}', type=bool))
@@ -117,7 +123,7 @@ class Plugin(ArtistExtrasPlugin):
         self.config.cparser.setValue('discogs/apikey',
                                      qwidget.apikey_lineedit.text())
 
-        for field in ['bio', 'fanart', 'thumbnails']:
+        for field in ['bio', 'fanart', 'thumbnails', 'websites']:
             func = getattr(qwidget, f'{field}_checkbox')
             self.config.cparser.setValue(f'discogs/{field}', func.isChecked())
 

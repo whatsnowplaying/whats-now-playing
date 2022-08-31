@@ -41,16 +41,17 @@ def test_15ghosts2_mp3_fullytagged(bootstrap, getroot):
     assert metadata['album'] == 'Ghosts I-IV'
     assert metadata['albumartist'] == 'Nine Inch Nails'
     assert metadata['artist'] == 'Nine Inch Nails'
-    assert metadata['artistwebsite'] == 'https://www.nin.com/'
+    assert metadata['artistwebsites'] == ['https://www.nin.com/']
     assert metadata['coverimagetype'] == 'png'
     assert metadata['coverurl'] == 'cover.png'
     assert metadata['date'] == '2008'
-    assert metadata['isrc'] == 'USTC40852243'
+    assert metadata['isrc'] == ['USTC40852243']
     assert metadata['label'] == 'The Null Corporation'
     assert metadata[
         'musicbrainzalbumid'] == '3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a'
-    assert metadata[
-        'musicbrainzartistid'] == 'b7ffd2af-418f-4be2-bdd1-22f8b48613da'
+    assert metadata['musicbrainzartistid'] == [
+        'b7ffd2af-418f-4be2-bdd1-22f8b48613da'
+    ]
     assert metadata[
         'musicbrainzrecordingid'] == '168cb2db-5626-30c5-b822-dbf2324c2f49'
     assert metadata['title'] == '15 Ghosts II'
@@ -89,17 +90,18 @@ def test_15ghosts2_flac_fullytagged(bootstrap, getroot):
     assert metadata['acoustidid'] == '02d23182-de8b-493e-a6e1-e011bfdacbcf'
     assert metadata['album'] == 'Ghosts I-IV'
     assert metadata['albumartist'] == 'Nine Inch Nails'
-    assert metadata['artistwebsite'] == 'https://www.nin.com/'
+    assert metadata['artistwebsites'] == ['https://www.nin.com/']
     assert metadata['artist'] == 'Nine Inch Nails'
     assert metadata['coverimagetype'] == 'png'
     assert metadata['coverurl'] == 'cover.png'
     assert metadata['date'] == '2008-03-02'
-    assert metadata['isrc'] == 'USTC40852243'
+    assert metadata['isrc'] == ['USTC40852243']
     assert metadata['label'] == 'The Null Corporation'
     assert metadata[
         'musicbrainzalbumid'] == '3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a'
-    assert metadata[
-        'musicbrainzartistid'] == 'b7ffd2af-418f-4be2-bdd1-22f8b48613da'
+    assert metadata['musicbrainzartistid'] == [
+        'b7ffd2af-418f-4be2-bdd1-22f8b48613da'
+    ]
     assert metadata[
         'musicbrainzrecordingid'] == '168cb2db-5626-30c5-b822-dbf2324c2f49'
     assert metadata['title'] == '15 Ghosts II'

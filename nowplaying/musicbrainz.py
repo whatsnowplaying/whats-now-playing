@@ -20,6 +20,7 @@ class MusicBrainzHelper():
     ''' handler for NowPlaying '''
 
     def __init__(self, config=None):
+        logging.getLogger('musicbrainzngs').setLevel(logging.CRITICAL + 1)
         if config:
             self.config = config
         else:
@@ -42,22 +43,27 @@ class MusicBrainzHelper():
                 contact=emailaddress)
             self.emailaddressset = True
 
-    def isrc(self, isrc):
+    def isrc(self, isrclist):
         ''' lookup musicbrainz information based upon isrc '''
         if not self.config.cparser.value('acoustidmb/enabled', type=bool):
             return None
 
         self._setemail()
-        try:
-            mbdata = musicbrainzngs.get_recordings_by_isrc(
-                isrc, includes=['releases'], release_status=['official'])
-        except Exception:  # pylint: disable=broad-except
+
+        for isrc in isrclist:
             try:
                 mbdata = musicbrainzngs.get_recordings_by_isrc(
-                    isrc, includes=['releases'])
+                    isrc, includes=['releases'], release_status=['official'])
             except Exception:  # pylint: disable=broad-except
-                logging.info('musicbrainz cannot find this ISRC')
-                return None
+                pass
+
+        if not mbdata:
+            for isrc in isrclist:
+                try:
+                    mbdata = musicbrainzngs.get_recordings_by_isrc(
+                        isrc, includes=['releases'])
+                except Exception:  # pylint: disable=broad-except
+                    logging.info('musicbrainz cannot find ISRC %s', isrc)
 
         if 'isrc' not in mbdata or 'recording-list' not in mbdata['isrc']:
             return None
@@ -112,12 +118,13 @@ class MusicBrainzHelper():
                     return None
             return mbdata
 
-        def _pickarelease(newdata, mbdata, multipleartists):
+        def _pickarelease(newdata, mbdata):
             namedartist = []
             variousartist = []
             for release in mbdata['release-list']:
-                if multipleartists and newdata.get('artist') and release[
-                        'artist-credit-phrase'] in newdata['artist']:
+                if len(newdata['musicbrainzartistid']) > 1 and newdata.get(
+                        'artist'
+                ) and release['artist-credit-phrase'] in newdata['artist']:
                     namedartist.append(release)
                 elif 'artist' in newdata and release[
                         'artist-credit-phrase'] == newdata['artist']:
@@ -139,7 +146,6 @@ class MusicBrainzHelper():
                           recordingid, error)
             return None
 
-        multipleartists = False
         if 'recording' in mbdata and 'title' in mbdata['recording']:
             newdata['title'] = mbdata['recording']['title']
         if 'recording' in mbdata and 'artist-credit-phrase' in mbdata[
@@ -148,13 +154,9 @@ class MusicBrainzHelper():
             for artist in mbdata['recording']['artist-credit']:
                 if not isinstance(artist, dict):
                     continue
-                if newdata.get('musicbrainzartistid'):
-                    newdata['musicbrainzartistid'] = '/'.join([
-                        newdata['musicbrainzartistid'], artist['artist']['id']
-                    ])
-                    multipleartists = True
-                else:
-                    newdata['musicbrainzartistid'] = artist['artist']['id']
+                if not newdata.get('musicbrainzartistid'):
+                    newdata['musicbrainzartistid'] = []
+                newdata['musicbrainzartistid'].append(artist['artist']['id'])
 
         mbdata = releaselookup_noartist(recordingid)
 
@@ -162,7 +164,7 @@ class MusicBrainzHelper():
                 'release-count'] == 0:
             return newdata
 
-        mbdata = _pickarelease(newdata, mbdata, multipleartists)
+        mbdata = _pickarelease(newdata, mbdata)
         if not mbdata:
             return None
 
@@ -184,13 +186,53 @@ class MusicBrainzHelper():
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('Failed to get cover art: %s', error)
 
+        newdata['artistwebsites'] = self._websites(
+            newdata['musicbrainzartistid'])
         return newdata
+
+    def _websites(self, idlist):
+        if not self.config.cparser.value('acoustidmb/websites',
+                                         type=bool) or not idlist:
+            return None
+
+        sitelist = []
+        for artistid in idlist:
+            if self.config.cparser.value('acoustidmb/musicbrainz', type=bool):
+                sitelist.append(f'https://musicbrainz.org/artist/{artistid}')
+            try:
+                webdata = musicbrainzngs.get_artist_by_id(
+                    artistid, includes=['url-rels'])
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error('MusicBrainz does not know artistid id %s: %s',
+                              artistid, error)
+
+            if not webdata.get('artist') or not webdata['artist'].get(
+                    'url-relation-list'):
+                continue
+
+            for urlrel in webdata['artist']['url-relation-list']:
+                convdict = {
+                    'bandcamp': 'bandcamp',
+                    'official homepage': 'homepage',
+                    'last.fm': 'lastfm',
+                    'discogs': 'discogs',
+                }
+
+                logging.debug('checking %s', urlrel['type'])
+                for src, dest in convdict.items():
+                    if urlrel['type'] == src and self.config.cparser.value(
+                            f'acoustidmb/{dest}', type=bool):
+                        sitelist.append(urlrel['target'])
+                        logging.debug('placed %s', dest)
+
+        return sitelist
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this recognition system '''
         return [
             'album',
             'artist',
+            'artistwebsites',
             'coverimageraw',
             'date',
             'label',

@@ -110,7 +110,7 @@
     <rect>
      <x>40</x>
      <y>240</y>
-     <width>441</width>
+     <width>541</width>
      <height>80</height>
     </rect>
    </property>
@@ -132,6 +132,16 @@
       </property>
       <property name="text">
        <string>Thumbnails</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="websites_checkbox">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Websites</string>
       </property>
      </widget>
     </item>
@@ -233,6 +243,22 @@
     <hint type="destinationlabel">
      <x>70</x>
      <y>164</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>discogs_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>websites_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>190</x>
+     <y>51</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>491</x>
+     <y>279</y>
     </hint>
    </hints>
   </connection>

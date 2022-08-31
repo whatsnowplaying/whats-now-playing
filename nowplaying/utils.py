@@ -73,8 +73,7 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
         if not self.filename or not os.path.exists(
                 self.filename) or not self.template:
             return " No template found; check Now Playing settings."
-
-        return self.template.render(metadatadict)
+        return self.template.render(**metadatadict)
 
 
 def getmoremetadata(metadata=None, imagecache=None):

@@ -43,7 +43,7 @@ class Plugin(ArtistExtrasPlugin):
         fnstr = nowplaying.utils.normalize(metadata['artist'])
         logging.debug('got musicbrainzartistid: %s',
                       metadata['musicbrainzartistid'])
-        for artistid in metadata['musicbrainzartistid'].split('/'):
+        for artistid in metadata['musicbrainzartistid']:
             try:
                 baseurl = f'http://webservice.fanart.tv/v3/music/{artistid}'
                 logging.debug('fanarttv: calling %s', baseurl)

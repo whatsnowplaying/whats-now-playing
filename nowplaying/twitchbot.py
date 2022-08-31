@@ -248,8 +248,14 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             metadata.update(moremetadata)
 
         if os.path.isfile(os.path.join(self.templatedir, template)):
-            template = self.jinja2.get_template(template)
-            message = template.render(metadata)
+            j2template = self.jinja2.get_template(template)
+            try:
+                message = j2template.render(metadata)
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error('template %s rendering failure: %s', template,
+                              error)
+                return
+
             self._send_text(message)
 
     def check_command_perms(self, profile, command):

@@ -2,6 +2,7 @@
 # pylint: disable=invalid-name
 ''' Use acoustid w/help from musicbrainz to recognize the file '''
 
+import copy
 import json
 import os
 import pathlib
@@ -109,14 +110,16 @@ class Plugin(RecognitionPlugin):
 
         return results['results']
 
-    def _read_acoustid_tuples(self, results):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
-        fnstr = nowplaying.utils.normalize(self.acoustidmd['filename'])
-        if self.acoustidmd.get('artist'):
-            fnstr = fnstr + nowplaying.utils.normalize(
-                self.acoustidmd['artist'])
-        if self.acoustidmd.get('title'):
-            fnstr = fnstr + nowplaying.utils.normalize(
-                self.acoustidmd['title'])
+    def _read_acoustid_tuples(self, metadata, results):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
+        fnstr = nowplaying.utils.normalize(metadata['filename'])
+        artistnstr = ''
+        titlenstr = ''
+        if metadata.get('artist'):
+            artistnstr = nowplaying.utils.normalize(metadata['artist'])
+        if metadata.get('title'):
+            titlenstr = nowplaying.utils.normalize(metadata['title'])
+
+        completenstr = fnstr + artistnstr + titlenstr
 
         lastscore = 0
         artistlist = []
@@ -151,7 +154,7 @@ class Plugin(RecognitionPlugin):
                             if albumartist == 'Various Artists':
                                 score = score - .10
                             elif albumartist and nowplaying.utils.normalize(
-                                    albumartist) in fnstr:
+                                    albumartist) in completenstr:
                                 score = score + .20
 
                     title = release['mediums'][0]['tracks'][0]['title']
@@ -159,7 +162,8 @@ class Plugin(RecognitionPlugin):
                         album = release['title']
                     else:
                         album = None
-                    if title and nowplaying.utils.normalize(title) in fnstr:
+                    if title and nowplaying.utils.normalize(
+                            title) in completenstr:
                         score = score + .10
                     artistlist = []
                     artistidlist = []
@@ -170,8 +174,14 @@ class Plugin(RecognitionPlugin):
                             artistidlist.append(trackartist['id'])
                         elif isinstance(trackartist, str):
                             artistlist.append(trackartist)
+                        if trackartist and artistnstr:
+                            if nowplaying.utils.normalize(
+                                    trackartist) == artistnstr:
+                                score = score + .30
+                            else:
+                                score = score - .50
                         if trackartist and nowplaying.utils.normalize(
-                                trackartist) in fnstr:
+                                trackartist) in completenstr:
                             score = score + .10
 
                     artist = ' & '.join(artistlist)
@@ -192,8 +202,7 @@ class Plugin(RecognitionPlugin):
                     if rid:
                         self.acoustidmd['musicbrainzrecordingid'] = rid
                     if artistidlist:
-                        self.acoustidmd['musicbrainzartistid'] = '/'.join(
-                            artistidlist)
+                        self.acoustidmd['musicbrainzartistid'] = artistidlist
                     lastscore = score
 
     def _configure_fpcalc(self, fpcalcexe=None):  # pylint: disable=too-many-return-statements
@@ -244,7 +253,9 @@ class Plugin(RecognitionPlugin):
         return True
 
     def recognize(self, metadata=None):  #pylint: disable=too-many-statements
-        self.acoustidmd = metadata
+        # we need to make sure we don't modify the passed
+        # structure so do a deep copy here
+        self.acoustidmd = copy.deepcopy(metadata)
         if not self.config.cparser.value('acoustidmb/enabled', type=bool):
             return None
 
@@ -269,7 +280,7 @@ class Plugin(RecognitionPlugin):
                     metadata['filename'])
                 return self.acoustidmd
 
-            self._read_acoustid_tuples(results)
+            self._read_acoustid_tuples(metadata, results)
 
         if not self.acoustidmd.get('musicbrainzrecordingid'):
             logging.info(
@@ -319,6 +330,22 @@ class Plugin(RecognitionPlugin):
         qwidget.fpcalcexe_lineedit.setText(
             self.config.cparser.value('acoustidmb/fpcalcexe'))
 
+        if self.config.cparser.value('acoustidmb/websites', type=bool):
+            qwidget.websites_checkbox.setChecked(True)
+        else:
+            qwidget.websites_checkbox.setChecked(False)
+
+        for website in [
+                'bandcamp',
+                'homepage',
+                'lastfm',
+                'musicbrainz',
+                'discogs',
+        ]:
+            guiattr = getattr(qwidget, f'ws_{website}_checkbox')
+            guiattr.setChecked(
+                self.config.cparser.value(f'acoustidmb/{website}', type=bool))
+
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''
         if qwidget.acoustidmb_checkbox.isChecked(
@@ -354,11 +381,36 @@ class Plugin(RecognitionPlugin):
         self.config.cparser.setValue('acoustidmb/fpcalcexe',
                                      qwidget.fpcalcexe_lineedit.text())
 
+        self.config.cparser.setValue('acoustidmb/websites',
+                                     qwidget.websites_checkbox.isChecked())
+
+        for website in [
+                'bandcamp',
+                'homepage',
+                'lastfm',
+                'musicbrainz',
+                'discogs',
+        ]:
+            guiattr = getattr(qwidget, f'ws_{website}_checkbox')
+            self.config.cparser.setValue(f'acoustidmb/{website}',
+                                         guiattr.isChecked())
+
     def defaults(self, qsettings):
         qsettings.setValue('acoustidmb/enabled', False)
         qsettings.setValue('acoustidmb/acoustidapikey', None)
         qsettings.setValue('acoustidmb/emailaddress', None)
         qsettings.setValue('acoustidmb/fpcalcexe', None)
+        qsettings.setValue('acoustidmb/websites', False)
+
+        for website in [
+                'bandcamp',
+                'homepage',
+                'lastfm',
+                'musicbrainz',
+                'discogs',
+        ]:
+            qsettings.setValue(f'acoustidmb/{website}', False)
+        qsettings.setValue('acoustidmb/homepage', True)
 
 
 def main():

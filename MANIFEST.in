@@ -1,5 +1,6 @@
 include versioneer.py
 include nowplaying/version.py
+graft nowplaying/artistextras
 graft nowplaying/inputs
 graft nowplaying/__pyinstaller
 graft nowplaying/recognition

@@ -112,24 +112,6 @@
     <string>Enable Music Recognition by Acoustid + MusicBrainz</string>
    </property>
   </widget>
-  <widget class="QLabel" name="acoustidmb_desclabel">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>280</y>
-     <width>591</width>
-     <height>131</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>AcoustID is a project providing complete audio identification service, based entirely on open source software.
-
-MusicBrainz is an open music encyclopedia that collects music metadata and makes it available to the public. </string>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-  </widget>
   <widget class="QLabel" name="fpcalcexe_label">
    <property name="enabled">
     <bool>false</bool>
@@ -176,6 +158,108 @@ MusicBrainz is an open music encyclopedia that collects music metadata and makes
    </property>
    <property name="text">
     <string>Browse for fpcalc ...</string>
+   </property>
+  </widget>
+  <widget class="QWidget" name="gridLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>310</x>
+     <y>280</y>
+     <width>191</width>
+     <height>146</height>
+    </rect>
+   </property>
+   <layout class="QGridLayout" name="websitedata_gridlayout">
+    <item row="2" column="0">
+     <widget class="QCheckBox" name="ws_bandcamp_checkbox">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Bandcamp</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="0">
+     <widget class="QCheckBox" name="ws_musicbrainz_checkbox">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>MusicBrainz</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <widget class="QCheckBox" name="ws_homepage_checkbox">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Official Homepage</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="0">
+     <widget class="QCheckBox" name="ws_lastfm_checkbox">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>last.fm</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0">
+     <widget class="QCheckBox" name="ws_discogs_checkbox">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Discogs</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QTextBrowser" name="textBrowser">
+   <property name="geometry">
+    <rect>
+     <x>60</x>
+     <y>310</y>
+     <width>191</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="html">
+    <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Artist website links to pull from MusicBrainz (if available)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="websites_checkbox">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>250</y>
+     <width>261</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Ask MusicBrainz for artist's websites</string>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
    </property>
   </widget>
  </widget>
@@ -274,6 +358,102 @@ MusicBrainz is an open music encyclopedia that collects music metadata and makes
     <hint type="destinationlabel">
      <x>405</x>
      <y>195</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>acoustidmb_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>websites_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>190</x>
+     <y>51</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>150</x>
+     <y>261</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>websites_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ws_lastfm_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>150</x>
+     <y>261</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>405</x>
+     <y>382</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>websites_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ws_bandcamp_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>150</x>
+     <y>261</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>405</x>
+     <y>322</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>websites_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ws_discogs_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>150</x>
+     <y>261</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>405</x>
+     <y>352</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>websites_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ws_homepage_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>150</x>
+     <y>261</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>405</x>
+     <y>292</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>websites_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ws_musicbrainz_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>150</x>
+     <y>261</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>405</x>
+     <y>412</y>
     </hint>
    </hints>
   </connection>

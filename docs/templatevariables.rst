@@ -41,8 +41,8 @@ Supported Variables
      - Full biography of the artist (from "Artist Extras")
    * - artistshortbio
      - First paragraph of the long bio (from "Artist Extras")
-   * - artistwebsite
-     - List of URLs (separated by ; ) for the artist (from the file)
+   * - artistwebsites
+     - List of URLs for the artist
    * - bitrate
      - Bitrate the file was encoded at
    * - bpm
@@ -84,7 +84,7 @@ Supported Variables
    * - musicbrainzalbumid
      - MusicBrainz Album Id
    * - musicbrainzartistid
-     - MusicBrainz Artist Id
+     - List of MusicBrainz Artist Ids
    * - musicbrainzrecordingid
      - MusicBrainz Recording Id
    * - title

@@ -226,6 +226,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             self.config.cparser.value('recognition/replacetitle', type=bool))
         self.widgets['general'].recog_artist_checkbox.setChecked(
             self.config.cparser.value('recognition/replaceartist', type=bool))
+        self.widgets['general'].recog_artistwebsites_checkbox.setChecked(
+            self.config.cparser.value('recognition/replaceartistwebsites',
+                                      type=bool))
 
     def _upd_win_input(self):
         ''' this is totally wrong and will need to get dealt
@@ -422,6 +425,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.config.cparser.setValue(
             'recognition/replaceartist',
             self.widgets['general'].recog_artist_checkbox.isChecked())
+        self.config.cparser.setValue(
+            'recognition/replaceartistwebsites',
+            self.widgets['general'].recog_artistwebsites_checkbox.isChecked())
 
     def _upd_conf_input(self):
         ''' find the text of the currently selected handler '''

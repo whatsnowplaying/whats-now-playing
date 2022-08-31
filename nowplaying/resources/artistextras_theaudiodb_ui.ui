@@ -149,6 +149,16 @@
       </property>
      </widget>
     </item>
+    <item>
+     <widget class="QCheckBox" name="websites_checkbox">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Websites</string>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QCheckBox" name="bio_checkbox">
@@ -372,6 +382,22 @@
     <hint type="destinationlabel">
      <x>495</x>
      <y>211</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>theaudiodb_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>websites_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>190</x>
+     <y>51</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>439</x>
+     <y>319</y>
     </hint>
    </hints>
   </connection>

@@ -14,6 +14,8 @@ from watchdog.events import PatternMatchingEventHandler
 
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
+SPLITSTR = '@@SPLITHERE@@'
+
 
 class DBWatcher:
     ''' utility to watch for database changes '''
@@ -71,7 +73,7 @@ class MetadataDB:
         'album',
         'albumartist',
         'artist',
-        'artistwebsite',
+        'artistwebsites',
         'artistlongbio',
         'artistshortbio',
         'bitrate',
@@ -101,6 +103,12 @@ class MetadataDB:
         'title',
         'track',
         'track_total',
+    ]
+
+    LISTFIELDS = [
+        'artistwebsites',
+        'isrc',
+        'musicbrainzartistid',
     ]
 
     # NOTE: artistfanartraw is never actually stored in this DB
@@ -167,6 +175,8 @@ class MetadataDB:
                     mdcopy[key] = None
 
             for data in mdcopy:
+                if isinstance(mdcopy[data], list):
+                    mdcopy[data] = SPLITSTR.join(mdcopy[data])
                 if isinstance(mdcopy[data], str) and len(mdcopy[data]) == 0:
                     mdcopy[data] = None
 
@@ -202,6 +212,11 @@ class MetadataDB:
                 metadata[key] = row[key]
                 if not metadata[key]:
                     del metadata[key]
+
+            for key in MetadataDB.LISTFIELDS:
+                metadata[key] = row[key]
+                if metadata[key]:
+                    metadata[key] = metadata[key].split(SPLITSTR)
 
             metadata['dbid'] = row['id']
         return metadata

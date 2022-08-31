@@ -281,6 +281,19 @@
     <string>Artist</string>
    </property>
   </widget>
+  <widget class="QCheckBox" name="recog_artistwebsites_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>250</x>
+     <y>320</y>
+     <width>171</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Artist Websites</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>
