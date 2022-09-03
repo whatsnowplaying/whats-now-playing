@@ -21,8 +21,7 @@ def getacoustidmbplugin(bootstrap):
                             os.environ['ACOUSTID_TEST_APIKEY'])
     config.cparser.setValue('acoustidmb/emailaddress',
                             'aw+wnptest@effectivemachines.com')
-    plugin = nowplaying.recognition.acoustidmb.Plugin(config=config)
-    yield plugin
+    yield nowplaying.recognition.acoustidmb.Plugin(config=config)
 
 
 def test_15ghosts2_orig(getacoustidmbplugin, getroot):  # pylint: disable=redefined-outer-name

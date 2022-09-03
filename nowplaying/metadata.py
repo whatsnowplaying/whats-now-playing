@@ -85,10 +85,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             }
 
             for src, dest in convdict.items():
-                if freeform['name'] == src:
-                    if not tempdata.get(dest):
-                        tempdata[dest] = MP4FreeformDecoders[
-                            freeform.data_type](freeform.value)
+                if freeform['name'] == src and not tempdata.get(dest):
+                    tempdata[dest] = MP4FreeformDecoders[
+                        freeform.data_type](freeform.value)
 
             convdict = {
                 'MusicBrainz Artist Id': 'musicbrainzartistid',

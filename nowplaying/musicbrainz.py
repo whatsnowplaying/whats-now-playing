@@ -210,14 +210,14 @@ class MusicBrainzHelper():
                     'url-relation-list'):
                 continue
 
-            for urlrel in webdata['artist']['url-relation-list']:
-                convdict = {
-                    'bandcamp': 'bandcamp',
-                    'official homepage': 'homepage',
-                    'last.fm': 'lastfm',
-                    'discogs': 'discogs',
-                }
+            convdict = {
+                'bandcamp': 'bandcamp',
+                'official homepage': 'homepage',
+                'last.fm': 'lastfm',
+                'discogs': 'discogs',
+            }
 
+            for urlrel in webdata['artist']['url-relation-list']:
                 logging.debug('checking %s', urlrel['type'])
                 for src, dest in convdict.items():
                     if urlrel['type'] == src and self.config.cparser.value(
