@@ -138,10 +138,12 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         settings.setValue('recognition/replaceartist', False)
 
         settings.setValue('settings/delay', '1.0')
-        settings.setValue('settings/input', 'serato')
         settings.setValue('settings/initialized', False)
+        settings.setValue('settings/input', 'serato')
         settings.setValue('settings/loglevel', self.loglevel)
         settings.setValue('settings/notif', self.notif)
+        settings.setValue('settings/stripextras', False)
+
         settings.setValue('textoutput/file', self.file)
         settings.setValue('textoutput/txttemplate', self.txttemplate)
 

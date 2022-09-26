@@ -3,6 +3,7 @@
 
 import logging
 import os
+import re
 import string
 import sys
 import textwrap
@@ -14,6 +15,12 @@ import nowplaying.hostmeta
 import nowplaying.vendor.audio_metadata
 from nowplaying.vendor.audio_metadata.formats.mp4_tags import MP4FreeformDecoders
 import nowplaying.vendor.tinytag
+
+STRIPWORDLIST = ['clean', 'dirty', 'explicit']
+STRIPRELIST = [
+    re.compile(r' \((?i:{0})\)'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
+    re.compile(r' - (?i:{0}$)'.format('|'.join(STRIPWORDLIST)))  #pylint: disable=consider-using-f-string
+]
 
 
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
@@ -54,6 +61,17 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self._generate_short_bio()
 
         self._uniqlists()
+
+        self._strip_identifiers()
+
+    def _strip_identifiers(self):
+
+        if self.config.cparser.value('settings/stripextras', type=bool):
+            trackname = self.metadata['title']
+            for index in STRIPRELIST:
+                trackname = index.sub('', trackname)
+            if len(trackname) > 0:
+                self.metadata['title'] = trackname
 
     def _uniqlists(self):
         lists = ['artistwebsites', 'isrc', 'musicbrainzartistid']

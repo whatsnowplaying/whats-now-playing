@@ -190,6 +190,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.widgets['general'].delay_lineedit.setText(
             str(self.config.cparser.value('settings/delay')))
         self.widgets['general'].notify_checkbox.setChecked(self.config.notif)
+        self.widgets['general'].stripextras_checkbox.setChecked(
+            self.config.cparser.value('settings/stripextras', type=bool))
 
         self._upd_win_artistextras()
         self._upd_win_recognition()
@@ -375,6 +377,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.config.cparser.setValue(
             'settings/delay', self.widgets['general'].delay_lineedit.text())
         loglevel = self.widgets['general'].logging_combobox.currentText()
+        self.config.cparser.setValue(
+            'settings/stripextras',
+            self.widgets['general'].stripextras_checkbox.isChecked())
+
         self._upd_conf_input()
 
         self.config.put(
