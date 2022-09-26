@@ -74,6 +74,8 @@ Supported URLs
    * - /cover.png
      - This URL will return the cover image, if available.
 
+See also `Artist Extras <../extras/index.html>`_ for other URLs when that set of features is enabled.
+
 REST API
 --------
 

@@ -26,12 +26,18 @@ Settings
   **File to write** - Name of the file where the app will write the track information.  You can either pick a pre-existing file or the name of a new file.
 
 *
-  **Logging Level** - By default, **Now Playing** will write debug logs into your Documents/NowPlaying/Logs directory.
-  This option lets you control the level of logging.
-
-*
   **Recognition Replacement** - By default, if a Music Recognition service is enabled, it will only supplement
    any missing information. These options forcibly replace title and artist from any enabled recognition services.
+
+   Additionally, some DJ Pools add extra identifiers to track titles.  The following entries can be removed:
+
+    * ' - clean', ' - Clean', ' (Clean)', and ' (clean)'
+    * ' - dirty', ' - Dirty', ' (Dirty)', and ' (dirty)'
+    * ' - explicity', ' - Explicit', ' (Explicit)', and ' (explicit)'
+
+*
+  **Logging Level** - By default, **Now Playing** will write debug logs into your Documents/NowPlaying/Logs directory.
+  This option lets you control the level of logging.
 
 At the bottom of every page will be the "Reset", "Cancel", and "Save" buttons:
 

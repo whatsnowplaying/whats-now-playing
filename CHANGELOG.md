@@ -11,7 +11,7 @@
     a built into the source code to help with debugging
     installs. It cannot be removed or disabled.
   * A new example !artistshortbio command for the biographies
-    support
+    support.
   * On startup, all of the existing twitchbot_ files will be analyzed
     and added to the preferences pane with a default of **DISABLED**.
     You will need to re-enable any that you wish to use.  Command files
@@ -26,12 +26,17 @@
   * Logos
   * Thumbnails
 
-* 'artistwebsite' variable now reports the Artist Website information
-  in the tag
-* Fixed some leaks that would prevent multiple launches
-* Metadata for date and label wasn't always correct
-* More metadata information from FLAC files
+* 'artistwebsites' variable has been added and is a list of websites that have
+  been either pulled from the tag or from external sources.
+* MusicBrainz artist IDs and ISRCs are now lists of IDs.
+* In several places, locks were switch to be context-based to remove
+  resource leakage due to bugs in Python.
+* Fixed some leaks that would prevent multiple launches.
+* Metadata for date, label, and some MusicBrainz IDs were not always correct.
+* More metadata information from FLAC files.
+* A bit of tuning on the acoustid recognition code.
 * Some log tuning, but also produce more logs with new features ...
+* Python 3.9 is now required.
 
 ## Version 3.0.2 - 2022-07-12
 

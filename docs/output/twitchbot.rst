@@ -149,3 +149,23 @@ such that::
 results in::
 
   bot: @modernmeerkat sends hugs to @person1 @person2 @person3
+
+Announcing Websites
+-------------------
+
+You may want to add support for announcing the website data as part of the Twitchbot
+track announcement.  You can pick and choose which websites are printed by taking
+the following code snippet and modifying as necessary:
+
+.. code-block:: jinja
+
+  {% if artistwebsites %}
+  {% for website in artistwebsites %}
+  {% if 'bandcamp' in website %} |Bandcamp: {{ website }}
+  {% elif 'musicbrainz' in website %} | MusicBrainz info: {{ website }}
+  {% elif 'discogs' in website %} | Discogs info: {{ website }}
+  {% elif 'last.fm' in website %} | last.fm info: {{ website }}
+  {% else %} | Official homepage: {{ website }}
+  {% endif %}
+  {% endfor %}
+  {% endif %}
