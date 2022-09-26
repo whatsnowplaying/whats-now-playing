@@ -53,7 +53,7 @@ class Plugin(ArtistExtrasPlugin):
                     nowplaying.utils.normalize(artdata.get(fieldname)))
         return found
 
-    def _handle_extradata(self, extradata, metadata, imagecache):    # pylint: disable=too-many-branches
+    def _handle_extradata(self, extradata, metadata, imagecache):  # pylint: disable=too-many-branches
         ''' deal with the various bits of data '''
         lang1 = self.config.cparser.value('theaudiodb/bio_iso')
 
@@ -74,8 +74,8 @@ class Plugin(ArtistExtrasPlugin):
                     bio += self._filter(artdata['strBiographyEN'])
 
             if self.config.cparser.value(
-                'theaudiodb/websites', type=bool
-            ) and artdata.get('strWebsite'):
+                    'theaudiodb/websites',
+                    type=bool) and artdata.get('strWebsite'):
                 webstr = 'https://' + artdata['strWebsite']
                 if not metadata.get('artistwebsites'):
                     metadata['artistwebsites'] = []

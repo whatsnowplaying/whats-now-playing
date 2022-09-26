@@ -27,9 +27,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         else:
             self.config = nowplaying.config.ConfigFile()
 
-        if 'filename' not in self.metadata:
-            logging.debug('No filename')
-            return
+        #if 'filename' not in self.metadata:
+        #    logging.debug('No filename')
+        #    return
 
         if 'artistfanarturls' not in self.metadata:
             self.metadata['artistfanarturls'] = []
@@ -86,13 +86,14 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
             for src, dest in convdict.items():
                 if freeform['name'] == src and not tempdata.get(dest):
-                    tempdata[dest] = MP4FreeformDecoders[
-                        freeform.data_type](freeform.value)
+                    tempdata[dest] = MP4FreeformDecoders[freeform.data_type](
+                        freeform.value)
 
             convdict = {
                 'MusicBrainz Artist Id': 'musicbrainzartistid',
                 'website': 'artistwebsites',
                 'tsrc': 'isrc',
+                'ISRC': 'isrc',
             }
 
             for src, dest in convdict.items():
@@ -128,8 +129,6 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 self.metadata['musicbrainzalbumid'] = usertext.text[0]
             elif usertext.description == 'MusicBrainz Artist Id':
                 self.metadata['musicbrainzartistid'] = usertext.text
-            elif usertext.description == 'MusicBrainz Release Track Id':
-                self.metadata['musicbrainzrecordingid'] = usertext.text[0]
             elif usertext.description == 'originalyear':
                 self.metadata['date'] = usertext.text[0]
 
@@ -173,7 +172,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             'acoustid id': 'acoustidid',
             'date': 'date',
             'musicbrainz album id': 'musicbrainzalbumid',
-            'musicbrainz release track id': 'musicbrainzrecordingid',
+            'musicbrainz_trackid': 'musicbrainzrecordingid',
             'publisher': 'label',
         }
 
@@ -198,6 +197,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     self.metadata[dest] = [str(tags[src])]
 
     def _process_audio_metadata(self):  # pylint: disable=too-many-branches
+        if not self.metadata.get('filename'):
+            return
+
         try:
             base = nowplaying.vendor.audio_metadata.load(
                 self.metadata['filename'])
@@ -226,6 +228,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 else:
                     self.metadata[key] = str(base.tags[key])
 
+        if 'ufid' in base.tags:
+            for index in base.tags.ufid:
+                if index.owner == 'http://musicbrainz.org':
+                    self.metadata[
+                        'musicbrainzrecordingid'] = index.identifier.decode(
+                            'utf-8')
+
         self._process_audio_metadata_remaps(base.tags)
         self._process_audio_metadata_othertags(base.tags)
 
@@ -237,6 +246,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     def _process_tinytag(self):
         ''' given a chunk of metadata, try to fill in more '''
+        if not self.metadata.get('filename'):
+            return
+
         try:
             tag = nowplaying.vendor.tinytag.TinyTag.get(
                 self.metadata['filename'], image=True)
