@@ -205,6 +205,7 @@ class MusicBrainzHelper():
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('MusicBrainz does not know artistid id %s: %s',
                               artistid, error)
+                return None
 
             if not webdata.get('artist') or not webdata['artist'].get(
                     'url-relation-list'):

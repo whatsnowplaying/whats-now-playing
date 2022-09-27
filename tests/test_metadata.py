@@ -213,6 +213,7 @@ def test_stripre_cleandash(bootstrap):
     metadata = myclass.metadata
     assert metadata['title'] == 'Test'
 
+
 def test_stripre_nocleandash(bootstrap):
     ''' automated integration test '''
     config = bootstrap
@@ -223,6 +224,7 @@ def test_stripre_nocleandash(bootstrap):
                                                      config=config)
     metadata = myclass.metadata
     assert metadata['title'] == 'Test - Clean'
+
 
 def test_stripre_cleanparens(bootstrap):
     ''' automated integration test '''

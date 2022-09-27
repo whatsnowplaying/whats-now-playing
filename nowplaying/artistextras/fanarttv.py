@@ -47,7 +47,8 @@ class Plugin(ArtistExtrasPlugin):
             try:
                 baseurl = f'http://webservice.fanart.tv/v3/music/{artistid}'
                 logging.debug('fanarttv: calling %s', baseurl)
-                artistrequest = requests.get(f'{baseurl}?api_key={apikey}')
+                artistrequest = requests.get(f'{baseurl}?api_key={apikey}',
+                                             timeout=5)
             except Exception as error:  # pylint: disable=broad-except
                 logging.debug('fanart.tv: %s', error)
                 return None

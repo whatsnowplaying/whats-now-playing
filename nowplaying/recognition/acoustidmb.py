@@ -75,13 +75,15 @@ class Plugin(RecognitionPlugin):
         try:
             counter = 0
             while counter < 3:
+                logging.debug('Performing acoustid lookup')
                 results = acoustid.lookup(apikey,
                                           data['fingerprint'],
                                           data['duration'],
                                           meta=[
                                               'recordings', 'recordingids',
                                               'releases', 'tracks', 'usermeta'
-                                          ])
+                                          ],
+                                          timeout=5)
                 if ('error' not in results
                         or 'rate limit' not in results['error']['message']):
                     break
@@ -128,12 +130,16 @@ class Plugin(RecognitionPlugin):
 
         logging.debug(results)
 
+        newdata = {}
         for result in results:  # pylint: disable=too-many-nested-blocks
             acoustidid = result['id']
             score = result['score']
             if 'recordings' not in result:
+                logging.debug('No recordings for this match, skipping %s',
+                              acoustidid)
                 continue
 
+            logging.debug('Processing %s', acoustidid)
             for recording in result['recordings']:
                 score = result['score']
                 if 'id' in recording:
@@ -142,9 +148,7 @@ class Plugin(RecognitionPlugin):
                     logging.debug('Skipping acoustid record %s', recording)
                     continue
 
-                releasecount = 0
                 for release in recording['releases']:
-                    releasecount += 1
                     if 'artists' in release:
                         for artist in release['artists']:
                             if 'name' in artist:
@@ -186,24 +190,33 @@ class Plugin(RecognitionPlugin):
 
                     artist = ' & '.join(artistlist)
 
-                score = score + (releasecount * 0.10)
-                logging.debug(
-                    'weighted score = %s, rid = %s, title = %s, artist = %s album = %s',
-                    score, rid, title, artist, album)
+                    logging.debug(
+                        'weighted score = %s, rid = %s, title = %s, artist = %s album = %s',
+                        score, rid, title, artist, album)
 
-                if score > lastscore:
-                    self.acoustidmd['acoustidid'] = acoustidid
-                    if artistlist:
-                        self.acoustidmd['artist'] = ' & '.join(artistlist)
-                    if title:
-                        self.acoustidmd['title'] = title
-                    if album:
-                        self.acoustidmd['album'] = album
-                    if rid:
-                        self.acoustidmd['musicbrainzrecordingid'] = rid
-                    if artistidlist:
-                        self.acoustidmd['musicbrainzartistid'] = artistidlist
-                    lastscore = score
+                    if score > lastscore:
+                        newdata = {}
+                        newdata['acoustidid'] = acoustidid
+                        if artistlist:
+                            newdata['artist'] = ' & '.join(artistlist)
+                        if title:
+                            newdata['title'] = title
+                        if album:
+                            newdata['album'] = album
+                        if rid:
+                            newdata['musicbrainzrecordingid'] = rid
+                        if artistidlist:
+                            newdata['musicbrainzartistid'] = artistidlist
+                        lastscore = score
+
+        for key, value in newdata.items():
+            self.acoustidmd[key] = value
+
+        logging.debug(
+            'picked weighted score = %s, rid = %s, title = %s, artist = %s album = %s',
+            lastscore, self.acoustidmd.get('musicbrainzrecordingid'),
+            self.acoustidmd.get('title'), self.acoustidmd.get('artist'),
+            self.acoustidmd.get('album'))
 
     def _configure_fpcalc(self, fpcalcexe=None):  # pylint: disable=too-many-return-statements
         ''' deal with all the potential issues of finding and running fpcalc '''
