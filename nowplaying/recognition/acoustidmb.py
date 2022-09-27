@@ -195,8 +195,7 @@ class Plugin(RecognitionPlugin):
                         score, rid, title, artist, album)
 
                     if score > lastscore:
-                        newdata = {}
-                        newdata['acoustidid'] = acoustidid
+                        newdata = {'acoustidid': acoustidid}
                         if artistlist:
                             newdata['artist'] = ' & '.join(artistlist)
                         if title:
