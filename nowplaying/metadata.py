@@ -66,7 +66,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     def _strip_identifiers(self):
 
-        if self.config.cparser.value('settings/stripextras', type=bool):
+        if self.config.cparser.value('settings/stripextras',
+                                     type=bool) and self.metadata.get('title'):
             trackname = self.metadata['title']
             for index in STRIPRELIST:
                 trackname = index.sub('', trackname)
