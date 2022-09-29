@@ -329,7 +329,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 self.metadata[meta] = addmeta[meta]
 
     def _process_plugins(self):
-        if self.metadata.get('musicbrainzartistid'):
+        if self.metadata.get('musicbrainzrecordingid'):
             logging.debug(
                 'musicbrainz recordingid detected; attempting shortcuts')
             musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
