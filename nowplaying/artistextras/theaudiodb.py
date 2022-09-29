@@ -4,6 +4,7 @@
 import logging
 import logging.config
 import logging.handlers
+import re
 
 import requests
 import requests.utils
@@ -22,6 +23,7 @@ class Plugin(ArtistExtrasPlugin):
         super().__init__(config=config, qsettings=qsettings)
         self.htmlfilter = nowplaying.utils.HTMLFilter()
         self.fnstr = None
+        self.there = re.compile('(?i)^the ')
 
     def _filter(self, text):
         self.htmlfilter.feed(text)
@@ -149,6 +151,18 @@ class Plugin(ArtistExtrasPlugin):
                                                      metadata['artist']):
                 extradata.extend(artist for artist in artistdata.get('artists')
                                  if self._check_artist(artist))
+            elif self.there.match(metadata['artist']):
+                logging.debug('Trying without a leading \'The\'')
+                oldartist = metadata['artist']
+                metadata['artist'] = self.there.sub('', metadata['artist'])
+                if artistdata := self.artistdatafromname(
+                        apikey, metadata['artist']):
+                    extradata.extend(artist
+                                     for artist in artistdata.get('artists')
+                                     if self._check_artist(artist))
+                else:
+                    metadata['artist'] = oldartist
+
         if not extradata:
             return None
 

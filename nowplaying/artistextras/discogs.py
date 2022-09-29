@@ -4,6 +4,7 @@
 import logging
 import logging.config
 import logging.handlers
+import re
 
 import nowplaying.vendor.discogs_client
 
@@ -18,27 +19,10 @@ class Plugin(ArtistExtrasPlugin):
     def __init__(self, config=None, qsettings=None):
         self.client = None
         self.version = nowplaying.version.get_versions()['version']
+        self.there = re.compile('(?i)^the ')
         super().__init__(config=config, qsettings=qsettings)
 
-    def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches, too-many-return-statements
-        ''' download content '''
-
-        apikey = self.config.cparser.value('discogs/apikey')
-
-        if not apikey or not self.config.cparser.value('discogs/enabled',
-                                                       type=bool):
-            return None
-
-        # discogs basically works by search for a combination of
-        # artist and album so we need both
-        if not metadata.get('artist') or not metadata.get('album'):
-            logging.debug('artist or album is empty, skipping')
-            return None
-
-        if not self.client:
-            self.client = nowplaying.vendor.discogs_client.Client(
-                f'whatsnowplaying/{self.version}', user_token=apikey)
-
+    def _find_discogs_releaselist(self, metadata):
         try:
             logging.debug('Fetching %s - %s', metadata['artist'],
                           metadata['album'])
@@ -55,7 +39,39 @@ class Plugin(ArtistExtrasPlugin):
             None,
         )
 
+        return artistresultlist
+
+    def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches, too-many-return-statements
+        ''' download content '''
+
+        apikey = self.config.cparser.value('discogs/apikey')
+        oldartist = None
+
+        if not apikey or not self.config.cparser.value('discogs/enabled',
+                                                       type=bool):
+            return None
+
+        # discogs basically works by search for a combination of
+        # artist and album so we need both
+        if not metadata.get('artist') or not metadata.get('album'):
+            logging.debug('artist or album is empty, skipping')
+            return None
+
+        if not self.client:
+            self.client = nowplaying.vendor.discogs_client.Client(
+                f'whatsnowplaying/{self.version}', user_token=apikey)
+
+        artistresultlist = self._find_discogs_releaselist(metadata)
+
+        if not artistresultlist and self.there.match(metadata['artist']):
+            logging.debug('Trying without a leading \'The\'')
+            oldartist = metadata['artist']
+            metadata['artist'] = self.there.sub('', metadata['artist'])
+            artistresultlist = self._find_discogs_releaselist(metadata)
+
         if not artistresultlist:
+            if oldartist:
+                metadata['artist'] = oldartist
             logging.debug('discogs did not find it')
             return None
 
