@@ -1,7 +1,7 @@
 
 # Changelog
 
-## Version 3.1.0 - In-progress
+## Version 3.1.0 - 2022-09-29
 
 * IMPORTANT! Big Twichbot changes:
 
@@ -17,6 +17,7 @@
     You will need to re-enable any that you wish to use.  Command files
     added while the software is running will be available immediately
     but then next startup will be disabled.
+  * trackdetail got some minor cleanup.
 
 * New experimental feature: artist extras
 
@@ -26,17 +27,32 @@
   * Logos
   * Thumbnails
 
+  * Also bundled are some new web server template files that may be used
+    as examples for your own stream.
+
+* New experimental feature: Track title filtering
+
+  * Some DJ pools will add 'clean', 'dirty', or 'explicit' entries to
+    track titles.  There is now a feature to attempt to remove those
+    descriptors from the track title.
+
 * 'artistwebsites' variable has been added and is a list of websites that have
   been either pulled from the tag or from external sources.
-* MusicBrainz artist IDs and ISRCs are now lists of IDs.
+* MusicBrainz artist IDs and ISRCs are now lists of IDs. Additionally, Files
+  tagged with an ISRC or MusicBrainz Recording IDs should now properly
+  short-cut AcoustID DB lookups.
 * In several places, locks were switch to be context-based to remove
   resource leakage due to bugs in Python.
 * Fixed some leaks that would prevent multiple launches.
 * Metadata for date, label, and some MusicBrainz IDs were not always correct.
 * More metadata information from FLAC files.
 * A bit of tuning on the acoustid recognition code.
-* Some log tuning, but also produce more logs with new features ...
+* Will now try looking up artists without 'The' attached
+* Some log tuning, but also produce more logs with new features and for
+  better debugging ability ...
+* PNG convertor should be less noisy and a bit faster.
 * Python 3.9 is now required.
+* Some documentation updates.
 
 ## Version 3.0.2 - 2022-07-12
 
