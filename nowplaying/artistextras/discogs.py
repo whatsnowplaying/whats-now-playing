@@ -33,13 +33,16 @@ class Plugin(ArtistExtrasPlugin):
             logging.error('discogs hit %s', error)
             return None
 
-        artistresultlist = next(
-            (result.artists[0] for result in resultlist if isinstance(
-                result, nowplaying.vendor.discogs_client.models.Release)),
+        return next(
+            (
+                result.artists[0]
+                for result in resultlist
+                if isinstance(
+                    result, nowplaying.vendor.discogs_client.models.Release
+                )
+            ),
             None,
         )
-
-        return artistresultlist
 
     def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches, too-many-return-statements
         ''' download content '''
