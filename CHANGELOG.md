@@ -50,7 +50,7 @@
 * Will now try looking up artists without 'The' attached
 * Some log tuning, but also produce more logs with new features and for
   better debugging ability ...
-* PNG convertor should be less noisy and a bit faster.
+* PNG converter should be less noisy and a bit faster.
 * Python 3.9 is now required.
 * Some documentation updates.
 
