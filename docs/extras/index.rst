@@ -63,10 +63,19 @@ of the first pass of downloads done quickly but low enough that it doesn't overw
 The 'Clear Cache' button will remove all mappings between artists and images.  It does not remove the
 cached responses from the web server in order to save bandwidth.
 
+Reminder
+--------
+
+In order to perform these look ups, certain data is required to be tagged in the media to
+make the results remotely accurate.  More data == more better results.  Therefore, media
+with ISRC tags will cause MusicBrainz lookups if that service is enabled to fill in
+any missing data.
+
 Discogs
 -------
 
 Provides: Biographies, Fan art, and Thumbnails
+Media tags: album and artist
 
 `Discogs <https://www.discogs.com>`_ is a well-known source for music release information, a
 marketplace, and more. Be aware of Discogs Terms of Use as linked to on
@@ -78,6 +87,7 @@ fanart.tv
 -----------
 
 Provides: Banners, Fan art, Logos, and Thumbnails
+Media tags: MusicBrainz Artist ID
 
 `fanart.tv <https://www.fanart.tv>`_ is a community project to provide high quality
 artwork for music and other media. It requires music be tagged with
@@ -89,6 +99,7 @@ TheAudioDB
 -----------
 
 Provides: Banners, Biographies, Fan art, Logos, and Thumbnails
+Media tags: artist or MusicBrainz Artist ID
 
 `TheAudioDB <https://www.theaudiodb.com>`_ is a community project to provide high quality
 artwork and other metadata for music. If `MusicBrainz <https://www.musicbrainz.org>`_

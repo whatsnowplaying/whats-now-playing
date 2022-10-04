@@ -23,6 +23,14 @@ Some examples:
 Some outputs (e.g., TwitchBot) may provide additional variables that offer
 other, context-sensitive features. See their pages for more information.
 
+Reminder
+--------
+
+In order to perform these look ups, certain data is required to be tagged in the media to
+make the results remotely accurate.  More data == more better results.  Therefore, media
+with ISRC tags will cause MusicBrainz lookups if that service is enabled to fill in
+any missing data.
+
 Supported Variables
 --------------------
 
@@ -75,6 +83,8 @@ Supported Variables
      - Short hostname of the machine running Now Playing
    * - httpport
      - Port number that is running the web server
+   * - isrc
+     - List of `International Standard Recording Code <https://isrc.ifpi.org/en/>`_
    * - key
      - Key of the song
    * - label
