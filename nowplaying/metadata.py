@@ -328,25 +328,36 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             elif not self.metadata.get(meta) and addmeta.get(meta):
                 self.metadata[meta] = addmeta[meta]
 
-    def _process_plugins(self):
+    def _musicbrainz(self):
+        musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
+            config=self.config)
+        metalist = musicbrainz.providerinfo()
+
+        addmeta = {}
+
         if self.metadata.get('musicbrainzrecordingid'):
             logging.debug(
                 'musicbrainz recordingid detected; attempting shortcuts')
-            musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
-                config=self.config)
-            metalist = musicbrainz.providerinfo()
             if any(meta not in self.metadata for meta in metalist):
                 addmeta = musicbrainz.recordingid(
                     self.metadata['musicbrainzrecordingid'])
                 self._recognition_replacement(addmeta)
         elif self.metadata.get('isrc'):
             logging.debug('Preprocessing with musicbrainz isrc')
-            musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
-                config=self.config)
-            metalist = musicbrainz.providerinfo()
             if any(meta not in self.metadata for meta in metalist):
                 addmeta = musicbrainz.isrc(self.metadata['isrc'])
                 self._recognition_replacement(addmeta)
+        elif self.metadata.get('musicbrainzartistid'):
+            logging.debug('Preprocessing with musicbrainz artistid')
+            if any(meta not in self.metadata for meta in metalist):
+                addmeta = musicbrainz.artistids(
+                    self.metadata['musicbrainzartistid'])
+                self._recognition_replacement(addmeta)
+
+        return addmeta
+
+    def _process_plugins(self):
+        addmeta = self._musicbrainz()
 
         for plugin in self.config.plugins['recognition']:
             metalist = self.config.pluginobjs['recognition'][
