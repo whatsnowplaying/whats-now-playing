@@ -310,6 +310,13 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
 
         def fillin(self):
             tryagain = False
+
+            if not self.imagecache:
+                logging.debug(
+                    'Artist Extras was enabled without restart; skipping image downloads'
+                )
+                return None
+
             for key in ['artistthumb', 'artistlogo', 'artistbanner']:
                 logging.debug('Calling %s', key)
                 rawkey = f'{key}raw'
