@@ -315,7 +315,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                 logging.debug(
                     'Artist Extras was enabled without restart; skipping image downloads'
                 )
-                return None
+                return True
 
             for key in ['artistthumb', 'artistlogo', 'artistbanner']:
                 logging.debug('Calling %s', key)
