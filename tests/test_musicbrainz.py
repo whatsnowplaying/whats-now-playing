@@ -10,7 +10,8 @@ import nowplaying.musicbrainz  # pylint: disable=import-error
 def getmusicbrainz(bootstrap):
     ''' automated integration test '''
     config = bootstrap
-    config.cparser.setValue('acoustidmb/enabled', True)
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', True)
     config.cparser.setValue('acoustidmb/emailaddress',
                             'aw+wnptest@effectivemachines.com')
     return nowplaying.musicbrainz.MusicBrainzHelper(config=config)

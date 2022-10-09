@@ -11,6 +11,7 @@ def test_15ghosts2_mp3_orig(bootstrap, getroot):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     metadata = {
         'filename':
         os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.mp3')
@@ -29,6 +30,7 @@ def test_15ghosts2_mp3_fullytagged(bootstrap, getroot):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     metadata = {
         'filename':
         os.path.join(getroot, 'tests', 'audio',
@@ -61,6 +63,7 @@ def test_15ghosts2_flac_orig(bootstrap, getroot):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     metadata = {
         'filename':
         os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.flac')
@@ -78,6 +81,7 @@ def test_15ghosts2_m4a_orig(bootstrap, getroot):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     metadata = {
         'filename':
         os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.m4a')
@@ -96,6 +100,7 @@ def test_15ghosts2_flac_fullytagged(bootstrap, getroot):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     metadata = {
         'filename':
         os.path.join(getroot, 'tests', 'audio',
@@ -129,6 +134,7 @@ def test_15ghosts2_m4a_fullytagged(bootstrap, getroot):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     metadata = {
         'filename':
         os.path.join(getroot, 'tests', 'audio',
@@ -162,6 +168,7 @@ def test_artistshortio(bootstrap, getroot):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     metadata = {
         'filename':
         os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.mp3'),
@@ -206,6 +213,7 @@ def test_stripre_cleandash(bootstrap):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', True)
     metadata = {'title': 'Test - Clean'}
     myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
@@ -218,6 +226,7 @@ def test_stripre_nocleandash(bootstrap):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
     metadata = {'title': 'Test - Clean'}
     myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
@@ -230,6 +239,7 @@ def test_stripre_cleanparens(bootstrap):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', True)
     metadata = {'title': 'Test (Clean)'}
     myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
@@ -242,6 +252,7 @@ def test_stripre_cleanextraparens(bootstrap):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', True)
     metadata = {'title': 'Test (Clean) (Single Mix)'}
     myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
@@ -254,6 +265,7 @@ def test_publisher_not_label(bootstrap):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
     metadata = {'publisher': 'Cool Music Publishing'}
     myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
@@ -267,6 +279,7 @@ def test_year_not_date(bootstrap):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
     metadata = {'year': '1999'}
     myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,

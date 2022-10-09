@@ -17,6 +17,7 @@ def getacoustidmbplugin(bootstrap):
     ''' automated integration test '''
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', True)
+    config.cparser.setValue('musicbrainz/enabled', True)
     config.cparser.setValue('acoustidmb/acoustidapikey',
                             os.environ['ACOUSTID_TEST_APIKEY'])
     config.cparser.setValue('acoustidmb/emailaddress',
