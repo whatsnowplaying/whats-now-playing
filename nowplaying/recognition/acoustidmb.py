@@ -309,7 +309,7 @@ class Plugin(RecognitionPlugin):
             self.acoustidmd.update(musicbrainzlookup)
         return self.acoustidmd
 
-    def providerinfo(self):  # pylint: disable=no-self-use
+    def providerinfo(self):
         ''' return list of what is provided by this recognition system '''
         return self.musicbrainz.providerinfo()
 
@@ -317,6 +317,7 @@ class Plugin(RecognitionPlugin):
         ''' connect m3u button to filename picker'''
         self.qwidget = qwidget
         qwidget.fpcalcexe_button.clicked.connect(self.on_fpcalcexe_button)
+        qwidget.acoustid_checkbox.clicked.connect(self.on_acoustid_checkbox)
 
     def on_fpcalcexe_button(self):
         ''' filename button clicked action'''
@@ -329,16 +330,28 @@ class Plugin(RecognitionPlugin):
         if dirname and dirname[0]:
             self.qwidget.fpcalcexe_lineedit.setText(dirname[0])
 
+    def on_acoustid_checkbox(self):
+        ''' if acoustid is turned on, then musicbrainz must also be on '''
+        if self.qwidget.acoustid_checkbox.isChecked():
+            self.qwidget.musicbrainz_checkbox.setChecked(True)
+
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
         if self.config.cparser.value('acoustidmb/enabled', type=bool):
-            qwidget.acoustidmb_checkbox.setChecked(True)
+            qwidget.acoustid_checkbox.setChecked(True)
         else:
-            qwidget.acoustidmb_checkbox.setChecked(False)
+            qwidget.acoustid_checkbox.setChecked(False)
+
+        if self.config.cparser.value('musicbrainz/enabled', type=bool):
+            qwidget.musicbrainz_checkbox.setChecked(True)
+        else:
+            qwidget.musicbrainz_checkbox.setChecked(False)
+        qwidget.emailaddress_lineedit.setText(
+            self.config.cparser.value('musicbrainz/emailaddress'))
+
         qwidget.apikey_lineedit.setText(
             self.config.cparser.value('acoustidmb/acoustidapikey'))
-        qwidget.emailaddress_lineedit.setText(
-            self.config.cparser.value('acoustidmb/emailaddress'))
+
         qwidget.fpcalcexe_lineedit.setText(
             self.config.cparser.value('acoustidmb/fpcalcexe'))
 
@@ -360,22 +373,22 @@ class Plugin(RecognitionPlugin):
 
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''
-        if qwidget.acoustidmb_checkbox.isChecked(
+        if qwidget.acoustid_checkbox.isChecked(
         ) and not qwidget.apikey_lineedit.text():
             raise PluginVerifyError(
                 'Acoustid enabled, but no API Key provided.')
 
-        if qwidget.acoustidmb_checkbox.isChecked(
+        if qwidget.musicbrainz_checkbox.isChecked(
         ) and not qwidget.emailaddress_lineedit.text():
             raise PluginVerifyError(
                 'Acoustid enabled, but no email address provided.')
 
-        if qwidget.acoustidmb_checkbox.isChecked(
+        if qwidget.acoustid_checkbox.isChecked(
         ) and not qwidget.fpcalcexe_lineedit.text():
             raise PluginVerifyError(
                 'Acoustid enabled, but no fpcalc binary provided.')
 
-        if qwidget.acoustidmb_checkbox.isChecked(
+        if qwidget.acoustid_checkbox.isChecked(
         ) and qwidget.fpcalcexe_lineedit.text():
             fpcalcexe = qwidget.fpcalcexe_lineedit.text()
             if not self._configure_fpcalc(fpcalcexe=fpcalcexe):

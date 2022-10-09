@@ -13,6 +13,9 @@
   <property name="windowTitle">
    <string>Acoustid + MusicBrainz</string>
   </property>
+  <property name="displayName" stdset="0">
+   <string>AcoustID/MusicBrainz</string>
+  </property>
   <widget class="QLabel" name="config_label">
    <property name="enabled">
     <bool>true</bool>
@@ -99,17 +102,17 @@
     </item>
    </layout>
   </widget>
-  <widget class="QCheckBox" name="acoustidmb_checkbox">
+  <widget class="QCheckBox" name="acoustid_checkbox">
    <property name="geometry">
     <rect>
      <x>10</x>
      <y>40</y>
-     <width>361</width>
+     <width>251</width>
      <height>23</height>
     </rect>
    </property>
    <property name="text">
-    <string>Enable Music Recognition by Acoustid + MusicBrainz</string>
+    <string>Enable Music Recognition by Acoustid </string>
    </property>
   </widget>
   <widget class="QLabel" name="fpcalcexe_label">
@@ -148,6 +151,9 @@
    </property>
   </widget>
   <widget class="QPushButton" name="fpcalcexe_button">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>120</x>
@@ -239,6 +245,8 @@
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Artist website links to pull from MusicBrainz (if available)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
@@ -262,11 +270,24 @@ hr { height: 1px; border-width: 0; }
     <bool>false</bool>
    </property>
   </widget>
+  <widget class="QCheckBox" name="musicbrainz_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>290</x>
+     <y>40</y>
+     <width>251</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Query MusicBrainz for missing data</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections>
   <connection>
-   <sender>acoustidmb_checkbox</sender>
+   <sender>acoustid_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>apikey_label</receiver>
    <slot>setEnabled(bool)</slot>
@@ -282,7 +303,7 @@ hr { height: 1px; border-width: 0; }
    </hints>
   </connection>
   <connection>
-   <sender>acoustidmb_checkbox</sender>
+   <sender>acoustid_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>apikey_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
@@ -298,13 +319,13 @@ hr { height: 1px; border-width: 0; }
    </hints>
   </connection>
   <connection>
-   <sender>acoustidmb_checkbox</sender>
+   <sender>musicbrainz_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>emailaddress_label</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>190</x>
+     <x>415</x>
      <y>51</y>
     </hint>
     <hint type="destinationlabel">
@@ -314,13 +335,13 @@ hr { height: 1px; border-width: 0; }
    </hints>
   </connection>
   <connection>
-   <sender>acoustidmb_checkbox</sender>
+   <sender>musicbrainz_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>emailaddress_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>190</x>
+     <x>415</x>
      <y>51</y>
     </hint>
     <hint type="destinationlabel">
@@ -330,7 +351,7 @@ hr { height: 1px; border-width: 0; }
    </hints>
   </connection>
   <connection>
-   <sender>acoustidmb_checkbox</sender>
+   <sender>acoustid_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>fpcalcexe_label</receiver>
    <slot>setEnabled(bool)</slot>
@@ -346,7 +367,7 @@ hr { height: 1px; border-width: 0; }
    </hints>
   </connection>
   <connection>
-   <sender>acoustidmb_checkbox</sender>
+   <sender>acoustid_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>fpcalcexe_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
@@ -362,13 +383,13 @@ hr { height: 1px; border-width: 0; }
    </hints>
   </connection>
   <connection>
-   <sender>acoustidmb_checkbox</sender>
+   <sender>musicbrainz_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>websites_checkbox</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>190</x>
+     <x>415</x>
      <y>51</y>
     </hint>
     <hint type="destinationlabel">
@@ -454,6 +475,38 @@ hr { height: 1px; border-width: 0; }
     <hint type="destinationlabel">
      <x>405</x>
      <y>412</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>acoustid_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>musicbrainz_checkbox</receiver>
+   <slot>setDisabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>135</x>
+     <y>51</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>415</x>
+     <y>51</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>acoustid_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>fpcalcexe_button</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>135</x>
+     <y>51</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>205</x>
+     <y>205</y>
     </hint>
    </hints>
   </connection>

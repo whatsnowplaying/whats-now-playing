@@ -89,7 +89,9 @@ class UpgradeConfig:
 
         mapping = {
             'settings/interval': 'serato/interval',
-            'settings/handler': 'settings/input'
+            'settings/handler': 'settings/input',
+            'acoustidmb/emailaddress': 'musicbrainz/emailaddress',
+            'acoustidmb/enabled': 'musicbrainz/enabled'
         }
         source = config.fileName()
 

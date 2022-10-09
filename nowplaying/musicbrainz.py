@@ -32,7 +32,8 @@ class MusicBrainzHelper():
         ''' make sure the musicbrainz fetch has an email address set
             according to their requirements '''
         if not self.emailaddressset:
-            emailaddress = self.config.cparser.value('acoustidmb/emailaddress')
+            emailaddress = self.config.cparser.value(
+                'musicbrainz/emailaddress')
 
             if not emailaddress:
                 emailaddress = 'aw@effectivemachines.com'
@@ -43,9 +44,28 @@ class MusicBrainzHelper():
                 contact=emailaddress)
             self.emailaddressset = True
 
+    def recognize(self, metadata):
+        ''' fill in any blanks from musicbrainz '''
+
+        if not self.config.cparser.value('musicbrainz/enabled', type=bool):
+            return None
+
+        addmeta = {}
+
+        if metadata.get('musicbrainzrecordingid'):
+            logging.debug('Preprocessing with musicbrainz recordingid')
+            addmeta = self.recordingid(metadata['musicbrainzrecordingid'])
+        elif metadata.get('isrc'):
+            logging.debug('Preprocessing with musicbrainz isrc')
+            addmeta = self.isrc(metadata['isrc'])
+        elif metadata.get('musicbrainzartistid'):
+            logging.debug('Preprocessing with musicbrainz artistid')
+            addmeta = self.artistids(metadata['musicbrainzartistid'])
+        return addmeta
+
     def isrc(self, isrclist):
         ''' lookup musicbrainz information based upon isrc '''
-        if not self.config.cparser.value('acoustidmb/enabled', type=bool):
+        if not self.config.cparser.value('musicbrainz/enabled', type=bool):
             return None
 
         self._setemail()
@@ -75,7 +95,7 @@ class MusicBrainzHelper():
 
     def recordingid(self, recordingid):  # pylint: disable=too-many-branches, too-many-return-statements, too-many-statements
         ''' lookup the musicbrainz information based upon recording id '''
-        if not self.config.cparser.value('acoustidmb/enabled', type=bool):
+        if not self.config.cparser.value('musicbrainz/enabled', type=bool):
             return None
 
         self._setemail()
@@ -193,7 +213,7 @@ class MusicBrainzHelper():
     def artistids(self, idlist):
         ''' add data available via musicbrainz artist ids '''
 
-        if not self.config.cparser.value('acoustidmb/enabled', type=bool):
+        if not self.config.cparser.value('musicbrainz/enabled', type=bool):
             return None
 
         return {'artistwebsites': self._websites(idlist)}
