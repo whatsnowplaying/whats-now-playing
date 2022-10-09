@@ -398,10 +398,12 @@ class Plugin(RecognitionPlugin):
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
         self.config.cparser.setValue('acoustidmb/enabled',
-                                     qwidget.acoustidmb_checkbox.isChecked())
+                                     qwidget.acoustid_checkbox.isChecked())
+        self.config.cparser.setValue('musicbrainz/enabled',
+                                     qwidget.musicbrainz_checkbox.isChecked())
         self.config.cparser.setValue('acoustidmb/acoustidapikey',
                                      qwidget.apikey_lineedit.text())
-        self.config.cparser.setValue('acoustidmb/emailaddress',
+        self.config.cparser.setValue('musicbrainz/emailaddress',
                                      qwidget.emailaddress_lineedit.text())
         self.config.cparser.setValue('acoustidmb/fpcalcexe',
                                      qwidget.fpcalcexe_lineedit.text())
