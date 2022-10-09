@@ -20,7 +20,7 @@ As part of the identification, AcoustID requires
 
 Note that AcoustID's database is not as large or as comprehensive as, for example, Shazam.  Additionally,
 it only samples the beginning of the song so media with long introductions before the core of the
-music starts (e.g., extended videos) may not be correclty identified.
+music starts (e.g., extended videos) may not be correctly identified.
 
 MusicBrainz
 -----------
