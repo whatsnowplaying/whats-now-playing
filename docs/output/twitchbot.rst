@@ -118,7 +118,8 @@ The TwitchBot adds the following additional values for templating purposes:
    * - cmdtarget[x]
      - The x'th target on the command, starting with 0.  For example, if the command was `!so modernmeerkat`,
        then `{{ cmdtarget[0] }}` will have `modernmeerkat` in it. See below for an example.
-
+   * - startnewmessage
+     - Split the text at this location and start a new message to send to chat.
 
 Multiple Targets
 ^^^^^^^^^^^^^^^^

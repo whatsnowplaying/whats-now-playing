@@ -14,6 +14,8 @@
   causing (effectively) a hang.  Turning on Artist Extras still
   requires a restart but it should no longer crash the first
   time.
+* Twitch bot messages may now be split up by using `{{ startnewmessage }}`
+  as a template variable.
 * Some docs updates to clarify some things.
 
 ## Version 3.1.0 - 2022-09-29

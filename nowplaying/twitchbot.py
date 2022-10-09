@@ -64,6 +64,7 @@ import nowplaying.version
 #
 
 LASTANNOUNCED = {'artist': None, 'title': None}
+SPLITMESSAGETEXT = '****SPLITMESSSAGEHERE****'
 
 
 class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instance-attributes
@@ -243,20 +244,23 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
         if 'coverimageraw' in metadata:
             del metadata['coverimageraw']
         metadata['cmdtarget'] = None
+        metadata['startnewmessage'] = SPLITMESSAGETEXT
 
         if moremetadata:
             metadata.update(moremetadata)
 
         if os.path.isfile(os.path.join(self.templatedir, template)):
-            j2template = self.jinja2.get_template(template)
             try:
+                j2template = self.jinja2.get_template(template)
                 message = j2template.render(metadata)
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('template %s rendering failure: %s', template,
                               error)
                 return
 
-            self._send_text(message)
+            messages = message.split(SPLITMESSAGETEXT)
+            for msg in messages:
+                self._send_text(msg)
 
     def check_command_perms(self, profile, command):
         ''' given the profile, check if the command is allowed to be executed '''
