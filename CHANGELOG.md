@@ -1,6 +1,21 @@
 
 # Changelog
 
+## Version 3.1.1 - Unreleased
+
+* AcoustID and MusicBrainz may now run independently! If you
+  would like MB support but would like to disable AcoustID,
+  please check out the new settings window.  Note that
+  AcoustID requires MusicBrainz support to be turned on and
+  will enforce that.
+* If MusicBrainz Artist IDs are present, they will trigger
+  artist website URL downloads if MusicBrainz support is enabled.
+* There was a bug with enabling Artist Extras and not restarting
+  causing (effectively) a hang.  Turning on Artist Extras still
+  requires a restart but it should no longer crash the first
+  time.
+* Some docs updates to clarify some things.
+
 ## Version 3.1.0 - 2022-09-29
 
 * IMPORTANT! Big Twichbot changes:
