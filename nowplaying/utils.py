@@ -3,17 +3,26 @@
 
 from html.parser import HTMLParser
 
+import copy
 import importlib
 import io
 import logging
 import pkgutil
 import os
+import re
 
 import jinja2
 import normality
 import PIL.Image
 
 import nowplaying.metadata
+
+STRIPWORDLIST = ['clean', 'dirty', 'explicit', 'official music video']
+STRIPRELIST = [
+    re.compile(r' \((?i:{0})\)'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
+    re.compile(r' - (?i:{0}$)'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
+    re.compile(r' \[(?i:{0})\]'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
+]
 
 
 class HTMLFilter(HTMLParser):
@@ -218,3 +227,15 @@ def normalize(crazystring):
     if len(crazystring) < 4:
         return 'TEXT IS TOO SMALL IGNORE'
     return normality.normalize(crazystring).replace(' ', '')
+
+
+def titlestripper_basic(title):
+    ''' Basic title removal '''
+    if not title:
+        return None
+    trackname = copy.deepcopy(title)
+    for index in STRIPRELIST:
+        trackname = index.sub('', trackname)
+    if len(trackname) == 0:
+        trackname = copy.deepcopy(title)
+    return trackname
