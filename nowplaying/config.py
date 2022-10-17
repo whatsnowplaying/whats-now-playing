@@ -327,7 +327,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         plugin = self.cparser.value('settings/input')
         inputplugin = self.plugins['inputs'][
             f'nowplaying.inputs.{plugin}'].Plugin(config=self)
-        return inputplugin.getmixmode()
+        return inputplugin.validmixmodes()
 
     def setmixmode(self, mixmode):  # pylint: disable=no-self-use
         ''' set the mixmode by calling the plugin '''

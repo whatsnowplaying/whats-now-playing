@@ -22,7 +22,7 @@ import nowplaying.version
 # -- Project information -----------------------------------------------------
 
 project = 'Now Playing'
-copyright = '2021, Allen Wittenauer'
+copyright = '2021-2022, Allen Wittenauer'
 author = 'Allen Wittenauer'
 
 # The full version, including alpha/beta/rc tags

@@ -49,7 +49,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.action_newestmode.setCheckable(True)
         self.action_newestmode.setEnabled(True)
         self.action_oldestmode = QAction('Oldest')
-        self.action_oldestmode.setCheckable(False)
+        self.action_oldestmode.setCheckable(True)
+        self.action_oldestmode.setEnabled(False)
         self.menu.addAction(self.action_newestmode)
         self.menu.addAction(self.action_oldestmode)
         self.mixmode_actiongroup = QActionGroup(self.tray)
@@ -246,10 +247,14 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         validmixmodes = self.config.validmixmodes()
 
         if 'oldest' in validmixmodes:
-            self.action_oldestmode.setCheckable(True)
+            self.action_oldestmode.setEnabled(True)
+        else:
+            self.action_oldestmode.setEnabled(False)
 
         if 'newest' in validmixmodes:
-            self.action_newestmode.setCheckable(True)
+            self.action_newestmode.setEnabled(True)
+        else:
+            self.action_newestmode.setEnabled(False)
 
         if self.config.getmixmode() == 'newest':
             self.action_newestmode.setChecked(True)

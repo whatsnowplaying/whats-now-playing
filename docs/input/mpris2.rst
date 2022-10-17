@@ -8,6 +8,8 @@ Now Playing supports reading track data from MPRIS2 sources, including VLC.
 The `dbus-python` Python module must be installed in
 the virtual environment to use MPRIS2 support,
 
+      NOTE: This source does not support Oldest mix mode.
+
 Instructions
 ------------
 

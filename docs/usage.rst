@@ -39,10 +39,9 @@ includes the following options:
 
 * Oldest/Newest
 
-  * Toggle that determines which mixing mode is currently used.
+  * Toggle that determines which mixing mode is currently used. Not all Sources support both modes. Be sure to check the documentation for your particular Source.
 
-    * Oldest mode will pick the oldest track from all decks.  This setting for DJs who are using the
-      non-playing deck or will be manually controlling cross-fades.
+    * Oldest mode will pick the oldest track from all decks.  This setting is for DJs who are using the non-playing deck or will be manually controlling cross-fades.
     * Newest mode will pick the newest track from all decks.  This setting is helpful for pre-built
       playlists or Serato's AutoDJ capability.
 

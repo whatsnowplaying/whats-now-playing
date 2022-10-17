@@ -3,6 +3,8 @@ M3U Support
 
 M3U is a somewhat standardized file format that many different applications write. In particular, Virtual DJ uses this file format for its history.
 
+      NOTE: This source does not support Oldest mix mode.
+
 Instructions
 ------------
 
@@ -26,3 +28,4 @@ Instructions
 
 Now Playing will read that directory, reading the most current m3u file
 for the currently playing track information.
+
