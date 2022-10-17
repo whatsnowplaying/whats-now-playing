@@ -1,7 +1,7 @@
 
 # Changelog
 
-## Version 3.1.1 - Unreleased
+## Version 3.1.1 - 2022-10-17
 
 * AcoustID and MusicBrainz may now run independently! If you
   would like MB support but would like to disable AcoustID,
@@ -16,7 +16,12 @@
   time.
 * Twitch bot messages may now be split up by using `{{ startnewmessage }}`
   as a template variable.
+* Mixmode (Newest/Oldest) got some fixes that now make it correctly
+  unavailable/set for various types of drivers.
+* 'Official Music Video' is now removed when clean/explicit/dirty is
+  also removed.
 * Some docs updates to clarify some things.
+* The Qt test code got a major overhaul to improve debugging the UI.
 
 ## Version 3.1.0 - 2022-09-29
 
