@@ -26,6 +26,9 @@ Settings
   **File to write** - Name of the file where the app will write the track information.  You can either pick a pre-existing file or the name of a new file.
 
 *
+  * **Enable setlists** - Setting this option will create a file in the NowPlaying/setlists directory when NowPlaying is shutdown of all of the tracks that were played as GitHub-flavored markdown table.
+
+*
   **Recognition Replacement** - By default, if a Music Recognition service is enabled, it will only supplement
    any missing information. These options forcibly replace title and artist from any enabled recognition services.
 

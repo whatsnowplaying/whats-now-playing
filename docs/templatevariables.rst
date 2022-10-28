@@ -143,13 +143,13 @@ The `previoustrack` variable is a list of played tracks in _reverse_ order, star
 current track at zero. It currently holds just the artist and the title of the
 track. Some examples:
 
-... code-block:: jinja
+.. code-block:: jinja
 
   {{ previoustrack[0].artist }}
 
 will show the current artist playing.
 
-... code-block:: jinja
+.. code-block:: jinja
 
   {{ previoustrack[1].artist }}
 
@@ -157,7 +157,7 @@ will show the previous-to-current artist.
 
 To get the title of the track played 2 tracks ago:
 
-... code-block:: jinja
+.. code-block:: jinja
 
   {{ previoustrack[2].title }}
 

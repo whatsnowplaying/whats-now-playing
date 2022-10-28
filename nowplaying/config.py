@@ -137,6 +137,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         settings.setValue('recognition/replacetitle', False)
         settings.setValue('recognition/replaceartist', False)
 
+        settings.setValue('setlist/enabled', False)
+
         settings.setValue('settings/delay', '1.0')
         settings.setValue('settings/initialized', False)
         settings.setValue('settings/input', 'serato')
@@ -270,6 +272,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     def find_icon_file(self):  # pylint: disable=no-self-use
         ''' try to find our icon '''
 
+        if not ConfigFile.BUNDLEDIR:
+            logging.error('bundledir not set in config')
+            return None
+
         for testdir in [
                 ConfigFile.BUNDLEDIR,
                 os.path.join(ConfigFile.BUNDLEDIR, 'bin'),
@@ -290,6 +296,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
     def find_ui_file(self):  # pylint: disable=no-self-use
         ''' try to find our icon '''
+
+        if not ConfigFile.BUNDLEDIR:
+            logging.error('bundledir not set in config')
+            return None
 
         for testdir in [
                 ConfigFile.BUNDLEDIR,
@@ -347,3 +357,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
     def getbundledir(self):  # pylint: disable=no-self-use
         ''' get the bundle dir '''
         return ConfigFile.BUNDLEDIR
+
+    def getsetlistdir(self):  # pylint: disable=no-self-use
+        ''' get the setlist directory '''
+        return os.path.join(
+            QStandardPaths.standardLocations(
+                QStandardPaths.DocumentsLocation)[0],
+            QCoreApplication.applicationName(), 'setlists')

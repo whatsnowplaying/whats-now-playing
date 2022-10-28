@@ -192,6 +192,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.widgets['general'].notify_checkbox.setChecked(self.config.notif)
         self.widgets['general'].stripextras_checkbox.setChecked(
             self.config.cparser.value('settings/stripextras', type=bool))
+        self.widgets['general'].setlist_checkbox.setChecked(
+            self.config.cparser.value('setlist/enabled', type=bool))
 
         self._upd_win_artistextras()
         self._upd_win_recognition()
@@ -380,6 +382,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.config.cparser.setValue(
             'settings/stripextras',
             self.widgets['general'].stripextras_checkbox.isChecked())
+        self.config.cparser.setValue(
+            'setlist/enabled',
+            self.widgets['general'].setlist_checkbox.isChecked())
 
         self._upd_conf_input()
 

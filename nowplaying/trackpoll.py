@@ -6,6 +6,7 @@ import logging
 import pathlib
 import socket
 import threading
+import time
 
 from PySide6.QtCore import Signal, QThread  # pylint: disable=no-name-in-module
 
@@ -33,6 +34,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                  testmode=False,
                  parent=None):
         QThread.__init__(self, parent)
+        self.datestr = time.strftime("%Y%m%d-%H%M%S")
         self.endthread = False
         self.setObjectName('TrackPoll')
         if testmode and config:
@@ -87,6 +89,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                 logging.debug('Failed attempting to get a track: %s',
                               error,
                               exc_info=True)
+        self.create_setlist()
         logging.debug('Exited main trackpool loop')
         self.stop()
         logging.debug('Trackpoll stopped gracefully.')
@@ -333,3 +336,32 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         # try to give it a bit more time if it doesn't complete the first time
         if not fillin(self):
             fillin(self)
+
+    def create_setlist(self):
+        ''' create the setlist '''
+
+        if not self.config.cparser.value('setlist/enabled',
+                                         type=bool) or self.testmode:
+            return
+
+        setlistpath = pathlib.Path(self.config.getsetlistdir())
+        setlistpath.mkdir(parents=True, exist_ok=True)
+        metadb = nowplaying.db.MetadataDB(initialize=False)
+        metadata = metadb.read_last_meta()
+        previoustrack = metadata['previoustrack']
+        previoustrack.reverse()
+
+        setlistfn = setlistpath.joinpath(self.datestr + '.md')
+        max_artist_size = max(len(t['artist']) for t in previoustrack)
+        max_title_size = max(len(t['title']) for t in previoustrack)
+
+        with open(setlistfn, 'w', encoding='utf-8') as fileh:
+
+            fileh.writelines(f'| {"ARTIST":{max_artist_size}} |'
+                             f' {"TITLE":{max_title_size}} |\n')
+            fileh.writelines(f'|:{"-":-<{max_artist_size}} |'
+                             f':{"-":-<{max_title_size}} |\n')
+
+            for track in previoustrack:
+                fileh.writelines(f'| {track["artist"]:{max_artist_size}} |'
+                                 f' {track["title"]:{max_title_size}} |\n')
