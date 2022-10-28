@@ -114,7 +114,7 @@ Arrays
 ^^^^^^
 
 Some fields that might be multi-valued (e.g., genre) will be merged into one. If they
-are not merged, the descrition will specifically say it is a list.
+are not merged, the description will specifically say it is a list.
 
 Undefined
 ^^^^^^^^^
