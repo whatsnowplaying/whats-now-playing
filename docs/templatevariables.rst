@@ -97,6 +97,8 @@ Supported Variables
      - List of MusicBrainz Artist Ids
    * - musicbrainzrecordingid
      - MusicBrainz Recording Id
+   * - previoustrack
+     - See below for more details.
    * - title
      - Title of the media
    * - track
@@ -111,7 +113,8 @@ Implementation Notes
 Arrays
 ^^^^^^
 
-Fields that are might be multi-valued (e.g., genre) will be merged into one.
+Some fields that might be multi-valued (e.g., genre) will be merged into one. If they
+are not merged, the descrition will specifically say it is a list.
 
 Undefined
 ^^^^^^^^^
@@ -132,3 +135,31 @@ This can be short-cut to:
 since the variable will always be defined. This also means that templates
 that incorrectly use the wrong variable name will render, just with an empty
 string in place of the expected text.
+
+Previous Track Details
+----------------------
+
+The `previoustrack` variable is a list of played tracks in _reverse_ order, starting with
+current track at zero. It currently holds just the artist and the title of the
+track. Some examples:
+
+... code-block:: jinja
+
+  {{ previoustrack[0].artist }}
+
+will show the current artist playing.
+
+... code-block:: jinja
+
+  {{ previoustrack[1].artist }}
+
+will show the previous-to-current artist.
+
+To get the title of the track played 2 tracks ago:
+
+... code-block:: jinja
+
+  {{ previoustrack[2].title }}
+
+For a more complex example, see the `twitchbot_previoustrack.txt` file
+in the templates directory.

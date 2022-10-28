@@ -187,8 +187,8 @@ class MetadataDB:
             datatuple = tuple(list(mdcopy.values()))
             cursor.execute(sql, datatuple)
 
-    def make_lasttracklist(self):
-        ''' create a reversed of the tracks played '''
+    def make_previoustracklist(self):
+        ''' create a reversed list of the tracks played '''
 
         if not self.databasefile.exists():
             logging.error('MetadataDB does not exist yet?')
@@ -206,14 +206,14 @@ class MetadataDB:
 
             records = cursor.fetchall()
 
-        lasttrack = []
+        previouslist = []
         if records:
-            lasttrack.extend({
+            previouslist.extend({
                 'artist': row['artist'],
                 'title': row['title']
             } for row in records)
 
-        return lasttrack
+        return previouslist
 
     def read_last_meta(self):
         ''' update metadb '''
@@ -247,7 +247,7 @@ class MetadataDB:
                 metadata[key] = metadata[key].split(SPLITSTR)
 
         metadata['dbid'] = row['id']
-        metadata['lasttrack'] = self.make_lasttracklist()
+        metadata['previoustrack'] = self.make_previoustracklist()
         return metadata
 
     def setupsql(self):

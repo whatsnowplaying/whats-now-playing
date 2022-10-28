@@ -76,14 +76,14 @@ def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
         'key': None,
         'label': None,
         'lang': None,
-        'lasttrack': [{
-            'artist': 'Nine Inch Nails',
-            'title': "15 Ghosts II"
-        }],
         'length': None,
         'musicbrainzalbumid': None,
         'musicbrainzartistid': None,
         'musicbrainzrecordingid': None,
+        'previoustrack': [{
+            'artist': 'Nine Inch Nails',
+            'title': "15 Ghosts II"
+        }],
         'title': '15 Ghosts II',
         'track': '15',
         'track_total': None,
@@ -152,14 +152,14 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'key': 'C#m',
         'label': 'Radioactive Records',
         'lang': None,
-        'lasttrack': [{
-            'artist': 'LĪVE',
-            'title': "Lakini's Juice"
-        }],
         'length': None,
         'musicbrainzalbumid': None,
         'musicbrainzartistid': None,
         'musicbrainzrecordingid': None,
+        'previoustrack': [{
+            'artist': 'LĪVE',
+            'title': "Lakini's Juice"
+        }],
         'title': 'Lakini\'s Juice',
         'track': None,
         'track_total': None,
@@ -192,8 +192,8 @@ def test_data_dbid(getmetadb):  # pylint: disable=redefined-outer-name
     assert readdata['dbid'] == 2
 
 
-def test_data_lasttrack(getmetadb):  # pylint: disable=redefined-outer-name
-    ''' test the lasttrack functionality '''
+def test_data_previoustrack(getmetadb):  # pylint: disable=redefined-outer-name
+    ''' test the previoustrack functionality '''
     metadb = getmetadb
 
     for counter in range(4):
@@ -204,5 +204,5 @@ def test_data_lasttrack(getmetadb):  # pylint: disable=redefined-outer-name
 
     readdata = metadb.read_last_meta()
 
-    assert readdata['lasttrack'][0] == {'artist': 'a3', 'title': 't3'}
-    assert readdata['lasttrack'][1] == {'artist': 'a2', 'title': 't2'}
+    assert readdata['previoustrack'][0] == {'artist': 'a3', 'title': 't3'}
+    assert readdata['previoustrack'][1] == {'artist': 'a2', 'title': 't2'}

@@ -1,0 +1,13 @@
+{% if previoustrack and previoustrack[1] %}
+{% if cmdtarget[0] %}
+{% if previoustrack[cmdtarget[0]|int + 1] %}
+{{ previoustrack[cmdtarget[0]|int + 1].artist }} - "{{ previoustrack[cmdtarget[0]|int + 1].title }}"
+{% else %}
+No track past {{cmdtarget[0]}}.
+{% endif %}
+{% else %}
+{{ previoustrack[1].artist }} - "{{ previoustrack[1].title }}"
+{% endif %}
+{% else %}
+This is the first track!
+{% endif %}
