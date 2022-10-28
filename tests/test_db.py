@@ -196,7 +196,7 @@ def test_data_lastsong(getmetadb):  # pylint: disable=redefined-outer-name
     ''' more complex data test '''
     metadb = getmetadb
 
-    for counter in range(0, 4):
+    for counter in range(4):
         metadb.write_to_metadb(metadata={
             'artist': f'a{counter}',
             'title': f't{counter}'

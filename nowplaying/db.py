@@ -208,11 +208,10 @@ class MetadataDB:
 
         lastsong = []
         if records:
-            for row in records:
-                lastsong.append({
-                    'artist': row['artist'],
-                    'title': row['title']
-                })
+            lastsong.extend({
+                'artist': row['artist'],
+                'title': row['title']
+            } for row in records)
 
         return lastsong
 
