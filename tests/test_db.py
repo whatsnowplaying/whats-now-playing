@@ -76,7 +76,7 @@ def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
         'key': None,
         'label': None,
         'lang': None,
-        'lastsong': [{
+        'lasttrack': [{
             'artist': 'Nine Inch Nails',
             'title': "15 Ghosts II"
         }],
@@ -152,7 +152,7 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'key': 'C#m',
         'label': 'Radioactive Records',
         'lang': None,
-        'lastsong': [{
+        'lasttrack': [{
             'artist': 'LĪVE',
             'title': "Lakini's Juice"
         }],
@@ -192,8 +192,8 @@ def test_data_dbid(getmetadb):  # pylint: disable=redefined-outer-name
     assert readdata['dbid'] == 2
 
 
-def test_data_lastsong(getmetadb):  # pylint: disable=redefined-outer-name
-    ''' more complex data test '''
+def test_data_lasttrack(getmetadb):  # pylint: disable=redefined-outer-name
+    ''' test the lasttrack functionality '''
     metadb = getmetadb
 
     for counter in range(4):
@@ -204,5 +204,5 @@ def test_data_lastsong(getmetadb):  # pylint: disable=redefined-outer-name
 
     readdata = metadb.read_last_meta()
 
-    assert readdata['lastsong'][0] == {'artist': 'a3', 'title': 't3'}
-    assert readdata['lastsong'][1] == {'artist': 'a2', 'title': 't2'}
+    assert readdata['lasttrack'][0] == {'artist': 'a3', 'title': 't3'}
+    assert readdata['lasttrack'][1] == {'artist': 'a2', 'title': 't2'}
