@@ -1,6 +1,15 @@
 
 # Changelog
 
+## Version 3.1.2 - In progress
+
+* Beginning support for setlists:
+  * New previoustrack template variable.
+  * Example !previoustrack Twitchbot command to give users ability to
+    query the track list.
+  * New option to write the complete setlist to a file for either your
+    own recording keeping or to share on social media or whatever.
+
 ## Version 3.1.1 - 2022-10-17
 
 * AcoustID and MusicBrainz may now run independently! If you
