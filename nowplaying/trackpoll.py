@@ -351,7 +351,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         previoustrack = metadata['previoustrack']
         previoustrack.reverse()
 
-        setlistfn = setlistpath.joinpath(self.datestr + '.md')
+        setlistfn = setlistpath.joinpath(f'{self.datestr}.md')
         max_artist_size = max(len(t['artist']) for t in previoustrack)
         max_title_size = max(len(t['title']) for t in previoustrack)
 
