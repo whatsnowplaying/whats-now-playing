@@ -12,3 +12,4 @@ NowPlaying*.zip
 nowplaying/version.py.old
 NowPlaying.egg-info
 nowplaying/qtrc.py
+.DS_Store

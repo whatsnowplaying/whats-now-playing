@@ -41,6 +41,8 @@ When Local Mode is active,  the **Now Playing** app runs on the same machine as 
 Serato's directory, usually ``Music/_Serato_``.  This method is the recommended installation as much more information is available
 and significantly improves **Now Playing**\ 's correctness.
 
+Ignore Deck(s) allows for tracks on these deck(s) to be ignored.
+
 Remote Mode
 ^^^^^^^^^^^
 

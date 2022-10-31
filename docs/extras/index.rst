@@ -74,7 +74,11 @@ any missing data.
 Discogs
 -------
 
-Provides: Biographies, Fan art, and Thumbnails
+.. image:: images/discogs.png
+   :target: images/discogs.png
+   :alt: Discogs Settings
+
+Provides: Biographies, Fan art, Thumbnails, Websites
 
 Media tags: album and artist
 
@@ -86,6 +90,10 @@ pure text-search; results may be somewhat unreliable.
 
 fanart.tv
 -----------
+
+.. image:: images/fanarttv.png
+   :target: images/fanarttv.png
+   :alt: fanart.tv Settings
 
 Provides: Banners, Fan art, Logos, and Thumbnails
 
@@ -100,7 +108,11 @@ artwork for music and other media. It requires music be tagged with
 TheAudioDB
 -----------
 
-Provides: Banners, Biographies, Fan art, Logos, and Thumbnails
+.. image:: images/theaudiodb.png
+   :target: images/theaudiodb.png
+   :alt: theaudiodb Settings
+
+Provides: Banners, Biographies, Fan art, Logos, Thumbnails, and Websites
 
 Media tags: artist or MusicBrainz Artist ID
 

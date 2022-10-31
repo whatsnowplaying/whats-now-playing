@@ -6,6 +6,11 @@ to do something particularly special in order to get the desired impact.  The op
 under quirks allow one to do just that.  In general, however, users should stick with
 the defaults for optimal performance.
 
+
+.. image:: images/quirks.png
+   :target: images/quirks.png
+   :alt: Quirks Settings
+
 File System Notification Method
 -------------------------------
 

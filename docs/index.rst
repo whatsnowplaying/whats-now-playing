@@ -24,7 +24,6 @@ For everyone else, you will need to build and install locally.  See `Developers 
    :maxdepth: 2
    :caption: Contents:
 
-   installation
    quickstart
    upgrading
    usage
