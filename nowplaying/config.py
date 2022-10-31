@@ -5,7 +5,9 @@
 
 import logging
 import os
+import re
 import sys
+import time
 
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
 
@@ -16,7 +18,7 @@ import nowplaying.utils
 import nowplaying.version
 
 
-class ConfigFile:  # pylint: disable=too-many-instance-attributes
+class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-public-methods
     ''' read and write to config.ini '''
 
     ## Qt doesn't appear to support re-entrant locks or mutexes so
@@ -85,6 +87,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
 
         self.iconfile = self.find_icon_file()
         self.uidir = self.find_ui_file()
+        self.lastloaddate = None
+        self.striprelist = []
 
     def reset(self):
         ''' forcibly go back to defaults '''
@@ -263,10 +267,13 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
         ''' save the current set '''
 
         self.cparser.setValue('settings/initialized', self.initialized)
+        self.cparser.setValue('settings/lastsavedate',
+                              time.strftime("%Y%m%d%H%M%S"))
         self.cparser.setValue('settings/loglevel', self.loglevel)
         self.cparser.setValue('settings/notif', self.notif)
         self.cparser.setValue('textoutput/file', self.file)
         self.cparser.setValue('textoutput/txttemplate', self.txttemplate)
+
         self.cparser.sync()
 
     def find_icon_file(self):  # pylint: disable=no-self-use
@@ -364,3 +371,15 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes
             QStandardPaths.standardLocations(
                 QStandardPaths.DocumentsLocation)[0],
             QCoreApplication.applicationName(), 'setlists')
+
+    def getregexlist(self):
+        ''' get the regex title filter '''
+        if not self.striprelist or self.lastloaddate < self.cparser.value(
+                'settings/lastsavedate'):
+            self.striprelist = []
+            for configitem in self.cparser.allKeys():
+                if 'regex_filter/' in configitem:
+                    self.striprelist.append(
+                        re.compile(self.cparser.value(configitem)))
+            self.lastloaddate = self.cparser.value('settings/lastsavedate')
+        return self.striprelist

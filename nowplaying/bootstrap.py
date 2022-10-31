@@ -133,6 +133,9 @@ class UpgradeConfig:
 
         rawconfig = QSettings(source, self.qsettingsformat)
 
+        if oldversstr in ['3.1.0', '3.1.1']:
+            upgrade_filters(config=rawconfig)
+
         for oldkey, newkey in mapping.items():
             logging.debug('processing %s - %s', oldkey, newkey)
             try:
@@ -281,6 +284,17 @@ def upgrade(bundledir=None):
     logging.debug('Called upgrade')
     myupgrade = UpgradeConfig()  #pylint: disable=unused-variable
     myupgrade = UpgradeTemplates(bundledir=bundledir)
+
+
+def upgrade_filters(config):
+    ''' setup the recommended filters '''
+    if config.value('settings/stripextras',
+                    type=bool) and not config.value('regex_filter/0'):
+        stripworldlist = ['clean', 'dirty', 'explicit', 'official music video']
+        joinlist = '|'.join(stripworldlist)
+        config.setValue('regex_filter/0', f' \\((?i:{joinlist})\\)')
+        config.setValue('regex_filter/1', f' - (?i:{joinlist}$)')
+        config.setValue('regex_filter/2', f' \\[(?i:{joinlist})\\]')
 
 
 def setuplogging(logpath=None, rotate=False):

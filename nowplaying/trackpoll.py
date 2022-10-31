@@ -348,6 +348,9 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         setlistpath.mkdir(parents=True, exist_ok=True)
         metadb = nowplaying.db.MetadataDB(initialize=False)
         metadata = metadb.read_last_meta()
+        if not metadata:
+            return
+
         previoustrack = metadata['previoustrack']
         previoustrack.reverse()
 

@@ -5,12 +5,15 @@ import fnmatch
 import logging
 import os
 import pathlib
+import re
 
-from PySide6.QtCore import Slot, QFile, Qt  # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QCheckBox, QErrorMessage, QFileDialog, QTableWidgetItem, QWidget  # pylint: disable=no-name-in-module
-from PySide6.QtGui import QIcon  # pylint: disable=no-name-in-module
-from PySide6.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
-import PySide6.QtXml  # pylint: disable=unused-import, import-error, no-name-in-module
+# pylint: disable=no-name-in-module
+from PySide6.QtCore import Slot, QFile, Qt
+from PySide6.QtWidgets import (QCheckBox, QErrorMessage, QFileDialog,
+                               QListWidgetItem, QTableWidgetItem, QWidget)
+from PySide6.QtGui import QIcon
+from PySide6.QtUiTools import QUiLoader
+import PySide6.QtXml  # pylint: disable=unused-import, import-error
 
 import nowplaying.config
 import nowplaying.hostmeta
@@ -19,6 +22,7 @@ try:
     import nowplaying.qtrc  # pylint: disable=import-error, no-name-in-module
 except ModuleNotFoundError:
     pass
+import nowplaying.utils
 
 # needs to match ui file
 TWITCHBOT_CHECKBOXES = [
@@ -70,8 +74,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.qtui = _load_ui('settings')
 
         baseuis = [
-            'general', 'source', 'webserver', 'twitchbot', 'artistextras',
-            'obsws', 'quirks'
+            'general', 'source', 'filter', 'webserver', 'twitchbot',
+            'artistextras', 'obsws', 'quirks'
         ]
 
         pluginuis = {}
@@ -165,6 +169,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         qobject.add_button.clicked.connect(self.on_twitchbot_add_button)
         qobject.del_button.clicked.connect(self.on_twitchbot_del_button)
 
+    def _connect_filter_widget(self, qobject):
+        '''  connect regex filter to template picker'''
+        qobject.add_recommended_button.clicked.connect(
+            self.on_filter_add_recommended_button)
+        qobject.test_button.clicked.connect(self.on_filter_test_button)
+        qobject.add_button.clicked.connect(self.on_filter_regex_add_button)
+        qobject.del_button.clicked.connect(self.on_filter_regex_del_button)
+
     def _connect_plugins(self):
         ''' tell config to trigger plugins to update windows '''
         self.config.plugins_connect_settingsui(self.widgets)
@@ -190,12 +202,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.widgets['general'].delay_lineedit.setText(
             str(self.config.cparser.value('settings/delay')))
         self.widgets['general'].notify_checkbox.setChecked(self.config.notif)
-        self.widgets['general'].stripextras_checkbox.setChecked(
-            self.config.cparser.value('settings/stripextras', type=bool))
         self.widgets['general'].setlist_checkbox.setChecked(
             self.config.cparser.value('setlist/enabled', type=bool))
 
         self._upd_win_artistextras()
+        self._upd_win_filters()
         self._upd_win_recognition()
         self._upd_win_input()
         self._upd_win_plugins()
@@ -224,6 +235,18 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             guiattr = getattr(self.widgets['artistextras'], f'{art}_spin')
             guiattr.setValue(
                 self.config.cparser.value(f'artistextras/{art}', type=int))
+
+    def _upd_win_filters(self):
+        ''' update the filter settings '''
+        self.widgets['filter'].stripextras_checkbox.setChecked(
+            self.config.cparser.value('settings/stripextras', type=bool))
+
+        self.widgets['filter'].regex_list.clear()
+
+        for configitem in self.config.cparser.allKeys():
+            if 'regex_filter/' in configitem:
+                self._filter_regex_load(
+                    regex=self.config.cparser.value(configitem))
 
     def _upd_win_recognition(self):
         self.widgets['general'].recog_title_checkbox.setChecked(
@@ -380,9 +403,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             'settings/delay', self.widgets['general'].delay_lineedit.text())
         loglevel = self.widgets['general'].logging_combobox.currentText()
         self.config.cparser.setValue(
-            'settings/stripextras',
-            self.widgets['general'].stripextras_checkbox.isChecked())
-        self.config.cparser.setValue(
             'setlist/enabled',
             self.widgets['general'].setlist_checkbox.isChecked())
 
@@ -398,6 +418,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         logging.getLogger().setLevel(loglevel)
 
         self._upd_conf_artistextras()
+        self._upd_conf_filters()
         self._upd_conf_recognition()
         self._upd_conf_input()
         self._upd_conf_webserver()
@@ -500,6 +521,26 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
         if oldenabled != newenabled:
             self.tray.restart_obsws()
+
+    def _upd_conf_filters(self):
+        ''' update the filter settings '''
+
+        def reset_filters(widget, config):
+
+            for configitem in config.allKeys():
+                if 'regex_filter/' in configitem:
+                    config.remove(configitem)
+
+            rowcount = widget.count()
+            for row in range(rowcount):
+                item = widget.item(row)
+                config.setValue(f'regex_filter/{row}', item.text())
+
+        self.config.cparser.setValue(
+            'settings/stripextras',
+            self.widgets['filter'].stripextras_checkbox.isChecked())
+
+        reset_filters(self.widgets['filter'].regex_list, self.config.cparser)
 
     def _upd_conf_twitchbot(self):
         ''' update the twitch settings '''
@@ -682,6 +723,56 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
                 'twitchbot'].command_perm_table.selectedIndexes():
             self.widgets['twitchbot'].command_perm_table.removeRow(
                 items[0].row())
+
+    def _filter_regex_load(self, regex=None):
+        ''' setup the filter table '''
+        regexitem = QListWidgetItem()
+        if regex:
+            regexitem.setText(regex)
+        regexitem.setFlags(Qt.ItemIsEditable
+                           | Qt.ItemIsEnabled | Qt.ItemIsDragEnabled
+                           | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
+        self.widgets['filter'].regex_list.addItem(regexitem)
+
+    @Slot()
+    def on_filter_regex_add_button(self):
+        ''' filter add button clicked action '''
+        self._filter_regex_load('new')
+
+    @Slot()
+    def on_filter_regex_del_button(self):
+        ''' filter del button clicked action '''
+        if items := self.widgets['filter'].regex_list.selectedItems():
+            for item in items:
+                self.widgets['filter'].regex_list.takeItem(
+                    self.widgets['filter'].regex_list.row(item))
+
+    @Slot()
+    def on_filter_test_button(self):
+        ''' filter add button clicked action '''
+        title = self.widgets['filter'].test_lineedit.text()
+        striprelist = []
+        rowcount = self.widgets['filter'].regex_list.count()
+        for row in range(rowcount):
+            item = self.widgets['filter'].regex_list.item(row).text()
+            striprelist.append(re.compile(item))
+        result = nowplaying.utils.titlestripper_advanced(
+            title=title, title_regex_list=striprelist)
+        self.widgets['filter'].result_label.setText(result)
+        result = nowplaying.utils.titlestripper_advanced(
+            title=title, title_regex_list=self.config.getregexlist())
+        self.widgets['filter'].existing_label.setText(result)
+        self.widgets['filter'].result_label.update()
+
+    @Slot()
+    def on_filter_add_recommended_button(self):
+        ''' load some recommended settings '''
+        stripworldlist = ['clean', 'dirty', 'explicit', 'official music video']
+        joinlist = '|'.join(stripworldlist)
+
+        self._filter_regex_load(f' \\((?i:{joinlist})\\)')
+        self._filter_regex_load(f' - (?i:{joinlist}$)')
+        self._filter_regex_load(f' \\[(?i:{joinlist})\\]')
 
     @Slot()
     def on_cancel_button(self):

@@ -179,7 +179,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>400</y>
+     <y>370</y>
      <width>141</width>
      <height>20</height>
     </rect>
@@ -195,7 +195,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>430</y>
+     <y>410</y>
      <width>59</width>
      <height>16</height>
     </rect>
@@ -208,7 +208,7 @@
    <property name="geometry">
     <rect>
      <x>130</x>
-     <y>430</y>
+     <y>400</y>
      <width>91</width>
      <height>32</height>
     </rect>
@@ -292,19 +292,6 @@
    </property>
    <property name="text">
     <string>Artist Websites</string>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="stripextras_checkbox">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>360</y>
-     <width>271</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Strip Clean/Dirty/Explicit from Track Titles</string>
    </property>
   </widget>
   <widget class="QCheckBox" name="setlist_checkbox">

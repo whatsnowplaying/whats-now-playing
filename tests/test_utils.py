@@ -78,7 +78,7 @@ def test_songsubst_towindows(bootstrap):
 def test_basicstrip_explicitdash():
     ''' automated integration test '''
     metadata = {'title': 'Test - Explicit'}
-    title = nowplaying.utils.titlestripper_basic(metadata['title'])
+    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Test - Explicit'
     assert title == 'Test'
 
@@ -86,7 +86,7 @@ def test_basicstrip_explicitdash():
 def test_basicstrip_dirtydash():
     ''' automated integration test '''
     metadata = {'title': 'Test - Dirty'}
-    title = nowplaying.utils.titlestripper_basic(metadata['title'])
+    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Test - Dirty'
     assert title == 'Test'
 
@@ -94,7 +94,7 @@ def test_basicstrip_dirtydash():
 def test_basicstrip_cleandash():
     ''' automated integration test '''
     metadata = {'title': 'Test - Clean'}
-    title = nowplaying.utils.titlestripper_basic(metadata['title'])
+    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Test - Clean'
     assert title == 'Test'
 
@@ -102,7 +102,7 @@ def test_basicstrip_cleandash():
 def test_basicstrip_noclean():
     ''' automated integration test '''
     metadata = {'title': 'Clean'}
-    title = nowplaying.utils.titlestripper_basic(metadata['title'])
+    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Clean'
     assert title == 'Clean'
 
@@ -110,7 +110,7 @@ def test_basicstrip_noclean():
 def test_basicstrip_cleanparens():
     ''' automated integration test '''
     metadata = {'title': 'Test (Clean)'}
-    title = nowplaying.utils.titlestripper_basic(metadata['title'])
+    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Test (Clean)'
     assert title == 'Test'
 
@@ -118,7 +118,7 @@ def test_basicstrip_cleanparens():
 def test_basicstrip_cleansquareb():
     ''' automated integration test '''
     metadata = {'title': 'Test [Clean]'}
-    title = nowplaying.utils.titlestripper_basic(metadata['title'])
+    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Test [Clean]'
     assert title == 'Test'
 
@@ -126,7 +126,7 @@ def test_basicstrip_cleansquareb():
 def test_basicstrip_cleanextraparens():
     ''' automated integration test '''
     metadata = {'title': 'Test (Clean) (Single Mix)'}
-    title = nowplaying.utils.titlestripper_basic(metadata['title'])
+    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Test (Clean) (Single Mix)'
     assert title == 'Test (Single Mix)'
 
@@ -134,7 +134,7 @@ def test_basicstrip_cleanextraparens():
 def test_basicstrip_ovm1():
     ''' automated integration test '''
     metadata = {'title': 'Test (Clean) (Official Music Video)'}
-    title = nowplaying.utils.titlestripper_basic(metadata['title'])
+    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Test (Clean) (Official Music Video)'
     assert title == 'Test'
 
@@ -142,7 +142,7 @@ def test_basicstrip_ovm1():
 def test_basicstrip_ovm2():
     ''' automated integration test '''
     metadata = {'title': 'Test (Clean) [official music video]'}
-    title = nowplaying.utils.titlestripper_basic(metadata['title'])
+    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Test (Clean) [official music video]'
     assert title == 'Test'
 
@@ -150,7 +150,7 @@ def test_basicstrip_ovm2():
 def test_basicstrip_ovm3():
     ''' automated integration test '''
     metadata = {'title': 'Clean [official music video]'}
-    title = nowplaying.utils.titlestripper_basic(metadata['title'])
+    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Clean [official music video]'
     assert title == 'Clean'
 
@@ -158,7 +158,7 @@ def test_basicstrip_ovm3():
 def test_basicstrip_doubleclean():
     ''' automated integration test '''
     metadata = {'title': 'Clean - Clean'}
-    title = nowplaying.utils.titlestripper_basic(metadata['title'])
+    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Clean - Clean'
     assert title == 'Clean'
 
@@ -166,6 +166,6 @@ def test_basicstrip_doubleclean():
 def test_basicstrip_ovm4():
     ''' automated integration test '''
     metadata = {'title': 'Clean - Official Music Video'}
-    title = nowplaying.utils.titlestripper_basic(metadata['title'])
+    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Clean - Official Music Video'
     assert title == 'Clean'

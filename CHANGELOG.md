@@ -3,6 +3,9 @@
 
 ## Version 3.1.2 - In progress
 
+* Reworked filtering support to use user-supplied regular expressions.
+  * If the title filtering added in 3.1.0 was enabled, it will be
+    converted to use the new regular expression support.
 * Beginning support for setlists:
   * New previoustrack template variable.
   * Example !previoustrack Twitchbot command to give users ability to

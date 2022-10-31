@@ -61,8 +61,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         if self.config.cparser.value('settings/stripextras',
                                      type=bool) and self.metadata.get('title'):
-            self.metadata['title'] = nowplaying.utils.titlestripper_basic(
-                self.metadata['title'])
+            self.metadata['title'] = nowplaying.utils.titlestripper_advanced(
+                title=self.metadata['title'],
+                title_regex_list=self.config.getregexlist())
 
     def _uniqlists(self):
         lists = ['artistwebsites', 'isrc', 'musicbrainzartistid']

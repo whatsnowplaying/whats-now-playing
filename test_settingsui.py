@@ -5,13 +5,14 @@ import sys
 import pathlib
 import socket
 
-from PySide6.QtWidgets import QApplication, QWidget  # pylint: disable=no-name-in-module
-from PySide6.QtCore import QFile, Slot  # pylint: disable=no-name-in-module
-from PySide6.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
+# pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QApplication, QListWidgetItem, QWidget
+from PySide6.QtCore import QFile, Qt, Slot
+from PySide6.QtUiTools import QUiLoader
 
 GENERAL = [
-    'about', 'general', 'obsws', 'quirks', 'settings', 'source', 'twitchbot',
-    'webserver'
+    'about', 'general', 'filter', 'obsws', 'quirks', 'settings', 'source',
+    'twitchbot', 'webserver'
 ]
 
 INPUTS = ['inputs_m3u', 'inputs_mpris2', 'inputs_serato']
@@ -90,6 +91,13 @@ class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods
             qobject.sourcelist.addItem(text)
         qobject.currentRowChanged.connect(self._set_source_description)
 
+    def _connect_filter_widget(self, qobject):
+        '''  connect regex filter to template picker'''
+        qobject.add_recommended_button.clicked.connect(
+            self.on_filter_add_recommended_button)
+        qobject.add_button.clicked.connect(self.on_filter_regex_add_button)
+        qobject.del_button.clicked.connect(self.on_filter_regex_del_button)
+
     def _set_source_description(self, index):
         print('here')
         self.widgets['source'].description.setText(f'You hit {index}.')
@@ -102,6 +110,39 @@ class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods
 
     def _set_stacked_display(self, index):
         self.qtui.settings_stack.setCurrentIndex(index)
+
+    def _filter_regex_load(self, regex=None):
+        ''' setup the filter table '''
+        regexitem = QListWidgetItem()
+        if regex:
+            regexitem.setText(regex)
+        regexitem.setFlags(Qt.ItemIsEditable
+                           | Qt.ItemIsEnabled | Qt.ItemIsDragEnabled
+                           | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
+        self.widgets['filter'].regex_list.addItem(regexitem)
+
+    @Slot()
+    def on_filter_regex_add_button(self):
+        ''' filter add button clicked action '''
+        self._filter_regex_load('new')
+
+    @Slot()
+    def on_filter_regex_del_button(self):
+        ''' filter del button clicked action '''
+        if items := self.widgets['filter'].regex_list.selectedItems():
+            for item in items:
+                self.widgets['filter'].regex_list.takeItem(
+                    self.widgets['filter'].regex_list.row(item))
+
+    @Slot()
+    def on_filter_add_recommended_button(self):
+        ''' load some recommended settings '''
+        stripworldlist = ['clean', 'dirty', 'explicit', 'official music video']
+        joinlist = '|'.join(stripworldlist)
+
+        self._filter_regex_load(f' \\((?i:{joinlist})\\)')
+        self._filter_regex_load(f'  - (?i:{joinlist}$)')
+        self._filter_regex_load(f' \\[(?i:{joinlist})\\]')
 
 
 if __name__ == "__main__":

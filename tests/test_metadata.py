@@ -4,6 +4,7 @@
 import os
 import logging
 
+import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.metadata  # pylint: disable=import-error
 
 
@@ -215,6 +216,7 @@ def test_stripre_cleandash(bootstrap):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', True)
+    nowplaying.bootstrap.upgrade_filters(config.cparser)
     metadata = {'title': 'Test - Clean'}
     myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
                                                      config=config)
@@ -228,6 +230,7 @@ def test_stripre_nocleandash(bootstrap):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
+    nowplaying.bootstrap.upgrade_filters(config.cparser)
     metadata = {'title': 'Test - Clean'}
     myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
                                                      config=config)
@@ -241,6 +244,7 @@ def test_stripre_cleanparens(bootstrap):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', True)
+    nowplaying.bootstrap.upgrade_filters(config.cparser)
     metadata = {'title': 'Test (Clean)'}
     myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
                                                      config=config)
@@ -254,6 +258,7 @@ def test_stripre_cleanextraparens(bootstrap):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', True)
+    nowplaying.bootstrap.upgrade_filters(config.cparser)
     metadata = {'title': 'Test (Clean) (Single Mix)'}
     myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
                                                      config=config)
@@ -267,6 +272,7 @@ def test_publisher_not_label(bootstrap):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
+    nowplaying.bootstrap.upgrade_filters(config.cparser)
     metadata = {'publisher': 'Cool Music Publishing'}
     myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
                                                      config=config)

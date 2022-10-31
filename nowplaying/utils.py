@@ -229,12 +229,22 @@ def normalize(crazystring):
     return normality.normalize(crazystring).replace(' ', '')
 
 
-def titlestripper_basic(title):
+def titlestripper_basic(title=None, title_regex_list=None):
+    ''' Basic title removal '''
+    if not title_regex_list or len(title_regex_list) == 0:
+        title_regex_list = STRIPRELIST
+    return titlestripper_advanced(title=title,
+                                  title_regex_list=title_regex_list)
+
+
+def titlestripper_advanced(title=None, title_regex_list=None):
     ''' Basic title removal '''
     if not title:
         return None
     trackname = copy.deepcopy(title)
-    for index in STRIPRELIST:
+    if not title_regex_list or len(title_regex_list) == 0:
+        return trackname
+    for index in title_regex_list:
         trackname = index.sub('', trackname)
     if len(trackname) == 0:
         trackname = copy.deepcopy(title)

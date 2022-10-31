@@ -31,6 +31,7 @@ For everyone else, you will need to build and install locally.  See `Developers 
    settings
    input/index
    output/index
+   filter
    recognition/index
    extras/index
    quirks

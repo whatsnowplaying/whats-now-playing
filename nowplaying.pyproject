@@ -1,6 +1,7 @@
 {
     "files": [
         "nowplaying/resources/about_ui.ui",
+        "nowplaying/resources/filter_ui.ui",
         "nowplaying/resources/general_ui.ui",
         "nowplaying/resources/inputs_m3u_ui.ui",
         "nowplaying/resources/inputs_mpris2_ui.ui",
