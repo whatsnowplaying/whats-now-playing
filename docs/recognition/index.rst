@@ -5,7 +5,7 @@ Music Recognition
     individual files.  It will not work when DJing from external sources.
 
 In general, music recognition is primarily for DJs that do not have their music fully tagged.
-This feature may have some significant impacts on Now Playing's general performance:
+This feature may have some significant impacts on **What's Now Playing**'s general performance:
 
 * Extra network bandwidth and access are required to consult with online databases.
 * Extra CPU and RAM will be required to generate the 'fingerprint' that helps

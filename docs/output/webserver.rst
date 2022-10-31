@@ -1,7 +1,7 @@
 Webserver
 =========
 
-**Now Playing**\ has a built-in web server that allows for a wide
+**What's Now Playing**\ has a built-in web server that allows for a wide
 variety of customization and
 deployments, including complex ones involving multiple hosts.  Treat the files in
 `templates` as examples; copy them to new names and modify them until
@@ -14,7 +14,7 @@ others that use a timer to check for updates.  See more about WebSockets below.
 Installation
 ------------
 
-#. Open Settings from the Now Playing icon
+#. Open Settings from the **What's Now Playing** icon
 #. Select OBS WebSocket from the list of available input sources.
 #. Check Enable
 #. Change any settings as desired. See below.
@@ -34,7 +34,7 @@ Settings
      - Description
    * - Port
      - The HTTP server's TCP port.   A firewall should protect this port for
-       security reasons to limit which hosts will be permitted to connect. Now Playing does not limit what systems may connect to it.
+       security reasons to limit which hosts will be permitted to connect. **What's Now Playing** does not limit what systems may connect to it.
    * - HTML Template
      - The `Jinja2 template <https://jinja.palletsprojects.com/en/2.11.x/templates/>`_ file to use when fetching index.html. See `Templates <../templatevariables.html>`_ for more information.
    * - Once

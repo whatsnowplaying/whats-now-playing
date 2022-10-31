@@ -26,7 +26,7 @@ Windows
 ~~~~~~~
 
 * Microsoft has beefed up Windows security and you may now get prompted about an unsigned
-  binary.  Click on 'More Info' and then 'Run Anyway' to launch Now Playing.
+  binary.  Click on 'More Info' and then 'Run Anyway' to launch **What's Now Playing**.
 
 Linux
 ~~~~~~

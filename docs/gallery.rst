@@ -1,7 +1,7 @@
 Gallery of Templates
 ====================
 
-**Now Playing** has quite a bit of flexibility in what kind of output
+**What's Now Playing** has quite a bit of flexibility in what kind of output
 you can generate to the point that there are nearly infinite possibilities.
 The text versions are meant to be used to feed other systems and are rather
 basic.  E.g., the basic text template generates:

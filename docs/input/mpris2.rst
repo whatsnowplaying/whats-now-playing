@@ -3,7 +3,7 @@ MPRIS2
 
 `MPRIS2 <https://mpris2.readthedocs.io/en/latest/>`_ is a specification for
 Linux DBus compatible music software to communicate with each other.
-Now Playing supports reading track data from MPRIS2 sources, including VLC.
+**What's Now Playing** supports reading track data from MPRIS2 sources, including VLC.
 
 The `dbus-python` Python module must be installed in
 the virtual environment to use MPRIS2 support,
@@ -13,7 +13,7 @@ the virtual environment to use MPRIS2 support,
 Instructions
 ------------
 
-#. Open Settings from the Now Playing icon
+#. Open Settings from the **What's Now Playing** icon
 #. Select Input Source from the left-hand column
 
 .. image:: images/mpris2-input-source.png

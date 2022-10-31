@@ -21,7 +21,7 @@ import nowplaying.version
 
 # -- Project information -----------------------------------------------------
 
-project = 'Now Playing'
+project = 'What\'s Now Playing'
 copyright = '2021-2022, Allen Wittenauer'
 author = 'Allen Wittenauer'
 

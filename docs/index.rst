@@ -1,7 +1,7 @@
-Welcome to Now Playing's documentation!
-=======================================
+Welcome to What's Now Playing!
+==============================
 
-**Now Playing** is a tool written in Python to retrieve the current/last played
+**What's Now Playing** is a tool written in Python to retrieve the current/last played
 song in Serato DJ, Virtual DJ and other software that writes M3U files,
 or MPRIS2-compatible software. It gives you full control to use or not use
 whatever features you like and fully customize the output to match your
@@ -13,12 +13,7 @@ style. You can even pretend to be a fancy music channel:
 
 Checkout the `gallery <gallery.html>`_ to see more examples!
 
-Compiled, standalone versions are available for:
-
-* Windows
-* macOS
-
-For everyone else, you will need to build and install locally.  See `Developers <developers.html>`_ below.
+To get started, begin with `Quickstart <quickstart.html>`_.
 
 .. toctree::
    :maxdepth: 2

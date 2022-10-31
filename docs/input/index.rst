@@ -1,7 +1,7 @@
 Source
 ======
 
-For Now Playing to work, it needs to know what software is playing music.  In
+For **What's Now Playing** to work, it needs to know what software is playing music.  In
 the UI, this setting is called the Source.  There are many sources available.
 Each has its own screen to configure them.
 

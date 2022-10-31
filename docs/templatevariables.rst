@@ -1,23 +1,23 @@
 Templates
 =========
 
-Now Playing handles almost all output via the
+**What's Now Playing** handles almost all output via the
 `Jinja2 templating system <https://jinja2docs.readthedocs.io/>`_ which
 includes an extremely `powerful language <https://jinja2docs.readthedocs.io/en/stable/templates.html>`_
 that enables you a full range of customizing the output.
 
-In general, Now Playing provides a generic set of variables for use in any template. These
+In general, **What's Now Playing** provides a generic set of variables for use in any template. These
 values are filled based on a few factors:
 
 * the input source providing its data
 * media tag quality
-* Now Playing's file type and tag compatibility
+* **What's Now Playing**'s file type and tag compatibility
 
 Some examples:
 
 * An MP3 file missing ID3 tags may only have `title` available.
 * Serato in Remote mode, title, and optionally artist are available.
-* MP4/M4V files have minimal support currently in Now Playing, so will not have the label
+* MP4/M4V files have minimal support currently in **What's Now Playing**, so will not have the label
 * VOBS files do not support tagging and will only have information available from the DJ software, if possible
 
 Some outputs (e.g., TwitchBot) may provide additional variables that offer
@@ -76,11 +76,11 @@ Supported Variables
    * - genre
      - Genre of the song
    * - hostip
-     - IP address of the machine running Now Playing
+     - IP address of the machine running **What's Now Playing**
    * - hostfqdn
-     - Fully qualified hostname of the machine running Now Playing
+     - Fully qualified hostname of the machine running **What's Now Playing**
    * - hostname
-     - Short hostname of the machine running Now Playing
+     - Short hostname of the machine running **What's Now Playing**
    * - httpport
      - Port number that is running the web server
    * - isrc
@@ -119,7 +119,7 @@ are not merged, the description will specifically say it is a list.
 Undefined
 ^^^^^^^^^
 
-When rendering templates, Now Playing will set any undefined variables to the empty string.
+When rendering templates, **What's Now Playing** will set any undefined variables to the empty string.
 Instead of having to render a template as:
 
 .. code-block:: jinja

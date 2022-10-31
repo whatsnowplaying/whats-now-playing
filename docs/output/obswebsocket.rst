@@ -1,7 +1,7 @@
 OBS WebSocket Plug-in
 =====================
 
-Now Playing can use the
+**What's Now Playing** can use the
 `OBS WebSocket Plug-in <https://github.com/Palakis/obs-websocket/>`_ to send results
 directly to OBS Studio.
 
@@ -10,7 +10,7 @@ Installation
 
 #. Install and configure the OBS WebSocket Plug-in, keeping track of the port and password.
 #. Configure OBS to have a Text source, keeping track of the name of the source name.
-#. Open Settings from the Now Playing icon
+#. Open Settings from the **What's Now Playing** icon
 #. Select OBS WebSocket from the list of available input sources.
 
 .. image:: images/obsws.png

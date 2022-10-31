@@ -1,23 +1,23 @@
 TwitchBot
 =========
 
-Now Playing integrates with Twitch chat by incorporating a simple
+**What's Now Playing** integrates with Twitch chat by incorporating a simple
 bot. It takes any command and looks for an equivalent `twitchbot` template file.
 
 For example, in chat, if the user types::
 
 !track
 
-Now Playing will read a file called ``twitchbot_track.txt`` and expand any
+**What's Now Playing** will read a file called ``twitchbot_track.txt`` and expand any
 template values in it.  The Twitchbot settings section sets permissions
 for commands.
 
-Additionally, the Twitchbot can send an announcement template to chat when Now Playing detects a song change.
+Additionally, the Twitchbot can send an announcement template to chat when **What's Now Playing** detects a song change.
 
 Creating a Bot Account
 ----------------------
 
-#. Create a new, dedicated Twitch account for Now Playing. Be sure to enable:
+#. Create a new, dedicated Twitch account for **What's Now Playing**. Be sure to enable:
 
    * Multiple logins per email
    * Two-factor authentication (2FA)
@@ -27,7 +27,7 @@ Creating a Bot Account
    :alt: Account Settings for bots
 
 #. On the bot's account, go to `Twitch Dev Settings <https://dev.twitch.tv>`_ to
-   register Now Playing.
+   register **What's Now Playing**.
 
    #. Click Login in the upper right
    #. Click on "Your Console" in the upper right
@@ -59,7 +59,7 @@ the message posting rate.
 Installation
 ------------
 
-#. Open Settings from the Now Playing icon
+#. Open Settings from the **What's Now Playing** icon
 #. Select Twitchbot from the list of available input sources.
 
 .. image:: images/twitchbot.png
@@ -87,7 +87,7 @@ the version that is running.
 Adding New Commands
 -------------------
 
-Create a new file in Now Playing's``templates`` directory
+Create a new file in **What's Now Playing**'s``templates`` directory
 (``Documents/Now Playing/template``) called ``twitchbot_yourcommand.txt``
 where ``yourcommand`` is the actual command that will be
 executed by users that have the appropriate template code inside it.
@@ -99,7 +99,7 @@ Troubleshooting
 
 * If the bot never connects, try getting a new OAuth token.
 
-* Be aware that the bot may have trouble connecting if you restart Now Playing too
+* Be aware that the bot may have trouble connecting if you restart **What's Now Playing** too
   quickly.  It should eventually rejoin, but it may take several minutes.
 
 

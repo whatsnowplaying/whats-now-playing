@@ -1,7 +1,7 @@
 Usage
 =====
 
-Start the Now Playing app from the location where you placed it. The app is controlled and
+Start the **What's Now Playing** app from the location where you placed it. The app is controlled and
 configured by accessing the menu from the icon in the Windows system tray or Mac
 menu bar after configuration.
 
@@ -46,7 +46,7 @@ includes the following options:
       playlists or Serato's AutoDJ capability.
 
 * Pause/Unpause
-  - Determines whether Now Playing is looking for data and writing an updated title.
+  - Determines whether **What's Now Playing** is looking for data and writing an updated title.
 
 * Exit
-  - Stop and exit Now Playing
+  - Stop and exit **What's Now Playing**

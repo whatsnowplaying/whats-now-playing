@@ -33,7 +33,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.menu = QMenu()
 
         # create systemtray options and actions
-        self.action_title = QAction(f'Now Playing v{self.version}')
+        self.action_title = QAction(f'What\'s Now Playing v{self.version}')
         self.menu.addAction(self.action_title)
         self.action_title.setEnabled(False)
 

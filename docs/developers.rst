@@ -10,7 +10,7 @@ Developers
 Development Requirements
 ------------------------
 
-To locally build and install **Now Playing**\ , you will need the following:
+To locally build and install **What's Now Playing**\ , you will need the following:
 
 #. Python for your operating system (3.9 or higher is required)
 #. Access to a development shell (e.g., /Applications/Utility/Terminal on OS X)

@@ -5,7 +5,7 @@ Filter
    :target: images/filter.png
    :alt: Filter Settings
 
-Some DJ Pools add extra identifiers to track titles.  Now Playing has the ability to remove
+Some DJ Pools add extra identifiers to track titles.  **What's Now Playing** has the ability to remove
 extra text from the title of a track using
 `Python-style regular expressions <https://docs.python.org/3/howto/regex.html>`_ .
 

@@ -8,7 +8,7 @@ M3U is a somewhat standardized file format that many different applications writ
 Instructions
 ------------
 
-#. Open Settings from the Now Playing icon
+#. Open Settings from the **What's Now Playing** icon
 #. Select Input Source from the left-hand column
 
 .. image:: images/m3u-source-selection.png
@@ -26,6 +26,6 @@ Instructions
 
 #. Click Save
 
-Now Playing will read that directory, reading the most current m3u file
+**What's Now Playing** will read that directory, reading the most current m3u file
 for the currently playing track information.
 
