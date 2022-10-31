@@ -133,7 +133,7 @@ class UpgradeConfig:
 
         rawconfig = QSettings(source, self.qsettingsformat)
 
-        if oldversstr in ['3.1.0', '3.1.1']:
+        if oldversstr in {'3.1.0', '3.1.1'}:
             upgrade_filters(config=rawconfig)
 
         for oldkey, newkey in mapping.items():
