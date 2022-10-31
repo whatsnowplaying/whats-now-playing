@@ -9,6 +9,14 @@ Need some extra content for audio-only DJing?  The artist extras plug-ins allow 
 near real-time downloads of banners, logos, thumbnails, and fan art based upon the
 artists of the track that is currently playing.
 
+Artwork Details
+---------------
+
+.. image:: images/artexamples.png
+   :target: images/artexamples.png
+   :alt: OBS screen with an example of each image type
+
+
 .. csv-table:: Image Resources
    :header: "Type", "WebSocket URL", "Raw Image URL", "WS Height", "WS Width", "General Quality", "Description"
 
@@ -24,9 +32,14 @@ Notes:
   - Tracks with multiple artists will download both sets of images. However, only one will be used for fanart,
     banners, and logos.
 
+Biographies
+-----------
+
 Additionally, a biography of the artist may also be available. These biographies are
-also written by fans and may be brief or fairly detailed. The 'artistlongbio' value has the full content whereas the
-'artistshortbio' has only the content that will fit in a single Twitch chat message.
+also written by fans and may be brief or fairly detailed. The 'artistlongbio' value has the full content whereas the 'artistshortbio' has only the content that will fit in a single Twitch chat message.
+
+    NOTE: The short bio will end in a complete sentence as determined by a natural language toolkit.  One should be aware, however, that punctuation marks may occassionally trip it up so the last sentence may get truncated early.
+
 
 Timing
 ------
