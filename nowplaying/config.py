@@ -376,10 +376,13 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         ''' get the regex title filter '''
         if not self.striprelist or self.lastloaddate < self.cparser.value(
                 'settings/lastsavedate'):
-            self.striprelist = [
-                re.compile(self.cparser.value(configitem))
-                for configitem in self.cparser.allKeys()
-                if 'regex_filter/' in configitem
-            ]
-            self.lastloaddate = self.cparser.value('settings/lastsavedate')
+            try:
+                self.striprelist = [
+                    re.compile(self.cparser.value(configitem))
+                    for configitem in self.cparser.allKeys()
+                    if 'regex_filter/' in configitem
+                ]
+                self.lastloaddate = self.cparser.value('settings/lastsavedate')
+            except re.error as error:
+                logging.error('Filter error with \'%s\': %s', error.pattern, error.msg)
         return self.striprelist

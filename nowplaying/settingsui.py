@@ -522,6 +522,21 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         if oldenabled != newenabled:
             self.tray.restart_obsws()
 
+    def verify_regex_filters(self):
+        ''' verify the regex filters are real '''
+        widget = self.widgets['filter'].regex_list
+
+        rowcount = widget.count()
+        for row in range(rowcount):
+            item = self.widgets['filter'].regex_list.item(row).text()
+            try:
+                re.compile(item)
+            except re.error as error:
+                self.errormessage.showMessage(
+                    f'Filter error with \'{item}\': {error.msg}')
+                return False
+        return True
+
     def _upd_conf_filters(self):
         ''' update the filter settings '''
 
@@ -536,10 +551,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
                 item = widget.item(row)
                 config.setValue(f'regex_filter/{row}', item.text())
 
+        if not self.verify_regex_filters():
+            return
+
         self.config.cparser.setValue(
             'settings/stripextras',
             self.widgets['filter'].stripextras_checkbox.isChecked())
-
         reset_filters(self.widgets['filter'].regex_list, self.config.cparser)
 
     def _upd_conf_twitchbot(self):
@@ -750,6 +767,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     @Slot()
     def on_filter_test_button(self):
         ''' filter add button clicked action '''
+
+        if not self.verify_regex_filters():
+            return
+
         title = self.widgets['filter'].test_lineedit.text()
         striprelist = []
         rowcount = self.widgets['filter'].regex_list.count()
@@ -810,6 +831,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
         if self.widgets['general'].textoutput_lineedit.text() == "":
             self.errormessage.showMessage('File to write is required')
+            return
+
+        if not self.verify_regex_filters():
             return
 
         self.config.unpause()
