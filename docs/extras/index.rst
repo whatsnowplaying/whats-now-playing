@@ -38,7 +38,7 @@ Biographies
 Additionally, a biography of the artist may also be available. These biographies are
 also written by fans and may be brief or fairly detailed. The 'artistlongbio' value has the full content whereas the 'artistshortbio' has only the content that will fit in a single Twitch chat message.
 
-    NOTE: The short bio will end in a complete sentence as determined by a natural language toolkit.  One should be aware, however, that punctuation marks may occassionally trip it up so the last sentence may get truncated early.
+    NOTE: The short bio will end in a complete sentence as determined by a natural language toolkit.  One should be aware, however, that punctuation marks may occasionally trip it up so the last sentence may get truncated early.
 
 
 Timing
