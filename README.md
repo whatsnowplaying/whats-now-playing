@@ -12,9 +12,12 @@ streaming DJs using a variety of software, including:
 Output can be highly customized in a variety of ways:
 
 * plain text
-* plain HTML
+* HTML
 * streamed over WebSockets
 * directly to an OBS Text field via [OBS WebSocket Plug-in](https://github.com/Palakis/obs-websocket/)
+* Artwork in a variety of styles
+* Artist biographies
+* Twitch Chat
 
 [Compiled, standalone versions](https://github.com/whatsnowplaying/whats-now-playing/releases)
 are available for:
