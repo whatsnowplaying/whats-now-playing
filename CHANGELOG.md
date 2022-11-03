@@ -1,7 +1,7 @@
 
 # Changelog
 
-## Version 3.1.2 - In progress
+## Version 3.1.2 - 2022-11-03
 
 * Reworked filtering support to use user-supplied regular expressions.
   * If the title filtering added in 3.1.0 was enabled, it will be
