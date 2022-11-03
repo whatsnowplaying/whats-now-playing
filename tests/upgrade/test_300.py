@@ -15,6 +15,7 @@ import pytest
 from PySide6.QtCore import QCoreApplication, QSettings  # pylint: disable=no-name-in-module
 
 import nowplaying.bootstrap  # pylint: disable=import-error
+import nowplaying.upgrade  # pylint: disable=import-error
 
 if sys.platform == 'darwin':
     import pwd
@@ -102,7 +103,7 @@ def test_version_300rc1_to_current():  # pylint: disable=redefined-outer-name
         assert not os.path.exists(os.path.join(backupdir))
         reboot_macosx_prefs()
         nowplaying.bootstrap.set_qt_names(appname='testsuite')
-        upgrade = nowplaying.bootstrap.UpgradeConfig(testdir=newpath)  #pylint: disable=unused-variable
+        upgrade = nowplaying.upgrade.UpgradeConfig(testdir=newpath)  #pylint: disable=unused-variable
         config = QSettings(qsettingsformat, QSettings.UserScope,
                            QCoreApplication.organizationName(),
                            QCoreApplication.applicationName())

@@ -384,5 +384,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
                 ]
                 self.lastloaddate = self.cparser.value('settings/lastsavedate')
             except re.error as error:
-                logging.error('Filter error with \'%s\': %s', error.pattern, error.msg)
+                logging.error('Filter error with \'%s\': %s', error.pattern,
+                              error.msg)
         return self.striprelist
