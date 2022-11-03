@@ -508,7 +508,6 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             file_mod_age = time.time() - os.path.getmtime(sessionfilename)
             # ignore files older than 10 minutes
             if file_mod_age > 600:
-                logging.debug('ignoring %s; too old', file)
                 continue
 
             LASTPROCESSED = filetimestamp
