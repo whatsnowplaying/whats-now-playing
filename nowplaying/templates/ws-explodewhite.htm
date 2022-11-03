@@ -3,38 +3,34 @@
    <head>
       <meta charset="utf-8" >
       <title>Titlecard</title>
-      <link href="https://db.onlinewebfonts.com/c/de58fdcb98299a76fccd3c0cb4e5a6c0?family=Kabel" rel="stylesheet" type="text/css"/>
+      <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
       <style>
          .container {
            margin: 1px;
-           width: 2500px;
-           height: 200px;
            float: left;
-           font-size: 36px;
-           font-family: "Kabel";
-           line-height: 30%;
-           text-shadow: 4px 4px #000000;
-           color: #FFF;
-           text-indent: 1%;
+           color: white;
+           text-transform: uppercase;
+           line-height: 50%;
+
          }
-         .npimage {
-           margin: 10px;
-           float: left;
-           max-height: 190px;
-           min-height: 190px;
-           width: auto;
+         .title {
+           font-size: 36px;
+           font-family: "Helvetica";
+         }
+         .artist {
+           font-size: 24px;
+           font-family: "Helvetica";
          }
       </style>
       <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
+      <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
   </head>
    <body>
 
+
       <div class="container" id="titlecard">
-         <div class="npimage" id="cover"></div>
-         <p><div id="artist"></div></p>
-         <p><div id="title"></div></p>
-         <p><div id="album"></div></p>
-         <p><div id="label"></div></p>
+         <p><div class="title" id="title"></div></p>
+         <p><div class="artist" id="artist"></div></p>
       </div>
 
       <script type = "text/javascript">
@@ -49,26 +45,14 @@
                   ws.onmessage = function (event) {
                      var metadata = JSON.parse(event.data);
                      console.log(metadata.title);
-                     var img = document.createElement("img")
-                     img.src = 'data:image/png;base64,' + metadata.coverimagebase64;
-                     img.className = "npimage"
-                     $('#titlecard').hide()
                      if (metadata.title) {
-                        $("#cover").html(img);
-                        $("#title").html('\"'+metadata.title+'\"');
+                        $("#title").html(metadata.title);
                         $("#artist").html(metadata.artist);
-                        $("#album").html(metadata.album);
-                        $("#label").html(metadata.label);
-                        $('#titlecard').delay(2000).fadeIn(2000);
-                        $('#titlecard').delay(10000).fadeOut(2000);
+                        $('#titlecard').delay(10000).effect('explode', 5000);
                      } else {
-                        $("#cover").html('');
                         $("#title").html('');
                         $("#artist").html('');
-                        $("#album").html('');
-                        $("#label").html('');
                      }
-                     $('#titlecard').hide()
                   };
 
                   ws.onclose = function(){
@@ -82,6 +66,5 @@
             }
 
       </script>
-
    </body>
 </html>
