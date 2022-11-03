@@ -12,6 +12,8 @@
     query the track list.
   * New option to write the complete setlist to a file for either your
     own recording keeping or to share on social media or whatever.
+* Upgraded all web templates to jquery 3.6.1
+* Added some new example websocket templates
 
 ## Version 3.1.1 - 2022-10-17
 
