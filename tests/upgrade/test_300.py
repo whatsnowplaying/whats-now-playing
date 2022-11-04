@@ -79,7 +79,7 @@ def make_fake_300_config(fakestr):
     return filename
 
 
-def checksum(filename):  # pylint: disable=no-self-use
+def checksum(filename):
     ''' generate sha512 . See also build-update-sha.py '''
     hashfunc = hashlib.sha512()
     with open(filename, 'rb') as fileh:

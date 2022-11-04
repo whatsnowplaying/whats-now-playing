@@ -3,12 +3,9 @@
 
 import logging
 import logging.handlers
-import os
+import pathlib
 
-from PySide6.QtCore import QCoreApplication  # pylint: disable=no-name-in-module
-
-import nowplaying.upgrade
-import nowplaying.version
+from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 
 
 def set_qt_names(app=None, appname='NowPlaying'):
@@ -23,32 +20,38 @@ def set_qt_names(app=None, appname='NowPlaying'):
     app.setApplicationName(appname)
 
 
-def upgrade(bundledir=None):
-    ''' do an upgrade of an existing install '''
-    logging.debug('Called upgrade')
-    myupgrade = nowplaying.upgrade.UpgradeConfig()  #pylint: disable=unused-variable
-    myupgrade = nowplaying.upgrade.UpgradeTemplates(bundledir=bundledir)
-
-
-def setuplogging(logpath=None, rotate=False):
+def setuplogging(logdir=None, logname='debug.log', rotate=False):
     ''' configure logging '''
     besuretorotate = False
 
-    if os.path.exists(logpath) and rotate:
+    if logdir:
+        logpath = pathlib.Path(logdir)
+        if logpath.is_file():
+            logname = logpath.name
+            logpath = logpath.parent
+    else:
+        logpath = pathlib.Path(
+            QStandardPaths.standardLocations(
+                QStandardPaths.DocumentsLocation)[0],
+            QCoreApplication.applicationName()).joinpath('logs')
+    logpath.mkdir(parents=True, exist_ok=True)
+    logfile = logpath.joinpath(logname)
+
+    if logfile.exists() and rotate:
         besuretorotate = True
 
-    logfhandler = logging.handlers.RotatingFileHandler(filename=logpath,
+    logfhandler = logging.handlers.RotatingFileHandler(filename=logfile,
                                                        backupCount=10,
                                                        encoding='utf-8')
     if besuretorotate:
         logfhandler.doRollover()
 
-    # this loglevel should eventually be tied into config
-    # but for now, hard-set at info
     logging.basicConfig(
         format=
-        '%(asctime)s %(process)d %(threadName)s %(module)s:%(funcName)s:%(lineno)d '
+        '%(asctime)s %(process)d %(processName)s/%(threadName)s %(module)s:%(funcName)s:%(lineno)d '
         + '%(levelname)s %(message)s',
         datefmt='%Y-%m-%dT%H:%M:%S%z',
         handlers=[logfhandler],
         level=logging.DEBUG)
+    logging.captureWarnings(True)
+    return logpath

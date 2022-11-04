@@ -380,7 +380,7 @@ VALUES (?,?,?);
 
     def image_dl(self, imagedict):
         ''' fetch an image and store it '''
-        nowplaying.bootstrap.setuplogging(logpath=self.logpath)
+        nowplaying.bootstrap.setuplogging(logdir=self.logpath, rotate=False)
         threading.current_thread().name = 'ICFollower'
         logging.getLogger('requests_cache').setLevel(logging.CRITICAL + 1)
         logging.getLogger('aiosqlite').setLevel(logging.CRITICAL + 1)
@@ -418,7 +418,7 @@ VALUES (?,?,?);
         ''' Process to download stuff in the background to avoid the GIL '''
 
         threading.current_thread().name = 'ICQueue'
-        nowplaying.bootstrap.setuplogging(logpath=logpath)
+        nowplaying.bootstrap.setuplogging(logdir=logpath, rotate=False)
         self.logpath = logpath
         self.erase_url('STOPWNP')
         endloop = False

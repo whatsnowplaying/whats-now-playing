@@ -1,6 +1,11 @@
 
 # Changelog
 
+## Version 3.2.0 - Unreleased
+
+* Internal changes to bootstrap and upgrade code to prepare
+  for future asyncio work
+
 ## Version 3.1.2 - 2022-11-03
 
 * Reworked filtering support to use user-supplied regular expressions.

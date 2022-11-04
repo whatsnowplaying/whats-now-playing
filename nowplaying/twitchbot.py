@@ -435,7 +435,7 @@ def start(logpath, bundledir):
             bundledir = os.path.abspath(os.path.dirname(__file__))
 
     nowplaying.bootstrap.set_qt_names()
-    nowplaying.bootstrap.setuplogging(logpath)
+    nowplaying.bootstrap.setuplogging(logdir=logpath, rotate=False)
 
     config = nowplaying.config.ConfigFile(bundledir=bundledir)
     logging.info('boot up')

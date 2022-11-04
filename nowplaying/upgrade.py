@@ -278,3 +278,10 @@ def checksum(filename):
         while chunk := fileh.read(128 * hashfunc.block_size):
             hashfunc.update(chunk)
     return hashfunc.hexdigest()
+
+
+def upgrade(bundledir=None):
+    ''' do an upgrade of an existing install '''
+    logging.debug('Called upgrade')
+    myupgrade = UpgradeConfig()  #pylint: disable=unused-variable
+    myupgrade = UpgradeTemplates(bundledir=bundledir)
