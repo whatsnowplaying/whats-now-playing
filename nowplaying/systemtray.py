@@ -6,6 +6,7 @@ import multiprocessing
 
 from PySide6.QtWidgets import QApplication, QErrorMessage, QMenu, QMessageBox, QSystemTrayIcon  # pylint: disable=no-name-in-module
 from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=no-name-in-module
 
 import nowplaying.config
 import nowplaying.db
@@ -17,6 +18,8 @@ import nowplaying.utils
 import nowplaying.version
 import nowplaying.webserver
 
+LASTANNOUNCED = {'artist': None, 'title': None}
+
 
 class Tray:  # pylint: disable=too-many-instance-attributes
     ''' System Tray object '''
@@ -25,7 +28,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.config = nowplaying.config.ConfigFile()
         self.version = nowplaying.version.get_versions()['version']
 
-        self.icon = QIcon(self.config.iconfile)
+        self.icon = QIcon(str(self.config.iconfile))
         self.tray = QSystemTrayIcon()
         self.tray.setIcon(self.icon)
         self.tray.setToolTip("Now Playing ▶")
@@ -75,6 +78,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         # add menu to the systemtray UI
         self.tray.setContextMenu(self.menu)
+        self.tray.show()
 
         self.config.get()
         if not self.config.file:
@@ -89,7 +93,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.error_dialog = QErrorMessage()
         self.regular_dialog = QMessageBox()
         self._check_for_upgrade_alert()
-        self.trackthread = None
+        self.watcher = None
+        self.trackpoll = None
         self.webprocess = None
         self.obswsobj = None
         self.twitchbotprocess = None
@@ -110,21 +115,25 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def threadstart(self):
         ''' start our various threads '''
+
+        # Start the polling thread
+        self._start_trackpollprocess()
+
         # Start the OBS WebSocket thread
         self.obswsobj = nowplaying.obsws.OBSWebSocketHandler(tray=self)
         if self.config.cparser.value('obsws/enabled', type=bool):
             self._start_obsws()
-
-        # Start the polling thread
-        self.trackthread = nowplaying.trackpoll.TrackPoll()
-        self.trackthread.currenttrack[dict].connect(self.tracknotify)
-        self.trackthread.start()
 
         if self.config.cparser.value('weboutput/httpenabled', type=bool):
             self._start_webprocess()
 
         if self.config.cparser.value('twitchbot/enabled', type=bool):
             self._start_twitchbotprocess()
+
+        metadb = nowplaying.db.MetadataDB()
+        self.watcher = QFileSystemWatcher()
+        self.watcher.addPath(str(metadb.databasefile))
+        self.watcher.fileChanged.connect(self.tracknotify)
 
     def _start_obsws(self):
         self.obswsobj.start()
@@ -136,6 +145,33 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         ''' bounce the obsws connection '''
         self._stop_obsws()
         self._start_obsws()
+
+    def _stop_trackpollprocess(self):
+        ''' stop trackpoll '''
+        if self.trackpoll:
+            logging.debug('Notifying trackpoll')
+            nowplaying.trackpoll.stop(self.trackpoll.pid)
+            logging.debug('Waiting for trackpoll')
+            if not self.trackpoll.join(5):
+                logging.info('Terminating trackpoll forcefully')
+                self.trackpoll.terminate()
+            self.trackpoll.join(5)
+            self.trackpoll.close()
+            self.trackpoll = None
+
+    def _start_trackpollprocess(self):
+        ''' Start trackpoll '''
+        if not self.trackpoll:
+            logging.info('Starting trackpoll')
+            bundledir = self.config.getbundledir()
+            self.trackpoll = multiprocessing.Process(
+                target=nowplaying.trackpoll.start,
+                name='TrackProcess',
+                args=(
+                    bundledir,
+                    False,
+                ))
+            self.trackpoll.start()
 
     def _stop_webprocess(self):
         ''' stop the web process '''
@@ -157,7 +193,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             logging.info('Starting web process')
             bundledir = self.config.getbundledir()
             self.webprocess = multiprocessing.Process(
-                target=nowplaying.webserver.start, args=(bundledir, ))
+                target=nowplaying.webserver.start,
+                name='WebProcess',
+                args=(bundledir, ))
             self.webprocess.start()
 
     def _stop_twitchbotprocess(self):
@@ -181,11 +219,18 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             bundledir = self.config.getbundledir()
             logpath = self.config.logpath
             self.twitchbotprocess = multiprocessing.Process(
-                target=nowplaying.twitchbot.start, args=(
+                target=nowplaying.twitchbot.start,
+                name='TwitchProcess',
+                args=(
                     logpath,
                     bundledir,
                 ))
             self.twitchbotprocess.start()
+
+    def restart_trackpoll(self):
+        ''' handle starting or restarting the webserver process '''
+        self._stop_trackpollprocess()
+        self._start_trackpollprocess()
 
     def restart_webprocess(self):
         ''' handle starting or restarting the webserver process '''
@@ -197,11 +242,23 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self._stop_twitchbotprocess()
         self._start_twitchbotprocess()
 
-    def tracknotify(self, metadata):
+    def tracknotify(self):  # pylint: disable=unused-argument
         ''' signal handler to update the tooltip '''
+        global LASTANNOUNCED  # pylint: disable=global-statement, global-variable-not-assigned
 
         self.config.get()
         if self.config.notif:
+            metadb = nowplaying.db.MetadataDB()
+            metadata = metadb.read_last_meta()
+            if not metadata:
+                return
+
+            # don't announce empty content
+            if not metadata['artist'] and not metadata['title']:
+                logging.warning(
+                    'Both artist and title are empty; skipping notify')
+                return
+
             if 'artist' in metadata:
                 artist = metadata['artist']
             else:
@@ -212,9 +269,19 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             else:
                 title = ''
 
+            if metadata['artist'] == LASTANNOUNCED['artist'] and \
+               metadata['title'] == LASTANNOUNCED['title']:
+                return
+
+            LASTANNOUNCED['artist'] = metadata['artist']
+            LASTANNOUNCED['title'] = metadata['title']
+
             tip = f'{artist} - {title}'
-            self.tray.showMessage('Now Playing ▶ ', tip)
             self.tray.setIcon(self.icon)
+            self.tray.showMessage('Now Playing ▶ ',
+                                  tip,
+                                  icon=QSystemTrayIcon.NoIcon)
+            self.tray.show()
 
     def webenable(self, status):
         ''' If the web server gets in trouble, we need to tell the user '''
@@ -282,9 +349,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         logging.debug('Notifying obswsobj')
         self._stop_obsws()
 
-        if self.trackthread:
-            logging.debug('Notifying trackthread')
-            self.trackthread.exit()
+        self._stop_trackpollprocess()
 
         if self.config:
             self.config.get()
@@ -296,12 +361,6 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         logging.debug('Shutting down webprocess')
         self._stop_webprocess()
         self._stop_twitchbotprocess()
-
-        # calling exit should call __del__ on all of our QThreads
-        if self.trackthread:
-            logging.debug('Waiting for trackthread')
-            self.trackthread.endthread = True
-            self.trackthread.wait()
 
         app = QApplication.instance()
         app.exit(0)

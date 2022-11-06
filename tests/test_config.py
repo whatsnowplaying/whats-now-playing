@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 ''' misc nowplaying.config tests '''
 
-import os
+import pathlib
 
 from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 
@@ -20,7 +20,7 @@ def test_reset1(bootstrap):
 
 def test_reset2(getroot):
     ''' test config.reset via init '''
-    bundledir = os.path.join(getroot, 'nowplaying')
+    bundledir = pathlib.Path(getroot).joinpath('nowplaying')
     nowplaying.bootstrap.set_qt_names(appname='testsuite')
     config = nowplaying.config.ConfigFile(bundledir=bundledir, testmode=True)
     config.cparser.setValue('acoustidmb/enabled', False)
@@ -66,9 +66,12 @@ def test_get1(bootstrap):
     assert not config.initialized
     assert config.loglevel == 'DEBUG'
     assert not config.notif
-    assert config.txttemplate == os.path.join(
-        QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
-        QCoreApplication.applicationName(), 'templates', 'basic-plain.txt')
+    assert config.txttemplate == str(
+        pathlib.Path(
+            QStandardPaths.standardLocations(
+                QStandardPaths.DocumentsLocation)[0],
+            QCoreApplication.applicationName()).joinpath(
+                'templates', 'basic-plain.txt'))
 
     config.cparser.setValue('settings/initialized', True)
     config.cparser.setValue('settings/loglevel', 'invalid1')
@@ -87,6 +90,6 @@ def test_get1(bootstrap):
 
 def test_bundledir(getroot, bootstrap):
     ''' test config.getbundledir '''
-    bundledir = os.path.join(getroot, 'nowplaying')
+    bundledir = pathlib.Path(getroot).joinpath('nowplaying')
     config = bootstrap
     assert bundledir == config.getbundledir()

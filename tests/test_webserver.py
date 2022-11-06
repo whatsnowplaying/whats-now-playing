@@ -23,7 +23,10 @@ def getwebserver(bootstrap):
         config.templatedir = os.path.join(newpath, 'templates')
         bundledir = config.getbundledir()
         webprocess = multiprocessing.Process(target=nowplaying.webserver.start,
-                                             args=(bundledir, newpath))
+                                             args=(
+                                                 bundledir,
+                                                 newpath,
+                                             ))
         webprocess.start()
         time.sleep(1)
         yield config, metadb, webprocess

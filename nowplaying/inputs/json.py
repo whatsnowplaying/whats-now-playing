@@ -62,6 +62,7 @@ class Plugin(InputPlugin):
             self.config.cparser.value('jsoninput/filename'))
 
         if not filepath.exists():
+            logging.debug('%s does not exist', filepath)
             return {}
 
         try:

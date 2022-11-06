@@ -1,47 +1,51 @@
 #!/usr/bin/env python3
 ''' test the trackpoller '''
 
+import json
+import multiprocessing
 import logging
 import pathlib
+import time
 
 import pytest
 
-from PySide6.QtCore import QThread  # pylint: disable=no-name-in-module
-
 import nowplaying.trackpoll  # pylint: disable=import-error
-import nowplaying.inputs  # pylint: disable=import-error
-
-ARTIST = None
-FILENAME = None
-TITLE = None
 
 
 @pytest.fixture
-def trackpollbootstrap(bootstrap, tmp_path):  # pylint: disable=redefined-outer-name
+def trackpollbootstrap(bootstrap, getroot, tmp_path):  # pylint: disable=redefined-outer-name
     ''' bootstrap a configuration '''
     txtfile = tmp_path.joinpath('output.txt')
     if pathlib.Path(txtfile).exists():
         pathlib.Path(txtfile).unlink()
+    jsonfile = tmp_path.joinpath('input.json')
     config = bootstrap
-    config.cparser.setValue('textoutput/file', str(txtfile))
+    config.templatedir = getroot.joinpath('tests', 'templates')
     config.cparser.setValue('artistextras/enabled', False)
+    config.cparser.setValue('control/paused', True)
+    config.cparser.setValue('settings/input', 'json')
+    config.cparser.setValue('jsoninput/delay', 1)
+    config.cparser.setValue('jsoninput/filename', str(jsonfile))
+    config.cparser.setValue('textoutput/file', str(txtfile))
     config.file = str(txtfile)
+
+    logging.debug('output = %s', txtfile)
     config.cparser.sync()
+    trackpoll = multiprocessing.Process(target=nowplaying.trackpoll.start,
+                                        name='TrackProcess',
+                                        args=(
+                                            config.BUNDLEDIR,
+                                            True,
+                                        ))
+    trackpoll.start()
     yield config
-
-
-class InputStub(nowplaying.inputs.InputPlugin):
-    ''' stupid input plugin '''
-
-    def start(self):
-        ''' dummy start '''
-
-    def stop(self):
-        ''' dummy stop '''
-
-    def getplayingtrack(self):  # pylint: disable=no-self-use
-        ''' dummy meta -> just return globals '''
-        return {'artist': ARTIST, 'filename': FILENAME, 'title': TITLE}
+    if trackpoll:
+        nowplaying.trackpoll.stop(trackpoll.pid)
+        if not trackpoll.join(5):
+            trackpoll.terminate()
+        trackpoll.join(5)
+        trackpoll.close()
+        trackpoll = None
 
 
 def wait_for_output(filename):
@@ -49,196 +53,148 @@ def wait_for_output(filename):
 
     # these tests tend to be a bit flaky/racy esp on github
     # runners so add some protection
-    QThread.msleep(2000)
+    time.sleep(5)
     counter = 0
-    while counter < 5 and not pathlib.Path(filename).exists():
-        QThread.msleep(2000)
+    while counter < 10 and not pathlib.Path(filename).exists():
+        time.sleep(5)
         counter += 1
         logging.debug('waiting for %s: %s', filename, counter)
-    assert counter < 5
+    assert counter < 10
 
 
-def tracknotify(metadata):
-    ''' log what trackpoll meta notified with. do more in the future '''
-    logging.debug(metadata)
-
-
-def test_trackpoll1a(trackpollbootstrap):  # pylint: disable=redefined-outer-name
-    ''' see if the thread starts and stops '''
-    config = trackpollbootstrap
-    config.cparser.setValue('settings/input', 'InputStub')
-    trackthread = nowplaying.trackpoll.TrackPoll(testmode=True,
-                                                 inputplugin=InputStub(),
-                                                 config=config)
-    trackthread.currenttrack[dict].connect(tracknotify)
-    trackthread.start()
-    trackthread.endthread = True
-    trackthread.wait()
-
-
-def test_trackpoll_startstop(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
-    ''' see if the thread starts and stops '''
-    config = trackpollbootstrap
-    config.cparser.setValue('settings/input', 'InputStub')
-    template = getroot.joinpath('tests', 'templates', 'simple.txt')
-    config.txttemplate = str(template)
-    config.cparser.setValue('textoutput/txttemplate', str(template))
-    trackthread = nowplaying.trackpoll.TrackPoll(testmode=True,
-                                                 inputplugin=InputStub(),
-                                                 config=config)
-    trackthread.currenttrack[dict].connect(tracknotify)
-    trackthread.start()
-    QThread.msleep(1000)
-    trackthread.endthread = True
-    trackthread.wait()
-
-
-def test_trackpoll_basic(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
+def test_trackpoll_basic(trackpollbootstrap):  # pylint: disable=redefined-outer-name
     ''' test basic trackpolling '''
-    global ARTIST, FILENAME, TITLE  # pylint: disable=global-statement
 
     config = trackpollbootstrap
-    config.cparser.setValue('settings/input', 'InputStub')
-    template = getroot.joinpath('tests', 'templates', 'simple.txt')
+    template = config.templatedir.joinpath('simple.txt')
     config.txttemplate = str(template)
     config.cparser.setValue('textoutput/txttemplate', str(template))
-    FILENAME = 'randomfile'
-    trackthread = nowplaying.trackpoll.TrackPoll(testmode=True,
-                                                 inputplugin=InputStub(),
-                                                 config=config)
-    trackthread.currenttrack[dict].connect(tracknotify)
-    trackthread.start()
+    config.cparser.setValue('control/paused', False)
+    config.cparser.sync()
+    filepath = pathlib.Path(config.cparser.value('jsoninput/filename'))
 
-    QThread.msleep(2000)
-    with open(config.file, encoding='utf-8') as filein:
-        text = filein.readlines()
+    metadata = {'artist': 'NIN', 'title': 'Ghosts'}
 
-    assert text[0].strip() == ''
+    with open(filepath, "w+", encoding='utf-8') as fhout:
+        json.dump(metadata, fhout)
 
-    ARTIST = 'NIN'
-    wait_for_output(config.file)
-    with open(config.file, encoding='utf-8') as filein:
-        text = filein.readlines()
-    assert text[0].strip() == 'NIN'
+    # ARTIST = 'NIN'
+    # wait_for_output(config.file)
+    # with open(config.file, encoding='utf-8') as filein:
+    #     text = filein.readlines()
+    # assert text[0].strip() == 'NIN'
 
-    TITLE = 'Ghosts'
+    # TITLE = 'Ghosts'
     wait_for_output(config.file)
     with open(config.file, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == 'NIN'
     assert text[1].strip() == 'Ghosts'
 
-    trackthread.endthread = True
-    trackthread.wait()
 
-    ARTIST = FILENAME = TITLE = None
+# def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
+#     ''' test trackpolling + metadata + input override '''
+#     global ARTIST, FILENAME, TITLE  # pylint: disable=global-statement
 
+#     config = trackpollbootstrap
+#     config.cparser.setValue('settings/input', 'InputStub')
+#     template = getroot.joinpath('tests', 'templates', 'simplewfn.txt')
+#     config.txttemplate = str(template)
+#     config.cparser.setValue('textoutput/txttemplate', str(template))
+#     FILENAME = str(
+#         getroot.joinpath('tests', 'audio', '15_Ghosts_II_64kb_orig.mp3'))
+#     trackthread = nowplaying.trackpoll.TrackPoll(testmode=True,
+#                                                  inputplugin=InputStub(),
+#                                                  config=config)
+#     trackthread.currenttrack[dict].connect(tracknotify)
+#     trackthread.start()
 
-def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
-    ''' test trackpolling + metadata + input override '''
-    global ARTIST, FILENAME, TITLE  # pylint: disable=global-statement
+#     wait_for_output(config.file)
+#     with open(config.file, encoding='utf-8') as filein:
+#         text = filein.readlines()
 
-    config = trackpollbootstrap
-    config.cparser.setValue('settings/input', 'InputStub')
-    template = getroot.joinpath('tests', 'templates', 'simplewfn.txt')
-    config.txttemplate = str(template)
-    config.cparser.setValue('textoutput/txttemplate', str(template))
-    FILENAME = str(
-        getroot.joinpath('tests', 'audio', '15_Ghosts_II_64kb_orig.mp3'))
-    trackthread = nowplaying.trackpoll.TrackPoll(testmode=True,
-                                                 inputplugin=InputStub(),
-                                                 config=config)
-    trackthread.currenttrack[dict].connect(tracknotify)
-    trackthread.start()
+#     assert text[0].strip() == FILENAME
+#     assert text[1].strip() == 'Nine Inch Nails'
+#     assert text[2].strip() == '15 Ghosts II'
 
-    wait_for_output(config.file)
-    with open(config.file, encoding='utf-8') as filein:
-        text = filein.readlines()
+#     ARTIST = 'NIN'
+#     QThread.msleep(2000)
+#     with open(config.file, encoding='utf-8') as filein:
+#         text = filein.readlines()
+#     assert text[0].strip() == FILENAME
+#     assert text[1].strip() == 'NIN'
+#     assert text[2].strip() == '15 Ghosts II'
 
-    assert text[0].strip() == FILENAME
-    assert text[1].strip() == 'Nine Inch Nails'
-    assert text[2].strip() == '15 Ghosts II'
+#     ARTIST = None
+#     TITLE = 'Ghosts'
+#     wait_for_output(config.file)
+#     with open(config.file, encoding='utf-8') as filein:
+#         text = filein.readlines()
+#     assert text[0].strip() == FILENAME
+#     assert text[1].strip() == 'Nine Inch Nails'
+#     assert text[2].strip() == 'Ghosts'
 
-    ARTIST = 'NIN'
-    QThread.msleep(2000)
-    with open(config.file, encoding='utf-8') as filein:
-        text = filein.readlines()
-    assert text[0].strip() == FILENAME
-    assert text[1].strip() == 'NIN'
-    assert text[2].strip() == '15 Ghosts II'
+#     trackthread.endthread = True
+#     trackthread.wait()
 
-    ARTIST = None
-    TITLE = 'Ghosts'
-    wait_for_output(config.file)
-    with open(config.file, encoding='utf-8') as filein:
-        text = filein.readlines()
-    assert text[0].strip() == FILENAME
-    assert text[1].strip() == 'Nine Inch Nails'
-    assert text[2].strip() == 'Ghosts'
+#     ARTIST = FILENAME = TITLE = None
 
-    trackthread.endthread = True
-    trackthread.wait()
+# def test_trackpoll_titleisfile(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
+#     ''' test trackpoll title is a filename '''
+#     global ARTIST, FILENAME, TITLE  # pylint: disable=global-statement
 
-    ARTIST = FILENAME = TITLE = None
+#     config = trackpollbootstrap
+#     config.cparser.setValue('settings/input', 'InputStub')
+#     template = getroot.joinpath('tests', 'templates', 'simplewfn.txt')
+#     config.txttemplate = str(template)
+#     config.cparser.setValue('textoutput/txttemplate', str(template))
+#     TITLE = str(
+#         getroot.joinpath('tests', 'audio', '15_Ghosts_II_64kb_orig.mp3'))
+#     trackthread = nowplaying.trackpoll.TrackPoll(testmode=True,
+#                                                  inputplugin=InputStub(),
+#                                                  config=config)
+#     trackthread.currenttrack[dict].connect(tracknotify)
+#     trackthread.start()
 
+#     wait_for_output(config.file)
+#     with open(config.file, encoding='utf-8') as filein:
+#         text = filein.readlines()
 
-def test_trackpoll_titleisfile(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
-    ''' test trackpoll title is a filename '''
-    global ARTIST, FILENAME, TITLE  # pylint: disable=global-statement
+#     assert text[0].strip() == TITLE
+#     assert text[1].strip() == 'Nine Inch Nails'
+#     assert text[2].strip() == '15 Ghosts II'
 
-    config = trackpollbootstrap
-    config.cparser.setValue('settings/input', 'InputStub')
-    template = getroot.joinpath('tests', 'templates', 'simplewfn.txt')
-    config.txttemplate = str(template)
-    config.cparser.setValue('textoutput/txttemplate', str(template))
-    TITLE = str(
-        getroot.joinpath('tests', 'audio', '15_Ghosts_II_64kb_orig.mp3'))
-    trackthread = nowplaying.trackpoll.TrackPoll(testmode=True,
-                                                 inputplugin=InputStub(),
-                                                 config=config)
-    trackthread.currenttrack[dict].connect(tracknotify)
-    trackthread.start()
+#     trackthread.endthread = True
+#     trackthread.wait()
 
-    wait_for_output(config.file)
-    with open(config.file, encoding='utf-8') as filein:
-        text = filein.readlines()
+#     ARTIST = FILENAME = TITLE = None
 
-    assert text[0].strip() == TITLE
-    assert text[1].strip() == 'Nine Inch Nails'
-    assert text[2].strip() == '15 Ghosts II'
+# def test_trackpoll_nofile(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
+#     ''' test trackpoll title is a filename '''
+#     global ARTIST, FILENAME, TITLE  # pylint: disable=global-statement
 
-    trackthread.endthread = True
-    trackthread.wait()
+#     config = trackpollbootstrap
+#     config.cparser.setValue('settings/input', 'InputStub')
+#     template = getroot.joinpath('tests', 'templates', 'simplewfn.txt')
+#     config.txttemplate = str(template)
+#     config.cparser.setValue('textoutput/txttemplate', str(template))
+#     TITLE = 'title'
+#     ARTIST = 'artist'
+#     trackthread = nowplaying.trackpoll.TrackPoll(testmode=True,
+#                                                  inputplugin=InputStub(),
+#                                                  config=config)
+#     trackthread.currenttrack[dict].connect(tracknotify)
+#     trackthread.start()
 
-    ARTIST = FILENAME = TITLE = None
+#     wait_for_output(config.file)
+#     with open(config.file, encoding='utf-8') as filein:
+#         text = filein.readlines()
 
+#     assert text[0].strip() == ''
+#     assert text[1].strip() == 'artist'
+#     assert text[2].strip() == 'title'
 
-def test_trackpoll_nofile(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
-    ''' test trackpoll title is a filename '''
-    global ARTIST, FILENAME, TITLE  # pylint: disable=global-statement
+#     trackthread.endthread = True
+#     trackthread.wait()
 
-    config = trackpollbootstrap
-    config.cparser.setValue('settings/input', 'InputStub')
-    template = getroot.joinpath('tests', 'templates', 'simplewfn.txt')
-    config.txttemplate = str(template)
-    config.cparser.setValue('textoutput/txttemplate', str(template))
-    TITLE = 'title'
-    ARTIST = 'artist'
-    trackthread = nowplaying.trackpoll.TrackPoll(testmode=True,
-                                                 inputplugin=InputStub(),
-                                                 config=config)
-    trackthread.currenttrack[dict].connect(tracknotify)
-    trackthread.start()
-
-    wait_for_output(config.file)
-    with open(config.file, encoding='utf-8') as filein:
-        text = filein.readlines()
-
-    assert text[0].strip() == ''
-    assert text[1].strip() == 'artist'
-    assert text[2].strip() == 'title'
-
-    trackthread.endthread = True
-    trackthread.wait()
-
-    ARTIST = FILENAME = TITLE = None
+#     ARTIST = FILENAME = TITLE = None

@@ -5,6 +5,7 @@
 
 import logging
 import os
+import pathlib
 import re
 import sys
 import time
@@ -25,7 +26,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     ## let's use boring old Python threading
 
     BUNDLEDIR = None
-    PAUSED = False
 
     def __init__(self,
                  bundledir=None,
@@ -37,21 +37,23 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self.logpath = logpath
         self.initialized = False
         if logpath:
-            self.logpath = logpath
+            self.logpath = pathlib.Path(logpath)
         else:
-            self.logpath = os.path.join(
+            self.logpath = pathlib.Path(
                 QStandardPaths.standardLocations(
                     QStandardPaths.DocumentsLocation)[0],
-                QCoreApplication.applicationName(), 'logs', 'debug.log')
+                QCoreApplication.applicationName()).joinpath(
+                    'logs', 'debug.log')
 
-        self.templatedir = os.path.join(
+        self.templatedir = pathlib.Path(
             QStandardPaths.standardLocations(
                 QStandardPaths.DocumentsLocation)[0],
-            QCoreApplication.applicationName(), 'templates')
+            QCoreApplication.applicationName()).joinpath('templates')
 
         if not ConfigFile.BUNDLEDIR and bundledir:
-            ConfigFile.BUNDLEDIR = bundledir
+            ConfigFile.BUNDLEDIR = pathlib.Path(bundledir)
 
+        logging.info('Logpath: %s', self.logpath)
         logging.info('Templates: %s', self.templatedir)
         logging.info('Bundle: %s', ConfigFile.BUNDLEDIR)
 
@@ -65,9 +67,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
                                  QCoreApplication.applicationName())
         logging.info('configuration: %s', self.cparser.fileName())
         self.notif = False
-        ConfigFile.PAUSED = False
         self.file = None
-        self.txttemplate = os.path.join(self.templatedir, "basic-plain.txt")
+        self.txttemplate = str(self.templatedir.joinpath("basic-plain.txt"))
         self.loglevel = 'DEBUG'
 
         self.plugins = {}
@@ -109,8 +110,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         except TypeError:
             pass
 
-        self.file = self.cparser.value('textoutput/file')
-        self.txttemplate = self.cparser.value('textoutput/txttemplate')
+        self.file = self.cparser.value('textoutput/file', defaultValue=None)
+        self.txttemplate = self.cparser.value('textoutput/txttemplate',
+                                              defaultValue=None)
 
         try:
             self.initialized = self.cparser.value('settings/initialized',
@@ -160,22 +162,22 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue('obsws/secret', '')
         settings.setValue('obsws/source', '')
         settings.setValue('obsws/template',
-                          os.path.join(self.templatedir, "basic-plain.txt"))
+                          str(self.templatedir.joinpath("basic-plain.txt")))
 
         settings.setValue('weboutput/htmltemplate',
-                          os.path.join(self.templatedir, "basic-web.htm"))
+                          str(self.templatedir.joinpath("basic-web.htm")))
         settings.setValue(
             'weboutput/artistbannertemplate',
-            os.path.join(self.templatedir, "ws-artistbanner-nofade.htm"))
+            str(self.templatedir.joinpath("ws-artistbanner-nofade.htm")))
         settings.setValue(
             'weboutput/artistlogotemplate',
-            os.path.join(self.templatedir, "ws-artistlogo-nofade.htm"))
+            str(self.templatedir.joinpath("ws-artistlogo-nofade.htm")))
         settings.setValue(
             'weboutput/artistthumbtemplate',
-            os.path.join(self.templatedir, "ws-artistthumb-nofade.htm"))
+            str(self.templatedir.joinpath("ws-artistthumb-nofade.htm")))
         settings.setValue(
             'weboutput/artistfanarttemplate',
-            os.path.join(self.templatedir, "ws-artistfanart-nofade.htm"))
+            str(self.templatedir.joinpath("ws-artistfanart-nofade.htm")))
         settings.setValue('weboutput/httpenabled', False)
         settings.setValue('weboutput/httpport', '8899')
         settings.setValue('weboutput/once', True)
@@ -285,12 +287,12 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
         for testdir in [
                 ConfigFile.BUNDLEDIR,
-                os.path.join(ConfigFile.BUNDLEDIR, 'bin'),
-                os.path.join(ConfigFile.BUNDLEDIR, 'resources')
+                ConfigFile.BUNDLEDIR.joinpath('bin'),
+                ConfigFile.BUNDLEDIR.joinpath('resources')
         ]:
             for testfilename in ['icon.ico', 'windows.ico']:
-                testfile = os.path.join(testdir, testfilename)
-                if os.path.exists(testfile):
+                testfile = testdir.joinpath(testfilename)
+                if testfile.exists():
                     logging.debug('iconfile at %s', testfile)
                     return testfile
 
@@ -310,11 +312,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
         for testdir in [
                 ConfigFile.BUNDLEDIR,
-                os.path.join(ConfigFile.BUNDLEDIR, 'bin'),
-                os.path.join(ConfigFile.BUNDLEDIR, 'resources')
+                ConfigFile.BUNDLEDIR.joinpath('bin'),
+                ConfigFile.BUNDLEDIR.joinpath('resources')
         ]:
-            testfile = os.path.join(testdir, 'settings_ui.ui')
-            if os.path.exists(testfile):
+            testfile = testdir.joinpath('settings_ui.ui')
+            if testfile.exists():
                 logging.debug('ui file at %s', testfile)
                 return testdir
 
@@ -327,20 +329,20 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
     def pause(self):  # pylint: disable=no-self-use
         ''' Pause system '''
-        ConfigFile.PAUSED = True
+        self.cparser.setValue('control/paused', True)
         logging.warning('NowPlaying is currently paused.')
 
     def unpause(self):  # pylint: disable=no-self-use
         ''' unpause system '''
-        ConfigFile.PAUSED = False
+        self.cparser.setValue('control/paused', False)
         logging.warning('NowPlaying is no longer paused.')
 
     def getpause(self):  # pylint: disable=no-self-use
         ''' Get the pause status '''
-        return ConfigFile.PAUSED
+        return self.cparser.value('control/paused', type=bool)
 
     def validmixmodes(self):  # pylint: disable=no-self-use
-        ''' unpause system '''
+        ''' get valid mixmodes '''
         plugin = self.cparser.value('settings/input')
         inputplugin = self.plugins['inputs'][
             f'nowplaying.inputs.{plugin}'].Plugin(config=self)
@@ -355,7 +357,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         return inputplugin.setmixmode(mixmode)
 
     def getmixmode(self):  # pylint: disable=no-self-use
-        ''' unpause system '''
+        ''' get current mix mode '''
         plugin = self.cparser.value('settings/input')
         inputplugin = self.plugins['inputs'][
             f'nowplaying.inputs.{plugin}'].Plugin(config=self)

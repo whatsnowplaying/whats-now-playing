@@ -3,7 +3,9 @@
 
 import logging
 import os
+import pathlib
 import sys
+import tempfile
 
 import psutil
 import pytest
@@ -45,12 +47,15 @@ def getroot(pytestconfig):
 @pytest.fixture
 def bootstrap(getroot):  # pylint: disable=redefined-outer-name
     ''' bootstrap a configuration '''
-    bundledir = os.path.join(getroot, 'nowplaying')
-    nowplaying.bootstrap.set_qt_names(appname='testsuite')
-    config = nowplaying.config.ConfigFile(bundledir=bundledir, testmode=True)
-    config.cparser.setValue('acoustidmb/enabled', False)
-    config.cparser.sync()
-    yield config
+    with tempfile.TemporaryDirectory() as newpath:
+        bundledir = pathlib.Path(getroot).joinpath('nowplaying')
+        nowplaying.bootstrap.set_qt_names(appname='testsuite')
+        config = nowplaying.config.ConfigFile(bundledir=bundledir,
+                                              logpath=newpath,
+                                              testmode=True)
+        config.cparser.setValue('acoustidmb/enabled', False)
+        config.cparser.sync()
+        yield config
 
 
 #
@@ -78,20 +83,20 @@ def clear_old_testsuite():
                        QCoreApplication.applicationName())
     config.clear()
     config.sync()
-    filename = config.fileName()
+    filename = pathlib.Path(config.fileName())
     del config
-    if os.path.exists(filename):
-        os.unlink(filename)
+    if filename.exists():
+        filename.unlink()
     reboot_macosx_prefs()
-    if os.path.exists(filename):
-        os.unlink(filename)
+    if filename.exists():
+        filename.unlink()
     reboot_macosx_prefs()
-    if os.path.exists(filename):
+    if filename.exists():
         logging.error('Still exists, wtf?')
     yield filename
-    if os.path.exists(filename):
-        os.unlink(filename)
+    if filename.exists():
+        filename.unlink()
     reboot_macosx_prefs()
-    if os.path.exists(filename):
-        os.unlink(filename)
+    if filename.exists():
+        filename.unlink()
     reboot_macosx_prefs()

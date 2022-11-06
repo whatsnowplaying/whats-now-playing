@@ -49,7 +49,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
         if not self.config.iconfile:
             self.tray.cleanquit()
-        self.qtui.setWindowIcon(QIcon(self.iconfile))
+        self.qtui.setWindowIcon(QIcon(str(self.iconfile)))
 
     def load_qtui(self):
         ''' load the base UI and wire it up '''
@@ -57,11 +57,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         def _load_ui(name):
             ''' load a UI file into a widget '''
             loader = QUiLoader()
-            path = os.path.join(self.config.uidir, f'{name}_ui.ui')
-            if not os.path.exists(path):
+            path = self.config.uidir.joinpath(f'{name}_ui.ui')
+            if not path.exists():
                 return None
 
-            ui_file = QFile(path)
+            ui_file = QFile(str(path))
             ui_file.open(QFile.ReadOnly)
             try:
                 qwidget = loader.load(ui_file)

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 ''' thread to poll music player '''
-
 import multiprocessing
 import logging
+import os
 import pathlib
+import signal
 import socket
 import threading
 import time
-
-from PySide6.QtCore import Signal, QThread  # pylint: disable=no-name-in-module
+import sys
 
 import nowplaying.config
 import nowplaying.db
@@ -19,24 +19,15 @@ import nowplaying.imagecache
 COREMETA = ['artist', 'filename', 'title']
 
 
-class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
+class TrackPoll():  # pylint: disable=too-many-instance-attributes
     '''
-        QThread that runs the main polling work.
-        Uses a signal to tell the Tray when the
-        song has changed for notification
+        Do the heavy lifting of reading from the DJ software
     '''
 
-    currenttrack = Signal(dict)
-
-    def __init__(self,
-                 config=None,
-                 inputplugin=None,
-                 testmode=False,
-                 parent=None):
-        QThread.__init__(self, parent)
+    def __init__(self, config=None, testmode=False):
         self.datestr = time.strftime("%Y%m%d-%H%M%S")
+        signal.signal(signal.SIGINT, self.forced_stop)
         self.endthread = False
-        self.setObjectName('TrackPoll')
         if testmode and config:
             self.config = config
         else:
@@ -44,7 +35,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         self.currentmeta = {}
         self._resetcurrent()
         self.testmode = testmode
-        self.input = inputplugin
+        self.input = None
         self.inputname = None
         self.plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
         self.previoustxttemplate = None
@@ -52,6 +43,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         self.imagecache = None
         self.icprocess = None
         self._setup_imagecache()
+        self.run()
 
     def _resetcurrent(self):
         ''' reset the currentmeta to blank '''
@@ -68,27 +60,31 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         # sleep until we have something to write
         while not self.config.file and not self.endthread and not self.config.getpause(
         ):
-            QThread.msleep(1000)
+            time.sleep(5)
             self.config.get()
 
         while not self.endthread:
-            QThread.msleep(500)
+            time.sleep(5)
             self.config.get()
 
             if not previousinput or previousinput != self.config.cparser.value(
                     'settings/input'):
                 previousinput = self.config.cparser.value('settings/input')
-                if not self.testmode:
-                    self.input = self.plugins[
-                        f'nowplaying.inputs.{previousinput}'].Plugin()
+                self.input = self.plugins[
+                    f'nowplaying.inputs.{previousinput}'].Plugin()
                 logging.debug('Starting %s plugin', previousinput)
-                self.input.start()
+                if self.input:
+                    self.input.start()
+                else:
+                    continue
+
             try:
                 self.gettrack()
             except Exception as error:  #pylint: disable=broad-except
                 logging.debug('Failed attempting to get a track: %s',
                               error,
                               exc_info=True)
+
         self.create_setlist()
         logging.debug('Exited main trackpool loop')
         self.stop()
@@ -111,6 +107,10 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
 
         self.endthread = True
         self.plugins = None
+
+    def forced_stop(self, signum, frame):  # pylint: disable=unused-argument
+        ''' caught an int signal so tell the world to stop '''
+        self.stop()
 
     def _check_title_for_path(self, title, filename):
         ''' if title actually contains a filename, move it to filename '''
@@ -192,7 +192,7 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
 
         # check paused state
         while self.config.getpause() and not self.endthread:
-            QThread.msleep(500)
+            time.sleep(5)
 
         if self.endthread:
             return
@@ -233,7 +233,6 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
             metadb = nowplaying.db.MetadataDB()
             metadb.write_to_metadb(metadata=self.currentmeta)
         self._write_to_text()
-        self.currenttrack.emit(self.currentmeta)
 
     def _artfallbacks(self):
         if self.config.cparser.value(
@@ -266,9 +265,9 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                                               defaultValue=1.0)
         except ValueError:
             delay = 1.0
-        delay = int(delay * 500)
-        logging.debug('got half-delay of %sms', delay)
-        QThread.msleep(delay)
+        delay = delay / 2
+        logging.debug('got half-delay of %ss', delay)
+        time.sleep(delay)
 
     def _setup_imagecache(self):
         if not self.config.cparser.value('artistextras/enabled', type=bool):
@@ -368,3 +367,48 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
             for track in previoustrack:
                 fileh.writelines(f'| {track["artist"]:{max_artist_size}} |'
                                  f' {track["title"]:{max_title_size}} |\n')
+
+
+def stop(pid):
+    ''' stop the web server -- called from Tray '''
+    logging.info('sending INT to %s', pid)
+    try:
+        os.kill(pid, signal.SIGINT)
+    except ProcessLookupError:
+        pass
+
+
+def start(bundledir, testmode=False):
+    ''' multiprocessing start hook '''
+    threading.current_thread().name = 'TrackPoll'
+
+    if not bundledir:
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            bundledir = getattr(sys, '_MEIPASS',
+                                pathlib.Path(__file__).resolve().parent)
+        else:
+            bundledir = pathlib.Path(__file__).resolve().parent
+
+    if testmode:
+        nowplaying.bootstrap.set_qt_names(appname='testsuite')
+    else:
+        nowplaying.bootstrap.set_qt_names()
+    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log',
+                                                rotate=False)
+    config = nowplaying.config.ConfigFile(bundledir=bundledir,
+                                          logpath=logpath,
+                                          testmode=testmode)
+
+    logging.info('boot up')
+    try:
+        trackpoll = TrackPoll(config=config, testmode=testmode)  # pylint: disable=unused-variable
+    except Exception as error:  #pylint: disable=broad-except
+        logging.error('TrackPoll crashed: %s', error, exc_info=True)
+
+        sys.exit(1)
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+    start(None)
