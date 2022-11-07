@@ -265,7 +265,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                                               defaultValue=1.0)
         except ValueError:
             delay = 1.0
-        delay = delay / 2
+        delay /= 2
         logging.debug('got half-delay of %ss', delay)
         time.sleep(delay)
 
