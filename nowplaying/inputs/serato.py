@@ -515,7 +515,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             PARSEDSESSIONS.append(SessionFile(sessionfilename))
         logging.debug('finished processing')
 
-    def computedecks(self, deckskiplist=None):  # pylint: disable=no-self-use
+    def computedecks(self, deckskiplist=None):
         ''' based upon the session data, figure out what is actually
             on each deck '''
 
@@ -548,7 +548,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                               adat.deck, adat.artist, adat.title)
                 self.decks[adat.deck] = adat
 
-    def computeplaying(self):  # pylint: disable=no-self-use
+    def computeplaying(self):
         ''' set the adat for the playing track based upon the
             computed decks '''
 
@@ -736,7 +736,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             and getattr(self.playingadat, key)
         }
 
-    def stop(self):  # pylint: disable=no-self-use
+    def stop(self):
         ''' stop serato handler '''
         global LASTPROCESSED, PARSEDSESSIONS  #pylint: disable=global-statement
 
@@ -818,11 +818,11 @@ class Plugin(InputPlugin):
             #if self.serato:
             #    self.serato.process_sessions()
 
-    def start(self):
+    async def start(self):
         ''' get a handler '''
         self.gethandler()
 
-    def getplayingtrack(self):
+    async def getplayingtrack(self):
         ''' wrapper to call getplayingtrack '''
         self.gethandler()
 
@@ -881,7 +881,7 @@ class Plugin(InputPlugin):
         self.config.cparser.setValue('serato/mixmode', 'newest')
         return 'newest'
 
-    def stop(self):
+    async def stop(self):
         ''' stop the handler '''
         if self.serato:
             self.serato.stop()

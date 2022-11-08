@@ -3,8 +3,10 @@
 
 ## Version 3.2.0 - Unreleased
 
-* Internal changes to bootstrap and upgrade code to prepare
-  for future asyncio work
+* Major structural changes internally over a series of
+  code changes so that TrackPoll may support asyncio. A
+  side benefit has been that app shutdown time is
+  noticeably faster.
 
 ## Version 3.1.2 - 2022-11-03
 

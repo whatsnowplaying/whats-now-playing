@@ -75,18 +75,18 @@ class InputPlugin():
 
 #### Data feed methods
 
-    def getplayingtrack(self):
+    async def getplayingtrack(self):
         ''' Get the currently playing track '''
         raise NotImplementedError
 
 
 #### Control methods
 
-    def start(self):
+    async def start(self):
         ''' any initialization before actual polling starts '''
         raise NotImplementedError
 
-    def stop(self):
+    async def stop(self):
         ''' stopping either the entire program or just this
             input '''
         raise NotImplementedError

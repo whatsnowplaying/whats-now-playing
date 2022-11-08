@@ -36,16 +36,17 @@ class Plugin(InputPlugin):
         self.qwidget = None
         self._reset_meta()
 
-    def _reset_meta(self):  #pylint: disable=no-self-use
+    @staticmethod
+    def _reset_meta():
         Plugin.metadata = {'artist': None, 'title': None, 'filename': None}
 
-    def _setup_watcher(self):
+    async def _setup_watcher(self):
         ''' set up a custom watch on the m3u dir so meta info
             can update on change'''
 
         m3udir = self.config.cparser.value('m3u/directory')
         if not self.m3udir or self.m3udir != m3udir:
-            self.stop()
+            await self.stop()
 
         if self.observer:
             return
@@ -78,7 +79,8 @@ class Plugin(InputPlugin):
                                recursive=False)
         self.observer.start()
 
-    def _read_track_default(self, filename):  #pylint: disable=no-self-use
+    @staticmethod
+    def _read_track_default(filename):
         content = None
         with open(filename, 'rb') as m3ufh:
             while True:
@@ -91,7 +93,7 @@ class Plugin(InputPlugin):
                 content = newline
         return content
 
-    def _read_track(self, event):  #pylint: disable=no-self-use
+    def _read_track(self, event):
 
         if event.is_directory:
             return
@@ -144,15 +146,15 @@ class Plugin(InputPlugin):
         newmeta = {'filename': found}
         Plugin.metadata = newmeta
 
-    def start(self):
+    async def start(self):
         ''' setup the watcher to run in a separate thread '''
-        self._setup_watcher()
+        await self._setup_watcher()
 
-    def getplayingtrack(self):  #pylint: disable=no-self-use
+    async def getplayingtrack(self):
         ''' wrapper to call getplayingtrack '''
 
         # just in case called without calling start...
-        self.start()
+        await self.start()
         return Plugin.metadata
 
     def defaults(self, qsettings):  #pylint: disable=no-self-use
@@ -170,7 +172,7 @@ class Plugin(InputPlugin):
         ''' get the mixmode '''
         return 'newest'
 
-    def stop(self):
+    async def stop(self):
         ''' stop the m3u plugin '''
         self._reset_meta()
         if self.observer:

@@ -204,11 +204,11 @@ class Plugin(InputPlugin):
         self.mpris2.resetservice(service=sameservice)
         return
 
-    def start(self):
+    async def start(self):
         ''' configure MPRIS2 client '''
         self.gethandler()
 
-    def getplayingtrack(self):
+    async def getplayingtrack(self):
         ''' wrapper to call getplayingtrack '''
         self.gethandler()
 
@@ -231,7 +231,7 @@ class Plugin(InputPlugin):
         ''' only support newest for now '''
         return 'newest'
 
-    def stop(self):
+    async def stop(self):
         ''' not needed '''
 
     def connect_settingsui(self, qwidget):

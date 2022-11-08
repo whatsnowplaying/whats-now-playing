@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 ''' JSON Input Plugin definition, used for testing '''
 
+import asyncio
 import json
 import logging
 import pathlib
-import time
 
 from nowplaying.inputs import InputPlugin
 
@@ -52,9 +52,9 @@ class Plugin(InputPlugin):
 
 #### Data feed methods
 
-    def getplayingtrack(self):
+    async def getplayingtrack(self):
         ''' Get the currently playing track '''
-        time.sleep(
+        await asyncio.sleep(
             self.config.cparser.value('jsoninput/delay',
                                       type=int,
                                       defaultValue=5))
@@ -66,7 +66,7 @@ class Plugin(InputPlugin):
             return {}
 
         try:
-            with open(filepath, 'r', encoding='utf-8') as fhin:
+            with open(filepath, mode='r', encoding='utf-8') as fhin:
                 return json.load(fhin)
         except Exception as error:  # pylint: disable=broad-except
             logging.debug(error)
@@ -76,9 +76,9 @@ class Plugin(InputPlugin):
 
 #### Control methods
 
-    def start(self):
+    async def start(self):
         ''' any initialization before actual polling starts '''
 
-    def stop(self):
+    async def stop(self):
         ''' stopping either the entire program or just this
             input '''

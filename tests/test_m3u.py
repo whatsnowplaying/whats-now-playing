@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 ''' test m3u '''
 
+import asyncio
 import pathlib
 import os
 import sys
-import time
 
 import logging
 import tempfile
@@ -39,35 +39,37 @@ def results(expected, metadata):
 def write_m3u(m3u, filename):
     ''' create m3u file with content '''
     with open(m3u, 'w') as m3ufn:  # pylint: disable=unspecified-encoding
-        m3ufn.write('#EXTM3U' + os.linesep)
-        m3ufn.write(f'{filename}' + os.linesep)
+        m3ufn.write(f'#EXTM3U{os.linesep}')
+        m3ufn.write(f'{filename}{os.linesep}')
 
 
 def write_m3u8(m3u, filename):
     ''' create m3u file with content '''
     with open(m3u, 'w', encoding='utf-8') as m3ufn:
-        m3ufn.write('#EXTM3U' + os.linesep)
-        m3ufn.write(f'{filename}' + os.linesep)
+        m3ufn.write(f'#EXTM3U{os.linesep}')
+        m3ufn.write(f'{filename}{os.linesep}')
 
 
-def test_nom3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_nom3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
     mydir = config.cparser.value('m3u/directory')
     if not os.path.exists(mydir):
         logging.error('mydir does not exist!')
     plugin = nowplaying.inputs.m3u.Plugin(config=config)
-    plugin.start()
-    time.sleep(5)
-    metadata = plugin.getplayingtrack()
-    plugin.stop()
-    time.sleep(5)
+    await plugin.start()
+    await asyncio.sleep(5)
+    metadata = await plugin.getplayingtrack()
+    await plugin.stop()
+    await asyncio.sleep(5)
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert not metadata.get('filename')
 
 
-def test_emptym3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_emptym3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
     mydir = config.cparser.value('m3u/directory')
@@ -75,17 +77,18 @@ def test_emptym3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
         logging.error('mydir does not exist!')
     pathlib.Path(os.path.join(mydir, 'fake.m3u')).touch()
     plugin = nowplaying.inputs.m3u.Plugin(config=config)
-    plugin.start()
-    time.sleep(5)
-    metadata = plugin.getplayingtrack()
-    plugin.stop()
-    time.sleep(5)
+    await plugin.start()
+    await asyncio.sleep(5)
+    metadata = await plugin.getplayingtrack()
+    await plugin.stop()
+    await asyncio.sleep(5)
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert not metadata.get('filename')
 
 
-def test_emptym3u2(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_emptym3u2(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
     mydir = config.cparser.value('m3u/directory')
@@ -95,24 +98,26 @@ def test_emptym3u2(m3u_bootstrap):  # pylint: disable=redefined-outer-name
         m3ufh.write(os.linesep)
         m3ufh.write(os.linesep)
     plugin = nowplaying.inputs.m3u.Plugin(config=config)
-    plugin.start()
-    time.sleep(5)
-    metadata = plugin.getplayingtrack()
-    plugin.stop()
-    time.sleep(5)
+    await plugin.start()
+    await asyncio.sleep(5)
+    metadata = await plugin.getplayingtrack()
+    await plugin.stop()
+    await asyncio.sleep(5)
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert not metadata.get('filename')
 
 
-def test_no2newm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_no2newm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
     mym3udir = config.cparser.value('m3u/directory')
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
-    metadata = plugin.getplayingtrack()
-    plugin.start()
-    time.sleep(5)
+    metadata = await plugin.getplayingtrack()
+    await plugin.start()
+    await asyncio.sleep(5)
+    metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert not metadata.get('filename')
@@ -121,24 +126,25 @@ def test_no2newm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-n
                            '15_Ghosts_II_64kb_orig.mp3')
     m3ufile = os.path.join(mym3udir, 'test.m3u')
     write_m3u(m3ufile, testmp3)
-    time.sleep(1)
-    metadata = plugin.getplayingtrack()
+    await asyncio.sleep(1)
+    metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert metadata['filename'] == testmp3
-    plugin.stop()
-    time.sleep(5)
+    await plugin.stop()
+    await asyncio.sleep(5)
 
 
-def test_no2newm3upolltest(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_no2newm3upolltest(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
     mym3udir = config.cparser.value('m3u/directory')
     config.cparser.setValue('quirks/pollingobserver', True)
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
-    metadata = plugin.getplayingtrack()
-    plugin.start()
-    time.sleep(5)
+    metadata = await plugin.getplayingtrack()
+    await plugin.start()
+    await asyncio.sleep(5)
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert not metadata.get('filename')
@@ -149,65 +155,69 @@ def test_no2newm3upolltest(m3u_bootstrap, getroot):  # pylint: disable=redefined
                            '15_Ghosts_II_64kb_orig.mp3')
     m3ufile = os.path.join(mym3udir, 'test.m3u')
     write_m3u(m3ufile, testmp3)
-    time.sleep(10)  # needs to be long enough that the poller finds the update!
-    metadata = plugin.getplayingtrack()
+    await asyncio.sleep(
+        10)  # needs to be long enough that the poller finds the update!
+    metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert metadata['filename'] == testmp3
-    plugin.stop()
-    time.sleep(5)
+    await plugin.stop()
+    await asyncio.sleep(5)
 
 
-def test_noencodingm3u8(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_noencodingm3u8(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
     mym3udir = config.cparser.value('m3u/directory')
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
-    plugin.start()
-    time.sleep(5)
-    metadata = plugin.getplayingtrack()
+    await plugin.start()
+    await asyncio.sleep(5)
+    metadata = await plugin.getplayingtrack()
 
     testmp3 = os.path.join(getroot, 'tests', 'audio',
                            '15_Ghosts_II_64kb_orig.mp3')
     m3ufile = os.path.join(mym3udir, 'test.m3u')
     write_m3u8(m3ufile, testmp3)
-    time.sleep(1)
-    metadata = plugin.getplayingtrack()
+    await asyncio.sleep(1)
+    metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert metadata['filename'] == testmp3
-    plugin.stop()
-    time.sleep(5)
+    await plugin.stop()
+    await asyncio.sleep(5)
 
 
-def test_encodingm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_encodingm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
     mym3udir = config.cparser.value('m3u/directory')
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
-    plugin.start()
-    time.sleep(5)
+    await plugin.start()
+    await asyncio.sleep(5)
     testmp3 = os.path.join(getroot, 'tests', 'audio',
                            '15_Ghosts_II_64kb_füllytâgged.mp3')
     m3ufile = os.path.join(mym3udir, 'test.m3u')
     write_m3u(m3ufile, testmp3)
-    time.sleep(1)
-    metadata = plugin.getplayingtrack()
+    await asyncio.sleep(1)
+    metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert metadata['filename'] == testmp3
-    plugin.stop()
-    time.sleep(5)
+    await plugin.stop()
+    await asyncio.sleep(5)
 
 
-def test_no2newm3u8(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_no2newm3u8(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
     mym3udir = config.cparser.value('m3u/directory')
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
-    plugin.start()
-    time.sleep(5)
-    metadata = plugin.getplayingtrack()
+    await plugin.start()
+    await asyncio.sleep(5)
+    metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert not metadata.get('filename')
@@ -216,24 +226,25 @@ def test_no2newm3u8(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-
                            '15_Ghosts_II_64kb_füllytâgged.mp3')
     m3ufile = os.path.join(mym3udir, 'test.m3u8')
     write_m3u8(m3ufile, testmp3)
-    time.sleep(1)
-    metadata = plugin.getplayingtrack()
+    await asyncio.sleep(1)
+    metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert metadata['filename'] == testmp3
-    plugin.stop()
-    time.sleep(5)
+    await plugin.stop()
+    await asyncio.sleep(5)
 
 
-def test_m3urelative(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_m3urelative(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
     mym3udir = config.cparser.value('m3u/directory')
     mym3upath = pathlib.Path(mym3udir)
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
-    plugin.start()
-    time.sleep(5)
-    metadata = plugin.getplayingtrack()
+    await plugin.start()
+    await asyncio.sleep(5)
+    metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert not metadata.get('filename')
@@ -244,17 +255,18 @@ def test_m3urelative(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     m3ufile = mym3upath.joinpath('test.m3u8')
     write_m3u(m3ufile, testmp3)
     fullpath = mym3upath.joinpath('fakedir', '15_Ghosts_II_64kb_orig.mp3')
-    time.sleep(1)
-    metadata = plugin.getplayingtrack()
+    await asyncio.sleep(1)
+    metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert fullpath.resolve() == pathlib.Path(metadata['filename']).resolve()
 
-    plugin.stop()
-    time.sleep(5)
+    await plugin.stop()
+    await asyncio.sleep(5)
 
 
-def test_m3urelativesubst(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_m3urelativesubst(m3u_bootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
     audiodir = getroot.joinpath('tests', 'audio')
@@ -266,9 +278,9 @@ def test_m3urelativesubst(m3u_bootstrap, getroot):  # pylint: disable=redefined-
                             str(mym3udir.joinpath('fakedir')))
     config.cparser.setValue('quirks/filesubstout', str(audiodir))
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=str(mym3udir))
-    plugin.start()
-    time.sleep(5)
-    metadata = plugin.getplayingtrack()
+    await plugin.start()
+    await asyncio.sleep(5)
+    metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert not metadata.get('filename')
@@ -279,46 +291,48 @@ def test_m3urelativesubst(m3u_bootstrap, getroot):  # pylint: disable=redefined-
     mym3udir.joinpath(testmp3).touch()
     m3ufile = str(mym3udir.joinpath('test.m3u8'))
     write_m3u(m3ufile, testmp3)
-    time.sleep(5)
-    metadata = plugin.getplayingtrack()
+    await asyncio.sleep(5)
+    metadata = await plugin.getplayingtrack()
     assert metadata['filename'] == str(
         audiodir.joinpath('15_Ghosts_II_64kb_orig.mp3'))
-    plugin.stop()
-    time.sleep(5)
+    await plugin.stop()
+    await asyncio.sleep(5)
 
 
-def test_m3ustream(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_m3ustream(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
     mym3udir = config.cparser.value('m3u/directory')
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
-    plugin.start()
-    time.sleep(5)
-    metadata = plugin.getplayingtrack()
+    await plugin.start()
+    await asyncio.sleep(5)
+    metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert not metadata.get('filename')
 
     m3ufile = os.path.join(mym3udir, 'test.m3u')
     write_m3u(m3ufile, 'http://somecooltrack')
-    time.sleep(1)
-    metadata = plugin.getplayingtrack()
+    await asyncio.sleep(1)
+    metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert not metadata.get('filename')
 
-    plugin.stop()
-    time.sleep(5)
+    await plugin.stop()
+    await asyncio.sleep(5)
 
 
-def test_m3umixmode(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_m3umixmode(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     ''' make sure mix mode is always newest '''
     config = m3u_bootstrap
     plugin = nowplaying.inputs.m3u.Plugin(config=config)
-    plugin.start()
-    time.sleep(5)
+    await plugin.start()
+    await asyncio.sleep(5)
     assert plugin.validmixmodes()[0] == 'newest'
     assert plugin.setmixmode('fred') == 'newest'
     assert plugin.getmixmode() == 'newest'
-    plugin.stop()
-    time.sleep(5)
+    await plugin.stop()
+    await asyncio.sleep(5)

@@ -43,7 +43,7 @@ def write_json_metadata(config, metadata):
     filepath = pathlib.Path(config.cparser.value('jsoninput/filename'))
     with open(filepath, "w+", encoding='utf-8') as fhout:
         json.dump(metadata, fhout)
-    time.sleep(1)
+    time.sleep(5) # windows is pokey
     wait_for_output(config.file)
 
 

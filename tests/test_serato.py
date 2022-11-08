@@ -5,6 +5,7 @@ import pathlib
 import os
 
 import pytest
+import pytest_asyncio  # pylint: disable=import-error
 
 import nowplaying.inputs.serato  # pylint: disable=import-error
 
@@ -26,8 +27,8 @@ def touchdir(directory):
         pathlib.Path(filename).touch()
 
 
-@pytest.fixture
-def getseratoplugin(serato_bootstrap, getroot, request):  # pylint: disable=redefined-outer-name
+@pytest_asyncio.fixture
+async def getseratoplugin(serato_bootstrap, getroot, request):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = serato_bootstrap
     mark = request.node.get_closest_marker("seratosettings")
@@ -45,9 +46,9 @@ def getseratoplugin(serato_bootstrap, getroot, request):  # pylint: disable=rede
                               'Sessions'))
     config.cparser.sync()
     plugin = nowplaying.inputs.serato.Plugin(config=config)
-    plugin.start()
+    await plugin.start()
     yield plugin
-    plugin.stop()
+    await plugin.stop()
 
 
 def results(expected, metadata):
@@ -60,7 +61,8 @@ def results(expected, metadata):
 
 
 @pytest.mark.seratosettings(mode='remote', url='https://localhost')
-def test_serato_remote2(getseratoplugin, getroot, httpserver):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_serato_remote2(getseratoplugin, getroot, httpserver):  # pylint: disable=redefined-outer-name
     ''' test serato remote '''
     plugin = getseratoplugin
     with open(os.path.join(getroot, 'tests', 'seratolive',
@@ -72,18 +74,19 @@ def test_serato_remote2(getseratoplugin, getroot, httpserver):  # pylint: disabl
     plugin.config.cparser.setValue('serato/url',
                                    httpserver.url_for('/index.html'))
     plugin.config.cparser.sync()
-    metadata = plugin.getplayingtrack()
+    metadata = await plugin.getplayingtrack()
 
     assert metadata['artist'] == 'Chris McClenney'
     assert metadata['title'] == 'Tuning Up'
     assert 'filename' not in metadata
 
 
+@pytest.mark.asyncio
 @pytest.mark.seratosettings(datadir='serato-2.4-mac', mixmode='oldest')
-def test_serato24_mac_oldest(getseratoplugin):  # pylint: disable=redefined-outer-name
+async def test_serato24_mac_oldest(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getseratoplugin
-    metadata = plugin.getplayingtrack()
+    metadata = await plugin.getplayingtrack()
     expected = {
         'album': 'Mental Jewelry',
         'artist': 'LĪVE',
@@ -100,11 +103,12 @@ def test_serato24_mac_oldest(getseratoplugin):  # pylint: disable=redefined-oute
     results(expected, metadata)
 
 
+@pytest.mark.asyncio
 @pytest.mark.seratosettings(datadir='serato-2.4-mac', mixmode='newest')
-def test_serato24_mac_newest(getseratoplugin):  # pylint: disable=redefined-outer-name
+async def test_serato24_mac_newest(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getseratoplugin
-    metadata = plugin.getplayingtrack()
+    metadata = await plugin.getplayingtrack()
     expected = {
         'album': 'Secret Samadhi',
         'artist': 'LĪVE',
@@ -121,11 +125,12 @@ def test_serato24_mac_newest(getseratoplugin):  # pylint: disable=redefined-oute
     results(expected, metadata)
 
 
+@pytest.mark.asyncio
 @pytest.mark.seratosettings(datadir='serato-2.5-win', mixmode='oldest')
-def test_serato25_win_oldest(getseratoplugin):  # pylint: disable=redefined-outer-name
+async def test_serato25_win_oldest(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getseratoplugin
-    metadata = plugin.getplayingtrack()
+    metadata = await plugin.getplayingtrack()
     expected = {
         'album':
         'Directionless EP',
@@ -150,11 +155,12 @@ def test_serato25_win_oldest(getseratoplugin):  # pylint: disable=redefined-oute
     results(expected, metadata)
 
 
+@pytest.mark.asyncio
 @pytest.mark.seratosettings(datadir='serato-2.5-win', mixmode='newest')
-def test_serato25_win_newest(getseratoplugin):  # pylint: disable=redefined-outer-name
+async def test_serato25_win_newest(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getseratoplugin
-    metadata = plugin.getplayingtrack()
+    metadata = await plugin.getplayingtrack()
     expected = {
         'album': 'Ampex',
         'artist': 'Bio Unit',
@@ -167,15 +173,17 @@ def test_serato25_win_newest(getseratoplugin):  # pylint: disable=redefined-oute
     results(expected, metadata)
 
 
+@pytest.mark.asyncio
 @pytest.mark.seratosettings(datadir='serato-2.5-win')
-def test_serato_nomixmode(getseratoplugin):  # pylint: disable=redefined-outer-name
+async def test_serato_nomixmode(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' test default mixmode '''
     plugin = getseratoplugin
     assert plugin.getmixmode() == 'newest'
 
 
+@pytest.mark.asyncio
 @pytest.mark.seratosettings(datadir='serato-2.5-win')
-def test_serato_localmixmodes(getseratoplugin):  # pylint: disable=redefined-outer-name
+async def test_serato_localmixmodes(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' test local mixmodes '''
     plugin = getseratoplugin
     validmodes = plugin.validmixmodes()
@@ -190,8 +198,9 @@ def test_serato_localmixmodes(getseratoplugin):  # pylint: disable=redefined-out
     assert mode == 'newest'
 
 
+@pytest.mark.asyncio
 @pytest.mark.seratosettings(mode='remote', url='https://localhost.example.com')
-def test_serato_remote1(getseratoplugin):  # pylint: disable=redefined-outer-name
+async def test_serato_remote1(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' test local mixmodes '''
     plugin = getseratoplugin
     validmodes = plugin.validmixmodes()

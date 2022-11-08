@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 ''' thread to poll music player '''
+import asyncio
 import multiprocessing
 import logging
 import os
@@ -26,13 +27,16 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
     def __init__(self, stopevent=None, config=None, testmode=False):
         self.datestr = time.strftime("%Y%m%d-%H%M%S")
-        signal.signal(signal.SIGINT, self.forced_stop)
         self.stopevent = stopevent
         if testmode and config:
             self.config = config
         else:
             self.config = nowplaying.config.ConfigFile()
         self.currentmeta = {}
+        try:
+            self.loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.loop = asyncio.new_event_loop()
         self._resetcurrent()
         self.testmode = testmode
         self.input = None
@@ -43,14 +47,24 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self.imagecache = None
         self.icprocess = None
         self._setup_imagecache()
-        self.run()
+        self.tasks = set()
+        self.create_tasks()
+        self.loop.run_forever()
 
     def _resetcurrent(self):
         ''' reset the currentmeta to blank '''
         for key in COREMETA:
             self.currentmeta[f'fetched{key}'] = None
 
-    def run(self):
+    def create_tasks(self):
+        ''' create the asyncio tasks '''
+        task = self.loop.create_task(self.run())
+        task.add_done_callback(self.tasks.remove)
+        self.tasks.add(task)
+        self.loop.add_signal_handler(signal.SIGINT, self.forced_stop)
+        task.add_done_callback(self.tasks.remove)
+
+    async def run(self):
         ''' track polling process '''
 
         threading.current_thread().name = 'TrackPoll'
@@ -60,11 +74,11 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         # sleep until we have something to write
         while not self.config.file and not self.stopevent.is_set(
         ) and not self.config.getpause():
-            time.sleep(5)
+            await asyncio.sleep(.5)
             self.config.get()
 
         while not self.stopevent.is_set():
-            time.sleep(5)
+            await asyncio.sleep(.5)
             self.config.get()
 
             if not previousinput or previousinput != self.config.cparser.value(
@@ -74,27 +88,26 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                     f'nowplaying.inputs.{previousinput}'].Plugin()
                 logging.debug('Starting %s plugin', previousinput)
                 if self.input:
-                    self.input.start()
+                    await self.input.start()
                 else:
                     continue
 
             try:
-                self.gettrack()
+                await self.gettrack()
             except Exception as error:  #pylint: disable=broad-except
                 logging.debug('Failed attempting to get a track: %s',
                               error,
                               exc_info=True)
 
         self.create_setlist()
-        logging.debug('Exited main trackpool loop')
-        self.stop()
+        await self.stop()
         logging.debug('Trackpoll stopped gracefully.')
 
     def __del__(self):
         logging.debug('TrackPoll is being killed!')
         self.stop()
 
-    def stop(self):
+    async def stop(self):
         ''' stop trackpoll thread gracefully '''
         logging.debug('Stopping trackpoll')
         self.stopevent.set()
@@ -104,12 +117,14 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             logging.debug('joining imagecache')
             self.icprocess.join()
         if self.input:
-            self.input.stop()
+            await self.input.stop()
         self.plugins = None
+        loop = asyncio.get_running_loop()
+        loop.stop()
 
     def forced_stop(self, signum, frame):  # pylint: disable=unused-argument
         ''' caught an int signal so tell the world to stop '''
-        self.stop()
+        self.stopevent.set()
 
     def _check_title_for_path(self, title, filename):
         ''' if title actually contains a filename, move it to filename '''
@@ -187,17 +202,17 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 metadata[key] = ''
         return metadata
 
-    def gettrack(self):  # pylint: disable=too-many-branches
+    async def gettrack(self):  # pylint: disable=too-many-branches
         ''' get currently playing track, returns None if not new or not found '''
 
         # check paused state
         while self.config.getpause() and not self.stopevent.is_set():
-            time.sleep(5)
+            await asyncio.sleep(.5)
 
         if self.stopevent.is_set():
             return
 
-        nextmeta = self.input.getplayingtrack()
+        nextmeta = await self.input.getplayingtrack()
 
         if self._ismetaempty(nextmeta):
             return
@@ -212,15 +227,15 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                      self.currentmeta['artist'], self.currentmeta['title'])
 
         # try to interleave downloads in-between the delay
-        self._half_delay_write()
+        await self._half_delay_write()
         self._process_imagecache()
         self._start_artistfanartpool()
-        self._half_delay_write()
+        await self._half_delay_write()
         self._process_imagecache()
         self._start_artistfanartpool()
 
         # checkagain
-        nextcheck = self.input.getplayingtrack()
+        nextcheck = await self.input.getplayingtrack()
         if not self._ismetaempty(nextcheck) and not self._ismetasame(
                 nextcheck):
             logging.info('Track changed during delay, skipping')
@@ -258,16 +273,16 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                                        templatehandler=self.txttemplatehandler,
                                        metadata=self.currentmeta)
 
-    def _half_delay_write(self):
+    async def _half_delay_write(self):
         try:
             delay = self.config.cparser.value('settings/delay',
                                               type=float,
                                               defaultValue=1.0)
         except ValueError:
             delay = 1.0
-        delay = delay / 2
+        delay /= 2
         logging.debug('got half-delay of %ss', delay)
-        time.sleep(delay)
+        await asyncio.sleep(delay)
 
     def _setup_imagecache(self):
         if not self.config.cparser.value('artistextras/enabled', type=bool):
@@ -379,19 +394,6 @@ def stop(pid):
         pass
 
 
-def processstart(stopevent, config, testmode=False):  #pylint: disable=unused-argument
-    ''' multiprocessing start hook '''
-    try:
-        trackpoll = TrackPoll(  # pylint: disable=unused-variable
-            stopevent=stopevent,
-            config=config,
-            testmode=testmode)
-    except Exception as error:  #pylint: disable=broad-except
-        logging.error('TrackPoll crashed: %s', error, exc_info=True)
-        sys.exit(1)
-    sys.exit(0)
-
-
 def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argument
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'TrackPoll'
@@ -412,4 +414,13 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
     config = nowplaying.config.ConfigFile(bundledir=bundledir,
                                           logpath=logpath,
                                           testmode=testmode)
-    processstart(stopevent=stopevent, config=config, testmode=False)
+    try:
+        TrackPoll(  # pylint: disable=unused-variable
+            stopevent=stopevent,
+            config=config,
+            testmode=testmode)
+    except Exception as error:  #pylint: disable=broad-except
+        logging.error('TrackPoll crashed: %s', error, exc_info=True)
+        sys.exit(1)
+    logging.info('shutting down trackpoll v%s',
+                 nowplaying.version.get_versions()['version'])

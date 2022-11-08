@@ -50,7 +50,7 @@ jobs:
             export FPCALC
             popd
             source /tmp/venv/bin/activate
-            pytest
+            pytest -s
           fi
       - name: artifact mac test
         uses: actions/upload-artifact@v3
@@ -103,7 +103,7 @@ jobs:
             FPCALC=/tmp/chromaprint-fpcalc-1.5.0-windows-x86_64/fpcalc.exe
             export FPCALC
             popd
-            pytest
+            pytest -s
           fi
       - name: artifact windows test
         uses: actions/upload-artifact@v3
@@ -164,7 +164,7 @@ jobs:
             export FPCALC
             popd
             #source /tmp/venv/bin/activate
-            pytest
+            pytest -s
           fi
       - name: artifact linux test
         uses: actions/upload-artifact@v3
