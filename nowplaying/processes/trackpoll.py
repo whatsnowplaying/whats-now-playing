@@ -24,10 +24,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         Do the heavy lifting of reading from the DJ software
     '''
 
-    def __init__(self, config=None, testmode=False):
+    def __init__(self, stopevent=None, config=None, testmode=False):
         self.datestr = time.strftime("%Y%m%d-%H%M%S")
         signal.signal(signal.SIGINT, self.forced_stop)
-        self.endthread = False
+        self.stopevent = stopevent
         if testmode and config:
             self.config = config
         else:
@@ -58,12 +58,12 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         previousinput = None
 
         # sleep until we have something to write
-        while not self.config.file and not self.endthread and not self.config.getpause(
-        ):
+        while not self.config.file and not self.stopevent.is_set(
+        ) and not self.config.getpause():
             time.sleep(5)
             self.config.get()
 
-        while not self.endthread:
+        while not self.stopevent.is_set():
             time.sleep(5)
             self.config.get()
 
@@ -97,6 +97,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
     def stop(self):
         ''' stop trackpoll thread gracefully '''
         logging.debug('Stopping trackpoll')
+        self.stopevent.set()
         if self.icprocess:
             logging.debug('stopping imagecache')
             self.imagecache.stop_process()
@@ -104,8 +105,6 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             self.icprocess.join()
         if self.input:
             self.input.stop()
-
-        self.endthread = True
         self.plugins = None
 
     def forced_stop(self, signum, frame):  # pylint: disable=unused-argument
@@ -131,7 +130,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         return title, filename
 
-    def _ismetaempty(self, metadata):  # pylint: disable=no-self-use
+    @staticmethod
+    def _ismetaempty(metadata):
         ''' need at least one value '''
 
         if not metadata:
@@ -151,7 +151,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 return False
         return True
 
-    def _fillinmetadata(self, metadata):  # pylint: disable=no-self-use
+    def _fillinmetadata(self, metadata):
         ''' keep a copy of our fetched data '''
 
         # Fill in as much metadata as possible. everything
@@ -191,10 +191,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         ''' get currently playing track, returns None if not new or not found '''
 
         # check paused state
-        while self.config.getpause() and not self.endthread:
+        while self.config.getpause() and not self.stopevent.is_set():
             time.sleep(5)
 
-        if self.endthread:
+        if self.stopevent.is_set():
             return
 
         nextmeta = self.input.getplayingtrack()
@@ -277,7 +277,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         sizelimit = self.config.cparser.value('artistextras/cachesize',
                                               type=int)
 
-        self.imagecache = nowplaying.imagecache.ImageCache(sizelimit=sizelimit)
+        self.imagecache = nowplaying.imagecache.ImageCache(
+            sizelimit=sizelimit, stopevent=self.stopevent)
         self.config.cparser.setValue('artistextras/cachedbfile',
                                      self.imagecache.databasefile)
         self.icprocess = multiprocessing.Process(
@@ -378,7 +379,20 @@ def stop(pid):
         pass
 
 
-def start(bundledir, testmode=False):
+def processstart(stopevent, config, testmode=False):  #pylint: disable=unused-argument
+    ''' multiprocessing start hook '''
+    try:
+        trackpoll = TrackPoll(  # pylint: disable=unused-variable
+            stopevent=stopevent,
+            config=config,
+            testmode=testmode)
+    except Exception as error:  #pylint: disable=broad-except
+        logging.error('TrackPoll crashed: %s', error, exc_info=True)
+        sys.exit(1)
+    sys.exit(0)
+
+
+def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argument
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'TrackPoll'
 
@@ -398,17 +412,4 @@ def start(bundledir, testmode=False):
     config = nowplaying.config.ConfigFile(bundledir=bundledir,
                                           logpath=logpath,
                                           testmode=testmode)
-
-    logging.info('boot up')
-    try:
-        trackpoll = TrackPoll(config=config, testmode=testmode)  # pylint: disable=unused-variable
-    except Exception as error:  #pylint: disable=broad-except
-        logging.error('TrackPoll crashed: %s', error, exc_info=True)
-
-        sys.exit(1)
-    sys.exit(0)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    start(None)
+    processstart(stopevent=stopevent, config=config, testmode=False)

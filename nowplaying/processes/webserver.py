@@ -55,15 +55,26 @@ TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
 class WebHandler():  # pylint: disable=too-many-public-methods
     ''' aiohttp built server that does both http and websocket '''
 
-    def __init__(self, databasefile, testmode=False):
+    def __init__(self,
+                 bundledir=None,
+                 config=None,
+                 stopevent=None,
+                 testmode=False):
         threading.current_thread().name = 'WebServer'
         self.testmode = testmode
-        config = nowplaying.config.ConfigFile(testmode=testmode)
+        if not config:
+            config = nowplaying.config.ConfigFile(bundledir=bundledir,
+                                                  testmode=testmode)
         self.port = config.cparser.value('weboutput/httpport', type=int)
         enabled = config.cparser.value('weboutput/httpenabled', type=bool)
-        self.databasefile = databasefile
+        self.databasefile = pathlib.Path(
+            QStandardPaths.standardLocations(
+                QStandardPaths.CacheLocation)[0]).joinpath(
+                    'webserver', 'web.db')
+        self._init_webdb()
+        self.stopevent = stopevent
 
-        while not enabled:
+        while not enabled and not self.stopevent.is_set():
             try:
                 time.sleep(5)
                 config.get()
@@ -78,12 +89,34 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         logging.info('Secret url to quit websever: %s', self.magicstopurl)
 
         signal.signal(signal.SIGINT, self.forced_stop)
-        self.loop = asyncio.get_event_loop()
+        try:
+            self.loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.loop = asyncio.new_event_loop()
+
         self.loop.run_until_complete(
             self.start_server(host='0.0.0.0', port=self.port))
         self.loop.run_forever()
 
-    def _base64ifier(self, metadata):  # pylint: disable=no-self-use
+    def _init_webdb(self):
+        if self.databasefile.exists():
+            try:
+                self.databasefile.unlink()
+            except PermissionError as error:
+                logging.error('WebServer process already running?')
+                logging.error(error)
+                sys.exit(1)
+
+        self.databasefile.parent.mkdir(parents=True, exist_ok=True)
+
+    async def stopeventtask(self):
+        ''' task to wait for the stop event '''
+        while not self.stopevent.is_set():
+            await asyncio.sleep(.5)
+        await self.forced_stop()
+
+    @staticmethod
+    def _base64ifier(metadata):
         ''' replace all the binary data with base64 data '''
         for key in nowplaying.db.MetadataDB.METADATABLOBLIST:
             if metadata.get(key):
@@ -165,14 +198,16 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
         return web.Response(content_type='text/html', text=INDEXREFRESH)
 
-    async def setlastid(self, request, lastid, source):  # pylint: disable=no-self-use
+    @staticmethod
+    async def setlastid(request, lastid, source):
         ''' get the lastid sent by http/html '''
         await request.app['statedb'].execute(
             'INSERT OR REPLACE INTO lastprocessed(lastid, source) VALUES (?,?) ',
             [lastid, source])
         await request.app['statedb'].commit()
 
-    async def getlastid(self, request, source):  # pylint: disable=no-self-use
+    @staticmethod
+    async def getlastid(request, source):
         ''' get the lastid sent by http/html '''
         cursor = await request.app['statedb'].execute(
             f'SELECT lastid FROM lastprocessed WHERE source="{source}"')
@@ -184,7 +219,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         await cursor.close()
         return lastid
 
-    async def indextxt_handler(self, request):  # pylint: disable=no-self-use
+    @staticmethod
+    async def indextxt_handler(request):
         ''' handle static index.txt '''
         metadata = request.app['metadb'].read_last_meta()
         txtoutput = ""
@@ -200,11 +236,13 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 txtoutput = ''
         return web.Response(text=txtoutput)
 
-    async def favicon_handler(self, request):  # pylint: disable=no-self-use
+    @staticmethod
+    async def favicon_handler(request):
         ''' handle favicon.ico '''
         return web.FileResponse(path=request.app['config'].iconfile)
 
-    async def cover_handler(self, request):  # pylint: disable=no-self-use
+    @staticmethod
+    async def cover_handler(request):
         ''' handle cover image '''
         metadata = request.app['metadb'].read_last_meta()
         if 'coverimageraw' in metadata:
@@ -214,7 +252,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         # this makes the client code significantly easier
         return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
 
-    async def artistbanner_handler(self, request):  # pylint: disable=no-self-use
+    @staticmethod
+    async def artistbanner_handler(request):
         ''' handle cover image '''
         metadata = request.app['metadb'].read_last_meta()
         if 'artistbannerraw' in metadata:
@@ -224,7 +263,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         # this makes the client code significantly easier
         return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
 
-    async def artistlogo_handler(self, request):  # pylint: disable=no-self-use
+    @staticmethod
+    async def artistlogo_handler(request):
         ''' handle cover image '''
         metadata = request.app['metadb'].read_last_meta()
         if 'artistlogoraw' in metadata:
@@ -234,7 +274,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         # this makes the client code significantly easier
         return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
 
-    async def artistthumb_handler(self, request):  # pylint: disable=no-self-use
+    @staticmethod
+    async def artistthumb_handler(request):
         ''' handle cover image '''
         metadata = request.app['metadb'].read_last_meta()
         if 'artistthumbraw' in metadata:
@@ -244,20 +285,22 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         # this makes the client code significantly easier
         return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
 
-    async def api_v1_last_handler(self, request):  # pylint: disable=no-self-use
+    async def api_v1_last_handler(self, request):
         ''' handle static index.txt '''
         metadata = request.app['metadb'].read_last_meta()
         del metadata['dbid']
         return web.json_response(self._base64ifier(metadata))
 
-    async def websocket_artistfanart_streamer(self, request):  # pylint: disable=no-self-use
+    async def websocket_artistfanart_streamer(self, request):
         ''' handle continually streamed updates '''
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
         request.app['websockets'].add(websocket)
 
         try:
-            while True:
+            while not self.stopevent.is_set():
+                if self.stopevent.is_set():
+                    break
                 metadata = request.app['metadb'].read_last_meta()
                 if not metadata or not metadata.get('artist'):
                     await asyncio.sleep(5)
@@ -288,48 +331,51 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                           error)
             logging.error(traceback.print_exc())
         finally:
-            logging.debug('artistfanart ended in finally')
             await websocket.close()
             request.app['websockets'].discard(websocket)
         return websocket
 
-    async def websocket_lastjson_handler(self, request, websocket):  # pylint: disable=no-self-use
+    async def websocket_lastjson_handler(self, request, websocket):
         ''' handle singular websocket request '''
         metadata = request.app['metadb'].read_last_meta()
         del metadata['dbid']
         await websocket.send_json(self._base64ifier(metadata))
 
-    async def websocket_streamer(self, request):  # pylint: disable=no-self-use
-        ''' handle continually streamed updates '''
-
-        async def do_update(websocket, database):
-            # early launch can be a bit weird so
-            # pause a bit
+    async def _wss_do_update(self, websocket, database):
+        # early launch can be a bit weird so
+        # pause a bit
+        await asyncio.sleep(1)
+        metadata = None
+        while not metadata:
+            if self.stopevent.is_set():
+                return time.time()
+            metadata = database.read_last_meta()
             await asyncio.sleep(1)
-            metadata = None
-            while not metadata:
-                metadata = database.read_last_meta()
-                await asyncio.sleep(1)
-            del metadata['dbid']
-            await websocket.send_json(self._transparentifier(metadata))
-            return time.time()
+        del metadata['dbid']
+        await websocket.send_json(self._transparentifier(metadata))
+        return time.time()
+
+    async def websocket_streamer(self, request):
+        ''' handle continually streamed updates '''
 
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
         request.app['websockets'].add(websocket)
 
         try:
-            mytime = await do_update(websocket, request.app['metadb'])
-            while True:
-                while mytime > request.app['watcher'].updatetime:
+            mytime = await self._wss_do_update(websocket,
+                                               request.app['metadb'])
+            while not self.stopevent.is_set():
+                while mytime > request.app[
+                        'watcher'].updatetime and not self.stopevent.is_set():
                     await asyncio.sleep(1)
 
-                mytime = await do_update(websocket, request.app['metadb'])
+                mytime = await self._wss_do_update(websocket,
+                                                   request.app['metadb'])
                 await asyncio.sleep(1)
         except Exception as error:  #pylint: disable=broad-except
             logging.error('websocket streamer exception: %s', error)
         finally:
-            logging.debug('ended in finally')
             await websocket.close()
             request.app['websockets'].discard(websocket)
         return websocket
@@ -397,18 +443,13 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         runner = self.create_runner()
         await runner.setup()
         site = web.TCPSite(runner, host, port)
+        asyncio.create_task(self.stopeventtask())
         await site.start()
 
     async def on_startup(self, app):
         ''' setup app connections '''
         app['config'] = nowplaying.config.ConfigFile(testmode=self.testmode)
-        if self.testmode:
-            app['config'].templatedir = os.path.join(
-                os.path.dirname(self.databasefile), 'templates')
-            app['metadb'] = nowplaying.db.MetadataDB(databasefile=os.path.join(
-                os.path.dirname(self.databasefile), 'test.db'))
-        else:
-            app['metadb'] = nowplaying.db.MetadataDB()
+        app['metadb'] = nowplaying.db.MetadataDB()
         app['imagecache'] = nowplaying.imagecache.ImageCache()
         app['watcher'] = app['metadb'].watcher()
         app['watcher'].start()
@@ -421,24 +462,27 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                              ')')
         await app['statedb'].commit()
 
-    async def on_shutdown(self, app):  # pylint: disable=no-self-use
+    @staticmethod
+    async def on_shutdown(app):
         ''' handle shutdown '''
         for websocket in set(app['websockets']):
             await websocket.close(code=WSCloseCode.GOING_AWAY,
                                   message='Server shutdown')
 
-    async def on_cleanup(self, app):  # pylint: disable=no-self-use
+    @staticmethod
+    async def on_cleanup(app):
         ''' cleanup the app '''
         await app['statedb'].close()
         app['watcher'].stop()
 
-    async def stop_server(self, request):  # pylint: disable=unused-argument
+    async def stop_server(self, request):
         ''' stop our server '''
+        self.stopevent.set()
         await request.app.shutdown()
         await request.app.cleanup()
         self.loop.stop()
 
-    def forced_stop(self, signum, frame):  # pylint: disable=unused-argument
+    def forced_stop(self, signum=None, frame=None):  # pylint: disable=unused-argument
         ''' caught an int signal so tell the world to stop '''
         try:
             logging.debug('telling webserver to stop via http')
@@ -457,7 +501,7 @@ def stop(pid):
         pass
 
 
-def start(bundledir, testdir=None):
+def start(stopevent=None, bundledir=None, testmode=False):
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'WebServer'
 
@@ -468,41 +512,26 @@ def start(bundledir, testdir=None):
         else:
             bundledir = os.path.abspath(os.path.dirname(__file__))
 
-    if testdir:
+    if testmode:
         nowplaying.bootstrap.set_qt_names(appname='testsuite')
-        databasefile = pathlib.Path(testdir).joinpath('web.db')
         testmode = True
     else:
         testmode = False
         nowplaying.bootstrap.set_qt_names()
-        databasefile = pathlib.Path(
-            QStandardPaths.standardLocations(
-                QStandardPaths.CacheLocation)[0]).joinpath(
-                    'webserver', 'web.db')
-
-    logging.debug('Using %s as web databasefile', databasefile)
-    if databasefile.exists():
-        try:
-            databasefile.unlink()
-        except PermissionError as error:
-            logging.error('WebServer process already running?')
-            logging.error(error)
-            sys.exit(1)
-
-    databasefile.parent.mkdir(parents=True, exist_ok=True)
+    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log',
+                                                rotate=False)
     config = nowplaying.config.ConfigFile(bundledir=bundledir,
+                                          logpath=logpath,
                                           testmode=testmode)
-    if testdir:
-        config.templatedir = os.path.join(testdir, 'templates')
+
     logging.info('boot up')
+
     try:
-        webserver = WebHandler(databasefile, testmode=testmode)  # pylint: disable=unused-variable
+        webserver = WebHandler(  # pylint: disable=unused-variable
+            config=config,
+            stopevent=stopevent,
+            testmode=testmode)
     except Exception as error:  #pylint: disable=broad-except
         logging.error('Webserver crashed: %s', error, exc_info=True)
         sys.exit(1)
     sys.exit(0)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    start(None)

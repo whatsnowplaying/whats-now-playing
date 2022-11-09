@@ -496,7 +496,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             self.widgets['webserver'].once_checkbox.isChecked())
 
         if oldenabled != httpenabled or oldport != httpport:
-            self.tray.restart_webprocess()
+            self.tray.subprocesses.restart_webserver()
 
     def _upd_conf_obsws(self):
         ''' update the obsws settings '''
@@ -520,7 +520,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.config.cparser.setValue('obsws/enabled', newenabled)
 
         if oldenabled != newenabled:
-            self.tray.restart_obsws()
+            self.tray.subprocesses.restart_obsws()
 
     def verify_regex_filters(self):
         ''' verify the regex filters are real '''
@@ -608,7 +608,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
                        self.config.cparser)
 
         if oldenabled != newenabled:
-            self.tray.restart_twitchbotprocess()
+            self.tray.subprocesses.restart_twitchbot()
 
     def _upd_conf_quirks(self):
         ''' update the quirks settings to match config '''

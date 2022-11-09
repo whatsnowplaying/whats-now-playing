@@ -3,8 +3,9 @@
 
 #pylint: disable=invalid-name
 
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules  # pylint: disable=import-error
 
-hiddenimports = collect_submodules(
-    'nowplaying.artistextras') + collect_submodules(
-        'nowplaying.inputs') + collect_submodules('nowplaying.recognition')
+hiddenimports = collect_submodules('nowplaying.artistextras') + \
+    collect_submodules('nowplaying.inputs') + \
+    collect_submodules('nowplaying.processes') + \
+    collect_submodules('nowplaying.recognition')

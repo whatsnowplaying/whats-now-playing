@@ -104,7 +104,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             self.username,
         )
 
-    def _finalize(self, variable):  # pylint: disable=no-self-use
+    @staticmethod
+    def _finalize(variable):
         ''' helper routine to avoid NoneType exceptions '''
         if variable:
             return variable
@@ -203,7 +204,8 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
             logging.info('Received command: %s', cmd)
             self.do_command(event, cmd)
 
-    def _build_user_profile(self, event):  #pylint: disable=no-self-use
+    @staticmethod
+    def _build_user_profile(event):
         # Get the channel id, we will need this for v5 API calls
         tags = event.tags
         result = {entry['key']: entry['value'] for entry in tags}
@@ -318,7 +320,7 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 
         self._post_template(cmdfile, moremetadata=metadata)
 
-    def shutdown(self):  # pylint: disable=no-self-use
+    def shutdown(self):
         ''' shutdown '''
         if self.watcher:
             self.watcher.stop()
@@ -327,10 +329,10 @@ class TwitchBot(irc.bot.SingleServerIRCBot):  # pylint: disable=too-many-instanc
 class TwitchBotHandler():
     ''' Now Playing built-in twitch bot custom handler '''
 
-    def __init__(self, config=None):
+    def __init__(self, stopevent=None, config=None):
         self.config = config
         self.server = None
-        self.endthread = False
+        self.stopevent = stopevent
         signal.signal(signal.SIGINT, self.stop)
 
     def run(self):  # pylint: disable=too-many-branches, too-many-statements
@@ -361,15 +363,15 @@ class TwitchBotHandler():
         '''
         threading.current_thread().name = 'TwitchBotControl'
 
-        while not self.endthread:
+        while not self.stopevent.is_set():
             logging.debug('Starting main loop')
 
             while not self.isconfigured():
                 time.sleep(5)
-                if self.endthread:
+                if self.stopevent.is_set():
                     break
 
-            if self.endthread:
+            if self.stopevent.is_set():
                 self.stop()
                 break
             try:
@@ -405,12 +407,14 @@ class TwitchBotHandler():
     def stop(self, signum=None, frame=None):  #pylint: disable=unused-argument
         ''' method to stop the thread '''
         logging.debug('asked to stop or reconfigure')
+        self.stopevent.set()
         if self.server:
             self.server.shutdown()
+        self.server.die()
 
     def __del__(self):
         logging.debug('thread is being killed!')
-        self.endthread = True
+        self.stopevent.set()
         self.stop()
 
 
@@ -423,7 +427,7 @@ def stop(pid):
         pass
 
 
-def start(logpath, bundledir):
+def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argument
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'TwitchBot'
 
@@ -435,11 +439,11 @@ def start(logpath, bundledir):
             bundledir = os.path.abspath(os.path.dirname(__file__))
 
     nowplaying.bootstrap.set_qt_names()
-    nowplaying.bootstrap.setuplogging(logdir=logpath, rotate=False)
+    nowplaying.bootstrap.setuplogging(rotate=False)
 
     config = nowplaying.config.ConfigFile(bundledir=bundledir)
     logging.info('boot up')
-    twitchbot = TwitchBotHandler(config)  # pylint: disable=unused-variable
+    twitchbot = TwitchBotHandler(stopevent=stopevent, config=config)  # pylint: disable=unused-variable
     twitchbot.run()
 
 

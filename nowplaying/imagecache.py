@@ -40,7 +40,11 @@ MAX_FANART_DOWNLOADS = 50
 class ImageCache:
     ''' database operations for caches '''
 
-    def __init__(self, sizelimit=1, initialize=False, cachedir=None):
+    def __init__(self,
+                 sizelimit=1,
+                 initialize=False,
+                 cachedir=None,
+                 stopevent=None):
         if not cachedir:
             self.cachedir = pathlib.Path(
                 QStandardPaths.standardLocations(
@@ -62,8 +66,10 @@ class ImageCache:
             self.setup_sql(initialize=True)
         self.session = None
         self.logpath = None
+        self.stopevent = stopevent
 
-    def _normalize_artist(self, artist):  # pylint: disable=no-self-use
+    @staticmethod
+    def _normalize_artist(artist):
         return normality.normalize(artist).replace(' ', '')
 
     def setup_sql(self, initialize=False):
@@ -425,7 +431,7 @@ VALUES (?,?,?);
         oldset = []
         with concurrent.futures.ProcessPoolExecutor(
                 max_workers=maxworkers) as executor:
-            while not endloop:
+            while not endloop and not self.stopevent.is_set():
                 if dataset := self.get_next_dlset():
                     # sometimes images are downloaded but not
                     # written to sql yet so don't try to resend
