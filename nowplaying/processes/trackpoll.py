@@ -28,6 +28,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
     def __init__(self, stopevent=None, config=None, testmode=False):
         self.datestr = time.strftime("%Y%m%d-%H%M%S")
         self.stopevent = stopevent
+        # we can't use asyncio's because it doesn't work on Windows
+        signal.signal(signal.SIGINT, self.forced_stop)
         if testmode and config:
             self.config = config
         else:
@@ -61,7 +63,6 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         task = self.loop.create_task(self.run())
         task.add_done_callback(self.tasks.remove)
         self.tasks.add(task)
-        self.loop.add_signal_handler(signal.SIGINT, self.forced_stop)
         task.add_done_callback(self.tasks.remove)
 
     async def run(self):
