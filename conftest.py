@@ -7,15 +7,15 @@ import pathlib
 import sys
 import tempfile
 
-import psutil
 import pytest
 from PySide6.QtCore import QCoreApplication, QSettings  # pylint: disable=no-name-in-module
 
 import nowplaying.bootstrap
 import nowplaying.config
 
-if sys.platform == 'darwin':
-    import pwd
+# if sys.platform == 'darwin':
+#     import psutil
+#     import pwd
 
 try:
     from pytest_cov.embed import cleanup_on_sigterm
@@ -28,14 +28,18 @@ else:
 def reboot_macosx_prefs():
     ''' work around Mac OS X's preference caching '''
     if sys.platform == 'darwin':
-        for process in psutil.process_iter():
-            try:
-                if 'cfprefsd' in process.name() and pwd.getpwuid(
-                        os.getuid()).pw_name == process.username():
-                    process.terminate()
-                    process.wait()
-            except psutil.NoSuchProcess:
-                pass
+        os.system('defaults delete com.whatsnowplaying.testsuite')
+        #
+        # old method:
+        #
+        # for process in psutil.process_iter():
+        #     try:
+        #         if 'cfprefsd' in process.name() and pwd.getpwuid(
+        #                 os.getuid()).pw_name == process.username():
+        #             process.terminate()
+        #             process.wait()
+        #     except psutil.NoSuchProcess:
+        #         pass
 
 
 @pytest.fixture
