@@ -5,7 +5,10 @@ import logging
 import logging.config
 import logging.handlers
 import re
+import socket
 
+import requests.exceptions
+import urllib3.exceptions
 import nowplaying.vendor.discogs_client
 
 import nowplaying.config
@@ -29,6 +32,10 @@ class Plugin(ArtistExtrasPlugin):
             resultlist = self.client.search(metadata['album'],
                                             artist=metadata['artist'],
                                             type='title').page(1)
+        except (requests.exceptions.ReadTimeout,
+                urllib3.exceptions.ReadTimeoutError, socket.timeout):
+            logging.error('discogs releaselist timeout error')
+            return None
         except Exception as error:  # pylint: disable=broad-except
             logging.error('discogs hit %s', error)
             return None

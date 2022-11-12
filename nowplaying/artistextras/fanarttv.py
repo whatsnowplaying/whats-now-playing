@@ -4,8 +4,11 @@
 import logging
 import logging.config
 import logging.handlers
+import socket
 
 import requests
+import requests.exceptions
+import urllib3.exceptions
 
 import nowplaying.config
 from nowplaying.artistextras import ArtistExtrasPlugin
@@ -49,8 +52,13 @@ class Plugin(ArtistExtrasPlugin):
                 logging.debug('fanarttv: calling %s', baseurl)
                 artistrequest = requests.get(f'{baseurl}?api_key={apikey}',
                                              timeout=5)
+            except (requests.exceptions.ReadTimeout,
+                    urllib3.exceptions.ReadTimeoutError, socket.timeout):
+                logging.error('fantart.tv timeout getting artistid %s',
+                              artistid)
+                return None
             except Exception as error:  # pylint: disable=broad-except
-                logging.debug('fanart.tv: %s', error)
+                logging.error('fanart.tv: %s', error)
                 return None
             artist = artistrequest.json()
 

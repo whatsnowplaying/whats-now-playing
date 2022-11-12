@@ -15,8 +15,6 @@ import jinja2
 import normality
 import PIL.Image
 
-import nowplaying.metadata
-
 STRIPWORDLIST = ['clean', 'dirty', 'explicit', 'official music video']
 STRIPRELIST = [
     re.compile(r' \((?i:{0})\)'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
@@ -83,30 +81,6 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
                 self.filename) or not self.template:
             return " No template found; check Now Playing settings."
         return self.template.render(**metadatadict)
-
-
-def getmoremetadata(metadata=None, imagecache=None):
-    ''' given a chunk of metadata, try to fill in more '''
-
-    logging.debug('getmoremetadata called')
-
-    if not metadata or 'filename' not in metadata:
-        return metadata
-
-    if not os.path.isfile(metadata['filename']):
-        return metadata
-
-    logging.debug('getmoremetadata calling metadata processor for %s',
-                  metadata['filename'])
-    try:
-        myclass = nowplaying.metadata.MetadataProcessors(metadata=metadata,
-                                                         imagecache=imagecache)
-        metadata = myclass.metadata
-    except OSError as error:  # pragma: no cover
-        logging.error('MetadataProcessor failed for %s with %s',
-                      metadata['filename'], error)
-
-    return metadata
 
 
 def writetxttrack(filename=None,

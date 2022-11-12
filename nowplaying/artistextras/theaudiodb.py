@@ -5,9 +5,12 @@ import logging
 import logging.config
 import logging.handlers
 import re
+import socket
 
 import requests
+import requests.exceptions
 import requests.utils
+import urllib3.exceptions
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -29,12 +32,17 @@ class Plugin(ArtistExtrasPlugin):
         self.htmlfilter.feed(text)
         return self.htmlfilter.text
 
-    def _fetch(self, apikey, api):  # pylint: disable=no-self-use
+    @staticmethod
+    def _fetch(apikey, api):
         try:
             logging.debug('Fetching %s', api)
             page = requests.get(
                 f'https://theaudiodb.com/api/v1/json/{apikey}/{api}',
                 timeout=5)
+        except (requests.exceptions.ReadTimeout,
+                urllib3.exceptions.ReadTimeoutError, socket.timeout):
+            logging.error('TheAudioDB _fetch hit socket timeout on %s', api)
+            return None
         except Exception as error:  # pylint: disable=broad-except
             logging.error('TheAudioDB hit %s', error)
             return None

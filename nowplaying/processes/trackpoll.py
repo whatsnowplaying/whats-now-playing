@@ -14,6 +14,7 @@ import sys
 import nowplaying.config
 import nowplaying.db
 import nowplaying.inputs
+import nowplaying.metadata
 import nowplaying.utils
 import nowplaying.imagecache
 
@@ -50,6 +51,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self.icprocess = None
         self._setup_imagecache()
         self.tasks = set()
+        self.metadataprocessors = nowplaying.metadata.MetadataProcessors(
+            config=self.config)
         self.create_tasks()
         self.loop.run_forever()
 
@@ -63,7 +66,6 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         task = self.loop.create_task(self.run())
         task.add_done_callback(self.tasks.remove)
         self.tasks.add(task)
-        task.add_done_callback(self.tasks.remove)
 
     async def run(self):
         ''' track polling process '''
@@ -103,10 +105,6 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self.create_setlist()
         await self.stop()
         logging.debug('Trackpoll stopped gracefully.')
-
-    def __del__(self):
-        logging.debug('TrackPoll is being killed!')
-        self.stop()
 
     async def stop(self):
         ''' stop trackpoll thread gracefully '''
@@ -174,7 +172,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             return True
         return False
 
-    def _fillinmetadata(self, metadata):
+    async def _fillinmetadata(self, metadata):
         ''' keep a copy of our fetched data '''
 
         # Fill in as much metadata as possible. everything
@@ -199,10 +197,11 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             if key in metadata and not metadata[key]:
                 del metadata[key]
 
-        if metadata.get('filename'):
-            metadata = nowplaying.utils.getmoremetadata(
-                metadata, self.imagecache)
-
+        try:
+            metadata = await self.metadataprocessors.getmoremetadata(
+                metadata=metadata, imagecache=self.imagecache)
+        except OSError as error:  # pragma: no cover
+            logging.error('MetadataProcessor failed: %s', error)
         for key in COREMETA:
             if key not in metadata:
                 logging.info('Track missing %s data, setting it to blank.',
@@ -233,7 +232,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         # fill in the blanks and make it live
         oldmeta = self.currentmeta
-        self.currentmeta = self._fillinmetadata(nextmeta)
+        self.currentmeta = await self._fillinmetadata(nextmeta)
         logging.info('Potential new track: %s / %s',
                      self.currentmeta['artist'], self.currentmeta['title'])
 

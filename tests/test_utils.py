@@ -13,17 +13,6 @@ def results(expected, metadata):
     assert metadata == {}
 
 
-def test_getmoremetadata_brokenmd():
-    ''' test getmoremetadata when based garbage '''
-
-    assert not nowplaying.utils.getmoremetadata()
-
-    metadatain = {'filename': 'filenamedoesnotexist'}
-
-    metadataout = nowplaying.utils.getmoremetadata(metadatain.copy())
-    results(metadatain, metadataout)
-
-
 def test_songsubst1(bootstrap):
     ''' test file name substition1 '''
     config = bootstrap

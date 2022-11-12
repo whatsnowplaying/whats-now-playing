@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 ''' pull out metadata '''
 
+import asyncio
+import concurrent.futures
 import logging
 import os
 import string
@@ -19,25 +21,28 @@ import nowplaying.vendor.tinytag
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
     ''' Run through a bunch of different metadata processors '''
 
-    def __init__(self, metadata, imagecache=None, config=None):
-        self.metadata = metadata
-        self.imagecache = imagecache
+    def __init__(self, config=None):
+        self.metadata = None
+        self.imagecache = None
         if config:
             self.config = config
         else:
             self.config = nowplaying.config.ConfigFile()
 
-        #if 'filename' not in self.metadata:
-        #    logging.debug('No filename')
-        #    return
+    async def getmoremetadata(self, metadata=None, imagecache=None):
+        ''' take metadata and process it '''
+        self.metadata = metadata
+        self.imagecache = imagecache
 
         if 'artistfanarturls' not in self.metadata:
             self.metadata['artistfanarturls'] = []
 
-        for processor in 'hostmeta', 'audio_metadata', 'tinytag', 'image2png', 'plugins':
+        for processor in 'hostmeta', 'audio_metadata', 'tinytag', 'image2png':
             logging.debug('running %s', processor)
             func = getattr(self, f'_process_{processor}')
             func()
+
+        await self._process_plugins()
 
         if 'publisher' in self.metadata:
             if 'label' not in self.metadata:
@@ -56,6 +61,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self._uniqlists()
 
         self._strip_identifiers()
+        return self.metadata
 
     def _strip_identifiers(self):
 
@@ -81,6 +87,173 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         hostmeta = nowplaying.hostmeta.gethostmeta()
         for key, value in hostmeta.items():
             self.metadata[key] = value
+
+    def _process_audio_metadata(self):
+        self.metadata = AudioMetadataRunner(config=self.config).process(
+            metadata=self.metadata)
+
+    def _process_tinytag(self):
+        ''' given a chunk of metadata, try to fill in more '''
+        if not self.metadata.get('filename'):
+            return
+
+        try:
+            tag = nowplaying.vendor.tinytag.TinyTag.get(
+                self.metadata['filename'], image=True)
+        except nowplaying.vendor.tinytag.tinytag.TinyTagException as error:
+            logging.error('tinytag could not process %s: %s',
+                          self.metadata['filename'], error)
+            return
+
+        if tag:
+            for key in [
+                    'album', 'albumartist', 'artist', 'bitrate', 'bpm',
+                    'comments', 'composer', 'disc', 'disc_total', 'genre',
+                    'key', 'lang', 'publisher', 'title', 'track',
+                    'track_total', 'year'
+            ]:
+                if key not in self.metadata and hasattr(tag, key) and getattr(
+                        tag, key):
+                    self.metadata[key] = getattr(tag, key)
+
+            if getattr(tag, 'extra'):
+                extra = getattr(tag, 'extra')
+                for key in ['isrc']:
+                    if extra.get(key):
+                        self.metadata[key] = extra[key].split('/')
+
+            if 'date' not in self.metadata and hasattr(
+                    tag, 'year') and getattr(tag, 'year'):
+                self.metadata['date'] = getattr(tag, 'year')
+
+            if 'coverimageraw' not in self.metadata:
+                self.metadata['coverimageraw'] = tag.get_image()
+
+    def _process_image2png(self):
+        # always convert to png
+
+        if 'coverimageraw' not in self.metadata or not self.metadata[
+                'coverimageraw']:
+            return
+
+        self.metadata['coverimageraw'] = nowplaying.utils.image2png(
+            self.metadata['coverimageraw'])
+        self.metadata['coverimagetype'] = 'png'
+        self.metadata['coverurl'] = 'cover.png'
+
+    def _musicbrainz(self):
+        musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
+            config=self.config)
+        metalist = musicbrainz.providerinfo()
+
+        addmeta = {}
+
+        if self.metadata.get('musicbrainzrecordingid'):
+            logging.debug(
+                'musicbrainz recordingid detected; attempting shortcuts')
+            if any(meta not in self.metadata for meta in metalist):
+                addmeta = musicbrainz.recordingid(
+                    self.metadata['musicbrainzrecordingid'])
+                self.metadata = recognition_replacement(config=self.config,
+                                                        metadata=self.metadata,
+                                                        addmeta=addmeta)
+        elif self.metadata.get('isrc'):
+            logging.debug('Preprocessing with musicbrainz isrc')
+            if any(meta not in self.metadata for meta in metalist):
+                addmeta = musicbrainz.isrc(self.metadata['isrc'])
+                self.metadata = recognition_replacement(config=self.config,
+                                                        metadata=self.metadata,
+                                                        addmeta=addmeta)
+        elif self.metadata.get('musicbrainzartistid'):
+            logging.debug('Preprocessing with musicbrainz artistid')
+            if any(meta not in self.metadata for meta in metalist):
+                addmeta = musicbrainz.artistids(
+                    self.metadata['musicbrainzartistid'])
+                self.metadata = recognition_replacement(config=self.config,
+                                                        metadata=self.metadata,
+                                                        addmeta=addmeta)
+
+        return addmeta
+
+    async def _process_plugins(self):
+        addmeta = self._musicbrainz()
+
+        for plugin in self.config.plugins['recognition']:
+            metalist = self.config.pluginobjs['recognition'][
+                plugin].providerinfo()
+            provider = any(meta not in self.metadata for meta in metalist)
+            if provider:
+                try:
+                    if addmeta := self.config.pluginobjs['recognition'][
+                            plugin].recognize(metadata=self.metadata):
+                        self.metadata = recognition_replacement(
+                            config=self.config,
+                            metadata=self.metadata,
+                            addmeta=addmeta)
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.debug('%s threw exception %s',
+                                  plugin,
+                                  error,
+                                  exc_info=True)
+
+        tasks = []
+        if self.config.cparser.value('artistextras/enabled', type=bool):
+            with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=3, thread_name_prefix='artistextras') as pool:
+                for plugin in self.config.plugins['artistextras']:
+                    metalist = self.config.pluginobjs['artistextras'][
+                        plugin].providerinfo()
+                    loop = asyncio.get_running_loop()
+                    tasks.append(
+                        loop.run_in_executor(
+                            pool, self.config.pluginobjs['artistextras']
+                            [plugin].download, self.metadata, self.imagecache))
+
+            for task in tasks:
+                try:
+                    if addmeta := await task:
+                        self.metadata = recognition_replacement(
+                            config=self.config,
+                            metadata=self.metadata,
+                            addmeta=addmeta)
+
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.debug('%s threw exception %s',
+                                  plugin,
+                                  error,
+                                  exc_info=True)
+
+    def _generate_short_bio(self):
+        message = self.metadata['artistlongbio']
+        message = message.replace('\n', ' ')
+        message = message.replace('\r', ' ')
+        message = str(message).strip()
+        text = textwrap.TextWrapper(width=450).wrap(message)[0]
+        tokens = nltk.sent_tokenize(text)
+
+        if tokens[-1][-1] in string.punctuation and tokens[-1][-1] not in [
+                ':', ',', ';', '-'
+        ]:
+            self.metadata['artistshortbio'] = ' '.join(tokens)
+        else:
+            self.metadata['artistshortbio'] = ' '.join(tokens[:-1])
+
+
+class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
+    ''' run through audio_metadata '''
+
+    def __init__(self, config=None):
+        self.metadata = None
+        self.config = config
+
+    def process(self, metadata):
+        ''' process it '''
+        if not metadata.get('filename'):
+            return metadata
+
+        self.metadata = metadata
+        self._process_audio_metadata()
+        return self.metadata
 
     def _process_audio_metadata_mp4_freeform(self, freeformparentlist):
 
@@ -127,7 +300,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 if freeform.description == 'com.apple.iTunes':
                     tempdata = _itunes(tempdata, freeform)
 
-        self._recognition_replacement(tempdata)
+        self.metadata = recognition_replacement(config=self.config,
+                                                metadata=self.metadata,
+                                                addmeta=tempdata)
 
     def _process_audio_metadata_id3_usertext(self, usertextlist):
         for usertext in usertextlist:
@@ -207,9 +382,6 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     self.metadata[dest] = [str(tags[src])]
 
     def _process_audio_metadata(self):  # pylint: disable=too-many-branches
-        if not self.metadata.get('filename'):
-            return
-
         try:
             base = nowplaying.vendor.audio_metadata.load(
                 self.metadata['filename'])
@@ -254,147 +426,23 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if getattr(base, 'pictures') and 'coverimageraw' not in self.metadata:
             self.metadata['coverimageraw'] = base.pictures[0].data
 
-    def _process_tinytag(self):
-        ''' given a chunk of metadata, try to fill in more '''
-        if not self.metadata.get('filename'):
-            return
 
-        try:
-            tag = nowplaying.vendor.tinytag.TinyTag.get(
-                self.metadata['filename'], image=True)
-        except nowplaying.vendor.tinytag.tinytag.TinyTagException as error:
-            logging.error('tinytag could not process %s: %s',
-                          self.metadata['filename'], error)
-            return
+def recognition_replacement(config=None, metadata=None, addmeta=None):
+    ''' handle any replacements '''
+    # if there is nothing in addmeta, then just bail early
+    if not addmeta:
+        return metadata
 
-        if tag:
-            for key in [
-                    'album', 'albumartist', 'artist', 'bitrate', 'bpm',
-                    'comments', 'composer', 'disc', 'disc_total', 'genre',
-                    'key', 'lang', 'publisher', 'title', 'track',
-                    'track_total', 'year'
-            ]:
-                if key not in self.metadata and hasattr(tag, key) and getattr(
-                        tag, key):
-                    self.metadata[key] = getattr(tag, key)
-
-            if getattr(tag, 'extra'):
-                extra = getattr(tag, 'extra')
-                for key in ['isrc']:
-                    if extra.get(key):
-                        self.metadata[key] = extra[key].split('/')
-
-            if 'date' not in self.metadata and hasattr(
-                    tag, 'year') and getattr(tag, 'year'):
-                self.metadata['date'] = getattr(tag, 'year')
-
-            if 'coverimageraw' not in self.metadata:
-                self.metadata['coverimageraw'] = tag.get_image()
-
-    def _process_image2png(self):
-        # always convert to png
-
-        if 'coverimageraw' not in self.metadata or not self.metadata[
-                'coverimageraw']:
-            return
-
-        self.metadata['coverimageraw'] = nowplaying.utils.image2png(
-            self.metadata['coverimageraw'])
-        self.metadata['coverimagetype'] = 'png'
-        self.metadata['coverurl'] = 'cover.png'
-
-    def _recognition_replacement(self, addmeta):
-
-        # if there is nothing in addmeta, then just bail early
-        if not addmeta:
-            return
-
-        for meta in addmeta:
-            if meta in ['artist', 'title', 'artistwebsites']:
-                if self.config.cparser.value(f'recognition/replace{meta}',
-                                             type=bool) and addmeta.get(meta):
-                    self.metadata[meta] = addmeta[meta]
-                elif not self.metadata.get(meta) and addmeta.get(meta):
-                    self.metadata[meta] = addmeta[meta]
-            elif not self.metadata.get(meta) and addmeta.get(meta):
-                self.metadata[meta] = addmeta[meta]
-
-    def _musicbrainz(self):
-        musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
-            config=self.config)
-        metalist = musicbrainz.providerinfo()
-
-        addmeta = {}
-
-        if self.metadata.get('musicbrainzrecordingid'):
-            logging.debug(
-                'musicbrainz recordingid detected; attempting shortcuts')
-            if any(meta not in self.metadata for meta in metalist):
-                addmeta = musicbrainz.recordingid(
-                    self.metadata['musicbrainzrecordingid'])
-                self._recognition_replacement(addmeta)
-        elif self.metadata.get('isrc'):
-            logging.debug('Preprocessing with musicbrainz isrc')
-            if any(meta not in self.metadata for meta in metalist):
-                addmeta = musicbrainz.isrc(self.metadata['isrc'])
-                self._recognition_replacement(addmeta)
-        elif self.metadata.get('musicbrainzartistid'):
-            logging.debug('Preprocessing with musicbrainz artistid')
-            if any(meta not in self.metadata for meta in metalist):
-                addmeta = musicbrainz.artistids(
-                    self.metadata['musicbrainzartistid'])
-                self._recognition_replacement(addmeta)
-
-        return addmeta
-
-    def _process_plugins(self):
-        addmeta = self._musicbrainz()
-
-        for plugin in self.config.plugins['recognition']:
-            metalist = self.config.pluginobjs['recognition'][
-                plugin].providerinfo()
-            provider = any(meta not in self.metadata for meta in metalist)
-            if provider:
-                try:
-                    if addmeta := self.config.pluginobjs['recognition'][
-                            plugin].recognize(metadata=self.metadata):
-                        self._recognition_replacement(addmeta)
-                except Exception as error:  # pylint: disable=broad-except
-                    logging.debug('%s threw exception %s',
-                                  plugin,
-                                  error,
-                                  exc_info=True)
-
-        if self.config.cparser.value('artistextras/enabled', type=bool):
-            for plugin in self.config.plugins['artistextras']:
-                metalist = self.config.pluginobjs['artistextras'][
-                    plugin].providerinfo()
-                try:
-                    if addmeta := self.config.pluginobjs['artistextras'][
-                            plugin].download(metadata=self.metadata,
-                                             imagecache=self.imagecache):
-                        self._recognition_replacement(addmeta)
-
-                except Exception as error:  # pylint: disable=broad-except
-                    logging.debug('%s threw exception %s',
-                                  plugin,
-                                  error,
-                                  exc_info=True)
-
-    def _generate_short_bio(self):
-        message = self.metadata['artistlongbio']
-        message = message.replace('\n', ' ')
-        message = message.replace('\r', ' ')
-        message = str(message).strip()
-        text = textwrap.TextWrapper(width=450).wrap(message)[0]
-        tokens = nltk.sent_tokenize(text)
-
-        if tokens[-1][-1] in string.punctuation and tokens[-1][-1] not in [
-                ':', ',', ';', '-'
-        ]:
-            self.metadata['artistshortbio'] = ' '.join(tokens)
-        else:
-            self.metadata['artistshortbio'] = ' '.join(tokens[:-1])
+    for meta in addmeta:
+        if meta in ['artist', 'title', 'artistwebsites']:
+            if config.cparser.value(f'recognition/replace{meta}',
+                                    type=bool) and addmeta.get(meta):
+                metadata[meta] = addmeta[meta]
+            elif not metadata.get(meta) and addmeta.get(meta):
+                metadata[meta] = addmeta[meta]
+        elif not metadata.get(meta) and addmeta.get(meta):
+            metadata[meta] = addmeta[meta]
+    return metadata
 
 
 def main():
@@ -407,10 +455,10 @@ def main():
         level=logging.DEBUG)
     logging.captureWarnings(True)
     bundledir = os.path.abspath(os.path.dirname(__file__))
-    nowplaying.config.ConfigFile(bundledir=bundledir)
+    config = nowplaying.config.ConfigFile(bundledir=bundledir)
     metadata = {'filename': sys.argv[1]}
-    myclass = MetadataProcessors(metadata=metadata)
-    metadata = myclass.metadata
+    myclass = MetadataProcessors(config=config)
+    metadata = asyncio.run(myclass.getmoremetadata(metadata=metadata))
     if 'coverimageraw' in metadata:
         print('got an image')
         del metadata['coverimageraw']
