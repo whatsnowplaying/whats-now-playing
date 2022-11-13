@@ -29,7 +29,9 @@ def get_imagecache(bootstrap):
         newpathdir = pathlib.Path(newpath)
         logging.debug(newpathdir)
         logpath = newpathdir.joinpath('debug.log')
-        imagecache = nowplaying.imagecache.ImageCache(cachedir=newpathdir)
+        stopevent = multiprocessing.Event()
+        imagecache = nowplaying.imagecache.ImageCache(cachedir=newpathdir,
+                                                      stopevent=stopevent)
         icprocess = multiprocessing.Process(target=imagecache.queue_process,
                                             name='ICProcess',
                                             args=(
@@ -38,6 +40,7 @@ def get_imagecache(bootstrap):
                                             ))
         icprocess.start()
         yield config, imagecache
+        stopevent.set()
         imagecache.stop_process()
         icprocess.join()
         pathlib.Path(imagecache.databasefile).unlink()
@@ -57,7 +60,7 @@ def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
                           urllist=TEST_URLS)
     time.sleep(5)
 
-    page = requests.get(TEST_URLS[2])
+    page = requests.get(TEST_URLS[2], timeout=10)
     png = nowplaying.utils.image2png(page.content)
 
     for cachekey in list(imagecache.cache.iterkeys()):
