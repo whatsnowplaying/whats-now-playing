@@ -3,10 +3,18 @@
 
 ## Version 3.2.0 - Unreleased
 
+* OBS Websocket v5 support
 * Major structural changes internally over a series of
   code changes so that TrackPoll may support asyncio. A
-  side benefit has been that app shutdown time is
-  noticeably faster.
+  side benefit has been that various parts of the system
+  are just generally faster, more efficient.
+* Metadata processing finally got some (simple) parallelization.
+* Subprocess handling is now much more streamlined.
+* Moved various bits of source around in the source tree
+  to ease maintenance.
+* A few more things are now using pathlib.
+* Better error reporting/capturing for a few things.
+* A simple JSON-based source plug-in to help test things out.
 
 ## Version 3.1.2 - 2022-11-03
 
