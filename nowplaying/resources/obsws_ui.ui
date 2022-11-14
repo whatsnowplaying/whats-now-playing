@@ -59,71 +59,20 @@
    </property>
    <property name="html">
     <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'.SF NS Text'; font-size:13pt;&quot;&gt;Enables support of the &lt;/span&gt;&lt;a href=&quot;https://github.com/Palakis/obs-websocket&quot;&gt;&lt;span style=&quot; font-family:'.SF NS Text'; font-size:13pt; text-decoration: underline; color:#0068da;&quot;&gt;OBS WebSocket API Plug-in&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-family:'.SF NS Text'; font-size:13pt;&quot;&gt; for OBS Studio and compatible software.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'.SF NS Text'; font-size:13pt;&quot;&gt;Enables support OBS Websocket v5 for OBS Studio and compatible software.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
-  </widget>
-  <widget class="QGroupBox" name="texttype_box">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>150</y>
-     <width>581</width>
-     <height>81</height>
-    </rect>
-   </property>
-   <property name="title">
-    <string>TextType</string>
-   </property>
-   <widget class="QRadioButton" name="freetype2_button">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>40</y>
-      <width>100</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>FreeType2</string>
-    </property>
-    <property name="checked">
-     <bool>true</bool>
-    </property>
-    <attribute name="buttonGroup">
-     <string notr="true">texttype_button_group</string>
-    </attribute>
-   </widget>
-   <widget class="QRadioButton" name="gdi_button">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>250</x>
-      <y>40</y>
-      <width>100</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>GDI+</string>
-    </property>
-    <attribute name="buttonGroup">
-     <string notr="true">texttype_button_group</string>
-    </attribute>
-   </widget>
   </widget>
   <widget class="QWidget" name="formLayoutWidget">
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>250</y>
+     <y>150</y>
      <width>561</width>
      <height>131</height>
     </rect>
@@ -227,7 +176,7 @@ p, li { white-space: pre-wrap; }
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>400</y>
+     <y>330</y>
      <width>111</width>
      <height>16</height>
     </rect>
@@ -243,7 +192,7 @@ p, li { white-space: pre-wrap; }
    <property name="geometry">
     <rect>
      <x>150</x>
-     <y>390</y>
+     <y>320</y>
      <width>141</width>
      <height>32</height>
     </rect>
@@ -256,7 +205,7 @@ p, li { white-space: pre-wrap; }
    <property name="geometry">
     <rect>
      <x>310</x>
-     <y>390</y>
+     <y>320</y>
      <width>281</width>
      <height>21</height>
     </rect>
@@ -265,38 +214,6 @@ p, li { white-space: pre-wrap; }
  </widget>
  <resources/>
  <connections>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>freetype2_button</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>82</x>
-     <y>69</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>119</x>
-     <y>199</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>gdi_button</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>82</x>
-     <y>69</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>339</x>
-     <y>199</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>

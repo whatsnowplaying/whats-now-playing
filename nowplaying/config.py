@@ -156,9 +156,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue('textoutput/txttemplate', self.txttemplate)
 
         settings.setValue('obsws/enabled', False)
-        settings.setValue('obsws/freetype2', True)
         settings.setValue('obsws/host', 'localhost')
-        settings.setValue('obsws/port', '4444')
+        settings.setValue('obsws/port', '4455')
         settings.setValue('obsws/secret', '')
         settings.setValue('obsws/source', '')
         settings.setValue('obsws/template',

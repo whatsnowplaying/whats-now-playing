@@ -5,9 +5,6 @@ import importlib
 import logging
 import multiprocessing
 
-import nowplaying.obsws
-import nowplaying.db
-
 
 class SubprocessManager:
     ''' manage all of the subprocesses '''
@@ -18,7 +15,7 @@ class SubprocessManager:
         self.obswsobj = None
         self.manager = multiprocessing.Manager()
         self.processes = {}
-        for name in ['trackpoll', 'twitchbot', 'webserver']:
+        for name in ['trackpoll', 'obsws', 'twitchbot', 'webserver']:
             self.processes[name] = {
                 'module':
                 importlib.import_module(f'nowplaying.processes.{name}'),
@@ -33,11 +30,6 @@ class SubprocessManager:
             func = getattr(self, f'start_{key}')
             func()
 
-        # Start the OBS WebSocket thread
-        self.obswsobj = nowplaying.obsws.OBSWebSocketHandler(tray=self)
-        if self.config.cparser.value('obsws/enabled', type=bool):
-            self.start_obsws()
-
     def stop_all_processes(self):
         ''' stop all the subprocesses '''
 
@@ -51,21 +43,6 @@ class SubprocessManager:
             func()
 
         self.stop_obsws()
-
-    def start_obsws(self):
-        ''' start the obs ws thread '''
-        if self.obswsobj:
-            self.obswsobj.start()
-
-    def stop_obsws(self):
-        ''' stop the obs ws thread '''
-        if self.obswsobj:
-            self.obswsobj.stop()
-
-    def restart_obsws(self):
-        ''' bounce the obsws connection '''
-        self.stop_obsws()
-        self.start_obsws()
 
     def _process_start(self, processname):
         ''' Start trackpoll '''
@@ -98,6 +75,14 @@ class SubprocessManager:
             self.processes[processname]['process'].close()
             self.processes[processname]['process'] = None
 
+    def start_obsws(self):
+        ''' Start obsws '''
+        self._process_start('obsws')
+
+    def stop_obsws(self):
+        ''' stop trackpoll '''
+        self._process_stop('obsws')
+
     def start_trackpoll(self):
         ''' Start trackpoll '''
         self._process_start('trackpoll')
@@ -107,7 +92,7 @@ class SubprocessManager:
         self._process_stop('trackpoll')
 
     def start_twitchbot(self):
-        ''' Start the webserver '''
+        ''' Start the twitchbot '''
         if self.config.cparser.value('twitchbot/enabled', type=bool):
             self._process_start('twitchbot')
 
@@ -124,8 +109,13 @@ class SubprocessManager:
         ''' stop the web process '''
         self._process_stop('webserver')
 
+    def restart_obsws(self):
+        ''' handle starting or restarting the obsws process '''
+        self.stop_obsws()
+        self.start_obsws()
+
     def restart_trackpoll(self):
-        ''' handle starting or restarting the webserver process '''
+        ''' handle starting or restarting the trackpoll process '''
         self.stop_trackpoll()
         self.start_trackpoll()
 
@@ -135,6 +125,6 @@ class SubprocessManager:
         self.start_webserver()
 
     def restart_twitchbot(self):
-        ''' handle starting or restarting the webserver process '''
+        ''' handle starting or restarting the twitchbot process '''
         self.stop_twitchbot()
         self.start_twitchbot()

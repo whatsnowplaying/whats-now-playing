@@ -280,13 +280,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         ''' update the obsws settings to match config '''
         self.widgets['obsws'].enable_checkbox.setChecked(
             self.config.cparser.value('obsws/enabled', type=bool))
-        if self.config.cparser.value('obsws/freetype2', type=bool):
-            self.widgets['obsws'].freetype2_button.setChecked(True)
-            self.widgets['obsws'].gdi_button.setChecked(False)
-        else:
-            self.widgets['obsws'].freetype2_button.setChecked(False)
-            self.widgets['obsws'].gdi_button.setChecked(True)
-
         self.widgets['obsws'].source_lineedit.setText(
             self.config.cparser.value('obsws/source'))
         self.widgets['obsws'].host_lineedit.setText(
@@ -504,9 +497,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         oldenabled = self.config.cparser.value('obsws/enabled', type=bool)
         newenabled = self.widgets['obsws'].enable_checkbox.isChecked()
 
-        self.config.cparser.setValue(
-            'obsws/freetype2',
-            self.widgets['obsws'].freetype2_button.isChecked())
         self.config.cparser.setValue(
             'obsws/source', self.widgets['obsws'].source_lineedit.text())
         self.config.cparser.setValue(
