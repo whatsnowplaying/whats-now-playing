@@ -80,7 +80,7 @@ class SubprocessManager:
         self._process_start('obsws')
 
     def stop_obsws(self):
-        ''' stop trackpoll '''
+        ''' stop obsws '''
         self._process_stop('obsws')
 
     def start_trackpoll(self):
