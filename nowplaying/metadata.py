@@ -10,12 +10,12 @@ import sys
 import textwrap
 
 import nltk
+import tinytag
 
 import nowplaying.config
 import nowplaying.hostmeta
 import nowplaying.vendor.audio_metadata
 from nowplaying.vendor.audio_metadata.formats.mp4_tags import MP4FreeformDecoders
-import nowplaying.vendor.tinytag
 
 
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
@@ -98,9 +98,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         try:
-            tag = nowplaying.vendor.tinytag.TinyTag.get(
+            tag = tinytag.TinyTag.get(
                 self.metadata['filename'], image=True)
-        except nowplaying.vendor.tinytag.tinytag.TinyTagException as error:
+        except tinytag.tinytag.TinyTagException as error:
             logging.error('tinytag could not process %s: %s',
                           self.metadata['filename'], error)
             return
