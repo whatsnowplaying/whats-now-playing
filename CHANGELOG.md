@@ -15,6 +15,7 @@
 * A few more things are now using pathlib.
 * Better error reporting/capturing for a few things.
 * A simple JSON-based source plug-in to help test things out.
+* Python v3.10 is now required
 
 ## Version 3.1.2 - 2022-11-03
 
