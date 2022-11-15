@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-''' Process Mixxx exposed metadata
+''' Process MPRIS2 exposed metadata
 
-    This is based upon https://github.com/mixxxdj/mixxx/pull/3483 as of
-    2021-03-07, git sha af5812d
+    * Mixxx: This is based upon https://github.com/mixxxdj/mixxx/pull/3483 +
+             a custom patch to add url support
+    * VLC: out of the box
 
  '''
 
