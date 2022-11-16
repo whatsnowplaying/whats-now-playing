@@ -46,7 +46,6 @@ class Client:
         params = {}
         params['User-Agent'] = self.user_agent
         params['Content-Type'] = 'application/x-www-form-urlencoded'
-        params['Accept'] = 'application/vnd.discogs.v2.plaintext+json'
         if callback_url:
             params['oauth_callback'] = callback_url
         postdata = urlencode(params)
@@ -71,7 +70,6 @@ class Client:
 
         params = {}
         params['User-Agent'] = self.user_agent
-        params['Accept'] = 'application/vnd.discogs.v2.plaintext+json'
 
         content, status_code = self._fetcher.fetch(self, 'POST', self._access_token_url, headers=params)
         if status_code != 200:
@@ -94,7 +92,7 @@ class Client:
         headers = {
             'Accept-Encoding': 'gzip',
             'User-Agent': self.user_agent,
-            'Accept': 'application/vnd.discogs.v2.plaintext+json'
+            'Accept': 'application/vnd.discogs.v2.plaintext+json',
         }
 
         if data:

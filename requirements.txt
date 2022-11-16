@@ -46,3 +46,4 @@ wrapt==1.14.1
 # discogs_client
 #
 oauthlib==3.2.2
+python-dateutil

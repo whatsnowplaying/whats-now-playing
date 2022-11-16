@@ -1,4 +1,4 @@
-__version__ = '2.3.15'
+__version__ = '2.5'
 __version_info__ = tuple(int(i) for i in __version__.split('.') if i.isdigit())
 
 from nowplaying.vendor.discogs_client.client import Client
