@@ -9,6 +9,7 @@ Each has its own screen to configure them.
    :maxdepth: 2
    :caption: Contents:
 
+   icecast
    m3u
    mpris2
    serato

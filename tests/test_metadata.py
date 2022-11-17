@@ -99,6 +99,7 @@ async def test_15ghosts2_m4a_orig(bootstrap, getroot):
     assert metadataout['track'] == '15'
     assert metadataout['title'] == '15 Ghosts II'
 
+
 @pytest.mark.asyncio
 async def test_15ghosts2_aiff_orig(bootstrap, getroot):
     ''' automated integration test '''
@@ -115,6 +116,7 @@ async def test_15ghosts2_aiff_orig(bootstrap, getroot):
     assert metadataout['artist'] == 'Nine Inch Nails'
     assert metadataout['track'] == '15'
     assert metadataout['title'] == '15 Ghosts II'
+
 
 @pytest.mark.asyncio
 async def test_15ghosts2_flac_fullytagged(bootstrap, getroot):
@@ -183,6 +185,7 @@ async def test_15ghosts2_m4a_fullytagged(bootstrap, getroot):
         'musicbrainzrecordingid'] == '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
     assert metadataout['title'] == '15 Ghosts II'
 
+
 @pytest.mark.asyncio
 async def test_15ghosts2_aiff_fullytagged(bootstrap, getroot):
     ''' automated integration test '''
@@ -204,6 +207,7 @@ async def test_15ghosts2_aiff_fullytagged(bootstrap, getroot):
     assert metadataout['coverurl'] == 'cover.png'
     assert metadataout['isrc'] == ['USTC40852243']
     assert metadataout['title'] == '15 Ghosts II'
+
 
 @pytest.mark.asyncio
 async def test_artistshortio(bootstrap, getroot):

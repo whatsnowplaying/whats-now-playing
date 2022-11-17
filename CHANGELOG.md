@@ -3,6 +3,8 @@
 
 ## Version 3.2.0 - Unreleased
 
+* Support for Icecast, enabling butt, MIXXX, Traktor,
+  and many, many more.
 * OBS Websocket v5 support
 * Major structural changes internally over a series of
   code changes so that TrackPoll may support asyncio. A

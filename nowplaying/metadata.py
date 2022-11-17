@@ -98,8 +98,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         try:
-            tag = tinytag.TinyTag.get(
-                self.metadata['filename'], image=True)
+            tag = tinytag.TinyTag.get(self.metadata['filename'], image=True)
         except tinytag.tinytag.TinyTagException as error:
             logging.error('tinytag could not process %s: %s',
                           self.metadata['filename'], error)

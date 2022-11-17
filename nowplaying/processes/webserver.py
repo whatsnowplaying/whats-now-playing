@@ -118,7 +118,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     @staticmethod
     def _base64ifier(metadata):
         ''' replace all the binary data with base64 data '''
-        for key in nowplaying.db.MetadataDB.METADATABLOBLIST:
+        for key in nowplaying.db.METADATABLOBLIST:
             if metadata.get(key):
                 newkey = key.replace('raw', 'base64')
                 metadata[newkey] = base64.b64encode(
@@ -128,7 +128,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
     def _transparentifier(self, metadata):
         ''' base64 encoding + transparent missing '''
-        for key in nowplaying.db.MetadataDB.METADATABLOBLIST:
+        for key in nowplaying.db.METADATABLOBLIST:
             if not metadata.get(key):
                 metadata[key] = TRANSPARENT_PNG_BIN
         return self._base64ifier(metadata)
@@ -434,7 +434,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             web.get('/wsstream', self.websocket_streamer),
             web.get('/wsartistfanartstream',
                     self.websocket_artistfanart_streamer),
-            web.get(f'/{self.magicstopurl}', self.stop_server)
+            web.get(f'/{self.magicstopurl}', self.stop_server),
         ])
         return web.AppRunner(app)
 

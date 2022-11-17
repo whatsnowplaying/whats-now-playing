@@ -2,10 +2,9 @@ Welcome to What's Now Playing!
 ==============================
 
 **What's Now Playing** is a tool written in Python to retrieve the current/last played
-song in Serato DJ, Virtual DJ and other software that writes M3U files,
-or MPRIS2-compatible software. It gives you full control to use or not use
-whatever features you like and fully customize the output to match your
-style. You can even pretend to be a fancy music channel:
+song in MIXXX, Serato, Traktor, Virtual DJ, and many other audio and DJ programs. It gives
+you full control to use or not use whatever features you like and fully customize the
+output to match your style. You can even pretend to be a fancy music channel:
 
 .. image:: gallery/images/mtv-with-cover.png
    :target: gallery/images/mtv-with-cover.png

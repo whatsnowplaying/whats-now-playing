@@ -9,12 +9,63 @@ import sys
 import sqlite3
 import time
 
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
+from watchdog.observers import Observer  # pylint: disable=import-error
+from watchdog.events import PatternMatchingEventHandler  # pylint: disable=import-error
 
-from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QStandardPaths  # pylint: disable=import-error, no-name-in-module
 
 SPLITSTR = '@@SPLITHERE@@'
+
+METADATALIST = [
+    'acoustidid',
+    'album',
+    'albumartist',
+    'artist',
+    'artistwebsites',
+    'artistlongbio',
+    'artistshortbio',
+    'bitrate',
+    'bpm',
+    'comments',
+    'composer',
+    'coverurl',
+    'date',
+    'deck',
+    'disc',
+    'disc_total',
+    'discsubtitle',
+    'filename',
+    'genre',
+    'hostfqdn',
+    'hostip',
+    'hostname',
+    'httpport',
+    'isrc',
+    'key',
+    'label',
+    'lang',
+    'length',
+    'musicbrainzalbumid',
+    'musicbrainzartistid',
+    'musicbrainzrecordingid',
+    'title',
+    'track',
+    'track_total',
+]
+
+LISTFIELDS = [
+    'artistwebsites',
+    'isrc',
+    'musicbrainzartistid',
+]
+
+# NOTE: artistfanartraw is never actually stored in this DB
+# but putting it here triggers side-effects to force it to be
+# treated as binary
+METADATABLOBLIST = [
+    'artistbannerraw', 'artistfanartraw', 'artistlogoraw', 'artistthumbraw',
+    'coverimageraw'
+]
 
 
 class DBWatcher:
@@ -68,57 +119,6 @@ class DBWatcher:
 class MetadataDB:
     """ Metadata DB module"""
 
-    METADATALIST = [
-        'acoustidid',
-        'album',
-        'albumartist',
-        'artist',
-        'artistwebsites',
-        'artistlongbio',
-        'artistshortbio',
-        'bitrate',
-        'bpm',
-        'comments',
-        'composer',
-        'coverurl',
-        'date',
-        'deck',
-        'disc',
-        'disc_total',
-        'discsubtitle',
-        'filename',
-        'genre',
-        'hostfqdn',
-        'hostip',
-        'hostname',
-        'httpport',
-        'isrc',
-        'key',
-        'label',
-        'lang',
-        'length',
-        'musicbrainzalbumid',
-        'musicbrainzartistid',
-        'musicbrainzrecordingid',
-        'title',
-        'track',
-        'track_total',
-    ]
-
-    LISTFIELDS = [
-        'artistwebsites',
-        'isrc',
-        'musicbrainzartistid',
-    ]
-
-    # NOTE: artistfanartraw is never actually stored in this DB
-    # but putting it here triggers side-effects to force it to be
-    # treated as binary
-    METADATABLOBLIST = [
-        'artistbannerraw', 'artistfanartraw', 'artistlogoraw',
-        'artistthumbraw', 'coverimageraw'
-    ]
-
     def __init__(self, databasefile=None, initialize=False):
 
         if databasefile:
@@ -143,13 +143,12 @@ class MetadataDB:
         def filterkeys(mydict):
             return {
                 key: mydict[key]
-                for key in MetadataDB.METADATALIST +
-                MetadataDB.METADATABLOBLIST if key in mydict
+                for key in METADATALIST + METADATABLOBLIST if key in mydict
             }
 
         logging.debug('Called write_to_metadb')
-        if (not metadata or not MetadataDB.METADATALIST
-                or 'title' not in metadata or 'artist' not in metadata):
+        if (not metadata or not METADATALIST or 'title' not in metadata
+                or 'artist' not in metadata):
             logging.debug('metadata is either empty or too incomplete')
             return
 
@@ -170,7 +169,7 @@ class MetadataDB:
             logging.debug('Adding record with %s/%s', mdcopy['artist'],
                           mdcopy['title'])
 
-            for key in MetadataDB.METADATABLOBLIST:
+            for key in METADATABLOBLIST:
                 if key not in mdcopy:
                     mdcopy[key] = None
 
@@ -235,13 +234,13 @@ class MetadataDB:
             if not row:
                 return None
 
-        metadata = {data: row[data] for data in MetadataDB.METADATALIST}
-        for key in MetadataDB.METADATABLOBLIST:
+        metadata = {data: row[data] for data in METADATALIST}
+        for key in METADATABLOBLIST:
             metadata[key] = row[key]
             if not metadata[key]:
                 del metadata[key]
 
-        for key in MetadataDB.LISTFIELDS:
+        for key in LISTFIELDS:
             metadata[key] = row[key]
             if metadata[key]:
                 metadata[key] = metadata[key].split(SPLITSTR)
@@ -266,8 +265,8 @@ class MetadataDB:
             cursor = connection.cursor()
 
             sql = 'CREATE TABLE currentmeta (id INTEGER PRIMARY KEY AUTOINCREMENT, '
-            sql += ' TEXT, '.join(MetadataDB.METADATALIST) + ' TEXT, '
-            sql += ' BLOB, '.join(MetadataDB.METADATABLOBLIST) + ' BLOB)'
+            sql += ' TEXT, '.join(METADATALIST) + ' TEXT, '
+            sql += ' BLOB, '.join(METADATABLOBLIST) + ' BLOB)'
 
             cursor.execute(sql)
             logging.debug('Cache db file created')
