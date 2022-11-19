@@ -298,9 +298,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         request.app['websockets'].add(websocket)
 
         try:
-            while not self.stopevent.is_set():
-                if self.stopevent.is_set():
-                    break
+            while not self.stopevent.is_set() and not self.stopevent.is_set():
                 metadata = request.app['metadb'].read_last_meta()
                 if not metadata or not metadata.get('artist'):
                     await asyncio.sleep(5)
