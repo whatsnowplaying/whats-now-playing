@@ -195,8 +195,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                                   error,
                                   exc_info=True)
 
-        tasks = []
         if self.config.cparser.value('artistextras/enabled', type=bool):
+            tasks = []
             with concurrent.futures.ThreadPoolExecutor(
                     max_workers=3, thread_name_prefix='artistextras') as pool:
                 for plugin in self.config.plugins['artistextras']:

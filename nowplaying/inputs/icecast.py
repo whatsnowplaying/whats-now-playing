@@ -67,7 +67,7 @@ class IcecastProtocol(asyncio.Protocol):
                 if page[:7] == b"\x03vorbis":
                     pageio.seek(7, os.SEEK_CUR)  # jump over header name
                     self._parse_vorbis_comment(pageio)
-                elif page[0:8] == b'OpusTags':  # parse opus metadata:
+                elif page[:8] == b'OpusTags':  # parse opus metadata:
                     pageio.seek(8, os.SEEK_CUR)  # jump over header name
                     self._parse_vorbis_comment(pageio)
 
@@ -140,7 +140,7 @@ class IcecastProtocol(asyncio.Protocol):
         vendor_length = struct.unpack('I', fh.read(4))[0]
         fh.seek(vendor_length, os.SEEK_CUR)  # jump over vendor
         elements = struct.unpack('I', fh.read(4))[0]
-        for i in range(elements):  # pylint: disable=unused-variable
+        for _ in range(elements):
             length = struct.unpack('I', fh.read(4))[0]
             try:
                 keyvalpair = codecs.decode(fh.read(length), 'UTF-8')
@@ -148,8 +148,7 @@ class IcecastProtocol(asyncio.Protocol):
                 continue
             if '=' in keyvalpair:
                 key, value = keyvalpair.split('=', 1)
-                fieldname = comment_type_to_attr_mapping.get(key.lower())
-                if fieldname:
+                if fieldname := comment_type_to_attr_mapping.get(key.lower()):
                     METADATA[fieldname] = value
 
 
@@ -187,8 +186,7 @@ class Traktor:
         with sqlite3.connect(self.databasefile) as connection:
             cursor = connection.cursor()
             sql = 'CREATE TABLE IF NOT EXISTS traktor ('
-            sql += ' TEXT, '.join(METADATALIST)
-            sql += ' TEXT, '
+            sql += ' TEXT, '.join(METADATALIST) + ' TEXT, '
             sql += 'id INTEGER PRIMARY KEY AUTOINCREMENT)'
             cursor.execute(sql)
             connection.commit()
@@ -311,12 +309,11 @@ class Plugin(InputPlugin):
         for radio in ['none', 'traktor']:
             func = getattr(qwidget, f'{radio}_button')
             func.setChecked(False)
-        mode = self.config.cparser.value('icecast/mode')
-        if not mode:
-            qwidget.none_button.setChecked(True)
-        else:
+        if mode := self.config.cparser.value('icecast/mode'):
             func = getattr(qwidget, f'{mode}_button')
             func.setChecked(True)
+        else:
+            qwidget.none_button.setChecked(True)
 
         qwidget.traktor_collection_lineedit.setText(
             self.config.cparser.value('icecast/traktor-collections'))

@@ -90,14 +90,13 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 self.input = self.plugins[
                     f'nowplaying.inputs.{previousinput}'].Plugin()
                 logging.debug('Starting %s plugin', previousinput)
-                if self.input:
-                    try:
-                        await self.input.start()
-                    except Exception as error:  # pylint: disable=broad-except
-                        logging.debug('cannot start %s: %s', previousinput,
-                                      error)
-                        continue
-                else:
+                if not self.input:
+                    continue
+
+                try:
+                    await self.input.start()
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.debug('cannot start %s: %s', previousinput, error)
                     continue
 
             try:
