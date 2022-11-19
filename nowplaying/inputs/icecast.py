@@ -100,6 +100,7 @@ class IcecastProtocol(asyncio.Protocol):
     def _query_parse(data):
         ''' try to parse the query '''
         global METADATA  # pylint: disable=global-statement
+        logging.debug('Processing updinfo')
 
         METADATA = {}
         text = data.decode('utf-8').replace('GET ',
