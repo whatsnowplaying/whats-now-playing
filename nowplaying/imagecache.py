@@ -439,11 +439,21 @@ VALUES (?,?,?);
                     newset = []
                     newdataset = []
                     for entry in dataset:
-                        newset.append(entry['url'])
+                        newset.append({
+                            'url': entry['url'],
+                            'time': int(time.time())
+                        })
                         if entry['url'] == 'STOPWNP':
                             endloop = True
                             break
-                        if entry['url'] in oldset:
+                        oldcopy = oldset
+                        for oldentry in oldcopy:
+                            if int(time.time()) - oldentry['time'] > 180:
+                                oldset.remove(oldentry)
+                                logging.debug(
+                                    'removing %s from the previously processed queue',
+                                    oldentry['url'])
+                        if not any(u['url'] == entry['url'] for u in oldset):
                             logging.debug('skipping in-progress url %s ',
                                           entry['url'])
                         else:
