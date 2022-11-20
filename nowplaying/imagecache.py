@@ -453,7 +453,7 @@ VALUES (?,?,?);
                                 logging.debug(
                                     'removing %s from the previously processed queue',
                                     oldentry['url'])
-                        if not any(u['url'] == entry['url'] for u in oldset):
+                        if all(u['url'] != entry['url'] for u in oldset):
                             logging.debug('skipping in-progress url %s ',
                                           entry['url'])
                         else:
