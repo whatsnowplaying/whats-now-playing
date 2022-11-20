@@ -430,7 +430,7 @@ VALUES (?,?,?);
         endloop = False
         oldset = []
         with concurrent.futures.ProcessPoolExecutor(
-                max_workers=maxworkers) as executor:
+                    max_workers=maxworkers) as executor:
             while not endloop and not self.stopevent.is_set():
                 if dataset := self.get_next_dlset():
                     # sometimes images are downloaded but not
@@ -453,7 +453,7 @@ VALUES (?,?,?);
                                 logging.debug(
                                     'removing %s from the previously processed queue',
                                     oldentry['url'])
-                        if not any(u['url'] == entry['url'] for u in oldset):
+                        if all(u['url'] != entry['url'] for u in oldset):
                             logging.debug('skipping in-progress url %s ',
                                           entry['url'])
                         else:
