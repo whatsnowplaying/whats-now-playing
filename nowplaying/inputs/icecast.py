@@ -255,7 +255,6 @@ class Plugin(InputPlugin):
         self.mode = None
         self.extradb = None
         self.qwidget = None
-        self._set_mode()
         self.lastmetadata = {}
 
     def _set_mode(self):
@@ -388,6 +387,7 @@ class Plugin(InputPlugin):
 
     async def start(self):
         ''' any initialization before actual polling starts '''
+        self._set_mode()
         loop = asyncio.get_running_loop()
         port = self.config.cparser.value('icecast/port',
                                          type=int,

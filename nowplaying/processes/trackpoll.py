@@ -86,6 +86,9 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
             if not previousinput or previousinput != self.config.cparser.value(
                     'settings/input'):
+                if self.input:
+                    logging.debug('stopping %s', previousinput)
+                    await self.input.stop()
                 previousinput = self.config.cparser.value('settings/input')
                 self.input = self.plugins[
                     f'nowplaying.inputs.{previousinput}'].Plugin()
