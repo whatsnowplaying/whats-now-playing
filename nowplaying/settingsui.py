@@ -793,7 +793,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self.upd_win()
         self.qtui.close()
 
-        if not self.config.file:
+        if not self.config.cparser.value('settings/input', defaultValue=None):
             self.tray.cleanquit()
 
     @Slot()
@@ -819,7 +819,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             self.errormessage.showMessage(error.message)
             return
 
-        if self.widgets['general'].textoutput_lineedit.text() == "":
+        if not self.widgets['source'].sourcelist.currentItem():
             self.errormessage.showMessage('File to write is required')
             return
 

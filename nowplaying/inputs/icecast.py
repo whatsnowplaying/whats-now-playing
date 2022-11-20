@@ -257,6 +257,23 @@ class Plugin(InputPlugin):
         self.qwidget = None
         self.lastmetadata = {}
 
+    def install(self):
+        ''' auto-install for Icecast '''
+        nidir = pathlib.Path.home().joinpath('Documents', 'Native Instruments')
+
+        if nidir.exists():
+            for entry in os.scandir(nidir):
+                if entry.is_dir() and 'Traktor' in entry.name:
+                    cmlpath = pathlib.Path(entry).joinpath('collection.nml')
+                    if cmlpath.exists():
+                        self.config.cparser.value(
+                            'icecast/traktor-collections', str(cmlpath))
+                        self.config.cparser.value('settings/input', 'icecast')
+                        self.config.cparser.value('icecast/mode', 'traktor')
+                        return True
+
+        return False
+
     def _set_mode(self):
         mode = self.config.cparser.value('icecast/mode')
         logging.debug('icecast mode: %s', mode)

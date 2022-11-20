@@ -183,6 +183,10 @@ class Plugin(InputPlugin):
         self.mpris2 = MPRIS2Handler()
         self.dbus_status = True
 
+    def install(self):
+        ''' Auto-install for MPRIS2 '''
+        return False
+
     def gethandler(self):
         ''' setup the MPRIS2Handler for this session '''
 

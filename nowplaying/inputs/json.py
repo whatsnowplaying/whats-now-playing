@@ -16,6 +16,10 @@ class Plugin(InputPlugin):
         ''' no custom init '''
         super().__init__(config=config, qsettings=qsettings)
 
+    def install(self):
+        ''' auto-install '''
+        return False
+
 #### Settings UI methods
 
     def defaults(self, qsettings):

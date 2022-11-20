@@ -22,6 +22,12 @@ class InputPlugin():
         if not config:  # pragma: no cover
             self.config = nowplaying.config.ConfigFile()
 
+#### Autoinstallation methods ####
+
+    def install(self):  # pylint: disable=no-self-use
+        ''' if a fresh install, run this '''
+        return False
+
 #### Settings UI methods
 
     def defaults(self, qsettings):

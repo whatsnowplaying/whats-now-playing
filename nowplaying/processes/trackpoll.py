@@ -74,9 +74,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         socket.setdefaulttimeout(5.0)
         previousinput = None
 
-        # sleep until we have something to write
-        while not self.config.file and not self.stopevent.is_set(
-        ) and not self.config.getpause():
+        # sleep until we have something to do
+        while not self.stopevent.is_set() and not self.config.getpause(
+        ) and not self.config.cparser.value('settings/input',
+                                            defaultValue=None):
             await asyncio.sleep(.5)
             self.config.get()
 
@@ -297,13 +298,15 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 'coverimageraw']
 
     def _write_to_text(self):
-        if not self.previoustxttemplate or self.previoustxttemplate != self.config.txttemplate:
-            self.txttemplatehandler = nowplaying.utils.TemplateHandler(
-                filename=self.config.txttemplate)
-            self.previoustxttemplate = self.config.txttemplate
-        nowplaying.utils.writetxttrack(filename=self.config.file,
-                                       templatehandler=self.txttemplatehandler,
-                                       metadata=self.currentmeta)
+        if self.config.file:
+            if not self.previoustxttemplate or self.previoustxttemplate != self.config.txttemplate:
+                self.txttemplatehandler = nowplaying.utils.TemplateHandler(
+                    filename=self.config.txttemplate)
+                self.previoustxttemplate = self.config.txttemplate
+            nowplaying.utils.writetxttrack(
+                filename=self.config.file,
+                templatehandler=self.txttemplatehandler,
+                metadata=self.currentmeta)
 
     async def _half_delay_write(self):
         try:

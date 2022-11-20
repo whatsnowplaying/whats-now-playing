@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 ''' A _very_ simple and incomplete parser for Serato Live session files '''
 
+#pylint: disable=too-many-lines
+
 import binascii
 import collections
 import datetime
@@ -766,6 +768,19 @@ class Plugin(InputPlugin):
         self.serato = None
         self.mixmode = "newest"
         self.qwidget = None
+
+    def install(self):
+        ''' auto-install for Serato '''
+        seratodir = pathlib.Path(
+            QStandardPaths.standardLocations(
+                QStandardPaths.MusicLocation)[0]).joinpath("_Serato_")
+
+        if seratodir.exists():
+            self.config.cparser.value('settings/input', 'serato')
+            self.config.cparser.value('serato/libpath', str(seratodir))
+            return True
+
+        return False
 
     def gethandler(self):
         ''' setup the SeratoHandler for this session '''

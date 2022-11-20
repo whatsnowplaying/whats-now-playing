@@ -23,6 +23,7 @@ TIMEDELTA = datetime.timedelta(minutes=10)
 def trysocket():
     ''' try using socket.*; this works most of the time '''
     global HOSTFQDN, HOSTNAME, HOSTIP  #pylint: disable=global-statement
+    socket.setdefaulttimeout(5)
     try:
         HOSTNAME = socket.gethostname()
     except Exception as error:  # pylint: disable = broad-except
@@ -43,7 +44,7 @@ def trysocket():
 def trynetifaces():
     ''' try using socket.*; this works most of the time '''
     global HOSTIP  #pylint: disable=global-statement
-
+    socket.setdefaulttimeout(5)
     try:
         gws = netifaces.gateways()
         defnic = gws['default'][netifaces.AF_INET][1]
@@ -73,6 +74,8 @@ def fallback():
 def gethostmeta():
     ''' resolve hostname/ip of this machine '''
     global TIMESTAMP  #pylint: disable=global-statement
+
+    logging.debug('Attempting to get DNS information')
 
     if not TIMESTAMP or (datetime.datetime.now() - TIMESTAMP >
                          TIMEDELTA) or not HOSTNAME:

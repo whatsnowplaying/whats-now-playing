@@ -147,7 +147,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
         settings.setValue('settings/delay', '1.0')
         settings.setValue('settings/initialized', False)
-        settings.setValue('settings/input', 'serato')
         settings.setValue('settings/loglevel', self.loglevel)
         settings.setValue('settings/notif', self.notif)
         settings.setValue('settings/stripextras', False)

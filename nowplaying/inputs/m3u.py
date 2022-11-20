@@ -3,6 +3,7 @@
 
 import logging
 import os
+import pathlib
 
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
@@ -35,6 +36,17 @@ class Plugin(InputPlugin):
         self.observer = None
         self.qwidget = None
         self._reset_meta()
+
+    def install(self):
+        ''' locate Virtual DJ '''
+        vdjdir = pathlib.Path.home().joinpath('Documents', 'VirtualDJ',
+                                              'History')
+        if vdjdir.exists():
+            self.config.cparser.value('settings/input', 'm3u')
+            self.config.cparser.value('m3u/directory', str(vdjdir))
+            return True
+
+        return False
 
     @staticmethod
     def _reset_meta():
