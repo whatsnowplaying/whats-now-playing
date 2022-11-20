@@ -296,9 +296,10 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
         request.app['websockets'].add(websocket)
+        endloop = False
 
         try:
-            while not self.stopevent.is_set():
+            while not self.stopevent.is_set() or endloop:
                 metadata = request.app['metadb'].read_last_meta()
                 if not metadata or not metadata.get('artist'):
                     await asyncio.sleep(5)
@@ -320,7 +321,11 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 else:
                     metadata['artistfanartraw'] = TRANSPARENT_PNG_BIN
 
-                await websocket.send_json(self._transparentifier(metadata))
+                try:
+                    await websocket.send_json(self._transparentifier(metadata))
+                except ConnectionResetError:
+                    logging.debug('Lost a client')
+                    endloop = True
                 delay = request.app['config'].cparser.value(
                     'artistextras/fanartdelay', type=int)
                 await asyncio.sleep(delay)
