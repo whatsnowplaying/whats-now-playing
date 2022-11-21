@@ -203,6 +203,7 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
             self.data = None
             self.chunkheader = None
 
+
     def process(self):  #pylint: disable=too-many-branches,too-many-statements
         ''' process the 'adat' chunk '''
 
@@ -216,90 +217,84 @@ class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attribute
         self.row = self._num()
 
         while self.bytecounter < len(self.data):
-            field = self._num()
-
-            # Python's lack of 'case' is annoying. :(
-            # opted to just use simple if/elif ladder
-            # rather than anything particularly fancy
-
-            if field == 2:
-                self.pathstr = self._string()
-            elif field == 3:
-                self.location = self._string()
-            elif field == 4:
-                self.filename = self._string()
-            elif field == 6:
-                self.title = self._string()
-            elif field == 7:
-                self.artist = self._string()
-            elif field == 8:
-                self.album = self._string()
-            elif field == 9:
-                self.genre = self._string()
-            elif field == 10:
-                self.length = self._string()
-            elif field == 11:
-                self.filesize = self._string()
-            elif field == 13:
-                self.bitrate = self._string()
-            elif field == 14:
-                self.frequency = self._string()
-            elif field == 15:
-                self.bpm = self._numfield()
-            elif field == 16:  # pragma: no cover
-                self.field16 = self._hex()
-            elif field == 17:
-                self.comments = self._string()
-            elif field == 18:
-                self.lang = self._string()
-            elif field == 19:
-                self.grouping = self._string()
-            elif field == 20:
-                self.remixer = self._string()
-            elif field == 21:
-                self.label = self._string()
-            elif field == 22:
-                self.composer = self._string()
-            elif field == 23:
-                self.date = self._string()
-            elif field == 28:
-                self.starttime = self._timestamp()
-            elif field == 29:
-                self.endtime = self._timestamp()
-            elif field == 31:
-                self.deck = self._numfield()
-            elif field == 39:
-                self.field39 = self._string_nodecode()
-            elif field == 45:
-                self.playtime = self._numfield()
-            elif field == 48:
-                self.sessionid = self._numfield()
-            elif field == 50:
-                self.played = self._bool()
-            elif field == 51:
-                self.key = self._string()
-            elif field == 52:
-                self.added = self._bool()
-            elif field == 53:
-                self.updatedat = self._timestamp()
-            elif field == 63:
-                self.playername = self._string()
-            elif field == 64:
-                self.commentname = self._string()
-            elif field == 68:
-                self.field68 = self._string_nodecode()
-            elif field == 69:
-                self.field69 = self._string_nodecode()
-            elif field == 70:
-                self.field70 = self._string_nodecode()
-            elif field == 72:
-                self.field72 = self._string_nodecode()
-            elif field == 78:
-                self.field78 = self._numfield()
-            else:
-                logging.debug('Unknown field: %s', field)
-                self._debug()
-                break
+            try:
+                match self._num():
+                    case 2:
+                        self.pathstr = self._string()
+                    case 3:
+                        self.location = self._string()
+                    case 4:
+                        self.filename = self._string()
+                    case 6:
+                        self.title = self._string()
+                    case 7:
+                        self.artist = self._string()
+                    case 8:
+                        self.album = self._string()
+                    case 9:
+                        self.genre = self._string()
+                    case 10:
+                        self.length = self._string()
+                    case 11:
+                        self.filesize = self._string()
+                    case 13:
+                        self.bitrate = self._string()
+                    case 14:
+                        self.frequency = self._string()
+                    case 15:
+                        self.bpm = self._numfield()
+                    case 16:  # pragma: no cover
+                        self.field16 = self._hex()
+                    case 17:
+                        self.comments = self._string()
+                    case 18:
+                        self.lang = self._string()
+                    case 19:
+                        self.grouping = self._string()
+                    case 20:
+                        self.remixer = self._string()
+                    case 21:
+                        self.label = self._string()
+                    case 22:
+                        self.composer = self._string()
+                    case 23:
+                        self.date = self._string()
+                    case 28:
+                        self.starttime = self._timestamp()
+                    case 29:
+                        self.endtime = self._timestamp()
+                    case 31:
+                        self.deck = self._numfield()
+                    case 39:
+                        self.field39 = self._string_nodecode()
+                    case 45:
+                        self.playtime = self._numfield()
+                    case 48:
+                        self.sessionid = self._numfield()
+                    case 50:
+                        self.played = self._bool()
+                    case 51:
+                        self.key = self._string()
+                    case 52:
+                        self.added = self._bool()
+                    case 53:
+                        self.updatedat = self._timestamp()
+                    case 63:
+                        self.playername = self._string()
+                    case 64:
+                        self.commentname = self._string()
+                    case 68:
+                        self.field68 = self._string_nodecode()
+                    case 69:
+                        self.field69 = self._string_nodecode()
+                    case 70:
+                        self.field70 = self._string_nodecode()
+                    case 72:
+                        self.field72 = self._string_nodecode()
+                    case 78:
+                        self.field78 = self._numfield()
+            except Exception as error: #pylint: disable=broad-except
+                logging.debug(error)
 
         # what people would expect in a filename meta
         # appears to be in pathstr
@@ -621,8 +616,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             logging.debug('in remote mode; skipping')
             return None, None
 
-        if not self.lastfetched or \
-           LASTPROCESSED >= self.lastfetched:
+        if not self.lastfetched or LASTPROCESSED >= self.lastfetched:
             self.lastfetched = LASTPROCESSED + 1
             self.computedecks(deckskiplist=deckskiplist)
             self.computeplaying()
@@ -665,12 +659,8 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
         # cleanup
         tdat = str(item)
-        tdat = tdat.replace("['", "")\
-                   .replace("']", "")\
-                   .replace("[]", "")\
-                   .replace("\\n", "")\
-                   .replace("\\t", "")\
-                   .replace("[\"", "").replace("\"]", "")
+        for char in ["['", "']", "[]", "\\n", "\\t", "[\"", "\"]"]:
+            tdat = tdat.replace(char, "")
         tdat = tdat.strip()
 
         if not tdat:
