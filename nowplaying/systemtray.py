@@ -208,7 +208,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
                 title = ''
 
             if metadata['artist'] == LASTANNOUNCED['artist'] and \
-               metadata['title'] == LASTANNOUNCED['title']:
+                   metadata['title'] == LASTANNOUNCED['title']:
                 return
 
             LASTANNOUNCED['artist'] = metadata['artist']

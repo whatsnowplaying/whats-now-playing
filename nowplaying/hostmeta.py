@@ -80,10 +80,10 @@ def gethostmeta():
     if not TIMESTAMP or (datetime.datetime.now() - TIMESTAMP >
                          TIMEDELTA) or not HOSTNAME:
         trysocket()
-        if not HOSTIP and IFACES:
-            trynetifaces()
-
         if not HOSTIP:
+            if IFACES:
+                trynetifaces()
+
             fallback()
         TIMESTAMP = datetime.datetime.now()
     return {'hostname': HOSTNAME, 'hostfqdn': HOSTFQDN, 'hostip': HOSTIP}
