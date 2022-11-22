@@ -7,6 +7,7 @@ Outputs
    :maxdepth: 2
    :caption: Contents:
 
+   discord
    obswebsocket
    twitchbot
    webserver

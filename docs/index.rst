@@ -24,6 +24,7 @@ To get started, begin with `Quickstart <quickstart.html>`_.
    settings
    input/index
    output/index
+   requests
    filter
    recognition/index
    extras/index

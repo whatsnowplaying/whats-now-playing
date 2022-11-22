@@ -132,7 +132,7 @@ class UpgradeConfig:
                 continue
 
             if oldval:
-                logging.debug('Setting %s to %s', newkey, oldval)
+                logging.debug('Setting %s from %s', newkey, oldkey)
                 config.setValue(newkey, oldval)
             else:
                 logging.debug('%s does not exist', oldkey)

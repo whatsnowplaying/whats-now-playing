@@ -1,8 +1,13 @@
 TwitchBot
 =========
 
-**What's Now Playing** integrates with Twitch chat by incorporating a simple
-bot. It takes any command and looks for an equivalent `twitchbot` template file.
+**What's Now Playing** integrates with Twitch with channel point redemptions and/or chat.  They
+may be run independently or run both at the same time.
+
+Twitch Chat Support
+-------------------
+
+The chat bot support includes track announcement as well as interactive features.
 
 For example, in chat, if the user types::
 
@@ -12,12 +17,26 @@ For example, in chat, if the user types::
 template values in it.  The Twitchbot settings section sets permissions
 for commands.
 
-Additionally, the Twitchbot can send an announcement template to chat when **What's Now Playing** detects a song change.
+Additionally, the Twitchbot can send an announcement template to chat when **What's Now Playing** detects a song change
+or when a track Request has been fulfilled.
 
-Creating a Bot Account
-----------------------
 
-#. Create a new, dedicated Twitch account for **What's Now Playing**. Be sure to enable:
+Twitch Channel Point Redemptions
+--------------------------------
+
+Currently, channel point redemptions allow for users to request songs, either by
+artist/title or picking a random song in a 'roulette' mode when that redemption
+is tied to a supported DJ's software crate/playlist.  For more information see
+`Requests <../requests/>`_.
+
+Authentication
+--------------
+
+You can choose to either use your own account or create a new account for your bot.  It is generally recommended
+to create a new account and these instructions are following those guidelines.
+
+#. Follow the Twitch process for creating a new account.
+#. On the new account, be sure to enable:
 
    * Multiple logins per email
    * Two-factor authentication (2FA)
@@ -26,7 +45,7 @@ Creating a Bot Account
    :target: images/twitchbot-account-settings.png
    :alt: Account Settings for bots
 
-#. On the bot's account, go to `Twitch Dev Settings <https://dev.twitch.tv>`_ to
+#. Go to `Twitch Dev Settings <https://dev.twitch.tv>`_ to
    register **What's Now Playing**.
 
    #. Click Login in the upper right
@@ -34,10 +53,11 @@ Creating a Bot Account
    #. Click on "Applications"
    #. Click on "Register Your Application"
    #. Name: login name used by the bot account
-   #. OAuth Redirect URLs: http://localhost
+   #. OAuth Redirect URLs: http://localhost:17563
    #. Category: Chat Bot
    #. Create
-   #. Click on "Manage" and save a copy of the Client ID
+   #. Click on "Manage" and save a copy of the Client ID.
+   #. Click on 'New Secret'. Save a copy of the Client Secret.
 
 #. Get an OAuth Token:
 
@@ -45,47 +65,61 @@ Creating a Bot Account
    #. Authentication
    #. Copy the Token down
 
-At the end of this process, you should have four pieces of information:
+#. At the end of this process, you should have four pieces of information:
 
-* Bot's Username:
-* Bot's ClientID:
-* Bot's Token:
-* Your Twitch Stream/Channel:
+  * Your Twitch Stream/Channel:
+  * Bot's Client ID:
+  * Bot's Client Secret:
+  * Bot's Token:
+
+#. Open Settings from the **What's Now Playing** icon.
+#. Select Twitch from the list of settings available.
+#. Fill in the information in **What's Now Playing**'s  Twitch setting:
+
+
+.. image:: images/twitchbot_auth.png
+   :target: images/twitchbot_auth.png
+   :alt: What's Now Playing's Twitch auth panel
+
 
 You will need to provide all four to the Twitchbot Settings.  Additionally,
-you should consider making the bot a moderator to avoid limits, such as
-the message posting rate.
+you should consider making the bot a moderator on your channel to avoid limits,
+such as the message posting rate, URL filters, etc.
 
-Installation
-------------
+For certain services, such as channel point redemptions, launching **What's Now Playing**
+will also launch a browser in order to authenticate the bot to your channel.
+
+Twitch Chat Configuration
+-------------------------
 
 #. Open Settings from the **What's Now Playing** icon
-#. Select Twitchbot from the list of available input sources.
+#. Select Twitch Chat from the list of settings available.
 
-.. image:: images/twitchbot.png
-   :target: images/twitchbot.png
-   :alt: TwitchBot
+.. image:: images/twitchbot_chat.png
+   :target: images/twitchbot_chat.png
+   :alt: Twitch Chat Settings
 
 #. Check Enable
-#. Provide the four pieces of authentication information above.
 #. To have the bot announce new tracks in chat, select the template.
-#. Click Save
+
+You are now ready to set permissions on user interactive commands.
 
 Setting Permissions
--------------------
+^^^^^^^^^^^^^^^^^^^
 
-By default, all commands are available to everyone on your channel's chat.
-If you wish to limit a command, add the command to the Twitchbot settings,
-and check the types of users who should execute those commands.
+Upon launch, **What's Now Playing** will create an entry for every `twitchbot_*.txt` file
+in the template directory.  These entries will all be set to completely disabled.  In order
+to enable them, you will need to check the appropriate field.
 
-Built-in Commands
------------------
+Twitchbot template files added while **What's Now Playing** is running will let anyone
+use them until the next run.  At the next run, it will again change them back to no permissions
+granted.
 
-Post-v3.0.2, the Twitchbot will always respond to the command 'whatsnowplayingversion' . It will report
-the version that is running.
+Once the permissions are set and Save is clicked, those permissions will be preserved on
+every restart.
 
 Adding New Commands
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 Create a new file in **What's Now Playing**'s``templates`` directory
 (``Documents/Now Playing/template``) called ``twitchbot_yourcommand.txt``
@@ -94,8 +128,19 @@ executed by users that have the appropriate template code inside it.
 Note that all text will be smashed together as a single line when sent to Twitch, so
 be mindful of where to put spaces.
 
+Built-in Commands
+^^^^^^^^^^^^^^^^^
+
+Post-v3.0.2, the Twitchbot will always respond to the command 'whatsnowplayingversion' . It
+will report the version that is running.
+
+
 Troubleshooting
----------------
+^^^^^^^^^^^^^^^
+
+* To test if the chat bot is working, you should be able to use the '!whatsnowplayingversion'
+  command.  **What's Now Playing** only needs to be running.  You do not have to be live
+  streaming to test chat.
 
 * If the bot never connects, try getting a new OAuth token.
 
@@ -104,7 +149,7 @@ Troubleshooting
 
 
 Additional Variables
---------------------
+^^^^^^^^^^^^^^^^^^^^
 
 The TwitchBot adds the following additional values for templating purposes:
 
@@ -152,7 +197,7 @@ results in::
   bot: @modernmeerkat sends hugs to @person1 @person2 @person3
 
 Announcing Websites
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 You may want to add support for announcing the website data as part of the Twitchbot
 track announcement.  You can pick and choose which websites are printed by taking

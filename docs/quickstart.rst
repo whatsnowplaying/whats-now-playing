@@ -43,12 +43,13 @@ Here are the steps to get a basic installation working:
 
 #. Download and unpack the binaries from `releases page <https://github.com/whatsnowplaying/whats-now-playing/releases>`_.
 #. Launch the application
+#. The software will attempt to pre-configure itself for whatever software you have installed.  Note that in the case of Traktor, this work will including building an index for file lookup. For large Traktor installations, that may take a while.
 #. It should bring up the `Settings <settings.html>`_
-#. Configure a File to Write.
-#. Configure a `Source <input/index.html>`_
+#. (Re-)Configure a `Source <input/index.html>`_
+#. Configure an output: a file to write, the webserver, the twitchbot, etc ...
 #. Save
 #. Bring up your DJ software and play a song.
-#. The file you picked to write should now have the song contents a few seconds after the DJ software updates its files. (Virtual DJ has a default 45-second delay, Serato updates on deck update.)
+#. The output you picked should now have the song contents after the DJ software updates its files. (Depending upon the output option and the DJ software in use, time may vary.)
 
 
 At this point, you are ready to customize via `Templates <templates.html>`_ and enable other features!

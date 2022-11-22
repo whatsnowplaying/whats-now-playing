@@ -1,23 +1,49 @@
 
 # Changelog
 
-## Version 3.2.0 - Unreleased
+## Version 4.0.0 - Unreleased
 
-* Support for Icecast, enabling butt, MIXXX, Traktor,
+### Major Changes
+
+* New logic for first-time users to try and pre-configure
+  some things.  This change also removes the requirement
+  of having a file that has to be written.
+* Support for Icecast which enables butt, MIXXX, Traktor,
   and many, many more.
-* OBS Websocket v5 support
+* OBS Websocket v5 support for OBS Studio v28+. Older versions
+  of OBS Websocket are not supported.
+* New UI and Twitch support for requests, including
+  randomized requests tied to crates/playlists.
+* New Discord support to update a bot's status
+* New two computer setup that no longer requires
+  using file sharing tricks using the new Beam executable
+  and Beam input source.
+* Upgrades from v1 and v2 are no longer supported.  You will need
+  to upgrade to v3 first if you wish to save your settings.
+
+### Internal/Minor Changes
+
+* Some new and updated templates to clean up some things and to
+  show off the new features.
 * Major structural changes internally over a series of
   code changes so that TrackPoll may support asyncio. A
   side benefit has been that various parts of the system
   are just generally faster, more efficient.
 * Metadata processing finally got some (simple) parallelization.
-* Subprocess handling is now much more streamlined.
+* Subprocess handling is now much more streamlined and should
+  be less impacted by crashes.
+* Serato processing has gotten a major overhaul.
+* Artist URLs should now be normalized as well as better
+  de-duplication (e.g., http vs. https to the same site)
 * Moved various bits of source around in the source tree
   to ease maintenance.
+* MusicBrainz should be more reliable in a few instances.
 * A few more things are now using pathlib.
 * Better error reporting/capturing for a few things.
 * A simple JSON-based source plug-in to help test things out.
-* Python v3.10 is now required
+* The usual doc updates to with the changes.
+* Several dependency updates.
+* Python v3.10 is now required.
 
 ## Version 3.1.3 - 2023-01-03
 

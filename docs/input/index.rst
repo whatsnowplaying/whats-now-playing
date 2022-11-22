@@ -13,4 +13,5 @@ Each has its own screen to configure them.
    m3u
    mpris2
    serato
+   traktor
    virtualdj
