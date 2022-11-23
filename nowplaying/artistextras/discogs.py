@@ -67,6 +67,7 @@ class Plugin(ArtistExtrasPlugin):
         if not self.client:
             self.client = nowplaying.vendor.discogs_client.Client(
                 f'whatsnowplaying/{self.version}', user_token=apikey)
+            self.client.set_timeout(connect=3, read=2)
 
         artistresultlist = self._find_discogs_releaselist(metadata)
 
