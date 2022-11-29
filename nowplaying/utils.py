@@ -25,12 +25,17 @@ STRIPRELIST = [
 
 class HTMLFilter(HTMLParser):
     ''' simple class to strip HTML '''
-    text = ""
+
+    def __init__(self, convert_charrefs=True):
+        super().__init__(convert_charrefs=convert_charrefs)
+        self.text = ""
 
     def handle_data(self, data):
+        ''' handle data '''
         self.text += data
 
-    def error(self, message):  # pylint: disable=no-self-use
+    @staticmethod
+    def error(message):
         ''' handle error messages '''
         logging.debug('HTMLFilter: %s', message)
 
