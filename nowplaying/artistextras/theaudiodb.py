@@ -24,13 +24,13 @@ class Plugin(ArtistExtrasPlugin):
 
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
-        self.htmlfilter = nowplaying.utils.HTMLFilter()
         self.fnstr = None
         self.there = re.compile('(?i)^the ')
 
     def _filter(self, text):
-        self.htmlfilter.feed(text)
-        return self.htmlfilter.text
+        htmlfilter = nowplaying.utils.HTMLFilter()
+        htmlfilter.feed(text)
+        return htmlfilter.text
 
     @staticmethod
     def _fetch(apikey, api):
