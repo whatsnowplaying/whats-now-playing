@@ -156,8 +156,10 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
                 await self.client.connect()
                 await self.client.wait_until_identified()
             except Exception as error:  # pylint: disable=broad-except
+                # do not stop here in case OBS just isn't running yet
+                # (initial launch case)
                 logging.debug(error)
-                self.stopevent.set()
+                asyncio.sleep(3)
 
     def stop(self):
         ''' exit the thread '''
