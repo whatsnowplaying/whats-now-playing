@@ -24,3 +24,8 @@ addopts = [
 ]
 log_level = "DEBUG"
 asyncio_mode = "strict"
+
+[tool.pylint.main]
+# List of plugins (as comma separated values of python module names) to load,
+# usually to register additional checkers.
+load-plugins = [ "pylint.extensions.no_self_use" ]
