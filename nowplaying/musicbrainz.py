@@ -40,8 +40,7 @@ class MusicBrainzHelper():
 
             musicbrainzngs.set_useragent(
                 'whats-now-playing',
-                nowplaying.version.get_versions()['version'],
-                contact=emailaddress)
+                nowplaying.version.get_versions()['version'], emailaddress)
             self.emailaddressset = True
 
     def recognize(self, metadata):
@@ -118,6 +117,8 @@ class MusicBrainzHelper():
 
         def releaselookup_noartist(recordingid):
             mbdata = None
+
+            self._setemail()
 
             try:
                 mbdata = musicbrainzngs.browse_releases(
@@ -212,6 +213,8 @@ class MusicBrainzHelper():
 
     def artistids(self, idlist):
         ''' add data available via musicbrainz artist ids '''
+
+        self._setemail()
 
         if not self.config.cparser.value('musicbrainz/enabled', type=bool):
             return None
