@@ -6,9 +6,7 @@ from codecs import (
 )
 from functools import reduce
 
-from nowplaying.vendor.tbm_utils import datareader
-from nowplaying.vendor.tbm_utils import humanize_duration as tbm_humanize_duration
-
+from .tbm_utils import datareader
 
 def apply_unsynchronization(data):
 	"""Apply ID3v2 unsynchronization scheme to data."""
@@ -233,10 +231,23 @@ def humanize_bitrate(bitrate):
 
 
 def humanize_duration(duration):
-	"""Humanize duration from integer."""
+	if duration == 0:
+		return '00:00'
+	if not duration:
+		return None
+	if duration // 3600:
+		hours = int(duration // 3600)
+		minutes = int(duration % 3600 // 60)
+		seconds = round(duration % 3600 % 60)
 
-	if duration is not None:
-		return tbm_humanize_duration(duration)
+		return f'{hours:02d}:{minutes:02d}:{seconds:02d}'
+	elif duration // 60:
+		minutes = int(duration // 60)
+		seconds = round(duration % 60)
+
+		return f'{minutes:02d}:{seconds:02d}'
+	else:
+		return f'00:{round(duration):02d}'
 
 
 def humanize_sample_rate(sample_rate):

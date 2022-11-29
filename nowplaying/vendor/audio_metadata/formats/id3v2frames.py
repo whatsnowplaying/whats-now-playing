@@ -79,9 +79,8 @@ from attr import (
 	attrib,
 	attrs,
 )
-from pendulum.parsing import ParserError
-from pendulum.parsing.iso8601 import parse_iso8601
-from nowplaying.vendor.tbm_utils import (
+from datetime import datetime
+from ..tbm_utils import (
 	AttrMapping,
 	datareader,
 )
@@ -1419,8 +1418,8 @@ class ID3v2TimestampFrame(ID3v2Frame):
 	def _validate_value(self, attribute, value):
 		for v in value:
 			try:
-				parse_iso8601(v)
-			except ParserError:
+				datetime.fromisoformat(v.replace('Z', '+00:00'))
+			except:
 				raise TagError("Timestamp frame values must conform to the ID3v2-compliant subset of ISO 8601.")
 
 	@datareader

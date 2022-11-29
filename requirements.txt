@@ -33,13 +33,12 @@ vendoring==1.2.0
 watchdog==2.1.9
 
 #
-# audio-metadata and tbm-utils
+# audio-metadata
 #
 attrs>=18.2
 bidict==0.*
 bitstruct>=6.0,<9.0
 more-itertools>=4.0,<9.0
-pendulum>=2.0,<=3.0,!=2.0.5,!=2.1.0  # Work around https://github.com/sdispater/pendulum/issues/454
 pprintpp==0.*
 wrapt==1.14.1
 

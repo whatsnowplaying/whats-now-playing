@@ -16,7 +16,7 @@ from attr import (
 	attrib,
 	attrs,
 )
-from nowplaying.vendor.tbm_utils import datareader
+from ..tbm_utils import datareader
 
 from .flac import FLACPicture
 from .ogg import Ogg
