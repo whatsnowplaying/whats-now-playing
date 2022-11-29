@@ -617,7 +617,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             return None, None
 
         if not self.lastfetched or \
-           LASTPROCESSED >= self.lastfetched:
+               LASTPROCESSED >= self.lastfetched:
             self.lastfetched = LASTPROCESSED + 1
             self.computedecks(deckskiplist=deckskiplist)
             self.computeplaying()
@@ -661,11 +661,11 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         # cleanup
         tdat = str(item)
         tdat = tdat.replace("['", "")\
-                   .replace("']", "")\
-                   .replace("[]", "")\
-                   .replace("\\n", "")\
-                   .replace("\\t", "")\
-                   .replace("[\"", "").replace("\"]", "")
+                       .replace("']", "")\
+                       .replace("[]", "")\
+                       .replace("\\n", "")\
+                       .replace("\\t", "")\
+                       .replace("[\"", "").replace("\"]", "")
         tdat = tdat.strip()
 
         if not tdat:
