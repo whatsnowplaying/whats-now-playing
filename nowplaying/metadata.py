@@ -75,9 +75,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
     def _uniqlists(self):
 
         if self.metadata.get('artistwebsites'):
-            newlist = []
-            for url in self.metadata['artistwebsites']:
-                newlist.append(url_normalize.url_normalize(url))
+            newlist = [
+                url_normalize.url_normalize(url)
+                for url in self.metadata.get('artistwebsites')
+            ]
             self.metadata['artistwebsites'] = newlist
 
         lists = ['artistwebsites', 'isrc', 'musicbrainzartistid']
