@@ -9,7 +9,7 @@ import sys
 import subprocess
 
 
-def checksum(filename):  # pylint: disable=no-self-use
+def checksum(filename):
     ''' generate sha512 '''
     hashfunc = hashlib.sha512()
     with open(filename, 'rb') as fileh:

@@ -65,7 +65,8 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
 
         self.template = self.env.get_template(basename)
 
-    def _finalize(self, variable):  # pylint: disable=no-self-use
+    @staticmethod
+    def _finalize(variable):
         ''' helper routine to avoid NoneType exceptions '''
         if variable:
             return variable

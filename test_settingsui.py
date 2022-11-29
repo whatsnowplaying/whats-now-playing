@@ -73,7 +73,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods
             self.widgets[
                 'recognition_acoustidmb'].musicbrainz_checkbox.setChecked(True)
 
-    def _connect_webserver_widget(self, qobject):  # pylint: disable=no-self-use
+    @staticmethod
+    def _connect_webserver_widget(qobject):
         try:
             hostname = socket.gethostname()
             hostip = socket.gethostbyname(hostname)

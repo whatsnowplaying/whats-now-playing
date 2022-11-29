@@ -27,7 +27,8 @@ class Plugin(ArtistExtrasPlugin):
         self.fnstr = None
         self.there = re.compile('(?i)^the ')
 
-    def _filter(self, text):
+    @staticmethod
+    def _filter(text):
         htmlfilter = nowplaying.utils.HTMLFilter()
         htmlfilter.feed(text)
         return htmlfilter.text

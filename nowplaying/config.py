@@ -94,7 +94,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     def reset(self):
         ''' forcibly go back to defaults '''
         logging.debug('config reset')
-        self.__init__(bundledir=ConfigFile.BUNDLEDIR, reset=True)
+        self.__init__(bundledir=ConfigFile.BUNDLEDIR, reset=True)  # pylint: disable=unnecessary-dunder-call
 
     def get(self):
         ''' refresh values '''
@@ -276,7 +276,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
         self.cparser.sync()
 
-    def find_icon_file(self):  # pylint: disable=no-self-use
+    def find_icon_file(self):
         ''' try to find our icon '''
 
         if not ConfigFile.BUNDLEDIR:
@@ -301,7 +301,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             logging.error('Unable to find the icon file. Death only follows.')
         return None
 
-    def find_ui_file(self):  # pylint: disable=no-self-use
+    def find_ui_file(self):
         ''' try to find our icon '''
 
         if not ConfigFile.BUNDLEDIR:
@@ -325,28 +325,28 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             logging.error('Unable to find the ui dir. Death only follows.')
         return None
 
-    def pause(self):  # pylint: disable=no-self-use
+    def pause(self):
         ''' Pause system '''
         self.cparser.setValue('control/paused', True)
         logging.warning('NowPlaying is currently paused.')
 
-    def unpause(self):  # pylint: disable=no-self-use
+    def unpause(self):
         ''' unpause system '''
         self.cparser.setValue('control/paused', False)
         logging.warning('NowPlaying is no longer paused.')
 
-    def getpause(self):  # pylint: disable=no-self-use
+    def getpause(self):
         ''' Get the pause status '''
         return self.cparser.value('control/paused', type=bool)
 
-    def validmixmodes(self):  # pylint: disable=no-self-use
+    def validmixmodes(self):
         ''' get valid mixmodes '''
         plugin = self.cparser.value('settings/input')
         inputplugin = self.plugins['inputs'][
             f'nowplaying.inputs.{plugin}'].Plugin(config=self)
         return inputplugin.validmixmodes()
 
-    def setmixmode(self, mixmode):  # pylint: disable=no-self-use
+    def setmixmode(self, mixmode):
         ''' set the mixmode by calling the plugin '''
 
         plugin = self.cparser.value('settings/input')
@@ -354,18 +354,20 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             f'nowplaying.inputs.{plugin}'].Plugin(config=self)
         return inputplugin.setmixmode(mixmode)
 
-    def getmixmode(self):  # pylint: disable=no-self-use
+    def getmixmode(self):
         ''' get current mix mode '''
         plugin = self.cparser.value('settings/input')
         inputplugin = self.plugins['inputs'][
             f'nowplaying.inputs.{plugin}'].Plugin(config=self)
         return inputplugin.getmixmode()
 
-    def getbundledir(self):  # pylint: disable=no-self-use
+    @staticmethod
+    def getbundledir():
         ''' get the bundle dir '''
         return ConfigFile.BUNDLEDIR
 
-    def getsetlistdir(self):  # pylint: disable=no-self-use
+    @staticmethod
+    def getsetlistdir():
         ''' get the setlist directory '''
         return os.path.join(
             QStandardPaths.standardLocations(

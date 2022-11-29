@@ -40,7 +40,8 @@ class Plugin(RecognitionPlugin):
         self.acoustidmd = {}
         self.fpcalcexe = None
 
-    def _fetch_from_acoustid(self, apikey, filename):  # pylint: disable=no-self-use,too-many-branches
+    @staticmethod
+    def _fetch_from_acoustid(apikey, filename):  # pylint: disable=too-many-branches
         results = None
         completedprocess = None
         fpcalc = os.environ.get('FPCALC', 'fpcalc')
