@@ -11,6 +11,7 @@ import textwrap
 
 import nltk
 import tinytag
+import url_normalize
 
 import nowplaying.config
 import nowplaying.hostmeta
@@ -72,12 +73,30 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 title_regex_list=self.config.getregexlist())
 
     def _uniqlists(self):
-        lists = ['artistwebsites', 'isrc', 'musicbrainzartistid']
 
+        if self.metadata.get('artistwebsites'):
+            newlist = []
+            for url in self.metadata['artistwebsites']:
+                newlist.append(url_normalize.url_normalize(url))
+            self.metadata['artistwebsites'] = newlist
+
+        lists = ['artistwebsites', 'isrc', 'musicbrainzartistid']
         for listname in lists:
             if self.metadata.get(listname):
                 newlist = sorted(set(self.metadata[listname]))
                 self.metadata[listname] = newlist
+
+        if self.metadata.get('artistwebsites'):
+            newlist = []
+            for url in self.metadata['artistwebsites']:
+                if 'http:' not in url:
+                    newlist.append(url)
+                    continue
+
+                testurl = url.replace('http:', 'https:')
+                if testurl not in self.metadata.get('artistwebsites'):
+                    newlist.append(url)
+            self.metadata['artistwebsites'] = newlist
 
     def _process_hostmeta(self):
         ''' add the host metadata so other subsystems can use it '''

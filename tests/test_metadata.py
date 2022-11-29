@@ -337,3 +337,68 @@ async def test_year_not_date(bootstrap):
         config=config).getmoremetadata(metadata=metadatain)
     assert metadataout['date'] == '1999'
     assert not metadataout.get('year')
+
+
+@pytest.mark.asyncio
+async def test_url_dedupe1(bootstrap):
+    ''' automated integration test '''
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    config.cparser.setValue('settings/stripextras', False)
+    metadatain = {
+        'artistwebsites': ['http://example.com', 'http://example.com/']
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(
+        config=config).getmoremetadata(metadata=metadatain)
+    assert metadataout['artistwebsites'] == ['http://example.com/']
+
+
+@pytest.mark.asyncio
+async def test_url_dedupe2(bootstrap):
+    ''' automated integration test '''
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    config.cparser.setValue('settings/stripextras', False)
+    metadatain = {
+        'artistwebsites': ['http://example.com', 'https://example.com/']
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(
+        config=config).getmoremetadata(metadata=metadatain)
+    assert metadataout['artistwebsites'] == ['https://example.com/']
+
+
+@pytest.mark.asyncio
+async def test_url_dedupe3(bootstrap):
+    ''' automated integration test '''
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    config.cparser.setValue('settings/stripextras', False)
+    metadatain = {
+        'artistwebsites': ['https://example.com', 'http://example.com/']
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(
+        config=config).getmoremetadata(metadata=metadatain)
+    assert metadataout['artistwebsites'] == ['https://example.com/']
+
+
+@pytest.mark.asyncio
+async def test_url_dedupe4(bootstrap):
+    ''' automated integration test '''
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    config.cparser.setValue('settings/stripextras', False)
+    metadatain = {
+        'artistwebsites': [
+            'https://example.com', 'https://whatsnowplaying.github.io',
+            'http://example.com/'
+        ]
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(
+        config=config).getmoremetadata(metadata=metadatain)
+    assert metadataout['artistwebsites'] == [
+        'https://example.com/', 'https://whatsnowplaying.github.io/'
+    ]

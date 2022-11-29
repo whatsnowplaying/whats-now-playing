@@ -163,9 +163,14 @@ the following code snippet and modifying as necessary:
   {% if artistwebsites %}
   {% for website in artistwebsites %}
   {% if 'bandcamp' in website %} |Bandcamp: {{ website }}
-  {% elif 'musicbrainz' in website %} | MusicBrainz info: {{ website }}
-  {% elif 'discogs' in website %} | Discogs info: {{ website }}
-  {% elif 'last.fm' in website %} | last.fm info: {{ website }}
+  {% elif 'discogs' in website %} | Discogs: {{ website }}
+  {% elif 'facebook' in website %} | Facebook: {{ website }}
+  {% elif 'instagram' in website %} | IG: {{ website }}
+  {% elif 'last.fm' in website %} | last.fm: {{ website }}
+  {% elif 'musicbrainz' in website %} | MusicBrainz: {{ website }}
+  {% elif 'twitter' in website %} | Twitter: {{ website }}
+  {% elif 'wikipedia' in website %} | Wikipedia: {{ website }}
+  {% elif 'youtube' in website %} | YouTube: {{ website }}
   {% else %} | Official homepage: {{ website }}
   {% endif %}
   {% endfor %}
