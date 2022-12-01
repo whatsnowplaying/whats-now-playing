@@ -77,6 +77,10 @@ class Plugin(InputPlugin):
 
         return {}
 
+    async def getrandomtrack(self, playlist):
+        ''' not supported '''
+        return None
+
 
 #### Control methods
 

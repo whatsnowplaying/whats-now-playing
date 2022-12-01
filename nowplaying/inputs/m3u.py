@@ -169,6 +169,10 @@ class Plugin(InputPlugin):
         await self.start()
         return Plugin.metadata
 
+    async def getrandomtrack(self, playlist):
+        ''' not supported '''
+        return None
+
     def defaults(self, qsettings):  #pylint: disable=no-self-use
         pass
 

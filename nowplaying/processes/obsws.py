@@ -134,15 +134,18 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
 
         reconnect = False
         if not self.obswshost or self.obswshost != obswshost:
+            logging.debug('reconnect')
             reconnect = True
 
         if not self.obswsport or self.obswsport != obswsport:
+            logging.debug('reconnect')
             reconnect = True
 
         if not self.obswssecret or self.obswssecret != obswssecret:
+            logging.debug('reconnect')
             reconnect = True
 
-        if reconnect or not self.client:
+        if reconnect or not self.client or not self.client.is_identified():
             self.obswssecret = obswssecret
             self.obswsport = obswsport
             self.obswshost = obswshost
@@ -159,7 +162,7 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
                 # do not stop here in case OBS just isn't running yet
                 # (initial launch case)
                 logging.debug(error)
-                asyncio.sleep(3)
+                await asyncio.sleep(3)
 
     def stop(self):
         ''' exit the thread '''

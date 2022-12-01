@@ -34,6 +34,8 @@ METADATA = {}
 
 METADATALIST = ['artist', 'title', 'album', 'key', 'filename', 'bpm']
 
+PLAYLIST = ['name', 'filename']
+
 
 class IcecastProtocol(asyncio.Protocol):
     ''' a terrible implementation of the Icecast SOURCE protocol '''
@@ -169,6 +171,55 @@ class Traktor:
         if not self.databasefile.exists():
             self.rewrite_db()
 
+    @staticmethod
+    def _write_playlist(sqlcursor, traktortree):
+        ''' take the collections XML and save the playlists off '''
+        for subnode in traktortree.iterfind('PLAYLISTS/NODE/SUBNODES'):
+            for node in subnode:
+                entry = {'name': node.get('NAME')}
+                for tracks in node:
+                    for keys in tracks:
+                        for primarykey in keys:
+                            filepathcomps = primarykey.attrib['KEY'].split(
+                                '/:')
+                            entry['filename'] = str(
+                                pathlib.Path('/').joinpath(*filepathcomps[1:]))
+                            sql = 'INSERT INTO playlists (playlist,filename'
+                            sql += ', '.join(entry.keys()) + ') VALUES ('
+                            sql += '?,' * (len(entry.keys()) - 1) + '?)'
+                            datatuple = tuple(list(entry.values()))
+                            sqlcursor.execute(sql, datatuple)
+
+    @staticmethod
+    def _write_filelist(sqlcursor, traktortree):
+        ''' take the Traktor collections file and put it into
+            a sql database for faster mapping in real-time'''
+        for node in traktortree.iterfind('COLLECTION/ENTRY'):
+            metadata = {
+                'artist': node.get('ARTIST'),
+                'title': node.get('TITLE'),
+            }
+            for subnode in node:
+                if subnode.tag == 'ALBUM':
+                    metadata['album'] = subnode.get('TITLE')
+                elif subnode.tag == 'INFO':
+                    metadata['key'] = subnode.get('KEY')
+                elif subnode.tag == 'LOCATION':
+                    volume = subnode.get('VOLUME')
+                    metadata['filename'] = ''
+                    if volume[0].isalpha() and volume[1] == ':':
+                        metadata['filename'] = volume
+
+                    metadata['filename'] += subnode.get('DIR').replace(
+                        '/:', '/') + subnode.get('FILE')
+                elif subnode.tag == 'TEMPO':
+                    metadata['bpm'] = subnode.get('BPM')
+            sql = 'INSERT INTO songs ('
+            sql += ', '.join(metadata.keys()) + ') VALUES ('
+            sql += '?,' * (len(metadata.keys()) - 1) + '?)'
+            datatuple = tuple(list(metadata.values()))
+            sqlcursor.execute(sql, datatuple)
+
     def rewrite_db(self, collectionsfile=None):
         ''' erase and update the old db '''
         if not collectionsfile:
@@ -186,38 +237,22 @@ class Traktor:
 
         with sqlite3.connect(self.databasefile) as connection:
             cursor = connection.cursor()
-            sql = 'CREATE TABLE IF NOT EXISTS traktor ('
+            sql = 'CREATE TABLE IF NOT EXISTS songs ('
             sql += ' TEXT, '.join(METADATALIST) + ' TEXT, '
             sql += 'id INTEGER PRIMARY KEY AUTOINCREMENT)'
             cursor.execute(sql)
             connection.commit()
-            traktor = xml.etree.ElementTree.parse(collectionsfile).getroot()
-            for node in traktor.iterfind('COLLECTION/ENTRY'):
-                metadata = {
-                    'artist': node.get('ARTIST'),
-                    'title': node.get('TITLE'),
-                }
-                for subnode in node:
-                    if subnode.tag == 'ALBUM':
-                        metadata['album'] = subnode.get('TITLE')
-                    elif subnode.tag == 'INFO':
-                        metadata['key'] = subnode.get('KEY')
-                    elif subnode.tag == 'LOCATION':
-                        volume = subnode.get('VOLUME')
-                        metadata['filename'] = ''
-                        if volume[0].isalpha() and volume[1] == ':':
-                            metadata['filename'] = volume
+            sql = 'CREATE TABLE IF NOT EXISTS playlists ('
+            sql += ' TEXT, '.join(PLAYLIST) + ' TEXT, '
+            sql += 'id INTEGER PRIMARY KEY AUTOINCREMENT)'
+            cursor.execute(sql)
+            connection.commit()
 
-                        metadata['filename'] += subnode.get('DIR').replace(
-                            '/:', '/') + subnode.get('FILE')
-                    elif subnode.tag == 'TEMPO':
-                        metadata['bpm'] = subnode.get('BPM')
-                sql = 'INSERT INTO traktor ('
-                sql += ', '.join(metadata.keys()) + ') VALUES ('
-                sql += '?,' * (len(metadata.keys()) - 1) + '?)'
-                datatuple = tuple(list(metadata.values()))
-                cursor.execute(sql, datatuple)
-                connection.commit()
+            traktor = xml.etree.ElementTree.parse(collectionsfile).getroot()
+            self._write_filelist(cursor, traktor)
+            connection.commit()
+            self._write_playlist(cursor, traktor)
+            connection.commit()
 
     async def lookup(self, artist=None, title=None):
         ''' lookup the metadata '''
@@ -226,7 +261,7 @@ class Traktor:
             cursor = await connection.cursor()
             try:
                 await cursor.execute(
-                    '''SELECT * FROM traktor WHERE artist=? AND title=? ORDER BY id DESC LIMIT 1''',
+                    '''SELECT * FROM songs WHERE artist=? AND title=? ORDER BY id DESC LIMIT 1''',
                     (
                         artist,
                         title,
@@ -243,6 +278,24 @@ class Traktor:
             if metadata.get(key):
                 metadata[key] = [row[key]]
         return metadata
+
+    async def getrandomtrack(self, playlist):
+        ''' return the contents of a playlist '''
+        async with aiosqlite.connect(self.databasefile) as connection:
+            connection.row_factory = sqlite3.Row
+            cursor = await connection.cursor()
+            try:
+                await cursor.execute(
+                    '''SELECT filename FROM playlists WHERE playlist=? ORDER BY random() LIMIT 1''',
+                    (playlist, ))
+            except sqlite3.OperationalError:
+                return None
+
+            row = await cursor.fetchone()
+            if not row:
+                return None
+
+            return row['filename']
 
 
 class Plugin(InputPlugin):
@@ -398,6 +451,11 @@ class Plugin(InputPlugin):
             metadata = METADATA
         self.lastmetadata = metadata
         return metadata
+
+    async def getrandomtrack(self, playlist):
+        if self.extradb:
+            return await self.extradb.getrandomtrack(playlist)
+        return None
 
 
 #### Control methods

@@ -14,10 +14,12 @@
         "nowplaying/resources/artistextras_discogs_ui.ui",
         "nowplaying/resources/artistextras_fanarttv_ui.ui",
         "nowplaying/resources/artistextras_theaudiodb_ui.ui",
+        "nowplaying/resources/redemption_window.ui",
         "nowplaying/resources/settings.qrc",
         "nowplaying/resources/settings_ui.ui",
         "nowplaying/resources/source_ui.ui",
         "nowplaying/resources/twitchbot_ui.ui",
+        "nowplaying/resources/twitchredemptions_ui.ui",
         "nowplaying/resources/webserver_ui.ui",
         "test_settingsui.py"
     ]

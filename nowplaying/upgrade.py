@@ -90,7 +90,8 @@ class UpgradeConfig:
             'settings/interval': 'serato/interval',
             'settings/handler': 'settings/input',
             'acoustidmb/emailaddress': 'musicbrainz/emailaddress',
-            'acoustidmb/enabled': 'musicbrainz/enabled'
+            'acoustidmb/enabled': 'musicbrainz/enabled',
+            'twitchbot/enabled': 'twitchbot/chat',
         }
         sourcepath = pathlib.Path(config.fileName())
 

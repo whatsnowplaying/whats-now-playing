@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 ''' user interface to configure '''
 
-import fnmatch
 import logging
 import os
 import pathlib
@@ -9,8 +8,8 @@ import re
 
 # pylint: disable=no-name-in-module
 from PySide6.QtCore import Slot, QFile, Qt
-from PySide6.QtWidgets import (QCheckBox, QErrorMessage, QFileDialog,
-                               QListWidgetItem, QTableWidgetItem, QWidget)
+from PySide6.QtWidgets import (QErrorMessage, QFileDialog, QWidget,
+                               QListWidgetItem)
 from PySide6.QtGui import QIcon
 from PySide6.QtUiTools import QUiLoader
 import PySide6.QtXml  # pylint: disable=unused-import, import-error
@@ -22,34 +21,39 @@ try:
     import nowplaying.qtrc  # pylint: disable=import-error, no-name-in-module
 except ModuleNotFoundError:
     pass
+import nowplaying.twitch
+import nowplaying.twitch.chat
+import nowplaying.twitch.requests
+import nowplaying.uihelp
 import nowplaying.utils
-
-# needs to match ui file
-TWITCHBOT_CHECKBOXES = [
-    'anyone', 'broadcaster', 'moderator', 'subscriber', 'founder', 'conductor',
-    'vip', 'bits'
-]
 
 
 # settings UI
-class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
+class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-instance-attributes
     ''' create settings form window '''
 
     def __init__(self, tray, version):
 
         self.config = nowplaying.config.ConfigFile()
-        self.iconfile = self.config.iconfile
         self.tray = tray
         self.version = version
         super().__init__()
         self.qtui = None
         self.errormessage = None
         self.widgets = {}
+        self.settingsclasses = {
+            'twitch': nowplaying.twitch.TwitchSettings(),
+            'twitchchat': nowplaying.twitch.chat.TwitchChatSettings(),
+            'twitchrequests':
+            nowplaying.twitch.requests.TwitchRequestSettings(),
+        }
+
+        self.uihelp = None
         self.load_qtui()
 
         if not self.config.iconfile:
             self.tray.cleanquit()
-        self.qtui.setWindowIcon(QIcon(str(self.iconfile)))
+        self.qtui.setWindowIcon(QIcon(str(self.config.iconfile)))
 
     def load_qtui(self):
         ''' load the base UI and wire it up '''
@@ -72,10 +76,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             return qwidget
 
         self.qtui = _load_ui('settings')
+        self.uihelp = nowplaying.uihelp.UIHelp(self.config, self.qtui)
 
         baseuis = [
-            'general', 'source', 'filter', 'webserver', 'twitchbot',
-            'artistextras', 'obsws', 'quirks'
+            'general', 'source', 'filter', 'webserver', 'twitch', 'twitchchat',
+            'twitchrequests', 'artistextras', 'obsws', 'quirks'
         ]
 
         pluginuis = {}
@@ -109,6 +114,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             self.widgets['source'].sourcelist.addItem(displayname)
             self.widgets['source'].sourcelist.currentRowChanged.connect(
                 self._set_source_description)
+
+        for key in [
+                'twitch',
+                'twitchchat',
+                'twitchrequests',
+        ]:
+            self.settingsclasses[key].load(self.config, self.widgets[key])
+            self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
 
         self._connect_plugins()
 
@@ -162,13 +175,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         ''' connect obsws button to template picker'''
         qobject.template_button.clicked.connect(self.on_obsws_template_button)
 
-    def _connect_twitchbot_widget(self, qobject):
-        '''  connect twitchbot announce to template picker'''
-        qobject.announce_button.clicked.connect(
-            self.on_twitchbot_announce_button)
-        qobject.add_button.clicked.connect(self.on_twitchbot_add_button)
-        qobject.del_button.clicked.connect(self.on_twitchbot_del_button)
-
     def _connect_filter_widget(self, qobject):
         '''  connect regex filter to template picker'''
         qobject.add_recommended_button.clicked.connect(
@@ -191,7 +197,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         ''' update the settings window '''
         self.config.get()
         self.widgets['about'].program_label.setText(
-            f'<html><head/><body><p><img src="{self.iconfile}"/>'
+            f'<html><head/><body><p><img src="{self.config.iconfile}"/>'
             f'<span style=" font-size:14pt;"> Now Playing v{self.version}'
             '</span></p></body></html>')
 
@@ -212,8 +218,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         self._upd_win_plugins()
         self._upd_win_webserver()
         self._upd_win_obsws()
-        self._upd_win_twitchbot()
         self._upd_win_quirks()
+
+        for key in [
+                'twitch',
+                'twitchchat',
+                'twitchrequests',
+        ]:
+            self.settingsclasses[key].load(self.config, self.widgets[key])
 
     def _upd_win_artistextras(self):
         self.widgets['artistextras'].artistextras_checkbox.setChecked(
@@ -290,44 +302,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             self.config.cparser.value('obsws/secret'))
         self.widgets['obsws'].template_lineedit.setText(
             self.config.cparser.value('obsws/template'))
-
-    def _upd_win_twitchbot(self):
-        ''' update the twitch settings '''
-
-        def clear_table(widget):
-            widget.clearContents()
-            rows = widget.rowCount()
-            for row in range(rows, -1, -1):
-                widget.removeRow(row)
-
-        clear_table(self.widgets['twitchbot'].command_perm_table)
-
-        for configitem in self.config.cparser.childGroups():
-            setting = {}
-            if 'twitchbot-command-' in configitem:
-                command = configitem.replace('twitchbot-command-', '')
-                setting['command'] = command
-                for box in TWITCHBOT_CHECKBOXES:
-                    setting[box] = self.config.cparser.value(
-                        f'{configitem}/{box}', defaultValue=False, type=bool)
-                self._twitchbot_command_load(**setting)
-
-        self.widgets['twitchbot'].enable_checkbox.setChecked(
-            self.config.cparser.value('twitchbot/enabled', type=bool))
-        self.widgets['twitchbot'].clientid_lineedit.setText(
-            self.config.cparser.value('twitchbot/clientid'))
-        self.widgets['twitchbot'].channel_lineedit.setText(
-            self.config.cparser.value('twitchbot/channel'))
-        self.widgets['twitchbot'].username_lineedit.setText(
-            self.config.cparser.value('twitchbot/username'))
-        self.widgets['twitchbot'].token_lineedit.setText(
-            self.config.cparser.value('twitchbot/token'))
-        self.widgets['twitchbot'].announce_lineedit.setText(
-            self.config.cparser.value('twitchbot/announce'))
-        self.widgets['twitchbot'].commandchar_lineedit.setText(
-            self.config.cparser.value('twitchbot/commandchar'))
-        self.widgets['twitchbot'].announce_delay_lineedit.setText(
-            self.config.cparser.value('twitchbot/announcedelay'))
 
     def _upd_win_quirks(self):
         ''' update the quirks settings to match config '''
@@ -410,13 +384,19 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
 
         logging.getLogger().setLevel(loglevel)
 
+        for key in [
+                'twitch',
+                'twitchchat',
+                'twitchrequests',
+        ]:
+            self.settingsclasses[key].save(self.config, self.widgets[key])
+
         self._upd_conf_artistextras()
         self._upd_conf_filters()
         self._upd_conf_recognition()
         self._upd_conf_input()
         self._upd_conf_webserver()
         self._upd_conf_obsws()
-        self._upd_conf_twitchbot()
         self._upd_conf_quirks()
         self._upd_conf_plugins()
         self.config.cparser.sync()
@@ -549,57 +529,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             self.widgets['filter'].stripextras_checkbox.isChecked())
         reset_filters(self.widgets['filter'].regex_list, self.config.cparser)
 
-    def _upd_conf_twitchbot(self):
-        ''' update the twitch settings '''
-
-        def reset_commands(widget, config):
-
-            for configitem in config.allKeys():
-                if 'twitchbot-command-' in configitem:
-                    config.remove(configitem)
-
-            rowcount = widget.rowCount()
-            for row in range(rowcount):
-                item = widget.item(row, 0)
-                cmd = item.text()
-                cmd = f'twitchbot-command-{cmd}'
-                for column, cbtype in enumerate(TWITCHBOT_CHECKBOXES):
-                    item = widget.cellWidget(row, column + 1)
-                    value = item.isChecked()
-                    config.setValue(f'{cmd}/{cbtype}', value)
-
-        oldenabled = self.config.cparser.value('twitchbot/enabled', type=bool)
-        newenabled = self.widgets['twitchbot'].enable_checkbox.isChecked()
-
-        self.config.cparser.setValue('twitchbot/enabled', newenabled)
-        self.config.cparser.setValue(
-            'twitchbot/clientid',
-            self.widgets['twitchbot'].clientid_lineedit.text())
-        self.config.cparser.setValue(
-            'twitchbot/channel',
-            self.widgets['twitchbot'].channel_lineedit.text())
-        self.config.cparser.setValue(
-            'twitchbot/username',
-            self.widgets['twitchbot'].username_lineedit.text())
-        self.config.cparser.setValue(
-            'twitchbot/token', self.widgets['twitchbot'].token_lineedit.text())
-        self.config.cparser.setValue(
-            'twitchbot/announce',
-            self.widgets['twitchbot'].announce_lineedit.text())
-        self.config.cparser.setValue(
-            'twitchbot/commandchar',
-            self.widgets['twitchbot'].commandchar_lineedit.text())
-
-        self.config.cparser.setValue(
-            'twitchbot/announcedelay',
-            self.widgets['twitchbot'].announce_delay_lineedit.text())
-
-        reset_commands(self.widgets['twitchbot'].command_perm_table,
-                       self.config.cparser)
-
-        if oldenabled != newenabled:
-            self.tray.subprocesses.restart_twitchbot()
-
     def _upd_conf_quirks(self):
         ''' update the quirks settings to match config '''
 
@@ -650,86 +579,23 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
             logging.debug('Deleting %s', cachedbfilepath)
             cachedbfilepath.unlink()
 
-    def template_picker(self, startfile=None, startdir=None, limit='*.txt'):
-        ''' generic code to pick a template file '''
-        if startfile:
-            startdir = os.path.dirname(startfile)
-        elif not startdir:
-            startdir = os.path.join(self.config.templatedir, "templates")
-        if filename := QFileDialog.getOpenFileName(self.qtui, 'Open file',
-                                                   startdir, limit):
-            return filename[0]
-        return None
-
-    def template_picker_lineedit(self, qwidget, limit='*.txt'):
-        ''' generic code to pick a template file '''
-        if filename := self.template_picker(startfile=qwidget.text(),
-                                            limit=limit):
-            qwidget.setText(filename)
-
     @Slot()
     def on_text_template_button(self):
         ''' file template button clicked action '''
-        self.template_picker_lineedit(
+        self.uihelp.template_picker_lineedit(
             self.widgets['general'].texttemplate_lineedit)
 
     @Slot()
     def on_obsws_template_button(self):
         ''' obsws template button clicked action '''
-        self.template_picker_lineedit(self.widgets['obsws'].template_lineedit)
+        self.uihelp.template_picker_lineedit(
+            self.widgets['obsws'].template_lineedit)
 
     @Slot()
     def on_html_template_button(self):
         ''' html template button clicked action '''
-        self.template_picker_lineedit(
+        self.uihelp.template_picker_lineedit(
             self.widgets['webserver'].template_lineedit, limit='*.htm *.html')
-
-    @Slot()
-    def on_twitchbot_announce_button(self):
-        ''' twitchbot announce button clicked action '''
-        self.template_picker_lineedit(
-            self.widgets['twitchbot'].announce_lineedit,
-            limit='twitchbot_*.txt')
-
-    def _twitchbot_command_load(self, command=None, **kwargs):
-        if not command:
-            return
-
-        row = self.widgets['twitchbot'].command_perm_table.rowCount()
-        self.widgets['twitchbot'].command_perm_table.insertRow(row)
-        cmditem = QTableWidgetItem(command)
-        self.widgets['twitchbot'].command_perm_table.setItem(row, 0, cmditem)
-
-        checkbox = []
-        for column, cbtype in enumerate(TWITCHBOT_CHECKBOXES):  # pylint: disable=unused-variable
-            checkbox = QCheckBox()
-            if cbtype in kwargs:
-                checkbox.setChecked(kwargs[cbtype])
-            else:
-                checkbox.setChecked(True)
-            self.widgets['twitchbot'].command_perm_table.setCellWidget(
-                row, column + 1, checkbox)
-
-    @Slot()
-    def on_twitchbot_add_button(self):
-        ''' twitchbot add button clicked action '''
-        filename = self.template_picker(limit='twitchbot_*.txt')
-        if not filename:
-            return
-
-        filename = os.path.basename(filename)
-        filename = filename.replace('twitchbot_', '')
-        command = filename.replace('.txt', '')
-
-        self._twitchbot_command_load(command)
-
-    @Slot()
-    def on_twitchbot_del_button(self):
-        ''' twitchbot del button clicked action '''
-        if items := self.widgets[
-                'twitchbot'].command_perm_table.selectedIndexes():
-            self.widgets['twitchbot'].command_perm_table.removeRow(
-                items[0].row())
 
     def _filter_regex_load(self, regex=None):
         ''' setup the filter table '''
@@ -789,7 +655,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     def on_cancel_button(self):
         ''' cancel button clicked action '''
         if self.tray:
-            self.tray.action_config.setEnabled(True)
+            self.tray.settings_action.setEnabled(True)
         self.upd_win()
         self.qtui.close()
 
@@ -826,6 +692,17 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
         if not self.verify_regex_filters():
             return
 
+        for key in [
+                'twitch',
+                'twitchchat',
+                'twitchrequests',
+        ]:
+            try:
+                self.settingsclasses[key].verify(self.widgets[key])
+            except PluginVerifyError as error:
+                self.errormessage.showMessage(error.message)
+                return
+
         self.config.unpause()
         self.upd_conf()
         self.close()
@@ -836,35 +713,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods
     def show(self):
         ''' show the system tram '''
         if self.tray:
-            self.tray.action_config.setEnabled(False)
+            self.tray.settings_action.setEnabled(False)
         self.upd_win()
         self.qtui.show()
         self.qtui.setFocus()
 
     def close(self):
         ''' close the system tray '''
-        self.tray.action_config.setEnabled(True)
+        self.tray.settings_action.setEnabled(True)
         self.qtui.hide()
 
     def exit(self):
         ''' exit the tray '''
         self.qtui.close()
-
-
-def update_twitchbot_commands(config):
-    ''' make sure all twitchbot_ files have a config entry '''
-    filelist = os.listdir(config.templatedir)
-    existing = config.cparser.childGroups()
-
-    for file in filelist:
-        if not fnmatch.fnmatch(file, 'twitchbot_*.txt'):
-            continue
-
-        command = file.replace('twitchbot_', '').replace('.txt', '')
-        command = f'twitchbot-command-{command}'
-
-        if command not in existing:
-            config.cparser.setValue('settings/newtwitchbot', True)
-            logging.debug('creating %s', command)
-            for box in TWITCHBOT_CHECKBOXES:
-                config.cparser.setValue(f'{command}/{box}', False)

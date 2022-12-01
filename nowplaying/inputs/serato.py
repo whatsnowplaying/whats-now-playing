@@ -9,9 +9,11 @@ import datetime
 import logging
 import os
 import pathlib
+import random
 import struct
 import time
 
+import aiofiles
 import lxml.html
 import requests
 
@@ -30,6 +32,88 @@ Header = collections.namedtuple('Header', 'chunktype size')
 # when in local mode, these are shared variables between threads
 LASTPROCESSED = 0
 PARSEDSESSIONS = []
+
+
+class SeratoCrateReader:
+    ''' read a Serato crate (not smart crate) -
+        based on https://gist.github.com/kerrickstaley/8eb04988c02fa7c62e75c4c34c04cf02 '''
+
+    def __init__(self, filename):
+        self.decode_func_full = {
+            None: self._decode_struct,
+            'vrsn': self._decode_unicode,
+            'sbav': self._noop,
+            'rart': self._noop,
+            'rlut': self._noop,
+            'rurt': self._noop,
+        }
+
+        self.decode_func_first = {
+            'o': self._decode_struct,
+            't': self._decode_unicode,
+            'p': self._decode_unicode,
+            'u': self._decode_unsigned,
+            'b': self._noop,
+        }
+
+        self.cratepath = pathlib.Path(filename)
+        self.crate = None
+
+    def _decode_struct(self, data):
+        ''' decode the structures of the crate'''
+        ret = []
+        i = 0
+        while i < len(data):
+            tag = data[i:i + 4].decode('ascii')
+            length = struct.unpack('>I', data[i + 4:i + 8])[0]
+            value = data[i + 8:i + 8 + length]
+            value = self._datadecode(value, tag=tag)
+            ret.append((tag, value))
+            i += 8 + length
+        return ret
+
+    @staticmethod
+    def _decode_unicode(data):
+        return data.decode('utf-16-be')
+
+    @staticmethod
+    def _decode_unsigned(data):
+        return struct.unpack('>I', data)[0]
+
+    @staticmethod
+    def _noop(data):
+        return data
+
+    def _datadecode(self, data, tag=None):
+        if tag in self.decode_func_full:
+            decode_func = self.decode_func_full[tag]
+        else:
+            decode_func = self.decode_func_first[tag[0]]
+
+        return decode_func(data)
+
+    async def loadcrate(self):
+        ''' load/overwrite current crate '''
+        async with aiofiles.open(self.cratepath, 'rb') as cratefhin:
+            self.crate = self._datadecode(await cratefhin.read())
+
+    def getfilenames(self):
+        ''' get the filenames from this crate '''
+        if not self.crate:
+            logging.debug('crate has not been loaded')
+            return None
+        filelist = []
+        anchor = self.cratepath.anchor
+        for tag in self.crate:
+            if tag[0] != 'otrk':
+                continue
+            otrk = tag[1]
+            for subtag in otrk:
+                if subtag[0] != 'ptrk':
+                    continue
+                for filepart in subtag[1:]:
+                    filelist.append(f'{anchor}{filepart}')
+        return filelist
 
 
 class ChunkParser():  #pylint: disable=too-few-public-methods
@@ -846,6 +930,35 @@ class Plugin(InputPlugin):
                 deckskip = list(deckskip)
             return self.serato.getplayingtrack(deckskiplist=deckskip)
         return {}
+
+    async def getrandomtrack(self, playlist):
+        ''' Get the files associated with a playlist, crate, whatever '''
+
+        libpath = self.config.cparser.value('serato/libpath')
+        logging.debug('libpath: %s', libpath)
+        if not libpath:
+            return None
+
+        crate_path = pathlib.Path(libpath).joinpath('Subcrates')
+        smartcrate_path = pathlib.Path(libpath).joinpath('SmartCrates')
+
+
+        logging.debug('Determined: %s %s', crate_path, smartcrate_path)
+        if crate_path.joinpath(playlist+'.crate').exists():
+            playlistfile = crate_path.joinpath(playlist+'.crate')
+        elif smartcrate_path.joinpath(playlist+'.scrate'):
+            playlistfile = smartcrate_path.joinpath(playlist+'.scrate')
+        else:
+            logging.debug('Unknown crate: %s', playlist)
+            return None
+
+
+        logging.debug('Using %s', playlistfile)
+
+        crate = SeratoCrateReader(playlistfile)
+        await crate.loadcrate()
+        filelist = crate.getfilenames()
+        return filelist[random.randrange(len(filelist))]
 
     def defaults(self, qsettings):
         qsettings.setValue(

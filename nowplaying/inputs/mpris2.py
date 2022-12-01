@@ -220,6 +220,10 @@ class Plugin(InputPlugin):
             return self.mpris2.getplayingtrack()
         return {}
 
+    async def getrandomtrack(self, playlist):
+        ''' not supported '''
+        return None
+
     def defaults(self, qsettings):
         qsettings.setValue('mpris2/service', None)
 
@@ -287,7 +291,7 @@ def main():
         mpris2.resetservice(sys.argv[1])
         (artist, title, filename) = mpris2.getplayingtrack()
         print(f'Artist: {artist} | Title: {title} | Filename: {filename}')
-        data = mpris2.getplayingmetadata()
+        data = mpris2.getplayingtrack()
         if 'coverimageraw' in data:
             print('Got coverart')
             del data['coverimageraw']

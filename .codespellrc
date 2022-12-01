@@ -1,3 +1,3 @@
 [codespell]
 skip = versioneer.py,nowplaying/vendor/*
-ignore-words-list = sur, nin
+ignore-words-list = sur, nin, crate

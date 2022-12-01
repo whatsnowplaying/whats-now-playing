@@ -30,7 +30,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         else:
             self.config = nowplaying.config.ConfigFile()
 
-    async def getmoremetadata(self, metadata=None, imagecache=None):
+    async def getmoremetadata(self,
+                              metadata=None,
+                              imagecache=None,
+                              skipplugins=False):
         ''' take metadata and process it '''
         self.metadata = metadata
         self.imagecache = imagecache
@@ -43,7 +46,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             func = getattr(self, f'_process_{processor}')
             func()
 
-        await self._process_plugins()
+        if not skipplugins:
+            await self._process_plugins()
 
         if 'publisher' in self.metadata:
             if 'label' not in self.metadata:

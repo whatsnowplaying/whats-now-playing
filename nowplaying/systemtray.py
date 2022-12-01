@@ -11,6 +11,8 @@ import nowplaying.config
 import nowplaying.db
 import nowplaying.settingsui
 import nowplaying.subprocesses
+import nowplaying.twitch.chat
+import nowplaying.twitch.requests
 import nowplaying.utils
 import nowplaying.version
 
@@ -41,9 +43,13 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.settingswindow = nowplaying.settingsui.SettingsUI(
             tray=self, version=self.version)
 
-        self.action_config = QAction("Settings")
-        self.action_config.triggered.connect(self.settingswindow.show)
-        self.menu.addAction(self.action_config)
+        self.settings_action = QAction("Settings")
+        self.settings_action.triggered.connect(self.settingswindow.show)
+        self.menu.addAction(self.settings_action)
+        self.request_action = QAction('Requests')
+        self.request_action.triggered.connect(self._requestswindow)
+        self.request_action.setEnabled(False)
+        self.menu.addAction(self.request_action)
         self.menu.addSeparator()
 
         self.action_newestmode = QAction('Newest')
@@ -86,6 +92,21 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.watcher.addPath(str(metadb.databasefile))
         self.watcher.fileChanged.connect(self.tracknotify)
 
+        self.trwindow = None
+        self._configure_twitchrequests()
+
+        if self.config.cparser.value('twitchbot/requests', type=bool):
+            self.request_action.setEnabled(True)
+
+    def _configure_twitchrequests(self):
+        self.trwindow = nowplaying.twitch.requests.TwitchRequests(
+            config=self.config)
+        self.trwindow.initial_ui()
+
+    def _requestswindow(self):
+        if self.config.cparser.value('twitchbot/requests', type=bool):
+            self.trwindow.raise_window()
+
     def _configure_newold_menu(self):
         self.action_newestmode.setCheckable(True)
         self.action_newestmode.setEnabled(True)
@@ -104,7 +125,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.action_pause.setEnabled(False)
 
     def _check_for_upgrade_alert(self):
-        nowplaying.settingsui.update_twitchbot_commands(self.config)
+        nowplaying.twitch.chat.TwitchChatSettings().update_twitchbot_commands(
+            self.config)
         if self.config.cparser.value('settings/newtemplates', type=bool):
             self.regular_dialog.setText('Updated templates have been placed.')
             self.config.cparser.setValue('settings/newtemplates', False)
@@ -225,6 +247,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         ''' quit app and cleanup '''
 
         logging.debug('Starting shutdown')
+        self.trwindow.close_window()
         self.tray.setVisible(False)
 
         self.subprocesses.stop_all_processes()

@@ -84,6 +84,7 @@ def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
             'artist': 'Nine Inch Nails',
             'title': "15 Ghosts II"
         }],
+        'requester': None,
         'title': '15 Ghosts II',
         'track': '15',
         'track_total': None,
@@ -160,6 +161,7 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
             'artist': 'LĪVE',
             'title': "Lakini's Juice"
         }],
+        'requester': None,
         'title': 'Lakini\'s Juice',
         'track': None,
         'track_total': None,

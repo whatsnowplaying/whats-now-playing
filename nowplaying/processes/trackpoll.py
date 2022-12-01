@@ -13,10 +13,11 @@ import sys
 
 import nowplaying.config
 import nowplaying.db
+import nowplaying.imagecache
 import nowplaying.inputs
 import nowplaying.metadata
+import nowplaying.twitch.requests
 import nowplaying.utils
-import nowplaying.imagecache
 
 COREMETA = ['artist', 'filename', 'title']
 
@@ -43,6 +44,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self._resetcurrent()
         self.testmode = testmode
         self.input = None
+        self.previousinput = None
         self.inputname = None
         self.plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
         self.previoustxttemplate = None
@@ -50,6 +52,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self.imagecache = None
         self.icprocess = None
         self._setup_imagecache()
+        self.twitchrequests = nowplaying.twitch.requests.TwitchRequests(
+            config=self.config)
         self.tasks = set()
         self.metadataprocessors = nowplaying.metadata.MetadataProcessors(
             config=self.config)
@@ -67,12 +71,34 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         task.add_done_callback(self.tasks.remove)
         self.tasks.add(task)
 
+    async def switch_input_plugin(self):
+        ''' handle user switching source input while running '''
+        if not self.previousinput or self.previousinput != self.config.cparser.value(
+                'settings/input'):
+            if self.input:
+                logging.debug('stopping %s', self.previousinput)
+                await self.input.stop()
+            self.previousinput = self.config.cparser.value('settings/input')
+            self.input = self.plugins[
+                f'nowplaying.inputs.{self.previousinput}'].Plugin(
+                    config=self.config)
+            logging.debug('Starting %s plugin', self.previousinput)
+            if not self.input:
+                return False
+
+            try:
+                await self.input.start()
+            except Exception as error:  # pylint: disable=broad-except
+                logging.debug('cannot start %s: %s', self.previousinput, error)
+                return False
+
+        return True
+
     async def run(self):
         ''' track polling process '''
 
         threading.current_thread().name = 'TrackPoll'
         socket.setdefaulttimeout(5.0)
-        previousinput = None
 
         # sleep until we have something to do
         while not self.stopevent.is_set() and not self.config.getpause(
@@ -85,23 +111,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             await asyncio.sleep(.5)
             self.config.get()
 
-            if not previousinput or previousinput != self.config.cparser.value(
-                    'settings/input'):
-                if self.input:
-                    logging.debug('stopping %s', previousinput)
-                    await self.input.stop()
-                previousinput = self.config.cparser.value('settings/input')
-                self.input = self.plugins[
-                    f'nowplaying.inputs.{previousinput}'].Plugin()
-                logging.debug('Starting %s plugin', previousinput)
-                if not self.input:
-                    continue
-
-                try:
-                    await self.input.start()
-                except Exception as error:  # pylint: disable=broad-except
-                    logging.debug('cannot start %s: %s', previousinput, error)
-                    continue
+            if not await self.switch_input_plugin():
+                continue
 
             try:
                 await self.gettrack()
@@ -274,6 +285,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             logging.info('Track changed during delay, skipping')
             self.currentmeta = oldmeta
             return
+
+        if self.config.cparser.value('twitchbot/requests', type=bool):
+            if data := await self.twitchrequests.get_request(self.currentmeta):
+                self.currentmeta.update(data)
 
         self._artfallbacks()
 

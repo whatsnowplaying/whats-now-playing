@@ -3,7 +3,6 @@
 
 import logging
 
-import nowplaying.config
 from nowplaying.exceptions import PluginVerifyError
 
 
@@ -12,15 +11,14 @@ class RecognitionPlugin():
 
     def __init__(self, config=None, qsettings=None):
         self.plugintype = 'input'
-        if config:
-            self.config = config
+        self.config = config
 
         if qsettings:
             self.defaults(qsettings)
             return
 
-        if not config:  # pragma: no cover
-            self.config = nowplaying.config.ConfigFile()
+        if not self.config:
+            logging.debug('Plugin was not called with config')
 
 #### Settings UI methods
 

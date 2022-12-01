@@ -48,6 +48,7 @@ METADATALIST = [
     'musicbrainzalbumid',
     'musicbrainzartistid',
     'musicbrainzrecordingid',
+    'requester',
     'title',
     'track',
     'track_total',
@@ -64,7 +65,7 @@ LISTFIELDS = [
 # treated as binary
 METADATABLOBLIST = [
     'artistbannerraw', 'artistfanartraw', 'artistlogoraw', 'artistthumbraw',
-    'coverimageraw'
+    'coverimageraw', 'requesterimageraw'
 ]
 
 

@@ -1,124 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
+ <class>twitchchat_form</class>
+ <widget class="QWidget" name="twitchchat_form">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
+    <width>625</width>
     <height>480</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>Twitch Chat</string>
+  </property>
+  <property name="displayName" stdset="0">
+   <string>Twitch Chat</string>
   </property>
   <widget class="QWidget" name="formLayoutWidget">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>20</y>
-     <width>621</width>
-     <height>188</height>
+     <y>30</y>
+     <width>624</width>
+     <height>81</height>
     </rect>
    </property>
    <layout class="QFormLayout" name="settings_layout">
     <item row="0" column="0">
-     <widget class="QLabel" name="channel_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Channel</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="QLineEdit" name="channel_lineedit">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>496</width>
-        <height>0</height>
-       </size>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0">
-     <widget class="QLabel" name="username_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Username</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QLineEdit" name="username_lineedit">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>496</width>
-        <height>0</height>
-       </size>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QLabel" name="clientid_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Client ID</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="QLineEdit" name="clientid_lineedit">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>496</width>
-        <height>0</height>
-       </size>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="0">
-     <widget class="QLabel" name="token_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Token</string>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="1">
-     <widget class="QLineEdit" name="token_lineedit">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>496</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="echoMode">
-       <enum>QLineEdit::Password</enum>
-      </property>
-     </widget>
-    </item>
-    <item row="4" column="0">
      <widget class="QLabel" name="commandchar_label">
       <property name="enabled">
        <bool>false</bool>
@@ -128,7 +36,7 @@
       </property>
      </widget>
     </item>
-    <item row="4" column="1">
+    <item row="0" column="1">
      <widget class="QLineEdit" name="commandchar_lineedit">
       <property name="enabled">
        <bool>false</bool>
@@ -147,7 +55,7 @@
       </property>
      </widget>
     </item>
-    <item row="5" column="0">
+    <item row="1" column="0">
      <widget class="QLabel" name="announce_delay_label">
       <property name="enabled">
        <bool>false</bool>
@@ -157,7 +65,7 @@
       </property>
      </widget>
     </item>
-    <item row="5" column="1">
+    <item row="1" column="1">
      <widget class="QLineEdit" name="announce_delay_lineedit">
       <property name="enabled">
        <bool>false</bool>
@@ -177,12 +85,12 @@
     <rect>
      <x>10</x>
      <y>0</y>
-     <width>141</width>
+     <width>171</width>
      <height>23</height>
     </rect>
    </property>
    <property name="text">
-    <string>Enable Twitch Bot</string>
+    <string>Enable Twitch Chat</string>
    </property>
   </widget>
   <widget class="QLabel" name="announce_label">
@@ -192,7 +100,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>210</y>
+     <y>120</y>
      <width>103</width>
      <height>25</height>
     </rect>
@@ -208,7 +116,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>210</y>
+     <y>120</y>
      <width>381</width>
      <height>25</height>
     </rect>
@@ -227,7 +135,7 @@
    <property name="geometry">
     <rect>
      <x>140</x>
-     <y>210</y>
+     <y>120</y>
      <width>83</width>
      <height>25</height>
     </rect>
@@ -240,9 +148,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>240</y>
-     <width>621</width>
-     <height>192</height>
+     <y>170</y>
+     <width>611</width>
+     <height>261</height>
     </rect>
    </property>
    <property name="alternatingRowColors">
@@ -303,7 +211,7 @@
      <x>10</x>
      <y>440</y>
      <width>621</width>
-     <height>31</height>
+     <height>32</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="commandbuttons_layout">
@@ -326,134 +234,6 @@
  </widget>
  <resources/>
  <connections>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>channel_label</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>37</x>
-     <y>133</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>clientid_label</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>38</x>
-     <y>195</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>token_lineedit</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>356</x>
-     <y>226</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>token_label</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>29</x>
-     <y>226</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>channel_lineedit</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>356</x>
-     <y>133</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>username_label</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>44</x>
-     <y>164</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>username_lineedit</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>356</x>
-     <y>164</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>enable_checkbox</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>clientid_lineedit</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>356</x>
-     <y>195</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
