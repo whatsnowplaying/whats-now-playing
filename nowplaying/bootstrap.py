@@ -8,14 +8,16 @@ import pathlib
 from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 
 
-def set_qt_names(app=None, appname='NowPlaying'):
+def set_qt_names(app=None,
+                 domain='com.github.whatsnowplaying',
+                 appname='NowPlaying'):
     ''' bootstrap Qt for configuration '''
     #QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     if not app:
         app = QCoreApplication.instance()
     if not app:
         app = QCoreApplication()
-    app.setOrganizationDomain('com.github.whatsnowplaying')
+    app.setOrganizationDomain(domain)
     app.setOrganizationName('whatsnowplaying')
     app.setApplicationName(appname)
 

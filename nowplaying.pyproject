@@ -11,6 +11,8 @@
         "nowplaying/resources/inputs_m3u_ui.ui",
         "nowplaying/resources/inputs_mpris2_ui.ui",
         "nowplaying/resources/inputs_serato_ui.ui",
+        "nowplaying/resources/inputs_traktor_ui.ui",
+	"nowplaying/resources/inputs_virtualdj_ui.ui",
         "nowplaying/resources/obsws_ui.ui",
         "nowplaying/resources/quirks_ui.ui",
         "nowplaying/resources/recognition_acoustidmb_ui.ui",

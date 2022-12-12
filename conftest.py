@@ -17,6 +17,10 @@ import nowplaying.config
 #     import psutil
 #     import pwd
 
+# DO NOT CHANGE THIS TO BE com.github.whatsnowplaying
+# otherwise your actual bits will disappear!
+DOMAIN = 'com.github.whatsnowplaying.testsuite'
+
 try:
     from pytest_cov.embed import cleanup_on_sigterm
 except ImportError:
@@ -28,7 +32,7 @@ else:
 def reboot_macosx_prefs():
     ''' work around Mac OS X's preference caching '''
     if sys.platform == 'darwin':
-        os.system('defaults delete com.whatsnowplaying.testsuite')
+        os.system(f'defaults delete {DOMAIN}')
         #
         # old method:
         #
@@ -53,7 +57,7 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
     ''' bootstrap a configuration '''
     with tempfile.TemporaryDirectory() as newpath:
         bundledir = pathlib.Path(getroot).joinpath('nowplaying')
-        nowplaying.bootstrap.set_qt_names(appname='testsuite')
+        nowplaying.bootstrap.set_qt_names(domain=DOMAIN, appname='testsuite')
         config = nowplaying.config.ConfigFile(bundledir=bundledir,
                                               logpath=newpath,
                                               testmode=True)

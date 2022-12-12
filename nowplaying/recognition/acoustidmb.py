@@ -34,7 +34,6 @@ class Plugin(RecognitionPlugin):
 
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
-        self.qwidget = None
         self.musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
             self.config)
         self.acoustidmd = {}
@@ -320,9 +319,10 @@ class Plugin(RecognitionPlugin):
         ''' return list of what is provided by this recognition system '''
         return self.musicbrainz.providerinfo()
 
-    def connect_settingsui(self, qwidget):
+    def connect_settingsui(self, qwidget, uihelp):
         ''' connect m3u button to filename picker'''
         self.qwidget = qwidget
+        self.uihelp = uihelp
         qwidget.fpcalcexe_button.clicked.connect(self.on_fpcalcexe_button)
         qwidget.acoustid_checkbox.clicked.connect(self.on_acoustid_checkbox)
 

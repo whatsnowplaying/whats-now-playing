@@ -32,77 +32,6 @@
     <enum>Qt::MarkdownText</enum>
    </property>
   </widget>
-  <widget class="QRadioButton" name="traktor_button">
-   <property name="geometry">
-    <rect>
-     <x>50</x>
-     <y>130</y>
-     <width>98</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Traktor</string>
-   </property>
-   <attribute name="buttonGroup">
-    <string notr="true">mode_buttongroup</string>
-   </attribute>
-  </widget>
-  <widget class="QRadioButton" name="none_button">
-   <property name="geometry">
-    <rect>
-     <x>50</x>
-     <y>80</y>
-     <width>98</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>None</string>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <attribute name="buttonGroup">
-    <string notr="true">mode_buttongroup</string>
-   </attribute>
-  </widget>
-  <widget class="QWidget" name="horizontalLayoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>50</x>
-     <y>160</y>
-     <width>561</width>
-     <height>51</height>
-    </rect>
-   </property>
-   <layout class="QHBoxLayout" name="traktor_layout">
-    <item>
-     <widget class="QLabel" name="traktor_collection_label">
-      <property name="text">
-       <string>Collection File</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="traktor_browse_button">
-      <property name="text">
-       <string>Browse</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLineEdit" name="traktor_collection_lineedit"/>
-    </item>
-    <item>
-     <widget class="QPushButton" name="traktor_rebuild_button">
-      <property name="text">
-       <string>Re-read</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
   <widget class="QLabel" name="port_label">
    <property name="geometry">
     <rect>
@@ -132,10 +61,27 @@
     <string>8000</string>
    </property>
   </widget>
+  <widget class="QTextBrowser" name="info_text">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>140</y>
+     <width>551</width>
+     <height>231</height>
+    </rect>
+   </property>
+   <property name="html">
+    <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;For generic Icecast-compatible systems, configure them to be on the lowest possible Ogg configuration and point at the given port. Note that port 8000, the traditional port on macOS may be used by other services.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>
- <buttongroups>
-  <buttongroup name="mode_buttongroup"/>
- </buttongroups>
 </ui>

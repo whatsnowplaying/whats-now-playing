@@ -16,7 +16,7 @@ from twitchAPI.chat import Chat, ChatEvent
 from twitchAPI.oauth import validate_token
 
 from PySide6.QtCore import QCoreApplication, QStandardPaths, Slot  # pylint: disable=import-error, no-name-in-module
-from PySide6.QtWidgets import QCheckBox, QTableWidgetItem  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtWidgets import QCheckBox, QMessageBox, QTableWidgetItem  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -441,6 +441,7 @@ class TwitchChatSettings:
         ''' make sure all twitchbot_ files have a config entry '''
         filelist = os.listdir(config.templatedir)
         existing = config.cparser.childGroups()
+        alert = False
 
         for file in filelist:
             if not fnmatch.fnmatch(file, 'twitchbot_*.txt'):
@@ -450,10 +451,16 @@ class TwitchChatSettings:
             command = f'twitchbot-command-{command}'
 
             if command not in existing:
-                config.cparser.setValue('settings/newtwitchbot', True)
+                alert = True
                 logging.debug('creating %s', command)
                 for box in TWITCHBOT_CHECKBOXES:
                     config.cparser.setValue(f'{command}/{box}', False)
+        if alert and not config.testmode:
+            msgbox = QMessageBox()
+            msgbox.setText(
+                'Twitch Chat permissions have been added or changed.')
+            msgbox.show()
+            msgbox.exec()
 
     @staticmethod
     def verify(widget):

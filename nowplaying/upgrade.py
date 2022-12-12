@@ -12,7 +12,9 @@ import time
 import pkg_resources
 
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
 
+import nowplaying.twitch.chat
 import nowplaying.version
 
 
@@ -136,6 +138,9 @@ class UpgradeConfig:
         if oldversstr in {'3.1.0', '3.1.1'}:
             upgrade_filters(config=rawconfig)
 
+        if int(oldversstr[0]) < 4 and config.value('settings/input') == 'm3u':
+            upgrade_m3u(config=rawconfig, testdir=self.testdir)
+
         for oldkey, newkey in mapping.items():
             logging.debug('processing %s - %s', oldkey, newkey)
             try:
@@ -170,6 +175,7 @@ class UpgradeTemplates():
     def __init__(self, bundledir=None, testdir=None):
         self.bundledir = pathlib.Path(bundledir)
         self.apptemplatedir = self.bundledir.joinpath('templates')
+        self.testdir = testdir
         if testdir:
             self.usertemplatedir = pathlib.Path(testdir).joinpath(
                 QCoreApplication.applicationName(), 'templates')
@@ -185,8 +191,11 @@ class UpgradeTemplates():
 
         self.setup_templates()
 
-        if self.alert:
-            trigger_alert()
+        if self.alert and not self.testdir:
+            msgbox = QMessageBox()
+            msgbox.setText('Updated templates have been placed.')
+            msgbox.show()
+            msgbox.exec()
 
     def preload(self):
         ''' preload the known hashes for bundled templates '''
@@ -249,16 +258,19 @@ class UpgradeTemplates():
             self.copied.append(apppath.name)
 
 
-def trigger_alert():
-    ''' throw a pop-up to let the user know '''
-    if sys.platform == "win32":
-        qsettingsformat = QSettings.IniFormat
-    else:
-        qsettingsformat = QSettings.NativeFormat
-    cparser = QSettings(qsettingsformat, QSettings.UserScope,
-                        QCoreApplication.organizationName(),
-                        QCoreApplication.applicationName())
-    cparser.setValue('settings/newtemplates', True)
+def upgrade_m3u(config, testdir=None):
+    ''' convert m3u to virtualdj and maybe other stuff in the future? '''
+    if 'VirtualDJ' in config.value('m3u/directory'):
+        historypath = pathlib.Path(config.value('m3u/directory'))
+        config.setValue('virtualdj/history', config.value('m3u/directory'))
+        config.setValue('virtualdj/playlists',
+                        str(historypath.parent.joinpath('Playlists')))
+        config.setValue('settings/input', 'virtualdj')
+        if not testdir:
+            msgbox = QMessageBox()
+            msgbox.setText('M3U has been converted to VirtualDJ.')
+            msgbox.show()
+            msgbox.exec()
 
 
 def upgrade_filters(config):

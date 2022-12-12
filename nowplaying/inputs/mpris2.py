@@ -242,8 +242,10 @@ class Plugin(InputPlugin):
     async def stop(self):
         ''' not needed '''
 
-    def connect_settingsui(self, qwidget):
+    def connect_settingsui(self, qwidget, uihelp):
         ''' not needed '''
+        self.qwidget = qwidget
+        self.uihelp = uihelp
 
     def load_settingsui(self, qwidget):
         ''' populate the combobox '''

@@ -54,6 +54,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if not self.config.iconfile:
             self.tray.cleanquit()
         self.qtui.setWindowIcon(QIcon(str(self.config.iconfile)))
+        self.settingsclasses['twitchchat'].update_twitchbot_commands(
+            self.config)
 
     def load_qtui(self):
         ''' load the base UI and wire it up '''
@@ -185,7 +187,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _connect_plugins(self):
         ''' tell config to trigger plugins to update windows '''
-        self.config.plugins_connect_settingsui(self.widgets)
+        self.config.plugins_connect_settingsui(self.widgets, self.uihelp)
 
     def _set_source_description(self, index):
         item = self.widgets['source'].sourcelist.item(index)

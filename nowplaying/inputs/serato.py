@@ -840,7 +840,6 @@ class Plugin(InputPlugin):
         self.local = True
         self.serato = None
         self.mixmode = "newest"
-        self.qwidget = None
 
     def install(self):
         ''' auto-install for Serato '''
@@ -1013,9 +1012,10 @@ class Plugin(InputPlugin):
                                                       startdir):
             self.qwidget.local_dir_lineedit.setText(libdir)
 
-    def connect_settingsui(self, qwidget):
+    def connect_settingsui(self, qwidget, uihelp):
         ''' connect serato local dir button '''
         self.qwidget = qwidget
+        self.uihelp = uihelp
         self.qwidget.local_dir_button.clicked.connect(
             self.on_serato_lib_button)
 

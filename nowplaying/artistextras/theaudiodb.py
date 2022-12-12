@@ -201,7 +201,7 @@ class Plugin(ArtistExtrasPlugin):
             'artistthumbraw', 'theaudiodb-artistfanarturls'
         ]
 
-    def connect_settingsui(self, qwidget):
+    def connect_settingsui(self, qwidget, uihelp):
         ''' pass '''
 
     def load_settingsui(self, qwidget):

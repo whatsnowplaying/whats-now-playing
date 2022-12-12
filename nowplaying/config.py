@@ -211,14 +211,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
                     key].Plugin(config=self, qsettings=settings)
                 self.pluginobjs[plugintype][key].defaults(settings)
 
-    def plugins_connect_settingsui(self, qtwidgets):
+    def plugins_connect_settingsui(self, qtwidgets, uihelp):
         ''' configure the defaults for plugins '''
         # qtwidgets = list of qtwidgets, identified as [plugintype_pluginname]
         for plugintype, plugtypelist in self.plugins.items():
             for key in plugtypelist:
                 widgetkey = key.split('.')[-1]
                 self.pluginobjs[plugintype][key].connect_settingsui(
-                    qtwidgets[f'{plugintype}_{widgetkey}'])
+                    qtwidgets[f'{plugintype}_{widgetkey}'], uihelp)
 
     def plugins_load_settingsui(self, qtwidgets):
         ''' configure the defaults for plugins '''

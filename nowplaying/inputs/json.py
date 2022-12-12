@@ -25,8 +25,10 @@ class Plugin(InputPlugin):
     def defaults(self, qsettings):
         ''' (re-)set the default configuration values for this plugin '''
 
-    def connect_settingsui(self, qwidget):
+    def connect_settingsui(self, qwidget, uihelp):
         ''' connect any UI elements such as buttons '''
+        self.qwidget = qwidget
+        self.uihelp = uihelp
 
     def load_settingsui(self, qwidget):
         ''' load values from config and populate page '''

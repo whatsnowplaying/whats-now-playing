@@ -12,6 +12,8 @@ class RecognitionPlugin():
     def __init__(self, config=None, qsettings=None):
         self.plugintype = 'input'
         self.config = config
+        self.qwidget = None
+        self.uihelp = None
 
         if qsettings:
             self.defaults(qsettings)
@@ -26,7 +28,7 @@ class RecognitionPlugin():
         ''' (re-)set the default configuration values for this plugin '''
         raise NotImplementedError
 
-    def connect_settingsui(self, qwidget):
+    def connect_settingsui(self, qwidget, uihelp):
         ''' connect any UI elements such as buttons '''
         raise NotImplementedError
 
