@@ -30,9 +30,16 @@ USER_SCOPE = [
     AuthScope.CHAT_EDIT
 ]
 
-USERREQUEST = [
-    'artist', 'title', 'type', 'playlist', 'username', 'filename', 'userimage'
+USERREQUEST_TEXT = [
+    'artist',
+    'title',
+    'type',
+    'playlist',
+    'username',
+    'filename',
 ]
+
+USERREQUEST_BLOB = ['userimage']
 
 REQUEST_SETTING_MAPPING = {
     'request': 'Twitch Text',
@@ -96,7 +103,8 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
         with sqlite3.connect(self.databasefile) as connection:
             cursor = connection.cursor()
             sql = 'CREATE TABLE IF NOT EXISTS userrequest ('
-            sql += ' TEXT, '.join(USERREQUEST) + ' TEXT, '
+            sql += ' TEXT, '.join(USERREQUEST_TEXT) + ' TEXT, '
+            sql += ' BLOB, '.join(USERREQUEST_BLOB) + ' BLOB, '
             sql += 'reqid INTEGER PRIMARY KEY AUTOINCREMENT,'
             sql += 'timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)'
             cursor.execute(sql)
@@ -109,7 +117,6 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
             del data['username']
             del data['playlist']
             del data['type']
-            del data['userimage']
             sql = 'UPDATE userrequest SET '
             sql += '= ? , '.join(data.keys())
             sql += '= ? WHERE reqid=? '
@@ -144,7 +151,7 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
             with sqlite3.connect(self.databasefile) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = connection.cursor()
-                datatuple = tuple([RESPIN_TEXT, reqid])
+                datatuple = RESPIN_TEXT, reqid
                 cursor.execute(sql, datatuple)
                 connection.commit()
         except sqlite3.OperationalError as error:
@@ -218,17 +225,16 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
                 row = await cursor.fetchone()
                 if row:
                     self.erase_id(row['reqid'])
-                    data = {
+                    return {
                         'requester': row['username'],
                         'requesterimageraw': row['userimage'],
                     }
-                    return data
         except Exception as error:  #pylint: disable=broad-except
             logging.debug(error)
         return None
 
     async def _watch_for_respin(self):
-        datatuple = tuple([RESPIN_TEXT])
+        datatuple = (RESPIN_TEXT, )
         while not self.stopevent.is_set():
             await asyncio.sleep(10)
             try:
@@ -380,7 +386,8 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
         row = self.widgets.request_table.rowCount()
         self.widgets.request_table.insertRow(row)
 
-        for column, cbtype in enumerate(USERREQUEST + ['timestamp', 'reqid']):
+        for column, cbtype in enumerate(USERREQUEST_TEXT +
+                                        ['timestamp', 'reqid']):
             if not kwargs.get(cbtype):
                 continue
             self.widgets.request_table.setItem(

@@ -1,2 +1,2 @@
+{% if requester %} @{{ requester }} requested {% endif %}
 {% if artist %}{{ artist }} - {% endif %}"{{ title }}"
-{% if redeemer %} as requested by {{ redeemer }}{% endif %}

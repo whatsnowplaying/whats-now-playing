@@ -944,10 +944,10 @@ class Plugin(InputPlugin):
 
 
         logging.debug('Determined: %s %s', crate_path, smartcrate_path)
-        if crate_path.joinpath(playlist+'.crate').exists():
-            playlistfile = crate_path.joinpath(playlist+'.crate')
-        elif smartcrate_path.joinpath(playlist+'.scrate'):
-            playlistfile = smartcrate_path.joinpath(playlist+'.scrate')
+        if crate_path.joinpath(f'{playlist}.crate').exists():
+            playlistfile = crate_path.joinpath(f'{playlist}.crate')
+        elif smartcrate_path.joinpath(f'{playlist}.scrate'):
+            playlistfile = smartcrate_path.joinpath(f'{playlist}.scrate')
         else:
             logging.debug('Unknown crate: %s', playlist)
             return None
