@@ -117,8 +117,7 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
             del data['username']
             del data['playlist']
             del data['type']
-            sql = 'UPDATE userrequest SET '
-            sql += '= ? , '.join(data.keys())
+            sql = 'UPDATE userrequest SET ' + '= ? , '.join(data.keys())
             sql += '= ? WHERE reqid=? '
             datatuple = list(data.values()) + [reqid]
         else:
