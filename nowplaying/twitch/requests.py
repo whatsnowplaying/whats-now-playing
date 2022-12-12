@@ -286,10 +286,10 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
             user_input = None
 
         for configitem in self.config.cparser.childGroups():
-            setting = {}
             if 'twitchbot-request-' in configitem:
-                setting['request'] = configitem.replace(
-                    'twitchbot-request-', '')
+                setting = {
+                    'request': configitem.replace('twitchbot-request-', '')
+                }
                 for key in REQUEST_SETTING_MAPPING:
                     setting[key] = self.config.cparser.value(
                         f'{configitem}/{key}')

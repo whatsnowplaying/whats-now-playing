@@ -111,8 +111,7 @@ class SeratoCrateReader:
             for subtag in otrk:
                 if subtag[0] != 'ptrk':
                     continue
-                for filepart in subtag[1:]:
-                    filelist.append(f'{anchor}{filepart}')
+                filelist.extend(f'{anchor}{filepart}' for filepart in subtag[1:])
         return filelist
 
 
