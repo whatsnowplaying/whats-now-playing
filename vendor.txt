@@ -1,2 +1,2 @@
 git+https://github.com/whatsnowplaying/audio-metadata.git@nowplaying
-git+https://github.com/whatsnowplaying/discogs_client@new-nowplaying
+git+https://github.com/whatsnowplaying/discogs_client@nowplaying
