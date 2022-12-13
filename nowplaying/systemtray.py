@@ -75,19 +75,23 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         # add menu to the systemtray UI
         self.tray.setContextMenu(self.menu)
+        self.error_dialog = QErrorMessage()
+        self.regular_dialog = QMessageBox()
 
         self.config.get()
         if not self.config.file:
             self.settingswindow.show()
+        elif not self.config.validate_source():
+            self.error_dialog.showMessage(
+                'Invalid source detected. Please pick a valid one.')
+            self.config.cparser.remove('settings/input')
+            self.settingswindow.show()
 
-        else:
-            self.action_pause.setText('Pause')
-            self.action_pause.setEnabled(True)
+        self.action_pause.setText('Pause')
+        self.action_pause.setEnabled(True)
 
         self.fix_mixmode_menu()
 
-        self.error_dialog = QErrorMessage()
-        self.regular_dialog = QMessageBox()
         self._check_for_upgrade_alert()
         self.trackthread = None
         self.webprocess = None

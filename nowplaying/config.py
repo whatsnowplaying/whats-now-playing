@@ -188,6 +188,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
         self._defaults_plugins(settings)
 
+    def validate_source(self):
+        ''' validate the source input as valid '''
+        plugin = self.cparser.value('settings/input')
+        return self.plugins['inputs'].get(f'nowplaying.inputs.{plugin}')
+
     def _initial_plugins(self):
 
         self.plugins['inputs'] = nowplaying.utils.import_plugins(
@@ -384,5 +389,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
                 ]
                 self.lastloaddate = self.cparser.value('settings/lastsavedate')
             except re.error as error:
-                logging.error('Filter error with \'%s\': %s', error.pattern, error.msg)
+                logging.error('Filter error with \'%s\': %s', error.pattern,
+                              error.msg)
         return self.striprelist
