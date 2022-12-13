@@ -70,16 +70,10 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.tray.setContextMenu(self.menu)
         self.tray.show()
 
-        self.error_dialog = QErrorMessage()
-        self.regular_dialog = QMessageBox()
-
         self.config.get()
-        if not self.config.cparser.value('settings/input', defaultValue=None):
-            self.installer()
-        else:
-            self.action_pause.setText('Pause')
-            self.action_pause.setEnabled(True)
-
+        self.installer()
+        self.action_pause.setText('Pause')
+        self.action_pause.setEnabled(True)
         self.fix_mixmode_menu()
 
         self.subprocesses.start_all_processes()
@@ -245,25 +239,33 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def installer(self):
         ''' make some guesses as to what the user needs '''
-        if self.config.cparser.value('input/settings', defaultValue=None):
+        plugin = self.config.cparser.value('settings/input', defaultValue=None)
+        if not self.config.validate_source(plugin):
+            self.config.cparser.remove('settings/input')
+            msgbox = QErrorMessage()
+            msgbox.showMessage(
+                f'Configured source {plugin} is not supported. Reconfiguring.')
+            msgbox.show()
+            msgbox.exec()
+        elif not self.config.cparser.value('settings/input',
+                                           defaultValue=None):
+            msgbox = QMessageBox()
+            msgbox.setText('New installation! Thanks! '
+                           'Determining setup. This operation may take a bit!')
+            msgbox.show()
+            msgbox.exec()
+        else:
             return
-
-        self.regular_dialog.setText(
-            'New installation! Thanks! '
-            'Determining setup. This operation may take a bit!')
-        self.regular_dialog.show()
-        self.regular_dialog.exec()
 
         plugins = self.config.pluginobjs['inputs']
 
         for plugin in plugins:
             if plugins[plugin].install():
                 break
-
-        self.regular_dialog.setText(
-            'Basic configuration hopefully in place. '
-            'Please verify the Source and configure an output!')
-        self.regular_dialog.show()
-        self.regular_dialog.exec()
+        msgbox = QMessageBox()
+        msgbox.setText('Basic configuration hopefully in place. '
+                       'Please verify the Source and configure an output!')
+        msgbox.show()
+        msgbox.exec()
 
         self.settingswindow.show()

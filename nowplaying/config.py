@@ -120,6 +120,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         except TypeError:
             pass
 
+    def validate_source(self, plugin):
+        ''' verify the source input '''
+        return self.plugins['inputs'].get(f'nowplaying.inputs.{plugin}')
+
     def defaults(self):
         ''' default values for things '''
         logging.debug('set defaults')
