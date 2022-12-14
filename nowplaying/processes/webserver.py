@@ -46,12 +46,6 @@ INDEXREFRESH = \
     '<body></body></html>\n'
 
 
-TRANSPARENT_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC'\
-                  '1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAA'\
-                  'ASUVORK5CYII='
-TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
-
-
 class WebHandler():  # pylint: disable=too-many-public-methods
     ''' aiohttp built server that does both http and websocket '''
 
@@ -130,7 +124,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         ''' base64 encoding + transparent missing '''
         for key in nowplaying.db.METADATABLOBLIST:
             if not metadata.get(key):
-                metadata[key] = TRANSPARENT_PNG_BIN
+                metadata[key] = nowplaying.utils.TRANSPARENT_PNG_BIN
         return self._base64ifier(metadata)
 
     async def indexhtm_handler(self, request):
@@ -163,6 +157,12 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             request, request.app['config'].cparser.value(
                 'weboutput/artistfanarttemplate'))
 
+    async def requesterlaunchhtm_handler(self, request):
+        ''' handle web output '''
+        return await self.htm_handler(
+            request,
+            request.app['config'].cparser.value('weboutput/requestertemplate'))
+
     async def htm_handler(self, request, template):  # pylint: disable=unused-argument
         ''' handle static html files'''
 
@@ -172,6 +172,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         metadata = request.app['metadb'].read_last_meta()
         lastid = await self.getlastid(request, source)
         once = request.app['config'].cparser.value('weboutput/once', type=bool)
+        #once = False
 
         # | dbid  |  lastid | once |
         # |   x   |   NA    |      |  -> update lastid, send template
@@ -250,7 +251,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                                 body=metadata['coverimageraw'])
         # rather than return an error, just send a transparent PNG
         # this makes the client code significantly easier
-        return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
+        return web.Response(content_type='image/png',
+                            body=nowplaying.utils.TRANSPARENT_PNG_BIN)
 
     @staticmethod
     async def artistbanner_handler(request):
@@ -261,7 +263,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                                 body=metadata['artistbannerraw'])
         # rather than return an error, just send a transparent PNG
         # this makes the client code significantly easier
-        return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
+        return web.Response(content_type='image/png',
+                            body=nowplaying.utils.TRANSPARENT_PNG_BIN)
 
     @staticmethod
     async def artistlogo_handler(request):
@@ -272,7 +275,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                                 body=metadata['artistlogoraw'])
         # rather than return an error, just send a transparent PNG
         # this makes the client code significantly easier
-        return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
+        return web.Response(content_type='image/png',
+                            body=nowplaying.utils.TRANSPARENT_PNG_BIN)
 
     @staticmethod
     async def artistthumb_handler(request):
@@ -283,7 +287,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                                 body=metadata['artistthumbraw'])
         # rather than return an error, just send a transparent PNG
         # this makes the client code significantly easier
-        return web.Response(content_type='image/png', body=TRANSPARENT_PNG_BIN)
+        return web.Response(content_type='image/png',
+                            body=nowplaying.utils.TRANSPARENT_PNG_BIN)
 
     async def api_v1_last_handler(self, request):
         ''' handle static index.txt '''
@@ -319,7 +324,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                         'artistextras/coverfornofanart', type=bool):
                     metadata['artistfanartraw'] = metadata.get('coverimageraw')
                 else:
-                    metadata['artistfanartraw'] = TRANSPARENT_PNG_BIN
+                    metadata[
+                        'artistfanartraw'] = nowplaying.utils.TRANSPARENT_PNG_BIN
 
                 try:
                     await websocket.send_json(self._transparentifier(metadata))
@@ -433,6 +439,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             web.get('/index.htm', self.indexhtm_handler),
             web.get('/index.html', self.indexhtm_handler),
             web.get('/index.txt', self.indextxt_handler),
+            web.get('/request.htm', self.requesterlaunchhtm_handler),
             web.get('/ws', self.websocket_handler),
             web.get('/wsstream', self.websocket_streamer),
             web.get('/wsartistfanartstream',

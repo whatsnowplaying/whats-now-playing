@@ -3,6 +3,7 @@
 
 from html.parser import HTMLParser
 
+import base64
 import copy
 import importlib
 import io
@@ -21,6 +22,12 @@ STRIPRELIST = [
     re.compile(r' - (?i:{0}$)'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
     re.compile(r' \[(?i:{0})\]'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
 ]
+
+TRANSPARENT_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC'\
+                  '1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAA'\
+                  'ASUVORK5CYII='
+
+TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
 
 
 class HTMLFilter(HTMLParser):

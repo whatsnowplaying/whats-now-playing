@@ -1,0 +1,71 @@
+<!DOCTYPE HTML>
+<html>
+   <head>
+      <meta charset="utf-8" >
+      <title>Requests</title>
+      <link href="http://db.onlinewebfonts.com/c/de58fdcb98299a76fccd3c0cb4e5a6c0?family=Kabel" rel="stylesheet" type="text/css"/>
+      <style>
+         .container {
+           margin: 1px;
+           float: right;
+           font-size: 48px;
+           font-family: "Kabel";
+           text-shadow: 4px 4px #000000;
+           color: #FFF;
+         }
+         .npimage {
+           margin: 10px;
+           float: right;
+           max-height: 399px;
+           min-height: 399px;
+           width: auto;
+         }
+      </style>
+      <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
+  </head>
+   <body>
+
+
+      <div class="container" id="titlecard">
+         <div class="npimage" id="requesterimage"></div>
+         <p><div id="requester"></div></p>
+      </div>
+
+      <script type = "text/javascript">
+            function start(websocketServerLocation){
+                  // Let us open a web socket
+                  var ws = new WebSocket(websocketServerLocation);
+
+                  ws.onopen = function() {
+                     console.log('ws connected');
+                  };
+
+                  ws.onmessage = function (event) {
+                     var metadata = JSON.parse(event.data);
+                     var img = document.createElement("img")
+                     console.log(metadata);
+                     if (metadata.requester) {
+                        img.src = 'data:image/png;base64,' + metadata.requesterimagebase64;
+                        img.className = "npimage"
+                        $("#requesterimage").html(img);
+                        $("#requester").html('This '+ metadata.requestdisplayname+' track ' + 'requested by '+metadata.requester+'!');
+                     } else {
+                        $("#requesterimage").html('');
+                        $("#requester").html('');
+                     }
+                  };
+
+                  ws.onclose = function(){
+                     // Try to reconnect in 5 seconds
+                     setTimeout(function(){start(websocketServerLocation)}, 5000);
+                };
+            }
+
+            if ("WebSocket" in window) {
+               start("ws://{{ hostip }}:{{ httpport }}/wsstream")
+            }
+
+      </script>
+
+   </body>
+</html>

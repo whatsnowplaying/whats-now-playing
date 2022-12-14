@@ -48,6 +48,7 @@ METADATALIST = [
     'musicbrainzalbumid',
     'musicbrainzartistid',
     'musicbrainzrecordingid',
+    'requestdisplayname',
     'requester',
     'title',
     'track',

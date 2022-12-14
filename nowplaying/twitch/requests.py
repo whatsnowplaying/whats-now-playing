@@ -23,6 +23,7 @@ import nowplaying.config
 import nowplaying.db
 from nowplaying.exceptions import PluginVerifyError
 import nowplaying.metadata
+from nowplaying.utils import TRANSPARENT_PNG_BIN
 import nowplaying.version
 
 USER_SCOPE = [
@@ -33,6 +34,7 @@ USER_SCOPE = [
 USERREQUEST_TEXT = [
     'artist',
     'title',
+    'displayname',
     'type',
     'playlist',
     'username',
@@ -41,9 +43,15 @@ USERREQUEST_TEXT = [
 
 USERREQUEST_BLOB = ['userimage']
 
+REQUEST_WINDOW_FIELDS = [
+    'artist', 'title', 'type', 'playlist', 'username', 'filename', 'timestamp',
+    'reqid'
+]
+
 REQUEST_SETTING_MAPPING = {
     'request': 'Twitch Text',
     'type': 'Roulette',
+    'displayname': 'Display Name',
     'playlist': 'Playlist File'
 }
 
@@ -117,6 +125,7 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
             del data['username']
             del data['playlist']
             del data['type']
+            del data['displayname']
             sql = 'UPDATE userrequest SET '
             sql += '= ? , '.join(data.keys())
             sql += '= ? WHERE reqid=? '
@@ -173,17 +182,23 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
                 return
 
     async def user_roulette_request(self,
+                                    setting,
                                     user,
-                                    playlist,
                                     user_input,
                                     reqid=None):
         ''' roulette request '''
-        logging.debug('%s requested roulette %s | %s', user, playlist,
-                      user_input)
+
+        if not setting.get('playlist'):
+            logging.error('%s does not have a playlist defined',
+                          setting.get('displayname'))
+            return
+
+        logging.debug('%s requested roulette %s | %s', user,
+                      setting['playlist'], user_input)
 
         plugin = self.config.cparser.value('settings/input')
         roulette = await self.config.pluginobjs['inputs'][
-            f'nowplaying.inputs.{plugin}'].getrandomtrack(playlist)
+            f'nowplaying.inputs.{plugin}'].getrandomtrack(setting['playlist'])
         metadata = await nowplaying.metadata.MetadataProcessors(
             config=self.config
         ).getmoremetadata(metadata={'filename': roulette}, skipplugins=True)
@@ -193,45 +208,57 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
             'filename': metadata['filename'],
             'title': metadata.get('title'),
             'type': 'Roulette',
-            'playlist': playlist,
+            'playlist': setting['playlist'],
+            'displayname': setting.get('displayname'),
         }
         if reqid:
             data['reqid'] = reqid
         await self._add_to_db(data)
 
-    async def get_request(self, metadata):
-        ''' if a track gets played, finish out the request '''
-        if metadata.get('filename'):
-            sql = 'SELECT * FROM userrequest WHERE filename=?'
-            datatuple = [
-                metadata['filename'],
-            ]
-        elif metadata.get('artist') and metadata.get('title'):
-            sql = 'SELECT * FROM userrequest WHERE artist=? AND title=?'
-            datatuple = [
-                metadata['artist'],
-                metadata['title'],
-            ]
-        else:
-            return None
-        sql += ' ORDER BY timestamp ASC LIMIT 1'
-
+    async def _get_request_lookup(self, sql, datatuple):
+        ''' run sql for request '''
         try:
             async with aiosqlite.connect(self.databasefile) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
-                await cursor.execute(
-                    'SELECT * from userrequest WHERE filename=?', datatuple)
+                await cursor.execute(sql, datatuple)
                 row = await cursor.fetchone()
                 if row:
                     self.erase_id(row['reqid'])
                     return {
                         'requester': row['username'],
                         'requesterimageraw': row['userimage'],
+                        'requestdisplayname': row['displayname'],
                     }
         except Exception as error:  #pylint: disable=broad-except
             logging.debug(error)
         return None
+
+    async def get_request(self, metadata):
+        ''' if a track gets played, finish out the request '''
+        newdata = None
+        if metadata.get('filename'):
+            logging.debug('trying filename %s', metadata['filename'])
+            sql = 'SELECT * FROM userrequest WHERE filename=?'
+            datatuple = (metadata['filename'], )
+            newdata = await self._get_request_lookup(sql, datatuple)
+
+        if not newdata and metadata.get('artist') and metadata.get('title'):
+            logging.debug('trying artist %s / title %s', metadata['artist'],
+                          metadata['title'])
+            sql = 'SELECT * FROM userrequest WHERE artist=? AND title=? COLLATE NOCASE'
+            datatuple = metadata['artist'], metadata['title']
+
+            newdata = await self._get_request_lookup(sql, datatuple)
+
+        if not newdata:
+            logging.debug('not a request')
+            return None
+
+        if not newdata.get('requesterimageraw'):
+            newdata['requesterimageraw'] = TRANSPARENT_PNG_BIN
+
+        return newdata
 
     async def _watch_for_respin(self):
         datatuple = (RESPIN_TEXT, )
@@ -242,18 +269,19 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
                     connection.row_factory = sqlite3.Row
                     cursor = await connection.cursor()
                     await cursor.execute(
-                        'SELECT * from userrequest WHERE filename=? ORDER BY timestamp ASC',
+                        'SELECT * from userrequest WHERE filename=? ORDER BY timestamp DESC',
                         datatuple)
                     while row := await cursor.fetchone():
                         logging.debug(
                             'calling user_roulette_request: %s %s %s',
                             row['username'], row['playlist'], row['reqid'])
                         await self.user_roulette_request(
-                            row['username'], row['playlist'], '', row['reqid'])
+                            {'playlist': row['playlist']}, row['username'], '',
+                            row['reqid'])
             except Exception as error:  #pylint: disable=broad-except
                 logging.debug(error)
 
-    async def user_track_request(self, user, user_input):
+    async def user_track_request(self, setting, user, user_input):
         ''' generic request '''
         logging.debug('%s generic requested %s', user, user_input)
         artist = None
@@ -269,10 +297,11 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
         else:
             artist = user_input
         data = {
-            'user': user,
+            'username': user,
             'artist': artist,
             'title': title,
             'type': 'Generic',
+            'displayname': setting.get('displayname')
         }
         await self._add_to_db(data)
 
@@ -295,19 +324,24 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
                         f'{configitem}/{key}')
                 if redemptitle == setting['request']:
                     if setting.get('type') == 'Generic':
-                        await self.user_track_request(user, user_input)
+                        await self.user_track_request(setting, user,
+                                                      user_input)
                     elif setting.get('type') == 'Roulette':
                         await self.user_roulette_request(
-                            user, setting.get('playlist'), user_input)
+                            setting, user, user_input)
 
     async def run_request(self, twitch=None):
         ''' twitch requests '''
 
-        if not self.config.cparser.value('twitchbot/requests', type=bool):
-            logging.error('Twitch requests have not been enabled. Exiting.')
-
         if not twitch:
             logging.error('No Twitch credentials to start requests. Exiting.')
+            return
+
+        while not self.config.cparser.value(
+                'twitchbot/requests') and not self.stopevent.is_set():
+            await asyncio.sleep(1)
+
+        if self.stopevent.is_set():
             return
 
         loop = asyncio.get_running_loop()
@@ -386,8 +420,9 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
         row = self.widgets.request_table.rowCount()
         self.widgets.request_table.insertRow(row)
 
-        for column, cbtype in enumerate(USERREQUEST_TEXT +
-                                        ['timestamp', 'reqid']):
+        for column, cbtype in enumerate(REQUEST_WINDOW_FIELDS):
+            if cbtype == 'displayname':
+                continue
             if not kwargs.get(cbtype):
                 continue
             self.widgets.request_table.setItem(

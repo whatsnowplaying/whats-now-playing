@@ -62,6 +62,14 @@
    </column>
    <column>
     <property name="text">
+     <string>Display Name</string>
+    </property>
+    <property name="textAlignment">
+     <set>AlignLeading|AlignVCenter</set>
+    </property>
+   </column>
+   <column>
+    <property name="text">
      <string>Playlist File</string>
     </property>
     <property name="textAlignment">

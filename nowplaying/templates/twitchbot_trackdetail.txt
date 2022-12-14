@@ -15,3 +15,4 @@
 {% if label %} It was published by {{ label }}.{% endif %}
 {% if date %} The date is listed as {{ date }}, but that might be
  the date of the media. {% endif %}
+{% if requester %}  It was requested by @{{ requester }}.  {% endif %}
