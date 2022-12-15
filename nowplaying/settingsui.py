@@ -23,7 +23,7 @@ except ModuleNotFoundError:
     pass
 import nowplaying.twitch
 import nowplaying.twitch.chat
-import nowplaying.twitch.requests
+import nowplaying.trackrequests
 import nowplaying.uihelp
 import nowplaying.utils
 
@@ -44,8 +44,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.settingsclasses = {
             'twitch': nowplaying.twitch.TwitchSettings(),
             'twitchchat': nowplaying.twitch.chat.TwitchChatSettings(),
-            'twitchrequests':
-            nowplaying.twitch.requests.TwitchRequestSettings(),
+            'requests': nowplaying.trackrequests.RequestSettings(),
         }
 
         self.uihelp = None
@@ -82,7 +81,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         baseuis = [
             'general', 'source', 'filter', 'webserver', 'twitch', 'twitchchat',
-            'twitchrequests', 'artistextras', 'obsws', 'quirks'
+            'requests', 'artistextras', 'obsws', 'quirks'
         ]
 
         pluginuis = {}
@@ -120,7 +119,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         for key in [
                 'twitch',
                 'twitchchat',
-                'twitchrequests',
+                'requests',
         ]:
             self.settingsclasses[key].load(self.config, self.widgets[key])
             self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
@@ -225,7 +224,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         for key in [
                 'twitch',
                 'twitchchat',
-                'twitchrequests',
+                'requests',
         ]:
             self.settingsclasses[key].load(self.config, self.widgets[key])
 
@@ -389,7 +388,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         for key in [
                 'twitch',
                 'twitchchat',
-                'twitchrequests',
+                'requests',
         ]:
             self.settingsclasses[key].save(self.config, self.widgets[key])
 
@@ -697,7 +696,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         for key in [
                 'twitch',
                 'twitchchat',
-                'twitchrequests',
+                'requests',
         ]:
             try:
                 self.settingsclasses[key].verify(self.widgets[key])

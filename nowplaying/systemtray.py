@@ -12,7 +12,7 @@ import nowplaying.db
 import nowplaying.settingsui
 import nowplaying.subprocesses
 import nowplaying.twitch.chat
-import nowplaying.twitch.requests
+import nowplaying.trackrequests
 import nowplaying.utils
 import nowplaying.version
 
@@ -84,20 +84,20 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.watcher.addPath(str(metadb.databasefile))
         self.watcher.fileChanged.connect(self.tracknotify)
 
-        self.trwindow = None
+        self.requestswindow = None
         self._configure_twitchrequests()
 
         if self.config.cparser.value('twitchbot/requests', type=bool):
             self.request_action.setEnabled(True)
 
     def _configure_twitchrequests(self):
-        self.trwindow = nowplaying.twitch.requests.TwitchRequests(
+        self.requestswindow = nowplaying.trackrequests.Requests(
             config=self.config)
-        self.trwindow.initial_ui()
+        self.requestswindow.initial_ui()
 
     def _requestswindow(self):
         if self.config.cparser.value('twitchbot/requests', type=bool):
-            self.trwindow.raise_window()
+            self.requestswindow.raise_window()
 
     def _configure_newold_menu(self):
         self.action_newestmode.setCheckable(True)
@@ -223,7 +223,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         ''' quit app and cleanup '''
 
         logging.debug('Starting shutdown')
-        self.trwindow.close_window()
+        self.requestswindow.close_window()
         self.tray.setVisible(False)
 
         self.subprocesses.stop_all_processes()

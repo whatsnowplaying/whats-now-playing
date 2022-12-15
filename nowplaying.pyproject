@@ -22,7 +22,7 @@
         "nowplaying/resources/source_ui.ui",
         "nowplaying/resources/twitchbot_ui.ui",
         "nowplaying/resources/twitchchat_ui.ui",
-        "nowplaying/resources/twitchrequests_ui.ui",
+        "nowplaying/resources/requests_ui.ui",
         "nowplaying/resources/webserver_ui.ui",
         "test_settingsui.py"
     ]

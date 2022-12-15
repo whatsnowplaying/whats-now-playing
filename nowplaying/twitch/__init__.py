@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' handle twitch requests '''
+''' handle twitch '''
 
 import asyncio
 import logging
@@ -7,7 +7,7 @@ import threading
 import signal
 import sys
 
-import requests as urlrequests
+import requests
 
 from twitchAPI.twitch import Twitch
 from twitchAPI.helper import first
@@ -22,7 +22,7 @@ import nowplaying.metadata
 import nowplaying.version
 
 import nowplaying.twitch.chat
-import nowplaying.twitch.requests
+import nowplaying.twitch.redemptions
 
 USER_SCOPE = [
     AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ,
@@ -42,7 +42,7 @@ class TwitchSupport:
         self.twitch = None
         self.widgets = None
         self.chat = None
-        self.requests = None
+        self.redemptions = None
         self.loop = None
 
     async def bootstrap(self):
@@ -95,7 +95,8 @@ class TwitchSupport:
                 self.loop = asyncio.new_event_loop()
 
         self.loop.create_task(self.chat.run_chat(twitch=self.twitch))
-        self.loop.create_task(self.requests.run_request(twitch=self.twitch))
+        self.loop.create_task(
+            self.redemptions.run_redemptions(twitch=self.twitch))
 
     async def _watch_for_exit(self):
         while not self.stopevent.is_set():
@@ -107,7 +108,7 @@ class TwitchSupport:
 
         self.chat = nowplaying.twitch.chat.TwitchChat(config=self.config,
                                                       stopevent=self.stopevent)
-        self.requests = nowplaying.twitch.requests.TwitchRequests(
+        self.redemptions = nowplaying.twitch.redemptions.TwitchRedemptions(
             config=self.config, stopevent=self.stopevent)
         if not self.loop:
             try:
@@ -124,7 +125,7 @@ class TwitchSupport:
 
     async def stop(self):
         ''' stop the twitch support '''
-        await self.requests.stop()
+        await self.redemptions.stop()
         await self.chat.stop()
         await self.twitch.close()
         self.loop.stop()
@@ -182,7 +183,7 @@ class TwitchSettings:
             headers = {'Authorization': f'OAuth {token}'}
 
             try:
-                req = urlrequests.get(url, headers=headers, timeout=5)
+                req = requests.get(url, headers=headers, timeout=5)
             except Exception as error:
                 raise PluginVerifyError(
                     f'Twitch Token validation check failed: {error}'

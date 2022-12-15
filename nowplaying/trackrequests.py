@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' twitch request handling '''
+''' request handling '''
 
 import asyncio
 import logging
@@ -7,29 +7,15 @@ import pathlib
 import re
 import sqlite3
 
-import requests
-import aiosqlite  # pylint: disable=import-error
-
-from twitchAPI.pubsub import PubSub
-from twitchAPI.helper import first
-from twitchAPI.types import AuthScope
+import aiosqlite
 
 from PySide6.QtCore import Slot, QFile, QFileSystemWatcher, QStandardPaths  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtWidgets import QCheckBox, QHeaderView, QTableWidgetItem  # pylint: disable=no-name-in-module
 from PySide6.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
 
-import nowplaying.bootstrap
-import nowplaying.config
-import nowplaying.db
-from nowplaying.exceptions import PluginVerifyError
 import nowplaying.metadata
+from nowplaying.exceptions import PluginVerifyError
 from nowplaying.utils import TRANSPARENT_PNG_BIN
-import nowplaying.version
-
-USER_SCOPE = [
-    AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ,
-    AuthScope.CHAT_EDIT
-]
 
 USERREQUEST_TEXT = [
     'artist',
@@ -49,7 +35,8 @@ REQUEST_WINDOW_FIELDS = [
 ]
 
 REQUEST_SETTING_MAPPING = {
-    'request': 'Twitch Text',
+    'command': 'Chat Command',
+    'twitchtext': 'Twitch Text',
     'type': 'Roulette',
     'displayname': 'Display Name',
     'playlist': 'Playlist File'
@@ -75,8 +62,8 @@ TITLE_ARTIST_RE = re.compile(r'^s*"(.*)"\s+[-by]+\s+"(.*)\s*(for .*)*$')
 TITLE_RE = re.compile(r'^s*"(.*)"\s*(for .*)*$')
 
 
-class TwitchRequests:  #pylint: disable=too-many-instance-attributes
-    ''' handle twitch requests
+class Requests:  #pylint: disable=too-many-instance-attributes
+    ''' handle requests
 
 
         Note that different methods are being called by different parts of the system
@@ -89,15 +76,12 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
         self.config = config
         self.stopevent = stopevent
         self.filelists = None
-        self.uuid = None
-        self.pubsub = None
         self.databasefile = pathlib.Path(
             QStandardPaths.standardLocations(
                 QStandardPaths.CacheLocation)[0]).joinpath(
-                    'twitchrequests', 'request.db')
+                    'requests', 'request.db')
         self.widgets = None
         self.watcher = None
-        self.twitch = None
         if not self.databasefile.exists():
             self.setupdb()
 
@@ -118,7 +102,8 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
             cursor.execute(sql)
             connection.commit()
 
-    async def _add_to_db(self, data):
+    async def add_to_db(self, data):
+        ''' add an entry to the db '''
         if data.get('reqid'):
             reqid = data['reqid']
             del data['reqid']
@@ -131,14 +116,6 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
             sql += '= ? WHERE reqid=? '
             datatuple = list(data.values()) + [reqid]
         else:
-            try:
-                user = await first(
-                    self.twitch.get_users(logins=[data['username']]))
-                req = requests.get(user.profile_image_url, timeout=5)
-                data['userimage'] = nowplaying.utils.image2png(req.content)
-            except Exception as error:  #pylint: disable=broad-except
-                logging.debug(error)
-                data['userimage'] = None
             sql = 'INSERT OR REPLACE INTO userrequest ('
             sql += ', '.join(data.keys()) + ') VALUES ('
             sql += '?,' * (len(data.keys()) - 1) + '?)'
@@ -154,7 +131,8 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
         except sqlite3.OperationalError as error:
             logging.debug(error)
 
-    def _respin_a_reqid(self, reqid):
+    def respin_a_reqid(self, reqid):
+        ''' given a reqid, set to respin '''
         sql = 'UPDATE userrequest SET filename=? WHERE reqid=?'
         try:
             with sqlite3.connect(self.databasefile) as connection:
@@ -213,7 +191,7 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
         }
         if reqid:
             data['reqid'] = reqid
-        await self._add_to_db(data)
+        await self.add_to_db(data)
 
     async def _get_request_lookup(self, sql, datatuple):
         ''' run sql for request '''
@@ -260,7 +238,8 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
 
         return newdata
 
-    async def _watch_for_respin(self):
+    async def watch_for_respin(self):
+        ''' startup a watcher to handle respins '''
         datatuple = (RESPIN_TEXT, )
         while not self.stopevent.is_set():
             await asyncio.sleep(10)
@@ -280,6 +259,22 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
                             row['reqid'])
             except Exception as error:  #pylint: disable=broad-except
                 logging.debug(error)
+
+    async def find_twitchtext(self, twitchtext):
+        ''' locate request information based upon twitchtext '''
+        setting = {}
+        if not twitchtext:
+            return setting
+
+        for configitem in self.config.cparser.childGroups():
+            if 'request-' in configitem:
+                tvtext = self.config.cparser.value(f'{configitem}/twitchtext')
+                if tvtext == twitchtext:
+                    for key in nowplaying.trackrequests.REQUEST_SETTING_MAPPING:
+                        setting[key] = self.config.cparser.value(
+                            f'{configitem}/{key}')
+                    break
+        return setting
 
     async def user_track_request(self, setting, user, user_input):
         ''' generic request '''
@@ -303,61 +298,7 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
             'type': 'Generic',
             'displayname': setting.get('displayname')
         }
-        await self._add_to_db(data)
-
-    async def callback_redemption(self, uuid, data):  # pylint: disable=unused-argument
-        ''' handle the channel point redemption '''
-        redemptitle = data['data']['redemption']['reward']['title']
-        user = data['data']['redemption']['user']['display_name']
-        if data['data']['redemption'].get('user_input'):
-            user_input = data['data']['redemption'].get('user_input')
-        else:
-            user_input = None
-
-        for configitem in self.config.cparser.childGroups():
-            if 'twitchbot-request-' in configitem:
-                setting = {
-                    'request': configitem.replace('twitchbot-request-', '')
-                }
-                for key in REQUEST_SETTING_MAPPING:
-                    setting[key] = self.config.cparser.value(
-                        f'{configitem}/{key}')
-                if redemptitle == setting['request']:
-                    if setting.get('type') == 'Generic':
-                        await self.user_track_request(setting, user,
-                                                      user_input)
-                    elif setting.get('type') == 'Roulette':
-                        await self.user_roulette_request(
-                            setting, user, user_input)
-
-    async def run_request(self, twitch=None):
-        ''' twitch requests '''
-
-        if not twitch:
-            logging.error('No Twitch credentials to start requests. Exiting.')
-            return
-
-        while not self.config.cparser.value(
-                'twitchbot/requests') and not self.stopevent.is_set():
-            await asyncio.sleep(1)
-
-        if self.stopevent.is_set():
-            return
-
-        loop = asyncio.get_running_loop()
-        loop.create_task(self._watch_for_respin())
-        self.twitch = twitch
-        # starting up PubSub
-        self.pubsub = PubSub(twitch)
-        self.pubsub.start()
-
-        user = await first(
-            twitch.get_users(
-                logins=[self.config.cparser.value('twitchbot/channel')]))
-
-        # you can either start listening before or after you started pubsub.
-        self.uuid = await self.pubsub.listen_channel_points(
-            user.id, self.callback_redemption)
+        await self.add_to_db(data)
 
     def start_watcher(self):
         ''' start the qfilesystemwatcher '''
@@ -365,13 +306,13 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
         self.watcher.addPath(str(self.databasefile))
         self.watcher.fileChanged.connect(self.update_window)
 
-    def _connect_twitchrequest_widgets(self):
-        '''  connect twitch request'''
+    def _connect_request_widgets(self):
+        '''  connect request buttons'''
         self.widgets.respin_button.clicked.connect(self.on_respin_button)
         self.widgets.del_button.clicked.connect(self.on_del_button)
 
     def on_respin_button(self):
-        ''' twitch request respin button clicked action '''
+        ''' request respin button clicked action '''
         reqidlist = []
         if items := self.widgets.request_table.selectedItems():
             for item in items:
@@ -381,12 +322,12 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
 
         for reqid in reqidlist:
             try:
-                self._respin_a_reqid(reqid)
+                self.respin_a_reqid(reqid)
             except Exception as error:  #pylint: disable=broad-except
                 logging.error(error)
 
     def on_del_button(self):
-        ''' twitch request del button clicked action '''
+        ''' request del button clicked action '''
         reqidlist = []
         if items := self.widgets.request_table.selectedItems():
             for item in items:
@@ -415,7 +356,7 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
                 return None
         return dataset
 
-    def _twitch_request_load(self, **kwargs):
+    def _request_window_load(self, **kwargs):
         ''' fill in a row on the request window '''
         row = self.widgets.request_table.rowCount()
         self.widgets.request_table.insertRow(row)
@@ -423,10 +364,12 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
         for column, cbtype in enumerate(REQUEST_WINDOW_FIELDS):
             if cbtype == 'displayname':
                 continue
-            if not kwargs.get(cbtype):
-                continue
-            self.widgets.request_table.setItem(
-                row, column, QTableWidgetItem(str(kwargs[cbtype])))
+            if kwargs.get(cbtype):
+                self.widgets.request_table.setItem(
+                    row, column, QTableWidgetItem(str(kwargs[cbtype])))
+            else:
+                self.widgets.request_table.setItem(row, column,
+                                                   QTableWidgetItem(''))
 
     def update_window(self):
         ''' redraw the request window '''
@@ -446,7 +389,7 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
             return
 
         for configitem in dataset:
-            self._twitch_request_load(**configitem)
+            self._request_window_load(**configitem)
         self.widgets.request_table.horizontalHeader().ResizeMode(
             QHeaderView.Stretch)
         self.widgets.request_table.resizeColumnsToContents()
@@ -465,7 +408,7 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
         self.widgets.request_table.horizontalHeader().ResizeMode(
             QHeaderView.Stretch)
         ui_file.close()
-        self._connect_twitchrequest_widgets()
+        self._connect_request_widgets()
         self.update_window()
         self.start_watcher()
 
@@ -480,21 +423,15 @@ class TwitchRequests:  #pylint: disable=too-many-instance-attributes
             self.widgets.hide()
             self.widgets.close()
 
-    async def stop(self):
-        ''' stop the twitch request support '''
-        if self.pubsub:
-            await self.pubsub.unlisten(self.uuid)
-            self.pubsub.stop()
 
-
-class TwitchRequestSettings:
+class RequestSettings:
     ''' for settings UI '''
 
     def __init__(self):
         self.widget = None
 
     def connect(self, uihelp, widget):  # pylint: disable=unused-argument
-        '''  connect twitchbot '''
+        '''  connect buttons '''
         self.widget = widget
         widget.add_button.clicked.connect(self.on_add_button)
         widget.del_button.clicked.connect(self.on_del_button)
@@ -504,7 +441,8 @@ class TwitchRequestSettings:
         row = widget.request_table.rowCount()
         widget.request_table.insertRow(row)
 
-        for column, cbtype in enumerate(REQUEST_SETTING_MAPPING):
+        for column, cbtype in enumerate(
+                nowplaying.trackrequests.REQUEST_SETTING_MAPPING):
             if cbtype == 'type':
                 if kwargs.get('type') == 'Roulette':
                     checkbox = QCheckBox()
@@ -514,8 +452,12 @@ class TwitchRequestSettings:
                     checkbox.setChecked(False)
                 widget.request_table.setCellWidget(row, column, checkbox)
             else:
-                widget.request_table.setItem(
-                    row, column, QTableWidgetItem(str(kwargs.get(cbtype))))
+                if kwargs.get(cbtype):
+                    widget.request_table.setItem(
+                        row, column, QTableWidgetItem(str(kwargs.get(cbtype))))
+                else:
+                    widget.request_table.setItem(row, column,
+                                                 QTableWidgetItem(str('')))
         widget.request_table.resizeColumnsToContents()
 
     def load(self, config, widget):
@@ -531,16 +473,14 @@ class TwitchRequestSettings:
 
         for configitem in config.cparser.childGroups():
             setting = {}
-            if 'twitchbot-request-' in configitem:
-                setting['request'] = configitem.replace(
-                    'twitchbot-request-', '')
-                for key in REQUEST_SETTING_MAPPING:
+            if 'request-' in configitem:
+                for key in nowplaying.trackrequests.REQUEST_SETTING_MAPPING:
                     setting[key] = config.cparser.value(f'{configitem}/{key}')
                 self._row_load(widget, **setting)
 
         widget.request_table.resizeColumnsToContents()
         widget.enable_checkbox.setChecked(
-            config.cparser.value('twitchbot/requests', type=bool))
+            config.cparser.value('twitchbot/redemptions', type=bool))
 
     @staticmethod
     def save(config, widget):
@@ -549,15 +489,13 @@ class TwitchRequestSettings:
         def reset_commands(widget, config):
 
             for configitem in config.allKeys():
-                if 'twitchbot-request-' in configitem:
+                if 'request-' in configitem:
                     config.remove(configitem)
 
             rowcount = widget.rowCount()
             for row in range(rowcount):
-                item = widget.item(row, 0)
-                cmd = item.text()
-                cmd = f'twitchbot-request-{cmd}'
-                for column, cbtype in enumerate(REQUEST_SETTING_MAPPING):
+                for column, cbtype in enumerate(
+                        nowplaying.trackrequests.REQUEST_SETTING_MAPPING):
                     if cbtype == 'type':
                         item = widget.cellWidget(row, column)
                         checkv = item.isChecked()
@@ -570,9 +508,9 @@ class TwitchRequestSettings:
                         if not item:
                             continue
                         value = item.text()
-                    config.setValue(f'{cmd}/{cbtype}', value)
+                    config.setValue(f'request-{row}/{cbtype}', value)
 
-        config.cparser.setValue('twitchbot/requests',
+        config.cparser.setValue('twitchbot/redemptions',
                                 widget.enable_checkbox.isChecked())
 
         reset_commands(widget.request_table, config.cparser)
@@ -580,29 +518,29 @@ class TwitchRequestSettings:
     @staticmethod
     def verify(widget):
         ''' verify the settings are good '''
-        count = widget.request_table.rowCount()
 
+        count = widget.request_table.rowCount()
         for row in range(count):
-            text = widget.request_table.item(row, 0).text()
-            if not text:
-                raise PluginVerifyError('Twitch Redemption Text is empty')
+            item0 = widget.request_table.item(row, 0)
+            item1 = widget.request_table.item(row, 1)
+            if not item0.text() and not item1.text():
+                raise PluginVerifyError(
+                    'Request must have either a command or redemption text.')
+
             if item := widget.request_table.cellWidget(row, 1):
                 if item.isChecked():
                     playlistitem = widget.request_table.item(row, 2)
                     if not playlistitem.text():
                         raise PluginVerifyError(
-                            f'Twitch Redemption {text} empty playlist')
+                            'Roulette request has an empty playlist')
 
     @Slot()
     def on_add_button(self):
-        ''' twitchbot add button clicked action '''
-        self._row_load(self.widget,
-                       request='New',
-                       type='Roulette',
-                       playlist='Playlist name')
+        ''' add button clicked action '''
+        self._row_load(self.widget)
 
     @Slot()
     def on_del_button(self):
-        ''' twitchbot del button clicked action '''
+        ''' del button clicked action '''
         if items := self.widget.request_table.selectedIndexes():
             self.widget.request_table.removeRow(items[0].row())

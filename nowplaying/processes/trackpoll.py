@@ -16,7 +16,7 @@ import nowplaying.db
 import nowplaying.imagecache
 import nowplaying.inputs
 import nowplaying.metadata
-import nowplaying.twitch.requests
+import nowplaying.trackrequests
 import nowplaying.utils
 
 COREMETA = ['artist', 'filename', 'title']
@@ -52,7 +52,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self.imagecache = None
         self.icprocess = None
         self._setup_imagecache()
-        self.twitchrequests = nowplaying.twitch.requests.TwitchRequests(
+        self.trackrequests = nowplaying.trackrequests.Requests(
             config=self.config)
         self.tasks = set()
         self.metadataprocessors = nowplaying.metadata.MetadataProcessors(
@@ -287,7 +287,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             return
 
         if self.config.cparser.value('twitchbot/requests', type=bool):
-            if data := await self.twitchrequests.get_request(self.currentmeta):
+            if data := await self.trackrequests.get_request(self.currentmeta):
                 self.currentmeta.update(data)
 
         self._artfallbacks()
