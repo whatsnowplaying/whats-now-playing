@@ -85,6 +85,7 @@ def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
             'title': "15 Ghosts II"
         }],
         'requester': None,
+        'requestdisplayname': None,
         'title': '15 Ghosts II',
         'track': '15',
         'track_total': None,
@@ -162,6 +163,7 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
             'title': "Lakini's Juice"
         }],
         'requester': None,
+        'requestdisplayname': None,
         'title': 'Lakini\'s Juice',
         'track': None,
         'track_total': None,
