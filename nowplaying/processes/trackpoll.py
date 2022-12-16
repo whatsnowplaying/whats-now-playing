@@ -76,13 +76,13 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         if not self.previousinput or self.previousinput != self.config.cparser.value(
                 'settings/input'):
             if self.input:
-                logging.debug('stopping %s', self.previousinput)
+                logging.info('stopping %s', self.previousinput)
                 await self.input.stop()
             self.previousinput = self.config.cparser.value('settings/input')
             self.input = self.plugins[
                 f'nowplaying.inputs.{self.previousinput}'].Plugin(
                     config=self.config)
-            logging.debug('Starting %s plugin', self.previousinput)
+            logging.info('Starting %s plugin', self.previousinput)
             if not self.input:
                 return False
 
@@ -286,7 +286,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             self.currentmeta = oldmeta
             return
 
-        if self.config.cparser.value('twitchbot/requests', type=bool):
+        if self.config.cparser.value('settings/requests', type=bool):
             if data := await self.trackrequests.get_request(self.currentmeta):
                 self.currentmeta.update(data)
 

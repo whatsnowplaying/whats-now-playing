@@ -16,11 +16,11 @@
   <property name="displayName" stdset="0">
    <string>Requests</string>
   </property>
-  <widget class="QCheckBox" name="enable_checkbox">
+  <widget class="QCheckBox" name="enable_redemptions_checkbox">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>20</y>
+     <x>40</x>
+     <y>50</y>
      <width>321</width>
      <height>23</height>
     </rect>
@@ -33,7 +33,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>90</y>
+     <y>130</y>
      <width>621</width>
      <height>201</height>
     </rect>
@@ -109,11 +109,11 @@
     </item>
    </layout>
   </widget>
-  <widget class="QCheckBox" name="enable_checkbox_2">
+  <widget class="QCheckBox" name="enable_chat_checkbox">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>50</y>
+     <x>40</x>
+     <y>80</y>
      <width>321</width>
      <height>23</height>
     </rect>
@@ -122,13 +122,13 @@
     <string>Enable Twitch Chat Requests</string>
    </property>
   </widget>
-  <widget class="QTextBrowser" name="textBrowser">
+  <widget class="QTextBrowser" name="infobox">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>310</y>
+     <y>350</y>
      <width>621</width>
-     <height>131</height>
+     <height>111</height>
     </rect>
    </property>
    <property name="html">
@@ -144,7 +144,53 @@ li.checked::marker { content: &quot;\2612&quot;; }
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Redemption text must be an exact match: upper/lowercase, punctuation, spacing.  Roulette mode requires a supported playlist.  See the documentation for supported user input for non-roulette.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </widget>
+  <widget class="QCheckBox" name="enable_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>20</y>
+     <width>181</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enable Requests support</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>enable_chat_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>100</x>
+     <y>31</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>200</x>
+     <y>91</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>enable_redemptions_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>100</x>
+     <y>31</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>200</x>
+     <y>61</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

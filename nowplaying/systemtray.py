@@ -48,7 +48,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.menu.addAction(self.settings_action)
         self.request_action = QAction('Requests')
         self.request_action.triggered.connect(self._requestswindow)
-        self.request_action.setEnabled(False)
+        self.request_action.setEnabled(True)
         self.menu.addAction(self.request_action)
         self.menu.addSeparator()
 
@@ -87,16 +87,13 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.requestswindow = None
         self._configure_twitchrequests()
 
-        if self.config.cparser.value('twitchbot/requests', type=bool):
-            self.request_action.setEnabled(True)
-
     def _configure_twitchrequests(self):
         self.requestswindow = nowplaying.trackrequests.Requests(
             config=self.config)
         self.requestswindow.initial_ui()
 
     def _requestswindow(self):
-        if self.config.cparser.value('twitchbot/requests', type=bool):
+        if self.config.cparser.value('settings/requests', type=bool):
             self.requestswindow.raise_window()
 
     def _configure_newold_menu(self):

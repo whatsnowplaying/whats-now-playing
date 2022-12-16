@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import sys
+import traceback
 
 import jinja2
 
@@ -23,6 +24,7 @@ import nowplaying.config
 import nowplaying.db
 from nowplaying.exceptions import PluginVerifyError
 import nowplaying.metadata
+import nowplaying.trackrequests
 import nowplaying.version
 
 LASTANNOUNCED = {'artist': None, 'title': None}
@@ -35,33 +37,52 @@ TWITCHBOT_CHECKBOXES = [
 ]
 
 
-class MyChat(Chat):  # pylint: disable=too-few-public-methods
-    ''' custom version of twitchAPI's Chat to avoid _get_username() method '''
-
-    def __init__(self, botname, twitch, connection_url=None):
-        self.username = botname
-        super().__init__(twitch, connection_url)
-
-    async def _get_username(self):
-        self.username = 'modernmeerkatbot'
-
-
-class TwitchChat:
+class TwitchChat:  #pylint: disable=too-many-instance-attributes
     ''' handle twitch chat '''
 
     def __init__(self, config=None, stopevent=None):
         self.config = config
         self.stopevent = stopevent
         self.watcher = None
-        self.chat = None
+        self.requests = nowplaying.trackrequests.Requests(config=config,
+                                                          stopevent=stopevent)
         self.metadb = nowplaying.db.MetadataDB()
         self.templatedir = pathlib.Path(
             QStandardPaths.standardLocations(
                 QStandardPaths.DocumentsLocation)[0]).joinpath(
                     QCoreApplication.applicationName(), 'templates')
         self.jinja2 = self.setup_jinja2(self.templatedir)
+        self.twitch = None
+        self.chat = None
 
-    async def run_chat(self, twitch=None):
+    @staticmethod
+    async def _try_custom_token(token):
+        ''' if a custom token has been provided, try it. '''
+        twitch = None
+        if token:
+            # since there is no session to keep track of,
+            # doesn't appear we need to close it?
+            try:
+                tokenval = await validate_token(token)
+                if tokenval.get('status') == 401:
+                    logging.error(tokenval['message'])
+                else:
+                    # don't really care if the token's clientid
+                    # doesn't match the given clientid since
+                    # Chat() never uses the clientid other than
+                    # to do a user lookup
+                    twitch = await Twitch(tokenval['client_id'],
+                                          authenticate_app=False)
+                    twitch.auto_refresh_auth = False
+                    await twitch.set_user_authentication(
+                        token=token,
+                        scope=[AuthScope.CHAT_READ, AuthScope.CHAT_EDIT],
+                        validate=False)
+            except Exception:  #pylint: disable=broad-except
+                logging.debug(traceback.format_exc())
+        return twitch
+
+    async def run_chat(self, twitchlogin):
         ''' twitch chat '''
 
         # If the user provides us with a pre-existing token and username,
@@ -72,41 +93,41 @@ class TwitchChat:
         # the user
 
         while not self.config.cparser.value(
-                'twitchbot/chat') and not self.stopevent.is_set():
+                'twitchbot/chat', type=bool) and not self.stopevent.is_set():
             await asyncio.sleep(1)
+            self.config.get()
 
         if self.stopevent.is_set():
             return
 
         if token := self.config.cparser.value('twitchbot/token'):
+            logging.debug('validating old token')
             valid = await validate_token(token)
             if valid.get('status') == 401:
                 token = None
                 logging.error('Old twitchbot-specific token has expired')
 
         if token:
-            # since there is no session to keep track of,
-            # doesn't appear we need to close it?
-            mytwitch = await Twitch(
-                self.config.cparser.value('twitchbot/clientid'),
-                authenticate_app=False)
-            mytwitch.auto_refresh_auth = False
-            await mytwitch.set_user_authentication(
-                token=token,
-                scope=[AuthScope.CHAT_READ, AuthScope.CHAT_EDIT],
-                validate=False)
-            self.chat = await MyChat(
-                self.config.cparser.value('twitchbot/username'), mytwitch)
-        elif twitch:
-            self.chat = await Chat(twitch)
-        else:
+            logging.debug('attempting to use old token')
+            self.twitch = await self._try_custom_token(token)
+
+        if not self.twitch:
+            logging.debug('attempting to use global token')
+            self.twitch = await twitchlogin.api_login()
+
+        if not self.twitch:
             logging.error(
                 'No credentials to start Twitch Chat support. Exiting.')
             return
-
-        self.chat.register_event(ChatEvent.READY, self.on_twitchchat_ready)
-        self.chat.register_command('whatsnowplayingversion',
-                                   self.on_twitchchat_whatsnowplayingversion)
+        try:
+            self.chat = await Chat(self.twitch)
+            self.chat.register_event(ChatEvent.READY, self.on_twitchchat_ready)
+            self.chat.register_command(
+                'whatsnowplayingversion',
+                self.on_twitchchat_whatsnowplayingversion)
+        except Exception:  #pylint: disable=broad-except
+            logging.debug(traceback.format_exc())
+            return
 
         for configitem in self.config.cparser.childGroups():
             if 'twitchbot-command-' in configitem:
@@ -139,8 +160,13 @@ class TwitchChat:
         ''' handle !whatsnowplayingversion '''
         inputsource = self.config.cparser.value('settings/input')
         version = nowplaying.version.get_versions()['version']
-        await cmd.reply(f'whatsnowplaying v{version} by @modernmeerkat. ' +
-                        f'Using {inputsource} on {sys.platform}.')
+        content = f'whatsnowplaying v{version} by @modernmeerkat. ' + f'Using {inputsource} on {sys.platform}.'
+        try:
+            await cmd.reply(content)
+        except:  #pylint: disable=bare-except
+            logging.debug(traceback.format_exc())
+            await self.chat.send_message(
+                self.config.cparser.value('twitchbot/channel'), content)
         return
 
     def check_command_perms(self, profile, command):
@@ -184,9 +210,44 @@ class TwitchChat:
         if not self.check_command_perms(msg.user.badges, commandlist[0]):
             return
 
+        if self.config.cparser.value('settings/requests',
+                                     type=bool) and self.config.cparser.value(
+                                         'twitchbot/chatrequests', type=bool):
+            if reply := await self.handle_request(commandlist[0],
+                                                  commandlist[1:],
+                                                  msg.user.display_name):
+                metadata.update(reply)
+
         await self._post_template(msg=msg,
                                   template=cmdfile,
                                   moremetadata=metadata)
+
+    async def redemption_to_chat_request_bridge(self, command, metadata):
+        ''' respond in chat when a redemption request triggers '''
+        if self.config.cparser.value('twitchbot/chatrequests',
+                                     type=bool) and self.config.cparser.value(
+                                         'twitchbot/chat', type=bool):
+            cmdfile = f'twitchbot_{command}.txt'
+            await self._post_template(template=cmdfile, moremetadata=metadata)
+
+    async def handle_request(self, command, params, username):  # pylint: disable=unused-argument
+        ''' handle the channel point redemption '''
+        reply = None
+        logging.debug(command)
+        commandlist = ' '.join(params)
+        logging.debug(commandlist)
+        if setting := await self.requests.find_command(command):
+            logging.debug(setting)
+            setting[
+                'userimage'] = await nowplaying.twitch.utils.get_user_image(
+                    self.twitch, username)
+            if setting.get('type') == 'Generic':
+                reply = await self.requests.user_track_request(
+                    setting, username, commandlist)
+            elif setting.get('type') == 'Roulette':
+                reply = await self.requests.user_roulette_request(
+                    setting, username, commandlist[1:])
+        return reply
 
     @staticmethod
     def _finalize(variable):
@@ -295,7 +356,13 @@ class TwitchChat:
             messages = message.split(SPLITMESSAGETEXT)
             for content in messages:
                 if msg:
-                    await msg.reply(content)
+                    try:
+                        await msg.reply(content)
+                    except:  #pylint: disable=bare-except
+                        logging.debug(traceback.format_exc())
+                        await self.chat.send_message(
+                            self.config.cparser.value('twitchbot/channel'),
+                            content)
                 else:
                     await self.chat.send_message(
                         self.config.cparser.value('twitchbot/channel'),
@@ -305,7 +372,10 @@ class TwitchChat:
         ''' stop the twitch chat support '''
         if self.watcher:
             self.watcher.stop()
-        self.chat.stop()
+        if self.chat:
+            self.chat.stop()
+        self.chat = None
+        logging.debug('chat stopped')
 
 
 class TwitchChatSettings:

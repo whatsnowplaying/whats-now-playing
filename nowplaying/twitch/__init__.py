@@ -6,6 +6,7 @@ import logging
 import threading
 import signal
 import sys
+import traceback
 
 import requests
 
@@ -23,6 +24,7 @@ import nowplaying.version
 
 import nowplaying.twitch.chat
 import nowplaying.twitch.redemptions
+import nowplaying.twitch.utils
 
 USER_SCOPE = [
     AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ,
@@ -39,53 +41,16 @@ class TwitchSupport:
             self.stopevent = stopevent
         else:
             self.stopevent = threading.Event()
-        self.twitch = None
         self.widgets = None
         self.chat = None
         self.redemptions = None
         self.loop = None
+        self.twitchlogin = nowplaying.twitch.utils.TwitchLogin(self.config)
 
     async def bootstrap(self):
         ''' Authenticate twitch and launch related tasks '''
 
         signal.signal(signal.SIGINT, self.forced_stop)
-
-        while not self.config.cparser.value(
-                'twitchbot/clientid') and not self.stopevent.is_set():
-            asyncio.sleep(1)
-
-        if self.stopevent.is_set():
-            return
-
-        if self.config.cparser.value(
-                'twitchbot/clientid') and self.config.cparser.value(
-                    'twitchbot/secret'):
-            self.twitch = await Twitch(
-                self.config.cparser.value('twitchbot/clientid'),
-                self.config.cparser.value('twitchbot/secret'))
-
-            token = self.config.cparser.value('twitchbot/oldtoken')
-            refresh_token = self.config.cparser.value(
-                'twitchbot/oldrefreshtoken')
-            scopes = self.config.cparser.value('twitchbot/oldscopes')
-
-            if scopes != USER_SCOPE:
-                token = None
-
-            if token:
-                valid = await validate_token(token)
-                if valid.get('status') == 401:
-                    auth = UserAuthenticator(self.twitch,
-                                             USER_SCOPE,
-                                             force_verify=False)
-                    token, refresh_token = await auth.authenticate()
-
-            await self.twitch.set_user_authentication(token, scopes,
-                                                      refresh_token)
-
-            self.config.cparser.setValue('twitchbot/oldtoken', token)
-            self.config.cparser.setValue('twitchbot/oldrefreshtoken', token)
-            self.config.cparser.setValue('twitchbot/oldscopes', USER_SCOPE)
 
         # Now launch the actual tasks...
         if not self.loop:
@@ -94,9 +59,9 @@ class TwitchSupport:
             except RuntimeError:
                 self.loop = asyncio.new_event_loop()
 
-        self.loop.create_task(self.chat.run_chat(twitch=self.twitch))
+        self.loop.create_task(self.chat.run_chat(self.twitchlogin))
         self.loop.create_task(
-            self.redemptions.run_redemptions(twitch=self.twitch))
+            self.redemptions.run_redemptions(self.twitchlogin, self.chat))
 
     async def _watch_for_exit(self):
         while not self.stopevent.is_set():
@@ -125,10 +90,14 @@ class TwitchSupport:
 
     async def stop(self):
         ''' stop the twitch support '''
-        await self.redemptions.stop()
-        await self.chat.stop()
-        await self.twitch.close()
+        if self.redemptions:
+            await self.redemptions.stop()
+        if self.chat:
+            await self.chat.stop()
+        await asyncio.sleep(1)
+        await self.twitchlogin.api_logout()
         self.loop.stop()
+        logging.debug('twitchbot stopped')
 
 
 class TwitchSettings:
@@ -136,25 +105,30 @@ class TwitchSettings:
 
     def __init__(self):
         self.widget = None
+        self.token = None
 
     def connect(self, uihelp, widget):  # pylint: disable=unused-argument
         '''  connect twitch '''
         self.widget = widget
+        widget.chatbot_username_line.setBuddy(widget.token_lineedit)
+        self.widget.token_lineedit.editingFinished.connect(
+            self.update_token_name)
 
-    @staticmethod
-    def load(config, widget):
+    def load(self, config, widget):
         ''' load the settings window '''
+        self.widget = widget
         widget.enable_checkbox.setChecked(
             config.cparser.value('twitchbot/enabled', type=bool))
         widget.clientid_lineedit.setText(
             config.cparser.value('twitchbot/clientid'))
         widget.channel_lineedit.setText(
             config.cparser.value('twitchbot/channel'))
-        widget.username_lineedit.setText(
-            config.cparser.value('twitchbot/username'))
+        #widget.username_lineedit.setText(
+        #    config.cparser.value('twitchbot/username'))
         widget.token_lineedit.setText(config.cparser.value('twitchbot/token'))
         widget.secret_lineedit.setText(
             config.cparser.value('twitchbot/secret'))
+        self.update_token_name()
 
     @staticmethod
     def save(config, widget):
@@ -169,8 +143,8 @@ class TwitchSettings:
                                 widget.secret_lineedit.text())
         config.cparser.setValue('twitchbot/token',
                                 widget.token_lineedit.text())
-        config.cparser.setValue('twitchbot/username',
-                                widget.username_lineedit.text())
+        #config.cparser.setValue('twitchbot/username',
+        #                        widget.username_lineedit.text())
 
     @staticmethod
     def verify(widget):
@@ -179,17 +153,18 @@ class TwitchSettings:
             return
 
         if token := widget.token_lineedit.text():
-            url = 'https://id.twitch.tv/oauth2/validate'
-            headers = {'Authorization': f'OAuth {token}'}
+            if not nowplaying.twitch.utils.qtsafe_validate_token(token):
+                PluginVerifyError('Twitch bot token is invalid')
 
-            try:
-                req = requests.get(url, headers=headers, timeout=5)
-            except Exception as error:
-                raise PluginVerifyError(
-                    f'Twitch Token validation check failed: {error}'
-                ) from error
-
-            valid = req.json()
-            if valid.get('status') == 401:
-                raise PluginVerifyError(
-                    'Twitch Token is expired and/or not valid.')
+    def update_token_name(self):
+        ''' update the token name in the UI '''
+        token = self.widget.token_lineedit.text()
+        if self.token == token:
+            return
+        self.token = token
+        if token:
+            username = nowplaying.twitch.utils.qtsafe_validate_token(token)
+            if username:
+                self.widget.chatbot_username_line.setText(username)
+            else:
+                self.widget.chatbot_username_line.setText('')

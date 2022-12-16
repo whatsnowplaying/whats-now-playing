@@ -104,6 +104,11 @@ class Requests:  #pylint: disable=too-many-instance-attributes
 
     async def add_to_db(self, data):
         ''' add an entry to the db '''
+        if not self.databasefile.exists():
+            logging.error('%s does not exist, refusing to add.',
+                          self.databasefile)
+            return
+
         if data.get('reqid'):
             reqid = data['reqid']
             del data['reqid']
@@ -133,6 +138,11 @@ class Requests:  #pylint: disable=too-many-instance-attributes
 
     def respin_a_reqid(self, reqid):
         ''' given a reqid, set to respin '''
+        if not self.databasefile.exists():
+            logging.error('%s does not exist, refusing to respin.',
+                          self.databasefile)
+            return
+
         sql = 'UPDATE userrequest SET filename=? WHERE reqid=?'
         try:
             with sqlite3.connect(self.databasefile) as connection:
@@ -147,6 +157,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes
     def erase_id(self, reqid):
         ''' remove entry from requests '''
         if not self.databasefile.exists():
+            logging.error('%s does not exist, refusing to erase.',
+                          self.databasefile)
             return
 
         with sqlite3.connect(self.databasefile) as connection:
@@ -192,9 +204,18 @@ class Requests:  #pylint: disable=too-many-instance-attributes
         if reqid:
             data['reqid'] = reqid
         await self.add_to_db(data)
+        return {
+            'requester': user,
+            'requestdisplayname': setting.get('displayname')
+        }
 
     async def _get_request_lookup(self, sql, datatuple):
         ''' run sql for request '''
+        if not self.databasefile.exists():
+            logging.error('%s does not exist, refusing to lookup.',
+                          self.databasefile)
+            return None
+
         try:
             async with aiosqlite.connect(self.databasefile) as connection:
                 connection.row_factory = sqlite3.Row
@@ -214,6 +235,9 @@ class Requests:  #pylint: disable=too-many-instance-attributes
 
     async def get_request(self, metadata):
         ''' if a track gets played, finish out the request '''
+        if not self.config.cparser.value('settings/requests'):
+            return None
+
         newdata = None
         if metadata.get('filename'):
             logging.debug('trying filename %s', metadata['filename'])
@@ -243,6 +267,9 @@ class Requests:  #pylint: disable=too-many-instance-attributes
         datatuple = (RESPIN_TEXT, )
         while not self.stopevent.is_set():
             await asyncio.sleep(10)
+            if not self.databasefile.exists():
+                continue
+
             try:
                 async with aiosqlite.connect(self.databasefile) as connection:
                     connection.row_factory = sqlite3.Row
@@ -259,6 +286,22 @@ class Requests:  #pylint: disable=too-many-instance-attributes
                             row['reqid'])
             except Exception as error:  #pylint: disable=broad-except
                 logging.debug(error)
+
+    async def find_command(self, command):
+        ''' locate request information based upon a command '''
+        setting = {}
+        if not command:
+            return setting
+
+        for configitem in self.config.cparser.childGroups():
+            if 'request-' in configitem:
+                tvtext = self.config.cparser.value(f'{configitem}/command')
+                if tvtext == command:
+                    for key in nowplaying.trackrequests.REQUEST_SETTING_MAPPING:
+                        setting[key] = self.config.cparser.value(
+                            f'{configitem}/{key}')
+                    break
+        return setting
 
     async def find_twitchtext(self, twitchtext):
         ''' locate request information based upon twitchtext '''
@@ -299,6 +342,12 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             'displayname': setting.get('displayname')
         }
         await self.add_to_db(data)
+        return {
+            'requester': user,
+            'requestartist': artist,
+            'requesttitle': title,
+            'requestdisplayname': setting.get('displayname')
+        }
 
     def start_watcher(self):
         ''' start the qfilesystemwatcher '''
@@ -343,6 +392,11 @@ class Requests:  #pylint: disable=too-many-instance-attributes
 
     def _get_dataset(self):
         ''' get the current request list for display '''
+        if not self.databasefile.exists():
+            logging.error('%s does not exist, refusing to _get_dataset.',
+                          self.databasefile)
+            return None
+
         with sqlite3.connect(self.databasefile) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
@@ -373,7 +427,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes
 
     def update_window(self):
         ''' redraw the request window '''
-        if not self.databasefile.exists():
+        if not self.config.cparser.value('settings/requests'):
             return
 
         def clear_table(widget):
@@ -414,6 +468,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes
 
     def raise_window(self):
         ''' raise the request window '''
+        if not self.config.cparser.value('settings/requests'):
+            return
         self.update_window()
         self.widgets.raise_()
 
@@ -479,8 +535,12 @@ class RequestSettings:
                 self._row_load(widget, **setting)
 
         widget.request_table.resizeColumnsToContents()
-        widget.enable_checkbox.setChecked(
+        widget.enable_chat_checkbox.setChecked(
+            config.cparser.value('twitchbot/chatrequests', type=bool))
+        widget.enable_redemptions_checkbox.setChecked(
             config.cparser.value('twitchbot/redemptions', type=bool))
+        widget.enable_checkbox.setChecked(
+            config.cparser.value('settings/requests', type=bool))
 
     @staticmethod
     def save(config, widget):
@@ -511,8 +571,11 @@ class RequestSettings:
                     config.setValue(f'request-{row}/{cbtype}', value)
 
         config.cparser.setValue('twitchbot/redemptions',
+                                widget.enable_redemptions_checkbox.isChecked())
+        config.cparser.setValue('twitchbot/chatrequests',
+                                widget.enable_chat_checkbox.isChecked())
+        config.cparser.setValue('settings/requests',
                                 widget.enable_checkbox.isChecked())
-
         reset_commands(widget.request_table, config.cparser)
 
     @staticmethod

@@ -49,11 +49,22 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
         else:
             bundledir = os.path.abspath(os.path.dirname(__file__))
 
-    nowplaying.bootstrap.set_qt_names()
-    nowplaying.bootstrap.setuplogging(rotate=False)
-
-    config = nowplaying.config.ConfigFile(bundledir=bundledir)
+    if testmode:
+        nowplaying.bootstrap.set_qt_names(appname='testsuite')
+    else:
+        nowplaying.bootstrap.set_qt_names()
+    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log',
+                                                rotate=False)
+    config = nowplaying.config.ConfigFile(bundledir=bundledir,
+                                          logpath=logpath,
+                                          testmode=testmode)
     logging.info('boot up')
-    twitchbot = nowplaying.twitch.TwitchSupport(stopevent=stopevent,
-                                                config=config)  # pylint: disable=unused-variable
-    twitchbot.start()
+    try:
+        twitchbot = nowplaying.twitch.TwitchSupport(stopevent=stopevent,
+                                                    config=config)  # pylint: disable=unused-variable
+        twitchbot.start()
+    except Exception as error:  #pylint: disable=broad-except
+        logging.error('TrackPoll crashed: %s', error, exc_info=True)
+        sys.exit(1)
+    logging.info('shutting down twitchbot v%s',
+                 nowplaying.version.get_versions()['version'])

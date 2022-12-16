@@ -3,8 +3,7 @@
 
 import asyncio
 import logging
-
-import requests
+import traceback
 
 from twitchAPI.pubsub import PubSub
 from twitchAPI.helper import first
@@ -15,6 +14,7 @@ import nowplaying.config
 import nowplaying.db
 import nowplaying.metadata
 import nowplaying.trackrequests
+import nowplaying.twitch.utils
 import nowplaying.version
 
 USER_SCOPE = [
@@ -37,6 +37,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         self.config = config
         self.stopevent = stopevent
         self.filelists = None
+        self.chat = None
         self.uuid = None
         self.pubsub = None
         self.requests = nowplaying.trackrequests.Requests(config=config,
@@ -44,52 +45,6 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         self.widgets = None
         self.watcher = None
         self.twitch = None
-
-    async def _get_user_image(self, loginname):
-        ''' ask twitch for the user profile image '''
-        image = None
-        try:
-            user = await first(self.twitch.get_users(logins=loginname))
-            req = requests.get(user.profile_image_url, timeout=5)
-            image = nowplaying.utils.image2png(req.content)
-        except Exception as error:  #pylint: disable=broad-except
-            logging.debug(error)
-        return image
-
-    async def user_roulette_request(self,
-                                    setting,
-                                    user,
-                                    user_input,
-                                    reqid=None):
-        ''' roulette request '''
-
-        if not setting.get('playlist'):
-            logging.error('%s does not have a playlist defined',
-                          setting.get('displayname'))
-            return
-
-        logging.debug('%s requested roulette %s | %s', user,
-                      setting['playlist'], user_input)
-
-        plugin = self.config.cparser.value('settings/input')
-        roulette = await self.config.pluginobjs['inputs'][
-            f'nowplaying.inputs.{plugin}'].getrandomtrack(setting['playlist'])
-        metadata = await nowplaying.metadata.MetadataProcessors(
-            config=self.config
-        ).getmoremetadata(metadata={'filename': roulette}, skipplugins=True)
-        data = {
-            'username': user,
-            'artist': metadata.get('artist'),
-            'filename': metadata['filename'],
-            'title': metadata.get('title'),
-            'type': 'Roulette',
-            'playlist': setting['playlist'],
-            'userimage': setting.get('userimage'),
-            'displayname': setting.get('displayname'),
-        }
-        if reqid:
-            data['reqid'] = reqid
-        await self.requests.add_to_db(data)
 
     async def callback_redemption(self, uuid, data):  # pylint: disable=unused-argument
         ''' handle the channel point redemption '''
@@ -101,37 +56,59 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
             user_input = None
 
         if setting := await self.requests.find_twitchtext(redemptitle):
-            setting['userimage'] = self._get_user_image(user)
+            setting[
+                'userimage'] = await nowplaying.twitch.utils.get_user_image(
+                    self.twitch, user)
             if setting.get('type') == 'Generic':
-                await self.requests.user_track_request(setting, user,
-                                                       user_input)
+                reply = await self.requests.user_track_request(
+                    setting, user, user_input)
             elif setting.get('type') == 'Roulette':
-                await self.user_roulette_request(setting, user, user_input)
+                reply = await self.requests.user_roulette_request(
+                    setting, user, user_input)
 
-    async def run_redemptions(self, twitch=None):
+            if self.chat and setting.get('command'):
+                await self.chat.redemption_to_chat_request_bridge(
+                    setting['command'], reply)
+
+    async def run_redemptions(self, twitchlogin, chat):
         ''' twitch redemptions '''
 
-        if not twitch:
-            logging.error(
-                'No Twitch credentials to start redemptions. Exiting.')
-            return
+        # stop sleep loop if:
+        #
+        # stopevent is set -> end
+        #
+        # or both
+        #
+        # self.config.cparser.value('twitchbot/redemptions', type=bool) = true
+        # self.config.cparser.value('twitchbot/redemptions', type=bool) = true
+        # -> stat redemption request support
+        #
 
-        while not self.config.cparser.value(
-                'twitchbot/redemptions') and not self.stopevent.is_set():
+        while not self.stopevent.is_set() and not (
+                self.config.cparser.value('twitchbot/redemptions', type=bool)
+                and self.config.cparser.value('settings/requests', type=bool)):
             await asyncio.sleep(1)
+            self.config.get()
 
         if self.stopevent.is_set():
             return
 
-        loop = asyncio.get_running_loop()
-        loop.create_task(self.requests.watch_for_respin())
-        self.twitch = twitch
-        # starting up PubSub
-        self.pubsub = PubSub(twitch)
-        self.pubsub.start()
+        self.chat = chat
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self.requests.watch_for_respin())
+            self.twitch = await twitchlogin.api_login()
+            if not self.twitch:
+                logging.debug("something happened getting twitch; aborting")
+                return
+            # starting up PubSub
+            self.pubsub = PubSub(self.twitch)
+            self.pubsub.start()
+        except Exception:  #pylint: disable=broad-except
+            logging.error(traceback.format_exc())
 
         user = await first(
-            twitch.get_users(
+            self.twitch.get_users(
                 logins=[self.config.cparser.value('twitchbot/channel')]))
 
         # you can either start listening before or after you started pubsub.
@@ -143,3 +120,4 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         if self.pubsub:
             await self.pubsub.unlisten(self.uuid)
             self.pubsub.stop()
+            logging.debug('pubsub stopped')
