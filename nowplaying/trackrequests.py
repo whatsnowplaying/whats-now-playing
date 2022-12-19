@@ -507,13 +507,11 @@ class RequestSettings:
                     checkbox = QCheckBox()
                     checkbox.setChecked(False)
                 widget.request_table.setCellWidget(row, column, checkbox)
+            elif kwargs.get(cbtype):
+                widget.request_table.setItem(
+                    row, column, QTableWidgetItem(str(kwargs.get(cbtype))))
             else:
-                if kwargs.get(cbtype):
-                    widget.request_table.setItem(
-                        row, column, QTableWidgetItem(str(kwargs.get(cbtype))))
-                else:
-                    widget.request_table.setItem(row, column,
-                                                 QTableWidgetItem(str('')))
+                widget.request_table.setItem(row, column, QTableWidgetItem(''))
         widget.request_table.resizeColumnsToContents()
 
     def load(self, config, widget):

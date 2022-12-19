@@ -163,8 +163,8 @@ class TwitchSettings:
             return
         self.token = token
         if token:
-            username = nowplaying.twitch.utils.qtsafe_validate_token(token)
-            if username:
+            if username := nowplaying.twitch.utils.qtsafe_validate_token(
+                    token):
                 self.widget.chatbot_username_line.setText(username)
             else:
                 self.widget.chatbot_username_line.setText('')
