@@ -89,7 +89,7 @@ def clear_old_testsuite():
 
     cachedir = pathlib.Path(
         QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0])
-    if 'testsuite' in cachedir.name:
+    if 'testsuite' in cachedir.name and cachedir.exists():
         logging.info('Removing %s', cachedir)
         shutil.rmtree(cachedir)
 
