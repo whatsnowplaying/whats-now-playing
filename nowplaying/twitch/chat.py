@@ -193,7 +193,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
         return True
 
-    async def do_command(self, msg):  # pylint: disable=unused-argument
+    async def do_command(self, msg):    # pylint: disable=unused-argument
         ''' process a command '''
 
         metadata = {'cmduser': msg.user.display_name}
@@ -217,7 +217,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             if reply := await self.handle_request(commandlist[0],
                                                   commandlist[1:],
                                                   msg.user.display_name):
-                metadata.update(reply)
+                metadata |= reply
 
         await self._post_template(msg=msg,
                                   template=cmdfile,
