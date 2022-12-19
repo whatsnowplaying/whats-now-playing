@@ -4,11 +4,12 @@
 import logging
 import os
 import pathlib
+import shutil
 import sys
 import tempfile
 
 import pytest
-from PySide6.QtCore import QCoreApplication, QSettings  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -85,6 +86,12 @@ def clear_old_testsuite():
                        QCoreApplication.applicationName())
     config.clear()
     config.sync()
+
+    cachedir = pathlib.Path(
+        QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0])
+    if 'testsuite' in cachedir.name:
+        logging.info('Removing %s', cachedir)
+        shutil.rmtree(cachedir)
 
     config = QSettings(qsettingsformat, QSettings.UserScope,
                        QCoreApplication.organizationName(),

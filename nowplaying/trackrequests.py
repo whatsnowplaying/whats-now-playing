@@ -95,8 +95,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes
         with sqlite3.connect(self.databasefile) as connection:
             cursor = connection.cursor()
             try:
-                sql = ('CREATE TABLE IF NOT EXISTS userrequest ('
-                       ' TEXT, '.join(USERREQUEST_TEXT) + ' TEXT, '
+                sql = ('CREATE TABLE IF NOT EXISTS userrequest (' +
+                       ' TEXT, '.join(USERREQUEST_TEXT) + ' TEXT, ' +
                        ' BLOB, '.join(USERREQUEST_BLOB) + ' BLOB, '
                        ' reqid INTEGER PRIMARY KEY AUTOINCREMENT,'
                        ' timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)')
