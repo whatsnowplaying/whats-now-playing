@@ -217,7 +217,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             if reply := await self.handle_request(commandlist[0],
                                                   commandlist[1:],
                                                   msg.user.display_name):
-                metadata.update(reply)
+                metadata |= reply
 
         await self._post_template(msg=msg,
                                   template=cmdfile,
@@ -343,7 +343,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         metadata['startnewmessage'] = SPLITMESSAGETEXT
 
         if moremetadata:
-            metadata.update(moremetadata)
+            metadata |= moremetadata
 
         if self.templatedir.joinpath(template).is_file():
             try:

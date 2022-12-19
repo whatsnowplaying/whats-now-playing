@@ -94,13 +94,16 @@ class Requests:  #pylint: disable=too-many-instance-attributes
 
         with sqlite3.connect(self.databasefile) as connection:
             cursor = connection.cursor()
-            sql = 'CREATE TABLE IF NOT EXISTS userrequest ('
-            sql += ' TEXT, '.join(USERREQUEST_TEXT) + ' TEXT, '
-            sql += ' BLOB, '.join(USERREQUEST_BLOB) + ' BLOB, '
-            sql += 'reqid INTEGER PRIMARY KEY AUTOINCREMENT,'
-            sql += 'timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)'
-            cursor.execute(sql)
-            connection.commit()
+            try:
+                sql = ('CREATE TABLE IF NOT EXISTS userrequest ('
+                       ' TEXT, '.join(USERREQUEST_TEXT) + ' TEXT, '
+                       ' BLOB, '.join(USERREQUEST_BLOB) + ' BLOB, '
+                       ' reqid INTEGER PRIMARY KEY AUTOINCREMENT,'
+                       ' timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)')
+                cursor.execute(sql)
+                connection.commit()
+            except sqlite3.OperationalError as error:
+                logging.error(error)
 
     async def add_to_db(self, data):
         ''' add an entry to the db '''
@@ -116,8 +119,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             del data['playlist']
             del data['type']
             del data['displayname']
-            sql = 'UPDATE userrequest SET '
-            sql += '= ? , '.join(data.keys())
+            sql = 'UPDATE userrequest SET ' + '= ? , '.join(data.keys())
             sql += '= ? WHERE reqid=? '
             datatuple = list(data.values()) + [reqid]
         else:
@@ -144,15 +146,15 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             return
 
         sql = 'UPDATE userrequest SET filename=? WHERE reqid=?'
-        try:
-            with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile) as connection:
+            try:
                 connection.row_factory = sqlite3.Row
                 cursor = connection.cursor()
                 datatuple = RESPIN_TEXT, reqid
                 cursor.execute(sql, datatuple)
                 connection.commit()
-        except sqlite3.OperationalError as error:
-            logging.debug(error)
+            except sqlite3.OperationalError as error:
+                logging.error(error)
 
     def erase_id(self, reqid):
         ''' remove entry from requests '''
@@ -168,7 +170,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes
                 cursor.execute('DELETE FROM userrequest WHERE reqid=?;',
                                (reqid, ))
                 connection.commit()
-            except sqlite3.OperationalError:
+            except sqlite3.OperationalError as error:
+                logging.debug(error)
                 return
 
     async def user_roulette_request(self,
