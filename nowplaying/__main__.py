@@ -57,8 +57,12 @@ def main():
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     qapp = QApplication(sys.argv)
     qapp.setQuitOnLastWindowClosed(False)
+
     nowplaying.bootstrap.set_qt_names()
     logpath = run_bootstrap(bundledir=bundledir)
+
+    if not nowplaying.bootstrap.verify_python_version():
+        sys.exit(1)
 
     config = nowplaying.config.ConfigFile(logpath=logpath, bundledir=bundledir)
     logging.getLogger().setLevel(config.loglevel)

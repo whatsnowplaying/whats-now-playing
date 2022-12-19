@@ -4,8 +4,24 @@
 import logging
 import logging.handlers
 import pathlib
+import sys
 
 from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QErrorMessage  # pylint: disable=no-name-in-module
+
+
+def verify_python_version():
+    ''' make sure the correct version of python is being used '''
+
+    if sys.version_info[0] < 3 or (sys.version_info[0] == 3
+                                   and sys.version_info[1] < 10):
+        msgbox = QErrorMessage()
+        msgbox.showMessage('Python Version must be 3.10 or higher.  Exiting.')
+        msgbox.show()
+        msgbox.exec()
+        return False
+
+    return True
 
 
 def set_qt_names(app=None,

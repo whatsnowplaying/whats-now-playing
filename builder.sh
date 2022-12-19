@@ -7,7 +7,7 @@ VERSION=$(git describe --tags)
 DISTDIR=NowPlaying-"${VERSION}-${SYSTEM}"
 
 if [[ -z "${SYSTEM}" ]]; then
-  echo "Provide extra requirements"
+  echo "Provide extra requirements: 'windows' or 'macosx' "
   exit 1
 fi
 
@@ -17,11 +17,32 @@ case "${SYSTEM}" in
     ;;
   macosx)
     PYTHON=python3
+    ;;
+  *)
+    PYTHON=python
+    ;;
+esac
+
+PYTHON_VERSION=$("${PYTHON}" --version)
+PYTHON_VERSION=${PYTHON_VERSION#* }
+IFS="." read -ra PY_VERSION <<< "${PYTHON_VERSION}"
+
+if [[ ${PY_VERSION[0]} -lt 3 ]] || [[ ${PY_VERSION[0]} -lt 4 &&   ${PY_VERSION[1]} -lt 10 ]]; then
+  echo "Building requires version Python 3.10. No guarantess if it is higher than that."
+  exit 1
+fi
+
+case "${SYSTEM}" in
+  macosx)
     "${PYTHON}" -m venv /tmp/venv
     # shellcheck disable=SC1091
     source /tmp/venv/bin/activate
-  ;;
+    ;;
+  *)
+    ;;
 esac
+
+
 
 rm -rf build dist || true
 
