@@ -160,7 +160,8 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         ''' handle !whatsnowplayingversion '''
         inputsource = self.config.cparser.value('settings/input')
         version = nowplaying.version.get_versions()['version']
-        content = f'whatsnowplaying v{version} by @modernmeerkat. ' + f'Using {inputsource} on {sys.platform}.'
+        content = (f'whatsnowplaying v{version} by @modernmeerkat. '
+                   f'Using {inputsource} on {sys.platform}.')
         try:
             await cmd.reply(content)
         except:  #pylint: disable=bare-except

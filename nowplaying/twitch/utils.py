@@ -50,6 +50,7 @@ def qtsafe_validate_token(token):
 
 
 class TwitchLogin:
+    ''' manage the global twitch login for clientid/secret '''
     TWITCH = None
     TWITCH_LOCK = threading.Lock()
 
