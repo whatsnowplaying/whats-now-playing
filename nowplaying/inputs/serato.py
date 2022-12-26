@@ -247,10 +247,11 @@ class SeratoSessionReader:
             return
         for sessiontuple in self.sessiondata:
             if sessiontuple[0] == 'oent':
-                for oentdata in sessiontuple[1]:
-                    if oentdata[0] == 'adat':
-                        adatdata.append(oentdata[1])
-
+                adatdata.extend(
+                    oentdata[1]
+                    for oentdata in sessiontuple[1]
+                    if oentdata[0] == 'adat'
+                )
         self.sessiondata = adatdata
 
     def sortsession(self):
@@ -263,16 +264,14 @@ class SeratoSessionReader:
         if not self.sessiondata:
             logging.debug('session has not been loaded')
             return
-        for record in self.sessiondata:
-            yield record
+        yield from self.sessiondata
 
     def getreverseadat(self):
         ''' same as getadat, but reversed order '''
         if not self.sessiondata:
             logging.debug('session has not been loaded')
             return
-        for record in reversed(self.sessiondata):
-            yield record
+        yield from reversed(self.sessiondata)
 
 
 class SeratoHandler():  #pylint: disable=too-many-instance-attributes
@@ -370,8 +369,6 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             return
 
         logging.debug('triggered by watcher')
-        sessiondata = []
-
         # Just nuke the OS X metadata file rather than
         # work around it
 
@@ -389,8 +386,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         await session.loadsessionfile(sessionlist[-1])
         session.condense()
 
-        for record in session.getadat():
-            sessiondata.append(record)
+        sessiondata = list(session.getadat())
         LASTPROCESSED = round(time.time())
         PARSEDSESSIONS = copy.copy(sessiondata)
         #logging.debug(PARSEDSESSIONS)
