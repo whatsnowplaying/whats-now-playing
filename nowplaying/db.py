@@ -305,11 +305,8 @@ def create_setlist(config=None, databasefile=None):
     max_artist_size = max(len(t.get('artist')) for t in previoustrack)
     max_title_size = max(len(t.get('title')) for t in previoustrack)
 
-    if max_title_size < len('TITLE'):
-        max_title_size = len('TITLE')
-    if max_artist_size < len('ARTIST'):
-        max_artist_size = len('ARTIST')
-
+    max_title_size = max(max_title_size, len('TITLE'))
+    max_artist_size = max(max_artist_size, len('ARTIST'))
     setlistpath.mkdir(parents=True, exist_ok=True)
     logging.info('Creating %s', setlistfn)
     with open(setlistfn, 'w', encoding='utf-8') as fileh:
