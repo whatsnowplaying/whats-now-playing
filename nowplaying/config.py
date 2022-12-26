@@ -89,6 +89,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self.iconfile = self.find_icon_file()
         self.uidir = self.find_ui_file()
         self.lastloaddate = None
+        self.setlistdir = None
         self.striprelist = []
 
     def reset(self):
@@ -372,13 +373,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         ''' get the bundle dir '''
         return ConfigFile.BUNDLEDIR
 
-    @staticmethod
-    def getsetlistdir():
+    def getsetlistdir(self):
         ''' get the setlist directory '''
-        return os.path.join(
-            QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation)[0],
-            QCoreApplication.applicationName(), 'setlists')
+        if not self.setlistdir:
+            self.setlistdir = os.path.join(
+                QStandardPaths.standardLocations(
+                    QStandardPaths.DocumentsLocation)[0],
+                QCoreApplication.applicationName(), 'setlists')
+        return self.setlistdir
 
     def getregexlist(self):
         ''' get the regex title filter '''

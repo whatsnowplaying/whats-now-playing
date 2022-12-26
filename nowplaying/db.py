@@ -272,3 +272,51 @@ class MetadataDB:
 
             cursor.execute(sql)
             logging.debug('Cache db file created')
+
+
+def create_setlist(config=None, databasefile=None):
+    ''' create the setlist '''
+
+    datestr = time.strftime("%Y%m%d-%H%M%S")
+    setlistpath = pathlib.Path(config.getsetlistdir())
+    logging.debug('setlistpath = %s', setlistpath)
+    metadb = MetadataDB(databasefile=databasefile, initialize=False)
+    metadata = metadb.read_last_meta()
+    if not metadata:
+        logging.info('No tracks were played; not saving setlist')
+        return
+
+    previoustrack = metadata['previoustrack']
+    if not previoustrack:
+        logging.info('No previoustracks were played; not saving setlist')
+        return
+
+    for track in previoustrack:
+        if not track.get('artist'):
+            track['artist'] = ''
+
+    for track in previoustrack:
+        if not track.get('title'):
+            track['title'] = ''
+
+    previoustrack.reverse()
+
+    setlistfn = setlistpath.joinpath(f'{datestr}.md')
+    max_artist_size = max(len(t.get('artist')) for t in previoustrack)
+    max_title_size = max(len(t.get('title')) for t in previoustrack)
+
+    max_artist_size = max(max_artist_size, len('ARTIST'))
+    max_title_size = max(max_title_size, len('TITLE'))
+
+    setlistpath.mkdir(parents=True, exist_ok=True)
+    logging.info('Creating %s', setlistfn)
+    with open(setlistfn, 'w', encoding='utf-8') as fileh:
+
+        fileh.writelines(f'| {"ARTIST":{max_artist_size}} |'
+                         f' {"TITLE":{max_title_size}} |\n')
+        fileh.writelines(f'|:{"-":-<{max_artist_size}} |'
+                         f':{"-":-<{max_title_size}} |\n')
+
+        for track in previoustrack:
+            fileh.writelines(f'| {track["artist"]:{max_artist_size}} |'
+                             f' {track["title"]:{max_title_size}} |\n')
