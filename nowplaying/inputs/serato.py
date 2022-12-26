@@ -3,8 +3,8 @@
 
 #pylint: disable=too-many-lines
 
-import binascii
-import collections
+import asyncio
+import copy
 import datetime
 import logging
 import os
@@ -26,8 +26,6 @@ from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 from nowplaying.inputs import InputPlugin
 from nowplaying.exceptions import PluginVerifyError
-
-Header = collections.namedtuple('Header', 'chunktype size')
 
 # when in local mode, these are shared variables between threads
 LASTPROCESSED = 0
@@ -111,365 +109,170 @@ class SeratoCrateReader:
             for subtag in otrk:
                 if subtag[0] != 'ptrk':
                     continue
-                filelist.extend(f'{anchor}{filepart}' for filepart in subtag[1:])
+                filelist.extend(f'{anchor}{filepart}'
+                                for filepart in subtag[1:])
         return filelist
 
 
-class ChunkParser():  #pylint: disable=too-few-public-methods
-    ''' Basic Chunk Parser '''
+class SeratoSessionReader:
+    ''' read a Serato session file '''
 
-    # The format of a chunk is fairly trivial:
-    # [int field][int length][content of field]
+    def __init__(self):
+        self.decode_func_full = {
+            None: self._decode_struct,
+            'vrsn': self._decode_unicode,
+            'adat': self._decode_adat,
+            'oent': self._decode_struct,
+        }
 
-    def __init__(self, chunktype=None, data=None):
-        self.chunktype = chunktype
-        self.bytecounter = 0
-        self.headersize = 0
-        self.data = data
-        self.chunksize = 0
-        self.chunkheader = 0
+        self._adat_func = {
+            2: ['pathstr', self._decode_unicode],
+            3: ['location', self._decode_unicode],
+            4: ['filename', self._decode_unicode],
+            6: ['title', self._decode_unicode],
+            7: ['artist', self._decode_unicode],
+            8: ['album', self._decode_unicode],
+            9: ['genre', self._decode_unicode],
+            10: ['length', self._decode_unicode],
+            11: ['filesize', self._decode_unicode],
+            13: ['bitrate', self._decode_unicode],
+            14: ['frequency', self._decode_unicode],
+            15: ['bpm', self._decode_unsigned],
+            16: ['field16', self._decode_hex],
+            17: ['comments', self._decode_unicode],
+            18: ['lang', self._decode_unicode],
+            19: ['grouping', self._decode_unicode],
+            20: ['remixer', self._decode_unicode],
+            21: ['label', self._decode_unicode],
+            22: ['composer', self._decode_unicode],
+            23: ['date', self._decode_unicode],
+            28: ['starttime', self._decode_timestamp],
+            29: ['endtime', self._decode_timestamp],
+            31: ['deck', self._decode_unsigned],
+            45: ['playtime', self._decode_unsigned],
+            48: ['sessionid', self._decode_unsigned],
+            50: ['played', self._decode_bool],
+            51: ['key', self._decode_unicode],
+            52: ['added', self._decode_bool],
+            53: ['updatedat', self._decode_timestamp],
+            63: ['playername', self._decode_unicode],
+            64: ['commentname', self._decode_unicode],
+        }
 
-    def _header(self):
-        ''' read the header '''
+        self.sessiondata = []
 
-        # headers for hunks are 8 bytes
-        # 4 byte identifier, 4 byte size
-        # with the identifier, other program logic
-        # will kick in
-
-        (self.chunkheader,
-         self.chunksize) = struct.unpack_from('>4sI', self.data,
-                                              self.bytecounter)
-        self.bytecounter += 8
-
-    def _num(self, size=4):
-        ''' read an number '''
-        if size == 8:
-            readnum = struct.unpack_from('>Q', self.data, self.bytecounter)[0]
-            self.bytecounter += 8
-        else:
-            readnum = struct.unpack_from('>I', self.data, self.bytecounter)[0]
-            self.bytecounter += 4
-        return readnum
-
-    def _numfield(self):
-        ''' read the size of the number, then the number '''
-        size = self._num()
-        return self._num(size)
-
-    def _string_nodecode(self):
-        ''' read # of chars in a string, then the string '''
-        stringsize = self._num()
-        readstring = struct.unpack_from(f'{stringsize}s', self.data,
-                                        self.bytecounter)[0]
-        self.bytecounter += stringsize
-        return readstring
-
-    def _string(self):
-        ''' read # of chars in a string, then the string '''
-
-        # At least on the Mac, strings appear to be written
-        # in UTF-16-BE which gives a wide variety of possible
-        # choices of characters
-        encoded = self._string_nodecode()
-
-        try:
-            decoded = encoded.decode('utf-16-be')
-            # strip ending null character at the end
-            decoded = decoded[:-1]
-        except UnicodeDecodeError:
-            logging.error('Blew up on %s:', encoded, exc_info=True)
-            # just take out all the nulls this time and hope for the best
-            decoded = encoded.replace(b'\x00', b'')
-        return decoded
-
-    def _hex(self):
-        ''' read a string, then encode as hex '''
-        return self._string().encode('utf-8').hex()
-
-    def _bytes(self):
-        ''' read number of bytes, then that many bytes '''
-        bytesize = self._num()
-        readnum = struct.unpack_from(f'{bytesize}c', self.data,
-                                     self.bytecounter)[0]
-        self.bytecounter += 1
-        return readnum
-
-    def _bool(self):
-        ''' true/false handling '''
-        return bool(struct.unpack('b', self._bytes())[0])
-
-    def _timestamp(self):
-        ''' timestamps are numfields converted to a datetime object '''
-        timestampnum = self._numfield()
-        return datetime.datetime.fromtimestamp(timestampnum)
-
-    def process(self):
-        ''' overridable function meant to process the chunk '''
-
-    def _debug(self):  # pragma: no cover
-        ''' a dumb function to help debug stuff when writing a new chunk '''
-        hexbytes = binascii.hexlify(self.data[self.bytecounter:])  # pylint: disable=c-extension-no-member
-        total = len(hexbytes)
-        for j in range(1, total + 1, 8):
-            logging.debug('_debug: %s', hexbytes[j:j + 7])
-
-    def importantvalues(self):  # pragma: no cover
-        ''' another debug function to see when these fields change '''
-        for key, value in self.__dict__.items():
-            # if key in [
-            #         'deck', 'field16', 'field39', 'field68', 'field69',
-            #         'field70', 'field72', 'field78', 'title', 'played',
-            #         'playtime', 'starttime', 'updatedat'
-            # ]:
-            logging.info('thisdeck.%s = %s', key, value)
-
-    def __iter__(self):
-        yield self
-
-
-class ChunkTrackADAT(ChunkParser):  #pylint: disable=too-many-instance-attributes, too-few-public-methods
-    ''' Process the 'adat' chunk '''
-
-    # adat contains the deck information.
-    # it is important to note that, for all intents and purposes
-    # Serato only updates the adat if the deck has some sort of
-    # major event just as load and eject.  play is NOT written
-    # until after a load/eject event!
-
-    def __init__(self, data=None):
-        self.added = None
-        self.album = None
-        self.artist = None
-        self.bitrate = None
-        self.bpm = None
-        self.commentname = None
-        self.comments = None
-        self.composer = None
-        self.deck = None
-        self.endtime = None
-        self.filename = None
-        self.filesize = None
-        self.frequency = None
-        self.genre = None
-        self.grouping = None
-        self.key = None
-        self.label = None
-        self.lang = None
-        self.length = None
-        self.location = None
-        self.pathstr = None
-        self.played = False
-        self.playername = None
-        self.playtime = None
-        self.remixer = None
-        self.row = 0
-        self.sessionid = 0
-        self.starttime = datetime.datetime.now()
-        self.title = None
-        self.updatedat = self.starttime
-        self.date = None
-
-        self.field16 = None
-        self.field39 = None
-        self.field68 = None
-        self.field69 = None
-        self.field70 = None
-        self.field72 = None
-        self.field78 = 0
-
-        self.data = data
-        super().__init__(chunktype='adat', data=self.data)
-        if data:
-            self.process()
-            # free some RAM
-            self.data = None
-            self.chunkheader = None
-
-
-    def process(self):  #pylint: disable=too-many-branches,too-many-statements
-        ''' process the 'adat' chunk '''
-
-        # [adat][size][row][fields...]
-        #
-        # all fields are (effectively)
-        # [field identifier][size of field][content]
-        #
-
-        self._header()
-        self.row = self._num()
-
-        while self.bytecounter < len(self.data):
+    def _decode_adat(self, data):
+        ret = {}
+        #i = 0
+        #tag = struct.unpack('>I', data[0:i + 4])[0]
+        #length = struct.unpack('>I', data[i + 4:i + 8])[0]
+        i = 8
+        while i < len(data) - 8:
+            tag = struct.unpack('>I', data[i + 4:i + 8])[0]
+            length = struct.unpack('>I', data[i + 8:i + 12])[0]
+            value = data[i + 12:i + 12 + length]
             try:
-                match self._num():
-                    case 2:
-                        self.pathstr = self._string()
-                    case 3:
-                        self.location = self._string()
-                    case 4:
-                        self.filename = self._string()
-                    case 6:
-                        self.title = self._string()
-                    case 7:
-                        self.artist = self._string()
-                    case 8:
-                        self.album = self._string()
-                    case 9:
-                        self.genre = self._string()
-                    case 10:
-                        self.length = self._string()
-                    case 11:
-                        self.filesize = self._string()
-                    case 13:
-                        self.bitrate = self._string()
-                    case 14:
-                        self.frequency = self._string()
-                    case 15:
-                        self.bpm = self._numfield()
-                    case 16:  # pragma: no cover
-                        self.field16 = self._hex()
-                    case 17:
-                        self.comments = self._string()
-                    case 18:
-                        self.lang = self._string()
-                    case 19:
-                        self.grouping = self._string()
-                    case 20:
-                        self.remixer = self._string()
-                    case 21:
-                        self.label = self._string()
-                    case 22:
-                        self.composer = self._string()
-                    case 23:
-                        self.date = self._string()
-                    case 28:
-                        self.starttime = self._timestamp()
-                    case 29:
-                        self.endtime = self._timestamp()
-                    case 31:
-                        self.deck = self._numfield()
-                    case 39:
-                        self.field39 = self._string_nodecode()
-                    case 45:
-                        self.playtime = self._numfield()
-                    case 48:
-                        self.sessionid = self._numfield()
-                    case 50:
-                        self.played = self._bool()
-                    case 51:
-                        self.key = self._string()
-                    case 52:
-                        self.added = self._bool()
-                    case 53:
-                        self.updatedat = self._timestamp()
-                    case 63:
-                        self.playername = self._string()
-                    case 64:
-                        self.commentname = self._string()
-                    case 68:
-                        self.field68 = self._string_nodecode()
-                    case 69:
-                        self.field69 = self._string_nodecode()
-                    case 70:
-                        self.field70 = self._string_nodecode()
-                    case 72:
-                        self.field72 = self._string_nodecode()
-                    case 78:
-                        self.field78 = self._numfield()
-            except Exception as error: #pylint: disable=broad-except
-                logging.debug(error)
+                field = self._adat_func[tag][0]
+                value = self._adat_func[tag][1](value)
+            except KeyError:
+                field = f'unknown{tag}'
+                value = self._noop(value)
+            ret[field] = value
+            i += 8 + length
+        if not ret.get('filename'):
+            ret['filename'] = ret.get('pathstr')
+        return ret
 
-        # what people would expect in a filename meta
-        # appears to be in pathstr
-        if not self.filename:
-            self.filename = self.pathstr
+    def _decode_struct(self, data):
+        ''' decode the structures of the session'''
+        ret = []
+        i = 0
+        while i < len(data):
+            tag = data[i:i + 4].decode('ascii')
+            length = struct.unpack('>I', data[i + 4:i + 8])[0]
+            value = data[i + 8:i + 8 + length]
+            value = self._datadecode(value, tag=tag)
+            ret.append((tag, value))
+            i += 8 + length
+        return ret
 
+    @staticmethod
+    def _decode_unicode(data):
+        return data.decode('utf-16-be')[:-1]
 
-class ChunkVRSN(ChunkParser):  #pylint: disable=too-many-instance-attributes, too-few-public-methods
-    ''' Process the 'vrsn' chunk '''
+    @staticmethod
+    def _decode_timestamp(data):
+        try:
+            timestamp = struct.unpack('>I', data)[0]
+        except struct.error:
+            timestamp = struct.unpack('>Q', data)[0]
+        return datetime.datetime.fromtimestamp(timestamp)
 
-    # These chunks are very simple
+    @staticmethod
+    def _decode_hex(data):
+        ''' read a string, then encode as hex '''
+        return data.encode('utf-8').hex()
 
-    def __init__(self, data=None):
-        self.version = None
-        self.data = data
-        super().__init__(chunktype='vrsn', data=self.data)
-        self.process()
+    @staticmethod
+    def _decode_bool(data):
+        ''' true/false handling '''
+        return bool(struct.unpack('b', data)[0])
 
-    def process(self):  #pylint: disable=too-many-branches,too-many-statements
-        ''' process the 'vrsn' chunk '''
-        headersize = len(self.data)
-        self.version = struct.unpack(f'{headersize}s',
-                                     self.data)[0].decode('utf-16-be')
+    @staticmethod
+    def _decode_unsigned(data):
+        try:
+            field = struct.unpack('>I', data)[0]
+        except struct.error:
+            field = struct.unpack('>Q', data)[0]
+        return field
 
+    @staticmethod
+    def _noop(data):
+        return data
 
-class SessionFile():  #pylint: disable=too-few-public-methods
-    ''' process a session file '''
+    def _datadecode(self, data, tag=None):
+        decode_func = self.decode_func_full[tag]
+        return decode_func(data)
 
-    def __init__(self, filename=None):
-        self.filename = filename
-        self.adats = []
-        self.vrsn = None
-        self.decks = {}
-        self.lastreaddeck = None
+    async def loadsessionfile(self, filename):
+        ''' load/extend current session '''
+        async with aiofiles.open(filename, 'rb') as sessionfhin:
+            self.sessiondata.extend(self._datadecode(await sessionfhin.read()))
 
-        while os.access(self.filename, os.R_OK) is False:
-            time.sleep(0.5)
-
-        # Serato session files are effectively:
-        # 8 byte header = 4 byte ident + 4 byte length
-        # 8 byte container = 4 byte ident + 4 byte length
-        # ...
-
-        # There are different types of containers.  The two
-        # we care about are 'vrsn' and 'onet'.
-        # * vrsn is just the version of the file
-        # * onet is usually wrapping a single adat
-        # * adat is the deck information, including what track is
-        #   loaded
-        # The rest get ignored
-
-        if '.session' not in self.filename:
+    def condense(self):
+        ''' shrink to just adats '''
+        adatdata = []
+        if not self.sessiondata:
+            logging.debug('session has not been loaded')
             return
+        for sessiontuple in self.sessiondata:
+            if sessiontuple[0] == 'oent':
+                for oentdata in sessiontuple[1]:
+                    if oentdata[0] == 'adat':
+                        adatdata.append(oentdata[1])
 
-        logging.debug('starting to read %s', self.filename)
-        with open(self.filename, 'rb') as self.sessionfile:
-            while True:
-                header_bin = self.sessionfile.read(8)
-                length_read = len(header_bin)
-                if length_read < 8:
-                    break
+        self.sessiondata = adatdata
 
-                try:
-                    header = Header._make(struct.unpack('>4sI', header_bin))
-                except:  # pylint: disable=bare-except
-                    break
+    def sortsession(self):
+        ''' sort them by starttime '''
+        records = sorted(self.sessiondata, key=lambda x: x.get('starttime'))
+        self.sessiondata = records
 
-                if header.chunktype in [b'oent', b'oren']:
-                    containertype = header.chunktype
-                    continue
+    def getadat(self):
+        ''' get the filenames from this session '''
+        if not self.sessiondata:
+            logging.debug('session has not been loaded')
+            return
+        for record in self.sessiondata:
+            yield record
 
-                data = self.sessionfile.read(header.size)
-
-                if header.chunktype == b'adat' and containertype == b'oent':
-                    chunk = ChunkTrackADAT(data=data)
-                    if not chunk.played:
-                        continue
-                    self.adats.append(chunk)
-                    self.decks[self.adats[-1].deck] = self.adats[-1]
-                    self.lastreaddeck = self.adats[-1].deck
-                elif header.chunktype == b'adat' and containertype == b'oren':
-                    # not currently parsed, but probably should be?
-                    continue
-                elif header.chunktype == b'vrsn':
-                    self.vrsn = ChunkVRSN(data=data)
-                else:
-                    logging.warning('Skipping chunktype: %s', header.chunktype)
-                    break
-        logging.debug('finished reading %s', self.filename)
-
-    def __iter__(self):  # pragma: no cover
-        yield self
+    def getreverseadat(self):
+        ''' same as getadat, but reversed order '''
+        if not self.sessiondata:
+            logging.debug('session has not been loaded')
+            return
+        for record in reversed(self.sessiondata):
+            yield record
 
 
 class SeratoHandler():  #pylint: disable=too-many-instance-attributes
@@ -494,17 +297,17 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         self.event_handler = None
         self.observer = None
         self.decks = {}
+        self.playingadat = {}
         PARSEDSESSIONS = []
-        self.playingadat = ChunkTrackADAT()
         LASTPROCESSED = 0
         self.lastfetched = 0
+        self.loop = None
         if seratodir:
             self.seratodir = seratodir
             self.watchdeck = None
             PARSEDSESSIONS = []
             self.mode = 'local'
             self.mixmode = mixmode
-            self._setup_watcher()
 
         if seratourl:
             self.url = seratourl
@@ -516,7 +319,12 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         if self.mixmode not in ['newest', 'oldest']:
             self.mixmode = 'newest'
 
-    def _setup_watcher(self):
+    async def start(self):
+        ''' perform any startup tasks '''
+        if self.seratodir and self.mode == 'local':
+            await self._setup_watcher()
+
+    async def _setup_watcher(self):
         logging.debug('setting up watcher')
         self.event_handler = PatternMatchingEventHandler(
             patterns=['*.session'],
@@ -538,61 +346,54 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         self.observer.start()
 
         # process what is already there
-        self.process_sessions(path=self.seratodir)
+        await self._async_process_sessions()
 
-    def process_sessions(self, path):  # pylint: disable=unused-argument
+    def process_sessions(self, path):
+        ''' handle incoming session file updates '''
+        logging.debug('processing %s path', path)
+        if not self.loop:
+            try:
+                self.loop = asyncio.get_running_loop()
+                logging.debug('got a running loop')
+                self.loop.create_task(self._async_process_sessions())
+
+            except RuntimeError:
+                self.loop = asyncio.new_event_loop()
+                logging.debug('created a loop')
+                self.loop.run_until_complete(self._async_process_sessions())
+
+    async def _async_process_sessions(self):
         ''' read and process all of the relevant session files '''
         global LASTPROCESSED, PARSEDSESSIONS  #pylint: disable=global-statement
-
-        logging.debug('processing %s path', path)
 
         if self.mode == 'remote':
             return
 
         logging.debug('triggered by watcher')
-        PARSEDSESSIONS = []
+        sessiondata = []
 
         # Just nuke the OS X metadata file rather than
         # work around it
 
-        dsstorefile = os.path.abspath(os.path.join(self.seratodir,
-                                                   ".DS_Store"))
+        seratopath = pathlib.Path(self.seratodir)
 
-        if os.path.exists(dsstorefile):
-            os.remove(dsstorefile)
-
-        # Serato probably hasn't been started yet
-        if not os.path.exists(self.seratodir):
-            logging.debug('no seratodir?')
+        sessionlist = sorted(seratopath.glob('*.session'),
+                             key=lambda path: int(path.stem))
+        #sessionlist = sorted(seratopath.glob('*.session'),
+        #                     key=lambda path: path.stat().st_mtime)
+        if not sessionlist:
             return
 
-        # some other conditions may give us FNF, so just
-        # return here too
-        try:
-            files = sorted(os.listdir(self.seratodir),
-                           key=lambda x: os.path.getmtime(
-                               os.path.join(self.seratodir, x)))
-        except FileNotFoundError:
-            return
+        session = SeratoSessionReader()
 
-        # The directory exists, but nothing in it.
-        if not files:
-            logging.debug('dir is empty?')
-            return
+        await session.loadsessionfile(sessionlist[-1])
+        session.condense()
 
-        logging.debug('all files %s', files)
-        for file in files:
-            sessionfilename = os.path.abspath(
-                os.path.join(self.seratodir, file))
-            filetimestamp = os.path.getmtime(sessionfilename)
-            file_mod_age = time.time() - os.path.getmtime(sessionfilename)
-            # ignore files older than 10 minutes
-            if file_mod_age > 600:
-                continue
-
-            LASTPROCESSED = filetimestamp
-            logging.debug('processing %s', sessionfilename)
-            PARSEDSESSIONS.append(SessionFile(sessionfilename))
+        for record in session.getadat():
+            sessiondata.append(record)
+        LASTPROCESSED = round(time.time())
+        PARSEDSESSIONS = copy.copy(sessiondata)
+        #logging.debug(PARSEDSESSIONS)
         logging.debug('finished processing')
 
     def computedecks(self, deckskiplist=None):
@@ -606,27 +407,26 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
         self.decks = {}
 
-        # keep track of each deck. run through
-        # the session files trying to find
-        # the most recent, unplayed track.
-        # it is VERY IMPORTANT to know that
-        # playtime is _ONLY_ set when that deck
-        # has been reloaded!
-
-        for index in reversed(PARSEDSESSIONS):
-            for adat in index.adats:
-                if deckskiplist and str(adat.deck) in deckskiplist:
-                    continue
-                if 'playtime' in adat and adat.playtime > 0:
-                    continue
-                if not adat.played:
-                    continue
-                if (adat.deck in self.decks
-                        and adat.updatedat < self.decks[adat.deck].updatedat):
-                    continue
-                logging.debug('Setting deck: %d artist: %s title: %s',
-                              adat.deck, adat.artist, adat.title)
-                self.decks[adat.deck] = adat
+        for adat in reversed(PARSEDSESSIONS):
+            if not adat.get('deck'):
+                # broken record
+                continue
+            if deckskiplist and str(adat['deck']) in deckskiplist:
+                # on a deck that is supposed to be ignored
+                continue
+            if not adat.get('played'):
+                # wasn't played, so skip it
+                continue
+            if adat['deck'] in self.decks and adat.get(
+                    'starttime') < self.decks[adat['deck']].get('starttime'):
+                # started after a deck that is already set
+                continue
+            logging.debug(
+                'Setting deck: %d artist: %s title: %s  album: %s time: %s updated: %s',
+                adat['deck'], adat.get('artist'), adat.get('title'),
+                adat.get('album'), adat.get('starttime'),
+                adat.get('updatedat'))
+            self.decks[adat['deck']] = adat
 
     def computeplaying(self):
         ''' set the adat for the playing track based upon the
@@ -639,7 +439,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             return
 
         # at this point, self.decks should have
-        # all decks with their _most recent_ unplayed tracks
+        # all decks with their _most recent_ "unplayed" tracks
 
         # under most normal operations, we should expect
         # a round-robin between the decks:
@@ -666,29 +466,36 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         # e.g., unless you are changing more than two decks at
         # once, this behavior should be the expected result
 
-        self.playingadat = ChunkTrackADAT()
+        self.playingadat = {}
 
         logging.debug('mixmode: %s', self.mixmode)
 
         if self.mixmode == 'newest':
-            self.playingadat.starttime = datetime.datetime.fromtimestamp(0)
-            self.playingadat.updatedat = self.playingadat.starttime
+            self.playingadat['starttime'] = datetime.datetime.fromtimestamp(0)
+        else:
+            self.playingadat['starttime'] = datetime.datetime.fromtimestamp(
+                time.time())
+        self.playingadat['updatedat'] = self.playingadat['starttime']
 
         logging.debug('Find the current playing deck. Starting at time: %s',
-                      self.playingadat.starttime)
+                      self.playingadat.get('starttime'))
         for deck, adat in self.decks.items():
-            if self.mixmode == 'newest' and adat.starttime > self.playingadat.starttime:
+            if self.mixmode == 'newest' and adat.get(
+                    'starttime') > self.playingadat.get('starttime'):
                 self.playingadat = adat
                 logging.debug(
                     'Playing = time: %s deck: %d artist: %s title %s',
-                    self.playingadat.starttime, deck, self.playingadat.artist,
-                    self.playingadat.title)
-            elif self.mixmode == 'oldest' and adat.starttime < self.playingadat.starttime:
+                    self.playingadat.get('starttime'), deck,
+                    self.playingadat.get('artist'),
+                    self.playingadat.get('title'))
+            elif self.mixmode == 'oldest' and adat.get(
+                    'starttime') < self.playingadat.get('starttime'):
                 self.playingadat = adat
                 logging.debug(
                     'Playing = time: %s deck: %d artist: %s title %s',
-                    self.playingadat.starttime, deck, self.playingadat.artist,
-                    self.playingadat.title)
+                    self.playingadat.get('starttime'), deck,
+                    self.playingadat.get('artist'),
+                    self.playingadat.get('title'))
 
     def getlocalplayingtrack(self, deckskiplist=None):
         ''' parse out last track from binary session file
@@ -705,7 +512,8 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             self.computeplaying()
 
         if self.playingadat:
-            return self.playingadat.artist, self.playingadat.title, self.playingadat.filename
+            return self.playingadat.get('artist'), self.playingadat.get(
+                'title'), self.playingadat.get('filename')
         return None, None, None
 
     def getremoteplayingtrack(self):  # pylint: disable=too-many-return-statements, too-many-branches
@@ -747,7 +555,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         tdat = tdat.strip()
 
         if not tdat:
-            self.playingadat = ChunkTrackADAT()
+            self.playingadat = {}
             return
 
         if ' - ' not in tdat:
@@ -765,17 +573,17 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         else:
             artist = artist.strip()
 
-        self.playingadat.artist = artist
+        self.playingadat['artist'] = artist
 
         if not title or title == '.':
             title = None
         else:
             title = title.strip()
 
-        self.playingadat.title = title
+        self.playingadat['title'] = title
 
         if not title and not artist:
-            self.playingadat = ChunkTrackADAT()
+            self.playingadat = {}
 
         return
 
@@ -791,7 +599,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             return {}
 
         return {
-            key: getattr(self.playingadat, key)
+            key: self.playingadat[key]
             for key in [
                 'album',
                 'artist',
@@ -807,8 +615,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                 'label',
                 'lang',
                 'title',
-            ] if hasattr(self.playingadat, key)
-            and getattr(self.playingadat, key)
+            ] if self.playingadat.get(key)
         }
 
     def stop(self):
@@ -817,7 +624,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
         self.decks = {}
         PARSEDSESSIONS = []
-        self.playingadat = ChunkTrackADAT()
+        self.playingadat = {}
         LASTPROCESSED = 0
         self.lastfetched = 0
         if self.observer:
@@ -854,7 +661,7 @@ class Plugin(InputPlugin):
 
         return False
 
-    def gethandler(self):
+    async def gethandler(self):
         ''' setup the SeratoHandler for this session '''
 
         stilllocal = self.config.cparser.value('serato/local', type=bool)
@@ -904,14 +711,15 @@ class Plugin(InputPlugin):
                                         pollingobserver=usepoll)
             #if self.serato:
             #    self.serato.process_sessions()
+        await self.serato.start()
 
     async def start(self):
         ''' get a handler '''
-        self.gethandler()
+        await self.gethandler()
 
     async def getplayingtrack(self):
         ''' wrapper to call getplayingtrack '''
-        self.gethandler()
+        await self.gethandler()
 
         # get poll interval and then poll
         if self.local:
@@ -940,7 +748,6 @@ class Plugin(InputPlugin):
         crate_path = pathlib.Path(libpath).joinpath('Subcrates')
         smartcrate_path = pathlib.Path(libpath).joinpath('SmartCrates')
 
-
         logging.debug('Determined: %s %s', crate_path, smartcrate_path)
         if crate_path.joinpath(f'{playlist}.crate').exists():
             playlistfile = crate_path.joinpath(f'{playlist}.crate')
@@ -949,7 +756,6 @@ class Plugin(InputPlugin):
         else:
             logging.debug('Unknown crate: %s', playlist)
             return None
-
 
         logging.debug('Using %s', playlistfile)
 

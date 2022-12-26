@@ -1,5 +1,4 @@
 versioneer.py
-nowplaying/inputs/serato.py
 nowplaying/version.py
 nowplaying/vendor/
 nowplaying/qtrc.py

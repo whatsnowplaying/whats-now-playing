@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 ''' test serato '''
 
+from datetime import datetime
+import logging
 import pathlib
 import os
 
@@ -22,9 +24,22 @@ def serato_bootstrap(bootstrap):
 
 def touchdir(directory):
     ''' serato requires current session files to process '''
-    for file in os.listdir(directory):
-        filename = os.path.join(directory, file)
-        pathlib.Path(filename).touch()
+    files = {
+        '1': '2021-02-06 15:14:57',
+        '12': '2021-02-06 19:13:23',
+        '66': '2021-02-07 00:27:26',
+        '74': '2021-02-07 12:59:41',
+        '80': '2021-02-07 23:21:04',
+        '84': '2021-02-08 00:15:07'
+    }
+    for key, value in files.items():
+        filepath = pathlib.Path(directory).joinpath(f'{key}.session')
+        if not filepath.exists():
+            continue
+        utc_dt = datetime.fromisoformat(value)
+        epochtime = (utc_dt - datetime(1970, 1, 1)).total_seconds()
+        logging.debug('changing %s to %s', filepath, epochtime)
+        os.utime(filepath, times=(epochtime, epochtime))
 
 
 @pytest_asyncio.fixture
