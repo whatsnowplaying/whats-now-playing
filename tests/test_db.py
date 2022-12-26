@@ -20,6 +20,17 @@ def getmetadb(bootstrap):
                                        initialize=True)
 
 
+@pytest.fixture
+def config_and_getmetadb(bootstrap):
+    ''' create a temporary directory '''
+    config = bootstrap  # pylint: disable=unused-variable
+    with tempfile.TemporaryDirectory() as newpath:
+        config.setlistdir = os.path.join(newpath, 'sl')
+        yield config, nowplaying.db.MetadataDB(databasefile=os.path.join(
+            newpath, 'test.db'),
+                                               initialize=True)
+
+
 def results(expected, metadata):
     ''' take a metadata result and compare to expected '''
     for expkey in expected:
@@ -210,3 +221,42 @@ def test_data_previoustrack(getmetadb):  # pylint: disable=redefined-outer-name
 
     assert readdata['previoustrack'][0] == {'artist': 'a3', 'title': 't3'}
     assert readdata['previoustrack'][1] == {'artist': 'a2', 'title': 't2'}
+
+
+## NOTE: these don't check content, just make sure
+## there are no crashes
+
+
+def test_empty_setlist(bootstrap):
+    ''' test a simple empty db '''
+    config = bootstrap
+    config.cparser.setValue('setlist/enabled', True)
+    nowplaying.db.create_setlist(config)
+
+
+def test_simple_setlist(config_and_getmetadb):  # pylint: disable=redefined-outer-name
+    ''' test a single entry db '''
+    config, metadb = config_and_getmetadb
+    config.cparser.setValue('setlist/enabled', True)
+
+    expected = {
+        'artist': 'Great Artist Here',
+        'title': 'Great Title Here',
+    }
+
+    metadb.write_to_metadb(metadata=expected)
+    nowplaying.db.create_setlist(config, databasefile=metadb.databasefile)
+
+
+def test_missingartist_setlist(config_and_getmetadb):  # pylint: disable=redefined-outer-name
+    ''' test a single entry db '''
+    config, metadb = config_and_getmetadb
+    config.cparser.setValue('setlist/enabled', True)
+
+    expected = {
+        'artist': None,
+        'title': 'Great Title Here',
+    }
+
+    metadb.write_to_metadb(metadata=expected)
+    nowplaying.db.create_setlist(config, databasefile=metadb.databasefile)
