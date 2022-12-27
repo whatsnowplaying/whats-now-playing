@@ -14,8 +14,22 @@ import time
 import pkg_resources
 
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QErrorMessage  # pylint: disable=no-name-in-module
 
 import nowplaying.version
+
+def verify_python_version():
+    ''' make sure the correct version of python is being used '''
+
+    if sys.version_info[0] < 3 or (sys.version_info[0] == 3
+                                   and sys.version_info[1] < 9):
+        msgbox = QErrorMessage()
+        msgbox.showMessage('Python Version must be 3.9 or higher.  Exiting.')
+        msgbox.show()
+        msgbox.exec()
+        return False
+
+    return True
 
 
 class UpgradeConfig:
