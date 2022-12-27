@@ -89,7 +89,10 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
                 logging.debug('Failed attempting to get a track: %s',
                               error,
                               exc_info=True)
-        self.create_setlist()
+
+        if not self.testmode and self.config.cparser.value('setlist/enabled',
+                                                           type=bool):
+            nowplaying.db.create_setlist(self.config)
         logging.debug('Exited main trackpool loop')
         self.stop()
         logging.debug('Trackpoll stopped gracefully.')
@@ -337,34 +340,43 @@ class TrackPoll(QThread):  # pylint: disable=too-many-instance-attributes
         if not fillin(self):
             fillin(self)
 
-    def create_setlist(self):
-        ''' create the setlist '''
 
-        if not self.config.cparser.value('setlist/enabled',
-                                         type=bool) or self.testmode:
-            return
+def stop(pid):
+    ''' stop the web server -- called from Tray '''
+    logging.info('sending INT to %s', pid)
+    try:
+        os.kill(pid, signal.SIGINT)
+    except ProcessLookupError:
+        pass
 
-        setlistpath = pathlib.Path(self.config.getsetlistdir())
-        setlistpath.mkdir(parents=True, exist_ok=True)
-        metadb = nowplaying.db.MetadataDB(initialize=False)
-        metadata = metadb.read_last_meta()
-        if not metadata:
-            return
 
-        previoustrack = metadata['previoustrack']
-        previoustrack.reverse()
+def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argument
+    ''' multiprocessing start hook '''
+    threading.current_thread().name = 'TrackPoll'
 
-        setlistfn = setlistpath.joinpath(f'{self.datestr}.md')
-        max_artist_size = max(len(t['artist']) for t in previoustrack)
-        max_title_size = max(len(t['title']) for t in previoustrack)
+    if not bundledir:
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            bundledir = getattr(sys, '_MEIPASS',
+                                pathlib.Path(__file__).resolve().parent)
+        else:
+            bundledir = pathlib.Path(__file__).resolve().parent
 
-        with open(setlistfn, 'w', encoding='utf-8') as fileh:
-
-            fileh.writelines(f'| {"ARTIST":{max_artist_size}} |'
-                             f' {"TITLE":{max_title_size}} |\n')
-            fileh.writelines(f'|:{"-":-<{max_artist_size}} |'
-                             f':{"-":-<{max_title_size}} |\n')
-
-            for track in previoustrack:
-                fileh.writelines(f'| {track["artist"]:{max_artist_size}} |'
-                                 f' {track["title"]:{max_title_size}} |\n')
+    if testmode:
+        nowplaying.bootstrap.set_qt_names(appname='testsuite')
+    else:
+        nowplaying.bootstrap.set_qt_names()
+    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log',
+                                                rotate=False)
+    config = nowplaying.config.ConfigFile(bundledir=bundledir,
+                                          logpath=logpath,
+                                          testmode=testmode)
+    try:
+        TrackPoll(  # pylint: disable=unused-variable
+            stopevent=stopevent,
+            config=config,
+            testmode=testmode)
+    except Exception as error:  #pylint: disable=broad-except
+        logging.error('TrackPoll crashed: %s', error, exc_info=True)
+        sys.exit(1)
+    logging.info('shutting down trackpoll v%s',
+                 nowplaying.version.get_versions()['version'])
