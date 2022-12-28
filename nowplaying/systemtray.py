@@ -22,10 +22,10 @@ LASTANNOUNCED = {'artist': None, 'title': None}
 class Tray:  # pylint: disable=too-many-instance-attributes
     ''' System Tray object '''
 
-    def __init__(self):  #pylint: disable=too-many-statements
-        self.config = nowplaying.config.ConfigFile()
+    def __init__(self, beam=False):  #pylint: disable=too-many-statements
+        self.config = nowplaying.config.ConfigFile(beam=beam)
         self.version = nowplaying.version.get_versions()['version']
-
+        self._configure_beamstatus(beam)
         self.icon = QIcon(str(self.config.iconfile))
         self.tray = QSystemTrayIcon()
         self.tray.setIcon(self.icon)
@@ -41,7 +41,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.subprocesses = nowplaying.subprocesses.SubprocessManager(
             self.config)
         self.settingswindow = nowplaying.settingsui.SettingsUI(
-            tray=self, version=self.version)
+            tray=self, version=self.version, beam=beam)
 
         self.settings_action = QAction("Settings")
         self.settings_action.triggered.connect(self.settingswindow.show)
@@ -86,6 +86,14 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self.requestswindow = None
         self._configure_twitchrequests()
+
+    def _configure_beamstatus(self, beam):
+        self.config.cparser.setValue('control/beam', beam)
+        # these will get filled in by their various subsystems as required
+        self.config.cparser.remove('control/beamport')
+        self.config.cparser.remove('control/beamserverport')
+        self.config.cparser.remove('control/beamservername')
+        self.config.cparser.remove('control/beamserverip')
 
     def _configure_twitchrequests(self):
         self.requestswindow = nowplaying.trackrequests.Requests(

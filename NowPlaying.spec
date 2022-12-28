@@ -106,76 +106,83 @@ def windows_version_file():
 
 block_cipher = None
 
-a = Analysis(['nppyi.py'],
-             pathex=['.'],
-             binaries=[],
-             datas=[('nowplaying/resources/*', 'resources/'),
-                    ('nowplaying/templates/*', 'templates/')],
-             hiddenimports=ARTEXTRAS_MODULES + INPUT_MODULES +
-             RECOGNITION_MODULES,
-             hookspath=[('nowplaying/__pyinstaller')],
-             runtime_hooks=[],
-             excludes=[],
-             win_no_prefer_redirects=False,
-             win_private_assemblies=False,
-             cipher=block_cipher,
-             noarchive=False)
+executables = {
+    'NowPlaying': 'nppyi.py',
+    'NowPlayingBeam': 'beam.py',
+}
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)  # pylint: disable=undefined-variable
+for execname, execpy in executables.items():
 
-if sys.platform == 'darwin':
-    exe = EXE(  # pylint: disable=undefined-variable
-        pyz,
-        a.scripts,
-        [],
-        exclude_binaries=True,
-        name='NowPlaying',
-        debug=False,
-        bootloader_ignore_signals=False,
-        strip=False,
-        upx=True,
-        #console=False,
-        icon='bincomponents/' + geticon())
-    coll = COLLECT(  # pylint: disable=undefined-variable
-        exe,
-        a.binaries,
-        a.zipfiles,
-        a.datas,
-        strip=False,
-        upx=True,
-        upx_exclude=[],
-        name='NowPlaying')
-    app = BUNDLE( # pylint: disable=undefined-variable
-        coll,
-        name='NowPlaying.app',
-        icon='bincomponents/' + geticon(),
-        bundle_identifier=None,
-        info_plist={
-            'CFBundleDisplayName': 'NowPlaying',
-            'CFBundleName': 'NowPlaying',
-            'CFBundleShortVersionString': getcfbundleshortversionstring(),
-            'CFBundleVersion': getcfbundleversion(),
-            'LSMinimumSystemVersion': osxminimumversion(),
-            'LSUIElement': True,
-            'NSHumanReadableCopyright': osxcopyright()
-        })
+    a = Analysis([execpy],
+                 pathex=['.'],
+                 binaries=[],
+                 datas=[('nowplaying/resources/*', 'resources/'),
+                        ('nowplaying/templates/*', 'templates/')],
+                 hiddenimports=ARTEXTRAS_MODULES + INPUT_MODULES +
+                 RECOGNITION_MODULES,
+                 hookspath=[('nowplaying/__pyinstaller')],
+                 runtime_hooks=[],
+                 excludes=[],
+                 win_no_prefer_redirects=False,
+                 win_private_assemblies=False,
+                 cipher=block_cipher,
+                 noarchive=False)
 
-else:
-    windows_version_file()
-    exe = EXE(  # pylint: disable=undefined-variable
-        pyz,
-        a.scripts,
-        a.binaries,
-        a.zipfiles,
-        a.datas, [],
-        name='NowPlaying',
-        debug=False,
-        bootloader_ignore_signals=False,
-        strip=False,
-        upx=True,
-        upx_exclude=[],
-        runtime_tmpdir=None,
-        console=False,
-        version=WINVERSFILE,
-        icon='bincomponents/' + geticon())
-    os.unlink(WINVERSFILE)
+    pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)  # pylint: disable=undefined-variable
+
+    if sys.platform == 'darwin':
+        exe = EXE(  # pylint: disable=undefined-variable
+            pyz,
+            a.scripts,
+            [],
+            exclude_binaries=True,
+            name=execname,
+            debug=False,
+            bootloader_ignore_signals=False,
+            strip=False,
+            upx=True,
+            #console=False,
+            icon='bincomponents/' + geticon())
+        coll = COLLECT(  # pylint: disable=undefined-variable
+            exe,
+            a.binaries,
+            a.zipfiles,
+            a.datas,
+            strip=False,
+            upx=True,
+            upx_exclude=[],
+            name=execname)
+        app = BUNDLE( # pylint: disable=undefined-variable
+            coll,
+            name=f'{execname}.app',
+            icon='bincomponents/' + geticon(),
+            bundle_identifier=None,
+            info_plist={
+                'CFBundleDisplayName': 'NowPlaying',
+                'CFBundleName': 'NowPlaying',
+                'CFBundleShortVersionString': getcfbundleshortversionstring(),
+                'CFBundleVersion': getcfbundleversion(),
+                'LSMinimumSystemVersion': osxminimumversion(),
+                'LSUIElement': True,
+                'NSHumanReadableCopyright': osxcopyright()
+            })
+
+    else:
+        windows_version_file()
+        exe = EXE(  # pylint: disable=undefined-variable
+            pyz,
+            a.scripts,
+            a.binaries,
+            a.zipfiles,
+            a.datas, [],
+            name=execname,
+            debug=False,
+            bootloader_ignore_signals=False,
+            strip=False,
+            upx=True,
+            upx_exclude=[],
+            runtime_tmpdir=None,
+            console=False,
+            version=WINVERSFILE,
+            icon='bincomponents/' + geticon())
+        os.unlink(WINVERSFILE)

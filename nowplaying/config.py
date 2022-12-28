@@ -27,12 +27,15 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
     BUNDLEDIR = None
 
-    def __init__(self,
-                 bundledir=None,
-                 logpath=None,
-                 reset=False,
-                 testmode=False):
+    def __init__(  # pylint: disable=too-many-arguments
+            self,
+            bundledir=None,
+            logpath=None,
+            reset=False,
+            testmode=False,
+            beam=False):
 
+        self.beam = beam
         self.testmode = testmode
         self.logpath = logpath
         self.initialized = False
@@ -74,14 +77,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self.plugins = {}
         self.pluginobjs = {}
 
-        if self.testmode:
-            self.cparser.setValue('testmode/enabled', True)
+        self._force_set_statics()
 
         self._initial_plugins()
 
         self.defaults()
         if reset:
             self.cparser.clear()
+            self._force_set_statics()
             self.save()
         else:
             self.get()
@@ -91,6 +94,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self.lastloaddate = None
         self.setlistdir = None
         self.striprelist = []
+
+    def _force_set_statics(self):
+        ''' make sure these are always set '''
+        if self.testmode:
+            self.cparser.setValue('testmode/enabled', True)
+
+        if self.beam:
+            self.cparser.setValue('control/beam', True)
 
     def reset(self):
         ''' forcibly go back to defaults '''
@@ -204,9 +215,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             nowplaying.recognition)
         self.pluginobjs['recognition'] = {}
 
-        self.plugins['artistextras'] = nowplaying.utils.import_plugins(
-            nowplaying.artistextras)
-        self.pluginobjs['artistextras'] = {}
+        if not self.beam:
+            self.plugins['artistextras'] = nowplaying.utils.import_plugins(
+                nowplaying.artistextras)
+            self.pluginobjs['artistextras'] = {}
 
     def _defaults_plugins(self, settings):
         ''' configure the defaults for input plugins '''

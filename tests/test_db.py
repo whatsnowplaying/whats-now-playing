@@ -78,6 +78,8 @@ def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
         'disc_total': None,
         'discsubtitle': None,
         'filename': 'tests/audio/15_Ghosts_II_64kb_orig.mp3',
+        'fpcalcfingerprint': None,
+        'fpcalcduration': None,
         'genre': None,
         'hostfqdn': None,
         'hostip': None,
@@ -156,6 +158,8 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'discsubtitle': None,
         'filename':
         "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3",
+        'fpcalcfingerprint': None,
+        'fpcalcduration': None,
         'genre': 'Rock',
         'hostfqdn': None,
         'hostip': None,

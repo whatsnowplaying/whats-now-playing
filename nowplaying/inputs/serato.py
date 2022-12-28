@@ -125,7 +125,6 @@ class SeratoSessionReader:
             'oent': self._decode_struct,
         }
 
-
         self.decode_func_first = {
             'o': self._decode_struct,
             't': self._decode_unicode,

@@ -95,8 +95,6 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
 
         self.chat = chat
         try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(self.requests.watch_for_respin())
             self.twitch = await twitchlogin.api_login()
             if not self.twitch:
                 logging.debug("something happened getting twitch; aborting")

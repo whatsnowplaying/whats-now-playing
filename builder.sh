@@ -64,6 +64,7 @@ mv nowplaying/version.py.old nowplaying/version.py
 
 if [[ "${SYSTEM}" == "macosx" ]]; then
   rm -rf "${DISTDIR}"/NowPlaying || true
+  rm -rf "${DISTDIR}"/NowPlayingBeam || true
 fi
 
 if [[ ${SYSTEM} != "windows" ]]; then

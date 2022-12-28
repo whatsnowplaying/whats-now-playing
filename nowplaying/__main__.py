@@ -41,7 +41,7 @@ def run_bootstrap(bundledir=None):
     return logpath
 
 
-def main():
+def actualmain(beam=False):
     ''' main entrypoint '''
 
     multiprocessing.freeze_support()
@@ -67,13 +67,23 @@ def main():
     config = nowplaying.config.ConfigFile(logpath=logpath, bundledir=bundledir)
     logging.getLogger().setLevel(config.loglevel)
     logging.captureWarnings(True)
-    tray = nowplaying.systemtray.Tray()  # pylint: disable=unused-variable
+    tray = nowplaying.systemtray.Tray(beam=beam)  # pylint: disable=unused-variable
     icon = QIcon(str(config.iconfile))
     qapp.setWindowIcon(icon)
     exitval = qapp.exec_()
     logging.info('shutting down v%s',
                  nowplaying.version.get_versions()['version'])
     sys.exit(exitval)
+
+
+def main():
+    ''' Normal mode '''
+    actualmain(beam=False)
+
+
+def beammain():
+    ''' beam mode '''
+    actualmain(beam=True)
 
 
 if __name__ == '__main__':

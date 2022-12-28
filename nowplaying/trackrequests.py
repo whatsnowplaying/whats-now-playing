@@ -18,13 +18,8 @@ from nowplaying.exceptions import PluginVerifyError
 from nowplaying.utils import TRANSPARENT_PNG_BIN
 
 USERREQUEST_TEXT = [
-    'artist',
-    'title',
-    'displayname',
-    'type',
-    'playlist',
-    'username',
-    'filename',
+    'artist', 'title', 'displayname', 'type', 'playlist', 'username',
+    'filename', 'user_input'
 ]
 
 USERREQUEST_BLOB = ['userimage']
@@ -190,11 +185,17 @@ class Requests:  #pylint: disable=too-many-instance-attributes
                       setting['playlist'], user_input)
 
         plugin = self.config.cparser.value('settings/input')
-        roulette = await self.config.pluginobjs['inputs'][
-            f'nowplaying.inputs.{plugin}'].getrandomtrack(setting['playlist'])
-        metadata = await nowplaying.metadata.MetadataProcessors(
-            config=self.config
-        ).getmoremetadata(metadata={'filename': roulette}, skipplugins=True)
+        if plugin not in ['beam']:
+            roulette = await self.config.pluginobjs['inputs'][
+                f'nowplaying.inputs.{plugin}'].getrandomtrack(
+                    setting['playlist'])
+            metadata = await nowplaying.metadata.MetadataProcessors(
+                config=self.config
+            ).getmoremetadata(metadata={'filename': roulette},
+                              skipplugins=True)
+        else:
+            metadata = {'filename': RESPIN_TEXT}
+
         data = {
             'username': user,
             'artist': metadata.get('artist'),
@@ -203,6 +204,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             'type': 'Roulette',
             'playlist': setting['playlist'],
             'displayname': setting.get('displayname'),
+            'user_input': user_input,
         }
         if reqid:
             data['reqid'] = reqid
@@ -342,7 +344,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             'artist': artist,
             'title': title,
             'type': 'Generic',
-            'displayname': setting.get('displayname')
+            'displayname': setting.get('displayname'),
+            'user_input': user_input,
         }
         await self.add_to_db(data)
         return {
@@ -393,10 +396,28 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             except Exception as error:  #pylint: disable=broad-except
                 logging.error(error)
 
-    def _get_dataset(self):
+    async def get_all_generator(self):
+        ''' get all records, but use a generator '''
+
+        def dict_factory(cursor, row):
+            fields = [column[0] for column in cursor.description]
+            return dict(zip(fields, row))
+
+        async with aiosqlite.connect(self.databasefile) as connection:
+            connection.row_factory = dict_factory
+            cursor = await connection.cursor()
+            try:
+                await cursor.execute('''SELECT * FROM userrequest''')
+            except sqlite3.OperationalError:
+                return
+
+            while dataset := await cursor.fetchone():
+                yield dataset
+
+    def get_dataset(self):
         ''' get the current request list for display '''
         if not self.databasefile.exists():
-            logging.error('%s does not exist, refusing to _get_dataset.',
+            logging.error('%s does not exist, refusing to get_dataset.',
                           self.databasefile)
             return None
 
@@ -439,7 +460,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             for row in range(rows, -1, -1):
                 widget.removeRow(row)
 
-        dataset = self._get_dataset()
+        dataset = self.get_dataset()
         clear_table(self.widgets.request_table)
 
         if not dataset:

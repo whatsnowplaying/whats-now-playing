@@ -51,9 +51,12 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self.txttemplatehandler = None
         self.imagecache = None
         self.icprocess = None
-        self._setup_imagecache()
-        self.trackrequests = nowplaying.trackrequests.Requests(
-            config=self.config)
+        self.trackrequests = None
+        if not self.config.cparser.value('control/beam', type=bool):
+            self._setup_imagecache()
+            self.trackrequests = nowplaying.trackrequests.Requests(
+                config=self.config, stopevent=self.stopevent)
+
         self.tasks = set()
         self.metadataprocessors = nowplaying.metadata.MetadataProcessors(
             config=self.config)
@@ -70,6 +73,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         task = self.loop.create_task(self.run())
         task.add_done_callback(self.tasks.remove)
         self.tasks.add(task)
+        if self.trackrequests:
+            task = self.loop.create_task(self.trackrequests.watch_for_respin())
+            task.add_done_callback(self.tasks.remove)
+            self.tasks.add(task)
 
     async def switch_input_plugin(self):
         ''' handle user switching source input while running '''
@@ -288,7 +295,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             self.currentmeta = oldmeta
             return
 
-        if self.config.cparser.value('settings/requests', type=bool):
+        if self.config.cparser.value(
+                'settings/requests',
+                type=bool) and not self.config.cparser.value('control/beam',
+                                                             type=bool):
             if data := await self.trackrequests.get_request(self.currentmeta):
                 self.currentmeta.update(data)
 
@@ -358,7 +368,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self.icprocess.start()
 
     def _start_artistfanartpool(self):
-        if not self.config.cparser.value('artistextras/enabled', type=bool):
+        if not self.config.cparser.value(
+                'artistextras/enabled',
+                type=bool) or self.config.cparser.value('control/beam',
+                                                        type=bool):
             return
 
         if self.currentmeta.get('artistfanarturls'):
@@ -372,10 +385,9 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             del self.currentmeta['artistfanarturls']
 
     def _process_imagecache(self):
-        if not self.currentmeta.get('artist'):
-            return
-
-        if not self.config.cparser.value('artistextras/enabled', type=bool):
+        if not self.currentmeta.get('artist') or self.config.cparser.value(
+                'control/beam', type=bool) or not self.config.cparser.value(
+                    'artistextras/enabled', type=bool):
             return
 
         def fillin(self):
