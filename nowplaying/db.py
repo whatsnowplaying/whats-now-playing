@@ -35,6 +35,8 @@ METADATALIST = [
     'disc_total',
     'discsubtitle',
     'filename',
+    'fpcalcduration',
+    'fpcalcfingerprint',
     'genre',
     'hostfqdn',
     'hostip',

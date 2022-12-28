@@ -15,9 +15,12 @@ class SubprocessManager:
         self.obswsobj = None
         self.manager = multiprocessing.Manager()
         self.processes = {}
-        for name in [
-                'trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver'
-        ]:
+        if self.config.cparser.value('control/beam', type=bool):
+            processlist = ['trackpoll', 'beamsender']
+        else:
+            processlist = ['trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver']
+
+        for name in processlist:
             self.processes[name] = {
                 'module':
                 importlib.import_module(f'nowplaying.processes.{name}'),
@@ -36,7 +39,7 @@ class SubprocessManager:
         ''' stop all the subprocesses '''
 
         for key in self.processes:  #pylint: disable=consider-using-dict-items
-            if self.processes[key]['process']:
+            if self.processes[key].get('process'):
                 logging.debug('Early notifying %s', key)
                 self.processes[key]['stopevent'].set()
 
@@ -44,7 +47,8 @@ class SubprocessManager:
             func = getattr(self, f'stop_{key}')
             func()
 
-        self.stop_obsws()
+        if not self.config.cparser.value('control/beam', type=bool):
+            self.stop_obsws()
 
     def _process_start(self, processname):
         ''' Start trackpoll '''
@@ -84,6 +88,14 @@ class SubprocessManager:
     def stop_discordbot(self):
         ''' stop discordbot '''
         self._process_stop('discordbot')
+
+    def start_beamsender(self):
+        ''' Start beamsender '''
+        self._process_start('beamsender')
+
+    def stop_beamsender(self):
+        ''' stop beamsender '''
+        self._process_stop('beamsender')
 
     def start_obsws(self):
         ''' Start obsws '''

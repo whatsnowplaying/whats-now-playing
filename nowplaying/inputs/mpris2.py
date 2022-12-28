@@ -278,7 +278,6 @@ class Plugin(InputPlugin):
 
         qwidget.setText('This plugin provides support for MPRIS2 '
                         'compatible software on Linux and other DBus systems.')
-        return
 
 
 def main():

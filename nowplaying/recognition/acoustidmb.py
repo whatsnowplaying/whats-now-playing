@@ -40,8 +40,8 @@ class Plugin(RecognitionPlugin):
         self.fpcalcexe = None
 
     @staticmethod
-    def _fetch_from_acoustid(apikey, filename):  # pylint: disable=too-many-branches
-        results = None
+    def _fpcalc(filename):
+        ''' run fpcalc against the given filename '''
         completedprocess = None
         fpcalc = os.environ.get('FPCALC', 'fpcalc')
         command = [fpcalc, '-json', "-length", '120', filename]
@@ -70,15 +70,21 @@ class Plugin(RecognitionPlugin):
         if not completedprocess or not completedprocess.stdout:
             return None
 
-        data = json.loads(completedprocess.stdout.decode('utf-8'))
+        return json.loads(completedprocess.stdout.decode('utf-8'))
 
+    @staticmethod
+    def _fetch_from_acoustid(apikey, fingerprint, duration):
+
+        if isinstance(duration, str):
+            duration = float(duration)
+        results = None
         try:
             counter = 0
             while counter < 3:
                 logging.debug('Performing acoustid lookup')
                 results = acoustid.lookup(apikey,
-                                          data['fingerprint'],
-                                          data['duration'],
+                                          fingerprint,
+                                          duration,
                                           meta=[
                                               'recordings', 'recordingids',
                                               'releases', 'tracks', 'usermeta'
@@ -113,7 +119,11 @@ class Plugin(RecognitionPlugin):
         return results['results']
 
     def _read_acoustid_tuples(self, metadata, results):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
-        fnstr = nowplaying.utils.normalize(metadata['filename'])
+        if metadata.get('filename'):
+            fnstr = nowplaying.utils.normalize(metadata['filename'])
+        else:
+            fnstr = ''
+
         artist = metadata.get('artist')
         title = metadata.get('title')
         if artist and title and artist in title and len(artist) > 3:
@@ -270,7 +280,7 @@ class Plugin(RecognitionPlugin):
         self.fpcalcexe = fpcalcexe
         return True
 
-    def recognize(self, metadata=None):  #pylint: disable=too-many-statements
+    def recognize(self, metadata=None):  #pylint: disable=too-many-statements, too-many-return-statements, too-many-branches
         # we need to make sure we don't modify the passed
         # structure so do a deep copy here
         self.acoustidmd = copy.deepcopy(metadata)
@@ -281,21 +291,43 @@ class Plugin(RecognitionPlugin):
 
             logging.debug(
                 'No musicbrainzrecordingid in metadata, so use acoustid')
-            if 'filename' not in metadata:
-                logging.warning('No filename in metadata')
-                return None
+            if not metadata.get('fpcalcduration') and not metadata.get(
+                    'fpcalcfingerprint'):
+                if not metadata.get('filename'):
+                    logging.warning('No filename in metadata')
+                    return None
 
-            if not self._configure_fpcalc(fpcalcexe=self.config.cparser.value(
-                    'acoustidmb/fpcalcexe')):
-                logging.error('fpcalc is not configured')
-                return None
+                if not self._configure_fpcalc(fpcalcexe=self.config.cparser.
+                                              value('acoustidmb/fpcalcexe')):
+                    logging.error('fpcalc is not configured')
+                    return None
+
+                data = self._fpcalc(metadata['filename'])
+            else:
+                data = {
+                    'fingerprint': metadata['fpcalcfingerprint'],
+                    'duration': metadata['fpcalcduration']
+                }
+
+            if self.config.cparser.value('control/beam', type=bool):
+                return {
+                    'fpcalcfingerprint': data['fingerprint'],
+                    'fpcalcduration': data['duration'],
+                }
 
             apikey = self.config.cparser.value('acoustidmb/acoustidapikey')
-            results = self._fetch_from_acoustid(apikey, metadata['filename'])
+            results = self._fetch_from_acoustid(
+                apikey,
+                data['fingerprint'],
+                data['duration'],
+            )
             if not results:
-                logging.info(
-                    'acoustid could not recognize %s. Will need to be tagged.',
-                    metadata['filename'])
+                if metadata.get('filename'):
+                    logging.warning(
+                        'acoustid could not recognize %s. Will need to be tagged.',
+                        metadata['filename'])
+                else:
+                    logging.warning('could not recognize this track. tag it.')
                 return self.acoustidmd
 
             self._read_acoustid_tuples(metadata, results)

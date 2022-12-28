@@ -32,9 +32,9 @@ import nowplaying.utils
 class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-instance-attributes
     ''' create settings form window '''
 
-    def __init__(self, tray, version):
+    def __init__(self, tray, version, beam):
 
-        self.config = nowplaying.config.ConfigFile()
+        self.config = nowplaying.config.ConfigFile(beam=beam)
         self.tray = tray
         self.version = version
         super().__init__()
@@ -56,7 +56,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.settingsclasses['twitchchat'].update_twitchbot_commands(
             self.config)
 
-    def load_qtui(self):
+    def load_qtui(self):  # pylint: disable=too-many-branches, too-many-statements
         ''' load the base UI and wire it up '''
 
         def _load_ui(name):
@@ -79,10 +79,18 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.qtui = _load_ui('settings')
         self.uihelp = nowplaying.uihelp.UIHelp(self.config, self.qtui)
 
-        baseuis = [
-            'general', 'source', 'filter', 'webserver', 'twitch', 'twitchchat',
-            'requests', 'artistextras', 'obsws', 'discordbot', 'quirks'
-        ]
+        if self.config.cparser.value('control/beam', type=bool):
+
+            baseuis = [
+                'general',
+                'source',
+            ]
+
+        else:
+            baseuis = [
+                'general', 'source', 'filter', 'webserver', 'twitch',
+                'twitchchat', 'requests', 'artistextras', 'obsws', 'discordbot', 'quirks'
+            ]
 
         pluginuis = {}
         pluginuinames = []
@@ -116,13 +124,15 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.widgets['source'].sourcelist.currentRowChanged.connect(
                 self._set_source_description)
 
-        for key in [
-                'twitch',
-                'twitchchat',
-                'requests',
-        ]:
-            self.settingsclasses[key].load(self.config, self.widgets[key])
-            self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
+        if not self.config.cparser.value('control/beam', type=bool):
+            for key in [
+                    'twitch',
+                    'twitchchat',
+                    'requests',
+            ]:
+                self.settingsclasses[key].load(self.config, self.widgets[key])
+                self.settingsclasses[key].connect(self.uihelp,
+                                                  self.widgets[key])
 
         self._connect_plugins()
 
@@ -217,22 +227,24 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.widgets['general'].setlist_checkbox.setChecked(
             self.config.cparser.value('setlist/enabled', type=bool))
 
-        self._upd_win_artistextras()
-        self._upd_win_filters()
         self._upd_win_recognition()
         self._upd_win_input()
         self._upd_win_plugins()
-        self._upd_win_webserver()
-        self._upd_win_obsws()
-        self._upd_win_quirks()
-        self._upd_win_discordbot()
 
-        for key in [
-                'twitch',
-                'twitchchat',
-                'requests',
-        ]:
-            self.settingsclasses[key].load(self.config, self.widgets[key])
+        if not self.config.cparser.value('control/beam', type=bool):
+            self._upd_win_artistextras()
+            self._upd_win_filters()
+            self._upd_win_webserver()
+            self._upd_win_obsws()
+            self._upd_win_discordbot()
+            self._upd_win_quirks()
+
+            for key in [
+                    'twitch',
+                    'twitchchat',
+                    'requests',
+            ]:
+                self.settingsclasses[key].load(self.config, self.widgets[key])
 
     def _upd_win_artistextras(self):
         self.widgets['artistextras'].artistextras_checkbox.setChecked(
@@ -400,22 +412,25 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         logging.getLogger().setLevel(loglevel)
 
-        for key in [
-                'twitch',
-                'twitchchat',
-                'requests',
-        ]:
-            self.settingsclasses[key].save(self.config, self.widgets[key])
+        if not self.config.cparser.value('control/beam', type=bool):
+            for key in [
+                    'twitch',
+                    'twitchchat',
+                    'requests',
+            ]:
+                self.settingsclasses[key].save(self.config, self.widgets[key])
 
-        self._upd_conf_artistextras()
-        self._upd_conf_filters()
+            self._upd_conf_artistextras()
+            self._upd_conf_filters()
+            self._upd_conf_webserver()
+            self._upd_conf_obsws()
+            self._upd_conf_quirks()
+            self._upd_conf_discordbot()
+
+
         self._upd_conf_recognition()
         self._upd_conf_input()
-        self._upd_conf_webserver()
-        self._upd_conf_obsws()
-        self._upd_conf_quirks()
         self._upd_conf_plugins()
-        self._upd_conf_discordbot()
         self.config.cparser.sync()
 
     def _upd_conf_artistextras(self):
@@ -724,19 +739,20 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.errormessage.showMessage('File to write is required')
             return
 
-        if not self.verify_regex_filters():
-            return
-
-        for key in [
-                'twitch',
-                'twitchchat',
-                'requests',
-        ]:
-            try:
-                self.settingsclasses[key].verify(self.widgets[key])
-            except PluginVerifyError as error:
-                self.errormessage.showMessage(error.message)
+        if not self.config.cparser.value('control/beam', type=bool):
+            if not self.verify_regex_filters():
                 return
+
+            for key in [
+                    'twitch',
+                    'twitchchat',
+                    'requests',
+            ]:
+                try:
+                    self.settingsclasses[key].verify(self.widgets[key])
+                except PluginVerifyError as error:
+                    self.errormessage.showMessage(error.message)
+                    return
 
         self.config.unpause()
         self.upd_conf()
