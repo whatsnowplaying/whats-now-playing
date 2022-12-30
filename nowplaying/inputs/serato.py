@@ -125,6 +125,15 @@ class SeratoSessionReader:
             'oent': self._decode_struct,
         }
 
+
+        self.decode_func_first = {
+            'o': self._decode_struct,
+            't': self._decode_unicode,
+            'p': self._decode_unicode,
+            'u': self._decode_unsigned,
+            'b': self._noop,
+        }
+
         self._adat_func = {
             2: ['pathstr', self._decode_unicode],
             3: ['location', self._decode_unicode],
@@ -231,7 +240,10 @@ class SeratoSessionReader:
         return data
 
     def _datadecode(self, data, tag=None):
-        decode_func = self.decode_func_full[tag]
+        if tag in self.decode_func_full:
+            decode_func = self.decode_func_full[tag]
+        else:
+            decode_func = self.decode_func_first[tag[0]]
         return decode_func(data)
 
     async def loadsessionfile(self, filename):
