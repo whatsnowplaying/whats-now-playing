@@ -298,7 +298,6 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         PARSEDSESSIONS = []
         LASTPROCESSED = 0
         self.lastfetched = 0
-        self.loop = None
         if seratodir:
             self.seratodir = seratodir
             self.watchdeck = None
@@ -345,19 +344,18 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         # process what is already there
         await self._async_process_sessions()
 
-    def process_sessions(self, path):
+    def process_sessions(self, event):
         ''' handle incoming session file updates '''
-        logging.debug('processing %s path', path)
-        if not self.loop:
-            try:
-                self.loop = asyncio.get_running_loop()
-                logging.debug('got a running loop')
-                self.loop.create_task(self._async_process_sessions())
+        logging.debug('processing %s', event)
+        try:
+            loop = asyncio.get_running_loop()
+            logging.debug('got a running loop')
+            loop.create_task(self._async_process_sessions())
 
-            except RuntimeError:
-                self.loop = asyncio.new_event_loop()
-                logging.debug('created a loop')
-                self.loop.run_until_complete(self._async_process_sessions())
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            logging.debug('created a loop')
+            loop.run_until_complete(self._async_process_sessions())
 
     async def _async_process_sessions(self):
         ''' read and process all of the relevant session files '''
@@ -411,10 +409,12 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                 continue
             if not adat.get('played'):
                 # wasn't played, so skip it
+                logging.debug('not played: %s', adat)
                 continue
             if adat['deck'] in self.decks and adat.get(
                     'starttime') < self.decks[adat['deck']].get('starttime'):
                 # started after a deck that is already set
+                logging.debug('starttime: %s', adat)
                 continue
             logging.debug(
                 'Setting deck: %d artist: %s title: %s  album: %s time: %s updated: %s',
