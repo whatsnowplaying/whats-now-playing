@@ -1,6 +1,13 @@
 
 # Changelog
 
+## Version 3.1.3 - 2023-01-03
+
+* Allow downgrade from v4.0.0
+* Fix issues with some closed websocket connections
+* Fix some crashes if the setlist is empty
+* Verify expected version of python if building from scratch
+
 ## Version 3.1.2 - 2022-11-03
 
 * Reworked filtering support to use user-supplied regular expressions.
