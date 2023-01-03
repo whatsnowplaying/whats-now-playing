@@ -304,7 +304,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         endloop = False
 
         try:
-            while not self.stopevent.is_set() or endloop:
+            while not self.stopevent.is_set(
+            ) and not endloop and not websocket.closed:
                 metadata = request.app['metadb'].read_last_meta()
                 if not metadata or not metadata.get('artist'):
                     await asyncio.sleep(5)
@@ -355,13 +356,14 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         # pause a bit
         await asyncio.sleep(1)
         metadata = None
-        while not metadata:
+        while not metadata and not websocket.closed:
             if self.stopevent.is_set():
                 return time.time()
             metadata = database.read_last_meta()
             await asyncio.sleep(1)
         del metadata['dbid']
-        await websocket.send_json(self._transparentifier(metadata))
+        if not websocket.closed:
+            await websocket.send_json(self._transparentifier(metadata))
         return time.time()
 
     async def websocket_streamer(self, request):
@@ -374,7 +376,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         try:
             mytime = await self._wss_do_update(websocket,
                                                request.app['metadb'])
-            while not self.stopevent.is_set():
+            while not self.stopevent.is_set() and not websocket.closed:
                 while mytime > request.app[
                         'watcher'].updatetime and not self.stopevent.is_set():
                     await asyncio.sleep(1)
@@ -396,6 +398,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         request.app['websockets'].add(websocket)
         try:
             async for msg in websocket:
+                if websocket.closed:
+                    break
                 if msg.type == aiohttp.WSMsgType.TEXT:
                     if msg.data == 'close':
                         await websocket.close()
