@@ -61,7 +61,7 @@ async def getseratoplugin(serato_bootstrap, getroot, request):  # pylint: disabl
                               'Sessions'))
     config.cparser.sync()
     plugin = nowplaying.inputs.serato.Plugin(config=config)
-    await plugin.start()
+    await plugin.start(testmode=True)
     yield plugin
     await plugin.stop()
 

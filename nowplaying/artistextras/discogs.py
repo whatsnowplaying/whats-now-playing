@@ -33,7 +33,8 @@ class Plugin(ArtistExtrasPlugin):
                                             artist=metadata['artist'],
                                             type='title').page(1)
         except (requests.exceptions.ReadTimeout,
-                urllib3.exceptions.ReadTimeoutError, socket.timeout):
+                urllib3.exceptions.ReadTimeoutError, socket.timeout,
+                TimeoutError):
             logging.error('discogs releaselist timeout error')
             return None
         except Exception as error:  # pylint: disable=broad-except

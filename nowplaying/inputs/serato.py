@@ -125,7 +125,6 @@ class SeratoSessionReader:
             'oent': self._decode_struct,
         }
 
-
         self.decode_func_first = {
             'o': self._decode_struct,
             't': self._decode_unicode,
@@ -300,11 +299,13 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                  mixmode='oldest',
                  pollingobserver=False,
                  seratodir=None,
-                 seratourl=None):
+                 seratourl=None,
+                 testmode=False):
         global LASTPROCESSED, PARSEDSESSIONS  #pylint: disable=global-statement
         self.pollingobserver = pollingobserver
         self.event_handler = None
         self.observer = None
+        self.testmode = testmode
         self.decks = {}
         self.playingadat = {}
         PARSEDSESSIONS = []
@@ -387,11 +388,18 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                              key=lambda path: int(path.stem))
         #sessionlist = sorted(seratopath.glob('*.session'),
         #                     key=lambda path: path.stat().st_mtime)
+
         if not sessionlist:
+            logging.debug('no session files found')
             return
 
-        session = SeratoSessionReader()
+        if not self.testmode:
+            difftime = time.time() - sessionlist[-1].stat().st_mtime
+            if difftime > 600:
+                logging.debug('%s is too old', sessionlist[-1].name)
+                return
 
+        session = SeratoSessionReader()
         await session.loadsessionfile(sessionlist[-1])
         session.condense()
 
@@ -421,18 +429,11 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                 continue
             if not adat.get('played'):
                 # wasn't played, so skip it
-                logging.debug('not played: %s', adat)
                 continue
             if adat['deck'] in self.decks and adat.get(
                     'starttime') < self.decks[adat['deck']].get('starttime'):
                 # started after a deck that is already set
-                logging.debug('starttime: %s', adat)
                 continue
-            logging.debug(
-                'Setting deck: %d artist: %s title: %s  album: %s time: %s updated: %s',
-                adat['deck'], adat.get('artist'), adat.get('title'),
-                adat.get('album'), adat.get('starttime'),
-                adat.get('updatedat'))
             self.decks[adat['deck']] = adat
 
     def computeplaying(self):
@@ -654,6 +655,7 @@ class Plugin(InputPlugin):
         self.local = True
         self.serato = None
         self.mixmode = "newest"
+        self.testmode = False
 
     def install(self):
         ''' auto-install for Serato '''
@@ -689,7 +691,8 @@ class Plugin(InputPlugin):
             if self.serato:
                 self.serato.stop()
             self.serato = SeratoHandler(pollingobserver=usepoll,
-                                        seratourl=self.url)
+                                        seratourl=self.url,
+                                        testmode=self.testmode)
             return
 
         # configured as local!
@@ -715,13 +718,15 @@ class Plugin(InputPlugin):
             logging.debug('new session path = %s', sess_dir)
             self.serato = SeratoHandler(seratodir=sess_dir,
                                         mixmode=self.mixmode,
-                                        pollingobserver=usepoll)
+                                        pollingobserver=usepoll,
+                                        testmode=self.testmode)
             #if self.serato:
             #    self.serato.process_sessions()
         await self.serato.start()
 
-    async def start(self):
+    async def start(self, testmode=False):
         ''' get a handler '''
+        self.testmode = testmode
         await self.gethandler()
 
     async def getplayingtrack(self):
