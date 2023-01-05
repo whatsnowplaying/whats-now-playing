@@ -67,7 +67,7 @@ def getcfbundleversion():
 
 def getcfbundleshortversionstring():
     ''' MAJOR.MINOR.MICRO '''
-    short = '.'.join(getsplitversion()[0:3])
+    short = '.'.join(getsplitversion()[:3])
     print(f'CFBundleShortVersionString = {short}')
     return short
 
@@ -95,11 +95,10 @@ def windows_version_file():
         'company_name': 'NowPlaying',
         'file_description': 'NowPlaying',
         'internal_name': 'NowPlaying',
-        'legal_copyright':
-        f'{VERSION} (c) 2020-2021 Ely Miranda, (c) 2021 Allen Wittenauer',
+        'legal_copyright': f'{VERSION} (c) 2020-2021 Ely Miranda, (c) 2021 Allen Wittenauer',
         'original_filename': 'NowPlaying.exe',
         'product_name': 'Now Playing',
-        'version': '.'.join(getsplitversion()[0:3] + ['0'])
+        'version': '.'.join(getsplitversion()[:3] + ['0']),
     }
     pyinstaller_versionfile.create_versionfile(**rawmetadata)
 
@@ -131,7 +130,7 @@ for execname, execpy in executables.items():
     pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)  # pylint: disable=undefined-variable
 
     if sys.platform == 'darwin':
-        exe = EXE(  # pylint: disable=undefined-variable
+        exe = EXE(
             pyz,
             a.scripts,
             [],
@@ -141,8 +140,8 @@ for execname, execpy in executables.items():
             bootloader_ignore_signals=False,
             strip=False,
             upx=True,
-            #console=False,
-            icon='bincomponents/' + geticon())
+            icon=f'bincomponents/{geticon()}',
+        )
         coll = COLLECT(  # pylint: disable=undefined-variable
             exe,
             a.binaries,
@@ -152,10 +151,10 @@ for execname, execpy in executables.items():
             upx=True,
             upx_exclude=[],
             name=execname)
-        app = BUNDLE( # pylint: disable=undefined-variable
+        app = BUNDLE(
             coll,
             name=f'{execname}.app',
-            icon='bincomponents/' + geticon(),
+            icon=f'bincomponents/{geticon()}',
             bundle_identifier=None,
             info_plist={
                 'CFBundleDisplayName': 'NowPlaying',
@@ -164,17 +163,19 @@ for execname, execpy in executables.items():
                 'CFBundleVersion': getcfbundleversion(),
                 'LSMinimumSystemVersion': osxminimumversion(),
                 'LSUIElement': True,
-                'NSHumanReadableCopyright': osxcopyright()
-            })
+                'NSHumanReadableCopyright': osxcopyright(),
+            },
+        )
 
     else:
         windows_version_file()
-        exe = EXE(  # pylint: disable=undefined-variable
+        exe = EXE(
             pyz,
             a.scripts,
             a.binaries,
             a.zipfiles,
-            a.datas, [],
+            a.datas,
+            [],
             name=execname,
             debug=False,
             bootloader_ignore_signals=False,
@@ -184,5 +185,6 @@ for execname, execpy in executables.items():
             runtime_tmpdir=None,
             console=False,
             version=WINVERSFILE,
-            icon='bincomponents/' + geticon())
+            icon=f'bincomponents/{geticon()}',
+        )
         os.unlink(WINVERSFILE)
