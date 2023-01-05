@@ -194,7 +194,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                     continue
 
                 ipaddr = addr[0]
-                port, length = struct.unpack('<II', data[0:8])
+                port, length = struct.unpack('<II', data[:8])
                 idname = struct.unpack_from(f'<{length}s', data, 8)[0]
                 idname = idname.decode('utf-8')
                 if port != self.port:

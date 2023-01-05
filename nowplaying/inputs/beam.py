@@ -217,9 +217,8 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
         await websocket.prepare(request)
         request.app['websockets'].add(websocket)
         loop = asyncio.get_running_loop()
-        tasks = set()
         task = loop.create_task(self._beamv1_pingpong(websocket))
-        tasks.add(task)
+        tasks = {task}
         task.add_done_callback(tasks.discard)
 
         task = loop.create_task(self._beamv1_trackrequest(websocket))

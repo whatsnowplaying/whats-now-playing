@@ -67,7 +67,7 @@ def getcfbundleversion():
 
 def getcfbundleshortversionstring():
     ''' MAJOR.MINOR.MICRO '''
-    short = '.'.join(getsplitversion()[0:3])
+    short = '.'.join(getsplitversion()[:3])
     print(f'CFBundleShortVersionString = {short}')
     return short
 
@@ -99,7 +99,7 @@ def windows_version_file():
         f'{VERSION} (c) 2020-2021 Ely Miranda, (c) 2021 Allen Wittenauer',
         'original_filename': 'NowPlaying.exe',
         'product_name': 'Now Playing',
-        'version': '.'.join(getsplitversion()[0:3] + ['0'])
+        'version': '.'.join(getsplitversion()[:3] + ['0'])
     }
     pyinstaller_versionfile.create_versionfile(**rawmetadata)
 
@@ -142,7 +142,7 @@ for execname, execpy in executables.items():
             strip=False,
             upx=True,
             #console=False,
-            icon='bincomponents/' + geticon())
+            icon=f'bincomponents/{geticon()}')
         coll = COLLECT(  # pylint: disable=undefined-variable
             exe,
             a.binaries,
@@ -155,7 +155,7 @@ for execname, execpy in executables.items():
         app = BUNDLE( # pylint: disable=undefined-variable
             coll,
             name=f'{execname}.app',
-            icon='bincomponents/' + geticon(),
+            icon=f'bincomponents/{geticon()}',
             bundle_identifier=None,
             info_plist={
                 'CFBundleDisplayName': 'NowPlaying',
@@ -184,5 +184,5 @@ for execname, execpy in executables.items():
             runtime_tmpdir=None,
             console=False,
             version=WINVERSFILE,
-            icon='bincomponents/' + geticon())
+            icon=f'bincomponents/{geticon()}')
         os.unlink(WINVERSFILE)
