@@ -100,7 +100,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         if self.stopevent.is_set():
             return
 
-        if token := self.config.cparser.value('twitchbot/token'):
+        if token := self.config.cparser.value('twitchbot/chattoken'):
             logging.debug('validating old token')
             valid = await validate_token(token)
             if valid.get('status') == 401:

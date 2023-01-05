@@ -94,6 +94,7 @@ class UpgradeConfig:
             'acoustidmb/emailaddress': 'musicbrainz/emailaddress',
             'acoustidmb/enabled': 'musicbrainz/enabled',
             'twitchbot/enabled': 'twitchbot/chat',
+            'twitchbot/token': 'twitchbot/chattoken',
         }
         sourcepath = pathlib.Path(config.fileName())
 
