@@ -295,8 +295,8 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
     '''
 
-    def __init__(
-            self,  #pylint: disable=too-many-arguments
+    def __init__(  #pylint: disable=too-many-arguments
+            self,
             mixmode='oldest',
             pollingobserver=False,
             seratodir=None,
