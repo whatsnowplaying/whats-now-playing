@@ -329,6 +329,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                         'artistfanartraw'] = nowplaying.utils.TRANSPARENT_PNG_BIN
 
                 try:
+                    if websocket.closed:
+                        break
                     await websocket.send_json(self._transparentifier(metadata))
                 except ConnectionResetError:
                     logging.debug('Lost a client')
@@ -336,6 +338,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 delay = request.app['config'].cparser.value(
                     'artistextras/fanartdelay', type=int)
                 await asyncio.sleep(delay)
+            if not websocket.closed:
+                await websocket.send_json({'last': True})
         except Exception as error:  #pylint: disable=broad-except
             logging.error('websocket artistfanart streamer exception: %s',
                           error)
@@ -349,7 +353,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         ''' handle singular websocket request '''
         metadata = request.app['metadb'].read_last_meta()
         del metadata['dbid']
-        await websocket.send_json(self._base64ifier(metadata))
+        if not websocket.closed:
+            await websocket.send_json(self._base64ifier(metadata))
 
     async def _wss_do_update(self, websocket, database):
         # early launch can be a bit weird so
@@ -384,6 +389,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 mytime = await self._wss_do_update(websocket,
                                                    request.app['metadb'])
                 await asyncio.sleep(1)
+            if not websocket.closed:
+                await websocket.send_json({'last': True})
         except Exception as error:  #pylint: disable=broad-except
             logging.error('websocket streamer exception: %s', error)
         finally:
