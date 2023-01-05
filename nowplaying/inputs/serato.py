@@ -295,12 +295,13 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
     '''
 
-    def __init__(self,
-                 mixmode='oldest',
-                 pollingobserver=False,
-                 seratodir=None,
-                 seratourl=None,
-                 testmode=False):
+    def __init__(
+            self,  #pylint: disable=too-many-arguments
+            mixmode='oldest',
+            pollingobserver=False,
+            seratodir=None,
+            seratourl=None,
+            testmode=False):
         global LASTPROCESSED, PARSEDSESSIONS  #pylint: disable=global-statement
         self.pollingobserver = pollingobserver
         self.event_handler = None
@@ -644,7 +645,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         self.stop()
 
 
-class Plugin(InputPlugin):
+class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
     ''' handler for NowPlaying '''
 
     def __init__(self, config=None, qsettings=None):
