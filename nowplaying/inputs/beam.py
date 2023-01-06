@@ -18,7 +18,7 @@ from aiohttp.test_utils import get_unused_port_socket
 from aiohttp import web, WSCloseCode
 import requests
 
-from PySide6.QtWidgets import QHeaderView, QTableWidgetItem  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QTableWidgetItem  # pylint: disable=no-name-in-module
 
 import nowplaying.db
 from nowplaying.inputs import InputPlugin
