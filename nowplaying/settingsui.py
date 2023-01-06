@@ -637,8 +637,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         ''' beamstatus refresh button '''
         ipaddr = self.config.cparser.value('control/beamserverip')
         idname = self.config.cparser.value('control/beamservername')
-        port = self.config.cparser.value('control/beamserverport')
-        if port:
+        if port := self.config.cparser.value('control/beamserverport'):
             self.widgets['beamstatus'].server_label.setText(
                 f'{idname}({ipaddr}):{port}')
         else:
