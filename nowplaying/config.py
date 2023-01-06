@@ -210,6 +210,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
         self.plugins['inputs'] = nowplaying.utils.import_plugins(
             nowplaying.inputs)
+        if self.beam and self.plugins['inputs']['nowplaying.inputs.beam']:
+            del self.plugins['inputs']['nowplaying.inputs.beam']
         self.pluginobjs['inputs'] = {}
         self.plugins['recognition'] = nowplaying.utils.import_plugins(
             nowplaying.recognition)

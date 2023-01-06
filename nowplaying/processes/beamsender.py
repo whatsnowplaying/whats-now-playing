@@ -40,7 +40,6 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                  testmode=False):
         threading.current_thread().name = 'BeamSender'
         self.testmode = testmode
-        self.port = None
         if not config:
             config = nowplaying.config.ConfigFile(bundledir=bundledir,
                                                   testmode=testmode)
@@ -65,6 +64,14 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
         loop.create_task(self._start_watcher())
         loop.create_task(self._stop(loop))
         loop.run_forever()
+
+    async def _remove_control(self):
+        self.config.cparser.remove('control/beamserverip')
+        self.config.cparser.remove('control/beamservername')
+        self.config.cparser.remove('control/beamserverport')
+        self.port = None
+        self.idname = None
+        self.ipaddr = None
 
     async def _stop(self, loop):
         while not self.stopevent.is_set():
@@ -112,16 +119,13 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                                 task.add_done_callback(tasks.discard)
                             await asyncio.sleep(1)
                     logging.debug('beam connection closed')
-                    self.port = None
-                    self.ipaddr = None
-
                     for task in tasks:
                         task.cancel(task)
+                    self._remove_control()
                     await asyncio.sleep(1)
                 except aiohttp.client_exceptions.ClientConnectorError as error:
                     logging.debug(error)
-                    self.port = None
-                    self.ipaddr = None
+                    self._remove_control()
 
         except Exception as error:  # pylint: disable=broad-except
             logging.error(error)
@@ -138,7 +142,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
             await asyncio.sleep(1)
             async for msg in connection:
                 if msg.type == aiohttp.WSMsgType.ERROR:
-                    self.port = None
+                    self._remove_control()
                     break
 
                 jsondata = msg.json()

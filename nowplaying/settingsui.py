@@ -84,6 +84,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             baseuis = [
                 'general',
                 'source',
+                'beamstatus',
             ]
 
         else:
@@ -121,6 +122,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             displayname = self.widgets[uiname].property('displayName')
             if not displayname:
                 displayname = uiname.split('_')[1].capitalize()
+            if self.config.cparser.value('control/beam',
+                                         type=bool) and displayname == 'Beam':
+                continue
             self.widgets['source'].sourcelist.addItem(displayname)
             self.widgets['source'].sourcelist.currentRowChanged.connect(
                 self._set_source_description)
@@ -159,6 +163,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _set_stacked_display(self, index):
         self.qtui.settings_stack.setCurrentIndex(index)
+
+    def _connect_beamstatus_widget(self, qobject):
+        ''' refresh the status'''
+        qobject.refresh_button.clicked.connect(
+            self.on_beamstatus_refresh_button)
 
     def _connect_webserver_widget(self, qobject):
         ''' file in the hostname/ip and connect the template button'''
@@ -622,6 +631,15 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if cachedbfilepath.exists() and 'imagecache' in str(cachedbfile):
             logging.debug('Deleting %s', cachedbfilepath)
             cachedbfilepath.unlink()
+
+    @Slot()
+    def on_beamstatus_refresh_button(self):
+        ''' beamstatus refresh button '''
+        ipaddr = self.config.cparser.value('control/beamserverip')
+        idname = self.config.cparser.value('control/beamservername')
+        port = self.config.cparser.value('control/beamserverport')
+        self.widgets['beamstatus'].server_label.setText(
+            f'{idname}({ipaddr}):{port}')
 
     @Slot()
     def on_text_template_button(self):
