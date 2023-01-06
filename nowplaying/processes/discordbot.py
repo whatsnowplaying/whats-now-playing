@@ -57,7 +57,6 @@ class DiscordSupport:
 
                     metadata = metadb.read_last_meta()
                     if not metadata:
-                        logging.debug('empty data?')
                         continue
 
                     templatehandler = nowplaying.utils.TemplateHandler(
@@ -72,8 +71,11 @@ class DiscordSupport:
                             name=templateout,
                             url=f'https://twitch.tv/{channelname}')
                     else:
-                        activity = discord.CustomActvity(name=templateout)
+                        activity = discord.CustomActivity(name=templateout)
                     await self.client.change_presence(activity=activity)
+                    # discord will lock out if updates more than every 15 seconds
+                    await asyncio.sleep(14)
+
         except:  #pylint: disable=bare-except
             logging.debug(traceback.format_exc())
 
