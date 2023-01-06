@@ -89,7 +89,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         else:
             baseuis = [
                 'general', 'source', 'filter', 'webserver', 'twitch',
-                'twitchchat', 'requests', 'artistextras', 'obsws', 'discordbot', 'quirks'
+                'twitchchat', 'requests', 'artistextras', 'obsws',
+                'discordbot', 'quirks'
             ]
 
         pluginuis = {}
@@ -426,7 +427,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self._upd_conf_obsws()
             self._upd_conf_quirks()
             self._upd_conf_discordbot()
-
 
         self._upd_conf_recognition()
         self._upd_conf_input()

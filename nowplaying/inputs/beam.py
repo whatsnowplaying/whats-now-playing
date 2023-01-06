@@ -4,6 +4,7 @@
 import asyncio
 import base64
 import copy
+import datetime
 import logging
 import platform
 import socket
@@ -16,6 +17,8 @@ import aiohttp
 from aiohttp.test_utils import get_unused_port_socket
 from aiohttp import web, WSCloseCode
 import requests
+
+from PySide6.QtWidgets import QHeaderView, QTableWidgetItem  # pylint: disable=no-name-in-module
 
 import nowplaying.db
 from nowplaying.inputs import InputPlugin
@@ -51,6 +54,23 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
 
     def _update_current(self):
 
+        def clear_table(widget):
+            widget.clearContents()
+            rows = widget.rowCount()
+            for row in range(rows, -1, -1):
+                widget.removeRow(row)
+
+        def row_load(host_status, **kwargs):
+            row = host_status.rowCount()
+            host_status.insertRow(row)
+
+            valuelist = ['time', 'clientname', 'ipaddr', 'source', 'version']
+
+            for column, cbtype in enumerate(valuelist):
+                host_status.setItem(
+                    row, column, QTableWidgetItem(str(kwargs.get(cbtype, ''))))
+            host_status.resizeColumnsToContents()
+
         port = self.config.cparser.value('control/beamport', type=int)
 
         if not port:
@@ -63,20 +83,20 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
             logging.error('unable to get beam hosts: %s', error)
             return
 
+        clear_table(self.qwidget.host_status)
+
+        self.qwidget.port_label.setText(f'Listening on port {port}')
+        data = beamhosts.json()
         # see _beam_client_data()
 
-        for clientname, values in beamhosts.items():
-            address = values.get('ipaddr')
-            version = values.get('version')
-            source = values.get('source')
-            field = f'{clientname}/{address}/{version}/{source}'
-            self.qwidget.current_beam.setText(field)
+        for _, values in data.items():
+            row_load(self.qwidget.host_status, **values)
 
     def connect_settingsui(self, qwidget, uihelp):
         ''' connect any UI elements such as buttons '''
         self.qwidget = qwidget
         self.uihelp = uihelp
-        self._update_current()
+        self.qwidget.refresh_button.clicked.connect(self._update_current)
 
     def load_settingsui(self, qwidget):
         ''' load values from config and populate page '''
@@ -184,22 +204,29 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
 
         prefilter = self._unbase64ifier(prefilter)
 
-        clientname = json.get('clientname')
         METADATA = prefilter
+        self._update_beamhosts(request, json)
+
+    async def _process_pong(self, request, json):
+        ''' client responded to alive '''
+        clientname = json.get('clientname')
+        logging.debug('got a pong from %s ', clientname)
+        self._update_beamhosts(request, json)
         request.app['beamhosts'][clientname] = copy.copy(json)
         request.app['beamhosts'][clientname]['ipaddr'] = request.remote
         if request.app['beamhosts'][clientname].get('metadata'):
             del request.app['beamhosts'][clientname]['metadata']
 
     @staticmethod
-    async def _process_pong(request, json):
-        ''' client responded to alive '''
-        clientname = json.get('clientname')
-        request.app['beamhosts'][clientname] = copy.copy(json)
-        request.app['beamhosts'][clientname]['ipaddr'] = request.remote
-        if request.app['beamhosts'][clientname].get('metadata'):
-            del request.app['beamhosts'][clientname]['metadata']
-        logging.debug('got a pong from %s ', clientname)
+    def _update_beamhosts(request, datadict):
+        clientname = datadict.get('clientname')
+        request.app['beamhosts'][clientname] = {
+            'time': datetime.datetime.now().isoformat(),
+            'clientname': clientname,
+            'version': datadict.get('version'),
+            'source': datadict.get('source'),
+            'ipaddr': request.remote
+        }
 
     @staticmethod
     async def _beamv1_hosts(request):
