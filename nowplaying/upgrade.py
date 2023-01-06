@@ -29,7 +29,6 @@ class UpgradeConfig:
             self.qsettingsformat = QSettings.NativeFormat
 
         self.testdir = testdir
-        self.copy_old_2_new()
         self.upgrade()
 
     def _getconfig(self):
@@ -60,37 +59,12 @@ class UpgradeConfig:
             logging.error('Failed to make a backup: %s', error)
             sys.exit(0)
 
-    def copy_old_2_new(self):
-        ''' copy old config file name to new config file name '''
-
-        othersettings = QSettings(self.qsettingsformat, QSettings.UserScope,
-                                  'com.github.em1ran', 'NowPlaying')
-        othersettingsfn = pathlib.Path(othersettings.fileName())
-        if not othersettingsfn.exists():
-            return
-
-        config = self._getconfig()
-        configfn = pathlib.Path(config.fileName())
-        if configfn.exists():
-            logging.debug(
-                'new style config %s already exists; skipping em1ran copy',
-                configfn)
-            return
-
-        logging.debug(
-            'Upgrading from old em1ran config to whatsnowplaying config')
-        configfn.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(othersettingsfn, configfn)
-        config.sync()
-
     def upgrade(self):
         ''' variable re-mapping '''
         config = self._getconfig()
         config.sync()
 
         mapping = {
-            'settings/interval': 'serato/interval',
-            'settings/handler': 'settings/input',
             'acoustidmb/emailaddress': 'musicbrainz/emailaddress',
             'acoustidmb/enabled': 'musicbrainz/enabled',
             'twitchbot/enabled': 'twitchbot/chat',
@@ -112,11 +86,9 @@ class UpgradeConfig:
                 QStandardPaths.CacheLocation)[0]).joinpath('web.db')
         webdb.unlink(missing_ok=True)
 
-        try:
-            oldversstr = config.value('settings/configversion',
-                                      defaultValue='2.0.0')
-        except TypeError:
-            oldversstr = '2.0.0'
+
+        oldversstr = config.value('settings/configversion',
+                                      defaultValue='3.0.0')
 
         thisverstr = nowplaying.version.get_versions()['version']
         oldversion = pkg_resources.parse_version(oldversstr)
