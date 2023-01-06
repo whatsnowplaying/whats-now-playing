@@ -63,9 +63,9 @@ class DiscordSupport:
                         filename=template)
                     mytime = watcher.updatetime
                     templateout = templatehandler.generate(metadata)
-                    channelname = self.config.cparser.value(
-                        'twitchbot/channel')
-                    if channelname:
+                    if channelname := self.config.cparser.value(
+                        'twitchbot/channel'
+                    ):
                         activity = discord.Streaming(
                             platform='Twitch',
                             name=templateout,
