@@ -272,7 +272,6 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
             'clientname': platform.node(),
             'version': nowplaying.version.get_versions()['version'],
             'source': self.config.cparser.value('settings/input'),
-            'authkey': self.config.cparser.value('beam/authkey'),
         }
 
     async def _wss_do_update(self, connection):
