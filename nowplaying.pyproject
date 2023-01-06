@@ -5,6 +5,7 @@
         "nowplaying/resources/artistextras_fanarttv_ui.ui",
         "nowplaying/resources/artistextras_theaudiodb_ui.ui",
         "nowplaying/resources/artistextras_ui.ui",
+        "nowplaying/resources/discordbot_ui.ui",
         "nowplaying/resources/filter_ui.ui",
         "nowplaying/resources/general_ui.ui",
         "nowplaying/resources/inputs_icecast_ui.ui",

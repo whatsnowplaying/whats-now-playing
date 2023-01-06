@@ -81,7 +81,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         baseuis = [
             'general', 'source', 'filter', 'webserver', 'twitch', 'twitchchat',
-            'requests', 'artistextras', 'obsws', 'quirks'
+            'requests', 'artistextras', 'obsws', 'discordbot', 'quirks'
         ]
 
         pluginuis = {}
@@ -167,6 +167,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.on_text_template_button)
         qobject.textoutput_button.clicked.connect(self.on_text_saveas_button)
 
+    def _connect_discordbot_widget(self, qobject):
+        ''' connect the artistextras buttons to non-built-ins '''
+        qobject.template_button.clicked.connect(
+            self.on_discordbot_template_button)
+
     def _connect_artistextras_widget(self, qobject):
         ''' connect the artistextras buttons to non-built-ins '''
         qobject.clearcache_button.clicked.connect(
@@ -220,6 +225,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._upd_win_webserver()
         self._upd_win_obsws()
         self._upd_win_quirks()
+        self._upd_win_discordbot()
 
         for key in [
                 'twitch',
@@ -303,6 +309,15 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.config.cparser.value('obsws/secret'))
         self.widgets['obsws'].template_lineedit.setText(
             self.config.cparser.value('obsws/template'))
+
+    def _upd_win_discordbot(self):
+        ''' update the obsws settings to match config '''
+        self.widgets['discordbot'].enable_checkbox.setChecked(
+            self.config.cparser.value('discord/enabled', type=bool))
+        self.widgets['discordbot'].token_lineedit.setText(
+            self.config.cparser.value('discord/token'))
+        self.widgets['discordbot'].template_lineedit.setText(
+            self.config.cparser.value('discord/template'))
 
     def _upd_win_quirks(self):
         ''' update the quirks settings to match config '''
@@ -400,6 +415,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._upd_conf_obsws()
         self._upd_conf_quirks()
         self._upd_conf_plugins()
+        self._upd_conf_discordbot()
         self.config.cparser.sync()
 
     def _upd_conf_artistextras(self):
@@ -493,6 +509,18 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if oldenabled != newenabled:
             self.tray.subprocesses.restart_obsws()
 
+    def _upd_conf_discordbot(self):
+        ''' update the discord settings '''
+
+        enabled = self.widgets['discordbot'].enable_checkbox.isChecked()
+
+        self.config.cparser.setValue(
+            'discord/token', self.widgets['discordbot'].token_lineedit.text())
+        self.config.cparser.setValue(
+            'discord/template',
+            self.widgets['discordbot'].template_lineedit.text())
+        self.config.cparser.setValue('discord/enabled', enabled)
+
     def verify_regex_filters(self):
         ''' verify the regex filters are real '''
         widget = self.widgets['filter'].regex_list
@@ -585,6 +613,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         ''' file template button clicked action '''
         self.uihelp.template_picker_lineedit(
             self.widgets['general'].texttemplate_lineedit)
+
+    @Slot()
+    def on_discordbot_template_button(self):
+        ''' discordbot template button clicked action '''
+        self.uihelp.template_picker_lineedit(
+            self.widgets['discordbot'].template_lineedit)
 
     @Slot()
     def on_obsws_template_button(self):
