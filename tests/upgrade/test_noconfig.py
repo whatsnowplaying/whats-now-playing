@@ -2,12 +2,10 @@
 ''' test m3u '''
 
 import os
-import logging
 import sys
 import tempfile
 
 import psutil
-import pytest
 
 from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
 

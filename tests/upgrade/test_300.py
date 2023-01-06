@@ -2,7 +2,6 @@
 ''' test m3u '''
 
 import hashlib
-import logging
 import os
 import random
 import string
@@ -10,7 +9,6 @@ import sys
 import tempfile
 
 import psutil
-import pytest
 
 from PySide6.QtCore import QCoreApplication, QSettings  # pylint: disable=no-name-in-module
 
