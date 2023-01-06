@@ -65,7 +65,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
         loop.create_task(self._stop(loop))
         loop.run_forever()
 
-    async def _remove_control(self):
+    def _remove_control(self):
         self.config.cparser.remove('control/beamserverip')
         self.config.cparser.remove('control/beamservername')
         self.config.cparser.remove('control/beamserverport')

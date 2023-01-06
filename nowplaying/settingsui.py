@@ -638,8 +638,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         ipaddr = self.config.cparser.value('control/beamserverip')
         idname = self.config.cparser.value('control/beamservername')
         port = self.config.cparser.value('control/beamserverport')
-        self.widgets['beamstatus'].server_label.setText(
-            f'{idname}({ipaddr}):{port}')
+        if port:
+            self.widgets['beamstatus'].server_label.setText(
+                f'{idname}({ipaddr}):{port}')
+        else:
+            self.widgets['beamstatus'].server_label.setText('Not connected')
 
     @Slot()
     def on_text_template_button(self):
