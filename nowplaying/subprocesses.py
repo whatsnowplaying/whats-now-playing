@@ -15,7 +15,9 @@ class SubprocessManager:
         self.obswsobj = None
         self.manager = multiprocessing.Manager()
         self.processes = {}
-        for name in ['trackpoll', 'obsws', 'twitchbot', 'webserver']:
+        for name in [
+                'trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver'
+        ]:
             self.processes[name] = {
                 'module':
                 importlib.import_module(f'nowplaying.processes.{name}'),
@@ -75,6 +77,14 @@ class SubprocessManager:
             self.processes[processname]['process'].close()
             self.processes[processname]['process'] = None
 
+    def start_discordbot(self):
+        ''' Start discordbot '''
+        self._process_start('discordbot')
+
+    def stop_discordbot(self):
+        ''' stop discordbot '''
+        self._process_stop('discordbot')
+
     def start_obsws(self):
         ''' Start obsws '''
         self._process_start('obsws')
@@ -108,6 +118,11 @@ class SubprocessManager:
     def stop_webserver(self):
         ''' stop the web process '''
         self._process_stop('webserver')
+
+    def restart_discordbot(self):
+        ''' handle starting or restarting the discordbot process '''
+        self.stop_discordbot()
+        self.start_discordbot()
 
     def restart_obsws(self):
         ''' handle starting or restarting the obsws process '''

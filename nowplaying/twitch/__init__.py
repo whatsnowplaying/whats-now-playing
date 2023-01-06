@@ -125,7 +125,8 @@ class TwitchSettings:
             config.cparser.value('twitchbot/channel'))
         #widget.username_lineedit.setText(
         #    config.cparser.value('twitchbot/username'))
-        widget.token_lineedit.setText(config.cparser.value('twitchbot/chattoken'))
+        widget.token_lineedit.setText(
+            config.cparser.value('twitchbot/chattoken'))
         widget.secret_lineedit.setText(
             config.cparser.value('twitchbot/secret'))
         self.update_token_name()
