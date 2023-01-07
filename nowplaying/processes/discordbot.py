@@ -15,6 +15,7 @@ import sys
 import threading
 import traceback
 
+import pypresence
 import discord
 
 import nowplaying.bootstrap
@@ -30,13 +31,65 @@ class DiscordSupport:
     def __init__(self, config=None, stopevent=None):
         self.config = config
         self.stopevent = stopevent
-        self.intents = discord.Intents.default()
-        self.client = discord.Client(intents=self.intents)
-        self.activity = None
+        self.client = {}
         self.jinja2 = nowplaying.utils.TemplateHandler()
+        self.tasks = set()
+
+    async def _setup_bot_client(self):
+        token = self.config.cparser.value('discord/token')
+        if not token:
+            return
+        try:
+            intents = discord.Intents.default()
+            self.client['bot'] = discord.Client(intents=intents)
+            await self.client['bot'].login(token)
+        except Exception as error:  #pylint: disable=broad-except
+            logging.error('Cannot configure bot client: %s', error)
+            return
+
+        loop = asyncio.get_running_loop()
+        task = loop.create_task(self.client['bot'].connect(reconnect=True))
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
+        logging.debug('bot setup')
+
+    async def _setup_ipc_client(self):
+        clientid = self.config.cparser.value('discord/clientid')
+        if not clientid:
+            return
+
+        loop = asyncio.get_running_loop()
+        try:
+            self.client['ipc'] = pypresence.AioPresence(clientid, loop=loop)
+            await self.client['ipc'].connect()
+        except Exception as error:  #pylint: disable=broad-except
+            logging.error('Cannot configure IPC client: %s %s', error,
+                          traceback.format_exc())
+            return
+        logging.debug('ipc setup')
+
+    async def _update_bot(self, templateout):
+        if channelname := self.config.cparser.value(
+                'twitchbot/channel') and self.config.cparser.value(
+                    'twitchbot/enabled', type=bool):
+            activity = discord.Streaming(
+                platform='Twitch',
+                name=templateout,
+                url=f'https://twitch.tv/{channelname}')
+        else:
+            activity = discord.Game(templateout)
+        await self.client['bot'].change_presence(activity=activity)
+
+    async def _update_ipc(self, templateout):
+        await self.client['ipc'].update(state='Streaming', details=templateout)
 
     async def update_activity(self):
         ''' keep the bot's presence updated '''
+
+        client = {
+            'bot': self._update_bot,
+            'ipc': self._update_ipc,
+        }
 
         try:
             metadb = nowplaying.db.MetadataDB()
@@ -47,7 +100,8 @@ class DiscordSupport:
             while not self.stopevent.is_set():
                 await asyncio.sleep(1)
 
-                if not self.client.is_ready():
+                if self.client.get(
+                        'bot') and not self.client['bot'].is_ready():
                     continue
 
                 if mytime < watcher.updatetime:
@@ -63,16 +117,9 @@ class DiscordSupport:
                         filename=template)
                     mytime = watcher.updatetime
                     templateout = templatehandler.generate(metadata)
-                    if channelname := self.config.cparser.value(
-                            'twitchbot/channel') and self.config.cparser.value(
-                                'twitchbot/enabled', type=bool):
-                        activity = discord.Streaming(
-                            platform='Twitch',
-                            name=templateout,
-                            url=f'https://twitch.tv/{channelname}')
-                    else:
-                        activity = discord.Game(name=templateout, )
-                    await self.client.change_presence(activity=activity)
+                    for mode, func in client.items():
+                        if self.client.get(mode):
+                            await func(templateout)
                     # discord will lock out if updates more than every 15 seconds
                     await asyncio.sleep(14)
 
@@ -81,23 +128,31 @@ class DiscordSupport:
 
     async def start(self):
         ''' start the service '''
+
+        client = {
+            'bot': self._setup_bot_client,
+            'ipc': self._setup_ipc_client,
+        }
+
+        while not self.stopevent.is_set():
+            await asyncio.sleep(10)
+            for mode in client:  # pylint: disable=consider-using-dict-items
+                await client[mode]()
+            if self.client:
+                break
+
+        if self.stopevent.is_set():
+            return
+
         loop = asyncio.get_running_loop()
-        token = self.config.cparser.value('discord/token')
-        await self.client.login(token)
-        task = loop.create_task(self.client.connect(reconnect=True))
-        tasks = {task}
-        task.add_done_callback(tasks.discard)
-
-        while not self.client.is_ready():
-            await asyncio.sleep(1)
-
         task = loop.create_task(self.update_activity())
-        tasks.add(task)
-        task.add_done_callback(tasks.discard)
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
 
         while not self.stopevent.is_set():
             await asyncio.sleep(1)
-        await self.client.close()
+        if self.client.get('bot'):  # pylint: disable=consider-using-dict-items
+            await self.client['bot'].close()
 
 
 def stop(pid):

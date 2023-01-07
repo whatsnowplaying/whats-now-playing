@@ -86,9 +86,8 @@ class UpgradeConfig:
                 QStandardPaths.CacheLocation)[0]).joinpath('web.db')
         webdb.unlink(missing_ok=True)
 
-
         oldversstr = config.value('settings/configversion',
-                                      defaultValue='3.0.0')
+                                  defaultValue='3.0.0')
 
         thisverstr = nowplaying.version.get_versions()['version']
         oldversion = pkg_resources.parse_version(oldversstr)

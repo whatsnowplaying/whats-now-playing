@@ -336,6 +336,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         ''' update the obsws settings to match config '''
         self.widgets['discordbot'].enable_checkbox.setChecked(
             self.config.cparser.value('discord/enabled', type=bool))
+        self.widgets['discordbot'].clientid_lineedit.setText(
+            self.config.cparser.value('discord/clientid'))
         self.widgets['discordbot'].token_lineedit.setText(
             self.config.cparser.value('discord/token'))
         self.widgets['discordbot'].template_lineedit.setText(
@@ -538,6 +540,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         enabled = self.widgets['discordbot'].enable_checkbox.isChecked()
 
+        self.config.cparser.setValue(
+            'discord/clientid',
+            self.widgets['discordbot'].clientid_lineedit.text())
         self.config.cparser.setValue(
             'discord/token', self.widgets['discordbot'].token_lineedit.text())
         self.config.cparser.setValue(
