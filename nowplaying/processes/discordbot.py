@@ -136,8 +136,8 @@ class DiscordSupport:
 
         while not self.stopevent.is_set():
             await asyncio.sleep(10)
-            for mode in client:  # pylint: disable=consider-using-dict-items
-                await client[mode]()
+            for value in client.values():
+                await value()
             if self.client:
                 break
 
