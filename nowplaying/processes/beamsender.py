@@ -347,6 +347,9 @@ def start(stopevent=None, bundledir=None, testmode=False):
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'BeamSender'
 
+    if sys.platform == 'win32':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     if not bundledir:
         if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
             bundledir = getattr(sys, '_MEIPASS',
