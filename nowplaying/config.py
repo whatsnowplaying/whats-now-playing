@@ -34,7 +34,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             reset=False,
             testmode=False,
             beam=False):
-
+        self.version = nowplaying.version.get_versions()['version']
         self.beam = beam
         self.testmode = testmode
         self.logpath = logpath

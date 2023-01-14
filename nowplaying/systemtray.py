@@ -24,7 +24,6 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def __init__(self, beam=False):  #pylint: disable=too-many-statements
         self.config = nowplaying.config.ConfigFile(beam=beam)
-        self.version = nowplaying.version.get_versions()['version']
         self._configure_beamstatus(beam)
         self.icon = QIcon(str(self.config.iconfile))
         self.tray = QSystemTrayIcon()
@@ -34,14 +33,18 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.menu = QMenu()
 
         # create systemtray options and actions
-        self.action_title = QAction(f'What\'s Now Playing v{self.version}')
-        self.menu.addAction(self.action_title)
-        self.action_title.setEnabled(False)
+        self.aboutwindow = nowplaying.settingsui.load_widget_ui(
+            self.config, 'about')
+        nowplaying.settingsui.about_version_text(self.config, self.aboutwindow)
+        self.about_action = QAction('About What\'s Now Playing')
+        self.menu.addAction(self.about_action)
+        self.about_action.setEnabled(True)
+        self.about_action.triggered.connect(self.aboutwindow.show)
 
         self.subprocesses = nowplaying.subprocesses.SubprocessManager(
             self.config)
-        self.settingswindow = nowplaying.settingsui.SettingsUI(
-            tray=self, version=self.version, beam=beam)
+        self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self,
+                                                               beam=beam)
 
         self.settings_action = QAction("Settings")
         self.settings_action.triggered.connect(self.settingswindow.show)
