@@ -12,7 +12,6 @@ import signal
 import string
 import sys
 import threading
-import traceback
 import time
 import weakref
 
@@ -343,7 +342,6 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         except Exception as error:  #pylint: disable=broad-except
             logging.error('websocket artistfanart streamer exception: %s',
                           error)
-            logging.error(traceback.print_exc())
         finally:
             await websocket.close()
             request.app['websockets'].discard(websocket)
