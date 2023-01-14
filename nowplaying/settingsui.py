@@ -55,7 +55,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.settingsclasses['twitchchat'].update_twitchbot_commands(
             self.config)
 
-    def load_qtui(self):  # pylint: disable=too-many-branches, too-many-statements
+    def load_qtui(self):    # pylint: disable=too-many-branches, too-many-statements
         ''' load the base UI and wire it up '''
 
         self.qtui = load_widget_ui(self.config, 'settings')
@@ -129,9 +129,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.qtui.reset_button.clicked.connect(self.on_reset_button)
         self.qtui.save_button.clicked.connect(self.on_save_button)
         self.errormessage = QErrorMessage(self.qtui)
-        curbutton = self.qtui.settings_list.findItems('general',
-                                                      Qt.MatchContains)
-        if curbutton:
+        if curbutton := self.qtui.settings_list.findItems(
+            'general', Qt.MatchContains
+        ):
             self.qtui.settings_list.setCurrentItem(curbutton[0])
 
     def _load_list_item(self, name, qobject):
