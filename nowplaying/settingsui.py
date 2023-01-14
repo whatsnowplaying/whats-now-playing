@@ -129,9 +129,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.qtui.reset_button.clicked.connect(self.on_reset_button)
         self.qtui.save_button.clicked.connect(self.on_save_button)
         self.errormessage = QErrorMessage(self.qtui)
-        curbutton = self.qtui.settings_list.findItems('general',
-                                                      Qt.MatchContains)
-        if curbutton:
+        if curbutton := self.qtui.settings_list.findItems(
+                'general', Qt.MatchContains):
             self.qtui.settings_list.setCurrentItem(curbutton[0])
 
     def _load_list_item(self, name, qobject):
