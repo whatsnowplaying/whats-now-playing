@@ -8,7 +8,7 @@ import requests
 
 from twitchAPI.twitch import Twitch
 from twitchAPI.helper import first
-from twitchAPI.types import AuthScope
+from twitchAPI.types import AuthScope, InvalidRefreshTokenException
 from twitchAPI.oauth import UserAuthenticator, validate_token
 
 import nowplaying.utils
@@ -57,6 +57,25 @@ class TwitchLogin:
     def __init__(self, config):
         self.config = config
 
+    async def attempt_user_auth(self, token, refresh_token):
+        ''' try user auth '''
+        if not token or not refresh_token:
+            return False
+
+        valid = await validate_token(token)
+        if valid.get('status') == 401:
+            return False
+
+        try:
+            await TwitchLogin.TWITCH.set_user_authentication(
+                token, USER_SCOPE, refresh_token)
+            TwitchLogin.TWITCH.user_auth_refresh_callback = self.save_refreshed_tokens
+            await TwitchLogin.TWITCH.refresh_used_token()
+        except Exception as error:  #pylint: disable=broad-except
+            logging.debug(error)
+            return False
+        return True
+
     async def api_login(self):
         ''' authenticate with the configured clientid/secret '''
 
@@ -73,6 +92,7 @@ class TwitchLogin:
                     TwitchLogin.TWITCH = await Twitch(
                         self.config.cparser.value('twitchbot/clientid'),
                         self.config.cparser.value('twitchbot/secret'))
+
                     token = self.config.cparser.value('twitchbot/oldusertoken')
                     refresh_token = self.config.cparser.value(
                         'twitchbot/oldrefreshtoken')
@@ -82,28 +102,21 @@ class TwitchLogin:
                     if oldscopes != USER_SCOPE:
                         token = None
 
-                    if token or not refresh_token:
-                        valid = await validate_token(token)
-                        if valid.get('status') == 401:
-                            token = None
-
-                    if not token:
+                    if not await self.attempt_user_auth(token, refresh_token):
                         auth = UserAuthenticator(TwitchLogin.TWITCH,
                                                  USER_SCOPE,
                                                  force_verify=False)
                         token, refresh_token = await auth.authenticate()
                         oldscopes = USER_SCOPE
 
-                    await TwitchLogin.TWITCH.set_user_authentication(
-                        token, USER_SCOPE, refresh_token)
+                        await self.attempt_user_auth(token, refresh_token)
 
                     self.config.cparser.setValue('twitchbot/oldusertoken',
                                                  token)
                     self.config.cparser.setValue('twitchbot/oldrefreshtoken',
-                                                 token)
+                                                 refresh_token)
                     self.config.cparser.setValue('twitchbot/oldscopes',
                                                  USER_SCOPE)
-                    TwitchLogin.TWITCH.user_auth_refresh_callback = self.save_refreshed_tokens
             except Exception:  #pylint: disable=broad-except
                 logging.error(traceback.format_exc())
                 return None
@@ -115,9 +128,9 @@ class TwitchLogin:
         self.config.cparser.setValue('twitchbot/oldusertoken', usertoken)
         self.config.cparser.setValue('twitchbot/oldrefreshtoken', refreshtoken)
         self.config.save()
+        logging.debug('Twitch tokens refreshed and saved')
 
-    @staticmethod
-    async def api_logout():
+    async def api_logout(self):
         ''' log out of the global twitch login '''
         if TwitchLogin.TWITCH:
             try:
@@ -126,5 +139,9 @@ class TwitchLogin:
                     await TwitchLogin.TWITCH.close()
                 TwitchLogin.TWITCH = None
                 logging.debug('TWITCH shutdown')
+            except InvalidRefreshTokenException:
+                logging.debug('refresh token is invalid, removing')
+                self.config.cparser.remove('twitchbot/oldrefreshtoken')
+                self.config.save()
             except Exception:  #pylint: disable=broad-except
                 logging.error(traceback.format_exc())

@@ -355,19 +355,23 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 return
 
             messages = message.split(SPLITMESSAGETEXT)
-            for content in messages:
-                if msg:
-                    try:
-                        await msg.reply(content)
-                    except:  #pylint: disable=bare-except
-                        logging.debug(traceback.format_exc())
+            try:
+                for content in messages:
+                    if msg:
+                        try:
+                            await msg.reply(content)
+                        except:  #pylint: disable=bare-except
+                            logging.debug(traceback.format_exc())
+                            await self.chat.send_message(
+                                self.config.cparser.value('twitchbot/channel'),
+                                content)
+                    else:
                         await self.chat.send_message(
                             self.config.cparser.value('twitchbot/channel'),
                             content)
-                else:
-                    await self.chat.send_message(
-                        self.config.cparser.value('twitchbot/channel'),
-                        content)
+            except ConnectionResetError:
+                logging.debug(
+                    'Twitch appears to be down.  Cannot send message.')
 
     async def stop(self):
         ''' stop the twitch chat support '''

@@ -58,8 +58,9 @@ class TwitchSupport:
                 self.loop = asyncio.get_running_loop()
             except RuntimeError:
                 self.loop = asyncio.new_event_loop()
-
+        await asyncio.sleep(5)
         self.loop.create_task(self.chat.run_chat(self.twitchlogin))
+        await asyncio.sleep(5)
         self.loop.create_task(
             self.redemptions.run_redemptions(self.twitchlogin, self.chat))
 
