@@ -273,14 +273,12 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             f'nowplaying.{plugintype}.{plugin}'].desc_settingsui(qtwidget)
 
     # pylint: disable=too-many-arguments
-    def put(self, initialized, file, txttemplate, notif, loglevel):
+    def put(self, initialized, notif, loglevel):
         ''' Save the configuration file '''
 
-        self.file = file
         self.initialized = initialized
         self.loglevel = loglevel
         self.notif = notif
-        self.txttemplate = txttemplate
 
         self.save()
 
@@ -292,8 +290,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
                               time.strftime("%Y%m%d%H%M%S"))
         self.cparser.setValue('settings/loglevel', self.loglevel)
         self.cparser.setValue('settings/notif', self.notif)
-        self.cparser.setValue('textoutput/file', self.file)
-        self.cparser.setValue('textoutput/txttemplate', self.txttemplate)
 
         self.cparser.sync()
 

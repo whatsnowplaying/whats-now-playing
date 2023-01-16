@@ -43,19 +43,13 @@ def test_put(bootstrap):
     config.cparser.setValue('textoutput/file', 'invalid2')
     config.cparser.setValue('textoutput/txttemplate', 'invalid3')
 
-    config.put(initialized=True,
-               file='real1',
-               txttemplate='real2',
-               notif=True,
-               loglevel='DEBUG')
+    config.put(initialized=True, notif=True, loglevel='DEBUG')
     del config
     config = bootstrap
 
     assert config.cparser.value('settings/initialized')
     assert config.cparser.value('settings/loglevel') == 'DEBUG'
     assert config.cparser.value('settings/notif')
-    assert config.cparser.value('textoutput/file') == 'real1'
-    assert config.cparser.value('textoutput/txttemplate') == 'real2'
 
 
 def test_get1(bootstrap):

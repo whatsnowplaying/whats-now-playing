@@ -23,6 +23,7 @@
         "nowplaying/resources/settings.qrc",
         "nowplaying/resources/settings_ui.ui",
         "nowplaying/resources/source_ui.ui",
+        "nowplaying/resources/textoutput_ui.ui",
         "nowplaying/resources/twitch_ui.ui",
         "nowplaying/resources/twitchchat_ui.ui",
         "nowplaying/resources/webserver_ui.ui",

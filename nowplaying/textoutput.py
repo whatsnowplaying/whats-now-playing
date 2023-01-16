@@ -4,6 +4,20 @@
 import logging
 
 
+def deltxttrack(config=None):
+    ''' delete text track file '''
+
+    if not config:
+        logging.debug('No config?')
+        return
+
+    if not config.file:
+        return
+
+    if config.cparser.value('textoutput/clearonstartup', type=bool):
+        writetxttrack(config, clear=True)
+
+
 def writetxttrack(config=None,
                   filename=None,
                   templatehandler=None,
@@ -15,11 +29,15 @@ def writetxttrack(config=None,
         filename = config.file
 
     if not filename and not config:
-        raise ValueError
+        logging.debug('no filename and no config?!?')
+        return
 
-    if config and config.cparser.get('textoutput/fileappend', type=bool):
+    if config and config.cparser.value('textoutput/fileappend', type=bool):
         mode = 'a'
     else:
+        mode = 'w'
+
+    if clear:
         mode = 'w'
 
     logging.debug('writetxttrack called for %s', filename)

@@ -20,15 +20,6 @@ Settings
   * A setting of zero will update the track info on-screen immediately as a new track is detected.  This time value may be too soon for some DJ's mixing style as well as some features. Increasing the write delay allows for much more tuning.
 
 *
-  **Text Template** - The `Jinja2 template <https://jinja.palletsprojects.com/en/2.11.x/templates/>`_ file that will be used when the song updates. See `Templates <templatevariables.html>`_ for more information.
-
-*
-  **File to write** - Name of the file where the app will write the track information.  You can either pick a pre-existing file or the name of a new file.
-
-*
-  **Enable setlists** - Setting this option will create a file in the NowPlaying/setlists directory when NowPlaying is shutdown of all of the tracks that were played as GitHub-flavored markdown table.
-
-*
   **Recognition Replacement** - By default, if a Music Recognition service is enabled, it will only supplement
   any missing information. These options forcibly replace title and artist from any enabled recognition services.
 

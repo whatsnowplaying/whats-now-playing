@@ -96,28 +96,6 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
         return self.template.render(**metadatadict)
 
 
-def writetxttrack(filename=None,
-                  templatehandler=None,
-                  metadata=None,
-                  clear=False):
-    ''' write new track info '''
-
-    logging.debug('writetxttrack called for %s', filename)
-    if templatehandler:
-        txttemplate = templatehandler.generate(metadata)
-    elif clear:
-        txttemplate = ''
-    else:
-        txttemplate = '{{ artist }} - {{ title }}'
-
-    logging.debug('writetxttrack: starting write')
-    # need to -specifically- open as utf-8 otherwise
-    # pyinstaller built app crashes
-    with open(filename, "w", encoding='utf-8') as textfh:
-        textfh.write(txttemplate)
-    logging.debug('writetxttrack: finished write')
-
-
 def import_plugins(namespace):
     ''' import plugins and return an object
         with all of them '''

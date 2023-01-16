@@ -17,7 +17,7 @@ import nowplaying.imagecache
 import nowplaying.inputs
 import nowplaying.metadata
 import nowplaying.trackrequests
-import nowplaying.txtoutput
+import nowplaying.textoutput
 import nowplaying.utils
 
 COREMETA = ['artist', 'filename', 'title']
@@ -59,6 +59,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 config=self.config, stopevent=self.stopevent)
 
         self.tasks = set()
+        nowplaying.textoutput.deltxttrack(self.config)
         self.metadataprocessors = nowplaying.metadata.MetadataProcessors(
             config=self.config)
         self.create_tasks()
@@ -331,7 +332,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 self.txttemplatehandler = nowplaying.utils.TemplateHandler(
                     filename=self.config.txttemplate)
                 self.previoustxttemplate = self.config.txttemplate
-            nowplaying.txtoutput.writetxttrack(
+            nowplaying.textoutput.writetxttrack(
                 config=self.config,
                 templatehandler=self.txttemplatehandler,
                 metadata=self.currentmeta)

@@ -71,8 +71,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         else:
             baseuis = [
-                'general', 'source', 'filter', 'webserver', 'twitch',
-                'twitchchat', 'requests', 'artistextras', 'obsws',
+                'general', 'source', 'filter', 'textoutput', 'webserver',
+                'twitch', 'twitchchat', 'requests', 'artistextras', 'obsws',
                 'discordbot', 'quirks'
             ]
 
@@ -162,7 +162,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         qobject.template_button.clicked.connect(self.on_html_template_button)
 
-    def _connect_general_widget(self, qobject):
+    def _connect_textoutput_widget(self, qobject):
         ''' connect the general buttons to non-built-ins '''
         qobject.texttemplate_button.clicked.connect(
             self.on_text_template_button)
@@ -205,21 +205,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.config.get()
         about_version_text(self.config, self.widgets['about'])
 
-        self.widgets['general'].textoutput_lineedit.setText(self.config.file)
-        self.widgets['general'].texttemplate_lineedit.setText(
-            self.config.txttemplate)
-
         self.widgets['general'].delay_lineedit.setText(
             str(self.config.cparser.value('settings/delay')))
         self.widgets['general'].notify_checkbox.setChecked(self.config.notif)
-        self.widgets['general'].setlist_checkbox.setChecked(
-            self.config.cparser.value('setlist/enabled', type=bool))
 
         self._upd_win_recognition()
         self._upd_win_input()
         self._upd_win_plugins()
 
         if not self.config.cparser.value('control/beam', type=bool):
+            self._upd_win_textoutput()
             self._upd_win_artistextras()
             self._upd_win_filters()
             self._upd_win_webserver()
@@ -233,6 +228,19 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     'requests',
             ]:
                 self.settingsclasses[key].load(self.config, self.widgets[key])
+
+    def _upd_win_textoutput(self):
+        ''' textoutput settings '''
+        self.widgets['textoutput'].textoutput_lineedit.setText(
+            self.config.file)
+        self.widgets['textoutput'].texttemplate_lineedit.setText(
+            self.config.txttemplate)
+        self.widgets['textoutput'].append_checkbox.setChecked(
+            self.config.cparser.value('textoutput/fileappend', type=bool))
+        self.widgets['textoutput'].clear_checkbox.setChecked(
+            self.config.cparser.value('textoutput/clearonstartup', type=bool))
+        self.widgets['textoutput'].setlist_checkbox.setChecked(
+            self.config.cparser.value('setlist/enabled', type=bool))
 
     def _upd_win_artistextras(self):
         self.widgets['artistextras'].artistextras_checkbox.setChecked(
@@ -387,16 +395,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.config.cparser.setValue(
             'settings/delay', self.widgets['general'].delay_lineedit.text())
         loglevel = self.widgets['general'].logging_combobox.currentText()
-        self.config.cparser.setValue(
-            'setlist/enabled',
-            self.widgets['general'].setlist_checkbox.isChecked())
 
         self._upd_conf_input()
 
         self.config.put(
             initialized=True,
-            file=self.widgets['general'].textoutput_lineedit.text(),
-            txttemplate=self.widgets['general'].texttemplate_lineedit.text(),
             notif=self.widgets['general'].notify_checkbox.isChecked(),
             loglevel=loglevel)
 
@@ -410,6 +413,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             ]:
                 self.settingsclasses[key].save(self.config, self.widgets[key])
 
+            self._upd_conf_textoutput()
             self._upd_conf_artistextras()
             self._upd_conf_filters()
             self._upd_conf_webserver()
@@ -421,6 +425,24 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._upd_conf_input()
         self._upd_conf_plugins()
         self.config.cparser.sync()
+
+    def _upd_conf_textoutput(self):
+        self.config.cparser.setValue(
+            'setlist/enabled',
+            self.widgets['textoutput'].setlist_checkbox.isChecked())
+        self.config.file = self.widgets['textoutput'].textoutput_lineedit.text(
+        )
+        self.config.txttemplate = self.widgets[
+            'textoutput'].texttemplate_lineedit.text()
+        self.config.cparser.setValue('textoutput/file', self.config.file)
+        self.config.cparser.setValue('textoutput/txttemplate',
+                                     self.config.txttemplate)
+        self.config.cparser.setValue(
+            'textoutput/fileappend',
+            self.widgets['textoutput'].append_checkbox.isChecked())
+        self.config.cparser.setValue(
+            'textoutput/clearonstartup',
+            self.widgets['textoutput'].clear_checkbox.isChecked())
 
     def _upd_conf_artistextras(self):
         self.config.cparser.setValue(
@@ -595,13 +617,13 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     @Slot()
     def on_text_saveas_button(self):
         ''' file button clicked action '''
-        if startfile := self.widgets['general'].textoutput_lineedit.text():
+        if startfile := self.widgets['textoutput'].textoutput_lineedit.text():
             startdir = os.path.dirname(startfile)
         else:
             startdir = '.'
         if filename := QFileDialog.getSaveFileName(self, 'Open file', startdir,
                                                    '*.txt'):
-            self.widgets['general'].textoutput_lineedit.setText(filename[0])
+            self.widgets['textoutput'].textoutput_lineedit.setText(filename[0])
 
     @Slot()
     def on_artistextras_clearcache_button(self):
@@ -630,7 +652,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def on_text_template_button(self):
         ''' file template button clicked action '''
         self.uihelp.template_picker_lineedit(
-            self.widgets['general'].texttemplate_lineedit)
+            self.widgets['textoutput'].texttemplate_lineedit)
 
     @Slot()
     def on_discordbot_template_button(self):
