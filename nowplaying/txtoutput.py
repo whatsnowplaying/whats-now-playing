@@ -3,7 +3,9 @@
 
 import logging
 
-def writetxttrack(config=None, filename=None,
+
+def writetxttrack(config=None,
+                  filename=None,
                   templatehandler=None,
                   metadata=None,
                   clear=False):
