@@ -17,6 +17,7 @@ import nowplaying.imagecache
 import nowplaying.inputs
 import nowplaying.metadata
 import nowplaying.trackrequests
+import nowplaying.txtoutput
 import nowplaying.utils
 
 COREMETA = ['artist', 'filename', 'title']
@@ -330,8 +331,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 self.txttemplatehandler = nowplaying.utils.TemplateHandler(
                     filename=self.config.txttemplate)
                 self.previoustxttemplate = self.config.txttemplate
-            nowplaying.utils.writetxttrack(
-                filename=self.config.file,
+            nowplaying.txtoutput.writetxttrack(
+                config=self.config,
                 templatehandler=self.txttemplatehandler,
                 metadata=self.currentmeta)
 

@@ -236,12 +236,6 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self.subprocesses.stop_all_processes()
 
-        if self.config:
-            self.config.get()
-            if self.config.file:
-                logging.debug('Writing empty file')
-                nowplaying.utils.writetxttrack(filename=self.config.file,
-                                               clear=True)
         app = QApplication.instance()
         app.exit(0)
 
