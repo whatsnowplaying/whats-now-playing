@@ -169,6 +169,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
         settings.setValue('textoutput/file', self.file)
         settings.setValue('textoutput/txttemplate', self.txttemplate)
+        settings.setValue('textoutput/clearonstartup', True)
+        settings.setValue('textoutput/fileappend', False)
 
         settings.setValue('obsws/enabled', False)
         settings.setValue('obsws/host', 'localhost')

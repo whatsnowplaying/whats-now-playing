@@ -20,6 +20,7 @@
   and Beam input source.
 * Upgrades from v1 and v2 are no longer supported.  You will need
   to upgrade to v3 first if you wish to save your settings.
+* The plain text file output now supports append!
 
 ### Internal/Minor Changes
 
