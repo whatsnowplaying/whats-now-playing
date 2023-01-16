@@ -2,6 +2,10 @@
 Text Output
 =====================
 
+.. image:: images/textoutput.png
+   :target: images/textoutput.png
+   :alt: Account Settings for text files
+
 A simple output method that just writes a template to a file and writes the entire setlist on exit.
 
 *
