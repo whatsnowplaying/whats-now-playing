@@ -7,7 +7,7 @@ import tempfile
 import pytest
 
 import nowplaying.utils  # pylint: disable=import-error
-import nowplaying.txtoutput  # pylint: disable=import-error
+import nowplaying.textoutput  # pylint: disable=import-error
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def test_writingmeta(gettemplatehandler):  # pylint: disable=redefined-outer-nam
             'title': 'this is the title',
         }
 
-        nowplaying.txtoutput.writetxttrack(filename=filename,
+        nowplaying.textoutput.writetxttrack(filename=filename,
                                            templatehandler=gettemplatehandler,
                                            metadata=metadata)
         with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
@@ -52,7 +52,7 @@ def test_missingmeta(gettemplatehandler):  # pylint: disable=redefined-outer-nam
 
         metadata = {}
 
-        nowplaying.txtoutput.writetxttrack(filename=filename,
+        nowplaying.textoutput.writetxttrack(filename=filename,
                                            templatehandler=gettemplatehandler,
                                            metadata=metadata)
         with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
@@ -72,7 +72,7 @@ def test_missingtemplate(gettemplatehandler):  # pylint: disable=redefined-outer
             'title': 'this is the title',
         }
 
-        nowplaying.txtoutput.writetxttrack(filename=filename,
+        nowplaying.textoutput.writetxttrack(filename=filename,
                                            templatehandler=gettemplatehandler,
                                            metadata=metadata)
         with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
@@ -91,7 +91,7 @@ def test_missingfilename(gettemplatehandler):  # pylint: disable=redefined-outer
             'title': 'this is the title',
         }
 
-        nowplaying.txtoutput.writetxttrack(filename=filename,
+        nowplaying.textoutput.writetxttrack(filename=filename,
                                            templatehandler=gettemplatehandler,
                                            metadata=metadata)
         with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
@@ -104,7 +104,7 @@ def test_cleartemplate():  # pylint: disable=redefined-outer-name
     ''' try writing a text '''
     with tempfile.TemporaryDirectory() as newpath:
         filename = os.path.join(newpath, 'test.txt')
-        nowplaying.txtoutput.writetxttrack(filename=filename, clear=True)
+        nowplaying.textoutput.writetxttrack(filename=filename, clear=True)
         with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
             content = tempfn.readlines()
 
@@ -115,7 +115,7 @@ def test_justafile():  # pylint: disable=redefined-outer-name
     ''' try writing a text '''
     with tempfile.TemporaryDirectory() as newpath:
         filename = os.path.join(newpath, 'test.txt')
-        nowplaying.txtoutput.writetxttrack(filename=filename)
+        nowplaying.textoutput.writetxttrack(filename=filename)
         with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
             content = tempfn.readlines()
 
