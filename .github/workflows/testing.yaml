@@ -44,9 +44,9 @@ jobs:
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp
             curl --location --output fpcalc.tgz \
-              https://github.com/acoustid/chromaprint/releases/download/v1.5.0/chromaprint-fpcalc-1.5.0-macos-x86_64.tar.gz
+              https://github.com/acoustid/chromaprint/releases/download/v1.5.1/chromaprint-fpcalc-1.5.1-macos-x86_64.tar.gz
             tar xvpf fpcalc.tgz
-            FPCALC=/tmp/chromaprint-fpcalc-1.5.0-macos-x86_64/fpcalc
+            FPCALC=/tmp/chromaprint-fpcalc-1.5.1-macos-x86_64/fpcalc
             export FPCALC
             popd
             source /tmp/venv/bin/activate
@@ -98,9 +98,9 @@ jobs:
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp
             curl --location --output fpcalc.zip \
-              https://github.com/acoustid/chromaprint/releases/download/v1.5.0/chromaprint-fpcalc-1.5.0-windows-x86_64.zip
+              https://github.com/acoustid/chromaprint/releases/download/v1.5.1/chromaprint-fpcalc-1.5.1-windows-x86_64.zip
             unzip fpcalc.zip
-            FPCALC=/tmp/chromaprint-fpcalc-1.5.0-windows-x86_64/fpcalc.exe
+            FPCALC=/tmp/chromaprint-fpcalc-1.5.1-windows-x86_64/fpcalc.exe
             export FPCALC
             popd
             pytest -s
