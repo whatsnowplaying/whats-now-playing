@@ -25,12 +25,15 @@ def writetxttrack(config=None,
                   clear=False):
     ''' write new track info '''
 
-    if not filename:
-        filename = config.file
-
     if not filename and not config:
         logging.debug('no filename and no config?!?')
         return
+
+    if not filename:
+        filename = config.cparser.value('textoutput/file')
+        if not filename:
+            logging.debug('no filename passwed or configured?!?')
+            return
 
     if config and config.cparser.value('textoutput/fileappend', type=bool):
         mode = 'a'
