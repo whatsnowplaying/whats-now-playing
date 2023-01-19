@@ -51,7 +51,6 @@ def writetxttrack(config=None,
     else:
         txttemplate = '{{ artist }} - {{ title }}'
 
-    logging.debug('writetxttrack: starting write')
     # need to -specifically- open as utf-8 otherwise
     # pyinstaller built app crashes
     with open(filename, mode, encoding='utf-8') as textfh:

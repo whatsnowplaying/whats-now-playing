@@ -26,7 +26,6 @@ def trackpollbootstrap(bootstrap, getroot, tmp_path):  # pylint: disable=redefin
     config.cparser.setValue('jsoninput/delay', 1)
     config.cparser.setValue('jsoninput/filename', str(jsonfile))
     config.cparser.setValue('textoutput/file', str(txtfile))
-    config.file = str(txtfile)
 
     logging.debug('output = %s', txtfile)
     config.cparser.sync()
@@ -39,12 +38,14 @@ def trackpollbootstrap(bootstrap, getroot, tmp_path):  # pylint: disable=redefin
 
 def write_json_metadata(config, metadata):
     ''' given config and metadata, write a JSONStub input file '''
-    pathlib.Path(config.file).unlink(missing_ok=True)
+    txtoutput = config.cparser.value('textoutput/file')
+    pathlib.Path(txtoutput).unlink(missing_ok=True)
     filepath = pathlib.Path(config.cparser.value('jsoninput/filename'))
     with open(filepath, "w+", encoding='utf-8') as fhout:
         json.dump(metadata, fhout)
     time.sleep(5)  # windows is pokey
-    wait_for_output(config.file)
+    logging.debug('waiting for output %s', txtoutput)
+    wait_for_output(txtoutput)
 
 
 def wait_for_output(filename):
@@ -70,8 +71,9 @@ def test_trackpoll_basic(trackpollbootstrap):  # pylint: disable=redefined-outer
     config.cparser.setValue('control/paused', False)
     config.cparser.sync()
 
+    txtoutput = config.cparser.value('textoutput/file')
     write_json_metadata(config=config, metadata={'artist': 'NIN'})
-    with open(config.file, encoding='utf-8') as filein:
+    with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == 'NIN'
 
@@ -80,7 +82,7 @@ def test_trackpoll_basic(trackpollbootstrap):  # pylint: disable=redefined-outer
                             'artist': 'NIN',
                             'title': 'Ghosts'
                         })
-    with open(config.file, encoding='utf-8') as filein:
+    with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == 'NIN'
     assert text[1].strip() == 'Ghosts'
@@ -99,8 +101,9 @@ def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=red
         str(getroot.joinpath('tests', 'audio', '15_Ghosts_II_64kb_orig.mp3'))
     }
 
+    txtoutput = config.cparser.value('textoutput/file')
     write_json_metadata(config=config, metadata=metadata)
-    with open(config.file, encoding='utf-8') as filein:
+    with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
 
     assert text[0].strip() == metadata['filename']
@@ -110,7 +113,7 @@ def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=red
     metadata['artist'] = 'NIN'
 
     write_json_metadata(config=config, metadata=metadata)
-    with open(config.file, encoding='utf-8') as filein:
+    with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == metadata['filename']
     assert text[1].strip() == 'NIN'
@@ -119,8 +122,8 @@ def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=red
     metadata['title'] = 'Ghosts'
     del metadata['artist']
     write_json_metadata(config=config, metadata=metadata)
-    wait_for_output(config.file)
-    with open(config.file, encoding='utf-8') as filein:
+    wait_for_output(txtoutput)
+    with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == metadata['filename']
     assert text[1].strip() == 'Nine Inch Nails'
@@ -130,6 +133,7 @@ def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=red
 def test_trackpoll_titleisfile(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' test trackpoll title is a filename '''
     config = trackpollbootstrap
+    txtoutput = config.cparser.value('textoutput/file')
     template = getroot.joinpath('tests', 'templates', 'simplewfn.txt')
     config.txttemplate = str(template)
     config.cparser.setValue('textoutput/txttemplate', str(template))
@@ -138,7 +142,7 @@ def test_trackpoll_titleisfile(trackpollbootstrap, getroot):  # pylint: disable=
     title = str(
         getroot.joinpath('tests', 'audio', '15_Ghosts_II_64kb_orig.mp3'))
     write_json_metadata(config=config, metadata={'title': title})
-    with open(config.file, encoding='utf-8') as filein:
+    with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
 
     assert text[0].strip() == title
@@ -149,6 +153,7 @@ def test_trackpoll_titleisfile(trackpollbootstrap, getroot):  # pylint: disable=
 def test_trackpoll_nofile(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' test trackpoll title has no file '''
     config = trackpollbootstrap
+    txtoutput = config.cparser.value('textoutput/file')
     template = getroot.joinpath('tests', 'templates', 'simplewfn.txt')
     config.txttemplate = str(template)
     config.cparser.setValue('textoutput/txttemplate', str(template))
@@ -157,7 +162,7 @@ def test_trackpoll_nofile(trackpollbootstrap, getroot):  # pylint: disable=redef
 
     metadata = {'title': 'title', 'artist': 'artist'}
     write_json_metadata(config=config, metadata=metadata)
-    with open(config.file, encoding='utf-8') as filein:
+    with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
 
     assert text[0].strip() == ''

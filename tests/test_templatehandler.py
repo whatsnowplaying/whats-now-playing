@@ -35,8 +35,8 @@ def test_writingmeta(gettemplatehandler):  # pylint: disable=redefined-outer-nam
         }
 
         nowplaying.textoutput.writetxttrack(filename=filename,
-                                           templatehandler=gettemplatehandler,
-                                           metadata=metadata)
+                                            templatehandler=gettemplatehandler,
+                                            metadata=metadata)
         with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
             content = tempfn.readlines()
 
@@ -53,8 +53,8 @@ def test_missingmeta(gettemplatehandler):  # pylint: disable=redefined-outer-nam
         metadata = {}
 
         nowplaying.textoutput.writetxttrack(filename=filename,
-                                           templatehandler=gettemplatehandler,
-                                           metadata=metadata)
+                                            templatehandler=gettemplatehandler,
+                                            metadata=metadata)
         with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
             content = tempfn.readlines()
 
@@ -73,8 +73,8 @@ def test_missingtemplate(gettemplatehandler):  # pylint: disable=redefined-outer
         }
 
         nowplaying.textoutput.writetxttrack(filename=filename,
-                                           templatehandler=gettemplatehandler,
-                                           metadata=metadata)
+                                            templatehandler=gettemplatehandler,
+                                            metadata=metadata)
         with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
             content = tempfn.readlines()
 
@@ -92,8 +92,8 @@ def test_missingfilename(gettemplatehandler):  # pylint: disable=redefined-outer
         }
 
         nowplaying.textoutput.writetxttrack(filename=filename,
-                                           templatehandler=gettemplatehandler,
-                                           metadata=metadata)
+                                            templatehandler=gettemplatehandler,
+                                            metadata=metadata)
         with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
             content = tempfn.readlines()
 

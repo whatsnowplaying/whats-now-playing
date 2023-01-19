@@ -327,15 +327,18 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 'coverimageraw']
 
     def _write_to_text(self):
-        if self.config.file:
-            if not self.previoustxttemplate or self.previoustxttemplate != self.config.txttemplate:
-                self.txttemplatehandler = nowplaying.utils.TemplateHandler(
-                    filename=self.config.txttemplate)
-                self.previoustxttemplate = self.config.txttemplate
-            nowplaying.textoutput.writetxttrack(
-                config=self.config,
-                templatehandler=self.txttemplatehandler,
-                metadata=self.currentmeta)
+        if configfile := self.config.cparser.value('textoutput/file'):
+            if configtemplate := self.config.cparser.value(
+                    'textoutput/txttemplate'):
+                if not self.previoustxttemplate or self.previoustxttemplate != configtemplate:
+                    self.txttemplatehandler = nowplaying.utils.TemplateHandler(
+                        filename=configtemplate)
+                    self.previoustxttemplate = configtemplate
+                nowplaying.textoutput.writetxttrack(
+                    config=self.config,
+                    filename=configfile,
+                    templatehandler=self.txttemplatehandler,
+                    metadata=self.currentmeta)
 
     async def _half_delay_write(self):
         try:
