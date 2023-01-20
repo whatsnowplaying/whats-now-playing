@@ -6,12 +6,11 @@ import json
 import logging
 import pathlib
 import threading
-import time
 
 import pytest  # pylint: disable=import-error
 import pytest_asyncio  # pylint: disable=import-error
 
-import nowplaying.processes.trackpoll
+import nowplaying.processes.trackpoll    # pylint: disable=import-error
 
 
 @pytest_asyncio.fixture
