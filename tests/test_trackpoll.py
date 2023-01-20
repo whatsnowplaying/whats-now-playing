@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 ''' test the trackpoller '''
 
+import asyncio
 import json
 import logging
 import pathlib
+import threading
 import time
 
-import pytest
+import pytest  # pylint: disable=import-error
+import pytest_asyncio  # pylint: disable=import-error
 
-import nowplaying.subprocesses  # pylint: disable=import-error
+import nowplaying.processes.trackpoll
 
 
-@pytest.fixture
-def trackpollbootstrap(bootstrap, getroot, tmp_path):  # pylint: disable=redefined-outer-name
+@pytest_asyncio.fixture
+async def trackpollbootstrap(bootstrap, getroot, tmp_path):  # pylint: disable=redefined-outer-name
     ''' bootstrap a configuration '''
     txtfile = tmp_path.joinpath('output.txt')
     if pathlib.Path(txtfile).exists():
@@ -26,42 +29,45 @@ def trackpollbootstrap(bootstrap, getroot, tmp_path):  # pylint: disable=redefin
     config.cparser.setValue('jsoninput/delay', 1)
     config.cparser.setValue('jsoninput/filename', str(jsonfile))
     config.cparser.setValue('textoutput/file', str(txtfile))
-
+    stopevent = threading.Event()
     logging.debug('output = %s', txtfile)
     config.cparser.sync()
-    manager = nowplaying.subprocesses.SubprocessManager(config=config,
-                                                        testmode=True)
-    manager.start_trackpoll()
+    trackpoll = nowplaying.processes.trackpoll.TrackPoll(  # pylint: disable=unused-variable
+        stopevent=stopevent,
+        config=config,
+        testmode=True)
     yield config
-    manager.stop_all_processes()
+    stopevent.set()
+    await asyncio.sleep(2)
 
 
-def write_json_metadata(config, metadata):
+async def write_json_metadata(config, metadata):
     ''' given config and metadata, write a JSONStub input file '''
     txtoutput = config.cparser.value('textoutput/file')
     pathlib.Path(txtoutput).unlink(missing_ok=True)
     filepath = pathlib.Path(config.cparser.value('jsoninput/filename'))
     with open(filepath, "w+", encoding='utf-8') as fhout:
         json.dump(metadata, fhout)
-    time.sleep(5)  # windows is pokey
+    await asyncio.sleep(5)  # windows is pokey
     logging.debug('waiting for output %s', txtoutput)
-    wait_for_output(txtoutput)
+    await wait_for_output(txtoutput)
 
 
-def wait_for_output(filename):
+async def wait_for_output(filename):
     ''' wait for the output to appear '''
 
     # these tests tend to be a bit flaky/racy esp on github
     # runners so add some protection
     counter = 0
     while counter < 10 and not pathlib.Path(filename).exists():
-        time.sleep(5)
+        await asyncio.sleep(5)
         counter += 1
         logging.debug('waiting for %s: %s', filename, counter)
     assert counter < 10
 
 
-def test_trackpoll_basic(trackpollbootstrap):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_trackpoll_basic(trackpollbootstrap):  # pylint: disable=redefined-outer-name
     ''' test basic trackpolling '''
 
     config = trackpollbootstrap
@@ -72,23 +78,24 @@ def test_trackpoll_basic(trackpollbootstrap):  # pylint: disable=redefined-outer
     config.cparser.sync()
 
     txtoutput = config.cparser.value('textoutput/file')
-    write_json_metadata(config=config, metadata={'artist': 'NIN'})
+    await write_json_metadata(config=config, metadata={'artist': 'NIN'})
     with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == 'NIN'
 
-    write_json_metadata(config=config,
-                        metadata={
-                            'artist': 'NIN',
-                            'title': 'Ghosts'
-                        })
+    await write_json_metadata(config=config,
+                              metadata={
+                                  'artist': 'NIN',
+                                  'title': 'Ghosts'
+                              })
     with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == 'NIN'
     assert text[1].strip() == 'Ghosts'
 
 
-def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' test trackpolling + metadata + input override '''
     config = trackpollbootstrap
     template = getroot.joinpath('tests', 'templates', 'simplewfn.txt')
@@ -102,7 +109,7 @@ def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=red
     }
 
     txtoutput = config.cparser.value('textoutput/file')
-    write_json_metadata(config=config, metadata=metadata)
+    await write_json_metadata(config=config, metadata=metadata)
     with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
 
@@ -112,7 +119,7 @@ def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=red
 
     metadata['artist'] = 'NIN'
 
-    write_json_metadata(config=config, metadata=metadata)
+    await write_json_metadata(config=config, metadata=metadata)
     with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == metadata['filename']
@@ -121,8 +128,8 @@ def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=red
 
     metadata['title'] = 'Ghosts'
     del metadata['artist']
-    write_json_metadata(config=config, metadata=metadata)
-    wait_for_output(txtoutput)
+    await write_json_metadata(config=config, metadata=metadata)
+    await wait_for_output(txtoutput)
     with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == metadata['filename']
@@ -130,7 +137,8 @@ def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disable=red
     assert text[2].strip() == 'Ghosts'
 
 
-def test_trackpoll_titleisfile(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_trackpoll_titleisfile(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' test trackpoll title is a filename '''
     config = trackpollbootstrap
     txtoutput = config.cparser.value('textoutput/file')
@@ -141,7 +149,7 @@ def test_trackpoll_titleisfile(trackpollbootstrap, getroot):  # pylint: disable=
     config.cparser.sync()
     title = str(
         getroot.joinpath('tests', 'audio', '15_Ghosts_II_64kb_orig.mp3'))
-    write_json_metadata(config=config, metadata={'title': title})
+    await write_json_metadata(config=config, metadata={'title': title})
     with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
 
@@ -150,7 +158,8 @@ def test_trackpoll_titleisfile(trackpollbootstrap, getroot):  # pylint: disable=
     assert text[2].strip() == '15 Ghosts II'
 
 
-def test_trackpoll_nofile(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_trackpoll_nofile(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' test trackpoll title has no file '''
     config = trackpollbootstrap
     txtoutput = config.cparser.value('textoutput/file')
@@ -161,7 +170,7 @@ def test_trackpoll_nofile(trackpollbootstrap, getroot):  # pylint: disable=redef
     config.cparser.sync()
 
     metadata = {'title': 'title', 'artist': 'artist'}
-    write_json_metadata(config=config, metadata=metadata)
+    await write_json_metadata(config=config, metadata=metadata)
     with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
 

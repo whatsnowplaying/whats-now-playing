@@ -63,7 +63,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self.metadataprocessors = nowplaying.metadata.MetadataProcessors(
             config=self.config)
         self.create_tasks()
-        self.loop.run_forever()
+        if not testmode:
+            self.loop.run_forever()
 
     def _resetcurrent(self):
         ''' reset the currentmeta to blank '''
@@ -149,7 +150,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             await self.input.stop()
         self.plugins = None
         loop = asyncio.get_running_loop()
-        loop.stop()
+        if not self.testmode:
+            loop.stop()
 
     def forced_stop(self, signum, frame):  # pylint: disable=unused-argument
         ''' caught an int signal so tell the world to stop '''
