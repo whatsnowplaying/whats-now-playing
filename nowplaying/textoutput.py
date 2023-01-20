@@ -11,7 +11,7 @@ def deltxttrack(config=None):
         logging.debug('No config?')
         return
 
-    if not config.file:
+    if not config.cparser.value('textoutput/file'):
         return
 
     if config.cparser.value('textoutput/clearonstartup', type=bool):

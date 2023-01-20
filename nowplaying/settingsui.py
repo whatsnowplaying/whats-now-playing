@@ -232,7 +232,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def _upd_win_textoutput(self):
         ''' textoutput settings '''
         self.widgets['textoutput'].textoutput_lineedit.setText(
-            self.config.file)
+            self.config.cparser.value('textoutput/file'))
         self.widgets['textoutput'].texttemplate_lineedit.setText(
             self.config.txttemplate)
         self.widgets['textoutput'].append_checkbox.setChecked(
@@ -430,11 +430,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.config.cparser.setValue(
             'setlist/enabled',
             self.widgets['textoutput'].setlist_checkbox.isChecked())
-        self.config.file = self.widgets['textoutput'].textoutput_lineedit.text(
-        )
         self.config.txttemplate = self.widgets[
             'textoutput'].texttemplate_lineedit.text()
-        self.config.cparser.setValue('textoutput/file', self.config.file)
+        self.config.cparser.setValue('textoutput/file', self.widgets['textoutput'].textoutput_lineedit.text(
+        ))
         self.config.cparser.setValue('textoutput/txttemplate',
                                      self.config.txttemplate)
         self.config.cparser.setValue(

@@ -56,7 +56,6 @@ def test_get1(bootstrap):
     ''' test basic config.get '''
     config = bootstrap
 
-    assert not config.file
     assert not config.initialized
     assert config.loglevel == 'DEBUG'
     assert not config.notif
@@ -70,12 +69,10 @@ def test_get1(bootstrap):
     config.cparser.setValue('settings/initialized', True)
     config.cparser.setValue('settings/loglevel', 'invalid1')
     config.cparser.setValue('settings/notif', True)
-    config.cparser.setValue('textoutput/file', 'invalid2')
     config.cparser.setValue('textoutput/txttemplate', 'invalid3')
 
     config.get()
 
-    assert config.file == 'invalid2'
     assert config.initialized
     assert config.loglevel == 'invalid1'
     assert config.notif

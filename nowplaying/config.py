@@ -70,7 +70,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
                                  QCoreApplication.applicationName())
         logging.info('configuration: %s', self.cparser.fileName())
         self.notif = False
-        self.file = None
         self.txttemplate = str(self.templatedir.joinpath("basic-plain.txt"))
         self.loglevel = 'DEBUG'
 
@@ -122,7 +121,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         except TypeError:
             pass
 
-        self.file = self.cparser.value('textoutput/file', defaultValue=None)
         self.txttemplate = self.cparser.value('textoutput/txttemplate',
                                               defaultValue=None)
 
@@ -167,7 +165,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue('settings/notif', self.notif)
         settings.setValue('settings/stripextras', False)
 
-        settings.setValue('textoutput/file', self.file)
+        settings.setValue('textoutput/file', None)
         settings.setValue('textoutput/txttemplate', self.txttemplate)
         settings.setValue('textoutput/clearonstartup', True)
         settings.setValue('textoutput/fileappend', False)
