@@ -432,8 +432,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.widgets['textoutput'].setlist_checkbox.isChecked())
         self.config.txttemplate = self.widgets[
             'textoutput'].texttemplate_lineedit.text()
-        self.config.cparser.setValue('textoutput/file', self.widgets['textoutput'].textoutput_lineedit.text(
-        ))
+        self.config.cparser.setValue(
+            'textoutput/file',
+            self.widgets['textoutput'].textoutput_lineedit.text())
         self.config.cparser.setValue('textoutput/txttemplate',
                                      self.config.txttemplate)
         self.config.cparser.setValue(

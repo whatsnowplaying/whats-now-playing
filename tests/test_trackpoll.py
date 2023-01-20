@@ -10,7 +10,7 @@ import threading
 import pytest  # pylint: disable=import-error
 import pytest_asyncio  # pylint: disable=import-error
 
-import nowplaying.processes.trackpoll    # pylint: disable=import-error
+import nowplaying.processes.trackpoll  # pylint: disable=import-error
 
 
 @pytest_asyncio.fixture
