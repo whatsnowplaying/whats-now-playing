@@ -3,7 +3,6 @@
 #import faulthandler
 import logging
 import multiprocessing
-import os
 import socket
 import sys
 
