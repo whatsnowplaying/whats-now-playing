@@ -21,6 +21,7 @@ import discord
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
+import nowplaying.frozen
 import nowplaying.utils
 import nowplaying.version
 
@@ -176,12 +177,7 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'DiscordBot'
 
-    if not bundledir:
-        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-            bundledir = getattr(sys, '_MEIPASS',
-                                os.path.abspath(os.path.dirname(__file__)))
-        else:
-            bundledir = os.path.abspath(os.path.dirname(__file__))
+    bundledir = nowplaying.frozen.frozen_init(bundledir)
 
     if testmode:
         nowplaying.bootstrap.set_qt_names(appname='testsuite')

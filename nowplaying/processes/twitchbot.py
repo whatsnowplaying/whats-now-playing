@@ -14,6 +14,7 @@ import sys
 import threading
 
 import nowplaying.bootstrap
+import nowplaying.frozen
 import nowplaying.twitch
 
 # 1. create a bot account, be sure to enable multiple logins per email
@@ -42,12 +43,7 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'TwitchBot'
 
-    if not bundledir:
-        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-            bundledir = getattr(sys, '_MEIPASS',
-                                os.path.abspath(os.path.dirname(__file__)))
-        else:
-            bundledir = os.path.abspath(os.path.dirname(__file__))
+    bundledir = nowplaying.frozen.frozen_init(bundledir)
 
     if testmode:
         nowplaying.bootstrap.set_qt_names(appname='testsuite')

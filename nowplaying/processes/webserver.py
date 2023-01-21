@@ -36,6 +36,7 @@ logging.config.dictConfig({
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
+import nowplaying.frozen
 import nowplaying.imagecache
 import nowplaying.utils
 
@@ -524,12 +525,7 @@ def start(stopevent=None, bundledir=None, testmode=False):
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'WebServer'
 
-    if not bundledir:
-        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-            bundledir = getattr(sys, '_MEIPASS',
-                                os.path.abspath(os.path.dirname(__file__)))
-        else:
-            bundledir = os.path.abspath(os.path.dirname(__file__))
+    bundledir = nowplaying.frozen.frozen_init(bundledir)
 
     if testmode:
         nowplaying.bootstrap.set_qt_names(appname='testsuite')

@@ -26,6 +26,7 @@ from aiohttp import ClientSession
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
+import nowplaying.frozen
 import nowplaying.trackrequests
 import nowplaying.version
 
@@ -350,12 +351,7 @@ def start(stopevent=None, bundledir=None, testmode=False):
     if sys.platform == 'win32':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-    if not bundledir:
-        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-            bundledir = getattr(sys, '_MEIPASS',
-                                os.path.abspath(os.path.dirname(__file__)))
-        else:
-            bundledir = os.path.abspath(os.path.dirname(__file__))
+    bundledir = nowplaying.frozen.frozen_init(bundledir)
 
     if testmode:
         nowplaying.bootstrap.set_qt_names(appname='testsuite')

@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import re
+import ssl
 import sys
 import time
 
@@ -59,6 +60,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         logging.info('Logpath: %s', self.logpath)
         logging.info('Templates: %s', self.templatedir)
         logging.info('Bundle: %s', ConfigFile.BUNDLEDIR)
+        logging.debug('SSL_CERT_FILE=%s', os.environ.get('SSL_CERT_FILE'))
+        logging.debug('SSL CA FILE=%s', ssl.get_default_verify_paths().cafile)
 
         if sys.platform == "win32":
             self.qsettingsformat = QSettings.IniFormat

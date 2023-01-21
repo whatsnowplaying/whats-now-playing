@@ -15,6 +15,7 @@ import nowplaying
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
+import nowplaying.frozen
 import nowplaying.systemtray
 import nowplaying.upgrade
 
@@ -47,12 +48,7 @@ def actualmain(beam=False):
     multiprocessing.freeze_support()
     #faulthandler.enable()
 
-    # set paths for bundled files
-    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        bundledir = getattr(sys, '_MEIPASS',
-                            os.path.abspath(os.path.dirname(__file__)))
-    else:
-        bundledir = os.path.abspath(os.path.dirname(__file__))
+    bundledir = nowplaying.frozen.frozen_init(None)
 
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     qapp = QApplication(sys.argv)

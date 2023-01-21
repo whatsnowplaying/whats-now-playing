@@ -5,7 +5,6 @@
 import asyncio
 import logging
 import logging.config
-import pathlib
 import sys
 import threading
 
@@ -21,6 +20,7 @@ logging.config.dictConfig({
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
+import nowplaying.frozen
 import nowplaying.utils
 
 
@@ -181,12 +181,7 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'obsws'
 
-    if not bundledir:
-        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-            bundledir = getattr(sys, '_MEIPASS',
-                                pathlib.Path(__file__).resolve().parent)
-        else:
-            bundledir = pathlib.Path(__file__).resolve().parent
+    bundledir = nowplaying.frozen.frozen_init(bundledir)
 
     if testmode:
         nowplaying.bootstrap.set_qt_names(appname='testsuite')
