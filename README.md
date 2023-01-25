@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 MD034 -->
 
 # __Now Playing__ ![Menu Bar Image](git-images/seratoPlaying.png?raw=true)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fwhatsnowplaying%2Fwhats-now-playing.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fwhatsnowplaying%2Fwhats-now-playing?ref=badge_shield)
 
 __Now Playing__ is a tool written in Python to retrieve live song data for
 streaming DJs using a variety of software, including:
@@ -30,3 +31,7 @@ More detailed information is available at:
 * [Documentation](https://whatsnowplaying.github.io/)
 * [Releases](https://github.com/whatsnowplaying/whats-now-playing/releases)
 * [Changes](CHANGELOG.md)
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fwhatsnowplaying%2Fwhats-now-playing.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fwhatsnowplaying%2Fwhats-now-playing?ref=badge_large)
