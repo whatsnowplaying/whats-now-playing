@@ -143,8 +143,9 @@ class TwitchSettings:
                                 widget.clientid_lineedit.text())
         config.cparser.setValue('twitchbot/secret',
                                 widget.secret_lineedit.text())
-        config.cparser.setValue('twitchbot/chattoken',
-                                widget.token_lineedit.text())
+        chattoken = widget.token_lineedit.text()
+        chattoken = chattoken.replace('oauth:', '')
+        config.cparser.setValue('twitchbot/chattoken', chattoken)
         #config.cparser.setValue('twitchbot/username',
         #                        widget.username_lineedit.text())
 
