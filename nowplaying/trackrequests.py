@@ -41,6 +41,8 @@ RESPIN_TEXT = 'RESPIN SCHEDULED'
 '''
 Auto-detected formats:
 
+artist - title
+artist - title for someone
 artist - "title"
 artist - "title" for someone
 "title" - artist
@@ -52,7 +54,7 @@ artist
 
 '''
 
-ARTIST_TITLE_RE = re.compile(r'^s*(.*)\s+[-]+\s+"(.*)"\s*(for .*)*$')
+ARTIST_TITLE_RE = re.compile(r'^s*(.*)\s+[-]+\s+"?(.*)"?\s*(for .*)*$')
 TITLE_ARTIST_RE = re.compile(r'^s*"(.*)"\s+[-by]+\s+"(.*)\s*(for .*)*$')
 TITLE_RE = re.compile(r'^s*"(.*)"\s*(for .*)*$')
 
