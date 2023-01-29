@@ -84,26 +84,26 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         # -> stat redemption request support
         #
 
-        while not self.stopevent.is_set() and not (
-                self.config.cparser.value('twitchbot/redemptions', type=bool)
-                and self.config.cparser.value('settings/requests', type=bool)):
+        while not self.stopevent.is_set() and (
+            not self.config.cparser.value('twitchbot/redemptions', type=bool)
+            or not self.config.cparser.value('settings/requests', type=bool)
+        ):
             await asyncio.sleep(1)
             self.config.get()
 
         if self.stopevent.is_set():
             return
 
-        loggedin = False
         self.chat = chat
+        loggedin = False
         while not self.stopevent.is_set() and not loggedin:
             await asyncio.sleep(1)
             if self.stopevent.is_set():
                 break
 
-            if loggedin:
-                if self.pubsub and not self.pubsub.is_connected():
-                    await self.stop()
-                    loggedin = False
+            if loggedin and self.pubsub and not self.pubsub.is_connected():
+                await self.stop()
+                loggedin = False
 
             if loggedin:
                 continue
