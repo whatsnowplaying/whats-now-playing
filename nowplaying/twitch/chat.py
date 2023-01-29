@@ -101,6 +101,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             return
 
         if token := self.config.cparser.value('twitchbot/chattoken'):
+            if 'oauth:' in token:
+                token = token.replace('oauth:', '')
+                self.config.cparser.setValue('twitchbot/chattoken', token)
             logging.debug('validating old token')
             valid = await validate_token(token)
             if valid.get('status') == 401:

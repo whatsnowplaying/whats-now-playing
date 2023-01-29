@@ -181,10 +181,10 @@ class TwitchSettings:
         token = self.widget.token_lineedit.text()
         if self.token == token:
             return
-        self.token = token
+        token = token.replace('oauth:', '')
         if token:
             if username := nowplaying.twitch.utils.qtsafe_validate_token(
                     token):
                 self.widget.chatbot_username_line.setText(username)
             else:
-                self.widget.chatbot_username_line.setText('')
+                self.widget.chatbot_username_line.setText('(Invalid token?)')
