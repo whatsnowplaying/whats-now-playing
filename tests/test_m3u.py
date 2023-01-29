@@ -50,6 +50,33 @@ def write_m3u8(m3u, filename):
         m3ufn.write(f'{filename}{os.linesep}')
 
 
+def write_extvdj_m3u8(m3u):
+    ''' create m3u file with VDJ '''
+    with open(m3u, 'w', encoding='utf-8') as m3ufn:
+        m3ufn.write(
+            '#EXTVDJ:<time>21:39</time><lastplaytime>1674884385</lastplaytime>'
+        )
+        m3ufn.write(
+            '<artist>j. period</artist><title>Buddy [Remix]</title><remix>feat. De La Soul'
+        )
+        m3ufn.write(
+            f', Jungle Brothers, Q-Tip & Queen Latifah</remix>{os.linesep}')
+        m3ufn.write(f'netsearch://dz715352532{os.linesep}')
+        m3ufn.write(
+            '#EXTVDJ:<time>21:41</time><lastplaytime>1674884510</lastplaytime>'
+        )
+        m3ufn.write(
+            f'<artist>Kid \'N Play</artist><title>Can You Dig That</title>{os.linesep}'
+        )
+        m3ufn.write(f'netsearch://dz85144450{os.linesep}')
+        m3ufn.write(
+            '#EXTVDJ:<time>21:45</time><lastplaytime>1674884707</lastplaytime>'
+        )
+        m3ufn.write('<artist>Lords Of The Underground</artist>')
+        m3ufn.write(f'<title>Chief Rocka</title>{os.linesep}')
+        m3ufn.write(f'netsearch://dz3130706{os.linesep}')
+
+
 @pytest.mark.asyncio
 async def test_nom3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
@@ -205,6 +232,25 @@ async def test_encodingm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert metadata['filename'] == testmp3
+    await plugin.stop()
+    await asyncio.sleep(5)
+
+
+@pytest.mark.asyncio
+async def test_vdjm3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config = m3u_bootstrap
+    mym3udir = config.cparser.value('m3u/directory')
+    plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
+    await plugin.start()
+    await asyncio.sleep(5)
+    m3ufile = os.path.join(mym3udir, 'test.m3u')
+    write_extvdj_m3u8(m3ufile)
+    await asyncio.sleep(1)
+    metadata = await plugin.getplayingtrack()
+    assert metadata.get('artist') == 'Lords Of The Underground'
+    assert metadata.get('title') == 'Chief Rocka'
+    assert not metadata.get('filename')
     await plugin.stop()
     await asyncio.sleep(5)
 

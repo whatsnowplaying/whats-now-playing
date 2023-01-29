@@ -2,6 +2,7 @@
 ''' A _very_ simple and incomplete parser for Serato Live session files '''
 
 import logging
+from lxml import etree
 import os
 
 from watchdog.observers import Observer
@@ -84,6 +85,9 @@ class Plugin(InputPlugin):
 
     def _verify_file(self, m3ufilename, filestring):
         found = None
+        if b'netsearch://' in filestring or b'http://' in filestring:
+            logging.debug('Remote resource; skipping filename decode')
+            return None
         for encoding in ['utf-8', 'ascii', 'cp1252', 'utf-16']:
             logging.debug(filestring)
             try:
@@ -108,20 +112,23 @@ class Plugin(InputPlugin):
         return found
 
     @staticmethod
-    def _read_track_default(filename):
-        content = None
-        with open(filename, 'rb') as m3ufh:
-            while True:
-                newline = m3ufh.readline()
-                if not newline:
-                    break
-                newline = newline.rstrip()
-                if not newline or newline[0] == '#':
-                    continue
-                content = newline
-        return content
+    def _parse_extvdj(inputline):
+        ''' read the #EXTVDJ comment extension '''
+        metadata = {}
+        vdjline = inputline.replace('#EXTVDJ:', '')
+        extvdj = etree.fromstring(f'<extvdj>{vdjline}</extvdj>')
+        try:
+            metadata['title'] = extvdj.find('title').text
+        except:  # pylint: disable=bare-except
+            pass
+        try:
+            metadata['artist'] = extvdj.find('artist').text
+        except:  # pylint: disable=bare-except
+            pass
+        return metadata
 
     def _read_full_file(self, filename):
+        ''' read the entire content of a file '''
         content = []
         with open(filename, 'rb') as m3ufh:
             while True:
@@ -150,22 +157,41 @@ class Plugin(InputPlugin):
             self._reset_meta()
             return
 
-        content = self._read_track_default(filename)
+        trackfile = None
+        trackextvdj = None
+        with open(filename, 'rb') as m3ufh:
+            while True:
+                newline = m3ufh.readline()
+                if not newline:
+                    break
+                newline = newline.rstrip()
+                try:
+                    if '#EXTVDJ' in newline.decode('utf-8'):
+                        trackextvdj = newline.decode('utf-8')
+                        continue
+                except:  # pylint: disable=bare-except
+                    pass
+                if not newline or newline[0] == '#':
+                    continue
+                trackfile = newline
 
         logging.debug('attempting to parse \'%s\' with various encodings',
-                      content)
+                      trackfile)
 
-        if not content:
+        audiofilename = None
+        if trackfile:
+            audiofilename = self._verify_file(filename, trackfile)
+
+        newmeta = {}
+        if audiofilename:
+            newmeta['filename'] = audiofilename
+        if trackextvdj:
+            newmeta.update(self._parse_extvdj(trackextvdj))
+
+        if not newmeta:
             self._reset_meta()
             return
 
-        audiofilename = self._verify_file(filename, content)
-
-        if not audiofilename:
-            self._reset_meta()
-            return
-
-        newmeta = {'filename': audiofilename}
         Plugin.metadata = newmeta
 
     async def start(self):
