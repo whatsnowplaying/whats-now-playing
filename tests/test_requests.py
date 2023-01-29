@@ -17,10 +17,9 @@ async def trackrequestbootstrap(bootstrap):  # pylint: disable=redefined-outer-n
     config = bootstrap
     stopevent = threading.Event()
     config.cparser.sync()
-    trackrequest = nowplaying.trackrequests.Requests(stopevent=stopevent,
-                                                     config=config,
-                                                     testmode=True)
-    yield trackrequest
+    yield nowplaying.trackrequests.Requests(stopevent=stopevent,
+                                            config=config,
+                                            testmode=True)
     stopevent.set()
     await asyncio.sleep(2)
 
