@@ -33,17 +33,18 @@ class SubprocessManager:
     def start_all_processes(self):
         ''' start our various threads '''
 
-        for key in self.processes:
+        for key, module in self.processes.items():
+            module['stopevent'].clear()
             func = getattr(self, f'start_{key}')
             func()
 
     def stop_all_processes(self):
         ''' stop all the subprocesses '''
 
-        for key in self.processes:  #pylint: disable=consider-using-dict-items
-            if self.processes[key].get('process'):
+        for key, module in self.processes.items():
+            if module.get('process'):
                 logging.debug('Early notifying %s', key)
-                self.processes[key]['stopevent'].set()
+                module['stopevent'].set()
 
         for key in self.processes:
             func = getattr(self, f'stop_{key}')
@@ -56,6 +57,7 @@ class SubprocessManager:
         ''' Start trackpoll '''
         if not self.processes[processname]['process']:
             logging.info('Starting %s', processname)
+            self.processes[processname]['stopevent'].clear()
             self.processes[processname]['process'] = multiprocessing.Process(
                 target=getattr(self.processes[processname]['module'], 'start'),
                 name=processname,
@@ -81,6 +83,7 @@ class SubprocessManager:
                 self.processes[processname]['process'].terminate()
             self.processes[processname]['process'].join(5)
             self.processes[processname]['process'].close()
+            del self.processes[processname]['process']
             self.processes[processname]['process'] = None
 
     def start_discordbot(self):

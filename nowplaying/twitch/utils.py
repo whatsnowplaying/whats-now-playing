@@ -145,3 +145,11 @@ class TwitchLogin:
                 self.config.save()
             except Exception:  #pylint: disable=broad-except
                 logging.error(traceback.format_exc())
+
+    async def cache_token_del(self):
+        ''' logout and delete the old tokens '''
+        await self.api_logout()
+        self.config.cparser.remove('twitchbot/oldusertoken')
+        self.config.cparser.remove('twitchbot/oldrefreshtoken')
+        self.config.cparser.sync()
+        logging.debug('Broken twitch config. Removing any cached API tokens.')

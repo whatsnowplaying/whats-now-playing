@@ -7,7 +7,7 @@ import traceback
 
 from twitchAPI.pubsub import PubSub
 from twitchAPI.helper import first
-from twitchAPI.types import AuthScope
+from twitchAPI.types import AuthScope, TwitchAuthorizationException
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -93,25 +93,56 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         if self.stopevent.is_set():
             return
 
+        loggedin = False
         self.chat = chat
-        try:
-            self.twitch = await twitchlogin.api_login()
-            if not self.twitch:
-                logging.debug("something happened getting twitch; aborting")
-                return
-            # starting up PubSub
-            self.pubsub = PubSub(self.twitch)
-            self.pubsub.start()
-        except Exception:  #pylint: disable=broad-except
-            logging.error(traceback.format_exc())
+        while not self.stopevent.is_set() and not loggedin:
+            await asyncio.sleep(1)
+            if self.stopevent.is_set():
+                break
 
-        user = await first(
-            self.twitch.get_users(
-                logins=[self.config.cparser.value('twitchbot/channel')]))
+            if loggedin:
+                if self.pubsub and not self.pubsub.is_connected():
+                    await self.stop()
+                    loggedin = False
 
-        # you can either start listening before or after you started pubsub.
-        self.uuid = await self.pubsub.listen_channel_points(
-            user.id, self.callback_redemption)
+            if loggedin:
+                continue
+
+            await asyncio.sleep(4)
+
+            try:
+                self.twitch = await twitchlogin.api_login()
+                if not self.twitch:
+                    logging.debug(
+                        "something happened getting twitch; aborting")
+
+                    continue
+                # starting up PubSub
+                self.pubsub = PubSub(self.twitch)
+                self.pubsub.start()
+            except Exception:  #pylint: disable=broad-except
+                logging.error(traceback.format_exc())
+                twitchlogin.cache_token_del()
+                continue
+
+            try:
+                user = await first(
+                    self.twitch.get_users(logins=[
+                        self.config.cparser.value('twitchbot/channel')
+                    ]))
+            except:  #pylint: disable=bare-except
+                logging.error(traceback.format_exc())
+                twitchlogin.cache_token_del()
+                continue
+
+            # you can either start listening before or after you started pubsub.
+            try:
+                self.uuid = await self.pubsub.listen_channel_points(
+                    user.id, self.callback_redemption)
+                loggedin = True
+            except TwitchAuthorizationException:
+                twitchlogin.cache_token_del()
+                loggedin = False
 
     async def stop(self):
         ''' stop the twitch redemption support '''

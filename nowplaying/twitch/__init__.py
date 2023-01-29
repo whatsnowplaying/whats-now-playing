@@ -6,6 +6,7 @@ import logging
 import threading
 import signal
 import sys
+import time
 import traceback
 
 import requests
@@ -133,19 +134,35 @@ class TwitchSettings:
         self.update_token_name()
 
     @staticmethod
-    def save(config, widget):
+    def save(config, widget, subprocesses):
         ''' update the twitch settings '''
+        oldchannel = config.cparser.value('twitchbot/channel')
+        newchannel = widget.channel_lineedit.text()
+        oldclientid = config.cparser.value('twitchbot/clientid')
+        newclientid = widget.clientid_lineedit.text()
+        oldsecret = config.cparser.value('twitchbot/secret')
+        newsecret = widget.secret_lineedit.text()
+        oldchattoken = config.cparser.value('twitchbot/chattoken')
+        newchattoken = widget.token_lineedit.text()
+        newchattoken = newchattoken.replace('oauth:', '')
+
         config.cparser.setValue('twitchbot/enabled',
                                 widget.enable_checkbox.isChecked())
-        config.cparser.setValue('twitchbot/channel',
-                                widget.channel_lineedit.text())
-        config.cparser.setValue('twitchbot/clientid',
-                                widget.clientid_lineedit.text())
-        config.cparser.setValue('twitchbot/secret',
-                                widget.secret_lineedit.text())
-        chattoken = widget.token_lineedit.text()
-        chattoken = chattoken.replace('oauth:', '')
-        config.cparser.setValue('twitchbot/chattoken', chattoken)
+        config.cparser.setValue('twitchbot/channel', newchannel)
+        config.cparser.setValue('twitchbot/clientid', newclientid)
+        config.cparser.setValue('twitchbot/secret', newsecret)
+
+        config.cparser.setValue('twitchbot/chattoken', newchattoken)
+
+        if (oldchannel != newchannel) or (oldclientid != newclientid) or (
+                oldsecret != newsecret) or (oldchattoken != newchattoken):
+            subprocesses.stop_twitchbot()
+            config.cparser.remove('twitchbot/oldusertoken')
+            config.cparser.remove('twitchbot/oldrefreshtoken')
+            config.cparser.sync()
+            time.sleep(5)
+            subprocesses.start_twitchbot()
+
         #config.cparser.setValue('twitchbot/username',
         #                        widget.username_lineedit.text())
 

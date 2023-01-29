@@ -411,7 +411,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     'twitchchat',
                     'requests',
             ]:
-                self.settingsclasses[key].save(self.config, self.widgets[key])
+                self.settingsclasses[key].save(self.config, self.widgets[key],
+                                               self.tray.subprocesses)
 
             self._upd_conf_textoutput()
             self._upd_conf_artistextras()

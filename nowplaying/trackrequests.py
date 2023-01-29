@@ -567,7 +567,7 @@ class RequestSettings:
             config.cparser.value('settings/requests', type=bool))
 
     @staticmethod
-    def save(config, widget):
+    def save(config, widget, subprocesses):  #pylint: disable=unused-argument
         ''' update the twitch settings '''
 
         def reset_commands(widget, config):

@@ -477,7 +477,7 @@ class TwitchChatSettings:
             config.cparser.value('twitchbot/announcedelay'))
 
     @staticmethod
-    def save(config, widget):
+    def save(config, widget, subprocesses):  #pylint: disable=unused-argument
         ''' update the twitch settings '''
 
         def reset_commands(widget, config):
