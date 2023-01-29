@@ -186,7 +186,7 @@ class Plugin(InputPlugin):
         if audiofilename:
             newmeta['filename'] = audiofilename
         if trackextvdj:
-            newmeta.update(self._parse_extvdj(trackextvdj))
+            newmeta |= self._parse_extvdj(trackextvdj)
 
         if not newmeta:
             self._reset_meta()
