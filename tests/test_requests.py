@@ -12,15 +12,14 @@ import nowplaying.trackrequests  # pylint: disable=import-error
 
 
 @pytest_asyncio.fixture
-async def trackrequestbootstrap(bootstrap):  # pylint: disable=redefined-outer-name
+async def trackrequestbootstrap(bootstrap):    # pylint: disable=redefined-outer-name
     ''' bootstrap a configuration '''
     config = bootstrap
     stopevent = threading.Event()
     config.cparser.sync()
-    trackrequest = nowplaying.trackrequests.Requests(stopevent=stopevent,
-                                                     config=config,
-                                                     testmode=True)
-    yield trackrequest
+    yield nowplaying.trackrequests.Requests(
+        stopevent=stopevent, config=config, testmode=True
+    )
     stopevent.set()
     await asyncio.sleep(2)
 
