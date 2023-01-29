@@ -2,8 +2,9 @@
 ''' A _very_ simple and incomplete parser for Serato Live session files '''
 
 import logging
-from lxml import etree
 import os
+
+from lxml import etree
 
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
@@ -116,7 +117,7 @@ class Plugin(InputPlugin):
         ''' read the #EXTVDJ comment extension '''
         metadata = {}
         vdjline = inputline.replace('#EXTVDJ:', '')
-        extvdj = etree.fromstring(f'<extvdj>{vdjline}</extvdj>')
+        extvdj = etree.fromstring(f'<extvdj>{vdjline}</extvdj>')  #pylint: disable=c-extension-no-member
         try:
             metadata['title'] = extvdj.find('title').text
         except:  # pylint: disable=bare-except
