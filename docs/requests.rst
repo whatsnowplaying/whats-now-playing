@@ -92,3 +92,6 @@ the software to re-pick:
 #. If it is still not desired, repeat this process as many times as necessary.
 
   NOTE: There is no notification to users that Respin has been selected.
+
+  NOTE: For Traktor and Virtual DJ, Roulette requests require local files.
+

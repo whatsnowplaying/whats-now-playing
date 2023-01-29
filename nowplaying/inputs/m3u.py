@@ -85,7 +85,7 @@ class Plugin(InputPlugin):
 
     def _verify_file(self, m3ufilename, filestring):
         found = None
-        if b'netsearch://' in filestring or b'http://' in filestring:
+        if b'netsearch://' in filestring or b'http://' in filestring or b'https://' in filestring:
             logging.debug('Remote resource; skipping filename decode')
             return None
         for encoding in ['utf-8', 'ascii', 'cp1252', 'utf-16']:
