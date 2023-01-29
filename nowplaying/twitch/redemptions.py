@@ -85,9 +85,9 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         #
 
         while not self.stopevent.is_set() and (
-            not self.config.cparser.value('twitchbot/redemptions', type=bool)
-            or not self.config.cparser.value('settings/requests', type=bool)
-        ):
+                not self.config.cparser.value('twitchbot/redemptions',
+                                              type=bool) or
+                not self.config.cparser.value('settings/requests', type=bool)):
             await asyncio.sleep(1)
             self.config.get()
 

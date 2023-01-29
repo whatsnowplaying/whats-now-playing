@@ -54,9 +54,9 @@ artist
 
 '''
 
-ARTIST_TITLE_RE = re.compile(r'^s*(.*)\s+[-]+\s+"?(.*)"?\s*(for .*)*$')
-TITLE_ARTIST_RE = re.compile(r'^s*"(.*)"\s+[-by]+\s+"(.*)\s*(for .*)*$')
-TITLE_RE = re.compile(r'^s*"(.*)"\s*(for .*)*$')
+ARTIST_TITLE_RE = re.compile(r'^\s*(.*?)\s+[-]+\s+"?(.*?)"?\s*(for .*)*$')
+TITLE_ARTIST_RE = re.compile(r'^\s*"(.*?)"\s+[-by]+\s+(.*?)\s*(for .*)*$')
+TITLE_RE = re.compile(r'^\s*"(.*?)"\s*(for .*)*$')
 
 
 class Requests:  #pylint: disable=too-many-instance-attributes
@@ -69,9 +69,10 @@ class Requests:  #pylint: disable=too-many-instance-attributes
 
     '''
 
-    def __init__(self, config=None, stopevent=None):
+    def __init__(self, config=None, stopevent=None, testmode=False):
         self.config = config
         self.stopevent = stopevent
+        self.testmode = testmode
         self.filelists = None
         self.databasefile = pathlib.Path(
             QStandardPaths.standardLocations(
@@ -331,7 +332,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes
         logging.debug('%s generic requested %s', user, user_input)
         artist = None
         title = None
-        if match := ARTIST_TITLE_RE.search(user_input):
+        if user_input[0] != '"' and (match :=
+                                     ARTIST_TITLE_RE.search(user_input)):
             artist = match.group(1)
             title = match.group(2)
         elif match := TITLE_ARTIST_RE.search(user_input):
@@ -349,6 +351,9 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             'displayname': setting.get('displayname'),
             'user_input': user_input,
         }
+        if self.testmode:
+            return data
+
         await self.add_to_db(data)
         return {
             'requester': user,

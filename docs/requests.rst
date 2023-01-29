@@ -35,6 +35,61 @@ chat line.  For example:
   modernmeerkatbot: Thanks @modernmeerkat! Your special request of "Parklife" by Blur has been noted!
 
 
+Supported Request Formats
+-------------------------
+
+The following formats are supported, either as a chat command or as the
+optional text in a Twitch Channel Point Redemption:
+
+* artist - title
+
+.. image:: images/artist_title_request.png
+   :target: images/artist_title_request.png
+   :alt: Artist + Title request example
+
+* artist - "title"
+
+.. image:: images/artist_title_withquotes_request.png
+   :target: images/artist_title_withquotes_request.png
+   :alt: Artist + Title with quotes request example
+
+* "title" - artist
+
+.. image:: images/title_artist_request.png
+   :target: images/title_artist_request.png
+   :alt: Title + artist request example
+
+* "title" by artist
+
+.. image:: images/title_by_artist_request.png
+   :target: images/title_by_artist_request.png
+   :alt: Title by artist request example
+
+* "title"
+
+.. image:: images/just_title_request.png
+   :target: images/just_title_request.png
+   :alt: Title with quotesrequest example
+
+
+Additionally, the following formats can be used to request a track for someone else:
+
+* artist - "title" for username
+* "title" by artist for username
+
+(Note that the username is not currently saved or processed in any way.)
+
+.. image:: images/title_by_artist_for_you_request.png
+   :target: images/title_by_artist_for_you_request.png
+   :alt: Title by artist request example
+
+Anything else will be considered an artist. For example:
+
+.. image:: images/generic_request.png
+   :target: images/generic_request.png
+   :alt: Generic request example
+
+
 Using Twitch Redemptions for Requests
 --------------------------------------
 
