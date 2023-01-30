@@ -1,13 +1,16 @@
 <!-- markdownlint-disable MD013 MD034 -->
 
-# __Now Playing__ ![Menu Bar Image](git-images/seratoPlaying.png?raw=true)
+# __What's Now Playing__ ![Menu Bar Image](git-images/seratoPlaying.png?raw=true)
 
-__Now Playing__ is a tool written in Python to retrieve live song data for
+__What's Now Playing__ is a tool written in Python to retrieve live song data for
 streaming DJs using a variety of software, including:
 
+* [MIXXX](https://mixxx.org/)
 * [Serato DJ](https://serato.com/)
+* [Traktor](https://www.native-instruments.com/en/catalog/traktor/)
 * [Virtual DJ](https://www.virtualdj.com/) and other software that writes m3u files
 * MPRIS2-compatible software like [VLC](https://www.videolan.org/vlc/) on Linux
+* ... and more!
 
 Output can be highly customized in a variety of ways:
 
@@ -18,12 +21,13 @@ Output can be highly customized in a variety of ways:
 * Artwork in a variety of styles
 * Artist biographies
 * Twitch Chat
+* Discord Bot
 
 [Compiled, standalone versions](https://github.com/whatsnowplaying/whats-now-playing/releases)
 are available for:
 
 * Windows 10+
-* macOS 10.14 (Mojave) and up
+* macOS 11 (Big Sur) and up
 
 More detailed information is available at:
 
