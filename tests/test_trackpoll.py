@@ -176,3 +176,24 @@ async def test_trackpoll_nofile(trackpollbootstrap, getroot):  # pylint: disable
     assert text[0].strip() == ''
     assert text[1].strip() == 'artist'
     assert text[2].strip() == 'title'
+
+
+@pytest.mark.asyncio
+async def test_trackpoll_badfile(trackpollbootstrap, getroot):  # pylint: disable=redefined-outer-name
+    ''' test trackpoll title has no file '''
+    config = trackpollbootstrap
+    txtoutput = config.cparser.value('textoutput/file')
+    template = getroot.joinpath('tests', 'templates', 'simplewfn.txt')
+    config.txttemplate = str(template)
+    config.cparser.setValue('textoutput/txttemplate', str(template))
+    config.cparser.setValue('control/paused', False)
+    config.cparser.sync()
+
+    metadata = {'title': 'title', 'artist': 'artist', 'filename': 'completejunk'}
+    await write_json_metadata(config=config, metadata=metadata)
+    with open(txtoutput, encoding='utf-8') as filein:
+        text = filein.readlines()
+
+    assert text[0].strip() == ''
+    assert text[1].strip() == 'artist'
+    assert text[2].strip() == 'title'

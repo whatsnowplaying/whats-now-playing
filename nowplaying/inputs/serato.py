@@ -723,6 +723,9 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
                                         testmode=self.testmode)
             #if self.serato:
             #    self.serato.process_sessions()
+        else:
+            logging.error('%s does not exist!', sess_dir)
+            return
         await self.serato.start()
 
     async def start(self, testmode=False):

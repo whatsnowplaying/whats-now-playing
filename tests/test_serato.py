@@ -189,6 +189,22 @@ async def test_serato25_win_newest(getseratoplugin):  # pylint: disable=redefine
 
 
 @pytest.mark.asyncio
+@pytest.mark.seratosettings(datadir='seratotidal-win', mixmode='newest')
+async def test_seratotidal_win_newest(getseratoplugin):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    plugin = getseratoplugin
+    metadata = await plugin.getplayingtrack()
+    expected = {
+        'album': 'City of Gold',
+        'artist': 'Doomroar',
+        'date': '2018',
+        'deck': 2,
+        'filename': '_85474382.tdl',
+        'title': 'Laser Evolution',
+    }
+    results(expected, metadata)
+
+@pytest.mark.asyncio
 @pytest.mark.seratosettings(datadir='serato-2.5-win')
 async def test_serato_nomixmode(getseratoplugin):  # pylint: disable=redefined-outer-name
     ''' test default mixmode '''
