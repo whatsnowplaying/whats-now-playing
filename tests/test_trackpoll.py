@@ -189,7 +189,11 @@ async def test_trackpoll_badfile(trackpollbootstrap, getroot):  # pylint: disabl
     config.cparser.setValue('control/paused', False)
     config.cparser.sync()
 
-    metadata = {'title': 'title', 'artist': 'artist', 'filename': 'completejunk'}
+    metadata = {
+        'title': 'title',
+        'artist': 'artist',
+        'filename': 'completejunk'
+    }
     await write_json_metadata(config=config, metadata=metadata)
     with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()

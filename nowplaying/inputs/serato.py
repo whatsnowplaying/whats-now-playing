@@ -8,6 +8,7 @@ import copy
 import datetime
 import logging
 import os
+import re
 import pathlib
 import random
 import struct
@@ -30,6 +31,8 @@ from nowplaying.exceptions import PluginVerifyError
 # when in local mode, these are shared variables between threads
 LASTPROCESSED = 0
 PARSEDSESSIONS = []
+
+TIDAL_FORMAT = re.compile('^_(.*).tdl')
 
 
 class SeratoCrateReader:
@@ -291,7 +294,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
 
         To use local Serato directory, construct with:
-            self.seratodir='/path/to/_Serato_/History/Sessions')
+            self.seratodir='/path/to/_Serato_'
 
     '''
 
@@ -313,7 +316,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         LASTPROCESSED = 0
         self.lastfetched = 0
         if seratodir:
-            self.seratodir = seratodir
+            self.seratodir = pathlib.Path(seratodir)
             self.watchdeck = None
             PARSEDSESSIONS = []
             self.mode = 'local'
@@ -350,9 +353,10 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             self.observer = Observer()
             logging.debug('Using fsevent observer')
 
-        self.observer.schedule(self.event_handler,
-                               self.seratodir,
-                               recursive=False)
+        self.observer.schedule(
+            self.event_handler,
+            str(self.seratodir.joinpath("History", "Sessions")),
+            recursive=False)
         self.observer.start()
 
         # process what is already there
@@ -383,9 +387,9 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         # Just nuke the OS X metadata file rather than
         # work around it
 
-        seratopath = pathlib.Path(self.seratodir)
+        sessionpath = self.seratodir.joinpath("History", "Sessions")
 
-        sessionlist = sorted(seratopath.glob('*.session'),
+        sessionlist = sorted(sessionpath.glob('*.session'),
                              key=lambda path: int(path.stem))
         #sessionlist = sorted(seratopath.glob('*.session'),
         #                     key=lambda path: path.stat().st_mtime)
@@ -596,6 +600,18 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
         return
 
+    def _get_tidal_cover(self, filename):
+        ''' try to get the cover from tidal '''
+        if match := TIDAL_FORMAT.search(str(filename)):
+            imgfile = f'{match.group(1)}.jpg'
+            tidalimgpath = self.seratodir.joinpath('Metadata', 'Tidal',
+                                                   imgfile)
+            logging.debug(tidalimgpath)
+            if tidalimgpath.exists():
+                with open(tidalimgpath, 'rb') as fhin:
+                    return fhin.read()
+        return None
+
     def getplayingtrack(self, deckskiplist=None):
         ''' generate a dict of data '''
 
@@ -607,6 +623,12 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         if not self.playingadat:
             return {}
 
+        if self.playingadat.get('filename') and '.tdl' in self.playingadat.get(
+                'filename'):
+            if coverimage := self._get_tidal_cover(
+                    self.playingadat['filename']):
+                self.playingadat['coverimageraw'] = coverimage
+
         return {
             key: self.playingadat[key]
             for key in [
@@ -616,6 +638,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                 'bpm',
                 'comments',
                 'composer',
+                'coverimageraw',
                 'date',
                 'deck',
                 'filename',
@@ -712,12 +735,11 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         self.serato = None
 
         # paths for session history
-        sera_dir = self.libpath
-        hist_dir = os.path.abspath(os.path.join(sera_dir, "History"))
+        hist_dir = os.path.abspath(os.path.join(self.libpath, "History"))
         sess_dir = os.path.abspath(os.path.join(hist_dir, "Sessions"))
         if os.path.isdir(sess_dir):
             logging.debug('new session path = %s', sess_dir)
-            self.serato = SeratoHandler(seratodir=sess_dir,
+            self.serato = SeratoHandler(seratodir=self.libpath,
                                         mixmode=self.mixmode,
                                         pollingobserver=usepoll,
                                         testmode=self.testmode)

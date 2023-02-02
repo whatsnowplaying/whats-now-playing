@@ -167,7 +167,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                     self.config, metadata['filename'])
                 filepath = pathlib.Path(metadata['filename'])
                 if not filepath.exists():
-                    logging.debug('cannot find %s; removing from metadata', metadata['filename'])
+                    logging.debug('cannot find %s; removing from metadata',
+                                  metadata['filename'])
                     del metadata['filename']
         return metadata
 

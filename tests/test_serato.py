@@ -194,6 +194,8 @@ async def test_seratotidal_win_newest(getseratoplugin):  # pylint: disable=redef
     ''' automated integration test '''
     plugin = getseratoplugin
     metadata = await plugin.getplayingtrack()
+    assert metadata['coverimageraw'] is not None
+    del metadata['coverimageraw']
     expected = {
         'album': 'City of Gold',
         'artist': 'Doomroar',
@@ -203,6 +205,7 @@ async def test_seratotidal_win_newest(getseratoplugin):  # pylint: disable=redef
         'title': 'Laser Evolution',
     }
     results(expected, metadata)
+
 
 @pytest.mark.asyncio
 @pytest.mark.seratosettings(datadir='serato-2.5-win')
