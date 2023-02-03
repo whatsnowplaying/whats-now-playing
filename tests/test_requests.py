@@ -63,7 +63,7 @@ async def test_trackrequest_artisttitlenoquotecomplex(trackrequestbootstrap):  #
 
 @pytest.mark.asyncio
 async def test_trackrequest_artisttitlequotes(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
-    ''' artist - title '''
+    ''' artist - "title" '''
 
     trackrequest = trackrequestbootstrap
 
@@ -75,7 +75,7 @@ async def test_trackrequest_artisttitlequotes(trackrequestbootstrap):  # pylint:
 
 @pytest.mark.asyncio
 async def test_trackrequest_artisttitlequotesspaces(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
-    ''' artist - title '''
+    ''' artist - "title" '''
 
     trackrequest = trackrequestbootstrap
 
@@ -87,7 +87,7 @@ async def test_trackrequest_artisttitlequotesspaces(trackrequestbootstrap):  # p
 
 @pytest.mark.asyncio
 async def test_trackrequest_titlequotesartist(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
-    ''' artist - title '''
+    ''' "title" - artist '''
 
     trackrequest = trackrequestbootstrap
 
@@ -99,7 +99,7 @@ async def test_trackrequest_titlequotesartist(trackrequestbootstrap):  # pylint:
 
 @pytest.mark.asyncio
 async def test_trackrequest_titlequotesbyartist(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
-    ''' artist - title '''
+    ''' title by artist '''
 
     trackrequest = trackrequestbootstrap
 
@@ -111,7 +111,7 @@ async def test_trackrequest_titlequotesbyartist(trackrequestbootstrap):  # pylin
 
 @pytest.mark.asyncio
 async def test_trackrequest_quotedweirdal(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
-    ''' artist - title '''
+    ''' weird al is weird '''
 
     trackrequest = trackrequestbootstrap
 
@@ -124,7 +124,7 @@ async def test_trackrequest_quotedweirdal(trackrequestbootstrap):  # pylint: dis
 
 @pytest.mark.asyncio
 async def test_trackrequest_xtcfornigel(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
-    ''' artist - title '''
+    ''' for part of the title '''
 
     trackrequest = trackrequestbootstrap
 
@@ -136,7 +136,7 @@ async def test_trackrequest_xtcfornigel(trackrequestbootstrap):  # pylint: disab
 
 @pytest.mark.asyncio
 async def test_trackrequest_xtcforatnigel(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
-    ''' artist - title '''
+    ''' for @user test '''
 
     trackrequest = trackrequestbootstrap
 
@@ -148,7 +148,7 @@ async def test_trackrequest_xtcforatnigel(trackrequestbootstrap):  # pylint: dis
 
 @pytest.mark.asyncio
 async def test_trackrequest_nospace(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
-    ''' artist - title '''
+    ''' artist-title '''
 
     trackrequest = trackrequestbootstrap
 
