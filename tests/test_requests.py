@@ -107,3 +107,52 @@ async def test_trackrequest_titlequotesbyartist(trackrequestbootstrap):  # pylin
                                                  'user', '"title" by artist')
     assert data['artist'] == 'artist'
     assert data['title'] == 'title'
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_quotedweirdal(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    ''' artist - title '''
+
+    trackrequest = trackrequestbootstrap
+
+    data = await trackrequest.user_track_request(
+        {'displayname': 'test'}, 'user',
+        '"Weird Al" Yankovic - This Is The Life.')
+    assert data['artist'] == '"Weird Al" Yankovic'
+    assert data['title'] == 'This Is The Life.'
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_xtcfornigel(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    ''' artist - title '''
+
+    trackrequest = trackrequestbootstrap
+
+    data = await trackrequest.user_track_request(
+        {'displayname': 'test'}, 'user', 'xtc - making plans for nigel')
+    assert data['artist'] == 'xtc'
+    assert data['title'] == 'making plans for nigel'
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_xtcforatnigel(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    ''' artist - title '''
+
+    trackrequest = trackrequestbootstrap
+
+    data = await trackrequest.user_track_request(
+        {'displayname': 'test'}, 'user', 'xtc - making plans for @nigel')
+    assert data['artist'] == 'xtc'
+    assert data['title'] == 'making plans'
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_nospace(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    ''' artist - title '''
+
+    trackrequest = trackrequestbootstrap
+
+    data = await trackrequest.user_track_request({'displayname': 'test'},
+                                                 'user', 'artist-title')
+    assert data['artist'] == 'artist'
+    assert data['title'] == 'title'

@@ -54,9 +54,10 @@ artist
 
 '''
 
-ARTIST_TITLE_RE = re.compile(r'^\s*(.*?)\s+[-]+\s+"?(.*?)"?\s*(for .*)*$')
-TITLE_ARTIST_RE = re.compile(r'^\s*"(.*?)"\s+[-by]+\s+(.*?)\s*(for .*)*$')
-TITLE_RE = re.compile(r'^\s*"(.*?)"\s*(for .*)*$')
+WEIRDAL_RE = re.compile(r'"weird al"', re.IGNORECASE)
+ARTIST_TITLE_RE = re.compile(r'^\s*(.*?)\s+[-]+\s+"?(.*?)"?\s*(for @.*)*$')
+TITLE_ARTIST_RE = re.compile(r'^\s*"(.*?)"\s+[-by]+\s+(.*?)\s*(for @.*)*$')
+TITLE_RE = re.compile(r'^\s*"(.*?)"\s*(for @.*)*$')
 
 
 class Requests:  #pylint: disable=too-many-instance-attributes
@@ -332,6 +333,12 @@ class Requests:  #pylint: disable=too-many-instance-attributes
         logging.debug('%s generic requested %s', user, user_input)
         artist = None
         title = None
+        weirdal = False
+
+        if user_input.count('-') == 1:
+            user_input = user_input.replace('-', ' - ')
+        if user_input := WEIRDAL_RE.sub('Weird Al', user_input):
+            weirdal = True
         if user_input[0] != '"' and (match :=
                                      ARTIST_TITLE_RE.search(user_input)):
             artist = match.group(1)
@@ -343,6 +350,9 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             title = match.group(1)
         else:
             artist = user_input
+
+        if weirdal:
+            artist = artist.replace('Weird Al', '"Weird Al"')
         data = {
             'username': user,
             'artist': artist,

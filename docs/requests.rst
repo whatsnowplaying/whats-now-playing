@@ -74,14 +74,10 @@ optional text in a Twitch Channel Point Redemption:
 
 Additionally, the following formats can be used to request a track for someone else:
 
-* artist - "title" for username
-* "title" by artist for username
+* artist - "title" for @username
+* "title" by artist for @username
 
 (Note that the username is not currently saved or processed in any way.)
-
-.. image:: images/title_by_artist_for_you_request.png
-   :target: images/title_by_artist_for_you_request.png
-   :alt: Title by artist request example
 
 Anything else will be considered an artist. For example:
 
