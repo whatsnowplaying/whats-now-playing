@@ -19,6 +19,19 @@ sys.path.insert(0, os.path.abspath('..'))
 
 import nowplaying.version
 
+
+def get_last_tag():
+    cfg = nowplaying.version.get_config()
+    root = os.path.realpath(__file__)
+    # versionfile_source is the relative path from the top of the source
+    # tree (where the .git directory might live) to this file. Invert
+    # this to find the root from __file__.
+    for _ in cfg.versionfile_source.split('/'):
+        root = os.path.dirname(root)
+    pieces = nowplaying.version.git_pieces_from_vcs(cfg.tag_prefix, root, cfg.verbose)
+    return pieces["closest-tag"]
+
+
 # -- Project information -----------------------------------------------------
 
 project = 'What\'s Now Playing'
@@ -27,6 +40,8 @@ author = 'Allen Wittenauer'
 
 # The full version, including alpha/beta/rc tags
 release = nowplaying.version.get_versions()['version']
+# last released version
+lasttag = get_last_tag()
 
 # -- General configuration ---------------------------------------------------
 
@@ -36,6 +51,7 @@ release = nowplaying.version.get_versions()['version']
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.githubpages',
+    'sphinx.ext.extlinks',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -57,3 +73,20 @@ html_theme = 'alabaster'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+
+#make some variables available to RST
+#variables_to_export = [
+#    "release",
+#    "lasttag",
+#]
+
+#frozen_locals = dict(locals())
+#rst_prolog = '\n'.join(map(lambda x: f".. |{x}| replace:: {frozen_locals[x]}", variables_to_export))
+#del frozen_locals
+
+basedownload = 'https://github.com/whatsnowplaying/whats-now-playing/releases/download'
+
+extlinks = {
+    'lasttagdownloadlink': (f'{basedownload}/{lasttag}/NowPlaying-{lasttag}-%s.zip', '%s')
+}

@@ -41,7 +41,7 @@ Installation
 
 Here are the steps to get a basic installation working:
 
-#. Download and unpack the binaries from `releases page <https://github.com/whatsnowplaying/whats-now-playing/releases>`_.
+#. Download :lasttagdownloadlink:`macos11` or :lasttagdownloadlink:`windows`
 #. Launch the application
 #. The software will attempt to pre-configure itself for whatever software you have installed.  Note that in the case of Traktor, this work will including building an index for file lookup. For large Traktor installations, that may take a while.
 #. It should bring up the `Settings <settings.html>`_

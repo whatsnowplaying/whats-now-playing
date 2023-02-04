@@ -6,10 +6,19 @@ Be sure to check the
 `release notes <https://github.com/whatsnowplaying/whats-now-playing/releases>`_ for any
 breaking changes and news.
 
+From 3.x.x
+----------
+
+#. Just install and the software will make the necessary changes.
+
+If you need to downgrade for any reason, you must downgrade to 3.1.2 or higher after
+upgrading to a 4.x.x release.
+
 From 2.x.x
 ----------
 
-#. Install as normal. Upon launch, most settings will get copied over to their
+#. Install the last version of 3.x.x from the releases page.
+#. Upon launch, most settings will get copied over to their
    new homes in the new Settings screen.
 #. Many templates have been added and updated. New templates will be copied into
    the templates directory. For updated templates, there are two outcomes:
