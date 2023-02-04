@@ -30,13 +30,11 @@ def get_last_tag():
     for _ in cfg.versionfile_source.split('/'):
         root = os.path.dirname(root)
         try:
-            print(f'trying {root}')
             pieces = nowplaying.version.git_pieces_from_vcs(cfg.tag_prefix, root, cfg.verbose)
             if pieces.get('closest-tag'):
-                print('nope')
                 break
         except Exception as error:
-            print(error)
+            print(f'Tried {root} and failed: {error}')
     if not pieces:
         raise ValueError
     return pieces["closest-tag"]
