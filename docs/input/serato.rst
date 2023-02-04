@@ -1,6 +1,8 @@
 Serato
 ======
 
+    NOTE: Serato DJ Pro and Serato DJ Lite are both supported.
+
 Serato is a commercial software package that runs on Mac OS X and Windows.  **What's Now Playing**
 has two modes with which it may use Serato as an input: Local and Remote.
 
