@@ -24,6 +24,7 @@ jobs:
           apt-get update
           apt-get install -y git python3-pip
           git clone --depth 1 "https://token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" .
+          chown -R $(id -u):$(id -g) "${PWD}"
         shell: bash
 
       # - name: check

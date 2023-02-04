@@ -28,4 +28,6 @@ if [[ -n "${GITHUB_TOKEN}" ]]; then
   git commit -am "${msg}"
   git push deploy gh-pages --force
   popd || exit 1
+else
+  echo "No token defined; not pushing"
 fi

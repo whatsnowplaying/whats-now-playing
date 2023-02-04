@@ -23,12 +23,22 @@ import nowplaying.version
 def get_last_tag():
     cfg = nowplaying.version.get_config()
     root = os.path.realpath(__file__)
+    pieces = {}
     # versionfile_source is the relative path from the top of the source
     # tree (where the .git directory might live) to this file. Invert
     # this to find the root from __file__.
     for _ in cfg.versionfile_source.split('/'):
         root = os.path.dirname(root)
-    pieces = nowplaying.version.git_pieces_from_vcs(cfg.tag_prefix, root, cfg.verbose)
+        try:
+            print(f'trying {root}')
+            pieces = nowplaying.version.git_pieces_from_vcs(cfg.tag_prefix, root, cfg.verbose)
+            if pieces.get('closest-tag'):
+                print('nope')
+                break
+        except Exception as error:
+            print(error)
+    if not pieces:
+        raise ValueError
     return pieces["closest-tag"]
 
 

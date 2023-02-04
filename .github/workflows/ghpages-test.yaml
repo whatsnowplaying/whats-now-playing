@@ -2,11 +2,10 @@
 #
 # yamllint disable rule:line-length
 ---
-name: website
+name: website-test
 
 # execute this workflow automatically when a we push to master
-on: [push]
-
+on: [push]  # yamllint disable-line rule:truthy
 
 jobs:
 
@@ -15,14 +14,20 @@ jobs:
     container: debian:stable-slim
 
     steps:
-
       - name: Prereqs
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           apt-get update
           apt-get install -y git python3-pip
-          git clone --depth 1 "https://token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" .
+        shell: bash
+
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: test
+        run: |
+          chown -R $(id -u):$(id -g) "${PWD}"
         shell: bash
 
       # - name: check
@@ -30,7 +35,5 @@ jobs:
       #     pip3 install .
 
       - name: Execute script to build our documentation and update pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: "./build-website.sh test"
+        run: "./build-website.sh"
         shell: bash
