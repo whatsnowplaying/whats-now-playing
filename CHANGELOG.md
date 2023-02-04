@@ -15,9 +15,6 @@
 * New UI and Twitch support for requests, including
   randomized requests tied to crates/playlists.
 * New Discord support to update a bot's status
-* New two computer setup that no longer requires
-  using file sharing tricks using the new Beam executable
-  and Beam input source.
 * Upgrades from v1 and v2 are no longer supported.  You will need
   to upgrade to v3 first if you wish to save your settings.
 * The plain text file output now supports append!
