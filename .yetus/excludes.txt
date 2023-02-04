@@ -1,3 +1,4 @@
+nowplaying/beam/
 nowplaying/resources/
 nowplaying/version.py
 nowplaying/vendor/
