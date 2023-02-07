@@ -19,7 +19,7 @@ import nowplaying.utils
 #VDJ Extension lines that matter
 EXTVDJ_TITLE_RE = re.compile(r'.*<title>(.+)</title>.*')
 EXTVDJ_ARTIST_RE = re.compile(r'.*<artist>(.+)</artist>.*')
-EXTVDJ_REMIX_RE = re.compile(r'.*</remix>(.+)</remix>.*')
+EXTVDJ_REMIX_RE = re.compile(r'.*<remix>(.+)</remix>.*')
 
 # https://datatracker.ietf.org/doc/html/rfc8216
 
