@@ -8,6 +8,7 @@ import re
 import sqlite3
 
 import aiosqlite
+import normality
 
 from PySide6.QtCore import Slot, QFile, QFileSystemWatcher, QStandardPaths  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtWidgets import QCheckBox, QHeaderView, QTableWidgetItem  # pylint: disable=no-name-in-module
@@ -19,7 +20,7 @@ from nowplaying.utils import TRANSPARENT_PNG_BIN
 
 USERREQUEST_TEXT = [
     'artist', 'title', 'displayname', 'type', 'playlist', 'username',
-    'filename', 'user_input'
+    'filename', 'user_input', 'normalizedartist', 'normalizedtitle'
 ]
 
 USERREQUEST_BLOB = ['userimage']
@@ -70,7 +71,11 @@ class Requests:  #pylint: disable=too-many-instance-attributes
 
     '''
 
-    def __init__(self, config=None, stopevent=None, testmode=False):
+    def __init__(self,
+                 config=None,
+                 stopevent=None,
+                 testmode=False,
+                 upgrade=False):
         self.config = config
         self.stopevent = stopevent
         self.testmode = testmode
@@ -81,7 +86,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes
                     'requests', 'request.db')
         self.widgets = None
         self.watcher = None
-        if not self.databasefile.exists():
+        if not self.databasefile.exists() or upgrade:
             self.setupdb()
 
     def setupdb(self):
@@ -95,7 +100,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             cursor = connection.cursor()
             try:
                 sql = ('CREATE TABLE IF NOT EXISTS userrequest (' +
-                       ' TEXT, '.join(USERREQUEST_TEXT) + ' TEXT, ' +
+                       ' TEXT COLLATE NOCASE, '.join(USERREQUEST_TEXT) +
+                       ' TEXT COLLATE NOCASE, ' +
                        ' BLOB, '.join(USERREQUEST_BLOB) + ' BLOB, '
                        ' reqid INTEGER PRIMARY KEY AUTOINCREMENT,'
                        ' timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)')
@@ -103,6 +109,11 @@ class Requests:  #pylint: disable=too-many-instance-attributes
                 connection.commit()
             except sqlite3.OperationalError as error:
                 logging.error(error)
+
+    @staticmethod
+    def normalize(crazystring):
+        ''' user input needs to be normalized for best case matches '''
+        normality.normalize(crazystring).replace(' ', '')
 
     async def add_to_db(self, data):
         ''' add an entry to the db '''
@@ -128,8 +139,14 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             datatuple = tuple(list(data.values()))
 
         try:
-            logging.debug('Request %s / %s has made it to the database',
-                          data.get('artist'), data.get('title'))
+            if data.get('artist'):
+                data['normalizedartist'] = normalize(data['artist'])
+            if data.get('title'):
+                data['normalizedtitle'] = normalize(data['title'])
+
+            logging.debug(
+                'Request artist: >%s< / title: >%s< has made it to the requestdb',
+                data.get('artist'), data.get('title'))
             async with aiosqlite.connect(self.databasefile) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
@@ -220,7 +237,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             'requestdisplayname': setting.get('displayname')
         }
 
-    async def _get_request_lookup(self, sql, datatuple):
+    async def _get_and_del_request_lookup(self, sql, datatuple):
         ''' run sql for request '''
         if not self.databasefile.exists():
             logging.error('%s does not exist, refusing to lookup.',
@@ -254,15 +271,25 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             logging.debug('trying filename %s', metadata['filename'])
             sql = 'SELECT * FROM userrequest WHERE filename=?'
             datatuple = (metadata['filename'], )
-            newdata = await self._get_request_lookup(sql, datatuple)
+            newdata = await self._get_and_del_request_lookup(sql, datatuple)
 
         if not newdata and metadata.get('artist') and metadata.get('title'):
-            logging.debug('trying artist %s / title %s', metadata['artist'],
-                          metadata['title'])
-            sql = 'SELECT * FROM userrequest WHERE artist=? AND title=? COLLATE NOCASE'
+            logging.debug('trying artist >%s< / title >%s<',
+                          metadata['artist'], metadata['title'])
+            sql = 'SELECT * FROM userrequest WHERE artist=? AND title=?'
             datatuple = metadata['artist'], metadata['title']
             logging.debug('request db lookup: %s', datatuple)
-            newdata = await self._get_request_lookup(sql, datatuple)
+            newdata = await self._get_and_del_request_lookup(sql, datatuple)
+
+        if not newdata and metadata.get('artist') and metadata.get('title'):
+            artist = normalize(metdata['artist'])
+            title = normalize(metdata['title'])
+            logging.debug('trying normalized artist >%s< / title >%s<', artist,
+                          title)
+            sql = 'SELECT * FROM userrequest WHERE normalizedartist=? AND normalizedtitle=?'
+            datatuple = artist, title
+            logging.debug('request db lookup: %s', datatuple)
+            newdata = await self._get_and_del_request_lookup(sql, datatuple)
 
         if not newdata:
             logging.debug('not a request')

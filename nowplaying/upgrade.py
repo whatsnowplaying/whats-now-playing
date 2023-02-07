@@ -14,6 +14,7 @@ import pkg_resources
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
 
+import nowplaying.trackrequests
 import nowplaying.twitch.chat
 import nowplaying.version
 
@@ -96,6 +97,10 @@ class UpgradeConfig:
         if oldversion == thisversion:
             logging.debug('equivalent config file versions')
             return
+
+        # only save requests if the versions are the same
+        # otherwise nuke it
+        nowplaying.trackrequests.Requests(upgrade=True)
 
         if oldversion > thisversion:
             logging.warning('Running an older version with a newer config...')
