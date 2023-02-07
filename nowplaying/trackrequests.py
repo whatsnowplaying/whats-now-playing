@@ -128,6 +128,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             datatuple = tuple(list(data.values()))
 
         try:
+            logging.debug('Request %s / %s has made it to the database',
+                          data.get('artist'), data.get('title'))
             async with aiosqlite.connect(self.databasefile) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
@@ -259,7 +261,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes
                           metadata['title'])
             sql = 'SELECT * FROM userrequest WHERE artist=? AND title=? COLLATE NOCASE'
             datatuple = metadata['artist'], metadata['title']
-
+            logging.debug('request db lookup: %s', datatuple)
             newdata = await self._get_request_lookup(sql, datatuple)
 
         if not newdata:
