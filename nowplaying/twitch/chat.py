@@ -2,11 +2,13 @@
 ''' handle twitch chat '''
 
 import asyncio
+import datetime
 import fnmatch
 import logging
 import os
 import pathlib
 import sys
+import time
 import traceback
 
 import jinja2
@@ -54,6 +56,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         self.jinja2 = self.setup_jinja2(self.templatedir)
         self.twitch = None
         self.chat = None
+        self.starttime = datetime.datetime.utcnow()
 
     @staticmethod
     async def _try_custom_token(token):
@@ -162,9 +165,11 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
     async def on_twitchchat_whatsnowplayingversion(self, cmd):
         ''' handle !whatsnowplayingversion '''
         inputsource = self.config.cparser.value('settings/input')
+        delta = datetime.datetime.utcnow() - self.starttime
         version = nowplaying.version.get_versions()['version']
-        content = (f'whatsnowplaying v{version} by @modernmeerkat. '
-                   f'Using {inputsource} on {sys.platform}.')
+        content = (
+            f'whatsnowplaying v{version} by @modernmeerkat. '
+            f'Using {inputsource} on {sys.platform}. Running for {delta}.')
         try:
             await cmd.reply(content)
         except:  #pylint: disable=bare-except
