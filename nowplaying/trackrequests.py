@@ -113,7 +113,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes
     @staticmethod
     def normalize(crazystring):
         ''' user input needs to be normalized for best case matches '''
-        normality.normalize(crazystring).replace(' ', '')
+        return normality.normalize(crazystring).replace(' ', '')
 
     async def add_to_db(self, data):
         ''' add an entry to the db '''
@@ -121,6 +121,11 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             logging.error('%s does not exist, refusing to add.',
                           self.databasefile)
             return
+
+        if data.get('artist'):
+            data['normalizedartist'] = self.normalize(data['artist'])
+        if data.get('title'):
+            data['normalizedtitle'] = self.normalize(data['title'])
 
         if data.get('reqid'):
             reqid = data['reqid']
@@ -139,11 +144,6 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             datatuple = tuple(list(data.values()))
 
         try:
-            if data.get('artist'):
-                data['normalizedartist'] = normalize(data['artist'])
-            if data.get('title'):
-                data['normalizedtitle'] = normalize(data['title'])
-
             logging.debug(
                 'Request artist: >%s< / title: >%s< has made it to the requestdb',
                 data.get('artist'), data.get('title'))
@@ -282,8 +282,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             newdata = await self._get_and_del_request_lookup(sql, datatuple)
 
         if not newdata and metadata.get('artist') and metadata.get('title'):
-            artist = normalize(metdata['artist'])
-            title = normalize(metdata['title'])
+            artist = self.normalize(metadata['artist'])
+            title = self.normalize(metadata['title'])
             logging.debug('trying normalized artist >%s< / title >%s<', artist,
                           title)
             sql = 'SELECT * FROM userrequest WHERE normalizedartist=? AND normalizedtitle=?'
