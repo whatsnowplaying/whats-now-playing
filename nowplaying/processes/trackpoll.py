@@ -260,7 +260,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 metadata[key] = ''
         return metadata
 
-    async def gettrack(self):  # pylint: disable=too-many-branches
+    async def gettrack(self):  # pylint: disable=too-many-branches,
         ''' get currently playing track, returns None if not new or not found '''
 
         # check paused state
@@ -272,25 +272,20 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         try:
             nextmeta = await self.input.getplayingtrack()
-        except:
+        except:  #pylint: disable=bare-except
             logging.debug(traceback.format_exc())
             await asyncio.sleep(5)
             return
 
-        if self._ismetaempty(nextmeta):
-            return
-
-        if self._ismetasame(nextmeta):
-            return
-
-        if self._isignored(nextmeta):
+        if self._ismetaempty(nextmeta) or self._ismetasame(
+                nextmeta) or self._isignored(nextmeta):
             return
 
         # fill in the blanks and make it live
         oldmeta = self.currentmeta
         try:
             self.currentmeta = await self._fillinmetadata(nextmeta)
-        except:
+        except:  #pylint: disable=bare-except
             logging.debug(traceback.format_exc())
             await asyncio.sleep(5)
             return
