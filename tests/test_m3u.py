@@ -77,6 +77,17 @@ def write_extvdj_m3u8(m3u):
         m3ufn.write(f'netsearch://dz3130706{os.linesep}')
 
 
+def write_extvdj_ampersand(m3u):
+    ''' create m3u file with VDJ '''
+    with open(m3u, 'w', encoding='utf-8') as m3ufn:
+        m3ufn.write(
+            '#EXTVDJ:<time>08:43</time><lastplaytime>1675701805</lastplaytime>'
+        )
+        m3ufn.write('<artist>Nick Cave & The Bad Seeds</artist>')
+        m3ufn.write(f'<title>Hollywood</title>{os.linesep}')
+        m3ufn.write(f'netsearch://dz1873796677{os.linesep}')
+
+
 @pytest.mark.asyncio
 async def test_nom3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
@@ -237,7 +248,7 @@ async def test_encodingm3u(m3u_bootstrap, getroot):  # pylint: disable=redefined
 
 
 @pytest.mark.asyncio
-async def test_vdjm3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+async def test_vdjm3u_normal(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     config = m3u_bootstrap
     mym3udir = config.cparser.value('m3u/directory')
@@ -250,6 +261,25 @@ async def test_vdjm3u(m3u_bootstrap):  # pylint: disable=redefined-outer-name
     metadata = await plugin.getplayingtrack()
     assert metadata.get('artist') == 'Lords Of The Underground'
     assert metadata.get('title') == 'Chief Rocka'
+    assert not metadata.get('filename')
+    await plugin.stop()
+    await asyncio.sleep(5)
+
+
+@pytest.mark.asyncio
+async def test_vdjm3u_ampersand(m3u_bootstrap):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config = m3u_bootstrap
+    mym3udir = config.cparser.value('m3u/directory')
+    plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=mym3udir)
+    await plugin.start()
+    await asyncio.sleep(5)
+    m3ufile = os.path.join(mym3udir, 'test.m3u')
+    write_extvdj_ampersand(m3ufile)
+    await asyncio.sleep(1)
+    metadata = await plugin.getplayingtrack()
+    assert metadata.get('artist') == 'Nick Cave & The Bad Seeds'
+    assert metadata.get('title') == 'Hollywood'
     assert not metadata.get('filename')
     await plugin.stop()
     await asyncio.sleep(5)

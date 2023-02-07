@@ -30,7 +30,8 @@ def get_last_tag():
     for _ in cfg.versionfile_source.split('/'):
         root = os.path.dirname(root)
         try:
-            pieces = nowplaying.version.git_pieces_from_vcs(cfg.tag_prefix, root, cfg.verbose)
+            pieces = nowplaying.version.git_pieces_from_vcs(
+                cfg.tag_prefix, root, cfg.verbose)
             if pieces.get('closest-tag'):
                 break
         except Exception as error:
@@ -82,7 +83,6 @@ html_theme = 'alabaster'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-
 #make some variables available to RST
 #variables_to_export = [
 #    "release",
@@ -96,5 +96,6 @@ html_static_path = ['_static']
 basedownload = 'https://github.com/whatsnowplaying/whats-now-playing/releases/download'
 
 extlinks = {
-    'lasttagdownloadlink': (f'{basedownload}/{lasttag}/NowPlaying-{lasttag}-%s.zip', '%s')
+    'lasttagdownloadlink':
+    (f'{basedownload}/{lasttag}/NowPlaying-{lasttag}-%s.zip', '%s')
 }

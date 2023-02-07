@@ -9,6 +9,7 @@ import signal
 import socket
 import threading
 import time
+import traceback
 import sys
 
 import nowplaying.config
@@ -269,7 +270,12 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         if self.stopevent.is_set():
             return
 
-        nextmeta = await self.input.getplayingtrack()
+        try:
+            nextmeta = await self.input.getplayingtrack()
+        except:
+            logging.debug(traceback.format_exc())
+            await asyncio.sleep(5)
+            return
 
         if self._ismetaempty(nextmeta):
             return
@@ -282,7 +288,13 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         # fill in the blanks and make it live
         oldmeta = self.currentmeta
-        self.currentmeta = await self._fillinmetadata(nextmeta)
+        try:
+            self.currentmeta = await self._fillinmetadata(nextmeta)
+        except:
+            logging.debug(traceback.format_exc())
+            await asyncio.sleep(5)
+            return
+
         logging.info('Potential new track: %s / %s',
                      self.currentmeta['artist'], self.currentmeta['title'])
 

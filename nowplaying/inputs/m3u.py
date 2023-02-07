@@ -3,8 +3,8 @@
 
 import logging
 import os
-
-from lxml import etree
+import re
+import traceback
 
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
@@ -16,6 +16,11 @@ from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 from nowplaying.inputs import InputPlugin
 from nowplaying.exceptions import PluginVerifyError
 import nowplaying.utils
+
+#VDJ Extension lines that matter
+EXTVDJ_TITLE_RE = re.compile(r'.*<title>(.+)</title>.*')
+EXTVDJ_ARTIST_RE = re.compile(r'.*<artist>(.+)</artist>.*')
+EXTVDJ_REMIX_RE = re.compile(r'.*</remix>(.+)</remix>.*')
 
 # https://datatracker.ietf.org/doc/html/rfc8216
 
@@ -117,15 +122,24 @@ class Plugin(InputPlugin):
         ''' read the #EXTVDJ comment extension '''
         metadata = {}
         vdjline = inputline.replace('#EXTVDJ:', '')
-        extvdj = etree.fromstring(f'<extvdj>{vdjline}</extvdj>')  #pylint: disable=c-extension-no-member
+
         try:
-            metadata['title'] = extvdj.find('title').text
-        except:  # pylint: disable=bare-except
+            metadata['title'] = EXTVDJ_TITLE_RE.match(vdjline).group(1)
+        except AttributeError:
             pass
+
         try:
-            metadata['artist'] = extvdj.find('artist').text
-        except:  # pylint: disable=bare-except
+            metadata['artist'] = EXTVDJ_ARTIST_RE.match(vdjline).group(1)
+        except AttributeError:
             pass
+
+        try:
+            remix = EXTVDJ_REMIX_RE.match(vdjline).group(1)
+            if metadata.get('title'):
+                metadata['title'] += f' ({remix})'
+        except AttributeError:
+            pass
+
         return metadata
 
     def _read_full_file(self, filename):
