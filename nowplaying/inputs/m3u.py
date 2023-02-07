@@ -4,7 +4,6 @@
 import logging
 import os
 import re
-import traceback
 
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
