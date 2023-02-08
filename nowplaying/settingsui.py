@@ -808,9 +808,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 def about_version_text(config, qwidget):
     ''' set the version text for about box '''
     qwidget.program_label.setText(
-        f'<html><head/><body><p><img src="{config.iconfile}"/>'
-        f'<span style=" font-size:14pt;"> What\'s Now Playing v{config.version}'
-        '</span></p></body></html>')
+        '<html><head/><body><p align="center"><span style=" font-size:24pt; font-weight:700;">'
+        f'What\'s Now Playing v{config.version}</span></p></body></html>')
 
 
 def load_widget_ui(config, name):

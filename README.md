@@ -1,6 +1,8 @@
 <!-- markdownlint-disable MD013 MD034 -->
 
-# __What's Now Playing__ ![Menu Bar Image](git-images/seratoPlaying.png?raw=true)
+# __What's Now Playing__
+
+![Logo](docs/images/meerkatdj_256x256.png?raw=true)
 
 __What's Now Playing__ is a tool written in Python to retrieve live song data for
 streaming DJs using a variety of software, including:

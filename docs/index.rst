@@ -1,6 +1,10 @@
 Welcome to What's Now Playing!
 ==============================
 
+.. image:: images/meerkatdj_256x256.png
+   :target: images/meerkatdj_256x256.png
+   :alt: Meerkat Logo
+
 **What's Now Playing** is a tool written in Python to retrieve the current/last played
 song in MIXXX, Serato, Traktor, Virtual DJ, and many other audio and DJ programs. It gives
 you full control to use or not use whatever features you like and fully customize the
