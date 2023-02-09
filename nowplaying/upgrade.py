@@ -1,22 +1,191 @@
 #!/usr/bin/env python3
 ''' all things upgrade '''
 
+import copy
 import hashlib
 import json
 import logging
 import pathlib
+import packaging.version
+import re
+import requests
 import shutil
 import sys
 import time
-
-import pkg_resources
+import traceback
+import webbrowser
 
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QDialog, QMessageBox, QDialogButtonBox, QVBoxLayout, QLabel  # pylint: disable=no-name-in-module
 
 import nowplaying.trackrequests
 import nowplaying.twitch.chat
 import nowplaying.version
+
+# regex that support's git describe --tags as well as many semver-type strings
+# based upon the now deprected distutils version code
+VERSION_REGEX = re.compile(
+    r'''
+        ^
+        (?P<major>0|[1-9]\d*)
+        \.
+        (?P<minor>0|[1-9]\d*)
+        \.
+        (?P<micro>0|[1-9]\d*)
+        (?:-rc(?P<rc>(?:0|\d*)))?
+        (?:[-+](?P<commitnum>
+            (?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)
+            (?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*
+        ))?
+        (?:-(?P<identifier>
+            [0-9a-zA-Z-]+
+            (?:\.[0-9a-zA-Z-]+)*
+        ))?
+        $
+        ''',
+    re.VERBOSE,
+)
+
+
+class Version:
+
+    def __init__(self, version):
+        self.textversion = version
+        vermatch = VERSION_REGEX.match(version.replace('.dirty', ''))
+        if not vermatch:
+            raise ValueError
+        self.pre = False
+        self.chunk = vermatch.groupdict()
+        self._calculate()
+
+    def _calculate(self):
+        olddict = copy.copy(self.chunk)
+        for key, value in olddict.items():
+            if value and value.isdigit():
+                self.chunk[key] = int(value)
+
+        if self.chunk.get('rc') or self.chunk.get('commitnum'):
+            self.pre = True
+
+    def is_prerelease(self):
+        ''' if a pre-release, return True '''
+        return self.pre
+
+    def __str__(self):
+        return (self.textversion)
+
+    def __lt__(self, other):
+        ''' version compare '''
+        ''' do the easy stuff, major > minor > micro '''
+        for key in ["major", "minor", "micro"]:
+            if self.chunk.get(key) == other.chunk.get(key):
+                continue
+            return self.chunk.get(key) < other.chunk.get(key)
+
+        # rc < no rc
+        if self.chunk.get('rc') and not other.chunk.get('rc'):
+            return True
+
+        if self.chunk.get('rc') and other.chunk.get('rc'):
+            if self.chunk.get('rc') != other.chunk.get('rc'):
+                return self.chunk.get('rc') < other.chunk.get('rc')
+
+        # but commitnum > no commitnum at this point
+        if self.chunk.get('commitnum') and not other.chunk.get('commitnum'):
+            return False
+
+        if self.chunk.get('commitnum') and other.chunk.get('commitnum'):
+            if self.chunk.get('commitnum') != other.chunk.get('commitnum'):
+                return self.chunk.get('commitnum') < other.chunk.get(
+                    'commitnum')
+
+        return False
+
+
+class UpgradeBinary:
+
+    def __init__(self, testmode=False):
+        self.myversion = Version(nowplaying.version.get_versions()['version'])
+        self.prerelease = Version('0.0.0-rc0')
+        self.stable = Version('0.0.0')
+        self.predata = None
+        self.stabledata = None
+        if not testmode:
+            self.get_versions()
+
+    def get_versions(self, testdata=None):
+        ''' ask github about current versions '''
+        try:
+            if not testdata:
+                req = requests.get(
+                    'https://api.github.com/repos/whatsnowplaying/whats-now-playing/releases'
+                )
+                jsonreldata = req.json()
+            else:
+                jsonreldata = testdata
+
+            for rel in jsonreldata:
+                if rel.get('draft'):
+                    continue
+
+                tagname = Version(rel['tag_name'])
+                if rel.get('prerelease'):
+                    if self.prerelease < tagname:
+                        self.prerelease = tagname
+                        self.predata = rel
+                else:
+                    if self.stable < tagname:
+                        self.stable = tagname
+                        self.stabledata = rel
+
+            if self.stable > self.prerelease:
+                self.prerelease = self.stable
+                self.predata = self.stabledata
+
+        except:  # pylint: broad-except
+            logging.debug(traceback.format_exc())
+
+    def get_upgrade_data(self):
+        ''' compare our version to fetched version data '''
+        if self.myversion.is_prerelease():
+            if self.myversion < self.prerelease:
+                return self.predata
+        elif self.myversion < self.stable:
+            return self.stabledata
+        return None
+
+    def ask_ugprade(self):
+        ''' ask user about upgrade '''
+        data = self.get_upgrade_data()
+        if not data:
+            return
+
+        dialog = UpgradeDialog(self.myversion, data['tag_name'],
+                               data['html_url'])
+        if dialog.exec():
+            webbrowser.open(data['html_url'])
+            sys.exit(1)
+
+
+class UpgradeDialog(QDialog):
+
+    def __init__(self, oldversion, newversion, url, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("New Version Available!")
+
+        QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.layout = QVBoxLayout()
+        message = QLabel(f'Version {newversion} is now available. '
+                         f'You are running {oldversion}. Download?')
+        self.layout.addWidget(message)
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
 
 
 class UpgradeConfig:
@@ -91,8 +260,8 @@ class UpgradeConfig:
                                   defaultValue='3.0.0')
 
         thisverstr = nowplaying.version.get_versions()['version']
-        oldversion = pkg_resources.parse_version(oldversstr)
-        thisversion = pkg_resources.parse_version(thisverstr)
+        oldversion = Version(oldversstr)
+        thisversion = Version(thisverstr)
 
         if oldversion == thisversion:
             logging.debug('equivalent config file versions')
@@ -273,5 +442,6 @@ def checksum(filename):
 def upgrade(bundledir=None):
     ''' do an upgrade of an existing install '''
     logging.debug('Called upgrade')
+    myupgrade = UpgradeBinary().ask_ugprade()
     myupgrade = UpgradeConfig()  #pylint: disable=unused-variable
     myupgrade = UpgradeTemplates(bundledir=bundledir)
