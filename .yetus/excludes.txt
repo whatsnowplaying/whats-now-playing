@@ -7,4 +7,5 @@ bincomponents/
 versioneer.py
 NowPlaying.spec
 tests/seratolive/2021_08_25_pong.html
+tests/upgrade/releasedata.json
 docs/_static/basic.css
