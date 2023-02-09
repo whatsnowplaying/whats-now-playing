@@ -72,7 +72,7 @@ def test_version_4():
     assert ver1 < ver2
     assert not ver1 > ver2
 
-
+@pytest.mark.xfail(reason="API limit exceeded may happen")
 def test_real_getversion():
     ''' fetch from github '''
     upbin = nowplaying.upgrade.UpgradeBinary()
@@ -160,5 +160,11 @@ def test_fake_getversion_7(getreleasedata):  # pylint: disable=redefined-outer-n
     upbin.myversion = nowplaying.upgrade.Version('3.1.3')
 
     upbin.get_versions(releasedata)
+    data = upbin.get_upgrade_data()
+    assert data is None
+
+def test_fake_getversion_failuretest1():
+    ''' test same version '''
+    upbin = nowplaying.upgrade.UpgradeBinary(testmode=True)
     data = upbin.get_upgrade_data()
     assert data is None
