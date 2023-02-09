@@ -70,7 +70,7 @@ def test_version_4():
     ver2 = nowplaying.upgrade.Version('4.0.0-rc2')
 
     assert ver1 < ver2
-    assert ver1 > ver2
+    assert not ver1 > ver2
 
 
 def test_real_getversion():
