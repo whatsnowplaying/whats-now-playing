@@ -126,6 +126,10 @@ class UpgradeBinary:
                 jsonreldata = testdata
 
             for rel in jsonreldata:
+                if not isinstance(rel, dict):
+                    logging.error(rel)
+                    break
+
                 if rel.get('draft'):
                     continue
 
