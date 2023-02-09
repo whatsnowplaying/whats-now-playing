@@ -121,6 +121,7 @@ class UpgradeBinary:
                 req = requests.get(
                     'https://api.github.com/repos/whatsnowplaying/whats-now-playing/releases',
                     timeout=100)
+                req.raise_for_status()
                 jsonreldata = req.json()
             else:
                 jsonreldata = testdata
