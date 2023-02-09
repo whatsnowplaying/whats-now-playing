@@ -86,18 +86,24 @@ class Version:
         if self.chunk.get('rc') and not other.chunk.get('rc'):
             return True
 
-        if self.chunk.get('rc') and other.chunk.get('rc'):
-            if self.chunk.get('rc') != other.chunk.get('rc'):
-                return self.chunk.get('rc') < other.chunk.get('rc')
+        if (
+            self.chunk.get('rc')
+            and other.chunk.get('rc')
+            and self.chunk.get('rc') != other.chunk.get('rc')
+        ):
+            return self.chunk.get('rc') < other.chunk.get('rc')
 
         # but commitnum > no commitnum at this point
         if self.chunk.get('commitnum') and not other.chunk.get('commitnum'):
             return False
 
-        if self.chunk.get('commitnum') and other.chunk.get('commitnum'):
-            if self.chunk.get('commitnum') != other.chunk.get('commitnum'):
-                return self.chunk.get('commitnum') < other.chunk.get(
-                    'commitnum')
+        if (
+            self.chunk.get('commitnum')
+            and other.chunk.get('commitnum')
+            and self.chunk.get('commitnum') != other.chunk.get('commitnum')
+        ):
+            return self.chunk.get('commitnum') < other.chunk.get(
+                'commitnum')
 
         return False
 
@@ -133,10 +139,9 @@ class UpgradeBinary:
                     if self.prerelease < tagname:
                         self.prerelease = tagname
                         self.predata = rel
-                else:
-                    if self.stable < tagname:
-                        self.stable = tagname
-                        self.stabledata = rel
+                elif self.stable < tagname:
+                    self.stable = tagname
+                    self.stabledata = rel
 
             if self.stable > self.prerelease:
                 self.prerelease = self.stable
