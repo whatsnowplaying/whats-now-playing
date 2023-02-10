@@ -41,7 +41,16 @@ Installation
 
 Here are the steps to get a basic installation working:
 
-#. Download :lasttagdownloadlink:`macos11` or :lasttagdownloadlink:`windows`
+#. Download the appropriate binary:
+
+   * Latest release:
+
+     * :lasttagdownloadlink:`macos12_arm` for Apple silicon processors running Monterey or higher
+     * :lasttagdownloadlink:`macos11_intel` for Intel x86 processors running Big Sur or higher
+     * :lasttagdownloadlink:`windows` for Intel x86 or AMD Ryzen processors running Windows 10 or higher
+
+   * or see `All Releases <https://github.com/whatsnowplaying/whats-now-playing/releases/>`_
+
 #. Launch the application
 #. The software will attempt to pre-configure itself for whatever software you have installed.  Note that in the case of Traktor, this work will including building an index for file lookup. For large Traktor installations, that may take a while.
 #. It should bring up the `Settings <settings.html>`_

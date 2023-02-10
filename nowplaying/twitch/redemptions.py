@@ -122,7 +122,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                 self.pubsub.start()
             except Exception:  #pylint: disable=broad-except
                 logging.error(traceback.format_exc())
-                twitchlogin.cache_token_del()
+                await twitchlogin.cache_token_del()
                 continue
 
             try:
@@ -132,7 +132,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                     ]))
             except:  #pylint: disable=bare-except
                 logging.error(traceback.format_exc())
-                twitchlogin.cache_token_del()
+                await twitchlogin.cache_token_del()
                 continue
 
             # you can either start listening before or after you started pubsub.
@@ -141,7 +141,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                     user.id, self.callback_redemption)
                 loggedin = True
             except TwitchAuthorizationException:
-                twitchlogin.cache_token_del()
+                await twitchlogin.cache_token_del()
                 loggedin = False
 
     async def stop(self):

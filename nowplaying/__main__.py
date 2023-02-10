@@ -34,6 +34,7 @@ def run_bootstrap(bundledir=None):
     logging.info('starting up v%s',
                  nowplaying.version.get_versions()['version'])
     nowplaying.upgrade.upgrade(bundledir=bundledir)
+    logging.debug('ending upgrade')
 
     # fail early if metadatadb can't be configured
     metadb = nowplaying.db.MetadataDB()

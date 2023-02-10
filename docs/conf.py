@@ -40,6 +40,28 @@ def get_last_tag():
         raise ValueError
     return pieces["closest-tag"]
 
+def get_release():
+    cfg = nowplaying.version.get_config()
+    root = os.path.realpath(__file__)
+    pieces = {}
+    # versionfile_source is the relative path from the top of the source
+    # tree (where the .git directory might live) to this file. Invert
+    # this to find the root from __file__.
+    for _ in cfg.versionfile_source.split('/'):
+        root = os.path.dirname(root)
+        try:
+            pieces = nowplaying.version.git_pieces_from_vcs(
+                cfg.tag_prefix, root, cfg.verbose)
+            if pieces.get('closest-tag'):
+                break
+        except Exception as error:
+            print(f'Tried {root} and failed: {error}')
+    if not pieces:
+        raise ValueError
+    release = pieces.get('closest-tag')
+    if distance := pieces.get('distance'):
+        release = f'{release} [+ {distance} changes]'
+    return release
 
 # -- Project information -----------------------------------------------------
 
@@ -48,7 +70,7 @@ copyright = '2021-2023, Allen Wittenauer'
 author = 'Allen Wittenauer'
 
 # The full version, including alpha/beta/rc tags
-release = nowplaying.version.get_versions()['version']
+release = get_release()
 # last released version
 lasttag = get_last_tag()
 
@@ -76,7 +98,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'furo'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -93,7 +115,8 @@ html_static_path = ['_static']
 #rst_prolog = '\n'.join(map(lambda x: f".. |{x}| replace:: {frozen_locals[x]}", variables_to_export))
 #del frozen_locals
 
-basedownload = 'https://github.com/whatsnowplaying/whats-now-playing/releases/download'
+releaselink =  'https://github.com/whatsnowplaying/whats-now-playing/releases'
+basedownload = f'{releaselink}/download'
 
 extlinks = {
     'lasttagdownloadlink':

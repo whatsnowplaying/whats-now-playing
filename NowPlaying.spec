@@ -128,6 +128,14 @@ for execname, execpy in executables.items():
                  cipher=block_cipher,
                  noarchive=False)
 
+    if sys.platform != 'darwin':
+        splash = Splash('docs/images/meerkatdj_256x256.png',
+                        binaries=a.binaries,
+                        datas=a.datas,
+                        text_pos=(10, 50),
+                        text_size=12,
+                        text_color='black')
+
     pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)  # pylint: disable=undefined-variable
 
     if sys.platform == 'darwin':
