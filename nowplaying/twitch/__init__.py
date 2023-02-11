@@ -33,7 +33,7 @@ USER_SCOPE = [
 ]
 
 
-class TwitchSupport:
+class TwitchSupport:  # pylint: disable=too-many-instance-attributes
     ''' handle twitch  '''
 
     def __init__(self, config=None, stopevent=None):
