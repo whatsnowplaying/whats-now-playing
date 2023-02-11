@@ -72,6 +72,7 @@ class DiscordSupport:
             await self.client['ipc'].connect()
         except pypresence.exceptions.DiscordNotFound:
             logging.error('Discord client is not running')
+            del self.client['ipc']
             return
         except ConnectionRefusedError:
             logging.error('Cannot connect to discord client.')
