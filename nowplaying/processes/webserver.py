@@ -55,6 +55,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                  stopevent=None,
                  testmode=False):
         threading.current_thread().name = 'WebServer'
+        self.tasks = set()
         self.testmode = testmode
         if not config:
             config = nowplaying.config.ConfigFile(bundledir=bundledir,
@@ -463,7 +464,9 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         runner = self.create_runner()
         await runner.setup()
         site = web.TCPSite(runner, host, port)
-        asyncio.create_task(self.stopeventtask())
+        task = asyncio.create_task(self.stopeventtask())
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
         await site.start()
 
     async def on_startup(self, app):

@@ -70,6 +70,9 @@ class DiscordSupport:
         try:
             self.client['ipc'] = pypresence.AioPresence(clientid, loop=loop)
             await self.client['ipc'].connect()
+        except pypresence.exceptions.DiscordNotFound:
+            logging.error('Discord client is not running')
+            return
         except ConnectionRefusedError:
             logging.error('Cannot connect to discord client.')
             del self.client['ipc']
@@ -137,7 +140,7 @@ class DiscordSupport:
         while not self.stopevent.is_set():
             await self.connect_clients()
             # discord will lock out if updates more than every 15 seconds
-            await asyncio.sleep(15)
+            await asyncio.sleep(60)
 
             if mytime < watcher.updatetime:
                 template = self.config.cparser.value('discord/template')

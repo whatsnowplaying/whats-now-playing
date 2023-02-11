@@ -42,6 +42,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
         self.site = None
         self.trackrequests = nowplaying.trackrequests.Requests(
             config=self.config, stopevent=self.stopevent)
+        self.tasks = set()
 
     def install(self):
         ''' auto-install '''
@@ -146,8 +147,12 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
         else:
             self.stopevent.clear()
         loop = asyncio.get_running_loop()
-        loop.create_task(self._broadcast_location())
-        loop.create_task(self._start_server())
+        task = loop.create_task(self._broadcast_location())
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
+        task = loop.create_task(self._start_server())
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
 
     async def _broadcast_location(self):
         ''' announce the port '''
@@ -329,7 +334,9 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
         logging.debug('Setting port to %s', self.port)
         self.config.cparser.setValue('control/beamport', self.port)
         self.site = web.SockSite(runner, socketinfo)
-        asyncio.create_task(self.stopeventtask())
+        task = asyncio.create_task(self.stopeventtask())
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
         await self.site.start()
 
     async def _on_startup(self, app):

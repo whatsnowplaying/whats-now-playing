@@ -307,6 +307,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             testmode=False):
         global LASTPROCESSED, PARSEDSESSIONS  #pylint: disable=global-statement
         self.pollingobserver = pollingobserver
+        self.tasks = set()
         self.event_handler = None
         self.observer = None
         self.testmode = testmode
@@ -368,7 +369,9 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         try:
             loop = asyncio.get_running_loop()
             logging.debug('got a running loop')
-            loop.create_task(self._async_process_sessions())
+            task = loop.create_task(self._async_process_sessions())
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.discard)
 
         except RuntimeError:
             loop = asyncio.new_event_loop()

@@ -46,6 +46,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                                                   testmode=testmode)
         self.config = config
         self.stopevent = stopevent
+        self.tasks = set()
         self.watcher = None
         self.metadb = None
         self.idname = None
@@ -60,10 +61,18 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
         except RuntimeError:
             loop = asyncio.new_event_loop()
 
-        loop.create_task(self._find_beam())
-        loop.create_task(self._websocket_client())
-        loop.create_task(self._start_watcher())
-        loop.create_task(self._stop(loop))
+        task = loop.create_task(self._find_beam())
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
+        task = loop.create_task(self._websocket_client())
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
+        task = loop.create_task(self._start_watcher())
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
+        task = loop.create_task(self._stop(loop))
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
         loop.run_forever()
 
     def _remove_control(self):
@@ -330,7 +339,9 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
         except Exception as error:  # pylint: disable=broad-except
             logging.info(error)
 
-        loop.create_task(self.stop_server())
+        task = loop.create_task(self.stop_server())
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
         if self.stopevent:
             self.stopevent.set()
 
