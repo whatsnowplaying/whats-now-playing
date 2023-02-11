@@ -31,7 +31,6 @@ import nowplaying.version
 
 class Plugin(RecognitionPlugin):
     ''' handler for acoustidmb '''
-
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(

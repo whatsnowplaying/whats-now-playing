@@ -18,7 +18,6 @@ import nowplaying.version
 
 class MusicBrainzHelper():
     ''' handler for NowPlaying '''
-
     def __init__(self, config=None):
         logging.getLogger('musicbrainzngs').setLevel(logging.CRITICAL + 1)
         if config:

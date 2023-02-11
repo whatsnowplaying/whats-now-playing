@@ -8,7 +8,6 @@ from nowplaying.exceptions import PluginVerifyError
 
 class ArtistExtrasPlugin():
     ''' base class of plugins '''
-
     def __init__(self, config=None, qsettings=None):
         self.plugintype = 'input'
         self.config = config

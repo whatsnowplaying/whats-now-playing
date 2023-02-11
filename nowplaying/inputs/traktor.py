@@ -31,7 +31,6 @@ PLAYLIST = ['name', 'filename']
 
 class Traktor:
     ''' data from the traktor collections.nml file '''
-
     def __init__(self, config=None):
         self.databasefile = pathlib.Path(
             QStandardPaths.standardLocations(
@@ -171,7 +170,6 @@ class Traktor:
 
 class Plugin(IcecastPlugin):
     ''' base class of input plugins '''
-
     def __init__(self, config=None, qsettings=None):
         ''' no custom init '''
         super().__init__(config=config, qsettings=qsettings)

@@ -11,7 +11,6 @@ from nowplaying.inputs import InputPlugin
 
 class Plugin(InputPlugin):
     ''' base class of input plugins '''
-
     def __init__(self, config=None, qsettings=None):
         ''' no custom init '''
         super().__init__(config=config, qsettings=qsettings)

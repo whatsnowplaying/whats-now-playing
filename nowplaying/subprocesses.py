@@ -8,7 +8,6 @@ import multiprocessing
 
 class SubprocessManager:
     ''' manage all of the subprocesses '''
-
     def __init__(self, config=None, testmode=False):
         self.config = config
         self.testmode = testmode

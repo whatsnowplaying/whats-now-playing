@@ -74,7 +74,6 @@ METADATABLOBLIST = [
 
 class DBWatcher:
     ''' utility to watch for database changes '''
-
     def __init__(self, databasefile):
         self.observer = None
         self.event_handler = None
@@ -122,7 +121,6 @@ class DBWatcher:
 
 class MetadataDB:
     """ Metadata DB module"""
-
     def __init__(self, databasefile=None, initialize=False):
 
         if databasefile:
@@ -143,7 +141,6 @@ class MetadataDB:
 
     def write_to_metadb(self, metadata=None):
         ''' update metadb '''
-
         def filterkeys(mydict):
             return {
                 key: mydict[key]

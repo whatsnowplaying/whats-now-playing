@@ -21,7 +21,6 @@ LASTANNOUNCED = {'artist': None, 'title': None}
 
 class Tray:  # pylint: disable=too-many-instance-attributes
     ''' System Tray object '''
-
     def __init__(self, beam=False):  #pylint: disable=too-many-statements
         self.config = nowplaying.config.ConfigFile(beam=beam)
         self._configure_beamstatus(beam)

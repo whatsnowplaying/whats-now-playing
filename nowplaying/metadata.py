@@ -21,7 +21,6 @@ from nowplaying.vendor.audio_metadata.formats.mp4_tags import MP4FreeformDecoder
 
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
     ''' Run through a bunch of different metadata processors '''
-
     def __init__(self, config=None):
         self.metadata = None
         self.imagecache = None
@@ -267,7 +266,6 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
 class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
     ''' run through audio_metadata '''
-
     def __init__(self, config=None):
         self.metadata = None
         self.config = config
@@ -282,7 +280,6 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
         return self.metadata
 
     def _process_audio_metadata_mp4_freeform(self, freeformparentlist):
-
         def _itunes(tempdata, freeform):
             convdict = {
                 'LABEL': 'label',

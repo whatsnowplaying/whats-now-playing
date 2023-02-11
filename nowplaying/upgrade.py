@@ -49,7 +49,6 @@ VERSION_REGEX = re.compile(
 
 class Version:
     ''' process a version'''
-
     def __init__(self, version):
         self.textversion = version
         vermatch = VERSION_REGEX.match(version.replace('.dirty', ''))
@@ -104,7 +103,6 @@ class Version:
 
 class UpgradeBinary:
     ''' routines to determine if the binary is out of date '''
-
     def __init__(self, testmode=False):
         self.myversion = Version(nowplaying.version.get_versions()['version'])
         self.prerelease = Version('0.0.0-rc0')
@@ -175,7 +173,6 @@ class UpgradeBinary:
 
 class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
     ''' Qt Dialog for asking the user to ugprade '''
-
     def __init__(self, oldversion, newversion, parent=None):
         super().__init__(parent)
 
@@ -202,7 +199,6 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
 
 class UpgradeConfig:
     ''' methods to upgrade from old configs to new configs '''
-
     def __init__(self, testdir=None):
 
         if sys.platform == "win32":
@@ -329,7 +325,6 @@ class UpgradeConfig:
 
 class UpgradeTemplates():
     ''' Upgrade templates '''
-
     def __init__(self, bundledir=None, testdir=None):
         self.bundledir = pathlib.Path(bundledir)
         self.apptemplatedir = self.bundledir.joinpath('templates')

@@ -29,7 +29,6 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
     '''
         Do the heavy lifting of reading from the DJ software
     '''
-
     def __init__(self, stopevent=None, config=None, testmode=False):
         self.datestr = time.strftime("%Y%m%d-%H%M%S")
         self.stopevent = stopevent

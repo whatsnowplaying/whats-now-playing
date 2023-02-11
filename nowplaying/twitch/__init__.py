@@ -35,7 +35,6 @@ USER_SCOPE = [
 
 class TwitchSupport:
     ''' handle twitch  '''
-
     def __init__(self, config=None, stopevent=None):
         self.config = config
         if stopevent:
@@ -47,6 +46,7 @@ class TwitchSupport:
         self.redemptions = None
         self.loop = None
         self.twitchlogin = nowplaying.twitch.utils.TwitchLogin(self.config)
+        self.tasks = set()
 
     async def bootstrap(self):
         ''' Authenticate twitch and launch related tasks '''
@@ -60,10 +60,14 @@ class TwitchSupport:
             except RuntimeError:
                 self.loop = asyncio.new_event_loop()
         await asyncio.sleep(5)
-        self.loop.create_task(self.chat.run_chat(self.twitchlogin))
+        task = self.loop.create_task(self.chat.run_chat(self.twitchlogin))
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
         await asyncio.sleep(5)
-        self.loop.create_task(
+        task = self.loop.create_task(
             self.redemptions.run_redemptions(self.twitchlogin, self.chat))
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
 
     async def _watch_for_exit(self):
         while not self.stopevent.is_set():
@@ -82,8 +86,12 @@ class TwitchSupport:
                 self.loop = asyncio.get_running_loop()
             except RuntimeError:
                 self.loop = asyncio.new_event_loop()
-        self.loop.create_task(self.bootstrap())
-        self.loop.create_task(self._watch_for_exit())
+        task = self.loop.create_task(self.bootstrap())
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
+        task = self.loop.create_task(self._watch_for_exit())
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
         self.loop.run_forever()
 
     def forced_stop(self, signum, frame):  # pylint: disable=unused-argument
@@ -104,7 +112,6 @@ class TwitchSupport:
 
 class TwitchSettings:
     ''' for settings UI '''
-
     def __init__(self):
         self.widget = None
         self.token = None

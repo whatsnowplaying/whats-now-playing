@@ -70,7 +70,6 @@ class Requests:  #pylint: disable=too-many-instance-attributes
         since UI code can't call async code.
 
     '''
-
     def __init__(self,
                  config=None,
                  stopevent=None,
@@ -444,7 +443,6 @@ class Requests:  #pylint: disable=too-many-instance-attributes
 
     async def get_all_generator(self):
         ''' get all records, but use a generator '''
-
         def dict_factory(cursor, row):
             fields = [column[0] for column in cursor.description]
             return dict(zip(fields, row))
@@ -552,7 +550,6 @@ class Requests:  #pylint: disable=too-many-instance-attributes
 
 class RequestSettings:
     ''' for settings UI '''
-
     def __init__(self):
         self.widget = None
 
@@ -586,7 +583,6 @@ class RequestSettings:
 
     def load(self, config, widget):
         ''' load the settings window '''
-
         def clear_table(widget):
             widget.clearContents()
             rows = widget.rowCount()
@@ -613,7 +609,6 @@ class RequestSettings:
     @staticmethod
     def save(config, widget, subprocesses):  #pylint: disable=unused-argument
         ''' update the twitch settings '''
-
         def reset_commands(widget, config):
 
             for configitem in config.allKeys():

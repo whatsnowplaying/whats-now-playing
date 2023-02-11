@@ -26,7 +26,6 @@ import nowplaying.utils
 
 class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
     ''' Talk to OBS directly via WebSocket '''
-
     def __init__(self, config=None, stopevent=None, testmode=None):
         self.config = config
         self.stopevent = stopevent

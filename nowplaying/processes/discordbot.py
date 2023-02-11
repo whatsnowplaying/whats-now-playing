@@ -28,7 +28,6 @@ import nowplaying.version
 
 class DiscordSupport:
     ''' Work with discord '''
-
     def __init__(self, config=None, stopevent=None):
         self.config = config
         self.stopevent = stopevent

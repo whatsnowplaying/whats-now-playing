@@ -30,7 +30,6 @@ PLAYLIST = ['name', 'filename']
 
 class IcecastProtocol(asyncio.Protocol):
     ''' a terrible implementation of the Icecast SOURCE protocol '''
-
     def __init__(self):
         self.streaming = False
         self.previous_page = b''
@@ -148,7 +147,6 @@ class IcecastProtocol(asyncio.Protocol):
 
 class Plugin(InputPlugin):
     ''' base class of input plugins '''
-
     def __init__(self, config=None, qsettings=None):
         ''' no custom init '''
         super().__init__(config=config, qsettings=qsettings)

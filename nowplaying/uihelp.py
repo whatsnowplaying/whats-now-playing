@@ -8,7 +8,6 @@ from PySide6.QtWidgets import QFileDialog  # pylint: disable=import-error, no-na
 
 class UIHelp:
     ''' utility functions for GUI code'''
-
     def __init__(self, config, qtui):
         self.config = config
         self.qtui = qtui

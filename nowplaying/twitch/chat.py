@@ -40,7 +40,6 @@ TWITCHBOT_CHECKBOXES = [
 
 class TwitchChat:  #pylint: disable=too-many-instance-attributes
     ''' handle twitch chat '''
-
     def __init__(self, config=None, stopevent=None):
         self.config = config
         self.stopevent = stopevent
@@ -55,6 +54,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         self.jinja2 = self.setup_jinja2(self.templatedir)
         self.twitch = None
         self.chat = None
+        self.tasks = set()
         self.starttime = datetime.datetime.utcnow()
 
     @staticmethod
@@ -144,7 +144,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             loop = asyncio.get_running_loop()
         except Exception as error:  #pylint: disable=broad-except
             logging.debug(error)
-        loop.create_task(self._setup_timer())
+        task = loop.create_task(self._setup_timer())
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
 
     async def on_twitchchat_ready(self, ready_event):
         ''' twitch chatbot has connected, now join '''
@@ -392,7 +394,6 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
 class TwitchChatSettings:
     ''' for settings UI '''
-
     def __init__(self):
         self.widget = None
         self.uihelp = None
@@ -486,7 +487,6 @@ class TwitchChatSettings:
     @staticmethod
     def save(config, widget, subprocesses):  #pylint: disable=unused-argument
         ''' update the twitch settings '''
-
         def reset_commands(widget, config):
 
             for configitem in config.allKeys():

@@ -21,7 +21,6 @@ import nowplaying.utils
 
 class Plugin(ArtistExtrasPlugin):
     ''' handler for TheAudioDB '''
-
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.fnstr = None

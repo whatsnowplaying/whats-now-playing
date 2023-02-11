@@ -40,6 +40,7 @@ def get_last_tag():
         raise ValueError
     return pieces["closest-tag"]
 
+
 def get_release():
     cfg = nowplaying.version.get_config()
     root = os.path.realpath(__file__)
@@ -62,6 +63,7 @@ def get_release():
     if distance := pieces.get('distance'):
         release = f'{release} [+ {distance} changes]'
     return release
+
 
 # -- Project information -----------------------------------------------------
 
@@ -115,7 +117,7 @@ html_static_path = ['_static']
 #rst_prolog = '\n'.join(map(lambda x: f".. |{x}| replace:: {frozen_locals[x]}", variables_to_export))
 #del frozen_locals
 
-releaselink =  'https://github.com/whatsnowplaying/whats-now-playing/releases'
+releaselink = 'https://github.com/whatsnowplaying/whats-now-playing/releases'
 basedownload = f'{releaselink}/download'
 
 extlinks = {

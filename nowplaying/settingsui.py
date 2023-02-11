@@ -31,7 +31,6 @@ import nowplaying.utils
 # settings UI
 class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-instance-attributes
     ''' create settings form window '''
-
     def __init__(self, tray, beam):
 
         self.config = nowplaying.config.ConfigFile(beam=beam)
@@ -568,7 +567,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _upd_conf_filters(self):
         ''' update the filter settings '''
-
         def reset_filters(widget, config):
 
             for configitem in config.allKeys():

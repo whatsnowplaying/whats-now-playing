@@ -27,7 +27,6 @@ MPRIS2_BASE = 'org.mpris.MediaPlayer2'
 
 class MPRIS2Handler():
     ''' Read metadata from MPRIS2 '''
-
     def __init__(self, service=None):
         self.service = None
         self.bus = None
@@ -169,7 +168,6 @@ class MPRIS2Handler():
 
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
-
     def __init__(self, config=None, qsettings=None):
 
         super().__init__(config=config, qsettings=qsettings)

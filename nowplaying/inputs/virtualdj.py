@@ -19,7 +19,6 @@ PLAYLIST = ['name', 'filename']
 
 class Plugin(M3UPlugin):
     ''' handler for NowPlaying '''
-
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.databasefile = pathlib.Path(

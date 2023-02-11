@@ -39,7 +39,6 @@ MAX_FANART_DOWNLOADS = 50
 
 class ImageCache:
     ''' database operations for caches '''
-
     def __init__(self,
                  sizelimit=1,
                  initialize=False,
@@ -245,7 +244,6 @@ class ImageCache:
 
     def get_next_dlset(self):
         ''' update metadb '''
-
         def dict_factory(cursor, row):
             d = {}
             for idx, col in enumerate(cursor.description):

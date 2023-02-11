@@ -32,7 +32,6 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         since UI code can't call async code.
 
     '''
-
     def __init__(self, config=None, stopevent=None):
         self.config = config
         self.stopevent = stopevent

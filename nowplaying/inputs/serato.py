@@ -38,7 +38,6 @@ TIDAL_FORMAT = re.compile('^_(.*).tdl')
 class SeratoCrateReader:
     ''' read a Serato crate (not smart crate) -
         based on https://gist.github.com/kerrickstaley/8eb04988c02fa7c62e75c4c34c04cf02 '''
-
     def __init__(self, filename):
         self.decode_func_full = {
             None: self._decode_struct,
@@ -119,7 +118,6 @@ class SeratoCrateReader:
 
 class SeratoSessionReader:
     ''' read a Serato session file '''
-
     def __init__(self):
         self.decode_func_full = {
             None: self._decode_struct,
@@ -297,7 +295,6 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             self.seratodir='/path/to/_Serato_'
 
     '''
-
     def __init__(  #pylint: disable=too-many-arguments
             self,
             mixmode='oldest',
@@ -307,6 +304,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             testmode=False):
         global LASTPROCESSED, PARSEDSESSIONS  #pylint: disable=global-statement
         self.pollingobserver = pollingobserver
+        self.tasks = set()
         self.event_handler = None
         self.observer = None
         self.testmode = testmode
@@ -368,7 +366,9 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         try:
             loop = asyncio.get_running_loop()
             logging.debug('got a running loop')
-            loop.create_task(self._async_process_sessions())
+            task = loop.create_task(self._async_process_sessions())
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.discard)
 
         except RuntimeError:
             loop = asyncio.new_event_loop()
@@ -670,7 +670,6 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
 class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
     ''' handler for NowPlaying '''
-
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
 
@@ -865,7 +864,6 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
-
         def handle_deckskip(cparser, qwidget):
             deckskip = cparser.value('serato/deckskip')
             qwidget.deck1_checkbox.setChecked(False)
