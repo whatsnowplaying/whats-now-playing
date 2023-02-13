@@ -472,6 +472,14 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     async def on_startup(self, app):
         ''' setup app connections '''
         app['config'] = nowplaying.config.ConfigFile(testmode=self.testmode)
+        staticdir = app['config'].basedir.joinpath('httpstatic')
+        logging.debug('Verifying %s', staticdir)
+        staticdir.mkdir(parents=True, exist_ok=True)
+        logging.debug('Verified %s', staticdir)
+        app.router.add_static(
+            '/httpstatic/',
+            path=staticdir,
+        )
         app['metadb'] = nowplaying.db.MetadataDB()
         app['imagecache'] = nowplaying.imagecache.ImageCache()
         app['watcher'] = app['metadb'].watcher()

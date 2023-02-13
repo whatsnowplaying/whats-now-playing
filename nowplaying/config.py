@@ -39,20 +39,17 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self.beam = beam
         self.testmode = testmode
         self.logpath = logpath
+        self.basedir = pathlib.Path(
+            QStandardPaths.standardLocations(
+                QStandardPaths.DocumentsLocation)[0],
+            QCoreApplication.applicationName())
         self.initialized = False
         if logpath:
             self.logpath = pathlib.Path(logpath)
         else:
-            self.logpath = pathlib.Path(
-                QStandardPaths.standardLocations(
-                    QStandardPaths.DocumentsLocation)[0],
-                QCoreApplication.applicationName()).joinpath(
-                    'logs', 'debug.log')
+            self.logpath = self.basedir.joinpath('logs', 'debug.log')
 
-        self.templatedir = pathlib.Path(
-            QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation)[0],
-            QCoreApplication.applicationName()).joinpath('templates')
+        self.templatedir = self.basedir.joinpath('templates')
 
         if not ConfigFile.BUNDLEDIR and bundledir:
             ConfigFile.BUNDLEDIR = pathlib.Path(bundledir)

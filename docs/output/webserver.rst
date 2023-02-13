@@ -73,6 +73,8 @@ Supported URLs
      - Same output as the text output in the General settings.
    * - /cover.png
      - This URL will return the cover image, if available.
+   * - /httpstatic/
+     - Any content in`Documents/NowPlaying/httpstatic` will get served under this URL.
 
 See also `Artist Extras <../extras/index.html>`_ for other URLs when that set of features is enabled.
 
