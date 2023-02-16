@@ -11,7 +11,7 @@ import aiosqlite
 import normality
 
 from PySide6.QtCore import Slot, QFile, QFileSystemWatcher, QStandardPaths  # pylint: disable=import-error, no-name-in-module
-from PySide6.QtWidgets import QCheckBox, QComboBox, QHeaderView, QTableWidgetItem  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QComboBox, QHeaderView, QTableWidgetItem  # pylint: disable=no-name-in-module
 from PySide6.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
 
 import nowplaying.db
@@ -406,13 +406,10 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
     async def twofer_request(self, setting, user, user_input):
         ''' generic request '''
         logging.debug('%s twofer requested %s', user, user_input)
-        title = None
         metadb = nowplaying.db.MetadataDB()
         metadata = metadb.read_last_meta()
 
-        if artist := metadata.get('artist'):
-            pass
-        else:
+        if not (artist := metadata.get('artist')):
             artist = None
 
         if tmatch := TITLE_RE.search(user_input):
