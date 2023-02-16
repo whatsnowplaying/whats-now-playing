@@ -73,7 +73,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                 await self.chat.redemption_to_chat_request_bridge(
                     setting['command'], reply)
 
-    async def run_redemptions(self, twitchlogin, chat):
+    async def run_redemptions(self, twitchlogin, chat):  # pylint: disable=too-many-branches
         ''' twitch redemptions '''
 
         # stop sleep loop if:

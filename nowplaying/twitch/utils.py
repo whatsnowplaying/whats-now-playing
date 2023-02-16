@@ -4,10 +4,10 @@
 import logging
 import threading
 import traceback
-import requests
 import socket
 
 import aiohttp
+import requests
 
 from twitchAPI.twitch import Twitch
 from twitchAPI.helper import first

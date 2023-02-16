@@ -100,7 +100,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 if valid.get('status') == 401:
                     token = None
                     logging.error('Old twitchbot-specific token has expired')
-            except Exception as error:  #pylint: disable=broad-exception-caught
+            except Exception as error:  #pylint: disable=broad-except
                 logging.error('cannot validate token: %s', error)
                 token = None
         return token
