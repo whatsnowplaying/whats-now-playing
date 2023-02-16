@@ -148,6 +148,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 if not self.twitch:
                     logging.debug('attempting to use global token')
                     self.twitch = await twitchlogin.api_login()
+                    # ignore sourcery here
                     if not self.twitch:
                         await twitchlogin.cache_token_del()
 
