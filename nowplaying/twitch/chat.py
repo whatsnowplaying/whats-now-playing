@@ -100,12 +100,12 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 if valid.get('status') == 401:
                     token = None
                     logging.error('Old twitchbot-specific token has expired')
-            except Exception as error:
+            except Exception as error:  #pylint: disable=broad-exception-caught
                 logging.error('cannot validate token: %s', error)
                 token = None
         return token
 
-    async def run_chat(self, twitchlogin):
+    async def run_chat(self, twitchlogin):  #pylint: disable=too-many-branches, too-many-statements
         ''' twitch chat '''
 
         # If the user provides us with a pre-existing token and username,
@@ -189,8 +189,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 logging.error(error)
                 await asyncio.sleep(60)
                 continue
-            except:
-                logging.debug(traceback.format_exc())
+            except:  #pylint: disable=bare-except
+                for line in traceback.format_exc().splitlines():
+                    logging.debug(line)
                 await asyncio.sleep(60)
                 continue
 
@@ -402,7 +403,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         await self._post_template(template=pathlib.Path(
             self.config.cparser.value('twitchbot/announce')).name)
 
-    async def _post_template(self, msg=None, template=None, moremetadata=None):
+    async def _post_template(self, msg=None, template=None, moremetadata=None):  #pylint: disable=too-many-branches
         ''' take a template, fill it in, and post it '''
         if not template:
             return
@@ -449,8 +450,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             except ConnectionResetError:
                 logging.debug(
                     'Twitch appears to be down.  Cannot send message.')
-            except:
-                logging.debug(traceback.format_exc())
+            except:  #pylint: disable=bare-except
+                for line in traceback.format_exc().splitlines():
+                    logging.debug(line)
                 logging.error('Unknown problem.')
 
     async def stop(self):
