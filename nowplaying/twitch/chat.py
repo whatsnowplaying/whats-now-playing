@@ -341,7 +341,6 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         await asyncio.sleep(delay)
 
     def _announce_track(self, event):  #pylint: disable=unused-argument
-        logging.debug('here')
         try:
             try:
                 loop = asyncio.get_running_loop()

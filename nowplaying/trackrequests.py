@@ -226,7 +226,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             'artist': metadata.get('artist'),
             'filename': metadata['filename'],
             'title': metadata.get('title'),
-            'type': 'Mode',
+            'type': 'Roulette',
             'playlist': setting['playlist'],
             'displayname': setting.get('displayname'),
             'user_input': user_input,
@@ -412,7 +412,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         if not (artist := metadata.get('artist')):
             artist = None
 
-        if tmatch := TITLE_RE.search(user_input):
+        if tmatch := TWOFERTITLE_RE.search(user_input):
             title = tmatch.group(1)
         else:
             title = user_input
