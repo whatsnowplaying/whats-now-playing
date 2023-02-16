@@ -77,23 +77,26 @@ class TwitchSupport:  # pylint: disable=too-many-instance-attributes
 
     def start(self):
         ''' start twitch support '''
-
-        self.chat = nowplaying.twitch.chat.TwitchChat(config=self.config,
-                                                      stopevent=self.stopevent)
-        self.redemptions = nowplaying.twitch.redemptions.TwitchRedemptions(
-            config=self.config, stopevent=self.stopevent)
-        if not self.loop:
-            try:
-                self.loop = asyncio.get_running_loop()
-            except RuntimeError:
-                self.loop = asyncio.new_event_loop()
-        task = self.loop.create_task(self.bootstrap())
-        self.tasks.add(task)
-        task.add_done_callback(self.tasks.discard)
-        task = self.loop.create_task(self._watch_for_exit())
-        self.tasks.add(task)
-        task.add_done_callback(self.tasks.discard)
-        self.loop.run_forever()
+        try:
+            self.chat = nowplaying.twitch.chat.TwitchChat(
+                config=self.config, stopevent=self.stopevent)
+            self.redemptions = nowplaying.twitch.redemptions.TwitchRedemptions(
+                config=self.config, stopevent=self.stopevent)
+            if not self.loop:
+                try:
+                    self.loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    self.loop = asyncio.new_event_loop()
+            task = self.loop.create_task(self.bootstrap())
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.discard)
+            task = self.loop.create_task(self._watch_for_exit())
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.discard)
+            self.loop.run_forever()
+        except:  #pylint: disable=bare-except:
+            logging.error(traceback.format_exc())
+            logging.error('Twitch support crashed')
 
     def forced_stop(self, signum, frame):  # pylint: disable=unused-argument
         ''' caught an int signal so tell the world to stop '''
@@ -183,7 +186,7 @@ class TwitchSettings:
 
         if token := widget.token_lineedit.text():
             if not nowplaying.twitch.utils.qtsafe_validate_token(token):
-                PluginVerifyError('Twitch bot token is invalid')
+                raise PluginVerifyError('Twitch bot token is invalid')
 
     def update_token_name(self):
         ''' update the token name in the UI '''

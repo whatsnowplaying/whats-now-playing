@@ -78,6 +78,10 @@ class DiscordSupport:
             logging.error('Cannot connect to discord client.')
             del self.client['ipc']
             return
+        except pypresence.exceptions.DiscordError as error:
+            logging.error(error)
+            del self.client['ipc']
+            return
         except Exception as error:  #pylint: disable=broad-except
             logging.error('Cannot configure IPC client: %s %s', error,
                           traceback.format_exc())
@@ -162,7 +166,8 @@ class DiscordSupport:
                             await func(templateout)
 
                         except:  #pylint: disable=bare-except
-                            logging.debug(traceback.format_exc())
+                            for line in traceback.format_exc().splitlines():
+                                logging.debug(line)
                             del self.client[mode]
         if self.client.get('bot'):  # pylint: disable=consider-using-dict-items
             await self.client['bot'].close()

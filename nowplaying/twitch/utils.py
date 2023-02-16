@@ -5,6 +5,9 @@ import logging
 import threading
 import traceback
 import requests
+import socket
+
+import aiohttp
 
 from twitchAPI.twitch import Twitch
 from twitchAPI.helper import first
@@ -56,6 +59,7 @@ class TwitchLogin:
 
     def __init__(self, config):
         self.config = config
+        self.timeout = aiohttp.ClientTimeout(total=60)
 
     async def attempt_user_auth(self, token, refresh_token):
         ''' try user auth '''
@@ -91,7 +95,8 @@ class TwitchLogin:
                             'twitchbot/secret'):
                     TwitchLogin.TWITCH = await Twitch(
                         self.config.cparser.value('twitchbot/clientid'),
-                        self.config.cparser.value('twitchbot/secret'))
+                        self.config.cparser.value('twitchbot/secret'),
+                        session_timeout=self.timeout)
 
                     token = self.config.cparser.value('twitchbot/oldusertoken')
                     refresh_token = self.config.cparser.value(
@@ -117,6 +122,9 @@ class TwitchLogin:
                                                  refresh_token)
                     self.config.cparser.setValue('twitchbot/oldscopes',
                                                  USER_SCOPE)
+            except (aiohttp.client_exceptions.ClientConnectorError,
+                    socket.gaierror) as error:
+                logging.error(error)
             except Exception:  #pylint: disable=broad-except
                 logging.error(traceback.format_exc())
                 return None

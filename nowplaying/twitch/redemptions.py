@@ -100,11 +100,13 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         self.chat = chat
         loggedin = False
         while not self.stopevent.is_set() and not loggedin:
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
             if self.stopevent.is_set():
                 break
 
             if loggedin and self.pubsub and not self.pubsub.is_connected():
+                logging.debug(
+                    'Was logged in; but not connected to pubsub anymore')
                 await self.stop()
                 loggedin = False
 
@@ -117,15 +119,18 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                 self.twitch = await twitchlogin.api_login()
                 if not self.twitch:
                     logging.debug(
-                        "something happened getting twitch; aborting")
-
+                        "something happened getting twitch api_login; aborting"
+                    )
+                    await twitchlogin.cache_token_del()
                     continue
                 # starting up PubSub
                 self.pubsub = PubSub(self.twitch)
                 self.pubsub.start()
-            except Exception:  #pylint: disable=broad-except
+            except:  #pylint: disable=bare-except
                 logging.error(traceback.format_exc())
+                logging.error('pubsub failed to start')
                 await twitchlogin.cache_token_del()
+                await asyncio.sleep(60)
                 continue
 
             try:
@@ -135,6 +140,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                     ]))
             except:  #pylint: disable=bare-except
                 logging.error(traceback.format_exc())
+                logging.error('pubsub getusers failed')
                 await twitchlogin.cache_token_del()
                 continue
 
@@ -143,7 +149,9 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                 self.uuid = await self.pubsub.listen_channel_points(
                     user.id, self.callback_redemption)
                 loggedin = True
-            except TwitchAuthorizationException:
+            except:  #pylint: disable=bare-except
+                logging.error(traceback.format_exc())
+                logging.error('pubsub listen_channel_points failed')
                 await twitchlogin.cache_token_del()
                 loggedin = False
 

@@ -315,6 +315,9 @@ class Plugin(RecognitionPlugin):
                     'fpcalcduration': data['duration'],
                 }
 
+            if not data:
+                return None
+
             apikey = self.config.cparser.value('acoustidmb/acoustidapikey')
             results = self._fetch_from_acoustid(
                 apikey,
