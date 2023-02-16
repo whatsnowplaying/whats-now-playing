@@ -3,10 +3,11 @@ User Track Requests
 
 **What's Now Playing** has the ability to help manage requests that come from Twitch users.
 
-There are two types of requests, roulette and non-roulette.  Roulette requests will pick a
-random song from the given playlist/crate as the request.  Non-roulette require the user
-to provide the title and optionally the artist.
+There are three types of requests, generic, twofers, and roulette:
 
+* Generic requests are just that, user may request any track by specifying the artist and title.
+* Twofers are requests where the artist is the currently playing artist.
+* Roulette requests will pick a random song from the specified playlist/crate as the request.
 
 .. image:: images/requests_generic.png
    :target: images/requests_generic.png
@@ -79,11 +80,14 @@ Additionally, the following formats can be used to request a track for someone e
 
 (Note that the username is not currently saved or processed in any way.)
 
-Anything else will be considered an artist. For example:
+Unless Twofer is being redeemed, anything else will be considered an artist. For example:
 
 .. image:: images/generic_request.png
    :target: images/generic_request.png
    :alt: Generic request example
+
+For Twofers, anything else will be considered a title since the artist
+will always be the currently playing artist.
 
 
 Using Twitch Redemptions for Requests
@@ -116,7 +120,7 @@ Configuring Requests
 #. Add Entry
 #. Change the Chat Command to the Twitch Chat command in order to enable this Request via chat.
 #. Put in the exact Twitch reward text in the Redemption Text field to enable this Request via channel points.
-#. If this request is meant to be a Roulette, check the Roulette box.
+#. Select the mode as appropriate.  By default, Generic will be used.
 #. Fill in a displayname.  This name will be shown to users when referencing requests of this type.
 #. For roulette requests, enter in the playlist or crate name.  See below for more information.
 

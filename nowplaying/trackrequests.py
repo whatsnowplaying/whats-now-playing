@@ -11,9 +11,10 @@ import aiosqlite
 import normality
 
 from PySide6.QtCore import Slot, QFile, QFileSystemWatcher, QStandardPaths  # pylint: disable=import-error, no-name-in-module
-from PySide6.QtWidgets import QCheckBox, QHeaderView, QTableWidgetItem  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QCheckBox, QComboBox, QHeaderView, QTableWidgetItem  # pylint: disable=no-name-in-module
 from PySide6.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
 
+import nowplaying.db
 import nowplaying.metadata
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.utils import TRANSPARENT_PNG_BIN
@@ -33,7 +34,7 @@ REQUEST_WINDOW_FIELDS = [
 REQUEST_SETTING_MAPPING = {
     'command': 'Chat Command',
     'twitchtext': 'Twitch Text',
-    'type': 'Roulette',
+    'type': 'Type',
     'displayname': 'Display Name',
     'playlist': 'Playlist File'
 }
@@ -59,9 +60,10 @@ WEIRDAL_RE = re.compile(r'"weird al"', re.IGNORECASE)
 ARTIST_TITLE_RE = re.compile(r'^\s*(.*?)\s+[-]+\s+"?(.*?)"?\s*(for @.*)*$')
 TITLE_ARTIST_RE = re.compile(r'^\s*"(.*?)"\s+[-by]+\s+(.*?)\s*(for @.*)*$')
 TITLE_RE = re.compile(r'^\s*"(.*?)"\s*(for @.*)*$')
+TWOFERTITLE_RE = re.compile(r'^\s*"?(.*?)"?\s*(for @.*)*$')
 
 
-class Requests:  #pylint: disable=too-many-instance-attributes
+class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-methods
     ''' handle requests
 
 
@@ -224,7 +226,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             'artist': metadata.get('artist'),
             'filename': metadata['filename'],
             'title': metadata.get('title'),
-            'type': 'Roulette',
+            'type': 'Mode',
             'playlist': setting['playlist'],
             'displayname': setting.get('displayname'),
             'user_input': user_input,
@@ -368,15 +370,15 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             user_input = user_input.replace('-', ' - ')
         if user_input := WEIRDAL_RE.sub('Weird Al', user_input):
             weirdal = True
-        if user_input[0] != '"' and (match :=
+        if user_input[0] != '"' and (atmatch :=
                                      ARTIST_TITLE_RE.search(user_input)):
-            artist = match.group(1)
-            title = match.group(2)
-        elif match := TITLE_ARTIST_RE.search(user_input):
-            title = match.group(1)
-            artist = match.group(2)
-        elif match := TITLE_RE.search(user_input):
-            title = match.group(1)
+            artist = atmatch.group(1)
+            title = atmatch.group(2)
+        elif tmatch := TITLE_ARTIST_RE.search(user_input):
+            title = tmatch.group(1)
+            artist = tmatch.group(2)
+        elif tmatch := TITLE_RE.search(user_input):
+            title = tmatch.group(1)
         else:
             artist = user_input
 
@@ -387,6 +389,42 @@ class Requests:  #pylint: disable=too-many-instance-attributes
             'artist': artist,
             'title': title,
             'type': 'Generic',
+            'displayname': setting.get('displayname'),
+            'user_input': user_input,
+        }
+        if self.testmode:
+            return data
+
+        await self.add_to_db(data)
+        return {
+            'requester': user,
+            'requestartist': artist,
+            'requesttitle': title,
+            'requestdisplayname': setting.get('displayname')
+        }
+
+    async def twofer_request(self, setting, user, user_input):
+        ''' generic request '''
+        logging.debug('%s twofer requested %s', user, user_input)
+        title = None
+        metadb = nowplaying.db.MetadataDB()
+        metadata = metadb.read_last_meta()
+
+        if artist := metadata.get('artist'):
+            pass
+        else:
+            artist = None
+
+        if tmatch := TITLE_RE.search(user_input):
+            title = tmatch.group(1)
+        else:
+            title = user_input
+
+        data = {
+            'username': user,
+            'artist': artist,
+            'title': title,
+            'type': 'Twofer',
             'displayname': setting.get('displayname'),
             'user_input': user_input,
         }
@@ -564,19 +602,23 @@ class RequestSettings:
 
     @staticmethod
     def _row_load(widget, **kwargs):
+
+        def _typebox(current):
+            box = QComboBox()
+            for reqtype in ['Generic', 'Roulette', 'Twofer']:
+                box.addItem(reqtype)
+                if current and reqtype == current:
+                    box.setCurrentIndex(box.count() - 1)
+            return box
+
         row = widget.request_table.rowCount()
         widget.request_table.insertRow(row)
 
         for column, cbtype in enumerate(
                 nowplaying.trackrequests.REQUEST_SETTING_MAPPING):
             if cbtype == 'type':
-                if kwargs.get('type') == 'Roulette':
-                    checkbox = QCheckBox()
-                    checkbox.setChecked(True)
-                else:
-                    checkbox = QCheckBox()
-                    checkbox.setChecked(False)
-                widget.request_table.setCellWidget(row, column, checkbox)
+                box = _typebox(kwargs.get('type'))
+                widget.request_table.setCellWidget(row, column, box)
             elif kwargs.get(cbtype):
                 widget.request_table.setItem(
                     row, column, QTableWidgetItem(str(kwargs.get(cbtype))))
@@ -626,11 +668,7 @@ class RequestSettings:
                         nowplaying.trackrequests.REQUEST_SETTING_MAPPING):
                     if cbtype == 'type':
                         item = widget.cellWidget(row, column)
-                        checkv = item.isChecked()
-                        if checkv:
-                            value = "Roulette"
-                        else:
-                            value = "Generic"
+                        value = item.currentText()
                     else:
                         item = widget.item(row, column)
                         if not item:

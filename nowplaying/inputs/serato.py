@@ -605,8 +605,8 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
     def _get_tidal_cover(self, filename):
         ''' try to get the cover from tidal '''
-        if match := TIDAL_FORMAT.search(str(filename)):
-            imgfile = f'{match.group(1)}.jpg'
+        if tmatch := TIDAL_FORMAT.search(str(filename)):
+            imgfile = f'{tmatch.group(1)}.jpg'
             tidalimgpath = self.seratodir.joinpath('Metadata', 'Tidal',
                                                    imgfile)
             logging.debug(tidalimgpath)
