@@ -410,9 +410,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         metadb = nowplaying.db.MetadataDB()
         metadata = metadb.read_last_meta()
 
-        if artist := metadata.get('artist'):
-            pass
-        else:
+        if not (artist := metadata.get('artist')):
             artist = None
 
         if tmatch := TITLE_RE.search(user_input):
