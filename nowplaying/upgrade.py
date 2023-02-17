@@ -165,8 +165,8 @@ class UpgradeBinary:
         if not data:
             return
 
-        dialog = UpgradeDialog(self.myversion, data['tag_name'],
-                               data['html_url'])
+        dialog = UpgradeDialog()
+        dialog.fill_it_in(self.myversion, data['tag_name'])
         if dialog.exec():
             webbrowser.open(data['html_url'])
             logging.info('User wants to upgrade; exiting')
@@ -176,23 +176,22 @@ class UpgradeBinary:
 class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
     ''' Qt Dialog for asking the user to ugprade '''
 
-    def __init__(self, oldversion, newversion, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-
         self.setWindowTitle("New Version Available!")
-
         dialogbuttons = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-
         self.buttonbox = QDialogButtonBox(dialogbuttons)
         self.buttonbox.accepted.connect(self.accept)
         self.buttonbox.rejected.connect(self.reject)
+        self.layout = QVBoxLayout()
 
+    def fill_it_in(self, oldversion, newversion):
+        ''' fill in the upgrade versions and message '''
         messages = [
             f'Your version: {oldversion}', f'New version: {newversion}',
             'Download new version?'
         ]
 
-        self.layout = QVBoxLayout()
         for msg in messages:
             message = QLabel(msg)
             self.layout.addWidget(message)
