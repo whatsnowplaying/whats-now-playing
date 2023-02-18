@@ -115,6 +115,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
     @staticmethod
     def normalize(crazystring):
         ''' user input needs to be normalized for best case matches '''
+        if not crazystring:
+            return ''
         return normality.normalize(crazystring).replace(' ', '')
 
     async def add_to_db(self, data):
@@ -124,10 +126,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                           self.databasefile)
             return
 
-        if data.get('artist'):
-            data['normalizedartist'] = self.normalize(data['artist'])
-        if data.get('title'):
-            data['normalizedtitle'] = self.normalize(data['title'])
+        data['normalizedartist'] = self.normalize(data.get('artist'))
+        data['normalizedtitle'] = self.normalize(data.get('title'))
 
         if data.get('reqid'):
             reqid = data['reqid']
@@ -230,6 +230,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             'playlist': setting['playlist'],
             'displayname': setting.get('displayname'),
             'user_input': user_input,
+            'userimage': setting.get('userimage'),
         }
         if reqid:
             data['reqid'] = reqid
@@ -263,6 +264,25 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             logging.debug(error)
         return None
 
+    async def _request_lookup_by_artist_title(self, artist='', title=''):
+        ''' perform lookups in the request DB'''
+        logging.debug('trying artist >%s< / title >%s<', artist, title)
+        sql = 'SELECT * FROM userrequest WHERE artist=? AND title=?'
+        datatuple = artist, title
+        logging.debug('request db lookup: %s', datatuple)
+        newdata = await self._get_and_del_request_lookup(sql, datatuple)
+
+        if not newdata:
+            artist = self.normalize(artist)
+            title = self.normalize(title)
+            logging.debug('trying normalized artist >%s< / title >%s<', artist,
+                          title)
+            sql = 'SELECT * FROM userrequest WHERE normalizedartist=? AND normalizedtitle=?'
+            datatuple = artist, title
+            logging.debug('request db lookup: %s', datatuple)
+            newdata = await self._get_and_del_request_lookup(sql, datatuple)
+        return newdata
+
     async def get_request(self, metadata):
         ''' if a track gets played, finish out the request '''
         if not self.config.cparser.value('settings/requests'):
@@ -276,22 +296,16 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             newdata = await self._get_and_del_request_lookup(sql, datatuple)
 
         if not newdata and metadata.get('artist') and metadata.get('title'):
-            logging.debug('trying artist >%s< / title >%s<',
-                          metadata['artist'], metadata['title'])
-            sql = 'SELECT * FROM userrequest WHERE artist=? AND title=?'
-            datatuple = metadata['artist'], metadata['title']
-            logging.debug('request db lookup: %s', datatuple)
-            newdata = await self._get_and_del_request_lookup(sql, datatuple)
+            newdata = await self._request_lookup_by_artist_title(
+                artist=metadata.get('artist'), title=metadata.get('title'))
 
-        if not newdata and metadata.get('artist') and metadata.get('title'):
-            artist = self.normalize(metadata['artist'])
-            title = self.normalize(metadata['title'])
-            logging.debug('trying normalized artist >%s< / title >%s<', artist,
-                          title)
-            sql = 'SELECT * FROM userrequest WHERE normalizedartist=? AND normalizedtitle=?'
-            datatuple = artist, title
-            logging.debug('request db lookup: %s', datatuple)
-            newdata = await self._get_and_del_request_lookup(sql, datatuple)
+        if not newdata and metadata.get('artist'):
+            newdata = await self._request_lookup_by_artist_title(
+                artist=metadata.get('artist'))
+
+        if not newdata and metadata.get('title'):
+            newdata = await self._request_lookup_by_artist_title(
+                title=metadata.get('title'))
 
         if not newdata:
             logging.debug('not a request')
@@ -382,7 +396,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         else:
             artist = user_input
 
-        if weirdal:
+        if weirdal and artist:
             artist = artist.replace('Weird Al', '"Weird Al"')
         data = {
             'username': user,
@@ -391,6 +405,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             'type': 'Generic',
             'displayname': setting.get('displayname'),
             'user_input': user_input,
+            'userimage': setting.get('userimage'),
         }
         if self.testmode:
             return data
@@ -424,6 +439,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             'type': 'Twofer',
             'displayname': setting.get('displayname'),
             'user_input': user_input,
+            'userimage': setting.get('userimage'),
         }
         if self.testmode:
             return data
@@ -689,16 +705,16 @@ class RequestSettings:
         for row in range(count):
             item0 = widget.request_table.item(row, 0)
             item1 = widget.request_table.item(row, 1)
+            item2 = widget.request_table.cellWidget(row, 2)
             if not item0.text() and not item1.text():
                 raise PluginVerifyError(
                     'Request must have either a command or redemption text.')
 
-            if item := widget.request_table.cellWidget(row, 1):
-                if item.isChecked():
-                    playlistitem = widget.request_table.item(row, 2)
-                    if not playlistitem.text():
-                        raise PluginVerifyError(
-                            'Roulette request has an empty playlist')
+            if item2.currentText() in 'Roulette':
+                playlistitem = widget.request_table.item(row, 4)
+                if not playlistitem.text():
+                    raise PluginVerifyError(
+                        'Roulette request has an empty playlist')
 
     @Slot()
     def on_add_button(self):

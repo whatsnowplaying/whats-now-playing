@@ -2,6 +2,7 @@
 ''' system tray '''
 
 import logging
+import sys
 
 from PySide6.QtWidgets import QApplication, QErrorMessage, QMenu, QMessageBox, QSystemTrayIcon  # pylint: disable=no-name-in-module
 from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module
@@ -237,7 +238,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.subprocesses.stop_all_processes()
 
         app = QApplication.instance()
-        app.exit(0)
+        logging.info('shutting qapp down v%s',
+                     nowplaying.version.get_versions()['version'])
+        sys.exit(app.exit(0))
 
     def installer(self):
         ''' make some guesses as to what the user needs '''

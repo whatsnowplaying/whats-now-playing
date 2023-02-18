@@ -67,7 +67,7 @@ def actualmain(beam=False):
     icon = QIcon(str(config.iconfile))
     qapp.setWindowIcon(icon)
     exitval = qapp.exec_()
-    logging.info('shutting down v%s',
+    logging.info('shutting main down v%s',
                  nowplaying.version.get_versions()['version'])
     sys.exit(exitval)
 

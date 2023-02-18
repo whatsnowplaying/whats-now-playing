@@ -35,6 +35,7 @@ class DiscordSupport:
         self.client = {}
         self.jinja2 = nowplaying.utils.TemplateHandler()
         self.tasks = set()
+        signal.signal(signal.SIGINT, self.forced_stop)
 
     async def _setup_bot_client(self):
         token = self.config.cparser.value('discord/token')
@@ -69,24 +70,20 @@ class DiscordSupport:
         loop = asyncio.get_running_loop()
         try:
             self.client['ipc'] = pypresence.AioPresence(clientid, loop=loop)
-            await self.client['ipc'].connect()
         except pypresence.exceptions.DiscordNotFound:
             logging.error('Discord client is not running')
-            del self.client['ipc']
             return
         except ConnectionRefusedError:
             logging.error('Cannot connect to discord client.')
-            del self.client['ipc']
             return
         except pypresence.exceptions.DiscordError as error:
             logging.error(error)
-            del self.client['ipc']
             return
         except Exception as error:  #pylint: disable=broad-except
             logging.error('Cannot configure IPC client: %s %s', error,
                           traceback.format_exc())
-            del self.client['ipc']
             return
+        await self.client['ipc'].connect()
         logging.debug('ipc setup')
 
     async def _update_bot(self, templateout):
@@ -145,7 +142,7 @@ class DiscordSupport:
         while not self.stopevent.is_set():
             await self.connect_clients()
             # discord will lock out if updates more than every 15 seconds
-            await asyncio.sleep(60)
+            await asyncio.sleep(20)
 
             if mytime < watcher.updatetime:
                 template = self.config.cparser.value('discord/template')
@@ -169,8 +166,13 @@ class DiscordSupport:
                             for line in traceback.format_exc().splitlines():
                                 logging.debug(line)
                             del self.client[mode]
+        watcher.stop()
         if self.client.get('bot'):  # pylint: disable=consider-using-dict-items
             await self.client['bot'].close()
+
+    def forced_stop(self, signum, frame):  # pylint: disable=unused-argument
+        ''' caught an int signal so tell the world to stop '''
+        self.stopevent.set()
 
 
 def stop(pid):

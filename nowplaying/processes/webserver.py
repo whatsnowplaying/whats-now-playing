@@ -509,6 +509,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     async def stop_server(self, request):
         ''' stop our server '''
         self.stopevent.set()
+        for task in self.tasks:
+            task.cancel()
         await request.app.shutdown()
         await request.app.cleanup()
         self.loop.stop()
@@ -521,6 +523,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                          timeout=5)
         except Exception as error:  # pylint: disable=broad-except
             logging.info(error)
+        for task in self.tasks:
+            task.cancel()
 
 
 def stop(pid):
@@ -560,4 +564,6 @@ def start(stopevent=None, bundledir=None, testmode=False):
     except Exception as error:  #pylint: disable=broad-except
         logging.error('Webserver crashed: %s', error, exc_info=True)
         sys.exit(1)
+    logging.info('shutting down webserver v%s',
+                 nowplaying.version.get_versions()['version'])
     sys.exit(0)

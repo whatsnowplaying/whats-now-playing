@@ -85,6 +85,7 @@ class SubprocessManager:
             self.processes[processname]['process'].close()
             del self.processes[processname]['process']
             self.processes[processname]['process'] = None
+        logging.debug('%s should be stopped', processname)
 
     def start_discordbot(self):
         ''' Start discordbot '''
