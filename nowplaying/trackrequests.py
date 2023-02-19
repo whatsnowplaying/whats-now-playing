@@ -7,12 +7,12 @@ import pathlib
 import re
 import sqlite3
 
-import aiosqlite
-import normality
+import aiosqlite  #pylint: disable=import-error
+import normality  #pylint: disable=import-error
 
 from PySide6.QtCore import Slot, QFile, QFileSystemWatcher, QStandardPaths  # pylint: disable=import-error, no-name-in-module
-from PySide6.QtWidgets import QComboBox, QHeaderView, QTableWidgetItem  # pylint: disable=no-name-in-module
-from PySide6.QtUiTools import QUiLoader  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QComboBox, QHeaderView, QTableWidgetItem  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtUiTools import QUiLoader  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.db
 import nowplaying.metadata
@@ -38,6 +38,8 @@ REQUEST_SETTING_MAPPING = {
     'displayname': 'Display Name',
     'playlist': 'Playlist File'
 }
+
+ROULETTE_ARTIST_TEXT = ['playlist', 'artist']
 
 RESPIN_TEXT = 'RESPIN SCHEDULED'
 '''
@@ -98,7 +100,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         if self.databasefile.exists():
             self.databasefile.unlink()
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=10) as connection:
             cursor = connection.cursor()
             try:
                 sql = ('CREATE TABLE IF NOT EXISTS userrequest (' +
@@ -111,6 +113,71 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                 connection.commit()
             except sqlite3.OperationalError as error:
                 logging.error(error)
+
+    def clear_roulette_artist_dupes(self):
+        ''' clear out artists from the roulette table '''
+        with sqlite3.connect(self.databasefile, timeout=10) as connection:
+            cursor = connection.cursor()
+            try:
+                sql = ('CREATE TABLE IF NOT EXISTS rouletteartist (' +
+                       ' TEXT COLLATE NOCASE, '.join(ROULETTE_ARTIST_TEXT) +
+                       ' TEXT COLLATE NOCASE, '
+                       ' reqid INTEGER PRIMARY KEY AUTOINCREMENT,'
+                       ' timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)')
+                cursor.execute(sql)
+                connection.commit()
+                # if it did exist, then wipe it out
+                sql = 'DELETE FROM rouletteartist'
+                cursor.execute(sql)
+                connection.commit()
+            except sqlite3.OperationalError as error:
+                logging.error(error)
+
+    async def add_roulette_dupelist(self, artist, playlist):
+        ''' add a record to the dupe list '''
+        if not self.databasefile.exists():
+            logging.error('%s does not exist, refusing to add.',
+                          self.databasefile)
+            return
+
+        logging.debug('marking %s as played against %s', artist, playlist)
+        sql = 'INSERT INTO rouletteartist (artist,playlist) VALUES (?,?)'
+        datatuple = (artist, playlist)
+        async with aiosqlite.connect(self.databasefile,
+                                     timeout=10) as connection:
+            connection.row_factory = sqlite3.Row
+            cursor = await connection.cursor()
+            await cursor.execute(sql, datatuple)
+            await connection.commit()
+
+    async def get_roulette_dupe_list(self, playlist=None):
+        ''' get the artist dupelist '''
+        if not self.databasefile.exists():
+            logging.error('%s does not exist, refusing to add.',
+                          self.databasefile)
+            return
+
+        sql = 'SELECT artist FROM rouletteartist'
+        async with aiosqlite.connect(self.databasefile,
+                                     timeout=10) as connection:
+            connection.row_factory = lambda cursor, row: row[0]
+            cursor = await connection.cursor()
+            try:
+                if playlist:
+                    sql += ' WHERE playlist=?'
+                    datatuple = (playlist, )
+                    await cursor.execute(sql, datatuple)
+                else:
+                    await cursor.execute(sql)
+                await connection.commit()
+            except sqlite3.OperationalError as error:
+                logging.error(error)
+                return None
+
+            dataset = await cursor.fetchall()
+            if not dataset:
+                return None
+        return dataset
 
     @staticmethod
     def normalize(crazystring):
@@ -149,14 +216,15 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             logging.debug(
                 'Request artist: >%s< / title: >%s< has made it to the requestdb',
                 data.get('artist'), data.get('title'))
-            async with aiosqlite.connect(self.databasefile) as connection:
+            async with aiosqlite.connect(self.databasefile,
+                                         timeout=10) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
                 await cursor.execute(sql, datatuple)
                 await connection.commit()
 
         except sqlite3.OperationalError as error:
-            logging.debug(error)
+            logging.error(error)
 
     def respin_a_reqid(self, reqid):
         ''' given a reqid, set to respin '''
@@ -166,7 +234,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             return
 
         sql = 'UPDATE userrequest SET filename=? WHERE reqid=?'
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=10) as connection:
             try:
                 connection.row_factory = sqlite3.Row
                 cursor = connection.cursor()
@@ -183,7 +251,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                           self.databasefile)
             return
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=10) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:
@@ -191,8 +259,31 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                                (reqid, ))
                 connection.commit()
             except sqlite3.OperationalError as error:
-                logging.debug(error)
+                logging.error(error)
                 return
+
+    async def _find_good_request(self, setting):
+        artistdupes = await self.get_roulette_dupe_list(
+            playlist=setting['playlist'])
+        plugin = self.config.cparser.value('settings/input')
+        tryagain = True
+        counter = 10
+        while tryagain and counter > 0:
+            counter -= 1
+            roulette = await self.config.pluginobjs['inputs'][
+                f'nowplaying.inputs.{plugin}'].getrandomtrack(
+                    setting['playlist'])
+            metadata = await nowplaying.metadata.MetadataProcessors(
+                config=self.config
+            ).getmoremetadata(metadata={'filename': roulette},
+                              skipplugins=True)
+
+            if not artistdupes or metadata.get('artist') not in artistdupes:
+                tryagain = False
+                asyncio.sleep(.5)
+            if tryagain:
+                logging.debug('Duped on %s. Retrying.', metadata['artist'])
+        return metadata
 
     async def user_roulette_request(self,
                                     setting,
@@ -200,7 +291,6 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                                     user_input,
                                     reqid=None):
         ''' roulette request '''
-
         if not setting.get('playlist'):
             logging.error('%s does not have a playlist defined',
                           setting.get('displayname'))
@@ -211,13 +301,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
 
         plugin = self.config.cparser.value('settings/input')
         if plugin not in ['beam']:
-            roulette = await self.config.pluginobjs['inputs'][
-                f'nowplaying.inputs.{plugin}'].getrandomtrack(
-                    setting['playlist'])
-            metadata = await nowplaying.metadata.MetadataProcessors(
-                config=self.config
-            ).getmoremetadata(metadata={'filename': roulette},
-                              skipplugins=True)
+            metadata = await self._find_good_request(setting)
         else:
             metadata = {'filename': RESPIN_TEXT}
 
@@ -248,12 +332,16 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             return None
 
         try:
-            async with aiosqlite.connect(self.databasefile) as connection:
+            async with aiosqlite.connect(self.databasefile,
+                                         timeout=10) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
                 await cursor.execute(sql, datatuple)
                 row = await cursor.fetchone()
                 if row:
+                    if row['type'] == 'Roulette':
+                        await self.add_roulette_dupelist(
+                            row['artist'], row['playlist'])
                     self.erase_id(row['reqid'])
                     return {
                         'requester': row['username'],
@@ -261,7 +349,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                         'requestdisplayname': row['displayname'],
                     }
         except Exception as error:  #pylint: disable=broad-except
-            logging.debug(error)
+            logging.error(error)
         return None
 
     async def _request_lookup_by_artist_title(self, artist='', title=''):
@@ -325,7 +413,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                 continue
 
             try:
-                async with aiosqlite.connect(self.databasefile) as connection:
+                async with aiosqlite.connect(self.databasefile,
+                                             timeout=10) as connection:
                     connection.row_factory = sqlite3.Row
                     cursor = await connection.cursor()
                     await cursor.execute(
@@ -339,7 +428,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                             {'playlist': row['playlist']}, row['username'], '',
                             row['reqid'])
             except Exception as error:  #pylint: disable=broad-except
-                logging.debug(error)
+                logging.error(error)
 
     async def find_command(self, command):
         ''' locate request information based upon a command '''
@@ -500,7 +589,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             fields = [column[0] for column in cursor.description]
             return dict(zip(fields, row))
 
-        async with aiosqlite.connect(self.databasefile) as connection:
+        async with aiosqlite.connect(self.databasefile,
+                                     timeout=10) as connection:
             connection.row_factory = dict_factory
             cursor = await connection.cursor()
             try:
@@ -518,7 +608,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                           self.databasefile)
             return None
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=10) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:

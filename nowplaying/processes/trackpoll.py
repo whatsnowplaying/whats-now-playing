@@ -59,6 +59,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             self._setup_imagecache()
             self.trackrequests = nowplaying.trackrequests.Requests(
                 config=self.config, stopevent=self.stopevent)
+            self.trackrequests.clear_roulette_artist_dupes()
 
         self.tasks = set()
         nowplaying.textoutput.deltxttrack(self.config)
