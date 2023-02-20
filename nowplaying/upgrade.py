@@ -148,7 +148,8 @@ class UpgradeBinary:
                 self.predata = self.stabledata
 
         except:  # pylint: disable=bare-except
-            logging.debug(traceback.format_exc())
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
 
     def get_upgrade_data(self):
         ''' compare our version to fetched version data '''

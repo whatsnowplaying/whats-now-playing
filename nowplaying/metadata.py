@@ -214,7 +214,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                             metadata=self.metadata,
                             addmeta=addmeta)
                 except Exception as error:  # pylint: disable=broad-except
-                    logging.debug('%s threw exception %s',
+                    logging.error('%s threw exception %s',
                                   plugin,
                                   error,
                                   exc_info=True)
@@ -244,7 +244,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                             addmeta=addmeta)
 
                 except Exception as error:  # pylint: disable=broad-except
-                    logging.debug('%s threw exception %s',
+                    logging.error('%s threw exception %s',
                                   plugin,
                                   error,
                                   exc_info=True)
@@ -412,7 +412,7 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
             base = nowplaying.vendor.audio_metadata.load(
                 self.metadata['filename'])
         except Exception as error:  # pylint: disable=broad-except
-            logging.debug('audio_metadata could not process %s: %s',
+            logging.error('audio_metadata could not process %s: %s',
                           self.metadata['filename'], error)
             return
 

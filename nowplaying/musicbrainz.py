@@ -77,7 +77,7 @@ class MusicBrainzHelper():
             try:
                 mbdata = musicbrainzngs.get_recordings_by_isrc(
                     isrc, includes=['releases'], release_status=['official'])
-            except Exception:  # pylint: disable=broad-except
+            except:  # pylint: disable=bare-except
                 pass
 
         if not mbdata:
@@ -85,7 +85,7 @@ class MusicBrainzHelper():
                 try:
                     mbdata = musicbrainzngs.get_recordings_by_isrc(
                         isrc, includes=['releases'])
-                except Exception:  # pylint: disable=broad-except
+                except:  # pylint: disable=bare-except
                     logging.info('musicbrainz cannot find ISRC %s', isrc)
 
         if 'isrc' not in mbdata or 'recording-list' not in mbdata['isrc']:
@@ -132,7 +132,7 @@ class MusicBrainzHelper():
                     includes=['labels', 'artist-credits'],
                     release_status=['official'])
             except Exception as error:  # pylint: disable=broad-except
-                logging.debug('MusicBrainz threw an error: %s', error)
+                logging.error('MusicBrainz threw an error: %s', error)
                 return None
 
             if 'release-count' not in mbdata or mbdata['release-count'] == 0:
@@ -140,8 +140,8 @@ class MusicBrainzHelper():
                     mbdata = musicbrainzngs.browse_releases(
                         recording=recordingid,
                         includes=['labels', 'artist-credits'])
-                except Exception:  # pylint: disable=broad-except
-                    logging.debug('MusicBrainz threw an error: %s', error)
+                except:  # pylint: disable=bare-except
+                    logging.error('MusicBrainz threw an error: %s', error)
                     return None
             return mbdata
 

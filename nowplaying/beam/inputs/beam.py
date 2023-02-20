@@ -309,7 +309,8 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
                     self.trackrequests.erase_id(entry)
                 await asyncio.sleep(5)
         except:  #pylint: disable=bare-except
-            logging.debug(traceback.format_exc())
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
 
     def _create_runner(self):
         ''' setup http routing '''

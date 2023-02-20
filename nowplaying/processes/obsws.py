@@ -89,7 +89,7 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
 
                 await self.client.call(request)
             except Exception as error:  # pylint: disable=broad-except
-                logging.debug(error)
+                logging.error(error)
                 await self.client.disconnect()
 
             self.updateevent.clear()
@@ -161,7 +161,7 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
             except Exception as error:  # pylint: disable=broad-except
                 # do not stop here in case OBS just isn't running yet
                 # (initial launch case)
-                logging.debug(error)
+                logging.error(error)
                 await asyncio.sleep(3)
 
     def stop(self):

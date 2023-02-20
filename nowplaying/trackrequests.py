@@ -100,7 +100,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         if self.databasefile.exists():
             self.databasefile.unlink()
 
-        with sqlite3.connect(self.databasefile, timeout=10) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
             cursor = connection.cursor()
             try:
                 sql = ('CREATE TABLE IF NOT EXISTS userrequest (' +
@@ -116,7 +116,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
 
     def clear_roulette_artist_dupes(self):
         ''' clear out artists from the roulette table '''
-        with sqlite3.connect(self.databasefile, timeout=10) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
             cursor = connection.cursor()
             try:
                 sql = ('CREATE TABLE IF NOT EXISTS rouletteartist (' +
@@ -144,7 +144,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         sql = 'INSERT INTO rouletteartist (artist,playlist) VALUES (?,?)'
         datatuple = (artist, playlist)
         async with aiosqlite.connect(self.databasefile,
-                                     timeout=10) as connection:
+                                     timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
             await cursor.execute(sql, datatuple)
@@ -159,7 +159,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
 
         sql = 'SELECT artist FROM rouletteartist'
         async with aiosqlite.connect(self.databasefile,
-                                     timeout=10) as connection:
+                                     timeout=30) as connection:
             connection.row_factory = lambda cursor, row: row[0]
             cursor = await connection.cursor()
             try:
@@ -217,7 +217,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                 'Request artist: >%s< / title: >%s< has made it to the requestdb',
                 data.get('artist'), data.get('title'))
             async with aiosqlite.connect(self.databasefile,
-                                         timeout=10) as connection:
+                                         timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
                 await cursor.execute(sql, datatuple)
@@ -234,7 +234,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             return
 
         sql = 'UPDATE userrequest SET filename=? WHERE reqid=?'
-        with sqlite3.connect(self.databasefile, timeout=10) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
             try:
                 connection.row_factory = sqlite3.Row
                 cursor = connection.cursor()
@@ -251,7 +251,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                           self.databasefile)
             return
 
-        with sqlite3.connect(self.databasefile, timeout=10) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:
@@ -333,7 +333,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
 
         try:
             async with aiosqlite.connect(self.databasefile,
-                                         timeout=10) as connection:
+                                         timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
                 await cursor.execute(sql, datatuple)
@@ -414,7 +414,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
 
             try:
                 async with aiosqlite.connect(self.databasefile,
-                                             timeout=10) as connection:
+                                             timeout=30) as connection:
                     connection.row_factory = sqlite3.Row
                     cursor = await connection.cursor()
                     await cursor.execute(
@@ -590,7 +590,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             return dict(zip(fields, row))
 
         async with aiosqlite.connect(self.databasefile,
-                                     timeout=10) as connection:
+                                     timeout=30) as connection:
             connection.row_factory = dict_factory
             cursor = await connection.cursor()
             try:
@@ -608,7 +608,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                           self.databasefile)
             return None
 
-        with sqlite3.connect(self.databasefile, timeout=10) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:

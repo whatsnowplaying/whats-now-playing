@@ -137,9 +137,9 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                     logging.debug(error)
                     self._remove_control()
 
-        except Exception as error:  # pylint: disable=broad-except
-            logging.error(error)
-            logging.error(traceback.format_exc())
+        except:  # pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
 
     async def _websocket_listener(self, connection):
 
@@ -229,9 +229,9 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                     self.config.cparser.setValue('control/beamserverip',
                                                  self.ipaddr)
 
-        except Exception as error:  # pylint: disable=broad-except
-            logging.error(error)
-            logging.error(traceback.format_exc())
+        except:  # pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
         if sock:
             sock.close()
 
@@ -275,7 +275,8 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                     reqdata, reqdata.get('username'),
                     reqdata.get('user_input'))
         except:  #pylint: disable=bare-except
-            logging.debug(traceback.format_exc())
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
 
     async def _beam_client_data(self):
         return {

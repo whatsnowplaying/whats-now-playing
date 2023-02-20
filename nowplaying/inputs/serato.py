@@ -101,7 +101,7 @@ class SeratoCrateReader:
     def getfilenames(self):
         ''' get the filenames from this crate '''
         if not self.crate:
-            logging.debug('crate has not been loaded')
+            logging.error('crate has not been loaded')
             return None
         filelist = []
         anchor = self.cratepath.anchor
@@ -257,7 +257,7 @@ class SeratoSessionReader:
         ''' shrink to just adats '''
         adatdata = []
         if not self.sessiondata:
-            logging.debug('session has not been loaded')
+            logging.error('session has not been loaded')
             return
         for sessiontuple in self.sessiondata:
             if sessiontuple[0] == 'oent':
@@ -274,14 +274,14 @@ class SeratoSessionReader:
     def getadat(self):
         ''' get the filenames from this session '''
         if not self.sessiondata:
-            logging.debug('session has not been loaded')
+            logging.error('session has not been loaded')
             return
         yield from self.sessiondata
 
     def getreverseadat(self):
         ''' same as getadat, but reversed order '''
         if not self.sessiondata:
-            logging.debug('session has not been loaded')
+            logging.error('session has not been loaded')
             return
         yield from reversed(self.sessiondata)
 
@@ -609,7 +609,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             imgfile = f'{tmatch.group(1)}.jpg'
             tidalimgpath = self.seratodir.joinpath('Metadata', 'Tidal',
                                                    imgfile)
-            logging.debug(tidalimgpath)
+            logging.debug('using tidal image path: %s', tidalimgpath)
             if tidalimgpath.exists():
                 with open(tidalimgpath, 'rb') as fhin:
                     return fhin.read()
@@ -795,7 +795,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         elif smartcrate_path.joinpath(f'{playlist}.scrate'):
             playlistfile = smartcrate_path.joinpath(f'{playlist}.scrate')
         else:
-            logging.debug('Unknown crate: %s', playlist)
+            logging.error('Unknown crate: %s', playlist)
             return None
 
         logging.debug('Using %s', playlistfile)

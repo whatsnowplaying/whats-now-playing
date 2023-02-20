@@ -84,7 +84,7 @@ class ImageCache:
         logging.info('Create imagecache db file %s', self.databasefile)
         self.databasefile.resolve().parent.mkdir(parents=True, exist_ok=True)
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
 
             cursor = connection.cursor()
 
@@ -106,7 +106,7 @@ class ImageCache:
             self.setup_sql()
             return None
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:
@@ -123,7 +123,7 @@ class ImageCache:
                 msg = str(error)
                 error_code = error.sqlite_errorcode
                 error_name = error.sqlite_name
-                logging.debug('Error %s [Errno %s]: %s', msg, error_code,
+                logging.error('Error %s [Errno %s]: %s', msg, error_code,
                               error_name)
                 return None
 
@@ -148,7 +148,7 @@ class ImageCache:
             try:
                 image = self.cache[data['cachekey']]
             except KeyError as error:
-                logging.debug('random: %s', error)
+                logging.error('random: %s', error)
                 self.erase_cachekey(data['cachekey'])
             if image:
                 break
@@ -162,7 +162,7 @@ class ImageCache:
             self.setup_sql()
             return None
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:
@@ -172,7 +172,7 @@ class ImageCache:
                 msg = str(error)
                 error_code = error.sqlite_errorcode
                 error_name = error.sqlite_name
-                logging.debug('Error %s [Errno %s]: %s', msg, error_code,
+                logging.error('Error %s [Errno %s]: %s', msg, error_code,
                               error_name)
                 return None
 
@@ -194,7 +194,7 @@ class ImageCache:
             self.setup_sql()
             return None
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:
@@ -257,7 +257,7 @@ class ImageCache:
             logging.error('imagecache does not exist yet?')
             return None
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = dict_factory
             cursor = connection.cursor()
             try:
@@ -267,7 +267,7 @@ class ImageCache:
  WHERE imagetype='artistthumb' OR imagetype='artistbanner' OR imagetype='artistlogo')
  ORDER BY TIMESTAMP DESC''')
             except sqlite3.OperationalError as error:
-                logging.debug(error)
+                logging.error(error)
                 return None
 
             dataset = cursor.fetchall()
@@ -278,7 +278,7 @@ class ImageCache:
                         '''SELECT * FROM artistsha WHERE cachekey IS NULL
  ORDER BY TIMESTAMP DESC''')
                 except sqlite3.OperationalError as error:
-                    logging.debug(error)
+                    logging.error(error)
                     return None
 
                 dataset = cursor.fetchall()
@@ -293,7 +293,7 @@ class ImageCache:
             return
 
         normalartist = self._normalize_artist(artist)
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
 
@@ -312,7 +312,7 @@ INSERT OR REPLACE INTO
                 msg = str(error)
                 error_code = error.sqlite_errorcode
                 error_name = error.sqlite_name
-                logging.debug('Error %s [Errno %s]: %s', msg, error_code,
+                logging.error('Error %s [Errno %s]: %s', msg, error_code,
                               error_name)
                 return
 
@@ -323,7 +323,7 @@ INSERT OR REPLACE INTO
             logging.error('imagecache does not exist yet?')
             return
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
 
@@ -342,9 +342,9 @@ VALUES (?,?,?);
                 if 'UNIQUE' in str(error):
                     logging.debug('Duplicate URL, ignoring')
                 else:
-                    logging.debug(error)
+                    logging.error(error)
             except sqlite3.OperationalError as error:
-                logging.debug(error)
+                logging.error(error)
 
     def erase_url(self, url):
         ''' update metadb '''
@@ -354,7 +354,7 @@ VALUES (?,?,?);
             return
 
         logging.debug('Erasing %s', url)
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             logging.debug('Delete %s for reasons', url)

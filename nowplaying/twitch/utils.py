@@ -76,7 +76,7 @@ class TwitchLogin:
             TwitchLogin.TWITCH.user_auth_refresh_callback = self.save_refreshed_tokens
             await TwitchLogin.TWITCH.refresh_used_token()
         except Exception as error:  #pylint: disable=broad-except
-            logging.debug(error)
+            logging.error(error)
             return False
         return True
 
@@ -125,8 +125,9 @@ class TwitchLogin:
             except (aiohttp.client_exceptions.ClientConnectorError,
                     socket.gaierror) as error:
                 logging.error(error)
-            except Exception:  #pylint: disable=broad-except
-                logging.error(traceback.format_exc())
+            except:  #pylint: disable=broad-except
+                for line in traceback.format_exc().splitlines():
+                    logging.error(line)
                 return None
         logging.debug('exiting lock')
         return TwitchLogin.TWITCH
@@ -151,8 +152,9 @@ class TwitchLogin:
                 logging.debug('refresh token is invalid, removing')
                 self.config.cparser.remove('twitchbot/oldrefreshtoken')
                 self.config.save()
-            except Exception:  #pylint: disable=broad-except
-                logging.error(traceback.format_exc())
+            except:  #pylint: disable=broad-except
+                for line in traceback.format_exc().splitlines():
+                    logging.error(line)
 
     async def cache_token_del(self):
         ''' logout and delete the old tokens '''

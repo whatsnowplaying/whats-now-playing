@@ -106,7 +106,7 @@ class Plugin(M3UPlugin):
                     '''SELECT filename FROM playlists WHERE name=? ORDER BY random() LIMIT 1''',
                     (playlist, ))
             except sqlite3.OperationalError as error:
-                logging.debug(error)
+                logging.error(error)
                 return None
 
             row = await cursor.fetchone()

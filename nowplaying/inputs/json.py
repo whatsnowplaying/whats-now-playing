@@ -68,14 +68,14 @@ class Plugin(InputPlugin):
             self.config.cparser.value('jsoninput/filename'))
 
         if not filepath.exists():
-            logging.debug('%s does not exist', filepath)
+            logging.error('%s does not exist', filepath)
             return {}
 
         try:
             with open(filepath, mode='r', encoding='utf-8') as fhin:
                 return json.load(fhin)
         except Exception as error:  # pylint: disable=broad-except
-            logging.debug(error)
+            logging.error(error)
 
         return {}
 

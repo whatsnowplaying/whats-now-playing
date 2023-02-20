@@ -95,7 +95,8 @@ class TwitchSupport:  # pylint: disable=too-many-instance-attributes
             task.add_done_callback(self.tasks.discard)
             self.loop.run_forever()
         except:  #pylint: disable=bare-except:
-            logging.error(traceback.format_exc())
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
             logging.error('Twitch support crashed')
 
     def forced_stop(self, signum, frame):  # pylint: disable=unused-argument

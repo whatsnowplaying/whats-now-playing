@@ -102,7 +102,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             try:
                 await self.input.start()
             except Exception as error:  # pylint: disable=broad-except
-                logging.debug('cannot start %s: %s', self.previousinput, error)
+                logging.error('cannot start %s: %s', self.previousinput, error)
                 return False
 
         return True
@@ -130,7 +130,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             try:
                 await self.gettrack()
             except Exception as error:  #pylint: disable=broad-except
-                logging.debug('Failed attempting to get a track: %s',
+                logging.error('Failed attempting to get a track: %s',
                               error,
                               exc_info=True)
 
@@ -169,7 +169,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                     self.config, metadata['filename'])
                 filepath = pathlib.Path(metadata['filename'])
                 if not filepath.exists():
-                    logging.debug('cannot find %s; removing from metadata',
+                    logging.error('cannot find %s; removing from metadata',
                                   metadata['filename'])
                     del metadata['filename']
         return metadata
@@ -274,7 +274,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         try:
             nextmeta = await self.input.getplayingtrack()
         except:  #pylint: disable=bare-except
-            logging.debug(traceback.format_exc())
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
             await asyncio.sleep(5)
             return
 
@@ -287,7 +288,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         try:
             self.currentmeta = await self._fillinmetadata(nextmeta)
         except:  #pylint: disable=bare-except
-            logging.debug(traceback.format_exc())
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
             await asyncio.sleep(5)
             return
 

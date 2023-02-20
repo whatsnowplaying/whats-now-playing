@@ -57,6 +57,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                     QCoreApplication.applicationName(), 'templates')
         self.jinja2 = self.setup_jinja2(self.templatedir)
         self.twitch = None
+        self.twitchcustom = False
         self.chat = None
         self.tasks = set()
         self.starttime = datetime.datetime.utcnow()
@@ -64,10 +65,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
     async def _try_custom_token(self, token):
         ''' if a custom token has been provided, try it. '''
-        twitch = None
+        if self.twitch and self.twitchcustom:
+            self.twitch.close()
         if token:
-            # since there is no session to keep track of,
-            # doesn't appear we need to close it?
             try:
                 tokenval = await validate_token(token)
                 if tokenval.get('status') == 401:
@@ -77,17 +77,19 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                     # doesn't match the given clientid since
                     # Chat() never uses the clientid other than
                     # to do a user lookup
-                    twitch = await Twitch(tokenval['client_id'],
-                                          authenticate_app=False,
-                                          session_timeout=self.timeout)
-                    twitch.auto_refresh_auth = False
-                    await twitch.set_user_authentication(
+                    self.twitchcustom = False
+                    self.twitch = await Twitch(tokenval['client_id'],
+                                               authenticate_app=False,
+                                               session_timeout=self.timeout)
+                    self.twitch.auto_refresh_auth = False
+                    await self.twitch.set_user_authentication(
                         token=token,
                         scope=[AuthScope.CHAT_READ, AuthScope.CHAT_EDIT],
                         validate=False)
-            except Exception:  #pylint: disable=broad-except
-                logging.debug(traceback.format_exc())
-        return twitch
+                    self.twitchcustom = True
+            except:  #pylint: disable=broad-except
+                for line in traceback.format_exc().splitlines():
+                    logging.error(line)
 
     async def _token_validation(self):
         if token := self.config.cparser.value('twitchbot/chattoken'):
@@ -125,7 +127,6 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
         loggedin = False
         while not self.stopevent.is_set():
-            logging.debug('chat loop: %s', loggedin)
             if self.stopevent.is_set():
                 break
 
@@ -143,11 +144,12 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
                 if token:
                     logging.debug('attempting to use old token')
-                    self.twitch = await self._try_custom_token(token)
+                    await self._try_custom_token(token)
 
                 if not self.twitch:
                     logging.debug('attempting to use global token')
                     self.twitch = await twitchlogin.api_login()
+                    self.twitchcustom = False
                     # ignore sourcery here
                     if not self.twitch:
                         await twitchlogin.cache_token_del()
@@ -191,9 +193,14 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 continue
             except:  #pylint: disable=bare-except
                 for line in traceback.format_exc().splitlines():
-                    logging.debug(line)
+                    logging.error(line)
                 await asyncio.sleep(60)
                 continue
+        if self.twitch:
+            if self.twitchcustom:
+                self.twitch.close()
+            else:
+                await twitchlogin.api_logout()
 
     async def on_twitchchat_ready(self, ready_event):
         ''' twitch chatbot has connected, now join '''
@@ -221,7 +228,8 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         try:
             await cmd.reply(content)
         except:  #pylint: disable=bare-except
-            logging.debug(traceback.format_exc())
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
             await self.chat.send_message(
                 self.config.cparser.value('twitchbot/channel'), content)
         return
@@ -347,11 +355,12 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 task = loop.create_task(self._async_announce_track())
                 self.tasks.add(task)
                 task.add_done_callback(self.tasks.discard)
-            except Exception:  #pylint: disable=broad-except
+            except:  #pylint: disable=broad-except
                 loop = asyncio.new_event_loop()
                 loop.run_until_complete(self._async_announce_track())
         except:  #pylint: disable=bare-except
-            logging.debug(traceback.format_exc())
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
             logging.error('watcher failed')
 
     async def _async_announce_track(self):
@@ -438,7 +447,8 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                         try:
                             await msg.reply(content)
                         except:  #pylint: disable=bare-except
-                            logging.debug(traceback.format_exc())
+                            for line in traceback.format_exc().splitlines():
+                                logging.error(line)
                             await self.chat.send_message(
                                 self.config.cparser.value('twitchbot/channel'),
                                 content)
@@ -451,7 +461,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                     'Twitch appears to be down.  Cannot send message.')
             except:  #pylint: disable=bare-except
                 for line in traceback.format_exc().splitlines():
-                    logging.debug(line)
+                    logging.error(line)
                 logging.error('Unknown problem.')
 
     async def stop(self):

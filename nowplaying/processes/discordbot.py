@@ -79,11 +79,16 @@ class DiscordSupport:
         except pypresence.exceptions.DiscordError as error:
             logging.error(error)
             return
-        except Exception as error:  #pylint: disable=broad-except
-            logging.error('Cannot configure IPC client: %s %s', error,
-                          traceback.format_exc())
+        except:  # pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
             return
-        await self.client['ipc'].connect()
+        try:
+            await self.client['ipc'].connect()
+        except ConnectionRefusedError:
+            logging.error('pypresence cannot connect; connection refused')
+            del self.client['ipc']
+            return
         logging.debug('ipc setup')
 
     async def _update_bot(self, templateout):
@@ -109,9 +114,9 @@ class DiscordSupport:
         except ConnectionRefusedError:
             logging.error('Cannot connect to discord client.')
             del self.client['ipc']
-        except Exception as error:  #pylint: disable=broad-except
-            logging.error('Cannot configure IPC client: %s %s', error,
-                          traceback.format_exc())
+        except:  # pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
             del self.client['ipc']
 
     async def connect_clients(self):
@@ -164,7 +169,7 @@ class DiscordSupport:
 
                         except:  #pylint: disable=bare-except
                             for line in traceback.format_exc().splitlines():
-                                logging.debug(line)
+                                logging.error(line)
                             del self.client[mode]
         watcher.stop()
         if self.client.get('bot'):  # pylint: disable=consider-using-dict-items

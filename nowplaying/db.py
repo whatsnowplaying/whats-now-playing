@@ -159,7 +159,7 @@ class MetadataDB:
         if not self.databasefile.exists():
             self.setupsql()
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=10) as connection:
             # do not want to modify the original dictionary
             # otherwise Bad Things(tm) will happen
             mdcopy = copy.deepcopy(metadata)
@@ -197,7 +197,7 @@ class MetadataDB:
             logging.error('MetadataDB does not exist yet?')
             return None
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=10) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:
@@ -225,7 +225,7 @@ class MetadataDB:
             logging.error('MetadataDB does not exist yet?')
             return None
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=10) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:
@@ -265,7 +265,7 @@ class MetadataDB:
             logging.info('Clearing cache file %s', self.databasefile)
             os.unlink(self.databasefile)
 
-        with sqlite3.connect(self.databasefile) as connection:
+        with sqlite3.connect(self.databasefile, timeout=10) as connection:
             cursor = connection.cursor()
 
             sql = 'CREATE TABLE currentmeta (id INTEGER PRIMARY KEY AUTOINCREMENT, '
