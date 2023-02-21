@@ -87,7 +87,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                         scope=[AuthScope.CHAT_READ, AuthScope.CHAT_EDIT],
                         validate=False)
                     self.twitchcustom = True
-            except:  #pylint: disable=broad-except
+            except:  # pylint: disable=bare-except
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
 
@@ -353,7 +353,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 task = loop.create_task(self._async_announce_track())
                 self.tasks.add(task)
                 task.add_done_callback(self.tasks.discard)
-            except:  #pylint: disable=broad-except
+            except:  # pylint: disable=bare-except
                 loop = asyncio.new_event_loop()
                 loop.run_until_complete(self._async_announce_track())
         except:  #pylint: disable=bare-except
