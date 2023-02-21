@@ -36,8 +36,8 @@ class Plugin(M3UPlugin):
     @staticmethod
     def _write_playlist(sqlcursor, playlist, filelist):
         ''' take the collections XML and save the playlists off '''
+        sql = 'INSERT INTO playlists (name,filename) VALUES (?,?)'
         for filename in filelist:
-            sql = 'INSERT INTO playlists (name,filename) VALUES (?,?)'
             datatuple = playlist, filename
             sqlcursor.execute(sql, datatuple)
 

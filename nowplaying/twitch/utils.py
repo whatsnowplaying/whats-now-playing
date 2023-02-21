@@ -125,7 +125,7 @@ class TwitchLogin:
             except (aiohttp.client_exceptions.ClientConnectorError,
                     socket.gaierror) as error:
                 logging.error(error)
-            except:  #pylint: disable=broad-except
+            except:  # pylint: disable=bare-except
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
                 return None
@@ -141,20 +141,22 @@ class TwitchLogin:
 
     async def api_logout(self):
         ''' log out of the global twitch login '''
-        if TwitchLogin.TWITCH:
-            try:
-                with TwitchLogin.TWITCH_LOCK:
-                    await TwitchLogin.TWITCH.refresh_used_token()
-                    await TwitchLogin.TWITCH.close()
-                TwitchLogin.TWITCH = None
-                logging.debug('TWITCH shutdown')
-            except InvalidRefreshTokenException:
-                logging.debug('refresh token is invalid, removing')
-                self.config.cparser.remove('twitchbot/oldrefreshtoken')
-                self.config.save()
-            except:  #pylint: disable=broad-except
-                for line in traceback.format_exc().splitlines():
-                    logging.error(line)
+        if not TwitchLogin.TWITCH:
+            return
+
+        try:
+            with TwitchLogin.TWITCH_LOCK:
+                await TwitchLogin.TWITCH.refresh_used_token()
+                await TwitchLogin.TWITCH.close()
+            TwitchLogin.TWITCH = None
+            logging.debug('TWITCH shutdown')
+        except InvalidRefreshTokenException:
+            logging.debug('refresh token is invalid, removing')
+            self.config.cparser.remove('twitchbot/oldrefreshtoken')
+            self.config.save()
+        except:  # pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
 
     async def cache_token_del(self):
         ''' logout and delete the old tokens '''

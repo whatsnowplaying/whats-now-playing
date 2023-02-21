@@ -107,7 +107,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 token = None
         return token
 
-    async def run_chat(self, twitchlogin):  #pylint: disable=too-many-branches, too-many-statements
+    async def run_chat(self, twitchlogin):  # pylint: disable=too-many-branches, too-many-statements
         ''' twitch chat '''
 
         # If the user provides us with a pre-existing token and username,
@@ -127,8 +127,6 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
         loggedin = False
         while not self.stopevent.is_set():
-            if self.stopevent.is_set():
-                break
 
             if loggedin and self.chat and not self.chat.is_connected():
                 logging.error('No longer logged into chat')
