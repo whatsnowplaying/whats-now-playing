@@ -123,6 +123,19 @@ async def test_trackrequest_quotedweirdal(trackrequestbootstrap):  # pylint: dis
 
 
 @pytest.mark.asyncio
+async def test_trackrequest_quotedchampagne(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    ''' weird al is weird '''
+
+    trackrequest = trackrequestbootstrap
+
+    data = await trackrequest.user_track_request(
+        {'displayname': 'test'}, 'user',
+        'Evelyn "Champagne" King - "I\'m In Love"')
+    assert data['artist'] == 'Evelyn "Champagne" King'
+    assert data['title'] == 'I\'m In Love'
+
+
+@pytest.mark.asyncio
 async def test_trackrequest_xtcfornigel(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
     ''' for part of the title '''
 
