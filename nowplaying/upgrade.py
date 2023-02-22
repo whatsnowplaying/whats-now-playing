@@ -454,6 +454,11 @@ def checksum(filename):
 def upgrade(bundledir=None):
     ''' do an upgrade of an existing install '''
     logging.debug('Called upgrade')
-    UpgradeBinary().ask_ugprade()
+
+    try:
+        UpgradeBinary().ask_ugprade()
+    except Exception as error:  # pylint: disable=broad-except
+        logging.error(error)
+
     myupgrade = UpgradeConfig()  #pylint: disable=unused-variable
     myupgrade = UpgradeTemplates(bundledir=bundledir)

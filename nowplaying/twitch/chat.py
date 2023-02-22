@@ -7,18 +7,18 @@ import fnmatch
 import logging
 import os
 import pathlib
+import platform
 import socket
-import sys
 import traceback
 
-import aiohttp
+import aiohttp  # pylint: disable=import-error
 
-import jinja2
+import jinja2  # pylint: disable=import-error
 
-from twitchAPI.twitch import Twitch
-from twitchAPI.types import AuthScope
-from twitchAPI.chat import Chat, ChatEvent
-from twitchAPI.oauth import validate_token
+from twitchAPI.twitch import Twitch  # pylint: disable=import-error
+from twitchAPI.types import AuthScope  # pylint: disable=import-error
+from twitchAPI.chat import Chat, ChatEvent  # pylint: disable=import-error
+from twitchAPI.oauth import validate_token  # pylint: disable=import-error
 
 from PySide6.QtCore import QCoreApplication, QStandardPaths, Slot  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtWidgets import QCheckBox, QMessageBox, QTableWidgetItem  # pylint: disable=import-error, no-name-in-module
@@ -220,9 +220,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         inputsource = self.config.cparser.value('settings/input')
         delta = datetime.datetime.utcnow() - self.starttime
         version = nowplaying.version.get_versions()['version']
-        content = (
-            f'whatsnowplaying v{version} by @modernmeerkat. '
-            f'Using {inputsource} on {sys.platform}. Running for {delta}.')
+        plat = platform.platform()
+        content = (f'whatsnowplaying v{version} by @modernmeerkat. '
+                   f'Using {inputsource} on {plat}. Running for {delta}.')
         try:
             await cmd.reply(content)
         except:  #pylint: disable=bare-except
