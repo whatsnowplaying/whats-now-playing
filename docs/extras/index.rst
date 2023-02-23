@@ -1,8 +1,6 @@
 Artist Extras
 =============
 
-   WARNING: This feature is still in an experimental stage.
-
    IMPORTANT: Many settings in this section currently require a restart of the software in order to take effect.
 
 Need some extra content for audio-only DJing?  The artist extras plug-ins allow for

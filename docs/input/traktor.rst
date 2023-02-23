@@ -1,6 +1,8 @@
 Traktor
 ========
 
+      NOTE: This source does not support Oldest mix mode.
+
 The Traktor input source is a specialized version of the `icecast source <icecast.html>`_
 that also provides access to playlists for `Request support <../requests.html>`_ .
 

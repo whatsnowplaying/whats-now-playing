@@ -1,6 +1,8 @@
 Virtual DJ
 ==========
 
+      NOTE: This source does not support Oldest mix mode.
+
 The Virtual DJ input source is a specialized version of the `M3U source <m3u.html>`_
 that also provides access to playlists for `Request support <../requests.html>`_ .
 
