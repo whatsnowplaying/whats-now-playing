@@ -192,6 +192,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue(
             'weboutput/artistfanarttemplate',
             str(self.templatedir.joinpath("ws-artistfanart-nofade.htm")))
+        settings.setValue(
+            'weboutput/gifwordstemplate',
+            str(self.templatedir.joinpath("ws-gifwords-fade.htm")))
         settings.setValue('weboutput/requestertemplate',
                           str(self.templatedir.joinpath("ws-requests.htm")))
         settings.setValue('weboutput/httpenabled', False)

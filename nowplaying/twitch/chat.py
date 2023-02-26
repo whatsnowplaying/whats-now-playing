@@ -21,7 +21,9 @@ from twitchAPI.chat import Chat, ChatEvent  # pylint: disable=import-error
 from twitchAPI.oauth import validate_token  # pylint: disable=import-error
 
 from PySide6.QtCore import QCoreApplication, QStandardPaths, Slot  # pylint: disable=import-error, no-name-in-module
-from PySide6.QtWidgets import QCheckBox, QMessageBox, QTableWidgetItem  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
+    QCheckBox, QDialog, QDialogButtonBox, QVBoxLayout, QLabel,
+    QTableWidgetItem)
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -167,7 +169,6 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 self.chat.register_command(
                     'whatsnowplayingversion',
                     self.on_twitchchat_whatsnowplayingversion)
-
                 for configitem in self.config.cparser.childGroups():
                     if 'twitchbot-command-' in configitem:
                         command = configitem.replace('twitchbot-command-', '')
@@ -310,6 +311,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             elif setting.get('type') == 'Roulette':
                 reply = await self.requests.user_roulette_request(
                     setting, username, commandlist[1:])
+            elif setting.get('type') == 'GifWords':
+                reply = await self.requests.gifwords_request(
+                    setting, username, commandlist)
         return reply
 
     @staticmethod
@@ -620,11 +624,8 @@ class TwitchChatSettings:
                 for box in TWITCHBOT_CHECKBOXES:
                     config.cparser.setValue(f'{command}/{box}', False)
         if alert and not config.testmode:
-            msgbox = QMessageBox()
-            msgbox.setText(
-                'Twitch Chat permissions have been added or changed.')
-            msgbox.show()
-            msgbox.exec()
+            dialog = ChatTemplateUpgradeDialog()
+            dialog.exec()
 
     @staticmethod
     def verify(widget):
@@ -633,3 +634,21 @@ class TwitchChatSettings:
         if char and char[0] in ['/', '.']:
             raise PluginVerifyError(
                 'Twitch command character cannot start with / or .')
+
+
+class ChatTemplateUpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
+    ''' Qt Dialog for informing user about template changes '''
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("What's Now Playing Templates")
+        dialogbuttons = QDialogButtonBox.Ok
+        self.buttonbox = QDialogButtonBox(dialogbuttons)
+        self.buttonbox.accepted.connect(self.accept)
+        self.buttonbox.rejected.connect(self.reject)
+        self.setModal(True)
+        self.layout = QVBoxLayout()
+        message = QLabel('Twitch Chat permissions have been added or changed.')
+        self.layout.addWidget(message)
+        self.layout.addWidget(self.buttonbox)
+        self.setLayout(self.layout)

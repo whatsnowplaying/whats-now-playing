@@ -6,7 +6,9 @@ import logging
 import pathlib
 import re
 import sqlite3
+import traceback
 
+import aiohttp
 import aiosqlite  #pylint: disable=import-error
 import normality  #pylint: disable=import-error
 
@@ -16,6 +18,7 @@ from PySide6.QtUiTools import QUiLoader  # pylint: disable=import-error, no-name
 
 import nowplaying.db
 import nowplaying.metadata
+from nowplaying import __version__ as VERSION
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.utils import TRANSPARENT_PNG_BIN
 
@@ -64,6 +67,11 @@ TITLE_ARTIST_RE = re.compile(r'^\s*"(.*?)"\s+[-by]+\s+(.*?)\s*(for @.*)*$')
 TITLE_RE = re.compile(r'^\s*"(.*?)"\s*(for @.*)*$')
 TWOFERTITLE_RE = re.compile(r'^\s*"?(.*?)"?\s*(for @.*)*$')
 
+BASE_URL = 'https://tenor.googleapis.com/v2/search'
+
+GIFWORDS_TEXT = ['keywords', 'requester', 'requestdisplayname', 'imageurl']
+GIFWORDS_BLOB = ['image']
+
 
 class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-methods
     ''' handle requests
@@ -111,6 +119,16 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                        ' timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)')
                 cursor.execute(sql)
                 connection.commit()
+
+                sql = ('CREATE TABLE IF NOT EXISTS gifwords (' +
+                       ' TEXT COLLATE NOCASE, '.join(GIFWORDS_TEXT) +
+                       ' TEXT COLLATE NOCASE, ' +
+                       ' BLOB, '.join(GIFWORDS_BLOB) + ' BLOB, '
+                       ' reqid INTEGER PRIMARY KEY AUTOINCREMENT,'
+                       ' timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)')
+                cursor.execute(sql)
+                connection.commit()
+
             except sqlite3.OperationalError as error:
                 logging.error(error)
 
@@ -226,6 +244,32 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         except sqlite3.OperationalError as error:
             logging.error(error)
 
+    async def add_to_gifwordsdb(self, data):
+        ''' add an entry to the db '''
+        if not self.databasefile.exists():
+            logging.error('%s does not exist, refusing to add.',
+                          self.databasefile)
+            return
+
+        sql = 'INSERT OR REPLACE INTO gifwords ('
+        sql += ', '.join(data.keys()) + ') VALUES ('
+        sql += '?,' * (len(data.keys()) - 1) + '?)'
+        datatuple = tuple(list(data.values()))
+
+        try:
+            logging.debug(
+                'Request gifwords: >%s< / url: >%s< has made it to the requestdb',
+                data.get('keywords'), data.get('imageurl'))
+            async with aiosqlite.connect(self.databasefile,
+                                         timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = await connection.cursor()
+                await cursor.execute(sql, datatuple)
+                await connection.commit()
+
+        except sqlite3.OperationalError as error:
+            logging.error(error)
+
     def respin_a_reqid(self, reqid):
         ''' given a reqid, set to respin '''
         if not self.databasefile.exists():
@@ -258,6 +302,25 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                 cursor.execute('DELETE FROM userrequest WHERE reqid=?;',
                                (reqid, ))
                 connection.commit()
+            except sqlite3.OperationalError as error:
+                logging.error(error)
+                return
+
+    async def erase_gifwords_id(self, reqid):
+        ''' remove entry from gifwords '''
+        if not self.databasefile.exists():
+            logging.error('%s does not exist, refusing to erase.',
+                          self.databasefile)
+            return
+
+        async with aiosqlite.connect(self.databasefile,
+                                     timeout=30) as connection:
+            connection.row_factory = sqlite3.Row
+            cursor = await connection.cursor()
+            try:
+                await cursor.execute('DELETE FROM gifwords WHERE reqid=?;',
+                                     (reqid, ))
+                await connection.commit()
             except sqlite3.OperationalError as error:
                 logging.error(error)
                 return
@@ -430,6 +493,29 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             except Exception as error:  #pylint: disable=broad-except
                 logging.error(error)
 
+    async def check_for_gifwords(self):
+        ''' check if a gifword has been requested '''
+        content = {'reqeuster': None, 'image': None, 'keywords': None}
+        try:
+            async with aiosqlite.connect(self.databasefile,
+                                         timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = await connection.cursor()
+                await cursor.execute(
+                    'SELECT * from gifwords ORDER BY timestamp DESC')
+                if row := await cursor.fetchone():
+                    content = {
+                        'requester': row['requester'],
+                        'image': row['image'],
+                        'keywords': row['keywords']
+                    }
+                    reqid = row['reqid']
+                    await self.erase_gifwords_id(reqid)
+        except:  #pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
+        return content
+
     async def find_command(self, command):
         ''' locate request information based upon a command '''
         setting = {}
@@ -507,8 +593,68 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             'requestdisplayname': setting.get('displayname')
         }
 
+    async def _tenor_request(self, search_terms):
+        ''' get an image from tenor for a given set of terms '''
+
+        content = {
+            'imageurl': None,
+            'image': TRANSPARENT_PNG_BIN,
+            'keywords': search_terms,
+        }
+
+        apikey = self.config.cparser.value('gifwords/tenorkey')
+
+        if not apikey:
+            return content
+
+        result = None
+        streamer = self.config.cparser.value('twitch/channel')
+        client_key = f'whatsnowplaying/{VERSION}/{streamer}'
+
+        params = {
+            'media_filter': 'gif',
+            'client_key': client_key,
+            'key': apikey,
+            'limit': 1,
+            'q': search_terms,
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(BASE_URL, params=params,
+                                   timeout=10) as response:
+                if response.status == 200:
+                    # load the GIFs using the urls for the smaller GIF sizes
+                    result = await response.json()
+
+        if result:
+            content['imageurl'] = result['results'][0]['media_formats']['gif'][
+                'url']
+            async with aiohttp.ClientSession() as session:
+                async with session.get(content['imageurl'],
+                                       timeout=10) as response:
+                    if response.status == 200:
+                        # load the GIFs using the urls for the smaller GIF sizes
+                        content['image'] = await response.read()
+
+        return content
+
+    async def gifwords_request(self, setting, user, user_input):
+        ''' gifword request '''
+        logging.debug('%s gifwords requested %s', user, user_input)
+        if not user_input and self.testmode:
+            return None
+
+        content = await self._tenor_request(user_input)
+        content['requester'] = user
+        content['requestdisplayname'] = setting.get('displayname')
+        if self.testmode:
+            return content
+
+        await self.add_to_gifwordsdb(content)
+        return content
+
     async def twofer_request(self, setting, user, user_input):
-        ''' generic request '''
+        ''' twofer request '''
         logging.debug('%s twofer requested %s', user, user_input)
         metadb = nowplaying.db.MetadataDB()
         metadata = metadb.read_last_meta()
@@ -696,6 +842,7 @@ class RequestSettings:
 
     def __init__(self):
         self.widget = None
+        self.enablegifwords = False
 
     def connect(self, uihelp, widget):  # pylint: disable=unused-argument
         '''  connect buttons '''
@@ -703,12 +850,14 @@ class RequestSettings:
         widget.add_button.clicked.connect(self.on_add_button)
         widget.del_button.clicked.connect(self.on_del_button)
 
-    @staticmethod
-    def _row_load(widget, **kwargs):
+    def _row_load(self, widget, **kwargs):
 
-        def _typebox(current):
+        def _typebox(current, enablegifwords=False):
             box = QComboBox()
-            for reqtype in ['Generic', 'Roulette', 'Twofer']:
+            reqtypes = ['Generic', 'Roulette', 'Twofer']
+            if enablegifwords:
+                reqtypes.append('GifWords')
+            for reqtype in reqtypes:
                 box.addItem(reqtype)
                 if current and reqtype == current:
                     box.setCurrentIndex(box.count() - 1)
@@ -720,7 +869,7 @@ class RequestSettings:
         for column, cbtype in enumerate(
                 nowplaying.trackrequests.REQUEST_SETTING_MAPPING):
             if cbtype == 'type':
-                box = _typebox(kwargs.get('type'))
+                box = _typebox(kwargs.get('type'), self.enablegifwords)
                 widget.request_table.setCellWidget(row, column, box)
             elif kwargs.get(cbtype):
                 widget.request_table.setItem(
@@ -739,6 +888,9 @@ class RequestSettings:
                 widget.removeRow(row)
 
         clear_table(widget.request_table)
+
+        if config.cparser.value('gifwords/tenorkey'):
+            self.enablegifwords = True
 
         for configitem in config.cparser.childGroups():
             setting = {}

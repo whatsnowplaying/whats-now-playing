@@ -11,6 +11,7 @@ import logging
 import pkgutil
 import os
 import re
+import traceback
 
 import jinja2
 import normality
@@ -90,10 +91,16 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
         ''' get the generated template '''
         logging.debug('generating data for %s', self.filename)
 
-        if not self.filename or not os.path.exists(
-                self.filename) or not self.template:
-            return " No template found; check Now Playing settings."
-        return self.template.render(**metadatadict)
+        rendertext = 'Template has syntax errors'
+        try:
+            if not self.filename or not os.path.exists(
+                    self.filename) or not self.template:
+                return " No template found; check Now Playing settings."
+            rendertext = self.template.render(**metadatadict)
+        except:  #pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
+        return rendertext
 
 
 def import_plugins(namespace):

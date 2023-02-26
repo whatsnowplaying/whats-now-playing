@@ -352,6 +352,8 @@ class UpgradeTemplates():
         if self.alert and not self.testdir:
             msgbox = QMessageBox()
             msgbox.setText('Updated templates have been placed.')
+            msgbox.setModal(True)
+            msgbox.setWindowTitle("What's Now Playing Templates")
             msgbox.show()
             msgbox.exec()
 

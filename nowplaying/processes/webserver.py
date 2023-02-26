@@ -13,6 +13,7 @@ import string
 import sys
 import threading
 import time
+import traceback
 import weakref
 
 import requests
@@ -37,7 +38,9 @@ import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
+import nowplaying.hostmeta
 import nowplaying.imagecache
+import nowplaying.trackrequests
 import nowplaying.utils
 
 INDEXREFRESH = \
@@ -128,44 +131,70 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 metadata[key] = nowplaying.utils.TRANSPARENT_PNG_BIN
         return self._base64ifier(metadata)
 
-    async def indexhtm_handler(self, request):
+    async def index_htm_handler(self, request):
         ''' handle web output '''
-        return await self.htm_handler(
+        return await self._metacheck_htm_handler(
             request,
             request.app['config'].cparser.value('weboutput/htmltemplate'))
 
-    async def artistbannerhtm_handler(self, request):
+    async def artistbanner_htm_handler(self, request):
         ''' handle web output '''
-        return await self.htm_handler(
+        return await self._metacheck_htm_handler(
             request, request.app['config'].cparser.value(
                 'weboutput/artistbannertemplate'))
 
-    async def artistlogohtm_handler(self, request):
+    async def artistlogo_htm_handler(self, request):
         ''' handle web output '''
-        return await self.htm_handler(
+        return await self._metacheck_htm_handler(
             request, request.app['config'].cparser.value(
                 'weboutput/artistlogotemplate'))
 
-    async def artistthumbhtm_handler(self, request):
+    async def artistthumb_htm_handler(self, request):
         ''' handle web output '''
-        return await self.htm_handler(
+        return await self._metacheck_htm_handler(
             request, request.app['config'].cparser.value(
                 'weboutput/artistthumbtemplate'))
 
-    async def artistfanartlaunchhtm_handler(self, request):
+    async def artistfanartlaunch_htm_handler(self, request):
         ''' handle web output '''
-        return await self.htm_handler(
+        return await self._metacheck_htm_handler(
             request, request.app['config'].cparser.value(
                 'weboutput/artistfanarttemplate'))
 
-    async def requesterlaunchhtm_handler(self, request):
-        ''' handle web output '''
+    async def gifwords_launch_htm_handler(self, request):
+        ''' handle gifwords output '''
         return await self.htm_handler(
+            request,
+            request.app['config'].cparser.value('weboutput/gifwordstemplate'))
+
+    async def requesterlaunch_htm_handler(self, request):
+        ''' handle web output '''
+        return await self._metacheck_htm_handler(
             request,
             request.app['config'].cparser.value('weboutput/requestertemplate'))
 
-    async def htm_handler(self, request, template):  # pylint: disable=unused-argument
+    @staticmethod
+    async def htm_handler(request, template, metadata=None):  # pylint: disable=unused-argument
         ''' handle static html files'''
+        htmloutput = INDEXREFRESH
+        logging.debug(template)
+        try:
+            if not metadata:
+                metadata = request.app['metadb'].read_last_meta()
+            if not metadata:
+                metadata = nowplaying.hostmeta.gethostmeta()
+                metadata['httpport'] = request.app['config'].cparser.value(
+                    'weboutput/httpport', type=int)
+            templatehandler = nowplaying.utils.TemplateHandler(
+                filename=template)
+            htmloutput = templatehandler.generate(metadata)
+        except:  #pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
+        return web.Response(content_type='text/html', text=htmloutput)
+
+    async def _metacheck_htm_handler(self, request, template):  # pylint: disable=unused-argument
+        ''' handle static html files after checking metadata'''
 
         source = os.path.basename(template)
         htmloutput = ""
@@ -189,13 +218,9 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
         if lastid == 0 or lastid != metadata['dbid'] or not once:
             await self.setlastid(request, metadata['dbid'], source)
-            try:
-                templatehandler = nowplaying.utils.TemplateHandler(
-                    filename=template)
-                htmloutput = templatehandler.generate(metadata)
-            except Exception as error:  #pylint: disable=broad-except
-                logging.error('indexhtm_handler: %s', error)
-                htmloutput = INDEXREFRESH
+            htmloutput = await self.htm_handler(request,
+                                                template,
+                                                metadata=metadata)
             return web.Response(content_type='text/html', text=htmloutput)
 
         return web.Response(content_type='text/html', text=INDEXREFRESH)
@@ -296,6 +321,47 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         metadata = request.app['metadb'].read_last_meta()
         del metadata['dbid']
         return web.json_response(self._base64ifier(metadata))
+
+    async def websocket_gifwords_streamer(self, request):
+        ''' handle continually streamed updates '''
+        websocket = web.WebSocketResponse()
+        await websocket.prepare(request)
+        request.app['websockets'].add(websocket)
+        endloop = False
+
+        trackrequest = nowplaying.trackrequests.Requests(request.app['config'])
+
+        try:
+            while not self.stopevent.is_set(
+            ) and not endloop and not websocket.closed:
+                if self.stopevent.is_set() or websocket.closedx:
+                    break
+                metadata = await trackrequest.check_for_gifwords()
+                if not metadata.get('image'):
+                    await websocket.send_json({'noimage': True})
+                    await asyncio.sleep(10)
+                    continue
+
+                metadata['imagebase64'] = base64.b64encode(
+                    metadata['image']).decode('utf-8')
+                del metadata['image']
+                try:
+                    if websocket.closed:
+                        break
+                    await websocket.send_json(metadata)
+                except ConnectionResetError:
+                    logging.debug('Lost a client')
+                    endloop = True
+                await asyncio.sleep(10)
+            if not websocket.closed:
+                await websocket.send_json({'last': True})
+
+        except Exception as error:  #pylint: disable=broad-except
+            logging.error('websocket gifwords streamer exception: %s', error)
+        finally:
+            await websocket.close()
+            request.app['websockets'].discard(websocket)
+        return websocket
 
     async def websocket_artistfanart_streamer(self, request):
         ''' handle continually streamed updates '''
@@ -436,25 +502,27 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         app.on_cleanup.append(self.on_cleanup)
         app.on_shutdown.append(self.on_shutdown)
         app.add_routes([
-            web.get('/', self.indexhtm_handler),
+            web.get('/', self.index_htm_handler),
             web.get('/v1/last', self.api_v1_last_handler),
             web.get('/cover.png', self.cover_handler),
-            web.get('/artistfanart.htm', self.artistfanartlaunchhtm_handler),
+            web.get('/artistfanart.htm', self.artistfanartlaunch_htm_handler),
             web.get('/artistbanner.png', self.artistbanner_handler),
-            web.get('/artistbanner.htm', self.artistbannerhtm_handler),
+            web.get('/artistbanner.htm', self.artistbanner_htm_handler),
             web.get('/artistlogo.png', self.artistlogo_handler),
-            web.get('/artistlogo.htm', self.artistlogohtm_handler),
+            web.get('/artistlogo.htm', self.artistlogo_htm_handler),
             web.get('/artistthumb.png', self.artistthumb_handler),
-            web.get('/artistthumb.htm', self.artistthumbhtm_handler),
+            web.get('/artistthumb.htm', self.artistthumb_htm_handler),
             web.get('/favicon.ico', self.favicon_handler),
-            web.get('/index.htm', self.indexhtm_handler),
-            web.get('/index.html', self.indexhtm_handler),
+            web.get('/gifwords.htm', self.gifwords_launch_htm_handler),
+            web.get('/index.htm', self.index_htm_handler),
+            web.get('/index.html', self.index_htm_handler),
             web.get('/index.txt', self.indextxt_handler),
-            web.get('/request.htm', self.requesterlaunchhtm_handler),
+            web.get('/request.htm', self.requesterlaunch_htm_handler),
             web.get('/ws', self.websocket_handler),
             web.get('/wsstream', self.websocket_streamer),
             web.get('/wsartistfanartstream',
                     self.websocket_artistfanart_streamer),
+            web.get('/wsgifwordsstream', self.websocket_gifwords_streamer),
             web.get(f'/{self.magicstopurl}', self.stop_server),
         ])
         return web.AppRunner(app)
