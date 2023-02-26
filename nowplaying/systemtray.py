@@ -79,6 +79,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.action_pause.setEnabled(True)
         self.fix_mixmode_menu()
 
+        self.settingswindow.post_tray_init()
         self.subprocesses.start_all_processes()
 
         # Start the track notify handler

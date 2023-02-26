@@ -47,6 +47,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         }
 
         self.uihelp = None
+
+    def post_tray_init(self):
+        ''' after the systemtray is fully loaded, do this '''
+
         self.load_qtui()
 
         if not self.config.iconfile:
