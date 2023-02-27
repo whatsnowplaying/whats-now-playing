@@ -66,7 +66,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
     async def _try_custom_token(self, token):
         ''' if a custom token has been provided, try it. '''
         if self.twitch and self.twitchcustom:
-            self.twitch.close()
+            await self.twitch.close()
         if token:
             try:
                 tokenval = await validate_token(token)
@@ -196,7 +196,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 continue
         if self.twitch:
             if self.twitchcustom:
-                self.twitch.close()
+                await self.twitch.close()
             else:
                 await twitchlogin.api_logout()
 
