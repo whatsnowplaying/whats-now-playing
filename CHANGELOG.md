@@ -1,11 +1,11 @@
 
 # Changelog
 
-## Version 4.0.0 - Unreleased
+## Version 4.0.0 - 2023-02-27
 
 ### Major Changes
 
-* New logic for first-time users to try and pre-configure
+* New logic for first-time users to attempt pre-configuring
   some things.  This change also removes the requirement
   of having a file that has to be written.
 * Support for Icecast which enables butt, MIXXX,
@@ -23,10 +23,12 @@
 * The plain text file output now supports append!
 * Webserver supports serving static content from the NowPlaying/httpstatic
   directory.  Useful for when you want to add logos to the web templates.
+* There wis now a check for newer versions of the software being available!
 
 ### Internal/Minor Changes
 
-* New About menu item.
+* New About menu item, new icon, and new logo!
+* Minor website redesign and direct download links in Quickstart.
 * Some new and updated templates to clean up some things and to
   show off the new features.
 * Cover art should now be shown when using Tidal on Serato.
@@ -41,6 +43,8 @@
 * Metadata processing finally got some (simple) parallelization.
 * Subprocess handling is now much more streamlined and should
   be less impacted by crashes.
+* Speaking of crashes, many edge-case crashes have been eliminated.
+* Along the same line, quite a few general concurrency issues fixed.
 * SSL certificate authority file is now built into the binary
   to prevent weird SSL errors.
 * Serato processing has gotten a major overhaul.
@@ -54,6 +58,9 @@
 * A simple JSON-based source plug-in to help test things out.
 * The usual doc updates to with the changes.
 * Several rounds of dependency updates.
+* Some updates for logging to better capture problems when they occur
+  and better status reporting in others.  Plus some logs have been removed
+  entirely.
 * Python v3.10 is now required.
 
 ## Version 3.1.3 - 2023-01-03

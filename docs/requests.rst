@@ -13,8 +13,8 @@ There are three types of requests, generic, twofers, and roulette:
    :target: images/requests_generic.png
    :alt: Request Window
 
-If **What's Now Playing** detects the song has been played, it will be removed from the
-Requests queue.
+If **What's Now Playing** detects the song has been played, it will be removed
+from the Requests queue.
 
 Using Twitch Chat for Requests
 ------------------------------
@@ -145,6 +145,13 @@ the software to re-pick:
 #. Wait a few moments for the software to pick a new one. (It does not do it immediately.)
 #. The track should get replaced with a different one.
 #. If it is still not desired, repeat this process as many times as necessary.
+
+The software will keep track of which artists have been played during Roulette.
+It will try to avoid repeating the same artist in the same DJ session.  If it
+runs out or cannot pick one a non-duplicate fast enough, it will still offer up
+a duplicate artist.
+
+
 
   NOTE: There is no notification to users that Respin has been selected.
 
