@@ -199,9 +199,9 @@ class Plugin(IcecastPlugin):
         qsettings.setValue('traktor/port', '8000')
         nidir = pathlib.Path.home().joinpath('Documents', 'Native Instruments')
         if nidir.exists():
-            collist = list(nidir.glob('**/collection.nml'))
-            collist.sort(key=lambda x: x.stat().st_mtime)
-            qsettings.setValue('traktor/collections', str(collist[-1]))
+            if collist := list(nidir.glob('**/collection.nml')):
+                collist.sort(key=lambda x: x.stat().st_mtime)
+                qsettings.setValue('traktor/collections', str(collist[-1]))
 
     def connect_settingsui(self, qwidget, uihelp):
         ''' connect any UI elements such as buttons '''
