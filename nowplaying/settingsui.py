@@ -47,17 +47,19 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         }
 
         self.uihelp = None
+        self.load_qtui()
+        if not self.config.iconfile:
+            self.tray.cleanquit()
+        self.qtui.setWindowIcon(QIcon(str(self.config.iconfile)))
 
     def post_tray_init(self):
         ''' after the systemtray is fully loaded, do this '''
 
-        self.load_qtui()
-
-        if not self.config.iconfile:
-            self.tray.cleanquit()
-        self.qtui.setWindowIcon(QIcon(str(self.config.iconfile)))
-        self.settingsclasses['twitchchat'].update_twitchbot_commands(
-            self.config)
+        # if system hasn't been initialized, then
+        # twitch chat files are irrelevant
+        if self.config.initialized:
+            self.settingsclasses['twitchchat'].update_twitchbot_commands(
+                self.config)
 
     def load_qtui(self):  # pylint: disable=too-many-branches, too-many-statements
         ''' load the base UI and wire it up '''
@@ -739,7 +741,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.upd_win()
         self.qtui.close()
 
-        if not self.config.cparser.value('settings/input', defaultValue=None):
+        if not self.config.cparser.value(
+                'settings/input',
+                defaultValue=None) or not self.config.initialized:
             self.tray.cleanquit()
 
     @Slot()
@@ -792,7 +796,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.tray.action_pause.setEnabled(True)
 
     def show(self):
-        ''' show the system tram '''
+        ''' show the system tray '''
         if self.tray:
             self.tray.settings_action.setEnabled(False)
         self.upd_win()

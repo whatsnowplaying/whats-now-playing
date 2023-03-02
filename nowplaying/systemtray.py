@@ -3,7 +3,8 @@
 
 import logging
 
-from PySide6.QtWidgets import QApplication, QErrorMessage, QMenu, QMessageBox, QSystemTrayIcon  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+    QApplication, QErrorMessage, QMenu, QMessageBox, QSystemTrayIcon)
 from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module
 from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=no-name-in-module
 
@@ -237,6 +238,11 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self.subprocesses.stop_all_processes()
 
+        self.config.get()
+        if not self.config.initialized:
+            self.config.cparser.clear()
+            self.config.cparser.sync()
+
         app = QApplication.instance()
         logging.info('shutting qapp down v%s',
                      nowplaying.version.get_versions()['version'])
@@ -245,15 +251,14 @@ class Tray:  # pylint: disable=too-many-instance-attributes
     def installer(self):
         ''' make some guesses as to what the user needs '''
         plugin = self.config.cparser.value('settings/input', defaultValue=None)
-        if not self.config.validate_source(plugin):
+        if plugin and not self.config.validate_source(plugin):
             self.config.cparser.remove('settings/input')
             msgbox = QErrorMessage()
             msgbox.showMessage(
                 f'Configured source {plugin} is not supported. Reconfiguring.')
             msgbox.show()
             msgbox.exec()
-        elif not self.config.cparser.value('settings/input',
-                                           defaultValue=None):
+        elif not plugin:
             msgbox = QMessageBox()
             msgbox.setText('New installation! Thanks! '
                            'Determining setup. This operation may take a bit!')
@@ -266,7 +271,13 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         for plugin in plugins:
             if plugins[plugin].install():
+                self.config.cparser.setValue('settings/input',
+                                             plugin.split('.')[-1])
                 break
+
+        twitchchatsettings = nowplaying.twitch.chat.TwitchChatSettings()
+        twitchchatsettings.update_twitchbot_commands(self.config)
+
         msgbox = QMessageBox()
         msgbox.setText('Basic configuration hopefully in place. '
                        'Please verify the Source and configure an output!')

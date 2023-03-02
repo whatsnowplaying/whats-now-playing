@@ -113,6 +113,9 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         threading.current_thread().name = 'TrackPoll'
         socket.setdefaulttimeout(5.0)
 
+        if not self.config.cparser.value('settings/input', defaultValue=None):
+            logging.debug('Waiting for user to configure source input.')
+
         # sleep until we have something to do
         while not self.stopevent.is_set() and not self.config.getpause(
         ) and not self.config.cparser.value('settings/input',

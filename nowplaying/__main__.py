@@ -3,6 +3,7 @@
 #import faulthandler
 import logging
 import multiprocessing
+import platform
 import socket
 import sys
 
@@ -31,8 +32,9 @@ def run_bootstrap(bundledir=None):
     # point this should be configurable but this is good enough for now
     socket.setdefaulttimeout(5.0)
     logpath = nowplaying.bootstrap.setuplogging(rotate=True)
-    logging.info('starting up v%s',
-                 nowplaying.version.get_versions()['version'])
+    plat = platform.platform()
+    logging.info('starting up v%s on %s',
+                 nowplaying.version.get_versions()['version'], plat)
     nowplaying.upgrade.upgrade(bundledir=bundledir)
     logging.debug('ending upgrade')
 

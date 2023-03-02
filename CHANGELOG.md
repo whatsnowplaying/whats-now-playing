@@ -1,6 +1,13 @@
 
 # Changelog
 
+## Version 4.0.1 - 2023-03-02
+
+* Do not crash if a Native Instruments directory exists
+  without a Traktor installation.
+* Log the platform in the debug log.
+* Make the installer actually install.
+
 ## Version 4.0.0 - 2023-02-27
 
 ### Major Changes
