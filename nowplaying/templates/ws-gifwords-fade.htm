@@ -1,0 +1,69 @@
+<!DOCTYPE HTML>
+<html>
+   <head>
+      <meta charset="utf-8" >
+      <title>gifwords</title>
+      <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
+      <style>
+         .container {
+            text-align: center;
+            max-width: 1280px;
+            max-height: 800px;
+         }
+         .img-scale {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            overflow: hidden;
+            max-width: 1280px;
+            max-height: 800px;
+         }
+      </style>
+  </head>
+   <body>
+
+
+      <div class="container" id="gifwordsart">
+         <div class="img-scle" id="gifwordsartimg"></div>
+      </div>
+
+      <script type = "text/javascript">
+            function start(websocketServerLocation){
+                  // Let us open a web socket
+                  var ws = new WebSocket(websocketServerLocation);
+
+                  ws.onopen = function() {
+                     console.log('ws connected');
+                  };
+
+                  ws.onmessage = function (event) {
+                     var metadata = JSON.parse(event.data);
+                     var img = document.createElement("img");
+                     $('#gifwordsart').hide();
+                     if (metadata.imagebase64) {
+                        console.log('here');
+                        img.src = 'data:image/gif;base64,' + metadata.imagebase64;
+                        $("#gifwordsartimg").html(img);
+                        $('#gifwordsart').delay(2000).fadeIn(2000);
+                        $('#gifwordsart').delay(10000).fadeOut(2000);
+                     } else {
+                        $("#gifwordsartimg").html('');
+                     }
+                     $('#gifwordsart').hide();
+                  }
+
+                  ws.onclose = function(){
+                     // Try to reconnect in 5 seconds
+                     setTimeout(function(){start(websocketServerLocation)}, 5000);
+                };
+            }
+
+            if ("WebSocket" in window) {
+               start("ws://{{ hostip }}:{{ httpport }}/wsgifwordsstream")
+            }
+
+      </script>
+
+   </body>
+</html>
+
