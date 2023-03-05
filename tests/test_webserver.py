@@ -140,3 +140,59 @@ def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-outer-nam
     req = requests.get('http://localhost:8899/index.txt', timeout=5)
     assert req.status_code == 200
     assert req.text == ' artisttxt2 - titletxt2'
+
+
+def test_webserver_gifwordstest(getwebserver):  # pylint: disable=redefined-outer-name
+    ''' make sure gifwords works '''
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    config.cparser.setValue('weboutput/once', True)
+    config.cparser.sync()
+
+    req = requests.get('http://localhost:8899/gifwords.htm', timeout=5)
+    assert req.status_code == 200
+
+
+def test_webserver_coverpng(getwebserver):  # pylint: disable=redefined-outer-name
+    ''' make sure coverpng works '''
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    config.cparser.setValue('weboutput/once', True)
+    config.cparser.sync()
+
+    req = requests.get('http://localhost:8899/cover.png', timeout=5)
+    assert req.status_code == 200
+
+
+def test_webserver_artistfanart_test(getwebserver):  # pylint: disable=redefined-outer-name
+    ''' make sure artistfanart works '''
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    config.cparser.setValue('weboutput/once', True)
+    config.cparser.sync()
+
+    req = requests.get('http://localhost:8899/artistfanart.htm', timeout=5)
+    assert req.status_code == 202
+
+
+def test_webserver_banner_test(getwebserver):  # pylint: disable=redefined-outer-name
+    ''' make sure banner works '''
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    config.cparser.setValue('weboutput/once', True)
+    config.cparser.sync()
+
+    req = requests.get('http://localhost:8899/artistbanner.htm', timeout=5)
+    assert req.status_code == 202
+
+    req = requests.get('http://localhost:8899/artistbanner.png', timeout=5)
+    assert req.status_code == 200
+
+
+def test_webserver_logo_test(getwebserver):  # pylint: disable=redefined-outer-name
+    ''' make sure banner works '''
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    config.cparser.setValue('weboutput/once', True)
+    config.cparser.sync()
+
+    req = requests.get('http://localhost:8899/artistlogo.htm', timeout=5)
+    assert req.status_code == 202
+
+    req = requests.get('http://localhost:8899/artistlogo.png', timeout=5)
+    assert req.status_code == 200

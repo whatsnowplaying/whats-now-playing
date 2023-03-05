@@ -163,9 +163,11 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
     async def gifwords_launch_htm_handler(self, request):
         ''' handle gifwords output '''
-        return await self.htm_handler(
+
+        htmloutput = await self._htm_handler(
             request,
             request.app['config'].cparser.value('weboutput/gifwordstemplate'))
+        return web.Response(content_type='text/html', text=htmloutput)
 
     async def requesterlaunch_htm_handler(self, request):
         ''' handle web output '''
@@ -174,7 +176,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             request.app['config'].cparser.value('weboutput/requestertemplate'))
 
     @staticmethod
-    async def htm_handler(request, template, metadata=None):  # pylint: disable=unused-argument
+    async def _htm_handler(request, template, metadata=None):  # pylint: disable=unused-argument
         ''' handle static html files'''
         htmloutput = INDEXREFRESH
         logging.debug(template)
@@ -191,7 +193,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         except:  #pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
-        return web.Response(content_type='text/html', text=htmloutput)
+        return htmloutput
 
     async def _metacheck_htm_handler(self, request, template):  # pylint: disable=unused-argument
         ''' handle static html files after checking metadata'''
@@ -218,9 +220,9 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
         if lastid == 0 or lastid != metadata['dbid'] or not once:
             await self.setlastid(request, metadata['dbid'], source)
-            htmloutput = await self.htm_handler(request,
-                                                template,
-                                                metadata=metadata)
+            htmloutput = await self._htm_handler(request,
+                                                 template,
+                                                 metadata=metadata)
             return web.Response(content_type='text/html', text=htmloutput)
 
         return web.Response(content_type='text/html', text=INDEXREFRESH)
@@ -269,52 +271,36 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         return web.FileResponse(path=request.app['config'].iconfile)
 
     @staticmethod
-    async def cover_handler(request):
-        ''' handle cover image '''
-        metadata = request.app['metadb'].read_last_meta()
-        if 'coverimageraw' in metadata:
-            return web.Response(content_type='image/png',
-                                body=metadata['coverimageraw'])
-        # rather than return an error, just send a transparent PNG
-        # this makes the client code significantly easier
-        return web.Response(content_type='image/png',
-                            body=nowplaying.utils.TRANSPARENT_PNG_BIN)
+    async def _image_handler(imgtype, request):
+        ''' handle an image '''
 
-    @staticmethod
-    async def artistbanner_handler(request):
-        ''' handle cover image '''
-        metadata = request.app['metadb'].read_last_meta()
-        if 'artistbannerraw' in metadata:
-            return web.Response(content_type='image/png',
-                                body=metadata['artistbannerraw'])
         # rather than return an error, just send a transparent PNG
         # this makes the client code significantly easier
-        return web.Response(content_type='image/png',
-                            body=nowplaying.utils.TRANSPARENT_PNG_BIN)
+        image = nowplaying.utils.TRANSPARENT_PNG_BIN
+        try:
+            metadata = request.app['metadb'].read_last_meta()
+            if metadata and metadata.get(imgtype):
+                image = metadata[imgtype]
+        except:  #pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
+        return web.Response(content_type='image/png', body=image)
 
-    @staticmethod
-    async def artistlogo_handler(request):
+    async def cover_handler(self, request):
         ''' handle cover image '''
-        metadata = request.app['metadb'].read_last_meta()
-        if 'artistlogoraw' in metadata:
-            return web.Response(content_type='image/png',
-                                body=metadata['artistlogoraw'])
-        # rather than return an error, just send a transparent PNG
-        # this makes the client code significantly easier
-        return web.Response(content_type='image/png',
-                            body=nowplaying.utils.TRANSPARENT_PNG_BIN)
+        return await self._image_handler('coverimageraw', request)
 
-    @staticmethod
-    async def artistthumb_handler(request):
-        ''' handle cover image '''
-        metadata = request.app['metadb'].read_last_meta()
-        if 'artistthumbraw' in metadata:
-            return web.Response(content_type='image/png',
-                                body=metadata['artistthumbraw'])
-        # rather than return an error, just send a transparent PNG
-        # this makes the client code significantly easier
-        return web.Response(content_type='image/png',
-                            body=nowplaying.utils.TRANSPARENT_PNG_BIN)
+    async def artistbanner_handler(self, request):
+        ''' handle artist banner image '''
+        return await self._image_handler('artistbannerraw', request)
+
+    async def artistlogo_handler(self, request):
+        ''' handle artist logo image '''
+        return await self._image_handler('artistlogoraw', request)
+
+    async def artistthumb_handler(self, request):
+        ''' handle artist logo image '''
+        return await self._image_handler('artistthumbraw', request)
 
     async def api_v1_last_handler(self, request):
         ''' handle static index.txt '''
