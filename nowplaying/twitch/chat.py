@@ -109,7 +109,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 token = None
         return token
 
-    async def run_chat(self, twitchlogin):  # pylint: disable=too-many-branches, too-many-statements
+    async def run_chat(self, twitchlogin):   # pylint: disable=too-many-branches, too-many-statements
         ''' twitch chat '''
 
         # If the user provides us with a pre-existing token and username,
@@ -150,7 +150,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                     logging.debug('attempting to use global token')
                     self.twitch = await twitchlogin.api_login()
                     self.twitchcustom = False
-                    # ignore sourcery here
+                    # sourcery skip: hoist-if-from-if
                     if not self.twitch:
                         await twitchlogin.cache_token_del()
 
