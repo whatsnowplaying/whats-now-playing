@@ -179,7 +179,6 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     async def _htm_handler(request, template, metadata=None):  # pylint: disable=unused-argument
         ''' handle static html files'''
         htmloutput = INDEXREFRESH
-        logging.debug(template)
         try:
             if not metadata:
                 metadata = request.app['metadb'].read_last_meta()
