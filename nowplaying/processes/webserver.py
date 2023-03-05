@@ -332,10 +332,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         trackrequest = nowplaying.trackrequests.Requests(request.app['config'])
 
         try:
-            while not self.stopevent.is_set(
-            ) and not endloop and not websocket.closed:
-                if self.stopevent.is_set() or websocket.closedx:
-                    break
+            while (not self.stopevent.is_set() and not endloop
+                   and not websocket.closed):
                 metadata = await trackrequest.check_for_gifwords()
                 if not metadata.get('image'):
                     await websocket.send_json({'noimage': True})
