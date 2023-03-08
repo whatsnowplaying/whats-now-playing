@@ -27,6 +27,10 @@ some tips and tricks to help you out:
   Twitch but your users won't be alerted.  Extremely useful for working out the
   aforementioned timing issues.
 
+* Check the current `Bug List <https://github.com/whatsnowplaying/whats-now-playing/issues?q=is%3Aissue+is%3Aopen+label%3Abug+sort%3Aupdated-desc>`_ to see if any known problems apply
+  to your situation.
+
+
 Bug Reports and Feature Requests
 ================================
 
@@ -36,6 +40,8 @@ contribute in a variety of ways.  Currently this project is hosted
 on  `Github <https://github.com/whatsnowplaying/whats-now-playing>`_ which provides
 access to the source code, bugs and feature requests (issues), and a discussion
 area where you can ask questions.
+
+
 
 Keep in mind that also means this software is done by volunteers in their spare
 time!
