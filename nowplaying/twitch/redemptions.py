@@ -68,6 +68,9 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
             elif setting.get('type') == 'Twofer':
                 reply = await self.requests.twofer_request(
                     setting, user, user_input)
+            elif setting.get('type') == 'GifWords':
+                reply = await self.requests.gifwords_request(
+                    setting, user, user_input)
 
             if self.chat and setting.get('command'):
                 await self.chat.redemption_to_chat_request_bridge(
