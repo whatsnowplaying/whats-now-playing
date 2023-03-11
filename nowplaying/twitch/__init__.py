@@ -186,6 +186,8 @@ class TwitchSettings:
             return
 
         if token := widget.token_lineedit.text():
+            if 'oauth:' in token:
+                token = token.replace('oauth:', '')
             if not nowplaying.twitch.utils.qtsafe_validate_token(token):
                 raise PluginVerifyError('Twitch bot token is invalid')
 
