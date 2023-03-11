@@ -49,9 +49,9 @@ jobs:
             FPCALC=/tmp/chromaprint-fpcalc-1.5.1-macos-x86_64/fpcalc
             export FPCALC
             popd
-            source /tmp/venv/bin/activate
-            pytest -s
           fi
+          source /tmp/venv/bin/activate
+          pytest -s
       - name: artifact mac test
         uses: actions/upload-artifact@v3
         if: always()
