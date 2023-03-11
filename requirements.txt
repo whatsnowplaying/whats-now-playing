@@ -30,7 +30,7 @@ watchdog==2.2.1
 attrs>=18.2
 bidict==0.*
 bitstruct>=6.0,<9.0
-more-itertools>=4.0,<9.0
+more-itertools>=4.0,<10.0
 pprintpp==0.*
 wrapt==1.14.1
 
