@@ -36,6 +36,7 @@ def set_qt_names(app=None,
     app.setOrganizationDomain(domain)
     app.setOrganizationName('whatsnowplaying')
     app.setApplicationName(appname)
+    return QStandardPaths.standardLocations(QStandardPaths.RuntimeLocation)[0]
 
 
 def setuplogging(logdir=None, logname='debug.log', rotate=False):

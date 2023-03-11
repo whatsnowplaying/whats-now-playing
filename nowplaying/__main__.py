@@ -7,6 +7,9 @@ import platform
 import socket
 import sys
 
+from pid import PidFile
+from pid.base import PidFileAlreadyLockedError
+
 from PySide6.QtCore import QCoreApplication, Qt  # pylint: disable=no-name-in-module
 from PySide6.QtGui import QIcon  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QApplication  # pylint: disable=no-name-in-module
@@ -51,26 +54,33 @@ def actualmain(beam=False):
     #faulthandler.enable()
 
     bundledir = nowplaying.frozen.frozen_init(None)
-
+    exitval = 1
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     qapp = QApplication(sys.argv)
     qapp.setQuitOnLastWindowClosed(False)
+    piddir = nowplaying.bootstrap.set_qt_names()
+    try:
+        with PidFile(pidname='nowplaying.pid', piddir=piddir, register_term_signal_handler=False, register_atexit=False) as pid:
 
-    nowplaying.bootstrap.set_qt_names()
-    logpath = run_bootstrap(bundledir=bundledir)
+            logpath = run_bootstrap(bundledir=bundledir)
 
-    if not nowplaying.bootstrap.verify_python_version():
-        sys.exit(1)
+            if not nowplaying.bootstrap.verify_python_version():
+                sys.exit(1)
 
-    config = nowplaying.config.ConfigFile(logpath=logpath, bundledir=bundledir)
-    logging.getLogger().setLevel(config.loglevel)
-    logging.captureWarnings(True)
-    tray = nowplaying.systemtray.Tray(beam=beam)  # pylint: disable=unused-variable
-    icon = QIcon(str(config.iconfile))
-    qapp.setWindowIcon(icon)
-    exitval = qapp.exec_()
-    logging.info('shutting main down v%s',
-                 nowplaying.version.get_versions()['version'])
+            config = nowplaying.config.ConfigFile(logpath=logpath,
+                                                  bundledir=bundledir)
+            logging.getLogger().setLevel(config.loglevel)
+            logging.captureWarnings(True)
+            logging.debug('Using pidfile %s/%s', pid.piddir, pid.pidname)
+            tray = nowplaying.systemtray.Tray(beam=beam)  # pylint: disable=unused-variable
+            icon = QIcon(str(config.iconfile))
+            qapp.setWindowIcon(icon)
+            exitval = qapp.exec_()
+            logging.info('shutting main down v%s',
+                         nowplaying.version.get_versions()['version'])
+    except (PidFileAlreadyLockedError, BlockingIOError):
+        pass
+
     sys.exit(exitval)
 
 

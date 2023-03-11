@@ -9,6 +9,7 @@ musicbrainzngs==0.7.1
 netifaces==0.11.0
 nltk==3.8.1
 normality==2.4.0
+pid==3.0.4
 pillow==9.4.0
 pyacoustid==1.2.2
 pypresence==4.2.1
