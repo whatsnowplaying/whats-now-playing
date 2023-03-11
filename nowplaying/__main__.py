@@ -58,9 +58,13 @@ def actualmain(beam=False):
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     qapp = QApplication(sys.argv)
     qapp.setQuitOnLastWindowClosed(False)
-    piddir = nowplaying.bootstrap.set_qt_names()
+    nowplaying.bootstrap.set_qt_names()
+    piddir = nowplaying.bootstrap.get_pid_dir()
     try:
-        with PidFile(pidname='nowplaying.pid', piddir=piddir, register_term_signal_handler=False, register_atexit=False) as pid:
+        with PidFile(pidname='nowplaying.pid',
+                     piddir=piddir,
+                     register_term_signal_handler=False,
+                     register_atexit=False) as pid:
 
             logpath = run_bootstrap(bundledir=bundledir)
 
