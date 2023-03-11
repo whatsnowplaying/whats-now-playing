@@ -50,6 +50,7 @@ Here are the steps to get a basic installation working:
      * :lasttagdownloadlink:`windows` for Intel x86 or AMD Ryzen processors running Windows 10 or higher
 
    * or see `All Releases <https://github.com/whatsnowplaying/whats-now-playing/releases/>`_
+   * Also of interest, the current `Bug List <https://github.com/whatsnowplaying/whats-now-playing/issues?q=is%3Aissue+is%3Aopen+label%3Abug+sort%3Aupdated-desc>`_
 
 #. Launch the application
 #. The software will attempt to pre-configure itself for whatever software you have installed.  Note that in the case of Traktor, this work will including building an index for file lookup. For large Traktor installations, that may take a while.
