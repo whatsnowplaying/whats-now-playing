@@ -7,7 +7,7 @@ import pytest
 
 import nowplaying.recognition.acoustidmb  # pylint: disable=import-error
 
-if 'ACOUSTID_TEST_APIKEY' not in os.environ:
+if not os.environ.get('ACOUSTID_TEST_APIKEY'):
     pytest.skip("skipping, ACOUSTID_TEST_APIKEY is not set",
                 allow_module_level=True)
 
