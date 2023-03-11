@@ -103,8 +103,8 @@ jobs:
             FPCALC=/tmp/chromaprint-fpcalc-1.5.1-windows-x86_64/fpcalc.exe
             export FPCALC
             popd
-            pytest -s
           fi
+          pytest -s
       - name: artifact windows test
         uses: actions/upload-artifact@v3
         if: always()
@@ -164,8 +164,8 @@ jobs:
             export FPCALC
             popd
             #source /tmp/venv/bin/activate
-            pytest -s
           fi
+          pytest -s
       - name: artifact linux test
         uses: actions/upload-artifact@v3
         if: always()
