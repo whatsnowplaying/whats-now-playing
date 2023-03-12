@@ -6,8 +6,6 @@ import logging.handlers
 import pathlib
 import sys
 
-import pid.utils
-
 from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QErrorMessage  # pylint: disable=no-name-in-module
 
@@ -38,14 +36,6 @@ def set_qt_names(app=None,
     app.setOrganizationDomain(domain)
     app.setOrganizationName('whatsnowplaying')
     app.setApplicationName(appname)
-
-
-def get_pid_dir():
-    ''' pid has bad darwin support '''
-    if sys.platform == 'darwin':
-        return QStandardPaths.standardLocations(
-            QStandardPaths.RuntimeLocation)[0]
-    return pid.utils.determine_pid_directory()
 
 
 def setuplogging(logdir=None, logname='debug.log', rotate=False):

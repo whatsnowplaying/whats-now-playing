@@ -7,9 +7,6 @@ import platform
 import socket
 import sys
 
-from pid import PidFile
-from pid.base import PidFileAlreadyLockedError
-
 from PySide6.QtCore import QCoreApplication, Qt  # pylint: disable=no-name-in-module
 from PySide6.QtGui import QIcon  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QApplication  # pylint: disable=no-name-in-module
@@ -21,6 +18,8 @@ import nowplaying.db
 import nowplaying.frozen
 import nowplaying.systemtray
 import nowplaying.upgrade
+from nowplaying.vendor.pid import PidFile
+from nowplaying.vendor.pid.base import PidFileAlreadyLockedError
 
 # pragma: no cover
 #
@@ -59,10 +58,8 @@ def actualmain(beam=False):
     qapp = QApplication(sys.argv)
     qapp.setQuitOnLastWindowClosed(False)
     nowplaying.bootstrap.set_qt_names()
-    piddir = nowplaying.bootstrap.get_pid_dir()
     try:
         with PidFile(pidname='nowplaying.pid',
-                     piddir=piddir,
                      register_term_signal_handler=False,
                      register_atexit=False) as pid:
 
