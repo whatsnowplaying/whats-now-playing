@@ -280,7 +280,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         msgbox = QMessageBox()
         msgbox.setText('Basic configuration hopefully in place. '
-                       'Please verify the Source and configure an output!')
+                       'Bringing up the Settings windows. '
+                       ' Please check the Source is correct for'
+                       ' your DJ software.')
         msgbox.show()
         msgbox.exec()
 

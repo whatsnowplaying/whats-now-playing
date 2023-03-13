@@ -197,7 +197,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             str(self.templatedir.joinpath("ws-gifwords-fade.htm")))
         settings.setValue('weboutput/requestertemplate',
                           str(self.templatedir.joinpath("ws-requests.htm")))
-        settings.setValue('weboutput/httpenabled', False)
+        settings.setValue('weboutput/httpenabled', True)
         settings.setValue('weboutput/httpport', '8899')
         settings.setValue('weboutput/once', True)
 

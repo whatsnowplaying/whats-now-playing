@@ -56,10 +56,11 @@ Here are the steps to get a basic installation working:
 #. The software will attempt to pre-configure itself for whatever software you have installed.  Note that in the case of Traktor, this work will including building an index for file lookup. For large Traktor installations, that may take a while.
 #. It should bring up the `Settings <settings.html>`_
 #. (Re-)Configure a `Source <input/index.html>`_
-#. Configure an output: a file to write, the webserver, the twitchbot, etc ...
-#. Save
-#. Bring up your DJ software and play a song.
-#. The output you picked should now have the song contents after the DJ software updates its files. (Depending upon the output option and the DJ software in use, time may vary.)
-
+#. Save settings.
+#. Launch your DJ Software.
+#. Bring up OBS or SLOBS or your streaming software.
+#. Configure a Browser Source and point it at `http://localhost:8899/`.
+#. Bring up your DJ software again and play a song.
+#. The Browser Source should have a very simple track information box.
 
 At this point, you are ready to customize via `Templates <templates.html>`_ and enable other features!
