@@ -1,6 +1,16 @@
 
 # Changelog
 
+## Version 4.0.2 - 2023-03-12
+
+* Some dependency updates which should improve a few edge-case problems.
+* Prevent the app from being accidentally launched twice.
+* On new installs, the webserver is now enabled by default.
+* Some internal cleanup/simplification.
+* Some dialog changes for new installs.
+* Twitch chatbot token should now auto-strip 'oauth:' again if that is put into
+  the settings field.
+
 ## Version 4.0.1 - 2023-03-02
 
 * Do not crash if a Native Instruments directory exists

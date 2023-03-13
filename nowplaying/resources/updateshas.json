@@ -152,5 +152,8 @@
   },
   "twitchbot_request.txt": {
     "4.0.0-rc1": "ba6643c1ade80dd3bef0800e16476a8dd7f3ca32fcd24464e4412b97a8ac6baea47dd691bbe916c8e12be0995551b9da8aa1e29642632eaf4666bab3fe3ddd6c"
+  },
+  "ws-gifwords-fade.htm": {
+    "4.0.2": "34d13c3b5073149c7758725766b0db677baab6ab4f37a2f081a949f4526e613a5168d999e6b01d23fecf6c3e4d6df0a8a84525d4b1447c094c67f25d608d2adf"
   }
 }
