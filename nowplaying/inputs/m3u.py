@@ -94,11 +94,10 @@ class Plugin(InputPlugin):
             logging.debug('Remote resource; skipping filename decode')
             return None
         for encoding in ['utf-8', 'ascii', 'cp1252', 'utf-16']:
-            logging.debug(filestring)
             try:
                 location = filestring.decode(encoding)
             except UnicodeDecodeError:
-                logging.debug('Definitely not %s', encoding)
+                logging.debug('Definitely not encoded as %s', encoding)
                 continue
             if location[0] == '#':
                 break

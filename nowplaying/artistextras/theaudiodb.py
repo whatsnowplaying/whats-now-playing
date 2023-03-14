@@ -40,11 +40,13 @@ class Plugin(ArtistExtrasPlugin):
             page = requests.get(
                 f'https://theaudiodb.com/api/v1/json/{apikey}/{api}',
                 timeout=5)
-        except (requests.exceptions.ReadTimeout,
-                urllib3.exceptions.ReadTimeoutError, socket.timeout):
+        except (
+                requests.exceptions.ReadTimeout,  # pragma: no cover
+                urllib3.exceptions.ReadTimeoutError,
+                socket.timeout):
             logging.error('TheAudioDB _fetch hit socket timeout on %s', api)
             return None
-        except Exception as error:  # pylint: disable=broad-except
+        except Exception as error:  # pragma: no cover pylint: disable=broad-except
             logging.error('TheAudioDB hit %s', error)
             return None
         return page.json()
@@ -70,7 +72,8 @@ class Plugin(ArtistExtrasPlugin):
 
         bio = ''
 
-        for artdata in extradata:
+        oldartist = metadata['artist']
+        for artdata in extradata:  # pylint: disable=too-many-nested-blocks
 
             if not self._check_artist(artdata):
                 continue
@@ -97,7 +100,7 @@ class Plugin(ArtistExtrasPlugin):
                         'strArtistBanner') and self.config.cparser.value(
                             'theaudiodb/banners', type=bool):
                     imagecache.fill_queue(config=self.config,
-                                          artist=metadata['artist'],
+                                          artist=oldartist,
                                           imagetype='artistbanner',
                                           urllist=[artdata['strArtistBanner']])
 
@@ -105,7 +108,7 @@ class Plugin(ArtistExtrasPlugin):
                         'strArtistLogo') and self.config.cparser.value(
                             'theaudiodb/logos', type=bool):
                     imagecache.fill_queue(config=self.config,
-                                          artist=metadata['artist'],
+                                          artist=oldartist,
                                           imagetype='artistlogo',
                                           urllist=[artdata['strArtistLogo']])
 
@@ -113,7 +116,7 @@ class Plugin(ArtistExtrasPlugin):
                         'strArtistThumb') and self.config.cparser.value(
                             'theaudiodb/thumbnails', type=bool):
                     imagecache.fill_queue(config=self.config,
-                                          artist=metadata['artist'],
+                                          artist=oldartist,
                                           imagetype='artistthumb',
                                           urllist=[artdata['strArtistThumb']])
 
@@ -121,6 +124,8 @@ class Plugin(ArtistExtrasPlugin):
                     for num in ['', '2', '3', '4']:
                         artstring = f'strArtistFanart{num}'
                         if artdata.get(artstring):
+                            if not metadata.get('artistfanarturls'):
+                                metadata['artistfanarturls'] = []
                             metadata['artistfanarturls'].append(
                                 artdata[artstring])
 
@@ -135,7 +140,7 @@ class Plugin(ArtistExtrasPlugin):
         if not self.config.cparser.value('theaudiodb/enabled', type=bool):
             return None
 
-        if not metadata.get('artist'):
+        if not metadata or not metadata.get('artist'):
             logging.debug('No artist; skipping')
             return None
 
@@ -154,7 +159,7 @@ class Plugin(ArtistExtrasPlugin):
                 if newdata := self.artistdatafrommbid(apikey, mbid):
                     extradata.extend(artist for artist in newdata['artists']
                                      if self._check_artist(artist))
-        elif metadata.get('artist'):
+        if not extradata and metadata.get('artist'):
             logging.debug('got artist')
             if artistdata := self.artistdatafromname(apikey,
                                                      metadata['artist']):

@@ -507,7 +507,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         oldport = self.config.cparser.value('weboutput/httpport', type=int)
 
         httpenabled = self.widgets['webserver'].enable_checkbox.isChecked()
-        httpport = int(self.widgets['webserver'].port_lineedit.text())
+        if httpporttext := self.widgets['webserver'].port_lineedit.text():
+            httpport = int(httpporttext)
+        else:
+            httpport = 8899
 
         self.config.cparser.setValue('weboutput/httpenabled', httpenabled)
         self.config.cparser.setValue('weboutput/httpport', httpport)

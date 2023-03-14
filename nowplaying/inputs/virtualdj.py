@@ -20,8 +20,8 @@ PLAYLIST = ['name', 'filename']
 class Plugin(M3UPlugin):
     ''' handler for NowPlaying '''
 
-    def __init__(self, config=None, qsettings=None):
-        super().__init__(config=config, qsettings=qsettings)
+    def __init__(self, config=None, m3udir=None, qsettings=None):
+        super().__init__(config=config, m3udir=m3udir, qsettings=qsettings)
         self.databasefile = pathlib.Path(
             QStandardPaths.standardLocations(
                 QStandardPaths.CacheLocation)[0]).joinpath(
@@ -68,6 +68,7 @@ class Plugin(M3UPlugin):
             connection.commit()
 
             for filepath in list(playlistdirpath.rglob('*.m3u')):
+                logging.debug('Reading %s', filepath)
                 content = self._read_full_file(filepath)
                 self._write_playlist(cursor, filepath.stem, content)
             connection.commit()
