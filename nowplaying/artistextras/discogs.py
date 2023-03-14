@@ -32,28 +32,27 @@ class Plugin(ArtistExtrasPlugin):
             resultlist = self.client.search(metadata['album'],
                                             artist=metadata['artist'],
                                             type='title').page(1)
-        except (requests.exceptions.ReadTimeout,
-                urllib3.exceptions.ReadTimeoutError, socket.timeout,
+        except (
+                requests.exceptions.ReadTimeout,  # pragma: no cover
+                urllib3.exceptions.ReadTimeoutError,
+                socket.timeout,
                 TimeoutError):
             logging.error('discogs releaselist timeout error')
             return None
-        except Exception as error:  # pylint: disable=broad-except
+        except Exception as error:  # pragma: no cover pylint: disable=broad-except
             logging.error('discogs hit %s', error)
             return None
 
-        artistresultlist = next(
+        return next(
             (result.artists[0] for result in resultlist if isinstance(
                 result, nowplaying.vendor.discogs_client.models.Release)),
             None,
         )
 
-        return artistresultlist
-
     def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches, too-many-return-statements
         ''' download content '''
 
         apikey = self.config.cparser.value('discogs/apikey')
-        oldartist = None
 
         if not apikey or not self.config.cparser.value('discogs/enabled',
                                                        type=bool):
@@ -61,9 +60,12 @@ class Plugin(ArtistExtrasPlugin):
 
         # discogs basically works by search for a combination of
         # artist and album so we need both
-        if not metadata.get('artist') or not metadata.get('album'):
+        if not metadata or not metadata.get('artist') or not metadata.get(
+                'album'):
             logging.debug('artist or album is empty, skipping')
             return None
+
+        oldartist = metadata['artist']
 
         if not self.client:
             self.client = nowplaying.vendor.discogs_client.Client(
@@ -74,13 +76,10 @@ class Plugin(ArtistExtrasPlugin):
 
         if not artistresultlist and self.there.match(metadata['artist']):
             logging.debug('Trying without a leading \'The\'')
-            oldartist = metadata['artist']
             metadata['artist'] = self.there.sub('', metadata['artist'])
             artistresultlist = self._find_discogs_releaselist(metadata)
 
         if not artistresultlist:
-            if oldartist:
-                metadata['artist'] = oldartist
             logging.debug('discogs did not find it')
             return None
 
@@ -96,12 +95,15 @@ class Plugin(ArtistExtrasPlugin):
         if not artistresultlist.images:
             return metadata
 
+        if not metadata.get('artistfanarturls'):
+            metadata['artistfanarturls'] = []
+
         for record in artistresultlist.images:
             if record['type'] == 'primary' and record.get(
                     'uri150') and self.config.cparser.value(
                         'discogs/thumbnails', type=bool):
                 imagecache.fill_queue(config=self.config,
-                                      artist=metadata['artist'],
+                                      artist=oldartist,
                                       imagetype='artistthumb',
                                       urllist=[record['uri150']])
 

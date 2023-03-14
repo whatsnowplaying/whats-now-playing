@@ -343,7 +343,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
 
             if not artistdupes or metadata.get('artist') not in artistdupes:
                 tryagain = False
-                asyncio.sleep(.5)
+                await asyncio.sleep(.5)
             if tryagain:
                 logging.debug('Duped on %s. Retrying.', metadata['artist'])
         return metadata
@@ -582,16 +582,18 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             'user_input': user_input,
             'userimage': setting.get('userimage'),
         }
-        if self.testmode:
-            return data
 
         await self.add_to_db(data)
-        return {
+        newdata = {
             'requester': user,
             'requestartist': artist,
             'requesttitle': title,
             'requestdisplayname': setting.get('displayname')
         }
+        if self.testmode:
+            newdata |= data
+
+        return newdata
 
     async def _tenor_request(self, search_terms):
         ''' get an image from tenor for a given set of terms '''
@@ -676,16 +678,18 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             'user_input': user_input,
             'userimage': setting.get('userimage'),
         }
-        if self.testmode:
-            return data
 
         await self.add_to_db(data)
-        return {
+        newdata = {
             'requester': user,
             'requestartist': artist,
             'requesttitle': title,
             'requestdisplayname': setting.get('displayname')
         }
+        if self.testmode:
+            newdata |= data
+
+        return newdata
 
     def start_watcher(self):
         ''' start the qfilesystemwatcher '''

@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import pathlib
+import random
 
 from nowplaying.inputs import InputPlugin
 
@@ -15,6 +16,7 @@ class Plugin(InputPlugin):
     def __init__(self, config=None, qsettings=None):
         ''' no custom init '''
         super().__init__(config=config, qsettings=qsettings)
+        self.playlists = None
 
     def install(self):
         ''' auto-install '''
@@ -80,8 +82,19 @@ class Plugin(InputPlugin):
         return {}
 
     async def getrandomtrack(self, playlist):
-        ''' not supported '''
-        return None
+        ''' return a random track '''
+        if not self.playlists or not self.playlists.get(playlist):
+            return None
+
+        return random.choice(self.playlists[playlist])
+
+    def load_playlists(self, dirpath, playlistfile):
+        ''' load a playlist file '''
+        with open(playlistfile, mode='r', encoding='utf-8') as fhin:
+            datafile = fhin.read()
+
+        datafile = datafile.replace('ROOTPATH', str(dirpath))
+        self.playlists = json.loads(datafile)
 
 
 #### Control methods

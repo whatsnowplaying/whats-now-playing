@@ -7,8 +7,12 @@ requirements = "vendor.txt"
 namespace = "nowplaying.vendor"
 
 [tool.pytest.ini_options]
+
+# initializing qtbot _after_ asyncio or threading just
+# breaks pytest horribily so force those tests first
 testpaths = [
-    "tests",
+    "tests-qt",
+    "tests"
 ]
 markers = [
     "seratosettings: custom settings for serato ",
@@ -24,6 +28,7 @@ addopts = [
 ]
 log_level = "DEBUG"
 asyncio_mode = "strict"
+qt_qapp_name = "testsuite"
 
 [tool.pylint.main]
 # List of plugins (as comma separated values of python module names) to load,

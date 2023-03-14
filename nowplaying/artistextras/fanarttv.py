@@ -32,10 +32,12 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug('fanarttv: calling %s', baseurl)
             artistrequest = requests.get(f'{baseurl}?api_key={apikey}',
                                          timeout=5)
-        except (requests.exceptions.ReadTimeout,
-                urllib3.exceptions.ReadTimeoutError, socket.timeout):
+        except (
+                requests.exceptions.ReadTimeout,  # pragma: no cover
+                urllib3.exceptions.ReadTimeoutError,
+                socket.timeout):
             logging.error('fantart.tv timeout getting artistid %s', artistid)
-        except Exception as error:  # pylint: disable=broad-except
+        except Exception as error:  # pragma: no cover pylint: disable=broad-except
             logging.error('fanart.tv: %s', error)
 
         return artistrequest
@@ -48,7 +50,7 @@ class Plugin(ArtistExtrasPlugin):
                                                        type=bool):
             return None
 
-        if not metadata.get('artist'):
+        if not metadata or not metadata.get('artist'):
             logging.debug('skipping: no artist')
             return None
 
@@ -113,8 +115,12 @@ class Plugin(ArtistExtrasPlugin):
                                       imagetype='artistthumb',
                                       urllist=[x['url'] for x in thumbnail])
 
-            if artist.get('artistbackground'):
+            if self.config.cparser.value(
+                    'fanarttv/fanart',
+                    type=bool) and artist.get('artistbackground'):
                 for image in artist['artistbackground']:
+                    if not metadata.get('artistfanarturls'):
+                        metadata['artistfanarturls'] = []
                     metadata['artistfanarturls'].append(image['url'])
 
         return metadata

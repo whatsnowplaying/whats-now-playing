@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 ''' NowPlaying as run via python -m '''
+
 #import faulthandler
 import logging
 import multiprocessing
@@ -21,13 +22,12 @@ import nowplaying.upgrade
 from nowplaying.vendor.pid import PidFile
 from nowplaying.vendor.pid.base import PidFileAlreadyLockedError
 
-# pragma: no cover
 #
 # as of now, there isn't really much here to test... basic bootstrap stuff
 #
 
 
-def run_bootstrap(bundledir=None):
+def run_bootstrap(bundledir=None):  # pragma: no cover
     ''' bootstrap the app '''
     # we are in a hurry to get results.  If it takes longer than
     # 5 seconds, consider it a failure and move on.  At some
@@ -46,7 +46,7 @@ def run_bootstrap(bundledir=None):
     return logpath
 
 
-def actualmain(beam=False):
+def actualmain(beam=False):  # pragma: no cover
     ''' main entrypoint '''
 
     multiprocessing.freeze_support()
@@ -85,12 +85,12 @@ def actualmain(beam=False):
     sys.exit(exitval)
 
 
-def main():
+def main():  # pragma: no cover
     ''' Normal mode '''
     actualmain(beam=False)
 
 
-def beammain():
+def beammain():  # pragma: no cover
     ''' beam mode '''
     actualmain(beam=True)
 
