@@ -591,7 +591,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             'requestdisplayname': setting.get('displayname')
         }
         if self.testmode:
-            newdata.update(data)
+            newdata |= data
 
         return newdata
 
@@ -687,7 +687,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             'requestdisplayname': setting.get('displayname')
         }
         if self.testmode:
-            newdata.update(data)
+            newdata |= data
 
         return newdata
 
