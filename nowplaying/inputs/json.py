@@ -90,11 +90,17 @@ class Plugin(InputPlugin):
 
     def load_playlists(self, dirpath, playlistfile):
         ''' load a playlist file '''
-        with open(playlistfile, mode='r', encoding='utf-8') as fhin:
-            datafile = fhin.read()
+        with open(playlistfile, mode='rb') as fhin:
+            datain = json.load(fhin)
 
-        datafile = datafile.replace('ROOTPATH', str(dirpath))
-        self.playlists = json.loads(datafile)
+        self.playlists = {}
+        for listname, filelist in datain.items():
+            self.playlists[listname] = [
+                value.replace(
+                    'ROOTPATH',
+                    str(dirpath),
+                ) for value in filelist
+            ]
 
 
 #### Control methods
