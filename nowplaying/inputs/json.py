@@ -74,7 +74,7 @@ class Plugin(InputPlugin):
             return {}
 
         try:
-            with open(filepath, mode='rb', encoding='utf-8') as fhin:
+            with open(filepath, mode='rb') as fhin:
                 return json.load(fhin)
         except Exception as error:  # pylint: disable=broad-except
             logging.error(error)
