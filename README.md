@@ -36,3 +36,4 @@ More detailed information is available at:
 * [Documentation](https://whatsnowplaying.github.io/)
 * [Releases](https://github.com/whatsnowplaying/whats-now-playing/releases)
 * [Changes](CHANGELOG.md)
+* [Discord](https://discord.gg/rgEvcdUHUV)

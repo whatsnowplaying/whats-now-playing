@@ -42,6 +42,14 @@ access to the source code, bugs and feature requests (issues), and a discussion
 area where you can ask questions.
 
 
+Getting Help
+============
+
+If you'd like to chat with someone who uses the software or get inspiration, there is now a
+`Discord <https://discord.gg/rgEvcdUHUV>`_ server available!
+
+Open Source
+===========
 
 Keep in mind that also means this software is done by volunteers in their spare
 time!
