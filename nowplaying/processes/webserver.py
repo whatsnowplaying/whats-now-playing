@@ -121,7 +121,9 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 newkey = key.replace('raw', 'base64')
                 metadata[newkey] = base64.b64encode(
                     metadata[key]).decode('utf-8')
-            del metadata[key]
+                del metadata[key]
+        if metadata.get('dbid'):
+            del metadata['dbid']
         return metadata
 
     def _transparentifier(self, metadata):
@@ -302,10 +304,15 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         return await self._image_handler('artistthumbraw', request)
 
     async def api_v1_last_handler(self, request):
-        ''' handle static index.txt '''
-        metadata = request.app['metadb'].read_last_meta()
-        del metadata['dbid']
-        return web.json_response(self._base64ifier(metadata))
+        ''' v1/last just returns the metadata'''
+        data = {}
+        if metadata := request.app['metadb'].read_last_meta():
+            try:
+                del metadata['dbid']
+                data = self._base64ifier(metadata)
+            except:  # pylint: disable=bare-except
+                logging.debug(traceback.format_exc().splitlines())
+        return web.json_response(data)
 
     async def websocket_gifwords_streamer(self, request):
         ''' handle continually streamed updates '''
@@ -532,7 +539,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             path=staticdir,
         )
         app['metadb'] = nowplaying.db.MetadataDB()
-        app['imagecache'] = nowplaying.imagecache.ImageCache()
+        if not self.testmode:
+            app['imagecache'] = nowplaying.imagecache.ImageCache()
         app['watcher'] = app['metadb'].watcher()
         app['watcher'].start()
         app['statedb'] = await aiosqlite.connect(self.databasefile)
