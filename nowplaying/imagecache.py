@@ -411,7 +411,7 @@ VALUES (?,?,?);
             }
             dlimage = session.get(imagedict['url'], timeout=5, headers=headers)
         except Exception as error:  # pylint: disable=broad-except
-            logging.debug('image_dl: %s %s', imagedict['url'], error)
+            logging.error('image_dl: %s %s', imagedict['url'], error)
             self.erase_url(imagedict['url'])
             return
         if dlimage.status_code == 200:
@@ -422,7 +422,7 @@ VALUES (?,?,?);
                                  imagetype=imagedict['imagetype'],
                                  cachekey=cachekey)
         else:
-            logging.debug('image_dl: status_code %s', dlimage.status_code)
+            logging.error('image_dl: status_code %s', dlimage.status_code)
             self.erase_url(imagedict['url'])
             return
 
@@ -460,15 +460,14 @@ VALUES (?,?,?);
                         cachekeys.append(row['cachekey'])
         except:  # pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
-                logging.debug(line)
-
+                logging.error(line)
 
         # making this two separate operations unlocks the DB
         for key in cachekeys:
             try:
                 image = self.cache[key]  # pylint: disable=unused-variable
             except KeyError:
-                logging.debug('%s/%s expired', key, url)
+                logging.info('%s/%s expired', key, url)
                 self.erase_cachekey(key)
         logging.debug('Finished image cache verification: %s images',
                       len(cachekeys))

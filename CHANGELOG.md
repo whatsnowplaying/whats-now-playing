@@ -1,6 +1,25 @@
 
 # Changelog
 
+## Version 4.0.3 - Unreleased
+
+* Force binaries to build with Python 3.10 as 3.11 causes problems.
+* Verify the image cache at startup and every hour
+* Fixed some bugs around base64 encoding in the webserver
+  that would trigger a 500 HTTP error
+* missed an await in trackrequest that cause it to go awol
+* Quiet down the logging of Virtual DJ playlist import
+* Try to make the artistextras artwork handling consistent when
+  artist names are in disagreement. (Part 1)
+* Change TCP timeouts in artistextras to be based on track delay times
+  if possible
+* Fix some edge-case crashes with artistextras
+* Push the discord more :D
+* Enhanced the automated testing of some parts of the code base
+* More dependency updates
+* Add some debug messages for some rare issues
+* JSON test source now supports random tracks
+
 ## Version 4.0.2 - 2023-03-12
 
 * Some dependency updates which should improve a few edge-case problems.

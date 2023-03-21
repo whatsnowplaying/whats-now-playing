@@ -234,7 +234,7 @@ class MetadataDB:
                     '''SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1''')
             except sqlite3.OperationalError:
                 for line in traceback.format_exc().splitlines():
-                    logging.debug(line)
+                    logging.error(line)
                 return None
 
             row = cursor.fetchone()
