@@ -40,6 +40,9 @@ jobs:
         shell: bash
         env:
           ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
+          DISCOGS_API_KEY: ${{ secrets.DISCOGS_API_KEY }}  # pragma: allowlist secret
+          FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}  # pragma: allowlist secret
+          THEAUDIODB_API_KEY: ${{ secrets.THEAUDIODB_API_KEY }}  # pragma: allowlist secret
         run: |
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp
@@ -94,6 +97,9 @@ jobs:
         shell: bash
         env:
           ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
+          DISCOGS_API_KEY: ${{ secrets.DISCOGS_API_KEY }}  # pragma: allowlist secret
+          FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}  # pragma: allowlist secret
+          THEAUDIODB_API_KEY: ${{ secrets.THEAUDIODB_API_KEY }}  # pragma: allowlist secret
         run: |
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp
@@ -177,6 +183,9 @@ jobs:
         shell: bash
         env:
           ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
+          DISCOGS_API_KEY: ${{ secrets.DISCOGS_API_KEY }}  # pragma: allowlist secret
+          FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}  # pragma: allowlist secret
+          THEAUDIODB_API_KEY: ${{ secrets.THEAUDIODB_API_KEY }}  # pragma: allowlist secret
         run: |
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp
