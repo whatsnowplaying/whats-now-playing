@@ -4,6 +4,7 @@
 import logging
 import multiprocessing
 import pathlib
+import sys
 import tempfile
 import time
 
@@ -71,7 +72,8 @@ def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
             logging.debug('Found it at %s', cachekey)
 
 
-@pytest.mark.xfail(reason="Windows cannot close fast enough")
+@pytest.mark.xfail(sys.platform == "win32",
+                   reason="Windows cannot close fast enough")
 def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
     ''' get a 'random' image' '''
     config, imagecache = get_imagecache  # pylint: disable=unused-variable
