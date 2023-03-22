@@ -27,6 +27,7 @@ def getwebserver(bootstrap):
     config.cparser.setValue('weboutput/httpenabled', 'true')
     config.cparser.sync()
     port = config.cparser.value('weboutput/httpport', type=int)
+    logging.debug('checking %s for use', port)
     while is_port_in_use(port):
         logging.debug('%s is in use; waiting', port)
         time.sleep(2)
