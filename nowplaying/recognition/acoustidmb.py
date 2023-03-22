@@ -72,12 +72,13 @@ class Plugin(RecognitionPlugin):
 
         return json.loads(completedprocess.stdout.decode('utf-8'))
 
-    @staticmethod
-    def _fetch_from_acoustid(apikey, fingerprint, duration):
+    def _fetch_from_acoustid(self, apikey, fingerprint, duration):
 
         if isinstance(duration, str):
             duration = float(duration)
         results = None
+
+        delay = self.calculate_delay()
         try:
             counter = 0
             while counter < 3:
@@ -89,7 +90,7 @@ class Plugin(RecognitionPlugin):
                                               'recordings', 'recordingids',
                                               'releases', 'tracks', 'usermeta'
                                           ],
-                                          timeout=10)
+                                          timeout=delay)
                 if ('error' not in results
                         or 'rate limit' not in results['error']['message']):
                     break

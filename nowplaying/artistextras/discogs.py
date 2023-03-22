@@ -68,9 +68,10 @@ class Plugin(ArtistExtrasPlugin):
         oldartist = metadata['artist']
 
         if not self.client:
+            delay = self.calculate_delay()
             self.client = nowplaying.vendor.discogs_client.Client(
                 f'whatsnowplaying/{self.version}', user_token=apikey)
-            self.client.set_timeout(connect=3, read=2)
+            self.client.set_timeout(connect=delay, read=delay)
 
         artistresultlist = self._find_discogs_releaselist(metadata)
 

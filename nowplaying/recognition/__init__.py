@@ -2,6 +2,7 @@
 ''' Input Plugin definition '''
 
 import logging
+import sys
 
 from nowplaying.exceptions import PluginVerifyError
 
@@ -44,7 +45,6 @@ class RecognitionPlugin():
         ''' take the settings page and save it '''
         raise NotImplementedError
 
-
 #### Recognition methods
 
     def recognize(self, metadata=None):  #pylint: disable=no-self-use
@@ -54,3 +54,23 @@ class RecognitionPlugin():
     def providerinfo(self):
         ''' return list of what is provided by this recognition system '''
         raise NotImplementedError
+
+
+#### Utilities
+
+    def calculate_delay(self):
+        ''' determine a reasonable, minimal delay '''
+
+        try:
+            delay = self.config.cparser.value('settings/delay',
+                                              type=float,
+                                              defaultValue=10.0)
+        except ValueError:
+            delay = 10.0
+
+        if sys.platform == 'win32':
+            delay = max(delay / 2, 10)
+        else:
+            delay = max(delay / 2, 5)
+
+        return delay

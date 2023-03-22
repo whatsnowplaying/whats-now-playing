@@ -24,14 +24,15 @@ class Plugin(ArtistExtrasPlugin):
         self.version = nowplaying.version.get_versions()['version']
         super().__init__(config=config, qsettings=qsettings)
 
-    @staticmethod
-    def _fetch(apikey, artistid):
+    def _fetch(self, apikey, artistid):
         artistrequest = None
+        delay = self.calculate_delay()
+
         try:
             baseurl = f'http://webservice.fanart.tv/v3/music/{artistid}'
             logging.debug('fanarttv: calling %s', baseurl)
             artistrequest = requests.get(f'{baseurl}?api_key={apikey}',
-                                         timeout=10)
+                                         timeout=delay)
         except (
                 requests.exceptions.ReadTimeout,  # pragma: no cover
                 urllib3.exceptions.ReadTimeoutError,

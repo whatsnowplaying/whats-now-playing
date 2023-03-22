@@ -33,13 +33,13 @@ class Plugin(ArtistExtrasPlugin):
         htmlfilter.feed(text)
         return htmlfilter.text
 
-    @staticmethod
-    def _fetch(apikey, api):
+    def _fetch(self, apikey, api):
+        delay = self.calculate_delay()
         try:
             logging.debug('Fetching %s', api)
             page = requests.get(
                 f'https://theaudiodb.com/api/v1/json/{apikey}/{api}',
-                timeout=10)
+                timeout=delay)
         except (
                 requests.exceptions.ReadTimeout,  # pragma: no cover
                 urllib3.exceptions.ReadTimeoutError,
