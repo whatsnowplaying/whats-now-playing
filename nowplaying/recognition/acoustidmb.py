@@ -89,7 +89,7 @@ class Plugin(RecognitionPlugin):
                                               'recordings', 'recordingids',
                                               'releases', 'tracks', 'usermeta'
                                           ],
-                                          timeout=5)
+                                          timeout=10)
                 if ('error' not in results
                         or 'rate limit' not in results['error']['message']):
                     break

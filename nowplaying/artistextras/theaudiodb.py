@@ -39,7 +39,7 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug('Fetching %s', api)
             page = requests.get(
                 f'https://theaudiodb.com/api/v1/json/{apikey}/{api}',
-                timeout=5)
+                timeout=10)
         except (
                 requests.exceptions.ReadTimeout,  # pragma: no cover
                 urllib3.exceptions.ReadTimeoutError,
