@@ -2,6 +2,7 @@
 ''' test webserver '''
 
 import logging
+import socket
 import time
 
 import pytest
@@ -11,6 +12,11 @@ import nowplaying.subprocesses  # pylint: disable=import-error
 import nowplaying.processes.webserver  # pylint: disable=import-error
 
 
+def is_port_in_use(port: int) -> bool:
+    ''' check if a port is in use '''
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        return sock.connect_ex(('localhost', port)) == 0
+
 @pytest.fixture
 def getwebserver(bootstrap):
     ''' configure the webserver, dependents with prereqs '''
@@ -19,6 +25,9 @@ def getwebserver(bootstrap):
     logging.debug(metadb.databasefile)
     config.cparser.setValue('weboutput/httpenabled', 'true')
     config.cparser.sync()
+    while is_port_in_use(8899):
+        time.sleep(2)
+
     manager = nowplaying.subprocesses.SubprocessManager(config=config,
                                                         testmode=True)
     manager.start_webserver()
