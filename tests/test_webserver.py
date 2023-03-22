@@ -17,6 +17,7 @@ def is_port_in_use(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         return sock.connect_ex(('localhost', port)) == 0
 
+
 @pytest.fixture
 def getwebserver(bootstrap):
     ''' configure the webserver, dependents with prereqs '''
@@ -25,7 +26,9 @@ def getwebserver(bootstrap):
     logging.debug(metadb.databasefile)
     config.cparser.setValue('weboutput/httpenabled', 'true')
     config.cparser.sync()
-    while is_port_in_use(8899):
+    port = config.cparser.value('weboutput/httpport', type=int)
+    while is_port_in_use(port):
+        logging.debug('%s is in use; waiting', port)
         time.sleep(2)
 
     manager = nowplaying.subprocesses.SubprocessManager(config=config,
@@ -121,7 +124,6 @@ def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-outer-nam
     assert req.status_code == 200
     assert req.text == ''
 
-
     # should return empty
     req = requests.get('http://localhost:8899/v1/last', timeout=5)
     assert req.status_code == 200
@@ -169,13 +171,13 @@ def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-outer-nam
     assert req.status_code == 200
     assert req.text == ' artisttxt2 - titletxt2'
 
-
     req = requests.get('http://localhost:8899/v1/last', timeout=5)
     assert req.status_code == 200
     checkdata = req.json()
     assert checkdata['artist'] == 'artisttxt2'
     assert checkdata['title'] == 'titletxt2'
     assert not checkdata.get('dbid')
+
 
 def test_webserver_gifwordstest(getwebserver):  # pylint: disable=redefined-outer-name
     ''' make sure gifwords works '''
