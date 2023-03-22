@@ -31,7 +31,7 @@ class Plugin(ArtistExtrasPlugin):
             baseurl = f'http://webservice.fanart.tv/v3/music/{artistid}'
             logging.debug('fanarttv: calling %s', baseurl)
             artistrequest = requests.get(f'{baseurl}?api_key={apikey}',
-                                         timeout=5)
+                                         timeout=10)
         except (
                 requests.exceptions.ReadTimeout,  # pragma: no cover
                 urllib3.exceptions.ReadTimeoutError,
