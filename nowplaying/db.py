@@ -8,6 +8,7 @@ import pathlib
 import sys
 import sqlite3
 import time
+import traceback
 
 from watchdog.observers import Observer  # pylint: disable=import-error
 from watchdog.events import PatternMatchingEventHandler  # pylint: disable=import-error
@@ -232,10 +233,13 @@ class MetadataDB:
                 cursor.execute(
                     '''SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1''')
             except sqlite3.OperationalError:
+                for line in traceback.format_exc().splitlines():
+                    logging.debug(line)
                 return None
 
             row = cursor.fetchone()
             if not row:
+                logging.debug('No data?!?')
                 return None
 
         metadata = {data: row[data] for data in METADATALIST}

@@ -338,6 +338,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         while not self.stopevent.is_set():
             await asyncio.sleep(1)
 
+        logging.debug('watcher stop event received')
         self.watcher.stop()
 
     async def _delay_write(self):
@@ -352,6 +353,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         await asyncio.sleep(delay)
 
     def _announce_track(self, event):  #pylint: disable=unused-argument
+        logging.debug('watcher event called')
         try:
             try:
                 loop = asyncio.get_running_loop()
@@ -370,49 +372,55 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         ''' announce new tracks '''
         global LASTANNOUNCED  # pylint: disable=global-statement, global-variable-not-assigned
 
-        self.config.get()
+        try:
+            self.config.get()
 
-        if self.chat and not self.chat.is_connected():
-            logging.error('Twitch chat is not connected. Cannot announce.')
-            return
+            if self.chat and not self.chat.is_connected():
+                logging.error('Twitch chat is not connected. Cannot announce.')
+                return
 
-        anntemplate = self.config.cparser.value('twitchbot/announce')
-        if not anntemplate:
-            return
+            anntemplate = self.config.cparser.value('twitchbot/announce')
+            if not anntemplate:
+                logging.debug('No template to announce')
+                return
 
-        if not pathlib.Path(anntemplate).exists():
-            logging.error('Annoucement template %s does not exist.',
-                          anntemplate)
-            return
+            if not pathlib.Path(anntemplate).exists():
+                logging.error('Annoucement template %s does not exist.',
+                              anntemplate)
+                return
 
-        metadata = self.metadb.read_last_meta()
+            metadata = self.metadb.read_last_meta()
 
-        if not metadata:
-            return
+            if not metadata:
+                logging.debug('No metadata to announce')
+                return
 
-        # don't announce empty content
-        if not metadata['artist'] and not metadata['title']:
-            logging.warning(
-                'Both artist and title are empty; skipping announcement')
-            return
+            # don't announce empty content
+            if not metadata['artist'] and not metadata['title']:
+                logging.warning(
+                    'Both artist and title are empty; skipping announcement')
+                return
 
-        if metadata['artist'] == LASTANNOUNCED['artist'] and \
-           metadata['title'] == LASTANNOUNCED['title']:
-            logging.warning(
-                'Same artist and title or doubled event notification; skipping announcement.'
-            )
-            return
+            if metadata['artist'] == LASTANNOUNCED['artist'] and \
+               metadata['title'] == LASTANNOUNCED['title']:
+                logging.warning(
+                    'Same artist and title or doubled event notification; skipping announcement.'
+                )
+                return
 
-        LASTANNOUNCED['artist'] = metadata['artist']
-        LASTANNOUNCED['title'] = metadata['title']
+            LASTANNOUNCED['artist'] = metadata['artist']
+            LASTANNOUNCED['title'] = metadata['title']
 
-        await self._delay_write()
+            await self._delay_write()
 
-        logging.info('Announcing %s',
-                     self.config.cparser.value('twitchbot/announce'))
+            logging.info('Announcing %s',
+                         self.config.cparser.value('twitchbot/announce'))
 
-        await self._post_template(template=pathlib.Path(
-            self.config.cparser.value('twitchbot/announce')).name)
+            await self._post_template(template=pathlib.Path(
+                self.config.cparser.value('twitchbot/announce')).name)
+        except:  #pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
 
     async def _post_template(self, msg=None, template=None, moremetadata=None):  #pylint: disable=too-many-branches
         ''' take a template, fill it in, and post it '''
