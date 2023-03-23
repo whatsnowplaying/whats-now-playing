@@ -297,9 +297,10 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
     async def handle_request(self, command, params, username):  # pylint: disable=unused-argument
         ''' handle the channel point redemption '''
         reply = None
-        logging.debug(command)
+        logging.debug('got command: %s', command)
         commandlist = ' '.join(params)
-        logging.debug(commandlist)
+        if commandlist:
+            logging.debug('got commandlist: %s', commandlist)
         if setting := await self.requests.find_command(command):
             logging.debug(setting)
             setting[
