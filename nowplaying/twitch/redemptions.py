@@ -131,7 +131,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                 self.pubsub.start()
             except:  #pylint: disable=bare-except
                 for line in traceback.format_exc().splitlines():
-                    logging.debug(line)
+                    logging.error(line)
                 logging.error('pubsub failed to start')
                 await twitchlogin.cache_token_del()
                 await asyncio.sleep(60)
@@ -144,7 +144,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                     ]))
             except:  #pylint: disable=bare-except
                 for line in traceback.format_exc().splitlines():
-                    logging.debug(line)
+                    logging.error(line)
                 logging.error('pubsub getusers failed')
                 await twitchlogin.cache_token_del()
                 continue
@@ -156,7 +156,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                 loggedin = True
             except:  #pylint: disable=bare-except
                 for line in traceback.format_exc().splitlines():
-                    logging.debug(line)
+                    logging.error(line)
                 logging.error('pubsub listen_channel_points failed')
                 await twitchlogin.cache_token_del()
                 loggedin = False

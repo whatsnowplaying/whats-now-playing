@@ -311,7 +311,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 del metadata['dbid']
                 data = self._base64ifier(metadata)
             except:  # pylint: disable=bare-except
-                logging.debug(traceback.format_exc().splitlines())
+                for line in traceback.format_exc().splitlines():
+                    logging.debug(line)
         return web.json_response(data)
 
     async def websocket_gifwords_streamer(self, request):
@@ -329,7 +330,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 metadata = await trackrequest.check_for_gifwords()
                 if not metadata.get('image'):
                     await websocket.send_json({'noimage': True})
-                    await asyncio.sleep(10)
+                    await asyncio.sleep(5)
                     continue
 
                 metadata['imagebase64'] = base64.b64encode(
@@ -342,7 +343,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 except ConnectionResetError:
                     logging.debug('Lost a client')
                     endloop = True
-                await asyncio.sleep(10)
+                await asyncio.sleep(20)
             if not websocket.closed:
                 await websocket.send_json({'last': True})
 
