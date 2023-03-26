@@ -461,11 +461,11 @@ VALUES (?,?,?);
                         try:
                             image = self.cache[cachekey]  # pylint: disable=unused-variable
                         except KeyError:
-                            logging.debug('%s/%s expired', cachekey, url )
+                            logging.debug('%s/%s expired', cachekey, url)
                             self.erase_cachekey(cachekey)
             logging.debug('Finished image cache verification: %s images',
                           count)
-        except:   # pylint: disable=bare-except
+        except:  # pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
                 logging.debug(line)
 
