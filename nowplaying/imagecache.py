@@ -444,7 +444,7 @@ VALUES (?,?,?);
         if not self.databasefile.exists():
             return
 
-        cachekeys = []
+        cachekeys = {}
 
         try:
             logging.debug('Starting image cache verification')
@@ -457,20 +457,27 @@ VALUES (?,?,?);
                         url = row['url']
                         if url == 'STOPWNP':
                             continue
-                        cachekeys.append(row['cachekey'])
+                        cachekeys[row['cachekey']] = url
         except:  # pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
 
+        startsize = len(cachekeys)
+        if not startsize:
+            logging.debug('Finished image cache verification: no cache!')
+            return
+
+        count = startsize
         # making this two separate operations unlocks the DB
-        for key in cachekeys:
+        for key, url in cachekeys.items():
             try:
                 image = self.cache[key]  # pylint: disable=unused-variable
             except KeyError:
-                logging.info('%s/%s expired', key, url)
-                self.erase_cachekey(key)
-        logging.debug('Finished image cache verification: %s images',
-                      len(cachekeys))
+                count -= 1
+                logging.debug('%s/%s expired', key, url)
+                self.erase_url(url)
+        logging.debug('Finished image cache verification: %s/%s images', count,
+                      startsize)
 
     def queue_process(self, logpath, maxworkers=5):
         ''' Process to download stuff in the background to avoid the GIL '''
