@@ -444,7 +444,8 @@ VALUES (?,?,?);
         if not self.databasefile.exists():
             return
 
-        count = 0
+        cachekeys = []
+
         try:
             logging.debug('Starting image cache verification')
             async with aiosqlite.connect(self.databasefile,
@@ -454,20 +455,21 @@ VALUES (?,?,?);
                 async with connection.execute(sql) as cursor:
                     async for row in cursor:
                         url = row['url']
-                        cachekey = row['cachekey']
                         if url == 'STOPWNP':
                             continue
-                        count += 1
-                        try:
-                            image = self.cache[cachekey]  # pylint: disable=unused-variable
-                        except KeyError:
-                            logging.debug('%s/%s expired', cachekey, url)
-                            self.erase_cachekey(cachekey)
-            logging.debug('Finished image cache verification: %s images',
-                          count)
+                        cachekeys.append(row['cachekey'])
         except:  # pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
                 logging.debug(line)
+
+        for key in cachekeys:
+            try:
+                image = self.cache[key]  # pylint: disable=unused-variable
+            except KeyError:
+                logging.debug('%s/%s expired', key, url)
+                self.erase_cachekey(key)
+        logging.debug('Finished image cache verification: %s images',
+                      len(cachekeys))
 
     def queue_process(self, logpath, maxworkers=5):
         ''' Process to download stuff in the background to avoid the GIL '''
