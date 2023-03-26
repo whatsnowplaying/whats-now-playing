@@ -441,7 +441,6 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                     self.currentmeta[rawkey] = image
             return tryagain
 
-        await asyncio.sleep(1)
         # try to give it a bit more time if it doesn't complete the first time
         if not fillin(self):
             fillin(self)
