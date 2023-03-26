@@ -450,14 +450,18 @@ VALUES (?,?,?);
             async with aiosqlite.connect(self.databasefile,
                                          timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
-                sql = 'SELECT cachekey FROM artistsha'
+                sql = 'SELECT cachekey, url FROM artistsha'
                 async with connection.execute(sql) as cursor:
                     async for row in cursor:
-                        count += 1
+                        url = row['url']
                         cachekey = row['cachekey']
+                        if url == 'STOPWNP':
+                            continue
+                        count += 1
                         try:
                             image = self.cache[cachekey]  # pylint: disable=unused-variable
                         except KeyError:
+                            logging.debug('%s/%s expired', cachekey, url )
                             self.erase_cachekey(cachekey)
             logging.debug('Finished image cache verification: %s images',
                           count)
