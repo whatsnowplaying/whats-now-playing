@@ -1,7 +1,7 @@
 
 # Changelog
 
-## Version 4.0.3 - Unreleased
+## Version 4.0.3 - 2023-03-26
 
 * Force binaries to build with Python 3.10 as 3.11 causes problems.
 * Verify the image cache at startup and every hour
