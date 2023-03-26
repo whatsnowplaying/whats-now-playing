@@ -456,12 +456,12 @@ VALUES (?,?,?);
                         count += 1
                         cachekey = row['cachekey']
                         try:
-                            image = self.cache[cachekey]
+                            image = self.cache[cachekey]  # pylint: disable=unused-variable
                         except KeyError:
                             self.erase_cachekey(cachekey)
             logging.debug('Finished image cache verification: %s images',
                           count)
-        except:
+        except:   # pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
                 logging.debug(line)
 
