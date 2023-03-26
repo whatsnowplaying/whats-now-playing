@@ -467,10 +467,10 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
 
         return newdata
 
-    async def watch_for_respin(self):
+    async def watch_for_respin(self, stopevent):
         ''' startup a watcher to handle respins '''
         datatuple = (RESPIN_TEXT, )
-        while not self.stopevent.is_set():
+        while not stopevent.is_set():
             await asyncio.sleep(10)
             if not self.databasefile.exists():
                 continue

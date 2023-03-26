@@ -239,7 +239,6 @@ class MetadataDB:
 
             row = cursor.fetchone()
             if not row:
-                logging.debug('No data?!?')
                 return None
 
         metadata = {data: row[data] for data in METADATALIST}

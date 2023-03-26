@@ -80,7 +80,13 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         task.add_done_callback(self.tasks.remove)
         self.tasks.add(task)
         if self.trackrequests:
-            task = self.loop.create_task(self.trackrequests.watch_for_respin())
+            task = self.loop.create_task(
+                self.trackrequests.watch_for_respin(self.stopevent))
+            task.add_done_callback(self.tasks.remove)
+            self.tasks.add(task)
+        if self.imagecache:
+            task = self.loop.create_task(
+                self.imagecache.verify_cache_timer(self.stopevent))
             task.add_done_callback(self.tasks.remove)
             self.tasks.add(task)
 
@@ -301,10 +307,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         # try to interleave downloads in-between the delay
         await self._half_delay_write()
-        self._process_imagecache()
+        await self._process_imagecache()
         self._start_artistfanartpool()
         await self._half_delay_write()
-        self._process_imagecache()
+        await self._process_imagecache()
         self._start_artistfanartpool()
 
         # checkagain
@@ -407,7 +413,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 urllist=self.currentmeta['artistfanarturls'])
             del self.currentmeta['artistfanarturls']
 
-    def _process_imagecache(self):
+    async def _process_imagecache(self):
         if not self.currentmeta.get('artist') or self.config.cparser.value(
                 'control/beam', type=bool) or not self.config.cparser.value(
                     'artistextras/enabled', type=bool):
@@ -435,6 +441,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                     self.currentmeta[rawkey] = image
             return tryagain
 
+        await asyncio.sleep(1)
         # try to give it a bit more time if it doesn't complete the first time
         if not fillin(self):
             fillin(self)

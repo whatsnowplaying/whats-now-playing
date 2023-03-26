@@ -2,18 +2,21 @@
 # pylint: disable=invalid-name
 ''' image cache '''
 
+import asyncio
 import concurrent.futures
 import pathlib
 import random
 import sqlite3
 import threading
 import time
+import traceback
 import uuid
 
 import logging
 import logging.config
 import logging.handlers
 
+import aiosqlite
 import diskcache
 import normality
 import requests_cache
@@ -272,17 +275,22 @@ class ImageCache:
 
             dataset = cursor.fetchall()
 
-            if not dataset:
-                try:
-                    cursor.execute(
-                        '''SELECT * FROM artistsha WHERE cachekey IS NULL
- ORDER BY TIMESTAMP DESC''')
-                except sqlite3.OperationalError as error:
-                    logging.error(error)
-                    return None
+            if dataset:
+                logging.debug('banner/logo/thumbs found')
+                return dataset
 
-                dataset = cursor.fetchall()
+            try:
+                cursor.execute(
+                    '''SELECT * FROM artistsha WHERE cachekey IS NULL
+ORDER BY TIMESTAMP DESC''')
+            except sqlite3.OperationalError as error:
+                logging.error(error)
+                return None
 
+            dataset = cursor.fetchall()
+
+        if dataset:
+            logging.debug('artwork found')
         return dataset
 
     def put_db_cachekey(self, artist, url, imagetype, cachekey=None):
@@ -419,6 +427,43 @@ VALUES (?,?,?);
             return
 
         return
+
+    async def verify_cache_timer(self, stopevent):
+        ''' run verify_cache periodically '''
+        await self.verify_cache()
+        counter = 0
+        while not stopevent.is_set():
+            await asyncio.sleep(2)
+            counter += 2
+            if counter > 3600:
+                await self.verify_cache()
+                counter = 0
+
+    async def verify_cache(self):
+        ''' verify the image cache '''
+        if not self.databasefile.exists():
+            return
+
+        count = 0
+        try:
+            logging.debug('Starting image cache verification')
+            async with aiosqlite.connect(self.databasefile,
+                                         timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                sql = 'SELECT cachekey FROM artistsha'
+                async with connection.execute(sql) as cursor:
+                    async for row in cursor:
+                        count += 1
+                        cachekey = row['cachekey']
+                        try:
+                            image = self.cache[cachekey]
+                        except KeyError:
+                            self.erase_cachekey(cachekey)
+            logging.debug('Finished image cache verification: %s images',
+                          count)
+        except:
+            for line in traceback.format_exc().splitlines():
+                logging.debug(line)
 
     def queue_process(self, logpath, maxworkers=5):
         ''' Process to download stuff in the background to avoid the GIL '''
