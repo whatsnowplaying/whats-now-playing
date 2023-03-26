@@ -462,6 +462,8 @@ VALUES (?,?,?);
             for line in traceback.format_exc().splitlines():
                 logging.debug(line)
 
+
+        # making this two separate operations unlocks the DB
         for key in cachekeys:
             try:
                 image = self.cache[key]  # pylint: disable=unused-variable
