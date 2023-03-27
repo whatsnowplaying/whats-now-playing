@@ -53,26 +53,20 @@ Most of the content is downloaded during the write delay time period as set in t
 * Switching to a different track from the same artist pick new banners, logos, and thumbnails if they are available.
 * Collaborations will attempt (but it is not guaranteed!) to pull extras for both artists if the metadata of the track has more than one set of artists listed. For example, a track labeled with both David Bowie and Lou Reed should have both Bowie and Reed's images.
 
+At startup and every hour while running, the image cache will be verified so that image lookups remain fast.  This operation is completely local and will cause no extra network traffic.
+
 Generic Settings
 ----------------
 
-Configuring this feature is more involved than many others due to the need to
-compensate for various hardware limitations such as CPU and network bandwidth
-vs the amount of time it takes for the content to be available.  The default
-settings are thought to be fairly conservative and work with most configurations
-that have relatively good Internet connectivity with a Write Delay of 5 seconds.
+Configuring this feature is more involved than many others due to the need to compensate for various hardware limitations such as CPU and network bandwidth vs the amount of time it takes for the content to be available.  The default settings are thought to be fairly conservative and work with most configurations that have relatively good Internet connectivity with a Write Delay of 5 seconds.
 
-Maximums:  the number of images to attempt to download at a given time out of the total set available.
-Banners, logos, and thumbnails are downloaded first, and then fan art will be downloaded. Any extra
-fan art will be downloaded.  The maximums should be low enough that the first set downloads prior to
-the track being announced and the fanart finishes downloading prior to the next track being selected.
+Maximums:  the number of images to attempt to download at a given time out of the total set available. Banners, logos, and thumbnails are downloaded first, and then fan art will be downloaded. Any extra fan art will be downloaded.  The maximums should be low enough that the first set downloads prior to the track being announced and the fanart finishes downloading prior to the next track being selected.
 
-Download processes: The number of background processes to run that do nothing but download
-art and update the backend storage.  This number should be configured high enough to get all
-of the first pass of downloads done quickly but low enough that it doesn't overwhelm
+Download processes: The number of background processes to run that do nothing but download art and update the backend storage.  This number should be configured high enough to get all of the first pass of downloads done quickly but low enough that it doesn't overwhelm
 
-The 'Clear Cache' button will remove all mappings between artists and images.  It does not remove the
-cached responses from the web server in order to save bandwidth.
+Image cache size in GB: The amount of space to use for images.  In general, every 1GB will store approximately 1,000 mixed size images.
+
+The 'Clear Cache' button will remove all mappings between artists and images.  It does not remove the cached responses from the web server in order to save bandwidth.
 
 Reminder
 --------
