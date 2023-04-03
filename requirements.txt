@@ -10,7 +10,7 @@ netifaces==0.11.0
 nltk==3.8.1
 normality==2.4.0
 pid==3.0.4
-pillow==9.4.0
+pillow==9.5.0
 pyacoustid==1.2.2
 pypresence==4.2.1
 PySide6==6.4.3
