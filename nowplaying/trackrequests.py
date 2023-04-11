@@ -657,17 +657,23 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
 
     async def twofer_request(self, setting, user, user_input):
         ''' twofer request '''
-        logging.debug('%s twofer requested %s', user, user_input)
+
         metadb = nowplaying.db.MetadataDB()
         metadata = metadb.read_last_meta()
+        if not metadata:
+            logging.debug('Twofer: No currently playing track? skipping')
+            return {}
 
-        if not (artist := metadata.get('artist')):
-            artist = None
+        artist = metadata.get('artist')
+        logging.debug('%s twofer request (%s/%s)', user, artist, user_input)
 
-        if tmatch := TWOFERTITLE_RE.search(user_input):
-            title = tmatch.group(1)
+        if user_input:
+            if tmatch := TWOFERTITLE_RE.search(user_input):
+                title = tmatch.group(1)
+            else:
+                title = user_input
         else:
-            title = user_input
+            title = None
 
         data = {
             'username': user,

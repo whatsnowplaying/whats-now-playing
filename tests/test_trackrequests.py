@@ -4,11 +4,14 @@
 import asyncio
 import logging
 import pathlib
+import tempfile
 import threading
+import os
 
 import pytest  # pylint: disable=import-error
 import pytest_asyncio  # pylint: disable=import-error
 
+import nowplaying.db  # pylint: disable=import-error
 import nowplaying.trackrequests  # pylint: disable=import-error
 
 
@@ -308,26 +311,63 @@ async def test_trackrequest_getrequest_title(trackrequestbootstrap):  # pylint: 
 
 
 @pytest.mark.asyncio
-async def test_trackrequest_getrequest_filename(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
-    ''' artist-title '''
+async def test_twofer(bootstrap, getroot):  # pylint: disable=redefined-outer-name
+    ''' test twofers '''
+    stopevent = threading.Event()
+    config = bootstrap
+    config.cparser.setValue('settings/input', 'json')
+    playlistpath = pathlib.Path(getroot).joinpath('tests', 'playlists', 'json',
+                                                  'test.json')
+    config.pluginobjs['inputs']['nowplaying.inputs.json'].load_playlists(
+        getroot, playlistpath)
+    config.cparser.sync()
 
-    trackrequest = trackrequestbootstrap
-    logging.debug(trackrequest.databasefile)
+    metadb = nowplaying.db.MetadataDB(initialize=True)
+    trackrequest = nowplaying.trackrequests.Requests(stopevent=stopevent,
+                                                     config=config,
+                                                     testmode=True)
+
     trackrequest.clear_roulette_artist_dupes()
     trackrequest.config.cparser.setValue('settings/requests', True)
     trackrequest.config.cparser.sync()
-    trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_roulette_request(
-        {
-            'displayname': 'test',
-            'playlist': 'testlist'
-        }, 'user', 'artist-title')
+    data = await trackrequest.twofer_request({
+        'displayname': 'test',
+    }, 'user', None)
 
-    filename = trackrequest.config.pluginobjs['inputs'][
-        'nowplaying.inputs.json'].playlists['testlist'][0]
+    assert not data
 
-    data = await trackrequest.get_request({'filename': filename})
+    testdata = {'artist': 'myartist', 'title': 'mytitle1'}
+    metadb.write_to_metadb(testdata)
+
+    data = await trackrequest.twofer_request({
+        'displayname': 'test',
+    }, 'user', None)
+
+    assert data['requestartist'] == 'myartist'
+    assert not data['requesttitle']
+
+    testdata = {'artist': 'myartist', 'title': 'mytitle2'}
+    data = await trackrequest.get_request(testdata)
+
     assert data['requester'] == 'user'
     assert data['requestdisplayname'] == 'test'
-    assert data['requesterimageraw']
+
+    data = await trackrequest.twofer_request({
+        'displayname': 'test',
+    }, 'user1', "mytitle3")
+
+    assert data['requestartist'] == 'myartist'
+    assert data['requesttitle'] == 'mytitle3'
+
+    data = await trackrequest.twofer_request({
+        'displayname': 'test',
+    }, 'user2', "mytitle4")
+
+    assert data['requestartist'] == 'myartist'
+    assert data['requesttitle'] == 'mytitle4'
+
+    testdata = {'artist': 'myartist', 'title': 'mytitle3'}
+    data = await trackrequest.get_request(testdata)
+    assert data['requester'] == 'user1'
+    assert data['requestdisplayname'] == 'test'
