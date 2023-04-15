@@ -4,9 +4,7 @@
 import asyncio
 import logging
 import pathlib
-import tempfile
 import threading
-import os
 
 import pytest  # pylint: disable=import-error
 import pytest_asyncio  # pylint: disable=import-error
