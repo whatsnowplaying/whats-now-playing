@@ -1,2 +1,2 @@
 dbus-python
-pyicu==2.10.2
+pyicu==2.11
