@@ -43,7 +43,7 @@ python-dateutil
 # development
 #
 pip-upgrader
-psutil==5.9.4
+psutil==5.9.5
 pyinstaller==5.10.1
 pyinstaller_versionfile==2.1.1
 pytest==7.3.1
