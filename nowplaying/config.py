@@ -23,9 +23,6 @@ import nowplaying.version
 class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-public-methods
     ''' read and write to config.ini '''
 
-    ## Qt doesn't appear to support re-entrant locks or mutexes so
-    ## let's use boring old Python threading
-
     BUNDLEDIR = None
 
     def __init__(  # pylint: disable=too-many-arguments
@@ -257,8 +254,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         for plugintype, plugtypelist in self.plugins.items():
             for key in plugtypelist:
                 widgetkey = key.split('.')[-1]
-                if (widgetkey == inputname and plugintype
-                        == 'inputs') or (plugintype != 'inputs'):
+                if (widgetkey == inputname
+                        and plugintype == 'inputs') or (plugintype
+                                                        != 'inputs'):
                     self.pluginobjs[plugintype][key].verify_settingsui(
                         qtwidgets[f'{plugintype}_{widgetkey}'])
 

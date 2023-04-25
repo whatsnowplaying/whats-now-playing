@@ -77,8 +77,8 @@ def gethostmeta():
 
     logging.debug('Attempting to get DNS information')
 
-    if not TIMESTAMP or (datetime.datetime.now() - TIMESTAMP >
-                         TIMEDELTA) or not HOSTNAME:
+    if not TIMESTAMP or (datetime.datetime.now() - TIMESTAMP
+                         > TIMEDELTA) or not HOSTNAME:
         trysocket()
         if not HOSTIP and IFACES:
             trynetifaces()

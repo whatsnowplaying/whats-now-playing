@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ''' twitch utils '''
 
+import asyncio
 import logging
-import threading
 import traceback
 import socket
 
@@ -55,7 +55,7 @@ def qtsafe_validate_token(token):
 class TwitchLogin:
     ''' manage the global twitch login for clientid/secret '''
     TWITCH = None
-    TWITCH_LOCK = threading.Lock()
+    TWITCH_LOCK = asyncio.Lock()
 
     def __init__(self, config):
         self.config = config
@@ -87,7 +87,7 @@ class TwitchLogin:
             return TwitchLogin.TWITCH
 
         logging.debug('entering lock')
-        with TwitchLogin.TWITCH_LOCK:
+        async with TwitchLogin.TWITCH_LOCK:
             try:
 
                 if self.config.cparser.value(
@@ -145,7 +145,7 @@ class TwitchLogin:
             return
 
         try:
-            with TwitchLogin.TWITCH_LOCK:
+            async with TwitchLogin.TWITCH_LOCK:
                 await TwitchLogin.TWITCH.refresh_used_token()
                 await TwitchLogin.TWITCH.close()
             TwitchLogin.TWITCH = None
