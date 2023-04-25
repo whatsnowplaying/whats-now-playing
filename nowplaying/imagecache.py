@@ -63,6 +63,7 @@ class ImageCache:
         self.httpcachefile = self.cachedir.joinpath('http')
         self.cache = diskcache.Cache(
             directory=self.cachedir.joinpath('diskcache'),
+            timeout=30,
             eviction_policy='least-frequently-used',
             size_limit=sizelimit * 1024 * 1024 * 1024)
         if initialize:
