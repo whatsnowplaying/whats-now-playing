@@ -80,9 +80,11 @@ def gethostmeta():
     if not TIMESTAMP or (datetime.datetime.now() - TIMESTAMP
                          > TIMEDELTA) or not HOSTNAME:
         trysocket()
+        # sourcery skip: hoist-if-from-if
         if not HOSTIP and IFACES:
             trynetifaces()
 
+        # sourcery skip: hoist-if-from-if
         if not HOSTIP:
             fallback()
         TIMESTAMP = datetime.datetime.now()
