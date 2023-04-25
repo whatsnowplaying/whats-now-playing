@@ -31,10 +31,7 @@ jobs:
           python3 -m venv /tmp/venv
           source /tmp/venv/bin/activate
           python3 -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-macosx.txt
-          vendoring sync
-          pip install .
+          pip install ".[test,osspecials]"
           python setupnltk.py
       - name: tests
         shell: bash
@@ -82,16 +79,7 @@ jobs:
         run: |
           python fix_win_ver.py
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install .
-          #
-          # we are going to have to rely upon the checked in version
-          # for now since vendoring is broken on Windows
-          # see https://github.com/pradyunsg/vendoring/issues/33
-          #
-          #set PYTHONIOENCODING=utf-8
-          #set PYTHONLEGACYWINDOWSSTDIO=utf-8
-          #vendoring sync
+          pip install ".[test,osspecials]"
           python setupnltk.py
       - name: tests
         shell: bash
@@ -173,10 +161,7 @@ jobs:
           # python3 -m venv /tmp/venv
           # source /tmp/venv/bin/activate
           python3 -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-linux.txt
-          vendoring sync
-          pip install .
+          pip install ".[test]"
           python setupnltk.py
 
       - name: tests
@@ -194,7 +179,7 @@ jobs:
             popd
             #source /tmp/venv/bin/activate
           fi
-          pytest -s
+          pytest -s tests
       - name: artifact linux test
         uses: actions/upload-artifact@v3
         if: always()
@@ -226,7 +211,7 @@ jobs:
           python3 -m venv /tmp/venv
           source /tmp/venv/bin/activate
           python3 -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install ".[test]"
       - name: download coverage files
         uses: actions/download-artifact@v3
         with:

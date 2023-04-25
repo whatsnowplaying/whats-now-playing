@@ -1,0 +1,7 @@
+#
+# development
+#
+pip-upgrader
+pyinstaller==5.10.1
+pyinstaller_versionfile==2.1.1
+versioneer

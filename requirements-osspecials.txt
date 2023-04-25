@@ -1,0 +1,4 @@
+pyicu==2.11 ; sys_platform == 'linux'
+pyicu==2.11 ; sys_platform == 'darwin'
+dbus-python ; sys_platform == 'linux'
+

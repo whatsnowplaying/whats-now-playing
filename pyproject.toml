@@ -1,22 +1,50 @@
 [build-system]
-requires = ["setuptools >= 40.6.0", "wheel"]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "NowPlaying"
+dynamic = ["version", "dependencies", "optional-dependencies"]
+
+[project.entry-points.pyinstaller40]
+hook-dirs = "nowplaying.__pyinstaller:get_hook_dirs"
+
+[project.scripts]
+NowPlaying = "nowplaying:main"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["nowplaying", "nowplaying.__pyinstaller", "nowplaying.templates", "nowplaying.resources", "nowplaying.vendor"]
+license-files = ["LICENSE.txt"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements-run.txt"] }
+optional-dependencies = { test = { file = [
+  "requirements-test.txt"
+] }, dev = { file = ["requirements-dev.txt"] }, docs = { file = [
+  "docs/requirements.txt"
+] }, osspecials = { file = ["requirements-osspecials.txt"]} }
+version = { attr = "nowplaying.__version__" }
 
 [tool.vendoring]
 destination = "nowplaying/vendor"
 requirements = "vendor.txt"
 namespace = "nowplaying.vendor"
 
-[tool.pytest.ini_options]
+[tool.versioneer]
+vcs = "git"
+style = "pep440"
+versionfile_source = "nowplaying/version.py"
+versionfile_build = "nowplaying/version.py"
+tag_prefix = "''"
 
+[tool.pytest.ini_options]
 # initializing qtbot _after_ asyncio or threading just
 # breaks pytest horribily so force those tests first
-testpaths = [
-    "tests-qt",
-    "tests"
-]
+testpaths = ["tests-qt", "tests"]
 markers = [
-    "seratosettings: custom settings for serato ",
-    "templatesettings: custom settings for templates",
+  "seratosettings: custom settings for serato ",
+  "templatesettings: custom settings for templates",
 ]
 qt_api = "pyside6"
 log_cli = true
@@ -33,5 +61,5 @@ qt_qapp_name = "testsuite"
 [tool.pylint.main]
 # List of plugins (as comma separated values of python module names) to load,
 # usually to register additional checkers.
-load-plugins = [ "pylint.extensions.no_self_use" ]
-ignore = [ "nowplaying/beam" ]
+load-plugins = ["pylint.extensions.no_self_use"]
+ignore = ["nowplaying/beam"]

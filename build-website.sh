@@ -5,7 +5,7 @@ set -e
 apt-get update
 apt-get -y install git rsync
 
-pip3 install -r docs/requirements.txt
+pip3 install ".[docs]"
 make -C docs clean
 make -C docs html
 
