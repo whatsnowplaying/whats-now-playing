@@ -115,8 +115,7 @@ class Plugin(InputPlugin):
                 break
         return found
 
-    @staticmethod
-    def _parse_extvdj(inputline):
+    def _parse_extvdj(self, inputline):
         ''' read the #EXTVDJ comment extension '''
         metadata = {}
         vdjline = inputline.replace('#EXTVDJ:', '')
@@ -131,12 +130,13 @@ class Plugin(InputPlugin):
         except AttributeError:
             pass
 
-        try:
-            remix = EXTVDJ_REMIX_RE.match(vdjline).group(1)
-            if metadata.get('title'):
-                metadata['title'] += f' ({remix})'
-        except AttributeError:
-            pass
+        if self.config.cparser.value('virtualdj/useremix', type=bool):
+            try:
+                remix = EXTVDJ_REMIX_RE.match(vdjline).group(1)
+                if metadata.get('title'):
+                    metadata['title'] += f' ({remix})'
+            except AttributeError:
+                pass
 
         return metadata
 

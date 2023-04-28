@@ -290,6 +290,8 @@ async def test_vdjvirtualdj_remix(virtualdj_bootstrap):  # pylint: disable=redef
     ''' automated integration test '''
     config = virtualdj_bootstrap
     myvirtualdjdir = config.cparser.value('virtualdj/history')
+    config.cparser.setValue('virtualdj/useremix', True)
+    config.cparser.sync()
     plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
                                                 m3udir=myvirtualdjdir)
     await plugin.start()
@@ -302,6 +304,28 @@ async def test_vdjvirtualdj_remix(virtualdj_bootstrap):  # pylint: disable=redef
     assert metadata.get(
         'title'
     ) == 'Buddy [Remix] (feat. De La Soul, Jungle Brothers, Q-Tip & Queen Latifah)'
+    assert not metadata.get('filename')
+    await plugin.stop()
+    await asyncio.sleep(5)
+
+
+@pytest.mark.asyncio
+async def test_vdjvirtualdj_noremix(virtualdj_bootstrap):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config = virtualdj_bootstrap
+    myvirtualdjdir = config.cparser.value('virtualdj/history')
+    config.cparser.setValue('virtualdj/useremix', False)
+    config.cparser.sync()
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
+                                                m3udir=myvirtualdjdir)
+    await plugin.start()
+    await asyncio.sleep(5)
+    virtualdjfile = os.path.join(myvirtualdjdir, 'test.m3u')
+    write_extvdj_remix(virtualdjfile)
+    await asyncio.sleep(1)
+    metadata = await plugin.getplayingtrack()
+    assert metadata.get('artist') == 'j. period'
+    assert metadata.get('title') == 'Buddy [Remix]'
     assert not metadata.get('filename')
     await plugin.stop()
     await asyncio.sleep(5)

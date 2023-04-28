@@ -95,6 +95,22 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <string>Re-read Playlists</string>
    </property>
   </widget>
+  <widget class="QCheckBox" name="remix_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>30</y>
+     <width>131</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Use Remix Field</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>

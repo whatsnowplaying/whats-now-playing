@@ -131,6 +131,7 @@ class Plugin(M3UPlugin):
                            str(vdjdir.joinpath('History')))
         qsettings.setValue('virtualdj/playlists',
                            str(vdjdir.joinpath('Playlists')))
+        qsettings.setValue('virtualdj/useremix', True)
 
     def on_playlist_reread_button(self):
         ''' user clicked re-read collections '''
@@ -173,6 +174,10 @@ class Plugin(M3UPlugin):
             self.config.cparser.value('virtualdj/history'))
         qwidget.playlistdir_lineedit.setText(
             self.config.cparser.value('virtualdj/playlists'))
+        qwidget.remix_checkbox.setChecked(
+            self.config.cparser.value('virtualdj/useremix',
+                                      type=bool,
+                                      defaultValue=True))
 
     def verify_settingsui(self, qwidget):
         ''' verify settings '''
@@ -189,6 +194,8 @@ class Plugin(M3UPlugin):
                                      qwidget.historydir_lineedit.text())
         self.config.cparser.setValue('virtualdj/playlists',
                                      qwidget.playlistdir_lineedit.text())
+        self.config.cparser.setValue('virtualdj/useremix',
+                                     qwidget.remix_checkbox.isChecked())
 
     def desc_settingsui(self, qwidget):
         ''' description '''
