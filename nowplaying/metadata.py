@@ -204,8 +204,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if not self.config.cparser.value('musicbrainz/fallback', type=bool):
             return
 
-        if self.metadata.get('album') or not (self.metadata.get('artist')
-                                              and self.metadata.get('title')):
+        if (
+            self.metadata.get('album')
+            or not self.metadata.get('artist')
+            or not self.metadata.get('title')
+        ):
             return
         musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
             config=self.config)
