@@ -6,7 +6,7 @@ User Track Requests
 There are three types of requests, generic, twofers, and roulette:
 
 * Generic requests are just that, user may request any track by specifying the artist and title.
-* Twofers are requests where the artist is the currently playing artist.
+* Twofers are requests where the artist is the currently playing artist and (optionally) a particular track may be selected.
 * Roulette requests will pick a random song from the specified playlist/crate as the request.
 
 .. image:: images/requests_generic.png
@@ -86,8 +86,9 @@ Unless Twofer is being redeemed, anything else will be considered an artist. For
    :target: images/generic_request.png
    :alt: Generic request example
 
-For Twofers, anything else will be considered a title since the artist
-will always be the currently playing artist.
+For Twofers, anything else will be considered a track title since the artist
+will always be the currently playing artist.  Twofers are not required to have additional
+input.  In that case, the title will be blank.
 
 
 Using Twitch Redemptions for Requests
