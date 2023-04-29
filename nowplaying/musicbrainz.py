@@ -2,6 +2,7 @@
 # pylint: disable=invalid-name
 ''' support for musicbrainz '''
 
+import json
 import os
 import sys
 
@@ -42,6 +43,73 @@ class MusicBrainzHelper():
                 'whats-now-playing',
                 nowplaying.version.get_versions()['version'], emailaddress)
             self.emailaddressset = True
+
+    def lastditcheffort(self, metadata):
+        ''' there is like no data, so... '''
+
+        def _pickarecording(newdata, mbdata, allowothers=False):
+
+            #logging.debug(json.dumps(mbdata))
+            for recording in mbdata['recording-list']:
+                rid = recording['id']
+                logging.debug('id = %s', rid)
+                for release in recording['release-list']:
+                    title = release['title']
+                    if release.get(
+                            'artist-credit') and 'Various Artists' in release[
+                                'artist-credit'][0]['name']:
+                        logging.debug('skipped %s -- VA', title)
+                        continue
+                    relgroup = release['release-group']
+                    logging.debug(relgroup)
+                    if not relgroup:
+                        logging.debug('skipped %s -- no rel group', title)
+                        continue
+                    logging.debug('primary type: %s', relgroup['type'])
+                    logging.debug('secondary type: %s',
+                                  relgroup.get('secondary-type-list'))
+                    if not allowothers:
+                        if 'Compilation' in relgroup['type']:
+                            logging.debug('skipped %s -- compilation type',
+                                          title)
+                            continue
+                        if relgroup.get('secondary-type-list'):
+                            if 'Compilation' in relgroup[
+                                    'secondary-type-list']:
+                                logging.debug('skipped %s -- 2nd compilation',
+                                              title)
+                                continue
+                            if 'Live' in relgroup['secondary-type-list']:
+                                logging.debug('skipped %s -- 2nd live', title)
+                                continue
+                    return recording['id']
+
+            return None
+
+        if not self.config.cparser.value(
+                'musicbrainz/enabled', type=bool) or self.config.cparser.value(
+                    'control/beam', type=bool):
+            return None
+
+        if metadata.get('album'):
+            return None
+
+        addmeta = {
+            'artist': metadata.get('artist'),
+            'title': metadata.get('title')
+        }
+
+        if not metadata.get('album'):
+            self._setemail()
+            mydict = musicbrainzngs.search_recordings(
+                artist=metadata.get('artist'), recording=metadata.get('title'))
+            rid = _pickarecording(addmeta, mydict)
+            if not rid:
+                rid = _pickarecording(addmeta, mydict, allowothers=True)
+            if rid:
+                addmeta = self.recordingid(rid)
+
+        return addmeta
 
     def recognize(self, metadata):
         ''' fill in any blanks from musicbrainz '''

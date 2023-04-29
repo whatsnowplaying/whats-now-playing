@@ -198,6 +198,22 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         return addmeta
 
+    def _lastditchmetadata(self):
+        ''' at least see if album can be found '''
+
+        if not self.config.cparser.value('musicbrainz/fallback', type=bool):
+            return
+
+        if self.metadata.get('album') or not (self.metadata.get('artist')
+                                              and self.metadata.get('title')):
+            return
+        musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
+            config=self.config)
+        addmeta = musicbrainz.lastditcheffort(self.metadata)
+        self.metadata = recognition_replacement(config=self.config,
+                                                metadata=self.metadata,
+                                                addmeta=addmeta)
+
     async def _process_plugins(self):
         addmeta = self._musicbrainz()
 
@@ -218,6 +234,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                                   plugin,
                                   error,
                                   exc_info=True)
+
+        self._lastditchmetadata()
 
         if self.config.cparser.value(
                 'artistextras/enabled',
