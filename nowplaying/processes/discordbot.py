@@ -145,6 +145,10 @@ class DiscordSupport:
         mytime = 0
 
         while not self.stopevent.is_set():
+            if not self.config.cparser.value('discord/enabled', type=bool):
+                await asyncio.sleep(5)
+                continue
+
             await self.connect_clients()
             # discord will lock out if updates more than every 15 seconds
             await asyncio.sleep(20)
