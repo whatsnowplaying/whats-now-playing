@@ -52,6 +52,7 @@ MusicBrainz Instructions
 #. If you would like the data fetched to include artist website data, then select `Ask MusicBrainz for artist's websites` and which types of websites you would like included.
 #. Click `Save`
 
+The 'Use MusicBrainz when all else fails' button will attempt to try and figure out extra data based primarily on the artist and title information.  Accuracy is not guaranteed, but in some use cases it may be enough to get extra information such that `Artist Extras <../extras/>`_ work without having to use AcoustID.
 
 AcoustID Instructions
 ---------------------

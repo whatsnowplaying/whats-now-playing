@@ -1,4 +1,4 @@
-Source
+Inputs
 ======
 
 For **What's Now Playing** to work, it needs to know what software is playing music.  In
