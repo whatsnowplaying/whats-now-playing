@@ -1,6 +1,21 @@
 
 # Changelog
 
+## Version 4.0.4 - Unreleased
+
+* Experimental feature: Given an option to use Musicbrainz to fill in missing
+  metadata based only on artist and title (and album if available).
+* Ability to disable reading Virtual DJ remix fields from the M3U history file.
+  This feature has no impact on what is read from the media itself. In other words,
+  if the MP3 is tagged with '(Remix)' that will still show up.
+* Twitch redemptions using the 'Twofer' format now has the track title as optional.
+* The internal twitch lock should now be less likely to deadlock.
+* Some log messages have been bumped up from debut to error.
+* Unit tests ran during development have been improved.
+* Rework the development process.
+* Doc updates! Of course.
+* The usual dependency updates that should improve program speed and dependability.
+
 ## Version 4.0.3 - 2023-03-26
 
 * Force binaries to build with Python 3.10 as 3.11 causes problems.

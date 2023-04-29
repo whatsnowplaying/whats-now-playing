@@ -25,19 +25,16 @@ To get started, begin with `Quickstart <quickstart.html>`_.
    quickstart
    upgrading
    usage
-   settings
+   settings/index
    input/index
    output/index
-   requests
-   filter
    recognition/index
    extras/index
-   quirks
-   templatevariables
-   troubleshooting
-   developers
-   comparisons
+   requests
+   help/index
+   reference/index
    gallery
+   contact
 
 Indices and tables
 ==================

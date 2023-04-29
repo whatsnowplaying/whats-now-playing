@@ -29,29 +29,3 @@ some tips and tricks to help you out:
 
 * Check the current `Bug List <https://github.com/whatsnowplaying/whats-now-playing/issues?q=is%3Aissue+is%3Aopen+label%3Abug+sort%3Aupdated-desc>`_ to see if any known problems apply
   to your situation.
-
-
-Bug Reports and Feature Requests
-================================
-
-**What's Now Playing** is `open source software <https://opensource.com/resources/what-open-source>`_ .
-That means unlike commercial software individuals have the capability to
-contribute in a variety of ways.  Currently this project is hosted
-on  `Github <https://github.com/whatsnowplaying/whats-now-playing>`_ which provides
-access to the source code, bugs and feature requests (issues), and a discussion
-area where you can ask questions.
-
-
-Getting Help
-============
-
-If you'd like to chat with someone who uses the software or get inspiration, there is now a
-`Discord <https://discord.gg/rgEvcdUHUV>`_ server available!
-
-Open Source
-===========
-
-Keep in mind this software is done by volunteers in their spare time! It is also open source,
-so if you see something that should be fixed, wrong, or even just general feedback, you are
-part of the community as soon as you participate.  Every contribution, no matter how small
-you might think it is, helps everyone out.  We appreciate you!

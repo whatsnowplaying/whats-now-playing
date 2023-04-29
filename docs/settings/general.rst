@@ -1,4 +1,4 @@
-Settings
+General
 ========
 
 .. image:: images/general.png
