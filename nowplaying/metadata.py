@@ -198,6 +198,28 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         return addmeta
 
+    def _mb_fallback(self):
+        ''' at least see if album can be found '''
+
+        # user does not want fallback support
+        if not self.config.cparser.value('musicbrainz/fallback', type=bool):
+            return
+
+        # either missing key data or has already been processed
+        if (self.metadata['isrc'] or self.metadata['musicbrainzartistid']
+                or self.metadata['musicbrainzrecordingid']
+                or not self.metadata.get('artist')
+                or not self.metadata.get('title')):
+            return
+
+        logging.debug('Attempting musicbrainz fallback')
+        musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
+            config=self.config)
+        addmeta = musicbrainz.lastditcheffort(self.metadata)
+        self.metadata = recognition_replacement(config=self.config,
+                                                metadata=self.metadata,
+                                                addmeta=addmeta)
+
     async def _process_plugins(self):
         addmeta = self._musicbrainz()
 
@@ -218,6 +240,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                                   plugin,
                                   error,
                                   exc_info=True)
+
+        self._mb_fallback()
 
         if self.config.cparser.value(
                 'artistextras/enabled',

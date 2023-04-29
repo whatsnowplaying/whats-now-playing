@@ -23,7 +23,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>90</y>
+     <y>110</y>
      <width>311</width>
      <height>16</height>
     </rect>
@@ -39,8 +39,8 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>120</y>
-     <width>611</width>
+     <y>140</y>
+     <width>619</width>
      <height>71</height>
     </rect>
    </property>
@@ -106,7 +106,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>40</y>
+     <y>10</y>
      <width>251</width>
      <height>23</height>
     </rect>
@@ -122,7 +122,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>200</y>
+     <y>220</y>
      <width>98</width>
      <height>25</height>
     </rect>
@@ -138,7 +138,7 @@
    <property name="geometry">
     <rect>
      <x>300</x>
-     <y>190</y>
+     <y>210</y>
      <width>321</width>
      <height>31</height>
     </rect>
@@ -157,7 +157,7 @@
    <property name="geometry">
     <rect>
      <x>120</x>
-     <y>190</y>
+     <y>210</y>
      <width>171</width>
      <height>32</height>
     </rect>
@@ -170,7 +170,7 @@
    <property name="geometry">
     <rect>
      <x>310</x>
-     <y>280</y>
+     <y>300</y>
      <width>191</width>
      <height>146</height>
     </rect>
@@ -235,7 +235,7 @@
    <property name="geometry">
     <rect>
      <x>60</x>
-     <y>310</y>
+     <y>330</y>
      <width>191</width>
      <height>51</height>
     </rect>
@@ -247,8 +247,8 @@ p, li { white-space: pre-wrap; }
 hr { height: 1px; border-width: 0; }
 li.unchecked::marker { content: &quot;\2610&quot;; }
 li.checked::marker { content: &quot;\2612&quot;; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Artist website links to pull from MusicBrainz (if available)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Sans'; font-size:10pt;&quot;&gt;Artist website links to pull from MusicBrainz (if available)&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </widget>
   <widget class="QCheckBox" name="websites_checkbox">
@@ -258,7 +258,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>250</y>
+     <y>270</y>
      <width>261</width>
      <height>24</height>
     </rect>
@@ -273,7 +273,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <widget class="QCheckBox" name="musicbrainz_checkbox">
    <property name="geometry">
     <rect>
-     <x>290</x>
+     <x>10</x>
      <y>40</y>
      <width>251</width>
      <height>23</height>
@@ -281,6 +281,19 @@ li.checked::marker { content: &quot;\2612&quot;; }
    </property>
    <property name="text">
     <string>Query MusicBrainz for missing data</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="mb_fallback_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>70</y>
+     <width>261</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Use MusicBrainz when all else fails</string>
    </property>
   </widget>
  </widget>
@@ -507,6 +520,22 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <hint type="destinationlabel">
      <x>205</x>
      <y>205</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>musicbrainz_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>mb_fallback_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>135</x>
+     <y>51</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>170</x>
+     <y>79</y>
     </hint>
    </hints>
   </connection>

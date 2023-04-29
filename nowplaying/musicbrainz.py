@@ -43,6 +43,89 @@ class MusicBrainzHelper():
                 nowplaying.version.get_versions()['version'], emailaddress)
             self.emailaddressset = True
 
+    def lastditcheffort(self, metadata):
+        ''' there is like no data, so... '''
+
+        def _pickarecording(testdata, mbdata, allowothers=False):
+
+            riddata = {}
+            #import json
+            #logging.debug(json.dumps(mbdata))
+            for recording in mbdata['recording-list']:
+                rid = recording['id']
+                logging.debug('id = %s', rid)
+                for release in recording['release-list']:
+                    title = release['title']
+                    if testdata.get('album') and testdata['album'] != title:
+                        logging.debug('skipped %s <> %s', release['title'],
+                                      testdata['album'])
+                        continue
+                    if release.get(
+                            'artist-credit') and 'Various Artists' in release[
+                                'artist-credit'][0]['name']:
+                        logging.debug('skipped %s -- VA', title)
+                        continue
+                    relgroup = release['release-group']
+                    logging.debug(relgroup)
+                    if not relgroup:
+                        logging.debug('skipped %s -- no rel group', title)
+                        continue
+                    logging.debug('primary type: %s', relgroup['type'])
+                    logging.debug('secondary type: %s',
+                                  relgroup.get('secondary-type-list'))
+                    if not allowothers:
+                        if 'Compilation' in relgroup['type']:
+                            logging.debug('skipped %s -- compilation type',
+                                          title)
+                            continue
+                        if relgroup.get('secondary-type-list'):
+                            if 'Compilation' in relgroup[
+                                    'secondary-type-list']:
+                                logging.debug('skipped %s -- 2nd compilation',
+                                              title)
+                                continue
+                            if 'Live' in relgroup['secondary-type-list']:
+                                logging.debug('skipped %s -- 2nd live', title)
+                                continue
+                    logging.debug('checking %s', recording['id'])
+                    if riddata := self.recordingid(recording['id']):
+                        logging.debug('got data')
+                        return riddata
+
+            return riddata
+
+        if not self.config.cparser.value(
+                'musicbrainz/enabled', type=bool) or self.config.cparser.value(
+                    'control/beam', type=bool):
+            return None
+
+        self._setemail()
+
+        addmeta = {
+            'artist': metadata.get('artist'),
+            'title': metadata.get('title'),
+            'album': metadata.get('album')
+        }
+        riddata = {}
+
+        if addmeta['album']:
+            logging.debug('here')
+            mydict = musicbrainzngs.search_recordings(
+                artist=addmeta['artist'],
+                recording=addmeta['title'],
+                release=addmeta['album'])
+            riddata = _pickarecording(addmeta, mydict)
+            if not riddata:
+                riddata = _pickarecording(addmeta, mydict, allowothers=True)
+
+        if not riddata:
+            mydict = musicbrainzngs.search_recordings(
+                artist=metadata['artist'], recording=metadata['title'])
+            riddata = _pickarecording(addmeta, mydict)
+            if not riddata:
+                riddata = _pickarecording(addmeta, mydict, allowothers=True)
+        return riddata
+
     def recognize(self, metadata):
         ''' fill in any blanks from musicbrainz '''
 
@@ -166,6 +249,7 @@ class MusicBrainzHelper():
 
         newdata = {'musicbrainzrecordingid': recordingid}
         try:
+            logging.debug('looking up %s', recordingid)
             mbdata = musicbrainzngs.get_recording_by_id(recordingid,
                                                         includes=['artists'])
         except Exception as error:  # pylint: disable=broad-except
@@ -193,6 +277,7 @@ class MusicBrainzHelper():
 
         mbdata = _pickarelease(newdata, mbdata)
         if not mbdata:
+            logging.debug('questionable release; skipping for safety')
             return None
 
         release = mbdata[0]

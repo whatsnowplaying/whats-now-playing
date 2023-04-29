@@ -380,15 +380,13 @@ class Plugin(RecognitionPlugin):
 
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
-        if self.config.cparser.value('acoustidmb/enabled', type=bool):
-            qwidget.acoustid_checkbox.setChecked(True)
-        else:
-            qwidget.acoustid_checkbox.setChecked(False)
+        qwidget.acoustid_checkbox.setChecked(
+            self.config.cparser.value('acoustidmb/enabled', type=bool))
+        qwidget.musicbrainz_checkbox.setChecked(
+            self.config.cparser.value('musicbrainz/enabled', type=bool))
+        qwidget.mb_fallback_checkbox.setChecked(
+            self.config.cparser.value('musicbrainz/fallback', type=bool))
 
-        if self.config.cparser.value('musicbrainz/enabled', type=bool):
-            qwidget.musicbrainz_checkbox.setChecked(True)
-        else:
-            qwidget.musicbrainz_checkbox.setChecked(False)
         qwidget.emailaddress_lineedit.setText(
             self.config.cparser.value('musicbrainz/emailaddress'))
 
@@ -398,10 +396,8 @@ class Plugin(RecognitionPlugin):
         qwidget.fpcalcexe_lineedit.setText(
             self.config.cparser.value('acoustidmb/fpcalcexe'))
 
-        if self.config.cparser.value('acoustidmb/websites', type=bool):
-            qwidget.websites_checkbox.setChecked(True)
-        else:
-            qwidget.websites_checkbox.setChecked(False)
+        qwidget.websites_checkbox.setChecked(
+            self.config.cparser.value('acoustidmb/websites', type=bool))
 
         for website in [
                 'bandcamp',
@@ -444,6 +440,8 @@ class Plugin(RecognitionPlugin):
                                      qwidget.acoustid_checkbox.isChecked())
         self.config.cparser.setValue('musicbrainz/enabled',
                                      qwidget.musicbrainz_checkbox.isChecked())
+        self.config.cparser.setValue('musicbrainz/fallback',
+                                     qwidget.mb_fallback_checkbox.isChecked())
         self.config.cparser.setValue('acoustidmb/acoustidapikey',
                                      qwidget.apikey_lineedit.text())
         self.config.cparser.setValue('musicbrainz/emailaddress',
@@ -471,6 +469,7 @@ class Plugin(RecognitionPlugin):
         qsettings.setValue('acoustidmb/emailaddress', None)
         qsettings.setValue('acoustidmb/fpcalcexe', None)
         qsettings.setValue('acoustidmb/websites', False)
+        qsettings.setValue('musicbrainz/fallback', False)
 
         for website in [
                 'bandcamp',
