@@ -17,7 +17,7 @@ import nowplaying.artistextras
 import nowplaying.inputs
 import nowplaying.recognition
 import nowplaying.utils
-import nowplaying.version
+import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 
 
 class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-public-methods
@@ -32,7 +32,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             reset=False,
             testmode=False,
             beam=False):
-        self.version = nowplaying.version.get_versions()['version']
+        self.version = nowplaying.version.__VERSION__  #pylint: disable=no-member
         self.beam = beam
         self.testmode = testmode
         self.logpath = logpath

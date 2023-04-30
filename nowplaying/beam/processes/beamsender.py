@@ -281,7 +281,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
     async def _beam_client_data(self):
         return {
             'clientname': platform.node(),
-            'version': nowplaying.version.get_versions()['version'],
+            'version': nowplaying.version.VERSION,
             'source': self.config.cparser.value('settings/input'),
         }
 

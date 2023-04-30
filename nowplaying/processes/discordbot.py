@@ -23,7 +23,6 @@ import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
 import nowplaying.utils
-import nowplaying.version
 
 
 class DiscordSupport:
@@ -215,5 +214,4 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
     except Exception as error:  #pylint: disable=broad-except
         logging.error('discordbot crashed: %s', error, exc_info=True)
         sys.exit(1)
-    logging.info('shutting down discordbot v%s',
-                 nowplaying.version.get_versions()['version'])
+    logging.info('shutting down discordbot v%s', config.version)

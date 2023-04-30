@@ -15,55 +15,9 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath('..'))
+#sys.path.insert(0, os.path.abspath('..'))
 
-import nowplaying.version
-
-
-def get_last_tag():
-    cfg = nowplaying.version.get_config()
-    root = os.path.realpath(__file__)
-    pieces = {}
-    # versionfile_source is the relative path from the top of the source
-    # tree (where the .git directory might live) to this file. Invert
-    # this to find the root from __file__.
-    for _ in cfg.versionfile_source.split('/'):
-        root = os.path.dirname(root)
-        try:
-            pieces = nowplaying.version.git_pieces_from_vcs(
-                cfg.tag_prefix, root, cfg.verbose)
-            if pieces.get('closest-tag'):
-                break
-        except Exception as error:
-            print(f'Tried {root} and failed: {error}')
-    if not pieces:
-        raise ValueError
-    return pieces["closest-tag"]
-
-
-def get_release():
-    cfg = nowplaying.version.get_config()
-    root = os.path.realpath(__file__)
-    pieces = {}
-    # versionfile_source is the relative path from the top of the source
-    # tree (where the .git directory might live) to this file. Invert
-    # this to find the root from __file__.
-    for _ in cfg.versionfile_source.split('/'):
-        root = os.path.dirname(root)
-        try:
-            pieces = nowplaying.version.git_pieces_from_vcs(
-                cfg.tag_prefix, root, cfg.verbose)
-            if pieces.get('closest-tag'):
-                break
-        except Exception as error:
-            print(f'Tried {root} and failed: {error}')
-    if not pieces:
-        raise ValueError
-    release = pieces.get('closest-tag')
-    if distance := pieces.get('distance'):
-        release = f'{release} [+ {distance} changes]'
-    return release
-
+import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
 # -- Project information -----------------------------------------------------
 
@@ -72,9 +26,9 @@ copyright = '2021-2023, Allen Wittenauer'
 author = 'Allen Wittenauer'
 
 # The full version, including alpha/beta/rc tags
-release = get_release()
+release = f'{nowplaying.version.__CURRENT_TAG__} [+ {nowplaying.version.__VERSION_DISTANCE__} changes]'
 # last released version
-lasttag = get_last_tag()
+lasttag = nowplaying.version.__CURRENT_TAG__
 
 # -- General configuration ---------------------------------------------------
 

@@ -15,7 +15,6 @@ import urllib3.exceptions
 import nowplaying.bootstrap
 import nowplaying.config
 from nowplaying.artistextras import ArtistExtrasPlugin
-import nowplaying.version
 import nowplaying.utils
 
 

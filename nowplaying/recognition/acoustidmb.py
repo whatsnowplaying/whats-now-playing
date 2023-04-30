@@ -26,8 +26,6 @@ from nowplaying.exceptions import PluginVerifyError
 import nowplaying.musicbrainz
 import nowplaying.utils
 
-import nowplaying.version
-
 
 class Plugin(RecognitionPlugin):
     ''' handler for acoustidmb '''

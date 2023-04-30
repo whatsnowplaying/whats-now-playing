@@ -13,7 +13,6 @@ import nowplaying.vendor.discogs_client
 
 import nowplaying.config
 from nowplaying.artistextras import ArtistExtrasPlugin
-import nowplaying.version
 
 
 class Plugin(ArtistExtrasPlugin):
@@ -21,7 +20,7 @@ class Plugin(ArtistExtrasPlugin):
 
     def __init__(self, config=None, qsettings=None):
         self.client = None
-        self.version = nowplaying.version.get_versions()['version']
+        self.version = config.version
         self.there = re.compile('(?i)^the ')
         super().__init__(config=config, qsettings=qsettings)
 

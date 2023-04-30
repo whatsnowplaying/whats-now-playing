@@ -624,6 +624,5 @@ def start(stopevent=None, bundledir=None, testmode=False):
     except Exception as error:  #pylint: disable=broad-except
         logging.error('Webserver crashed: %s', error, exc_info=True)
         sys.exit(1)
-    logging.info('shutting down webserver v%s',
-                 nowplaying.version.get_versions()['version'])
+    logging.info('shutting down webserver v%s', config.version)
     sys.exit(0)

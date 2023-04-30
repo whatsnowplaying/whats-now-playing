@@ -151,6 +151,7 @@ def test_fallback5(getmusicbrainz):  # pylint: disable=redefined-outer-name
     ]
     assert newdata['album'] == 'Close My Eyes'
 
+
 @pytest.mark.xfail(reason="Non-deterministic at the moment")
 def test_fallback6(getmusicbrainz):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''

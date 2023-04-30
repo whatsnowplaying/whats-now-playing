@@ -200,5 +200,4 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
     except Exception as error:  #pylint: disable=broad-except
         logging.error('OBSWebSocket crashed: %s', error, exc_info=True)
         sys.exit(1)
-    logging.info('shutting down OBSWebSocket v%s',
-                 nowplaying.version.get_versions()['version'])
+    logging.info('shutting down OBSWebSocket v%s', config.version)

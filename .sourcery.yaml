@@ -4,7 +4,6 @@ refactor:
     - assign-if-exp
 ignore:
   - conftest.py
-  - versioneer.py
   - nowplaying/vendor/*
   - nowplaying/version.py
   - NowPlaying.spec

@@ -31,7 +31,6 @@ import nowplaying.db
 from nowplaying.exceptions import PluginVerifyError
 import nowplaying.metadata
 import nowplaying.trackrequests
-import nowplaying.version
 
 LASTANNOUNCED = {'artist': None, 'title': None}
 SPLITMESSAGETEXT = '****SPLITMESSSAGEHERE****'
@@ -220,10 +219,10 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         ''' handle !whatsnowplayingversion '''
         inputsource = self.config.cparser.value('settings/input')
         delta = datetime.datetime.utcnow() - self.starttime
-        version = nowplaying.version.get_versions()['version']
         plat = platform.platform()
-        content = (f'whatsnowplaying v{version} by @modernmeerkat. '
-                   f'Using {inputsource} on {plat}. Running for {delta}.')
+        content = (
+            f'whatsnowplaying v{self.config.version} by @modernmeerkat. '
+            f'Using {inputsource} on {plat}. Running for {delta}.')
         try:
             await cmd.reply(content)
         except:  #pylint: disable=bare-except

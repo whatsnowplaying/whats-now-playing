@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 '''
-    Titles for streaming for Serato
+    Titles for streaming
 '''
+from nowplaying.version import __VERSION__  # pylint: disable=no-name-in-module,import-error
 
-#from . import version
-#__version__ = version.get_versions()['version']
-
-import nowplaying.version
-
-__version__ = nowplaying.version.get_versions()['version']
+__version__ = __VERSION__  #pylint: disable=no-member
 
 
 def main():  #pylint: disable=missing-function-docstring; pragma: no cover

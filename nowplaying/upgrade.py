@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QDialog, QMessageBox, QDialogButtonBox, QVBoxLayou
 
 import nowplaying.trackrequests
 import nowplaying.twitch.chat
-import nowplaying.version
+import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
 # regex that support's git describe --tags as well as many semver-type strings
 # based upon the now deprecated distutils version code
@@ -54,7 +54,7 @@ class Version:
         self.textversion = version
         vermatch = VERSION_REGEX.match(version.replace('.dirty', ''))
         if not vermatch:
-            raise ValueError
+            raise ValueError(f'cannot match {version}')
         self.pre = False
         self.chunk = vermatch.groupdict()
         self._calculate()
@@ -106,7 +106,7 @@ class UpgradeBinary:
     ''' routines to determine if the binary is out of date '''
 
     def __init__(self, testmode=False):
-        self.myversion = Version(nowplaying.version.get_versions()['version'])
+        self.myversion = Version(nowplaying.version.__VERSION__)  #pylint: disable=no-member
         self.prerelease = Version('0.0.0-rc0')
         self.stable = Version('0.0.0')
         self.predata = None
@@ -271,7 +271,7 @@ class UpgradeConfig:
         oldversstr = config.value('settings/configversion',
                                   defaultValue='3.0.0')
 
-        thisverstr = nowplaying.version.get_versions()['version']
+        thisverstr = nowplaying.version.__VERSION__  #pylint: disable=no-member
         oldversion = Version(oldversstr)
         thisversion = Version(thisverstr)
 

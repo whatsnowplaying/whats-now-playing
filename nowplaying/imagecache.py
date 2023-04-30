@@ -25,7 +25,7 @@ from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.bootstrap
 import nowplaying.utils
-import nowplaying.version
+import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
 TABLEDEF = '''
 CREATE TABLE artistsha
@@ -399,7 +399,6 @@ VALUES (?,?,?);
         threading.current_thread().name = 'ICFollower'
         logging.getLogger('requests_cache').setLevel(logging.CRITICAL + 1)
         logging.getLogger('aiosqlite').setLevel(logging.CRITICAL + 1)
-        version = nowplaying.version.get_versions()['version']
         session = requests_cache.CachedSession(self.httpcachefile)
         cachekey = str(uuid.uuid4())
 
@@ -407,7 +406,7 @@ VALUES (?,?,?);
         try:
             headers = {
                 'user-agent':
-                f'whatsnowplaying/{version}'
+                f'whatsnowplaying/{nowplaying.version.__VERSION__}'  #pylint: disable=no-member
                 ' +https://whatsnowplaying.github.io/'
             }
             dlimage = session.get(imagedict['url'], timeout=5, headers=headers)

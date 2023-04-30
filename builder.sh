@@ -49,14 +49,10 @@ rm -rf build dist || true
 "${PYTHON}" -m pip install --upgrade pip
 pip install ".[dev,ospecials]"
 "${PYTHON}"  setupnltk.py
-"${PYTHON}" setup.py build
-mv nowplaying/version.py nowplaying/version.py.old
-mv build/lib/nowplaying/version.py nowplaying/version.py
 pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
 pyinstaller NowPlaying.spec
 cp -p CHANGELOG* README* LICENSE.txt NOTICE.txt dist
 mv dist "${DISTDIR}"
-mv nowplaying/version.py.old nowplaying/version.py
 
 if [[ "${SYSTEM}" == "macosx" ]]; then
   rm -rf "${DISTDIR}"/NowPlaying || true

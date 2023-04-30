@@ -35,8 +35,7 @@ def run_bootstrap(bundledir=None):  # pragma: no cover
     socket.setdefaulttimeout(5.0)
     logpath = nowplaying.bootstrap.setuplogging(rotate=True)
     plat = platform.platform()
-    logging.info('starting up v%s on %s',
-                 nowplaying.version.get_versions()['version'], plat)
+    logging.info('starting up v%s on %s', nowplaying.__version__, plat)
     nowplaying.upgrade.upgrade(bundledir=bundledir)
     logging.debug('ending upgrade')
 
@@ -77,8 +76,7 @@ def actualmain(beam=False):  # pragma: no cover
             icon = QIcon(str(config.iconfile))
             qapp.setWindowIcon(icon)
             exitval = qapp.exec_()
-            logging.info('shutting main down v%s',
-                         nowplaying.version.get_versions()['version'])
+            logging.info('shutting main down v%s', config.version)
     except (PidFileAlreadyLockedError, BlockingIOError):
         pass
 

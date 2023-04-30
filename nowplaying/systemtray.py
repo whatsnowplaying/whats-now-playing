@@ -15,7 +15,6 @@ import nowplaying.subprocesses
 import nowplaying.twitch.chat
 import nowplaying.trackrequests
 import nowplaying.utils
-import nowplaying.version
 
 LASTANNOUNCED = {'artist': None, 'title': None}
 
@@ -244,8 +243,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self.config.cparser.sync()
 
         app = QApplication.instance()
-        logging.info('shutting qapp down v%s',
-                     nowplaying.version.get_versions()['version'])
+        logging.info('shutting qapp down v%s', self.config.version)
         app.exit(0)
 
     def installer(self):

@@ -12,11 +12,10 @@ from PyInstaller.utils.hooks import collect_submodules
 
 sys.path.insert(0, os.path.abspath('.'))
 
+from nowplaying.version import __VERSION__
 import pyinstaller_versionfile
-import nowplaying.version
 
 NUMERICDATE = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
-VERSION = nowplaying.version.get_versions()['version']
 WINVERSFILE = os.path.join('bincomponents', 'winvers.bin')
 
 ARTEXTRAS_MODULES = collect_submodules('nowplaying.artistextras')
@@ -39,7 +38,7 @@ def geticon():
 
 def getsplitversion():
     ''' os x has weird rules about version numbers sooo... '''
-    cleanversion = VERSION.replace('+', '.')
+    cleanversion = __VERSION__.replace('+', '.')
     versionparts = cleanversion.split('.')
     try:
         versionparts.remove('dirty')
@@ -75,7 +74,7 @@ def getcfbundleshortversionstring():
 def osxcopyright():
     ''' put actual version in copyright so users
         Get Info in Finder to get it '''
-    return VERSION
+    return __VERSION__
 
 
 def osxminimumversion():
@@ -96,7 +95,7 @@ def windows_version_file():
         'file_description': 'NowPlaying',
         'internal_name': 'NowPlaying',
         'legal_copyright':
-        f'{VERSION} (c) 2020-2021 Ely Miranda, (c) 2021 Allen Wittenauer',
+        f'{__VERSION__} (c) 2020-2021 Ely Miranda, (c) 2021 Allen Wittenauer',
         'original_filename': 'NowPlaying.exe',
         'product_name': 'Now Playing',
         'version': '.'.join(getsplitversion()[:3] + ['0'])

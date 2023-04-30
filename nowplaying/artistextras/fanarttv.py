@@ -12,7 +12,6 @@ import urllib3.exceptions
 
 import nowplaying.config
 from nowplaying.artistextras import ArtistExtrasPlugin
-import nowplaying.version
 import nowplaying.utils
 
 
@@ -21,7 +20,7 @@ class Plugin(ArtistExtrasPlugin):
 
     def __init__(self, config=None, qsettings=None):
         self.client = None
-        self.version = nowplaying.version.get_versions()['version']
+        self.version = config.version
         super().__init__(config=config, qsettings=qsettings)
 
     def _fetch(self, apikey, artistid):

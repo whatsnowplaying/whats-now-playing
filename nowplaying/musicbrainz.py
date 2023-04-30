@@ -13,7 +13,6 @@ import musicbrainzngs
 
 import nowplaying.bootstrap
 import nowplaying.config
-import nowplaying.version
 
 
 class MusicBrainzHelper():
@@ -38,9 +37,8 @@ class MusicBrainzHelper():
             if not emailaddress:
                 emailaddress = 'aw@effectivemachines.com'
 
-            musicbrainzngs.set_useragent(
-                'whats-now-playing',
-                nowplaying.version.get_versions()['version'], emailaddress)
+            musicbrainzngs.set_useragent('whats-now-playing',
+                                         self.config.version, emailaddress)
             self.emailaddressset = True
 
     def lastditcheffort(self, metadata):

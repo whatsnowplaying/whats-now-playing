@@ -478,5 +478,4 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
     except Exception as error:  #pylint: disable=broad-except
         logging.error('TrackPoll crashed: %s', error, exc_info=True)
         sys.exit(1)
-    logging.info('shutting down trackpoll v%s',
-                 nowplaying.version.get_versions()['version'])
+    logging.info('shutting down trackpoll v%s', config.version)

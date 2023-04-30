@@ -39,3 +39,8 @@ wrapt==1.15.0
 #
 oauthlib==3.2.2
 python-dateutil
+
+#
+# required to install
+#
+versioningit==2.2.0

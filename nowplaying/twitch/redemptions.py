@@ -15,7 +15,6 @@ import nowplaying.db
 import nowplaying.metadata
 import nowplaying.trackrequests
 import nowplaying.twitch.utils
-import nowplaying.version
 
 USER_SCOPE = [
     AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ,

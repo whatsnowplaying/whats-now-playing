@@ -21,7 +21,6 @@ import nowplaying.config
 import nowplaying.db
 from nowplaying.exceptions import PluginVerifyError
 import nowplaying.metadata
-import nowplaying.version
 
 import nowplaying.twitch.chat
 import nowplaying.twitch.redemptions
