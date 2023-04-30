@@ -43,7 +43,7 @@ Timing
 ------
 
 Most of the content is downloaded during the write delay time period as set in the
-`general settings <../settings.html>`_ . You may need to bump up the delay to give enough time to not have
+`general settings <../settings/general.html>`_ . You may need to bump up the delay to give enough time to not have
 'empty' graphics.  In general:
 
 

@@ -54,7 +54,7 @@ Here are the steps to get a basic installation working:
 
 #. Launch the application
 #. The software will attempt to pre-configure itself for whatever software you have installed.  Note that in the case of Traktor, this work will including building an index for file lookup. For large Traktor installations, that may take a while.
-#. It should bring up the `Settings <settings.html>`_
+#. It should bring up the `Settings <settings/general.html>`_ window
 #. (Re-)Configure a `Source <input/index.html>`_
 #. Save settings.
 #. Launch your DJ Software.
@@ -63,4 +63,4 @@ Here are the steps to get a basic installation working:
 #. Bring up your DJ software again and play a song.
 #. The Browser Source should have a very simple track information box.
 
-At this point, you are ready to customize via `Templates <templates.html>`_ and enable other features!
+At this point, you are ready to customize via `Templates <reference/templatevariables.html>`_ and enable other features!

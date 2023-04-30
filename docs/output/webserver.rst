@@ -36,7 +36,7 @@ Settings
      - The HTTP server's TCP port.   A firewall should protect this port for
        security reasons to limit which hosts will be permitted to connect. **What's Now Playing** does not limit what systems may connect to it.
    * - HTML Template
-     - The `Jinja2 template <https://jinja.palletsprojects.com/en/2.11.x/templates/>`_ file to use when fetching index.html. See `Templates <../templatevariables.html>`_ for more information.
+     - The `Jinja2 template <https://jinja.palletsprojects.com/en/3.1.x/templates/>`_ file to use when fetching index.html. See `Templates <../reference/templatevariables.html>`_ for more information.
    * - Once
      - Only give index.html once per title, then return an empty refresh page
        until the next song change. This setting is handy for providing a
@@ -92,5 +92,5 @@ New with version 3.0.0 is a continual feed via WebSockets. The feed is a JSON-fo
 will get an update on every title change.  To connect, use the URL ``ws://hostname:port/wsstream``.
 The files that begin with `ws-` in the `templates` directory use WebSockets.
 
-Variables set should match what is on the `Templates <../templatevariables.html>`_ page. Be aware that
+Variables set should match what is on the `Templates <../reference/templatevariables.html>`_ page. Be aware that
 values may be null.

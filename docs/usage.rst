@@ -5,7 +5,7 @@ Start the **What's Now Playing** app from the location where you placed it. The 
 configured by accessing the menu from the icon in the Windows system tray or Mac
 menu bar after configuration.
 
-However, the first time you run the app, a `Settings <settings.html>`_ window will appear.
+However, the first time you run the app, a `Settings <settings/general.html>`_ window will appear.
 Populate the fields accordingly, and press Save. Once saved, the app will start polling
 for new songs. The app can be controlled and exited from...
 
@@ -35,7 +35,7 @@ includes the following options:
 * Settings
 
   * Reconfigure the application after going through the initial configuration.
-    See `Settings <settings.html>`_ for more information.
+    See `Settings <settings/general.html>`_ for more information.
 
 * Oldest/Newest
 

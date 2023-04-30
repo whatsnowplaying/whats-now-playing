@@ -21,14 +21,14 @@ Under Settings,Twitch Chat, there is an 'Announce Delay' field that takes number
 Put artist biographies in Twitch chat?
 --------------------------------------
 
-1. Enable `Twitchbot <output/twitchbot>`_
-2. Enable one of the `Artist Extras <extras/>`_ that supports biographies.
-3. If your track metadata only has artist and title, you may need to `Enable Recognition <recognition/>`_
+1. Enable `Twitchbot <output/twitchbot.html>`_
+2. Enable one of the `Artist Extras <extras/index.html>`_ that supports biographies.
+3. If your track metadata only has artist and title, you may need to `Enable Recognition <recognition/index.html>`_
 4. Edit your Twitch Chat announce template to include either ``{{ artistshortbio }}`` or ``{{ artistlongbio }}``
 5. Restart **What's Now Playing**
 
 Put artist graphics on my OBS/SLOBS/SE.Live/etc?
 ------------------------------------------------
 
-Configure a ``Browser Source`` for your scene and put in one of the Supported URLs that is listed on the `Webserver <output/webserver>`_ page.
+Configure a ``Browser Source`` for your scene and put in one of the Supported URLs that is listed on the `Webserver <output/webserver.html>`_ page.
 
