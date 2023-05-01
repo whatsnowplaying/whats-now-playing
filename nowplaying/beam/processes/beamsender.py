@@ -28,7 +28,6 @@ import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
 import nowplaying.trackrequests
-import nowplaying.version
 
 
 class BeamHandler():  # pylint: disable=too-many-instance-attributes
@@ -281,7 +280,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
     async def _beam_client_data(self):
         return {
             'clientname': platform.node(),
-            'version': nowplaying.version.VERSION,
+            'version': self.config.version,
             'source': self.config.cparser.value('settings/input'),
         }
 
