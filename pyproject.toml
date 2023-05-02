@@ -35,11 +35,12 @@ license-files = ["LICENSE.txt"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements-run.txt"] }
-optional-dependencies = { test = { file = [
+optional-dependencies = { dev = { file = [
+  "requirements-dev.txt"] },  docs = { file = [
+  "docs/requirements.txt"] },  osspecials = { file = [
+  "requirements-osspecials.txt"]}, test = { file = [
   "requirements-test.txt"
-] }, dev = { file = ["requirements-dev.txt"] }, docs = { file = [
-  "docs/requirements.txt"
-] }, osspecials = { file = ["requirements-osspecials.txt"]} }
+] } }
 version = { attr = "nowplaying.version.__VERSION__" }
 
 [tool.setuptools.package-data]

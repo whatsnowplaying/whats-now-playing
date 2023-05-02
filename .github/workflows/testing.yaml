@@ -42,6 +42,7 @@ jobs:
           DISCOGS_API_KEY: ${{ secrets.DISCOGS_API_KEY }}  # pragma: allowlist secret
           FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}  # pragma: allowlist secret
           THEAUDIODB_API_KEY: ${{ secrets.THEAUDIODB_API_KEY }}  # pragma: allowlist secret
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # pragma: allowlist secret
         run: |
           if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
             pushd /tmp

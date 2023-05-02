@@ -9,6 +9,9 @@ on:  # yamllint disable-line rule:truthy
   push:
     branches: [main]
 
+permissions:
+  deployments: write
+
 jobs:
 
   build_docs_job:
@@ -34,5 +37,6 @@ jobs:
       - name: Execute script to build our documentation and update pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_WRITE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: "./build-website.sh"
         shell: bash

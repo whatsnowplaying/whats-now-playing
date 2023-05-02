@@ -18,6 +18,7 @@ import sys
 #sys.path.insert(0, os.path.abspath('..'))
 
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
+from nowplaying.upgradeutils import UpgradeBinary
 
 # -- Project information -----------------------------------------------------
 
@@ -25,10 +26,15 @@ project = 'What\'s Now Playing'
 copyright = '2021-2023, Allen Wittenauer'
 author = 'Allen Wittenauer'
 
+
+def get_release_data():
+    upgrade = UpgradeBinary()
+    return upgrade.stable, upgrade.prerelease
+
+
 # The full version, including alpha/beta/rc tags
 release = f'{nowplaying.version.__CURRENT_TAG__} [+ {nowplaying.version.__VERSION_DISTANCE__} changes]'
-# last released version
-lasttag = nowplaying.version.__CURRENT_TAG__
+stablerelease, rcrelease = get_release_data()
 
 # -- General configuration ---------------------------------------------------
 
@@ -75,6 +81,9 @@ releaselink = 'https://github.com/whatsnowplaying/whats-now-playing/releases'
 basedownload = f'{releaselink}/download'
 
 extlinks = {
-    'lasttagdownloadlink':
-    (f'{basedownload}/{lasttag}/NowPlaying-{lasttag}-%s.zip', '%s')
+    'stabledownloadlink':
+    (f'{basedownload}/{stablerelease}/NowPlaying-{stablerelease}-%s.zip',
+     '%s'),
+    'rcdownloadlink':
+    (f'{basedownload}/{rcrelease}/NowPlaying-{rcrelease}-%s.zip', '%s')
 }

@@ -12,7 +12,7 @@ Development Requirements
 
 To locally build and install **What's Now Playing**\ , you will need the following:
 
-#. Python for your operating system (3.10 or higher is required)
+#. Python for your operating system (3.10 is required.  3.11 has issues)
 #. Access to a development shell (e.g., /Applications/Utility/Terminal on OS X)
 #. ``git`` installed and working
 
@@ -27,6 +27,14 @@ place first.  For example, for Debian-style systems:
 
    sudo apt-get install python-dbus
 
+macOS Pre-work
+^^^^^^^^^^^^^^
+
+You will need a working, modern ICU library:
+
+1. ``brew install icu4c``
+2. ``export PKG_CONFIG_PATH=/usr/homebrew/opt/icu4c/lib/pkgconfig``
+
 Commands
 --------
 
@@ -36,13 +44,8 @@ Commands
    source (virtualenv directory)/bin/activate
    git clone https://github.com/whastnowplaying/whats-now-playing.git
    cd whats-now-playing
-   pip install .
-
-On Linux, install dbus-python in your virtual env:
-
-.. code-block:: bash
-
-   pip install dbus-python
+   git checkout [version]
+   pip install ".[dev,docs,osspecials,test]
 
 At this point, you should be able to run the software from the shell:
 
@@ -53,11 +56,34 @@ At this point, you should be able to run the software from the shell:
 Build Executable
 ----------------
 
-To build a stand-alone executable, you will need to run PyInstaller:
+To build a stand-alone executable, there is a helper script to do all the work:
+
+* macOS
 
 .. code-block:: bash
 
-   pyinstaller NowPlaying.spec
+   builder.sh macosx
+
+* Windows
+
+
+.. code-block:: bash
+
+   builder.sh windows
+
+* Other
+
+.. code-block:: bash
+
+   builder.sh
+
+This bash script will:
+
+1. Create a venv
+2. Install the contents of the venv
+3. Run PyInstaller
+
+In the end you should have a zip file with your newly built binary.
 
 There should now be a ``dist`` directory and inside that directory will be
 either a ``NowPlaying.app`` on OS X or just a ``NowPlaying`` single file.

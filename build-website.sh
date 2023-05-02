@@ -9,7 +9,7 @@ pip3 install ".[docs]"
 make -C docs clean
 make -C docs html
 
-if [[ -n "${GITHUB_TOKEN}" ]]; then
+if [[ -n "${GITHUB_WRITE_TOKEN}" ]]; then
 
   git config --global user.name "${GITHUB_ACTOR}"
   git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
@@ -20,7 +20,7 @@ if [[ -n "${GITHUB_TOKEN}" ]]; then
   pushd "${docroot}" || exit 1
 
   git init
-  git remote add deploy "https://token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+  git remote add deploy "https://token:${GITHUB_WRITE_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
   git checkout -b gh-pages
   touch .nojekyll
   msg="Updating Docs for commit ${GITHUB_SHA} from ${GITHUB_REF} by ${GITHUB_ACTOR}"

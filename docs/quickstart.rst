@@ -31,10 +31,14 @@ Windows
 Linux
 ~~~~~~
 
-Binaries are not provided because of dbus-python, so please follow the developer guide
+Binaries are not provided because of dbus-python, so please follow the `developer guide <help/developers.html>`_
 to install in a Python virtual environment.  Note that currently, this software does not run headless.
 
 To use MPRIS2, you *must* have dbus-python installed in your Python virtual environment.
+
+Other Platforms
+~~~~~~~~~~~~~~~~
+Please follow the `developer guide <help/developers.html>`_ to install and run.
 
 Installation
 ------------
@@ -43,11 +47,17 @@ Here are the steps to get a basic installation working:
 
 #. Download the appropriate binary:
 
-   * Latest release:
+   * Latest stable release:
 
-     * :lasttagdownloadlink:`macos12_arm` for Apple silicon processors running Monterey or higher
-     * :lasttagdownloadlink:`macos11_intel` for Intel x86 processors running Big Sur or higher
-     * :lasttagdownloadlink:`windows` for Intel x86 or AMD Ryzen processors running Windows 10 or higher
+     * :stabledownloadlink:`macos12_arm` for Apple silicon processors running Monterey or higher
+     * :stabledownloadlink:`macos11_intel` for Intel x86 processors running Big Sur or higher
+     * :stabledownloadlink:`windows` for Intel x86 or AMD Ryzen processors running Windows 10 or higher
+
+   * Latest preview release (if available):
+
+     * :rcdownloadlink:`macos12_arm` for Apple silicon processors running Monterey or higher
+     * :rcdownloadlink:`macos11_intel` for Intel x86 processors running Big Sur or higher
+     * :rcdownloadlink:`windows` for Intel x86 or AMD Ryzen processors running Windows 10 or higher
 
    * or see `All Releases <https://github.com/whatsnowplaying/whats-now-playing/releases/>`_
    * Also of interest, the current `Bug List <https://github.com/whatsnowplaying/whats-now-playing/issues?q=is%3Aissue+is%3Aopen+label%3Abug+sort%3Aupdated-desc>`_
@@ -64,3 +74,5 @@ Here are the steps to get a basic installation working:
 #. The Browser Source should have a very simple track information box.
 
 At this point, you are ready to customize via `Templates <reference/templatevariables.html>`_ and enable other features!
+
+
