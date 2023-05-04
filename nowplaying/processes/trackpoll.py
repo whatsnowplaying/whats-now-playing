@@ -230,6 +230,17 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             return True
         return False
 
+    async def checkskip(self, nextmeta):
+        ''' check if this metadata is meant to be skipped '''
+        for skiptype in ['comment', 'genre']:
+            skipdata = self.config.cparser.value(f'trackskip/{skiptype}',
+                                                 defaultValue=None)
+            if not skipdata:
+                continue
+            if skipdata in nextmeta.get(skiptype, ''):
+                return True
+        return False
+
     async def _fillinmetadata(self, metadata):
         ''' keep a copy of our fetched data '''
 
@@ -304,6 +315,11 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         logging.info('Potential new track: %s / %s',
                      self.currentmeta['artist'], self.currentmeta['title'])
+
+        if await self.checkskip(nextmeta):
+            logging.info('Skipping %s / %s', self.currentmeta['artist'],
+                         self.currentmeta['title'])
+            return
 
         # try to interleave downloads in-between the delay
         await self._half_delay_write()

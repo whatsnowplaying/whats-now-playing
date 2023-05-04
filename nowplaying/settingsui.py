@@ -77,9 +77,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         else:
             baseuis = [
-                'general', 'source', 'filter', 'textoutput', 'webserver',
-                'twitch', 'twitchchat', 'requests', 'artistextras', 'obsws',
-                'discordbot', 'quirks'
+                'general', 'source', 'filter', 'trackskip', 'textoutput',
+                'webserver', 'twitch', 'twitchchat', 'requests',
+                'artistextras', 'obsws', 'discordbot', 'quirks'
             ]
 
         pluginuis = {}
@@ -223,6 +223,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self._upd_win_textoutput()
             self._upd_win_artistextras()
             self._upd_win_filters()
+            self._upd_win_trackskip()
             self._upd_win_webserver()
             self._upd_win_obsws()
             self._upd_win_discordbot()
@@ -280,6 +281,13 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             if 'regex_filter/' in configitem:
                 self._filter_regex_load(
                     regex=self.config.cparser.value(configitem))
+
+    def _upd_win_trackskip(self):
+        ''' update the trackskip settings to match config '''
+        self.widgets['trackskip'].comment_lineedit.setText(
+            self.config.cparser.value('trackskip/comment'))
+        self.widgets['trackskip'].genre_lineedit.setText(
+            self.config.cparser.value('trackskip/genre'))
 
     def _upd_win_recognition(self):
         self.widgets['general'].recog_title_checkbox.setChecked(
@@ -423,6 +431,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self._upd_conf_textoutput()
             self._upd_conf_artistextras()
             self._upd_conf_filters()
+            self._upd_conf_trackskip()
             self._upd_conf_webserver()
             self._upd_conf_obsws()
             self._upd_conf_quirks()
@@ -450,6 +459,13 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.config.cparser.setValue(
             'textoutput/clearonstartup',
             self.widgets['textoutput'].clear_checkbox.isChecked())
+
+    def _upd_conf_trackskip(self):
+        self.config.cparser.setValue(
+            'trackskip/genre', self.widgets['trackskip'].genre_lineedit.text())
+        self.config.cparser.setValue(
+            'trackskip/comment',
+            self.widgets['trackskip'].comment_lineedit.text())
 
     def _upd_conf_artistextras(self):
         self.config.cparser.setValue(

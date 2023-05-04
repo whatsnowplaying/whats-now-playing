@@ -22,6 +22,7 @@
         "nowplaying/resources/requests_ui.ui",
         "nowplaying/resources/settings.qrc",
         "nowplaying/resources/settings_ui.ui",
+        "nowplaying/resources/trackskip_ui.ui",
         "nowplaying/resources/source_ui.ui",
         "nowplaying/resources/textoutput_ui.ui",
         "nowplaying/resources/twitch_ui.ui",

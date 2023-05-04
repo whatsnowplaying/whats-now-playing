@@ -18,6 +18,7 @@ import nowplaying.twitch.chat
 import nowplaying.upgradeutils
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
+
 class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
     ''' Qt Dialog for asking the user to ugprade '''
 
