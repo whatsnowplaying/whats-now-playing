@@ -85,7 +85,7 @@ class Plugin(InputPlugin):
             for inkey, outkey in mapping.items() if info_dict.get(inkey)
         }
         if thumb_stream_ref := info_dict.get('thumbnail'):
-            if coverimage := self._getcoverimage(thumb_stream_ref):
+            if coverimage := await self._getcoverimage(thumb_stream_ref):
                 newmeta['coverimageraw'] = coverimage
 
         return newmeta
