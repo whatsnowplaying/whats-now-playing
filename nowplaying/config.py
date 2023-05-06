@@ -223,14 +223,21 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             self.pluginobjs['artistextras'] = {}
 
     def _defaults_plugins(self, settings):
-        ''' configure the defaults for input plugins '''
+        ''' configure the defaults for plugins '''
         self.pluginobjs = {}
         for plugintype, plugtypelist in self.plugins.items():
             self.pluginobjs[plugintype] = {}
+            removelist = []
             for key in plugtypelist:
                 self.pluginobjs[plugintype][key] = self.plugins[plugintype][
                     key].Plugin(config=self, qsettings=settings)
-                self.pluginobjs[plugintype][key].defaults(settings)
+                if self.pluginobjs[plugintype][key].available:
+                    self.pluginobjs[plugintype][key].defaults(settings)
+                else:
+                    removelist.append(key)
+            for key in removelist:
+                del self.pluginobjs[plugintype][key]
+                del self.plugins[plugintype][key]
 
     def plugins_connect_settingsui(self, qtwidgets, uihelp):
         ''' configure the defaults for plugins '''

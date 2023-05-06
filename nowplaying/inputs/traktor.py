@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' driver for Icecast SOURCE Protocol, as used by Traktor and Mixxx and others? '''
+''' Traktor-specific support '''
 
 import os
 import pathlib

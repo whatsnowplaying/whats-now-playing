@@ -206,8 +206,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         # either missing key data or has already been processed
-        if (self.metadata['isrc'] or self.metadata['musicbrainzartistid']
-                or self.metadata['musicbrainzrecordingid']
+        if (self.metadata.get('isrc')
+                or self.metadata.get('musicbrainzartistid')
+                or self.metadata.get('musicbrainzrecordingid')
                 or not self.metadata.get('artist')
                 or not self.metadata.get('title')):
             return

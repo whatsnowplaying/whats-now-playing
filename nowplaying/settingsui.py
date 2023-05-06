@@ -105,7 +105,13 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self._load_list_item(f'{uiname}', self.widgets[uiname])
 
         for uiname in pluginuinames:
-            if 'inputs' not in uiname or not self.widgets[uiname]:
+            if 'inputs' not in uiname:
+                continue
+            if not self.widgets[uiname]:
+                displayname = uiname.split('_')[1]
+                self.widgets['source'].sourcelist.addItem(displayname)
+                self.widgets['source'].sourcelist.currentRowChanged.connect(
+                    self._set_source_description)
                 continue
             displayname = self.widgets[uiname].property('displayName')
             if not displayname:
