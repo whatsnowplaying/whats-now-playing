@@ -42,8 +42,6 @@ class Plugin(InputPlugin):
     async def getplayingtrack(self):
         ''' Get the current playing track '''
         coverimage = None
-        newmeta = {}
-
         if not self.winmedia_status:
             return {}
         sessions = await MediaManager.request_async()
@@ -66,10 +64,11 @@ class Plugin(InputPlugin):
             'title': 'title',
             'track': 'track_number'
         }
-        for inkey, outkey in mapping.items():
-            if info_dict.get(inkey):
-                newmeta[outkey] = info_dict[inkey]
-
+        newmeta = {
+            outkey: info_dict[inkey]
+            for inkey, outkey in mapping.items()
+            if info_dict.get(inkey)
+        }
         if thumb_stream_ref := info_dict.get('thumbnail'):
             thumb_read_buffer = Buffer(5000000)
 
@@ -78,9 +77,9 @@ class Plugin(InputPlugin):
                                        thumb_read_buffer.capacity,
                                        InputStreamOptions.READ_AHEAD)
             buffer_reader = DataReader.from_buffer(thumb_read_buffer)
-            byte_buffer = bytearray(
-                buffer_reader.read_buffer(thumb_read_buffer.length))
-            if byte_buffer:
+            if byte_buffer := bytearray(
+                buffer_reader.read_buffer(thumb_read_buffer.length)
+            ):
                 newmeta['coverimageraw'] = nowplaying.utils.image2png(
                     byte_buffer)
 
