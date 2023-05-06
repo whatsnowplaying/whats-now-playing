@@ -9,6 +9,7 @@ class InputPlugin():
     ''' base class of input plugins '''
 
     def __init__(self, config=None, qsettings=None):
+        self.available = True
         self.plugintype = 'input'
         self.config = config
         self.qwidget = None

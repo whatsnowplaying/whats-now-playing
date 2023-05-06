@@ -178,6 +178,7 @@ class Plugin(InputPlugin):
 
         if not DBUS_STATUS:
             self.dbus_status = False
+            self.available = False
             return
 
         self.mpris2 = MPRIS2Handler()

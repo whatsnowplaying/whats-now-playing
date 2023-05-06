@@ -11,6 +11,7 @@ class ArtistExtrasPlugin():
     ''' base class of plugins '''
 
     def __init__(self, config=None, qsettings=None):
+        self.available = True
         self.plugintype = 'input'
         self.config = config
         self.qwidget = None
