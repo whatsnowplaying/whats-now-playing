@@ -39,11 +39,27 @@ class Plugin(InputPlugin):
     async def start(self):
         ''' configure WinMedia client '''
 
+    @staticmethod
+    async def _getcoverimage(thumbref):
+        ''' read the thumbnail buffer '''
+        thumb_read_buffer = Buffer(5000000)
+
+        readable_stream = await thumbref.open_read_async()
+        readable_stream.read_async(thumb_read_buffer,
+                                   thumb_read_buffer.capacity,
+                                   InputStreamOptions.READ_AHEAD)
+        buffer_reader = DataReader.from_buffer(thumb_read_buffer)
+        if byte_buffer := bytearray(
+                buffer_reader.read_buffer(thumb_read_buffer.length)):
+            return nowplaying.utils.image2png(byte_buffer)
+        return None
+
     async def getplayingtrack(self):
         ''' Get the current playing track '''
-        coverimage = None
+
         if not self.winmedia_status:
             return {}
+
         sessions = await MediaManager.request_async()
         current_session = sessions.get_current_session()
         if not current_session:
@@ -66,22 +82,11 @@ class Plugin(InputPlugin):
         }
         newmeta = {
             outkey: info_dict[inkey]
-            for inkey, outkey in mapping.items()
-            if info_dict.get(inkey)
+            for inkey, outkey in mapping.items() if info_dict.get(inkey)
         }
         if thumb_stream_ref := info_dict.get('thumbnail'):
-            thumb_read_buffer = Buffer(5000000)
-
-            readable_stream = await thumb_stream_ref.open_read_async()
-            readable_stream.read_async(thumb_read_buffer,
-                                       thumb_read_buffer.capacity,
-                                       InputStreamOptions.READ_AHEAD)
-            buffer_reader = DataReader.from_buffer(thumb_read_buffer)
-            if byte_buffer := bytearray(
-                buffer_reader.read_buffer(thumb_read_buffer.length)
-            ):
-                newmeta['coverimageraw'] = nowplaying.utils.image2png(
-                    byte_buffer)
+            if coverimage := self._getcoverimage(thumb_stream_ref):
+                newmeta['coverimageraw'] = coverimage
 
         return newmeta
 
