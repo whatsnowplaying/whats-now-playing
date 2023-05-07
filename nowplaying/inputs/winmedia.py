@@ -29,6 +29,9 @@ class Plugin(InputPlugin):
 
         self.displayname = "WinMedia"
         self.winmedia_status = True
+        self.stopevent = asyncio.Event()
+        self.metadata = {}
+        self.tasks = set()
         if not WINMEDIA_STATUS:
             self.available = False
             self.winmedia_status = False
@@ -56,52 +59,66 @@ class Plugin(InputPlugin):
                                        InputStreamOptions.READ_AHEAD)
             buffer_reader = DataReader.from_buffer(thumb_read_buffer)
             if byte_buffer := bytearray(
-                    buffer_reader.read_buffer(thumb_read_buffer.unconsumed_buffer_length)):
+                    buffer_reader.read_buffer(
+                        buffer_reader.unconsumed_buffer_length)):
                 return nowplaying.utils.image2png(byte_buffer)
         except:  # pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
         return None
 
+    async def _data_loop(self):
+        ''' check the metadata transport every so often '''
+        while not self.stopevent.is_set():
+            await asyncio.sleep(5)
+            sessions = await MediaManager.request_async()
+            current_session = sessions.get_current_session()
+            if not current_session:
+                logging.debug('No winmedia session active')
+                continue
+
+            info = await current_session.try_get_media_properties_async()
+            info_dict = {
+                song_attr: getattr(info, song_attr)
+                for song_attr in dir(info) if song_attr[0] != '_'
+            }
+            info_dict['genres'] = list(info_dict['genres'])
+
+            mapping = {
+                'album_title': 'album',
+                'album_artist': 'albumartist',
+                'artist': 'artist',
+                'title': 'title',
+                'track': 'track_number'
+            }
+            newdata = {
+                outkey: info_dict[inkey]
+                for inkey, outkey in mapping.items() if info_dict.get(inkey)
+            }
+            if thumb_stream_ref := info_dict.get('thumbnail'):
+                if coverimage := await self._getcoverimage(thumb_stream_ref):
+                    newdata['coverimageraw'] = coverimage
+
+            self.metadata = newdata
+
     async def getplayingtrack(self):
         ''' Get the current playing track '''
-
-        if not self.winmedia_status:
-            return {}
-
-        sessions = await MediaManager.request_async()
-        current_session = sessions.get_current_session()
-        if not current_session:
-            logging.debug('No winmedia session active')
-            return {}
-
-        info = await current_session.try_get_media_properties_async()
-        info_dict = {
-            song_attr: getattr(info, song_attr)
-            for song_attr in dir(info) if song_attr[0] != '_'
-        }
-        info_dict['genres'] = list(info_dict['genres'])
-
-        mapping = {
-            'album_title': 'album',
-            'album_artist': 'albumartist',
-            'artist': 'artist',
-            'title': 'title',
-            'track': 'track_number'
-        }
-        newmeta = {
-            outkey: info_dict[inkey]
-            for inkey, outkey in mapping.items() if info_dict.get(inkey)
-        }
-        if thumb_stream_ref := info_dict.get('thumbnail'):
-            if coverimage := await self._getcoverimage(thumb_stream_ref):
-                newmeta['coverimageraw'] = coverimage
-
-        return newmeta
+        return self.metadata
 
     async def getrandomtrack(self, playlist):
         ''' not supported '''
         return None
+
+    async def start(self):
+        ''' start loop '''
+        loop = asyncio.get_running_loop()
+        task = loop.create_task(self._data_loop())
+        self.tasks.add(task)
+        task.add_done_callback(self.tasks.discard)
+
+    async def stop(self):
+        ''' stop loop '''
+        self.stopevent.set()
 
 
 async def main():
