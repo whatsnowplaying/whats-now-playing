@@ -99,10 +99,10 @@ class Plugin(InputPlugin):
 
             # avoid expensive image2png call
 
-            diff = False
-            for _, cmpval in mapping.items():
-                if newdata[cmpval] != self.metadata[cmpval]:
-                    diff = True
+            diff = any(
+                newdata[cmpval] != self.metadata[cmpval]
+                for cmpval in mapping.values()
+            )
 
             if not diff:
                 continue
