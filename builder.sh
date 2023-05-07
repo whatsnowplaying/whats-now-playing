@@ -47,7 +47,7 @@ esac
 rm -rf build dist || true
 
 "${PYTHON}" -m pip install --upgrade pip
-pip install ".[dev,ospecials]"
+pip install ".[dev,osspecials]"
 "${PYTHON}"  setupnltk.py
 pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
 pyinstaller NowPlaying.spec
