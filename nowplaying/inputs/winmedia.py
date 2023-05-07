@@ -4,6 +4,7 @@
 import asyncio
 import logging
 import sys
+import traceback
 
 try:
 
@@ -46,16 +47,20 @@ class Plugin(InputPlugin):
     @staticmethod
     async def _getcoverimage(thumbref):
         ''' read the thumbnail buffer '''
-        thumb_read_buffer = Buffer(5000000)
+        try:
+            thumb_read_buffer = Buffer(5000000)
 
-        readable_stream = await thumbref.open_read_async()
-        readable_stream.read_async(thumb_read_buffer,
-                                   thumb_read_buffer.capacity,
-                                   InputStreamOptions.READ_AHEAD)
-        buffer_reader = DataReader.from_buffer(thumb_read_buffer)
-        if byte_buffer := bytearray(
-                buffer_reader.read_buffer(thumb_read_buffer.length)):
-            return nowplaying.utils.image2png(byte_buffer)
+            readable_stream = await thumbref.open_read_async()
+            readable_stream.read_async(thumb_read_buffer,
+                                       thumb_read_buffer.capacity,
+                                       InputStreamOptions.READ_AHEAD)
+            buffer_reader = DataReader.from_buffer(thumb_read_buffer)
+            if byte_buffer := bytearray(
+                    buffer_reader.read_buffer(thumb_read_buffer.unconsumed_buffer_length)):
+                return nowplaying.utils.image2png(byte_buffer)
+        except:  # pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
         return None
 
     async def getplayingtrack(self):
