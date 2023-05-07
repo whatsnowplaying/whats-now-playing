@@ -19,10 +19,11 @@ class Plugin(ArtistExtrasPlugin):
     ''' handler for discogs '''
 
     def __init__(self, config=None, qsettings=None):
+        super().__init__(config=config, qsettings=qsettings)
+        self.displayname = "Discogs"
         self.client = None
         self.version = config.version
         self.there = re.compile('(?i)^the ')
-        super().__init__(config=config, qsettings=qsettings)
 
     def _find_discogs_releaselist(self, metadata):
         try:

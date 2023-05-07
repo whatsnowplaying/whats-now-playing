@@ -61,7 +61,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.settingsclasses['twitchchat'].update_twitchbot_commands(
                 self.config)
 
-    def _setup_widgets(self, uiname):
+    def _setup_widgets(self, uiname, displayname=None):
         self.widgets[uiname] = load_widget_ui(self.config, f'{uiname}')
         if not self.widgets[uiname]:
             return
@@ -73,7 +73,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             pass
 
         self.qtui.settings_stack.addWidget(self.widgets[uiname])
-        self._load_list_item(f'{uiname}', self.widgets[uiname])
+        self._load_list_item(f'{uiname}', self.widgets[uiname], displayname)
 
     def load_qtui(self):  # pylint: disable=too-many-branches, too-many-statements
         ''' load the base UI and wire it up '''
@@ -113,9 +113,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     self.widgets[
                         'source'].sourcelist.currentRowChanged.connect(
                             self._set_source_description)
+                self._setup_widgets(
+                    f'{plugintype}_{pkey}',
+                    self.config.pluginobjs[plugintype][key].displayname)
 
-        for uiname in pluginuinames + ['about']:
-            self._setup_widgets(uiname)
+        self._setup_widgets('about')
 
         if not self.config.cparser.value('control/beam', type=bool):
             for key in [
@@ -139,13 +141,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 'general', Qt.MatchContains):
             self.qtui.settings_list.setCurrentItem(curbutton[0])
 
-    def _load_list_item(self, name, qobject):
-        displayname = qobject.property('displayName')
+    def _load_list_item(self, name, qobject, displayname):
         if not displayname:
-            if '_' in name:
-                displayname = name.split('_')[1].capitalize()
-            else:
-                displayname = name.capitalize()
+            displayname = qobject.property('displayName')
+            if not displayname:
+                if '_' in name:
+                    displayname = name.split('_')[1].capitalize()
+                else:
+                    displayname = name.capitalize()
         self.qtui.settings_list.addItem(displayname)
 
     def _set_stacked_display(self, index):

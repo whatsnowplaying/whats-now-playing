@@ -13,9 +13,6 @@
   <property name="windowTitle">
    <string>MPRIS2</string>
   </property>
-  <property name="displayName" stdset="0">
-   <string>MPRIS2</string>
-  </property>
   <widget class="QLabel" name="header_label">
    <property name="geometry">
     <rect>

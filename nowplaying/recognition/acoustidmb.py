@@ -36,6 +36,7 @@ class Plugin(RecognitionPlugin):
             self.config)
         self.acoustidmd = {}
         self.fpcalcexe = None
+        self.displayname = "AcoustID/MusicBrainz"
 
     @staticmethod
     def _fpcalc(filename):

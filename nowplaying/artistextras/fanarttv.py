@@ -19,9 +19,10 @@ class Plugin(ArtistExtrasPlugin):
     ''' handler for fanart.tv '''
 
     def __init__(self, config=None, qsettings=None):
+        super().__init__(config=config, qsettings=qsettings)
         self.client = None
         self.version = config.version
-        super().__init__(config=config, qsettings=qsettings)
+        self.displayname = "fanart.tv"
 
     def _fetch(self, apikey, artistid):
         artistrequest = None

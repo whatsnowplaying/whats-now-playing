@@ -25,6 +25,7 @@ class Plugin(ArtistExtrasPlugin):
         super().__init__(config=config, qsettings=qsettings)
         self.fnstr = None
         self.there = re.compile('(?i)^the ')
+        self.displayname = "TheAudioDB"
 
     @staticmethod
     def _filter(text):

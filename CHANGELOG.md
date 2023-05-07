@@ -17,10 +17,9 @@
 * Unit tests ran during development have been improved.
 * Rework the development process; now almost entirely `pyproject.yaml`-based.
 * Some major doc changes here and there.
-* Rework and simplify some of the plugin stuff to that settings are not required
-  and reduced the overall footprint for common configuration bits.
+* Rework and simplify some of the internals of plugins.
 * Along with that, sources that do not have the required operating
-  system component installed won't show up as a possible selection.
+  system component installed won't show up as a possible selection in the UI.
 * The usual dependency updates that should improve program speed and dependability.
 
 ## Version 4.0.3 - 2023-03-26

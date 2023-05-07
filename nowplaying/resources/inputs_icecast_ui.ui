@@ -13,9 +13,6 @@
   <property name="windowTitle">
    <string>Icecast</string>
   </property>
-  <property name="displayName" stdset="0">
-   <string>Icecast</string>
-  </property>
   <widget class="QLabel" name="header_label">
    <property name="geometry">
     <rect>
