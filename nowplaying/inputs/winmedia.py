@@ -89,12 +89,24 @@ class Plugin(InputPlugin):
                 'album_artist': 'albumartist',
                 'artist': 'artist',
                 'title': 'title',
-                'track': 'track_number'
+                'track_number': 'track'
             }
+
             newdata = {
                 outkey: info_dict[inkey]
                 for inkey, outkey in mapping.items() if info_dict.get(inkey)
             }
+
+            # avoid expensive image2png call
+
+            diff = False
+            for _, cmpval in mapping.items():
+                if newdata[cmpval] != self.metadata[cmpval]:
+                    diff = True
+
+            if not diff:
+                continue
+
             if thumb_stream_ref := info_dict.get('thumbnail'):
                 if coverimage := await self._getcoverimage(thumb_stream_ref):
                     newdata['coverimageraw'] = coverimage
