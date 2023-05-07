@@ -676,7 +676,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
-
+        self.displayname = "Serato"
         self.url = None
         self.libpath = None
         self.local = True

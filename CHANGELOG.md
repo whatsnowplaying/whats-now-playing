@@ -5,6 +5,9 @@
 
 * Experimental feature: Given an option to use Musicbrainz to fill in missing
   metadata based only on artist and title (and album if available).
+* On Windows, the ability to read from Windows Media Transport compatible
+  software, such as Amazon Music, Soundcloud, and likely others. (Ironically,
+  Windows Media Player doesn't appear to use it for whatever reason.)
 * Ability to disable reading Virtual DJ remix fields from the M3U history file.
   This feature has no impact on what is read from the media itself. In other words,
   if the MP3 is tagged with '(Remix)' that will still show up.
@@ -12,8 +15,12 @@
 * The internal twitch lock should now be less likely to deadlock.
 * Some log messages have been bumped up from debut to error.
 * Unit tests ran during development have been improved.
-* Rework the development process.
-* Doc updates! Of course.
+* Rework the development process; now almost entirely `pyproject.yaml`-based.
+* Some major doc changes here and there.
+* Rework and simplify some of the plugin stuff to that settings are not required
+  and reduced the overall footprint for common configuration bits.
+* Along with that, sources that do not have the required operating
+  system component installed won't show up as a possible selection.
 * The usual dependency updates that should improve program speed and dependability.
 
 ## Version 4.0.3 - 2023-03-26

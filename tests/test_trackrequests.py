@@ -18,10 +18,10 @@ async def trackrequestbootstrap(bootstrap, getroot):  # pylint: disable=redefine
     ''' bootstrap a configuration '''
     stopevent = threading.Event()
     config = bootstrap
-    config.cparser.setValue('settings/input', 'json')
+    config.cparser.setValue('settings/input', 'jsonreader')
     playlistpath = pathlib.Path(getroot).joinpath('tests', 'playlists', 'json',
                                                   'test.json')
-    config.pluginobjs['inputs']['nowplaying.inputs.json'].load_playlists(
+    config.pluginobjs['inputs']['nowplaying.inputs.jsonreader'].load_playlists(
         getroot, playlistpath)
     config.cparser.sync()
     yield nowplaying.trackrequests.Requests(stopevent=stopevent,
@@ -316,7 +316,7 @@ async def test_twofer(bootstrap, getroot):  # pylint: disable=redefined-outer-na
     config.cparser.setValue('settings/input', 'json')
     playlistpath = pathlib.Path(getroot).joinpath('tests', 'playlists', 'json',
                                                   'test.json')
-    config.pluginobjs['inputs']['nowplaying.inputs.json'].load_playlists(
+    config.pluginobjs['inputs']['nowplaying.inputs.jsonreader'].load_playlists(
         getroot, playlistpath)
     config.cparser.sync()
 

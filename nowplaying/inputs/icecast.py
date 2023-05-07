@@ -152,6 +152,7 @@ class Plugin(InputPlugin):
     def __init__(self, config=None, qsettings=None):
         ''' no custom init '''
         super().__init__(config=config, qsettings=qsettings)
+        self.displayname = "Icecast"
         self.server = None
         self.mode = None
         self.lastmetadata = {}
@@ -166,18 +167,10 @@ class Plugin(InputPlugin):
         ''' (re-)set the default configuration values for this plugin '''
         qsettings.setValue('icecast/port', '8000')
 
-    def connect_settingsui(self, qwidget, uihelp):
-        ''' connect any UI elements such as buttons '''
-        self.qwidget = qwidget
-        self.uihelp = uihelp
-
     def load_settingsui(self, qwidget):
         ''' load values from config and populate page '''
         qwidget.port_lineedit.setText(
             self.config.cparser.value('icecast/port'))
-
-    def verify_settingsui(self, qwidget):  #pylint: disable=no-self-use
-        ''' verify the values in the UI prior to saving '''
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
@@ -189,20 +182,6 @@ class Plugin(InputPlugin):
         qwidget.setText(
             'Icecast is a streaming broadcast protocol.'
             '  This setting should be used for butt, MIXXX, and many others.')
-
-#### Mix Mode menu item methods
-
-    def validmixmodes(self):  #pylint: disable=no-self-use
-        ''' tell ui valid mixmodes '''
-        return ['newest']
-
-    def setmixmode(self, mixmode):  #pylint: disable=no-self-use
-        ''' handle user switching the mix mode: TBD '''
-        return 'newest'
-
-    def getmixmode(self):  #pylint: disable=no-self-use
-        ''' return what the current mixmode is set to '''
-        return 'newest'
 
 #### Data feed methods
 

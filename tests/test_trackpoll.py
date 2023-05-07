@@ -24,7 +24,7 @@ async def trackpollbootstrap(bootstrap, getroot, tmp_path):  # pylint: disable=r
     config.templatedir = getroot.joinpath('tests', 'templates')
     config.cparser.setValue('artistextras/enabled', False)
     config.cparser.setValue('control/paused', True)
-    config.cparser.setValue('settings/input', 'json')
+    config.cparser.setValue('settings/input', 'jsonreader')
     config.cparser.setValue('jsoninput/delay', 1)
     config.cparser.setValue('jsoninput/filename', str(jsonfile))
     config.cparser.setValue('textoutput/file', str(txtfile))

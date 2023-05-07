@@ -16,47 +16,10 @@ class Plugin(InputPlugin):
     def __init__(self, config=None, qsettings=None):
         ''' no custom init '''
         super().__init__(config=config, qsettings=qsettings)
+        self.displayname = "JSONReader"
+        self.available = False
         self.playlists = None
 
-    def install(self):
-        ''' auto-install '''
-        return False
-
-#### Settings UI methods
-
-    def defaults(self, qsettings):
-        ''' (re-)set the default configuration values for this plugin '''
-
-    def connect_settingsui(self, qwidget, uihelp):
-        ''' connect any UI elements such as buttons '''
-        self.qwidget = qwidget
-        self.uihelp = uihelp
-
-    def load_settingsui(self, qwidget):
-        ''' load values from config and populate page '''
-
-    def verify_settingsui(self, qwidget):  #pylint: disable=no-self-use
-        ''' verify the values in the UI prior to saving '''
-
-    def save_settingsui(self, qwidget):
-        ''' take the settings page and save it '''
-
-    def desc_settingsui(self, qwidget):
-        ''' provide a description for the plugins page '''
-
-#### Mix Mode menu item methods
-
-    def validmixmodes(self):  #pylint: disable=no-self-use
-        ''' tell ui valid mixmodes '''
-        return ['newest']
-
-    def setmixmode(self, mixmode):  #pylint: disable=no-self-use
-        ''' handle user switching the mix mode: TBD '''
-        return 'newest'
-
-    def getmixmode(self):  #pylint: disable=no-self-use
-        ''' return what the current mixmode is set to '''
-        return 'newest'
 
 #### Data feed methods
 
@@ -101,13 +64,3 @@ class Plugin(InputPlugin):
                     str(dirpath),
                 ) for value in filelist
             ]
-
-
-#### Control methods
-
-    async def start(self):
-        ''' any initialization before actual polling starts '''
-
-    async def stop(self):
-        ''' stopping either the entire program or just this
-            input '''

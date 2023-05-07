@@ -26,6 +26,7 @@ class Plugin(InputPlugin):
 
         super().__init__(config=config, qsettings=qsettings)
 
+        self.displayname = "WinMedia"
         self.winmedia_status = True
         if not WINMEDIA_STATUS:
             self.available = False
@@ -36,8 +37,11 @@ class Plugin(InputPlugin):
         ''' Auto-install for WinMedia '''
         return False
 
-    async def start(self):
-        ''' configure WinMedia client '''
+    def desc_settingsui(self, qwidget):
+        ''' provide a description for the plugins page '''
+        qwidget.setText(
+            'WinMedia will read data from Windows Media Transport'
+            ' -compatible software such as Soundcloud and Spotify.')
 
     @staticmethod
     async def _getcoverimage(thumbref):
@@ -93,47 +97,6 @@ class Plugin(InputPlugin):
     async def getrandomtrack(self, playlist):
         ''' not supported '''
         return None
-
-    def defaults(self, qsettings):
-        ''' none '''
-
-    def validmixmodes(self):
-        ''' let the UI know which modes are valid '''
-        return ['newest']
-
-    def setmixmode(self, mixmode):
-        ''' only support newest for now '''
-        return 'newest'
-
-    def getmixmode(self):
-        ''' only support newest for now '''
-        return 'newest'
-
-    async def stop(self):
-        ''' not needed '''
-
-    def connect_settingsui(self, qwidget, uihelp):
-        ''' not needed '''
-        self.qwidget = qwidget
-        self.uihelp = uihelp
-
-    def load_settingsui(self, qwidget):
-        ''' populate the combobox '''
-        if not self.winmedia_status:
-            return
-
-    def verify_settingsui(self, qwidget):
-        ''' no verification to do '''
-
-    def save_settingsui(self, qwidget):
-        ''' save the combobox '''
-        if not self.winmedia_status:
-            return
-
-    def desc_settingsui(self, qwidget):
-        ''' description '''
-        if not self.winmedia_status:
-            return
 
 
 async def main():

@@ -6,6 +6,7 @@ import sys
 import pytest
 import nowplaying.inputs.winmedia  # pylint: disable=import-error
 
+
 @pytest.mark.asyncio
 async def test_winmedia():
     ''' entry point as a standalone app'''

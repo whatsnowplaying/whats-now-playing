@@ -173,6 +173,7 @@ class Plugin(InputPlugin):
     def __init__(self, config=None, qsettings=None):
 
         super().__init__(config=config, qsettings=qsettings)
+        self.displayname = "MPRIS2"
         self.mpris2 = None
         self.service = None
 
@@ -225,29 +226,6 @@ class Plugin(InputPlugin):
         ''' not supported '''
         return None
 
-    def defaults(self, qsettings):
-        qsettings.setValue('mpris2/service', None)
-
-    def validmixmodes(self):
-        ''' let the UI know which modes are valid '''
-        return ['newest']
-
-    def setmixmode(self, mixmode):
-        ''' only support newest for now '''
-        return 'newest'
-
-    def getmixmode(self):
-        ''' only support newest for now '''
-        return 'newest'
-
-    async def stop(self):
-        ''' not needed '''
-
-    def connect_settingsui(self, qwidget, uihelp):
-        ''' not needed '''
-        self.qwidget = qwidget
-        self.uihelp = uihelp
-
     def load_settingsui(self, qwidget):
         ''' populate the combobox '''
         if not self.dbus_status or not self.mpris2:
@@ -259,9 +237,6 @@ class Plugin(InputPlugin):
         if curbutton := qwidget.list_widget.findItems(currentservice,
                                                       Qt.MatchContains):
             curbutton[0].setSelected(True)
-
-    def verify_settingsui(self, qwidget):
-        ''' no verification to do '''
 
     def save_settingsui(self, qwidget):
         ''' save the combobox '''

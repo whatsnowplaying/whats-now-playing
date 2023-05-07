@@ -22,6 +22,7 @@ class Plugin(M3UPlugin):
 
     def __init__(self, config=None, m3udir=None, qsettings=None):
         super().__init__(config=config, m3udir=m3udir, qsettings=qsettings)
+        self.displayname = "VirtualDJ"
         self.databasefile = pathlib.Path(
             QStandardPaths.standardLocations(
                 QStandardPaths.CacheLocation)[0]).joinpath(

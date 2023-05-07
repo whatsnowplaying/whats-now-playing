@@ -175,6 +175,7 @@ class Plugin(IcecastPlugin):
     def __init__(self, config=None, qsettings=None):
         ''' no custom init '''
         super().__init__(config=config, qsettings=qsettings)
+        self.displayname = "Traktor"
         self.extradb = None
 
     def install(self):

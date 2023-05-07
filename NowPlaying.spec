@@ -95,7 +95,7 @@ def windows_version_file():
         'file_description': 'NowPlaying',
         'internal_name': 'NowPlaying',
         'legal_copyright':
-        f'{__VERSION__} (c) 2020-2021 Ely Miranda, (c) 2021 Allen Wittenauer',
+        f'{__VERSION__} (c) 2020-2021 Ely Miranda, (c) 2021-2023 Allen Wittenauer',
         'original_filename': 'NowPlaying.exe',
         'product_name': 'Now Playing',
         'version': '.'.join(getsplitversion()[:3] + ['0'])

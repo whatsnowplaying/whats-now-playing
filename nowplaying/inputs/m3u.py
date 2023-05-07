@@ -31,6 +31,7 @@ class Plugin(InputPlugin):
 
     def __init__(self, config=None, m3udir=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
+        self.displayname = "M3U"
         if m3udir and os.path.exists(m3udir):
             self.m3udir = m3udir
         else:
@@ -221,21 +222,6 @@ class Plugin(InputPlugin):
     async def getrandomtrack(self, playlist):
         ''' not supported '''
         return None
-
-    def defaults(self, qsettings):  #pylint: disable=no-self-use
-        pass
-
-    def validmixmodes(self):  #pylint: disable=no-self-use
-        ''' let the UI know which modes are valid '''
-        return ['newest']
-
-    def setmixmode(self, mixmode):  #pylint: disable=no-self-use
-        ''' set the mixmode '''
-        return 'newest'
-
-    def getmixmode(self):  #pylint: disable=no-self-use
-        ''' get the mixmode '''
-        return 'newest'
 
     async def stop(self):
         ''' stop the m3u plugin '''

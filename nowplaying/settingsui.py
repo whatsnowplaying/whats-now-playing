@@ -61,6 +61,20 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.settingsclasses['twitchchat'].update_twitchbot_commands(
                 self.config)
 
+    def _setup_widgets(self, uiname):
+        self.widgets[uiname] = load_widget_ui(self.config, f'{uiname}')
+        if not self.widgets[uiname]:
+            return
+
+        try:
+            qobject_connector = getattr(self, f'_connect_{uiname}_widget')
+            qobject_connector(self.widgets[uiname])
+        except AttributeError:
+            pass
+
+        self.qtui.settings_stack.addWidget(self.widgets[uiname])
+        self._load_list_item(f'{uiname}', self.widgets[uiname])
+
     def load_qtui(self):  # pylint: disable=too-many-branches, too-many-statements
         ''' load the base UI and wire it up '''
 
@@ -82,6 +96,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 'artistextras', 'obsws', 'discordbot', 'quirks'
             ]
 
+        for uiname in baseuis:
+            self._setup_widgets(uiname)
+
         pluginuis = {}
         pluginuinames = []
         for plugintype, pluginlist in self.config.plugins.items():
@@ -90,38 +107,15 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 pkey = key.replace(f'nowplaying.{plugintype}.', '')
                 pluginuis[plugintype].append(pkey)
                 pluginuinames.append(f'{plugintype}_{pkey}')
+                if plugintype == "inputs":
+                    self.widgets['source'].sourcelist.addItem(
+                        self.config.pluginobjs[plugintype][key].displayname)
+                    self.widgets[
+                        'source'].sourcelist.currentRowChanged.connect(
+                            self._set_source_description)
 
-        for uiname in baseuis + pluginuinames + ['about']:
-            self.widgets[uiname] = load_widget_ui(self.config, f'{uiname}')
-            if not self.widgets[uiname]:
-                continue
-            try:
-                qobject_connector = getattr(self, f'_connect_{uiname}_widget')
-                qobject_connector(self.widgets[uiname])
-            except AttributeError:
-                pass
-
-            self.qtui.settings_stack.addWidget(self.widgets[uiname])
-            self._load_list_item(f'{uiname}', self.widgets[uiname])
-
-        for uiname in pluginuinames:
-            if 'inputs' not in uiname:
-                continue
-            if not self.widgets[uiname]:
-                displayname = uiname.split('_')[1]
-                self.widgets['source'].sourcelist.addItem(displayname)
-                self.widgets['source'].sourcelist.currentRowChanged.connect(
-                    self._set_source_description)
-                continue
-            displayname = self.widgets[uiname].property('displayName')
-            if not displayname:
-                displayname = uiname.split('_')[1].capitalize()
-            if self.config.cparser.value('control/beam',
-                                         type=bool) and displayname == 'Beam':
-                continue
-            self.widgets['source'].sourcelist.addItem(displayname)
-            self.widgets['source'].sourcelist.currentRowChanged.connect(
-                self._set_source_description)
+        for uiname in pluginuinames + ['about']:
+            self._setup_widgets(uiname)
 
         if not self.config.cparser.value('control/beam', type=bool):
             for key in [
