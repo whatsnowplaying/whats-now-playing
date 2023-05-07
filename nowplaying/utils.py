@@ -16,6 +16,7 @@ import traceback
 import jinja2
 import normality
 import PIL.Image
+import pillow_avif  # pylint: disable=unused-import
 
 STRIPWORDLIST = ['clean', 'dirty', 'explicit', 'official music video']
 STRIPRELIST = [
@@ -145,13 +146,38 @@ def image2png(rawdata):
         return rawdata
 
     try:
-        origimage = rawdata
-        imgbuffer = io.BytesIO(origimage)
+        imgbuffer = io.BytesIO(rawdata)
         logging.getLogger('PIL.TiffImagePlugin').setLevel(logging.CRITICAL + 1)
         logging.getLogger('PIL.PngImagePlugin').setLevel(logging.CRITICAL + 1)
         image = PIL.Image.open(imgbuffer)
+        imgbuffer = io.BytesIO(rawdata)
         if image.format != 'PNG':
-            image.convert(mode='RGB').save(imgbuffer, format='png')
+            image.convert(mode='RGB').save(imgbuffer, format='PNG')
+    except Exception as error:  #pylint: disable=broad-except
+        logging.debug(error)
+        return None
+    logging.debug("Leaving image2png")
+    return imgbuffer.getvalue()
+
+
+def image2avif(rawdata):
+    ''' convert an image to png '''
+
+    if not rawdata:
+        return None
+
+    if rawdata.startswith(b'\x00\x00\x00 ftypavif'):
+        logging.debug('already AVIF, skipping convert')
+        return rawdata
+
+    try:
+        imgbuffer = io.BytesIO(rawdata)
+        logging.getLogger('PIL.TiffImagePlugin').setLevel(logging.CRITICAL + 1)
+        logging.getLogger('PIL.PngImagePlugin').setLevel(logging.CRITICAL + 1)
+        image = PIL.Image.open(imgbuffer)
+        imgbuffer = io.BytesIO(rawdata)
+        if image.format != 'AVIF':
+            image.convert(mode='RGB').save(imgbuffer, format='AVIF')
     except Exception as error:  #pylint: disable=broad-except
         logging.debug(error)
         return None

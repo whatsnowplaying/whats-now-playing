@@ -158,3 +158,28 @@ def test_basicstrip_ovm4():
     title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
     assert metadata['title'] == 'Clean - Official Music Video'
     assert title == 'Clean'
+
+
+def test_image2png(getroot):
+    ''' check png image conversion '''
+    filename = getroot.joinpath('tests', 'images', '1x1.jpg')
+    with open(filename, 'rb') as fhin:
+        image = fhin.read()
+
+    pngdata = nowplaying.utils.image2png(image)
+
+    pngdata2 = nowplaying.utils.image2png(pngdata)
+    assert pngdata.startswith(b'\211PNG\r\n\032\n')
+    assert pngdata2 == pngdata
+
+
+def test_image2avif(getroot):
+    ''' check png image conversion '''
+    filename = getroot.joinpath('tests', 'images', '1x1.jpg')
+    with open(filename, 'rb') as fhin:
+        image = fhin.read()
+
+    avifdata = nowplaying.utils.image2avif(image)
+    avifdata2 = nowplaying.utils.image2avif(avifdata)
+    assert avifdata.startswith(b'\x00\x00\x00 ftypavif')
+    assert avifdata2 == avifdata
