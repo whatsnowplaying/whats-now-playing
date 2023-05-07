@@ -5,6 +5,8 @@
 
 * Experimental feature: Given an option to use Musicbrainz to fill in missing
   metadata based only on artist and title (and album if available).
+* Add support for AVIF graphics. At some point, all of the templates will be
+  updated to handle multiple formats so be prepared!
 * On Windows, the ability to read from Windows Media Transport compatible
   software, such as Amazon Music, Soundcloud, and likely others. (Ironically,
   Windows Media Player doesn't appear to use it for whatever reason.)
