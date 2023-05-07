@@ -231,7 +231,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             for key in plugtypelist:
                 self.pluginobjs[plugintype][key] = self.plugins[plugintype][
                     key].Plugin(config=self, qsettings=settings)
-                if self.pluginobjs[plugintype][key].available:
+                if self.testmode or self.pluginobjs[plugintype][key].available:
                     self.pluginobjs[plugintype][key].defaults(settings)
                 else:
                     removelist.append(key)
