@@ -144,11 +144,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def _load_list_item(self, name, qobject, displayname):
         if not displayname:
             displayname = qobject.property('displayName')
-            if not displayname:
-                if '_' in name:
-                    displayname = name.split('_')[1].capitalize()
-                else:
-                    displayname = name.capitalize()
+        if not displayname:
+            if '_' in name:
+                displayname = name.split('_')[1].capitalize()
+            else:
+                displayname = name.capitalize()
         self.qtui.settings_list.addItem(displayname)
 
     def _set_stacked_display(self, index):
