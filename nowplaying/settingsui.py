@@ -144,7 +144,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def _load_list_item(self, name, qobject, displayname):
         if not displayname:
             displayname = qobject.property('displayName')
-            if not displayname:
+            if not displayname:  # sourcery skip: hoist-if-from-if
                 if '_' in name:
                     displayname = name.split('_')[1].capitalize()
                 else:
