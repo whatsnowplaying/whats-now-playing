@@ -15,3 +15,4 @@ Each has its own screen to configure them.
    serato
    traktor
    virtualdj
+   winmedia
