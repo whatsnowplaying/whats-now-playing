@@ -28,6 +28,7 @@ async def test_15ghosts2_mp3_orig(bootstrap, getroot):
     assert metadataout['bitrate'] == 64000
     assert metadataout['track'] == '15'
     assert metadataout['title'] == '15 Ghosts II'
+    assert metadataout['duration'] == 110
 
 
 @pytest.mark.asyncio
@@ -61,6 +62,7 @@ async def test_15ghosts2_mp3_fullytagged(bootstrap, getroot):
     assert metadataout[
         'musicbrainzrecordingid'] == '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
     assert metadataout['title'] == '15 Ghosts II'
+    assert metadataout['duration'] == 110
 
 
 @pytest.mark.asyncio
@@ -79,6 +81,7 @@ async def test_15ghosts2_flac_orig(bootstrap, getroot):
     assert metadataout['artist'] == 'Nine Inch Nails'
     assert metadataout['track'] == '15'
     assert metadataout['title'] == '15 Ghosts II'
+    assert metadataout['duration'] == 113
 
 
 @pytest.mark.asyncio
@@ -98,6 +101,7 @@ async def test_15ghosts2_m4a_orig(bootstrap, getroot):
     assert metadataout['bitrate'] == 705600
     assert metadataout['track'] == '15'
     assert metadataout['title'] == '15 Ghosts II'
+    assert metadataout['duration'] == 113
 
 
 @pytest.mark.asyncio
@@ -116,6 +120,7 @@ async def test_15ghosts2_aiff_orig(bootstrap, getroot):
     assert metadataout['artist'] == 'Nine Inch Nails'
     assert metadataout['track'] == '15'
     assert metadataout['title'] == '15 Ghosts II'
+    assert metadataout['duration'] == 113
 
 
 @pytest.mark.asyncio
@@ -150,6 +155,7 @@ async def test_15ghosts2_flac_fullytagged(bootstrap, getroot):
     assert metadataout[
         'musicbrainzrecordingid'] == '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
     assert metadataout['title'] == '15 Ghosts II'
+    assert metadataout['duration'] == 113
 
 
 @pytest.mark.asyncio
@@ -184,6 +190,7 @@ async def test_15ghosts2_m4a_fullytagged(bootstrap, getroot):
     assert metadataout[
         'musicbrainzrecordingid'] == '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
     assert metadataout['title'] == '15 Ghosts II'
+    assert metadataout['duration'] == 113
 
 
 @pytest.mark.asyncio
@@ -207,6 +214,7 @@ async def test_15ghosts2_aiff_fullytagged(bootstrap, getroot):
     assert metadataout['coverurl'] == 'cover.png'
     assert metadataout['isrc'] == ['USTC40852243']
     assert metadataout['title'] == '15 Ghosts II'
+    assert metadataout['duration'] == 113
 
 
 @pytest.mark.asyncio
@@ -402,3 +410,32 @@ async def test_url_dedupe4(bootstrap):
     assert metadataout['artistwebsites'] == [
         'https://example.com/', 'https://whatsnowplaying.github.io/'
     ]
+
+@pytest.mark.asyncio
+async def test_broken_duration(bootstrap):
+    ''' automated integration test '''
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    config.cparser.setValue('settings/stripextras', False)
+    metadatain = {
+        'duration': '1 hour 10 minutes'
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(
+        config=config).getmoremetadata(metadata=metadatain)
+    assert not metadataout.get('duration')
+
+
+@pytest.mark.asyncio
+async def test_str_duration(bootstrap):
+    ''' automated integration test '''
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    config.cparser.setValue('settings/stripextras', False)
+    metadatain = {
+        'duration': '1'
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(
+        config=config).getmoremetadata(metadata=metadatain)
+    assert metadataout['duration'] == 1

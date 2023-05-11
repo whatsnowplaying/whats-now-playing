@@ -72,7 +72,22 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self._uniqlists()
 
         self._strip_identifiers()
+        self._fix_duration()
         return self.metadata
+
+    def _fix_duration(self):
+        if not self.metadata.get('duration'):
+            return
+
+        try:
+            duration = int(self.metadata['duration'])
+        except ValueError:
+            logging.debug('Cannot convert duration = %s',
+                          self.metadata['duration'])
+            del self.metadata['duration']
+            return
+
+        self.metadata['duration'] = duration
 
     def _strip_identifiers(self):
 
@@ -137,8 +152,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if tag:
             for key in [
                     'album', 'albumartist', 'artist', 'bitrate', 'bpm',
-                    'comments', 'composer', 'disc', 'disc_total', 'genre',
-                    'key', 'lang', 'publisher', 'title', 'track',
+                    'comments', 'composer', 'disc', 'disc_total', 'duration',
+                    'genre', 'key', 'lang', 'publisher', 'title', 'track',
                     'track_total', 'year'
             ]:
                 if key not in self.metadata and hasattr(tag, key) and getattr(
@@ -461,6 +476,7 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
                 'comments',
                 'composer',
                 'discsubtitle',
+                'duration',
                 'genre',
                 'key',
                 'label',

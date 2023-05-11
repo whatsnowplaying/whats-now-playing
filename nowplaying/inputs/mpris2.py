@@ -113,7 +113,7 @@ class MPRIS2Handler():
             builddata['album'] = str(self.meta.get('xesam:album'))
 
         if length := self.meta.get('mpris:length'):
-            builddata['length'] = int(length)
+            builddata['duration'] = int(length)
 
         if tracknumber := self.meta.get('xesam:tracknumber'):
             builddata['track'] = int(tracknumber)

@@ -71,6 +71,10 @@ Supported Variables
      - disc subtitle (if there is one)
    * - disc_total
      - Total number of discs in album
+   * - duration
+     - Total expected track time in seconds
+   * - duration_hhmmss
+     - Same as duration but in `HH:MM:SS` format (so 1 minute 30 seconds becomes 01:30)
    * - filename
      - Local filename of the media
    * - genre

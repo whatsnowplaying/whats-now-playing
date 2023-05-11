@@ -11,6 +11,7 @@ import logging
 import pkgutil
 import os
 import re
+import time
 import traceback
 
 import jinja2
@@ -247,3 +248,11 @@ def titlestripper_advanced(title=None, title_regex_list=None):
     if len(trackname) == 0:
         trackname = copy.deepcopy(title)
     return trackname
+
+def humanize_time(seconds):
+    ''' convert seconds into hh:mm:ss '''
+    if seconds > 3600:
+        return time.strftime('%H:%M:%S', time.gmtime(int(seconds)))
+    if seconds > 60:
+        return time.strftime('%M:%S', time.gmtime(int(seconds)))
+    return time.strftime('%S', time.gmtime(int(seconds)))

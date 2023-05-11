@@ -272,10 +272,14 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         try:
             metadata = await self.metadataprocessors.getmoremetadata(
                 metadata=metadata, imagecache=self.imagecache)
+            if duration := metadata.get('duration'):
+                metadata['duration_hhmmss'] = nowplaying.utils.humanize_time(duration)
         except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             logging.error('Ignoring metadataprocessor failure.')
+
+
         for key in COREMETA:
             if key not in metadata:
                 logging.info('Track missing %s data, setting it to blank.',
