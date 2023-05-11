@@ -44,14 +44,18 @@ class MusicBrainzHelper():
     def lastditcheffort(self, metadata):
         ''' there is like no data, so... '''
 
-        def _pickarecording(testdata, mbdata, allowothers=False):
+        def _pickarecording(testdata, mbdata, allowothers=False):  #pylint: disable=too-many-branches
 
             riddata = {}
             #import json
             #logging.debug(json.dumps(mbdata))
+            if not mbdata.get('recording-list'):
+                return riddata
             for recording in mbdata['recording-list']:
                 rid = recording['id']
                 logging.debug('id = %s', rid)
+                if not recording.get('release-list'):
+                    continue
                 for release in recording['release-list']:
                     title = release['title']
                     if testdata.get('album') and testdata['album'] != title:
@@ -106,8 +110,8 @@ class MusicBrainzHelper():
         }
         riddata = {}
 
+        logging.debug('Starting data: %s', addmeta)
         if addmeta['album']:
-            logging.debug('here')
             mydict = musicbrainzngs.search_recordings(
                 artist=addmeta['artist'],
                 recording=addmeta['title'],

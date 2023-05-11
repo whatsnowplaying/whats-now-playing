@@ -169,3 +169,20 @@ def test_fallback6(getmusicbrainz):  # pylint: disable=redefined-outer-name
         '709af0d0-dcb6-4858-b76d-05a13fc9a0a6'
     ]
     assert newdata['album'] == 'Solid State Logik 1'
+
+
+def test_fallback7(getmusicbrainz):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    mbhelper = getmusicbrainz
+    metadata = {
+        'artist': 'Mareux',
+        'title': 'The Perfect Girl (Live at Coachella 2023)'
+    }
+    newdata = mbhelper.lastditcheffort(metadata)
+    #
+    # Not the best choice, but passable
+    #
+    assert newdata['musicbrainzartistid'] == [
+        '09095919-c549-4f33-9555-70df9dd941e1'
+    ]
+    assert newdata['album'] == 'The Perfect Girl'
