@@ -233,7 +233,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         logging.debug('Starting shutdown')
         self.requestswindow.close_window()
-        self.tray.setVisible(False)
+
+        self.action_pause.setEnabled(False)
+        self.request_action.setEnabled(False)
+        self.action_newestmode.setEnabled(False)
+        self.action_oldestmode.setEnabled(False)
+        self.settings_action.setEnabled(False)
 
         self.subprocesses.stop_all_processes()
 
