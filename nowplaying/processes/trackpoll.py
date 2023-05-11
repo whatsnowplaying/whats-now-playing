@@ -272,7 +272,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         try:
             metadata = await self.metadataprocessors.getmoremetadata(
                 metadata=metadata, imagecache=self.imagecache)
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             logging.error('Ignoring metadataprocessor failure.')

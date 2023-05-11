@@ -47,7 +47,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 logging.debug('running %s', processor)
                 func = getattr(self, f'_process_{processor}')
                 func()
-        except Exception:  #pylint: disable=broad-exception-caught
+        except Exception:  #pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             logging.error('Ignoring sub-metaproc failure.')
@@ -228,7 +228,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata = recognition_replacement(config=self.config,
                                                     metadata=self.metadata,
                                                     addmeta=addmeta)
-        except Exception:  #pylint: disable=broad-exception-caught
+        except Exception:  #pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             logging.error('Ignoring fallback failure.')
