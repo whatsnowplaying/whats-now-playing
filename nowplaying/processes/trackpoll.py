@@ -272,8 +272,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         try:
             metadata = await self.metadataprocessors.getmoremetadata(
                 metadata=metadata, imagecache=self.imagecache)
-        except OSError as error:  # pragma: no cover
-            logging.error('MetadataProcessor failed: %s', error)
+        except Exception:  # pylint: disable=broad-exception-caught
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
+            logging.error('Ignoring metadataprocessor failure.')
         for key in COREMETA:
             if key not in metadata:
                 logging.info('Track missing %s data, setting it to blank.',

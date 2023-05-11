@@ -8,6 +8,7 @@ import os
 import string
 import sys
 import textwrap
+import traceback
 
 import nltk
 import tinytag
@@ -41,10 +42,15 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if 'artistfanarturls' not in self.metadata:
             self.metadata['artistfanarturls'] = []
 
-        for processor in 'hostmeta', 'audio_metadata', 'tinytag', 'image2png':
-            logging.debug('running %s', processor)
-            func = getattr(self, f'_process_{processor}')
-            func()
+        try:
+            for processor in 'hostmeta', 'audio_metadata', 'tinytag', 'image2png':
+                logging.debug('running %s', processor)
+                func = getattr(self, f'_process_{processor}')
+                func()
+        except Exception:  #pylint: disable=broad-exception-caught
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
+            logging.error('Ignoring sub-metaproc failure.')
 
         if not skipplugins:
             await self._process_plugins()
@@ -214,12 +220,18 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         logging.debug('Attempting musicbrainz fallback')
-        musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
-            config=self.config)
-        addmeta = musicbrainz.lastditcheffort(self.metadata)
-        self.metadata = recognition_replacement(config=self.config,
-                                                metadata=self.metadata,
-                                                addmeta=addmeta)
+
+        try:
+            musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
+                config=self.config)
+            addmeta = musicbrainz.lastditcheffort(self.metadata)
+            self.metadata = recognition_replacement(config=self.config,
+                                                    metadata=self.metadata,
+                                                    addmeta=addmeta)
+        except Exception:  #pylint: disable=broad-exception-caught
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
+            logging.error('Ignoring fallback failure.')
 
     async def _process_plugins(self):
         addmeta = self._musicbrainz()
