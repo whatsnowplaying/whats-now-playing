@@ -311,7 +311,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             await asyncio.sleep(5)
-            return
+            logging.error('Ignoring the crash and just keep going!')
+            self.currentmeta = nextmeta
 
         logging.info('Potential new track: %s / %s',
                      self.currentmeta['artist'], self.currentmeta['title'])
