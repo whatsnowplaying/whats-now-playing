@@ -56,8 +56,7 @@ class MusicBrainzHelper():
             for release in recording['release-list']:
                 title = release['title']
                 if testdata.get('album') and testdata['album'] != title:
-                    logging.debug('skipped %s <> %s', release['title'],
-                                  testdata['album'])
+                    logging.debug('skipped %s <> %s', title, testdata['album'])
                     continue
                 if release.get(
                         'artist-credit'
@@ -120,10 +119,8 @@ class MusicBrainzHelper():
             mydict = musicbrainzngs.search_recordings(
                 artist=metadata['artist'], recording=metadata['title'])
             riddata = self._pickarecording(addmeta, mydict)
-            if not riddata:
-                riddata = self._pickarecording(addmeta,
-                                               mydict,
-                                               allowothers=True)
+        if not riddata:
+            riddata = self._pickarecording(addmeta, mydict, allowothers=True)
         return riddata
 
     def recognize(self, metadata):
