@@ -83,6 +83,9 @@ def test_fallback3(getmusicbrainz):  # pylint: disable=redefined-outer-name
     #
     metadata = {'artist': 'Prince', 'title': 'Computer Blue'}
     newdata = mbhelper.lastditcheffort(metadata)
+    if newdata.get('coverimageraw'):
+        del newdata['coverimageraw']
+    logging.debug(newdata)
     assert newdata['musicbrainzartistid'] == [
         '070d193a-845c-479f-980e-bef15710653e'
     ]

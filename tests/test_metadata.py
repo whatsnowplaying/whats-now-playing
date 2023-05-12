@@ -411,6 +411,7 @@ async def test_url_dedupe4(bootstrap):
         'https://example.com/', 'https://whatsnowplaying.github.io/'
     ]
 
+
 @pytest.mark.asyncio
 async def test_broken_duration(bootstrap):
     ''' automated integration test '''
@@ -418,9 +419,7 @@ async def test_broken_duration(bootstrap):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
-    metadatain = {
-        'duration': '1 hour 10 minutes'
-    }
+    metadatain = {'duration': '1 hour 10 minutes'}
     metadataout = await nowplaying.metadata.MetadataProcessors(
         config=config).getmoremetadata(metadata=metadatain)
     assert not metadataout.get('duration')
@@ -433,9 +432,7 @@ async def test_str_duration(bootstrap):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
-    metadatain = {
-        'duration': '1'
-    }
+    metadatain = {'duration': '1'}
     metadataout = await nowplaying.metadata.MetadataProcessors(
         config=config).getmoremetadata(metadata=metadatain)
     assert metadataout['duration'] == 1

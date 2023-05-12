@@ -249,6 +249,7 @@ def titlestripper_advanced(title=None, title_regex_list=None):
         trackname = copy.deepcopy(title)
     return trackname
 
+
 def humanize_time(seconds):
     ''' convert seconds into hh:mm:ss '''
     if seconds > 3600:
