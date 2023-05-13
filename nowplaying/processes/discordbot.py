@@ -157,7 +157,7 @@ class DiscordSupport:
                 if not template:
                     continue
 
-                metadata = metadb.read_last_meta()
+                metadata = await metadb.read_last_meta_async()
                 if not metadata:
                     continue
 

@@ -355,7 +355,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         if not self.testmode:
             metadb = nowplaying.db.MetadataDB()
-            metadb.write_to_metadb(metadata=self.currentmeta)
+            await metadb.write_to_metadb(metadata=self.currentmeta)
         self._write_to_text()
 
     def _artfallbacks(self):

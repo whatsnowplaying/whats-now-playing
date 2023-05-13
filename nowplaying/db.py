@@ -10,6 +10,8 @@ import sqlite3
 import time
 import traceback
 
+import aiosqlite
+
 from watchdog.observers import Observer  # pylint: disable=import-error
 from watchdog.events import PatternMatchingEventHandler  # pylint: disable=import-error
 
@@ -143,7 +145,7 @@ class MetadataDB:
         ''' get access to a watch on the database file '''
         return DBWatcher(self.databasefile)
 
-    def write_to_metadb(self, metadata=None):
+    async def write_to_metadb(self, metadata=None):
         ''' update metadb '''
 
         def filterkeys(mydict):
@@ -161,7 +163,8 @@ class MetadataDB:
         if not self.databasefile.exists():
             self.setupsql()
 
-        with sqlite3.connect(self.databasefile, timeout=10) as connection:
+        async with aiosqlite.connect(self.databasefile,
+                                     timeout=10) as connection:
             # do not want to modify the original dictionary
             # otherwise Bad Things(tm) will happen
             mdcopy = copy.deepcopy(metadata)
@@ -170,7 +173,7 @@ class MetadataDB:
             # toss any keys we do not care about
             mdcopy = filterkeys(mdcopy)
 
-            cursor = connection.cursor()
+            cursor = await connection.cursor()
 
             logging.debug('Adding record with %s/%s', mdcopy['artist'],
                           mdcopy['title'])
@@ -190,7 +193,8 @@ class MetadataDB:
             sql += '?,' * (len(mdcopy.keys()) - 1) + '?)'
 
             datatuple = tuple(list(mdcopy.values()))
-            cursor.execute(sql, datatuple)
+            await cursor.execute(sql, datatuple)
+            await connection.commit()
 
     def make_previoustracklist(self):
         ''' create a reversed list of the tracks played '''
@@ -220,6 +224,80 @@ class MetadataDB:
 
         return previouslist
 
+    async def make_previoustracklist_async(self):
+        ''' create a reversed list of the tracks played '''
+
+        if not self.databasefile.exists():
+            logging.error('MetadataDB does not exist yet?')
+            return None
+
+        async with aiosqlite.connect(self.databasefile,
+                                     timeout=10) as connection:
+            connection.row_factory = sqlite3.Row
+            cursor = await connection.cursor()
+            try:
+                await cursor.execute(
+                    '''SELECT artist, title FROM currentmeta ORDER BY id DESC'''
+                )
+            except sqlite3.OperationalError:
+                return None
+
+            records = await cursor.fetchall()
+
+        previouslist = []
+        if records:
+            previouslist.extend({
+                'artist': row['artist'],
+                'title': row['title']
+            } for row in records)
+
+        return previouslist
+
+    @staticmethod
+    def _postprocess_read_last_meta(row):
+        ''' common post-process of read_last_meta '''
+        metadata = {data: row[data] for data in METADATALIST}
+        for key in METADATABLOBLIST:
+            metadata[key] = row[key]
+            if not metadata[key]:
+                del metadata[key]
+
+        for key in LISTFIELDS:
+            metadata[key] = row[key]
+            if metadata[key]:
+                metadata[key] = metadata[key].split(SPLITSTR)
+
+        metadata['dbid'] = row['id']
+        return metadata
+
+    async def read_last_meta_async(self):
+        ''' update metadb '''
+
+        if not self.databasefile.exists():
+            logging.error('MetadataDB does not exist yet?')
+            return None
+
+        async with aiosqlite.connect(self.databasefile,
+                                     timeout=10) as connection:
+            connection.row_factory = sqlite3.Row
+            cursor = await connection.cursor()
+            try:
+                await cursor.execute(
+                    '''SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1''')
+            except sqlite3.OperationalError:
+                for line in traceback.format_exc().splitlines():
+                    logging.error(line)
+                return None
+
+            row = await cursor.fetchone()
+            await cursor.close()
+            if not row:
+                return None
+
+        metadata = self._postprocess_read_last_meta(row)
+        metadata['previoustrack'] = await self.make_previoustracklist_async()
+        return metadata
+
     def read_last_meta(self):
         ''' update metadb '''
 
@@ -242,18 +320,7 @@ class MetadataDB:
             if not row:
                 return None
 
-        metadata = {data: row[data] for data in METADATALIST}
-        for key in METADATABLOBLIST:
-            metadata[key] = row[key]
-            if not metadata[key]:
-                del metadata[key]
-
-        for key in LISTFIELDS:
-            metadata[key] = row[key]
-            if metadata[key]:
-                metadata[key] = metadata[key].split(SPLITSTR)
-
-        metadata['dbid'] = row['id']
+        metadata = self._postprocess_read_last_meta(row)
         metadata['previoustrack'] = self.make_previoustracklist()
         return metadata
 

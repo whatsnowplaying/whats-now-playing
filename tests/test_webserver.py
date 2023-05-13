@@ -48,7 +48,8 @@ def test_startstopwebserver(getwebserver):  # pylint: disable=redefined-outer-na
     time.sleep(5)
 
 
-def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-outer-name
     ''' start webserver, read existing data, add new data, then read that '''
     config, metadb = getwebserver
     config.cparser.setValue(
@@ -67,7 +68,7 @@ def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-outer-nam
 
     # handle first write
 
-    metadb.write_to_metadb(metadata={
+    await metadb.write_to_metadb(metadata={
         'title': 'testhtmtitle',
         'artist': 'testhtmartist'
     })
@@ -95,7 +96,7 @@ def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-outer-nam
 
     # handle second write
 
-    metadb.write_to_metadb(metadata={
+    await metadb.write_to_metadb(metadata={
         'artist': 'artisthtm2',
         'title': 'titlehtm2',
     })
@@ -105,7 +106,8 @@ def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-outer-nam
     assert req.text == ' artisthtm2 - titlehtm2'
 
 
-def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-outer-name
     ''' start webserver, read existing data, add new data, then read that '''
     config, metadb = getwebserver
     config.cparser.setValue('weboutput/httpenabled', 'true')
@@ -131,7 +133,7 @@ def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-outer-nam
     assert req.json() == {}
     # handle first write
 
-    metadb.write_to_metadb(metadata={
+    await metadb.write_to_metadb(metadata={
         'title': 'testtxttitle',
         'artist': 'testtxtartist'
     })
@@ -163,7 +165,7 @@ def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-outer-nam
 
     # handle second write
 
-    metadb.write_to_metadb(metadata={
+    await metadb.write_to_metadb(metadata={
         'artist': 'artisttxt2',
         'title': 'titletxt2',
     })

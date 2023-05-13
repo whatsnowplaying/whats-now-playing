@@ -388,7 +388,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                               anntemplate)
                 return
 
-            metadata = self.metadb.read_last_meta()
+            metadata = await self.metadb.read_last_meta_async()
 
             if not metadata:
                 logging.debug('No metadata to announce')
@@ -425,7 +425,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         ''' take a template, fill it in, and post it '''
         if not template:
             return
-        metadata = self.metadb.read_last_meta()
+        metadata = await self.metadb.read_last_meta_async()
         if not metadata:
             metadata = {}
         if 'coverimageraw' in metadata:

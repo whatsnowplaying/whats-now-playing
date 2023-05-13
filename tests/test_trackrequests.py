@@ -4,7 +4,6 @@
 import asyncio
 import logging
 import pathlib
-import threading
 
 import pytest  # pylint: disable=import-error
 import pytest_asyncio  # pylint: disable=import-error
@@ -16,7 +15,7 @@ import nowplaying.trackrequests  # pylint: disable=import-error
 @pytest_asyncio.fixture
 async def trackrequestbootstrap(bootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' bootstrap a configuration '''
-    stopevent = threading.Event()
+    stopevent = asyncio.Event()
     config = bootstrap
     config.cparser.setValue('settings/input', 'jsonreader')
     playlistpath = pathlib.Path(getroot).joinpath('tests', 'playlists', 'json',
@@ -311,7 +310,7 @@ async def test_trackrequest_getrequest_title(trackrequestbootstrap):  # pylint: 
 @pytest.mark.asyncio
 async def test_twofer(bootstrap, getroot):  # pylint: disable=redefined-outer-name
     ''' test twofers '''
-    stopevent = threading.Event()
+    stopevent = asyncio.Event()
     config = bootstrap
     config.cparser.setValue('settings/input', 'json')
     playlistpath = pathlib.Path(getroot).joinpath('tests', 'playlists', 'json',
@@ -336,7 +335,7 @@ async def test_twofer(bootstrap, getroot):  # pylint: disable=redefined-outer-na
     assert not data
 
     testdata = {'artist': 'myartist', 'title': 'mytitle1'}
-    metadb.write_to_metadb(testdata)
+    await metadb.write_to_metadb(testdata)
 
     data = await trackrequest.twofer_request({
         'displayname': 'test',

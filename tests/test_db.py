@@ -41,21 +41,38 @@ def results(expected, metadata):
     assert metadata == {}
 
 
-def test_empty_db(getmetadb):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_empty_db(getmetadb):  # pylint: disable=redefined-outer-name
     ''' test writing false data '''
     metadb = getmetadb
-    metadb.write_to_metadb(metadata=None)
+    await metadb.write_to_metadb(metadata=None)
     readdata = metadb.read_last_meta()
 
     assert readdata is None
 
     metadata = {'filename': 'tests/audio/15_Ghosts_II_64kb_orig.mp3'}
-    metadb.write_to_metadb(metadata=metadata)
+    await metadb.write_to_metadb(metadata=metadata)
     readdata = metadb.read_last_meta()
     assert readdata is None
 
 
-def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_empty_db_async(getmetadb):  # pylint: disable=redefined-outer-name
+    ''' test writing false data '''
+    metadb = getmetadb
+    await metadb.write_to_metadb(metadata=None)
+    readdata = await metadb.read_last_meta_async()
+
+    assert readdata is None
+
+    metadata = {'filename': 'tests/audio/15_Ghosts_II_64kb_orig.mp3'}
+    await metadb.write_to_metadb(metadata=metadata)
+    readdata = await metadb.read_last_meta_async()
+    assert readdata is None
+
+
+@pytest.mark.asyncio
+async def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
     ''' simple data test '''
     metadb = getmetadb
 
@@ -105,14 +122,15 @@ def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
         'track_total': None,
     }
 
-    metadb.write_to_metadb(metadata=expected)
+    await metadb.write_to_metadb(metadata=expected)
     readdata = metadb.read_last_meta()
 
     expected['dbid'] = 1
     results(expected, readdata)
 
 
-def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
     ''' more complex data test '''
     metadb = getmetadb
 
@@ -133,7 +151,7 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'title': 'Lakini\'s Juice',
     }
 
-    metadb.write_to_metadb(metadata=expected)
+    await metadb.write_to_metadb(metadata=expected)
     readdata = metadb.read_last_meta()
 
     expected = {
@@ -190,7 +208,8 @@ def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
     results(expected, readdata)
 
 
-def test_data_dbid(getmetadb):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_data_dbid(getmetadb):  # pylint: disable=redefined-outer-name
     ''' make sure dbid increments '''
     metadb = getmetadb
 
@@ -199,7 +218,7 @@ def test_data_dbid(getmetadb):  # pylint: disable=redefined-outer-name
         'title': '15 Ghosts II',
     }
 
-    metadb.write_to_metadb(metadata=expected)
+    await metadb.write_to_metadb(metadata=expected)
     readdata = metadb.read_last_meta()
 
     expected = {
@@ -207,18 +226,19 @@ def test_data_dbid(getmetadb):  # pylint: disable=redefined-outer-name
         'title': 'Great Title Here',
     }
 
-    metadb.write_to_metadb(metadata=expected)
+    await metadb.write_to_metadb(metadata=expected)
     readdata = metadb.read_last_meta()
 
     assert readdata['dbid'] == 2
 
 
-def test_data_previoustrack(getmetadb):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_data_previoustrack(getmetadb):  # pylint: disable=redefined-outer-name
     ''' test the previoustrack functionality '''
     metadb = getmetadb
 
     for counter in range(4):
-        metadb.write_to_metadb(metadata={
+        await metadb.write_to_metadb(metadata={
             'artist': f'a{counter}',
             'title': f't{counter}'
         })
@@ -240,7 +260,8 @@ def test_empty_setlist(bootstrap):
     nowplaying.db.create_setlist(config)
 
 
-def test_simple_setlist(config_and_getmetadb):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_simple_setlist(config_and_getmetadb):  # pylint: disable=redefined-outer-name
     ''' test a single entry db '''
     config, metadb = config_and_getmetadb
     config.cparser.setValue('setlist/enabled', True)
@@ -250,11 +271,12 @@ def test_simple_setlist(config_and_getmetadb):  # pylint: disable=redefined-oute
         'title': 'Great Title Here',
     }
 
-    metadb.write_to_metadb(metadata=expected)
+    await metadb.write_to_metadb(metadata=expected)
     nowplaying.db.create_setlist(config, databasefile=metadb.databasefile)
 
 
-def test_missingartist_setlist(config_and_getmetadb):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_missingartist_setlist(config_and_getmetadb):  # pylint: disable=redefined-outer-name
     ''' test a single entry db '''
     config, metadb = config_and_getmetadb
     config.cparser.setValue('setlist/enabled', True)
@@ -264,5 +286,5 @@ def test_missingartist_setlist(config_and_getmetadb):  # pylint: disable=redefin
         'title': 'Great Title Here',
     }
 
-    metadb.write_to_metadb(metadata=expected)
+    await metadb.write_to_metadb(metadata=expected)
     nowplaying.db.create_setlist(config, databasefile=metadb.databasefile)

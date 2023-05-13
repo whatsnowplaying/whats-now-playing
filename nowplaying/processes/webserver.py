@@ -183,7 +183,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         htmloutput = INDEXREFRESH
         try:
             if not metadata:
-                metadata = request.app['metadb'].read_last_meta()
+                metadata = await request.app['metadb'].read_last_meta_async()
             if not metadata:
                 metadata = nowplaying.hostmeta.gethostmeta()
                 metadata['httpport'] = request.app['config'].cparser.value(
@@ -202,7 +202,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         source = os.path.basename(template)
         htmloutput = ""
         request.app['config'].get()
-        metadata = request.app['metadb'].read_last_meta()
+        metadata = await request.app['metadb'].read_last_meta_async()
         lastid = await self.getlastid(request, source)
         once = request.app['config'].cparser.value('weboutput/once', type=bool)
         #once = False
@@ -252,7 +252,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     @staticmethod
     async def indextxt_handler(request):
         ''' handle static index.txt '''
-        metadata = request.app['metadb'].read_last_meta()
+        metadata = await request.app['metadb'].read_last_meta_async()
         txtoutput = ""
         if metadata:
             request.app['config'].get()
@@ -279,7 +279,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         # this makes the client code significantly easier
         image = nowplaying.utils.TRANSPARENT_PNG_BIN
         try:
-            metadata = request.app['metadb'].read_last_meta()
+            metadata = await request.app['metadb'].read_last_meta_async()
             if metadata and metadata.get(imgtype):
                 image = metadata[imgtype]
         except:  #pylint: disable=bare-except
@@ -306,7 +306,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     async def api_v1_last_handler(self, request):
         ''' v1/last just returns the metadata'''
         data = {}
-        if metadata := request.app['metadb'].read_last_meta():
+        if metadata := await request.app['metadb'].read_last_meta_async():
             try:
                 del metadata['dbid']
                 data = self._base64ifier(metadata)
@@ -364,7 +364,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         try:
             while not self.stopevent.is_set(
             ) and not endloop and not websocket.closed:
-                metadata = request.app['metadb'].read_last_meta()
+                metadata = await request.app['metadb'].read_last_meta_async()
                 if not metadata or not metadata.get('artist'):
                     await asyncio.sleep(5)
                     continue
@@ -408,7 +408,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
     async def websocket_lastjson_handler(self, request, websocket):
         ''' handle singular websocket request '''
-        metadata = request.app['metadb'].read_last_meta()
+        metadata = await request.app['metadb'].read_last_meta_async()
         del metadata['dbid']
         if not websocket.closed:
             await websocket.send_json(self._base64ifier(metadata))
@@ -421,7 +421,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         while not metadata and not websocket.closed:
             if self.stopevent.is_set():
                 return time.time()
-            metadata = database.read_last_meta()
+            metadata = await database.read_last_meta_async()
             await asyncio.sleep(1)
         del metadata['dbid']
         if not websocket.closed:

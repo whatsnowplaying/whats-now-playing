@@ -659,7 +659,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         ''' twofer request '''
 
         metadb = nowplaying.db.MetadataDB()
-        metadata = metadb.read_last_meta()
+        metadata = await metadb.read_last_meta_async()
         if not metadata:
             logging.debug('Twofer: No currently playing track? skipping')
             return {}
