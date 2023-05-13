@@ -125,7 +125,7 @@ async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-out
 
     req = requests.get('http://localhost:8899/index.txt', timeout=5)
     assert req.status_code == 200
-    assert req.text == ''
+    assert req.text == ''  # sourcery skip: simplify-empty-collection-comparison
 
     # should return empty
     req = requests.get('http://localhost:8899/v1/last', timeout=5)
