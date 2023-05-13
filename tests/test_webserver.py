@@ -107,7 +107,7 @@ async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-out
 
 
 @pytest.mark.asyncio
-async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-outer-name
+async def test_webserver_txttest(getwebserver):    # pylint: disable=redefined-outer-name
     ''' start webserver, read existing data, add new data, then read that '''
     config, metadb = getwebserver
     config.cparser.setValue('weboutput/httpenabled', 'true')
@@ -125,7 +125,7 @@ async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-out
 
     req = requests.get('http://localhost:8899/index.txt', timeout=5)
     assert req.status_code == 200
-    assert req.text == ''
+    assert not req.text
 
     # should return empty
     req = requests.get('http://localhost:8899/v1/last', timeout=5)
