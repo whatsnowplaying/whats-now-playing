@@ -40,7 +40,7 @@ class TwitchSupport:  # pylint: disable=too-many-instance-attributes
         if stopevent:
             self.stopevent = stopevent
         else:
-            self.stopevent = threading.Event()
+            self.stopevent = asyncio.Event()
         self.widgets = None
         self.chat = None
         self.redemptions = None
