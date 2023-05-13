@@ -27,8 +27,9 @@ async def get_user_image(twitch, loginname):
     image = None
     try:
         user = await first(twitch.get_users(logins=loginname))
-        req = requests.get(user.profile_image_url, timeout=5)
-        image = nowplaying.utils.image2png(req.content)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(user.profile_image_url, timeout=5) as resp:
+                image = nowplaying.utils.image2png(await resp.read())
     except Exception as error:  #pylint: disable=broad-except
         logging.error(error)
     return image
