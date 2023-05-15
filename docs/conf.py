@@ -82,8 +82,6 @@ basedownload = f'{releaselink}/download'
 
 extlinks = {
     'stabledownloadlink':
-    (f'{basedownload}/{stablerelease}/NowPlaying-{stablerelease}-%s.zip',
-     '%s'),
-    'rcdownloadlink':
-    (f'{basedownload}/{rcrelease}/NowPlaying-{rcrelease}-%s.zip', '%s')
+    (f'{basedownload}/{stablerelease}/NowPlaying-{stablerelease}-%s.zip', '%s'),
+    'rcdownloadlink': (f'{basedownload}/{rcrelease}/NowPlaying-{rcrelease}-%s.zip', '%s')
 }

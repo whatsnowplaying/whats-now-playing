@@ -117,8 +117,7 @@ for execname, execpy in executables.items():
                  binaries=[],
                  datas=[('nowplaying/resources/*', 'resources/'),
                         ('nowplaying/templates/*', 'templates/')],
-                 hiddenimports=ARTEXTRAS_MODULES + INPUT_MODULES +
-                 RECOGNITION_MODULES,
+                 hiddenimports=ARTEXTRAS_MODULES + INPUT_MODULES + RECOGNITION_MODULES,
                  hookspath=[('nowplaying/__pyinstaller')],
                  runtime_hooks=[],
                  excludes=[],

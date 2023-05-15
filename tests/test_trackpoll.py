@@ -32,9 +32,7 @@ async def trackpollbootstrap(bootstrap, getroot, tmp_path):  # pylint: disable=r
     logging.debug('output = %s', txtfile)
     config.cparser.sync()
     trackpoll = nowplaying.processes.trackpoll.TrackPoll(  # pylint: disable=unused-variable
-        stopevent=stopevent,
-        config=config,
-        testmode=True)
+        stopevent=stopevent, config=config, testmode=True)
     yield config
     stopevent.set()
     await asyncio.sleep(2)
@@ -82,11 +80,7 @@ async def test_trackpoll_basic(trackpollbootstrap):  # pylint: disable=redefined
         text = filein.readlines()
     assert text[0].strip() == 'NIN'
 
-    await write_json_metadata(config=config,
-                              metadata={
-                                  'artist': 'NIN',
-                                  'title': 'Ghosts'
-                              })
+    await write_json_metadata(config=config, metadata={'artist': 'NIN', 'title': 'Ghosts'})
     with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
     assert text[0].strip() == 'NIN'
@@ -102,10 +96,7 @@ async def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disab
     config.cparser.setValue('textoutput/txttemplate', str(template))
     config.cparser.setValue('control/paused', False)
     config.cparser.sync()
-    metadata = {
-        'filename':
-        str(getroot.joinpath('tests', 'audio', '15_Ghosts_II_64kb_orig.mp3'))
-    }
+    metadata = {'filename': str(getroot.joinpath('tests', 'audio', '15_Ghosts_II_64kb_orig.mp3'))}
 
     txtoutput = config.cparser.value('textoutput/file')
     await write_json_metadata(config=config, metadata=metadata)
@@ -146,8 +137,7 @@ async def test_trackpoll_titleisfile(trackpollbootstrap, getroot):  # pylint: di
     config.cparser.setValue('textoutput/txttemplate', str(template))
     config.cparser.setValue('control/paused', False)
     config.cparser.sync()
-    title = str(
-        getroot.joinpath('tests', 'audio', '15_Ghosts_II_64kb_orig.mp3'))
+    title = str(getroot.joinpath('tests', 'audio', '15_Ghosts_II_64kb_orig.mp3'))
     await write_json_metadata(config=config, metadata={'title': title})
     with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()
@@ -189,11 +179,7 @@ async def test_trackpoll_badfile(trackpollbootstrap, getroot):  # pylint: disabl
     config.cparser.setValue('control/paused', False)
     config.cparser.sync()
 
-    metadata = {
-        'title': 'title',
-        'artist': 'artist',
-        'filename': 'completejunk'
-    }
+    metadata = {'title': 'title', 'artist': 'artist', 'filename': 'completejunk'}
     await write_json_metadata(config=config, metadata=metadata)
     with open(txtoutput, encoding='utf-8') as filein:
         text = filein.readlines()

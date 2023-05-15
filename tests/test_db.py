@@ -15,8 +15,7 @@ def getmetadb(bootstrap):
     ''' create a temporary directory '''
     config = bootstrap  # pylint: disable=unused-variable
     with tempfile.TemporaryDirectory() as newpath:
-        yield nowplaying.db.MetadataDB(databasefile=os.path.join(
-            newpath, 'test.db'),
+        yield nowplaying.db.MetadataDB(databasefile=os.path.join(newpath, 'test.db'),
                                        initialize=True)
 
 
@@ -26,8 +25,7 @@ def config_and_getmetadb(bootstrap):
     config = bootstrap  # pylint: disable=unused-variable
     with tempfile.TemporaryDirectory() as newpath:
         config.setlistdir = os.path.join(newpath, 'sl')
-        yield config, nowplaying.db.MetadataDB(databasefile=os.path.join(
-            newpath, 'test.db'),
+        yield config, nowplaying.db.MetadataDB(databasefile=os.path.join(newpath, 'test.db'),
                                                initialize=True)
 
 
@@ -143,8 +141,7 @@ async def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'coverimageraw': "Grr! I'm an image!",
         'date': '1997',
         'deck': 1,
-        'filename':
-        "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3",
+        'filename': "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3",
         'genre': 'Rock',
         'key': 'C#m',
         'label': 'Radioactive Records',
@@ -177,8 +174,7 @@ async def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'discsubtitle': None,
         'duration': None,
         'duration_hhmmss': None,
-        'filename':
-        "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3",
+        'filename': "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3",
         'fpcalcduration': None,
         'fpcalcfingerprint': None,
         'genre': 'Rock',
@@ -238,10 +234,7 @@ async def test_data_previoustrack(getmetadb):  # pylint: disable=redefined-outer
     metadb = getmetadb
 
     for counter in range(4):
-        await metadb.write_to_metadb(metadata={
-            'artist': f'a{counter}',
-            'title': f't{counter}'
-        })
+        await metadb.write_to_metadb(metadata={'artist': f'a{counter}', 'title': f't{counter}'})
 
     readdata = metadb.read_last_meta()
 

@@ -24,9 +24,8 @@ class Plugin(M3UPlugin):
         super().__init__(config=config, m3udir=m3udir, qsettings=qsettings)
         self.displayname = "VirtualDJ"
         self.databasefile = pathlib.Path(
-            QStandardPaths.standardLocations(
-                QStandardPaths.CacheLocation)[0]).joinpath(
-                    'virtualdj', 'virtualdj.db')
+            QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]).joinpath(
+                'virtualdj', 'virtualdj.db')
         self.database = None
 
     def initdb(self):
@@ -79,10 +78,8 @@ class Plugin(M3UPlugin):
         vdjdir = pathlib.Path.home().joinpath('Documents', 'VirtualDJ')
         if vdjdir.exists():
             self.config.cparser.value('settings/input', 'virtualdj')
-            self.config.cparser.value('virtualdj/history',
-                                      str(vdjdir.joinpath('History')))
-            self.config.cparser.value('virtualdj/playlists',
-                                      str(vdjdir.joinpath('Playlists')))
+            self.config.cparser.value('virtualdj/history', str(vdjdir.joinpath('History')))
+            self.config.cparser.value('virtualdj/playlists', str(vdjdir.joinpath('Playlists')))
             return True
 
         return False
@@ -128,10 +125,8 @@ class Plugin(M3UPlugin):
     def defaults(self, qsettings):
         ''' (re-)set the default configuration values for this plugin '''
         vdjdir = pathlib.Path.home().joinpath('Documents', 'VirtualDJ')
-        qsettings.setValue('virtualdj/history',
-                           str(vdjdir.joinpath('History')))
-        qsettings.setValue('virtualdj/playlists',
-                           str(vdjdir.joinpath('Playlists')))
+        qsettings.setValue('virtualdj/history', str(vdjdir.joinpath('History')))
+        qsettings.setValue('virtualdj/playlists', str(vdjdir.joinpath('Playlists')))
         qsettings.setValue('virtualdj/useremix', True)
 
     def on_playlist_reread_button(self):
@@ -142,10 +137,8 @@ class Plugin(M3UPlugin):
         ''' filename button clicked action'''
         startdir = self.qwidget.playlistdir_lineedit.text()
         if not startdir:
-            startdir = str(pathlib.Path.home().joinpath(
-                'Documents', 'VirtualDJ'))
-        if filename := QFileDialog.getExistingDirectory(
-                self.qwidget, 'Select directory', startdir):
+            startdir = str(pathlib.Path.home().joinpath('Documents', 'VirtualDJ'))
+        if filename := QFileDialog.getExistingDirectory(self.qwidget, 'Select directory', startdir):
             self.qwidget.playlistdir_lineedit.setText(filename[0])
 
     def on_history_dir_button(self):
@@ -153,11 +146,8 @@ class Plugin(M3UPlugin):
         if self.qwidget.historydir_lineedit.text():
             startdir = self.qwidget.historydir_lineedit.text()
         else:
-            startdir = str(pathlib.Path.home().joinpath(
-                'Documents', 'VirtualDJ', 'History'))
-        if dirname := QFileDialog.getExistingDirectory(self.qwidget,
-                                                       'Select directory',
-                                                       startdir):
+            startdir = str(pathlib.Path.home().joinpath('Documents', 'VirtualDJ', 'History'))
+        if dirname := QFileDialog.getExistingDirectory(self.qwidget, 'Select directory', startdir):
             self.qwidget.historydir_lineedit.setText(dirname)
 
     def connect_settingsui(self, qwidget, uihelp):
@@ -166,37 +156,27 @@ class Plugin(M3UPlugin):
         self.uihelp = uihelp
         qwidget.historydir_button.clicked.connect(self.on_history_dir_button)
         qwidget.playlistdir_button.clicked.connect(self.on_playlistdir_button)
-        qwidget.playlist_reread_button.clicked.connect(
-            self.on_playlist_reread_button)
+        qwidget.playlist_reread_button.clicked.connect(self.on_playlist_reread_button)
 
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
-        qwidget.historydir_lineedit.setText(
-            self.config.cparser.value('virtualdj/history'))
-        qwidget.playlistdir_lineedit.setText(
-            self.config.cparser.value('virtualdj/playlists'))
+        qwidget.historydir_lineedit.setText(self.config.cparser.value('virtualdj/history'))
+        qwidget.playlistdir_lineedit.setText(self.config.cparser.value('virtualdj/playlists'))
         qwidget.remix_checkbox.setChecked(
-            self.config.cparser.value('virtualdj/useremix',
-                                      type=bool,
-                                      defaultValue=True))
+            self.config.cparser.value('virtualdj/useremix', type=bool, defaultValue=True))
 
     def verify_settingsui(self, qwidget):
         ''' verify settings '''
         if not os.path.exists(qwidget.historydir_lineedit.text()):
-            raise PluginVerifyError(
-                r'Virtual DJ History directory must exist.')
+            raise PluginVerifyError(r'Virtual DJ History directory must exist.')
         if not os.path.exists(qwidget.playlistdir_lineedit.text()):
-            raise PluginVerifyError(
-                r'Virtual DJ Playlists directory must exist.')
+            raise PluginVerifyError(r'Virtual DJ Playlists directory must exist.')
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
-        self.config.cparser.setValue('virtualdj/history',
-                                     qwidget.historydir_lineedit.text())
-        self.config.cparser.setValue('virtualdj/playlists',
-                                     qwidget.playlistdir_lineedit.text())
-        self.config.cparser.setValue('virtualdj/useremix',
-                                     qwidget.remix_checkbox.isChecked())
+        self.config.cparser.setValue('virtualdj/history', qwidget.historydir_lineedit.text())
+        self.config.cparser.setValue('virtualdj/playlists', qwidget.playlistdir_lineedit.text())
+        self.config.cparser.setValue('virtualdj/useremix', qwidget.remix_checkbox.isChecked())
 
     def desc_settingsui(self, qwidget):
         ''' description '''

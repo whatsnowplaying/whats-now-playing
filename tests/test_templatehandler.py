@@ -16,8 +16,7 @@ def gettemplatehandler(getroot, bootstrap, request):
     config = bootstrap  # pylint: disable=unused-variable
     mark = request.node.get_closest_marker("templatesettings")
     if mark and 'template' in mark.kwargs:
-        template = os.path.join(getroot, 'tests', 'templates',
-                                mark.kwargs['template'])
+        template = os.path.join(getroot, 'tests', 'templates', mark.kwargs['template'])
     else:
         template = None
     return nowplaying.utils.TemplateHandler(filename=template)

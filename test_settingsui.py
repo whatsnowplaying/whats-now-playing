@@ -11,15 +11,12 @@ from PySide6.QtCore import QFile, Qt, Slot
 from PySide6.QtUiTools import QUiLoader
 
 GENERAL = [
-    'about', 'general', 'filter', 'obsws', 'quirks', 'settings', 'source',
-    'twitchbot', 'webserver'
+    'about', 'general', 'filter', 'obsws', 'quirks', 'settings', 'source', 'twitchbot', 'webserver'
 ]
 
 INPUTS = ['inputs_m3u', 'inputs_mpris2', 'inputs_serato']
 
-ARTISTEXTRAS = [
-    'artistextras_discogs', 'artistextras_fanarttv', 'artistextras_theaudiodb'
-]
+ARTISTEXTRAS = ['artistextras_discogs', 'artistextras_fanarttv', 'artistextras_theaudiodb']
 
 RECOG = ['recognition_acoustidmb']
 
@@ -59,19 +56,15 @@ class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods
             self.qtui.settings_stack.addWidget(self.widgets[basic])
             self._load_list_item(f'{basic}', self.widgets[basic])
 
-        self.qtui.settings_list.currentRowChanged.connect(
-            self._set_stacked_display)
+        self.qtui.settings_list.currentRowChanged.connect(self._set_stacked_display)
 
     def _connect_recognition_acoustidmb_widget(self, qobject):
-        qobject.acoustid_checkbox.clicked.connect(
-            self._acoustidmb_checkbox_hook)
+        qobject.acoustid_checkbox.clicked.connect(self._acoustidmb_checkbox_hook)
 
     @Slot()
     def _acoustidmb_checkbox_hook(self):
-        if self.widgets['recognition_acoustidmb'].acoustid_checkbox.isChecked(
-        ):
-            self.widgets[
-                'recognition_acoustidmb'].musicbrainz_checkbox.setChecked(True)
+        if self.widgets['recognition_acoustidmb'].acoustid_checkbox.isChecked():
+            self.widgets['recognition_acoustidmb'].musicbrainz_checkbox.setChecked(True)
 
     @staticmethod
     def _connect_webserver_widget(qobject):
@@ -94,8 +87,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods
 
     def _connect_filter_widget(self, qobject):
         '''  connect regex filter to template picker'''
-        qobject.add_recommended_button.clicked.connect(
-            self.on_filter_add_recommended_button)
+        qobject.add_recommended_button.clicked.connect(self.on_filter_add_recommended_button)
         qobject.add_button.clicked.connect(self.on_filter_regex_add_button)
         qobject.del_button.clicked.connect(self.on_filter_regex_del_button)
 

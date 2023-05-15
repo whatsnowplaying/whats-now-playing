@@ -6,6 +6,7 @@ import json
 import logging
 import pathlib
 import random
+import typing as t
 
 from nowplaying.inputs import InputPlugin
 
@@ -23,14 +24,10 @@ class Plugin(InputPlugin):
 
 #### Data feed methods
 
-    async def getplayingtrack(self):
+    async def getplayingtrack(self) -> t.Optional[dict[str, t.Any]]:
         ''' Get the currently playing track '''
-        await asyncio.sleep(
-            self.config.cparser.value('jsoninput/delay',
-                                      type=int,
-                                      defaultValue=5))
-        filepath = pathlib.Path(
-            self.config.cparser.value('jsoninput/filename'))
+        await asyncio.sleep(self.config.cparser.value('jsoninput/delay', type=int, defaultValue=5))
+        filepath = pathlib.Path(self.config.cparser.value('jsoninput/filename'))
 
         if not filepath.exists():
             logging.error('%s does not exist', filepath)
@@ -44,17 +41,17 @@ class Plugin(InputPlugin):
 
         return {}
 
-    async def getrandomtrack(self, playlist):
+    async def getrandomtrack(self, playlist) -> t.Optional[str]:
         ''' return a random track '''
         if not self.playlists or not self.playlists.get(playlist):
             return None
 
         return random.choice(self.playlists[playlist])
 
-    def load_playlists(self, dirpath, playlistfile):
+    def load_playlists(self, dirpath: pathlib.Path, playlistfile: str):
         ''' load a playlist file '''
         with open(playlistfile, mode='rb') as fhin:
-            datain = json.load(fhin)
+            datain: dict[str, list[str]] = json.load(fhin)
 
         self.playlists = {}
         for listname, filelist in datain.items():

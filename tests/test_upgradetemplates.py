@@ -21,8 +21,7 @@ def upgrade_bootstrap(getroot):
         bundledir = os.path.join(getroot, 'nowplaying')
         logging.basicConfig(level=logging.DEBUG)
         nowplaying.bootstrap.set_qt_names(appname='testsuite')
-        config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                              testmode=True)
+        config = nowplaying.config.ConfigFile(bundledir=bundledir, testmode=True)
         config.cparser.sync()
         old_cwd = os.getcwd()
         os.chdir(newpath)
@@ -107,9 +106,8 @@ def test_upgrade_old(upgrade_bootstrap, getroot):  # pylint: disable=redefined-o
     srcdir = os.path.join(bundledir, 'templates')
     destdir = os.path.join(testpath, 'testsuite', 'templates')
     pathlib.Path(destdir).mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(
-        os.path.join(getroot, 'tests', 'templates', 'songquotes.txt'),
-        os.path.join(destdir, 'songquotes.new'))
+    shutil.copyfile(os.path.join(getroot, 'tests', 'templates', 'songquotes.txt'),
+                    os.path.join(destdir, 'songquotes.new'))
     touchfile = os.path.join(destdir, 'songquotes.txt')
     pathlib.Path(touchfile).touch()
     nowplaying.upgrade.UpgradeTemplates(bundledir=bundledir, testdir=testpath)

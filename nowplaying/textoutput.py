@@ -2,6 +2,9 @@
 ''' write to a text file '''
 
 import logging
+import typing as t
+
+from nowplaying.utils import TemplateHandler
 
 
 def deltxttrack(config=None):
@@ -19,15 +22,18 @@ def deltxttrack(config=None):
 
 
 def writetxttrack(config=None,
-                  filename=None,
-                  templatehandler=None,
-                  metadata=None,
+                  filename: t.Optional[str] = None,
+                  templatehandler: t.Optional[TemplateHandler] = None,
+                  metadata: t.Optional[dict[str, t.Any]] = None,
                   clear=False):
     ''' write new track info '''
 
     if not filename and not config:
         logging.debug('no filename and no config?!?')
         return
+
+    if not metadata:
+        metadata = {}
 
     if not filename:
         filename = config.cparser.value('textoutput/file')

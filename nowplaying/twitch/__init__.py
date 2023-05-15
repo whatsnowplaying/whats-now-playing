@@ -24,10 +24,7 @@ import nowplaying.twitch.chat
 import nowplaying.twitch.redemptions
 import nowplaying.twitch.utils
 
-USER_SCOPE = [
-    AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ,
-    AuthScope.CHAT_EDIT
-]
+USER_SCOPE = [AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 
 
 class TwitchSupport:  # pylint: disable=too-many-instance-attributes
@@ -62,8 +59,7 @@ class TwitchSupport:  # pylint: disable=too-many-instance-attributes
         self.tasks.add(task)
         task.add_done_callback(self.tasks.discard)
         await asyncio.sleep(5)
-        task = self.loop.create_task(
-            self.redemptions.run_redemptions(self.twitchlogin, self.chat))
+        task = self.loop.create_task(self.redemptions.run_redemptions(self.twitchlogin, self.chat))
         self.tasks.add(task)
         task.add_done_callback(self.tasks.discard)
 
@@ -75,8 +71,8 @@ class TwitchSupport:  # pylint: disable=too-many-instance-attributes
     def start(self):
         ''' start twitch support '''
         try:
-            self.chat = nowplaying.twitch.chat.TwitchChat(
-                config=self.config, stopevent=self.stopevent)
+            self.chat = nowplaying.twitch.chat.TwitchChat(config=self.config,
+                                                          stopevent=self.stopevent)
             self.redemptions = nowplaying.twitch.redemptions.TwitchRedemptions(
                 config=self.config, stopevent=self.stopevent)
             if not self.loop:
@@ -123,24 +119,18 @@ class TwitchSettings:
         '''  connect twitch '''
         self.widget = widget
         widget.chatbot_username_line.setBuddy(widget.token_lineedit)
-        self.widget.token_lineedit.editingFinished.connect(
-            self.update_token_name)
+        self.widget.token_lineedit.editingFinished.connect(self.update_token_name)
 
     def load(self, config, widget):
         ''' load the settings window '''
         self.widget = widget
-        widget.enable_checkbox.setChecked(
-            config.cparser.value('twitchbot/enabled', type=bool))
-        widget.clientid_lineedit.setText(
-            config.cparser.value('twitchbot/clientid'))
-        widget.channel_lineedit.setText(
-            config.cparser.value('twitchbot/channel'))
+        widget.enable_checkbox.setChecked(config.cparser.value('twitchbot/enabled', type=bool))
+        widget.clientid_lineedit.setText(config.cparser.value('twitchbot/clientid'))
+        widget.channel_lineedit.setText(config.cparser.value('twitchbot/channel'))
         #widget.username_lineedit.setText(
         #    config.cparser.value('twitchbot/username'))
-        widget.token_lineedit.setText(
-            config.cparser.value('twitchbot/chattoken'))
-        widget.secret_lineedit.setText(
-            config.cparser.value('twitchbot/secret'))
+        widget.token_lineedit.setText(config.cparser.value('twitchbot/chattoken'))
+        widget.secret_lineedit.setText(config.cparser.value('twitchbot/secret'))
         self.update_token_name()
 
     @staticmethod
@@ -156,8 +146,7 @@ class TwitchSettings:
         newchattoken = widget.token_lineedit.text()
         newchattoken = newchattoken.replace('oauth:', '')
 
-        config.cparser.setValue('twitchbot/enabled',
-                                widget.enable_checkbox.isChecked())
+        config.cparser.setValue('twitchbot/enabled', widget.enable_checkbox.isChecked())
         config.cparser.setValue('twitchbot/channel', newchannel)
         config.cparser.setValue('twitchbot/clientid', newclientid)
         config.cparser.setValue('twitchbot/secret', newsecret)
@@ -194,8 +183,7 @@ class TwitchSettings:
         if self.token == token:
             return
         if token := token.replace('oauth:', ''):
-            if username := nowplaying.twitch.utils.qtsafe_validate_token(
-                    token):
+            if username := nowplaying.twitch.utils.qtsafe_validate_token(token):
                 self.widget.chatbot_username_line.setText(username)
             else:
                 self.widget.chatbot_username_line.setText('(Invalid token?)')

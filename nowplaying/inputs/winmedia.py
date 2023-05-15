@@ -10,8 +10,7 @@ try:
 
     from winsdk.windows.media.control import \
         GlobalSystemMediaTransportControlsSessionManager as MediaManager
-    from winsdk.windows.storage.streams import (DataReader, Buffer,
-                                                InputStreamOptions)
+    from winsdk.windows.storage.streams import (DataReader, Buffer, InputStreamOptions)
     WINMEDIA_STATUS = True
 except ImportError:
     WINMEDIA_STATUS = False
@@ -43,9 +42,8 @@ class Plugin(InputPlugin):
 
     def desc_settingsui(self, qwidget):
         ''' provide a description for the plugins page '''
-        qwidget.setText(
-            'WinMedia will read data from Windows Media Transport'
-            ' -compatible software such as Soundcloud and Spotify.')
+        qwidget.setText('WinMedia will read data from Windows Media Transport'
+                        ' -compatible software such as Soundcloud and Spotify.')
 
     @staticmethod
     async def _getcoverimage(thumbref):
@@ -54,13 +52,11 @@ class Plugin(InputPlugin):
             thumb_read_buffer = Buffer(5000000)
 
             readable_stream = await thumbref.open_read_async()
-            readable_stream.read_async(thumb_read_buffer,
-                                       thumb_read_buffer.capacity,
+            readable_stream.read_async(thumb_read_buffer, thumb_read_buffer.capacity,
                                        InputStreamOptions.READ_AHEAD)
             buffer_reader = DataReader.from_buffer(thumb_read_buffer)
             if byte_buffer := bytearray(
-                    buffer_reader.read_buffer(
-                        buffer_reader.unconsumed_buffer_length)):
+                    buffer_reader.read_buffer(buffer_reader.unconsumed_buffer_length)):
                 return nowplaying.utils.image2png(byte_buffer)
         except:  # pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
@@ -99,8 +95,7 @@ class Plugin(InputPlugin):
 
             # avoid expensive image2png call
             diff = any(
-                newdata.get(cmpval) != self.metadata.get(cmpval)
-                for cmpval in mapping.values())
+                newdata.get(cmpval) != self.metadata.get(cmpval) for cmpval in mapping.values())
 
             if not diff:
                 continue

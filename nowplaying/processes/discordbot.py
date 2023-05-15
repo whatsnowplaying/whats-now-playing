@@ -14,6 +14,7 @@ import signal
 import sys
 import threading
 import traceback
+import typing as t
 
 import pypresence
 import discord
@@ -31,7 +32,7 @@ class DiscordSupport:
     def __init__(self, config=None, stopevent=None):
         self.config = config
         self.stopevent = stopevent
-        self.client = {}
+        self.client: dict[str, t.Any] = {}
         self.jinja2 = nowplaying.utils.TemplateHandler()
         self.tasks = set()
         signal.signal(signal.SIGINT, self.forced_stop)
@@ -56,8 +57,7 @@ class DiscordSupport:
         task = loop.create_task(self.client['bot'].connect(reconnect=True))
         self.tasks.add(task)
         task.add_done_callback(self.tasks.discard)
-        while not self.stopevent.is_set() and not self.client['bot'].is_ready(
-        ):
+        while not self.stopevent.is_set() and not self.client['bot'].is_ready():
             await asyncio.sleep(1)
         logging.debug('bot setup')
 
@@ -92,12 +92,10 @@ class DiscordSupport:
 
     async def _update_bot(self, templateout):
         if channelname := self.config.cparser.value(
-                'twitchbot/channel') and self.config.cparser.value(
-                    'twitchbot/enabled', type=bool):
-            activity = discord.Streaming(
-                platform='Twitch',
-                name=templateout,
-                url=f'https://twitch.tv/{channelname}')
+                'twitchbot/channel') and self.config.cparser.value('twitchbot/enabled', type=bool):
+            activity = discord.Streaming(platform='Twitch',
+                                         name=templateout,
+                                         url=f'https://twitch.tv/{channelname}')
         else:
             activity = discord.Game(templateout)
         try:
@@ -108,8 +106,7 @@ class DiscordSupport:
 
     async def _update_ipc(self, templateout):
         try:
-            await self.client['ipc'].update(state='Streaming',
-                                            details=templateout)
+            await self.client['ipc'].update(state='Streaming', details=templateout)
         except ConnectionRefusedError:
             logging.error('Cannot connect to discord client.')
             del self.client['ipc']
@@ -161,8 +158,7 @@ class DiscordSupport:
                 if not metadata:
                     continue
 
-                templatehandler = nowplaying.utils.TemplateHandler(
-                    filename=template)
+                templatehandler = nowplaying.utils.TemplateHandler(filename=template)
                 mytime = watcher.updatetime
                 templateout = templatehandler.generate(metadata)
                 for mode, func in client.items():
@@ -192,7 +188,7 @@ def stop(pid):
         pass
 
 
-def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argument
+def start(stopevent: threading.Event, bundledir: str, testmode: bool = False):  #pylint: disable=unused-argument
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'DiscordBot'
 
@@ -202,11 +198,8 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
         nowplaying.bootstrap.set_qt_names(appname='testsuite')
     else:
         nowplaying.bootstrap.set_qt_names()
-    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log',
-                                                rotate=False)
-    config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                          logpath=logpath,
-                                          testmode=testmode)
+    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log', rotate=False)
+    config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=logpath, testmode=testmode)
     logging.info('boot up')
     try:
         discordsupport = DiscordSupport(stopevent=stopevent, config=config)
