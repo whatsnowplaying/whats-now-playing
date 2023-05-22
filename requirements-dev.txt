@@ -2,6 +2,6 @@
 # development
 #
 pip-upgrader
-pyinstaller==5.10.1
+pyinstaller==5.11.0
 pyinstaller_versionfile==2.1.1
 yapf
