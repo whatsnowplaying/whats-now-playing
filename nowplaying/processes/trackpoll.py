@@ -265,7 +265,14 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             metadata = await self.metadataprocessors.getmoremetadata(metadata=metadata,
                                                                      imagecache=self.imagecache)
             if duration := metadata.get('duration'):
-                metadata['duration_hhmmss'] = nowplaying.utils.humanize_time(duration)
+                if isinstance(duration, str):
+                    duration = int(duration)
+                if isinstance(duration, int):
+                    metadata['duration_hhmmss'] = nowplaying.utils.humanize_time(duration)
+                else:
+                    logging.error('duration was not a str or it: %s %s', metadata['duration'],
+                                  type(duration))
+                    del metadata['duration']
         except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
