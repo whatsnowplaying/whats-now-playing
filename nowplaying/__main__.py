@@ -8,11 +8,10 @@ import platform
 import socket
 import sys
 
-from PySide6.QtCore import QCoreApplication, Qt  # pylint: disable=no-name-in-module
-from PySide6.QtGui import QIcon  # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QApplication  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QCoreApplication, Qt  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtGui import QIcon  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtWidgets import QApplication  # pylint: disable=import-error, no-name-in-module
 
-import nowplaying
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db

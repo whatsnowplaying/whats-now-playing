@@ -15,6 +15,7 @@ from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint
 
 import nowplaying.artistextras
 import nowplaying.inputs
+import nowplaying.pluginimporter
 import nowplaying.recognition
 import nowplaying.utils
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
@@ -208,17 +209,17 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
     def _initial_plugins(self):
 
-        self.plugins['inputs'] = nowplaying.utils.import_plugins(
+        self.plugins['inputs'] = nowplaying.pluginimporter.import_plugins(
             nowplaying.inputs)
         if self.beam and self.plugins['inputs']['nowplaying.inputs.beam']:
             del self.plugins['inputs']['nowplaying.inputs.beam']
         self.pluginobjs['inputs'] = {}
-        self.plugins['recognition'] = nowplaying.utils.import_plugins(
+        self.plugins['recognition'] = nowplaying.pluginimporter.import_plugins(
             nowplaying.recognition)
         self.pluginobjs['recognition'] = {}
 
         if not self.beam:
-            self.plugins['artistextras'] = nowplaying.utils.import_plugins(
+            self.plugins['artistextras'] = nowplaying.pluginimporter.import_plugins(
                 nowplaying.artistextras)
             self.pluginobjs['artistextras'] = {}
 

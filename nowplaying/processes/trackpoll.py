@@ -18,6 +18,7 @@ import nowplaying.frozen
 import nowplaying.imagecache
 import nowplaying.inputs
 import nowplaying.metadata
+import nowplaying.pluginimporter
 import nowplaying.trackrequests
 import nowplaying.textoutput
 import nowplaying.utils
@@ -49,7 +50,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self.input = None
         self.previousinput = None
         self.inputname = None
-        self.plugins = nowplaying.utils.import_plugins(nowplaying.inputs)
+        self.plugins = nowplaying.pluginimporter.import_plugins(nowplaying.inputs)
         self.previoustxttemplate = None
         self.txttemplatehandler = None
         self.imagecache = None

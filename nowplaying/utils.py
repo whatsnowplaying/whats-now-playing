@@ -5,10 +5,8 @@ from html.parser import HTMLParser
 
 import base64
 import copy
-import importlib
 import io
 import logging
-import pkgutil
 import os
 import re
 import time
@@ -103,37 +101,6 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
         return rendertext
-
-
-def import_plugins(namespace):
-    ''' import plugins and return an object
-        with all of them '''
-
-    def iter_ns(ns_pkg):
-        ''' iterate over a package and return children.
-            used to monkey patch in plugins
-        '''
-        prefix = f'{ns_pkg.__name__}.'
-        for pkg in pkgutil.iter_modules(ns_pkg.__path__, prefix):
-            if 'test' not in pkg[1]:
-                yield pkg[1]
-
-        # special handling when the package is bundled with PyInstaller
-        # See https://github.com/pyinstaller/pyinstaller/issues/1905#issuecomment-445787510
-        toc = set()
-        for importer in pkgutil.iter_importers(
-                ns_pkg.__name__.partition(".")[0]):  # pragma: no cover
-            if hasattr(importer, 'toc'):
-                toc |= importer.toc
-        for name in toc:  # pragma: no cover
-            if name.startswith(prefix):
-                yield name
-
-    plugins = {
-        name: importlib.import_module(name)
-        for name in iter_ns(namespace)
-    }
-    return plugins
 
 
 def image2png(rawdata):
