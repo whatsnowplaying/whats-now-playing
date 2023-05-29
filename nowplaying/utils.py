@@ -224,10 +224,16 @@ def titlestripper_advanced(title: str = '',
     return trackname
 
 
-def humanize_time(seconds: int) -> str:
+def humanize_time(seconds: t.Any) -> str:
     ''' convert seconds into hh:mm:ss '''
+
+    try:
+        convseconds = int(float(seconds))
+    except (ValueError,TypeError):
+        return ''
+
     if seconds > 3600:
-        return time.strftime('%H:%M:%S', time.gmtime(int(seconds)))
+        return time.strftime('%H:%M:%S', time.gmtime(convseconds))
     if seconds > 60:
-        return time.strftime('%M:%S', time.gmtime(int(seconds)))
-    return time.strftime('%S', time.gmtime(int(seconds)))
+        return time.strftime('%M:%S', time.gmtime(convseconds))
+    return time.strftime('%S', time.gmtime(convseconds))
