@@ -13,6 +13,5 @@ nowplaying/version.py
 NowPlaying.egg-info
 nowplaying/qtrc.py
 .DS_Store
-pyrightconfig.json
 nowplaying.sublime-project
 nowplaying.sublime-workspace

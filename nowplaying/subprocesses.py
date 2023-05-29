@@ -12,7 +12,7 @@ from types import ModuleType
 # process should be t.Optional[multiprocessing.Process] but it is too stupid to
 # realize that if you check the value for None and then do things, that it won't
 # be None. So it is easier to just declare it as Process and then exempt
-# the two cases where it is set to None rather than excempt the many, many
+# the two cases where it is set to None rather than exempt the many, many
 # references to the Process class.
 #
 @dataclasses.dataclass
