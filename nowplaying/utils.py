@@ -227,7 +227,7 @@ def titlestripper_advanced(title: str = '',
 def humanize_time(seconds: int) -> str:
     ''' convert seconds into hh:mm:ss '''
     if seconds > 3600:
-        return time.strftime('%H:%M:%S', time.gmtime(int(seconds)))
+        return time.strftime('%H:%M:%S', time.gmtime(seconds))
     if seconds > 60:
-        return time.strftime('%M:%S', time.gmtime(int(seconds)))
-    return time.strftime('%S', time.gmtime(int(seconds)))
+        return time.strftime('%M:%S', time.gmtime(seconds))
+    return time.strftime('%S', time.gmtime(seconds))
