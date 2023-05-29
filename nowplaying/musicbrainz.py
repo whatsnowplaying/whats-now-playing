@@ -2,12 +2,12 @@
 # pylint: disable=invalid-name
 ''' support for musicbrainz '''
 
-import os
-import sys
-
 import logging
 import logging.config
 import logging.handlers
+import os
+import sys
+import typing as t
 
 import musicbrainzngs
 
@@ -31,17 +31,19 @@ class MusicBrainzHelper():
         ''' make sure the musicbrainz fetch has an email address set
             according to their requirements '''
         if not self.emailaddressset:
-            emailaddress = self.config.cparser.value(
-                'musicbrainz/emailaddress')
+            emailaddress = self.config.cparser.value('musicbrainz/emailaddress')
 
             if not emailaddress:
                 emailaddress = 'aw@effectivemachines.com'
 
-            musicbrainzngs.set_useragent('whats-now-playing',
-                                         self.config.version, emailaddress)
+            musicbrainzngs.set_useragent('whats-now-playing', self.config.version, emailaddress)
             self.emailaddressset = True
 
-    def _pickarecording(self, testdata, mbdata, allowothers=False):  #pylint: disable=too-many-branches
+    def _pickarecording(  # pylint: disable=too-many-branches
+            self,
+            testdata: dict[str, t.Any],
+            mbdata: dict[str, t.Any],
+            allowothers=False):
         ''' core routine for last ditch '''
 
         riddata = {}
@@ -58,9 +60,8 @@ class MusicBrainzHelper():
                 if testdata.get('album') and testdata['album'] != title:
                     logging.debug('skipped %s <> %s', title, testdata['album'])
                     continue
-                if release.get(
-                        'artist-credit'
-                ) and 'Various Artists' in release['artist-credit'][0]['name']:
+                if release.get('artist-credit'
+                               ) and 'Various Artists' in release['artist-credit'][0]['name']:
                     logging.debug('skipped %s -- VA', title)
                     continue
                 relgroup = release['release-group']
@@ -73,8 +74,7 @@ class MusicBrainzHelper():
                         continue
                     if relgroup.get('secondary-type-list'):
                         if 'Compilation' in relgroup['secondary-type-list']:
-                            logging.debug('skipped %s -- 2nd compilation',
-                                          title)
+                            logging.debug('skipped %s -- 2nd compilation', title)
                             continue
                         if 'Live' in relgroup['secondary-type-list']:
                             logging.debug('skipped %s -- 2nd live', title)
@@ -86,13 +86,13 @@ class MusicBrainzHelper():
 
         return riddata
 
-    def lastditcheffort(self, metadata):
+    def lastditcheffort(self, metadata: dict[str, t.Any]) -> dict[str, t.Any]:
         ''' there is like no data, so... '''
 
-        if not self.config.cparser.value(
-                'musicbrainz/enabled', type=bool) or self.config.cparser.value(
-                    'control/beam', type=bool):
-            return None
+        if not self.config.cparser.value('musicbrainz/enabled',
+                                         type=bool) or self.config.cparser.value('control/beam',
+                                                                                 type=bool):
+            return {}
 
         self._setemail()
 
@@ -105,30 +105,27 @@ class MusicBrainzHelper():
 
         logging.debug('Starting data: %s', addmeta)
         if addmeta['album']:
-            mydict = musicbrainzngs.search_recordings(
-                artist=addmeta['artist'],
-                recording=addmeta['title'],
-                release=addmeta['album'])
+            mydict = musicbrainzngs.search_recordings(artist=addmeta['artist'],
+                                                      recording=addmeta['title'],
+                                                      release=addmeta['album'])
             riddata = self._pickarecording(addmeta, mydict)
             if not riddata:
-                riddata = self._pickarecording(addmeta,
-                                               mydict,
-                                               allowothers=True)
+                riddata = self._pickarecording(addmeta, mydict, allowothers=True)
 
         if not riddata:
-            mydict = musicbrainzngs.search_recordings(
-                artist=metadata['artist'], recording=metadata['title'])
+            mydict = musicbrainzngs.search_recordings(artist=metadata['artist'],
+                                                      recording=metadata['title'])
             riddata = self._pickarecording(addmeta, mydict)
         if not riddata:
             riddata = self._pickarecording(addmeta, mydict, allowothers=True)
         return riddata
 
-    def recognize(self, metadata):
+    def recognize(self, metadata: dict[str, t.Any]):
         ''' fill in any blanks from musicbrainz '''
 
-        if not self.config.cparser.value(
-                'musicbrainz/enabled', type=bool) or self.config.cparser.value(
-                    'control/beam', type=bool):
+        if not self.config.cparser.value('musicbrainz/enabled',
+                                         type=bool) or self.config.cparser.value('control/beam',
+                                                                                 type=bool):
             return None
 
         addmeta = {}
@@ -146,25 +143,25 @@ class MusicBrainzHelper():
 
     def isrc(self, isrclist):
         ''' lookup musicbrainz information based upon isrc '''
-        if not self.config.cparser.value(
-                'musicbrainz/enabled', type=bool) or self.config.cparser.value(
-                    'control/beam', type=bool):
+        if not self.config.cparser.value('musicbrainz/enabled',
+                                         type=bool) or self.config.cparser.value('control/beam',
+                                                                                 type=bool):
             return None
 
         self._setemail()
 
         for isrc in isrclist:
             try:
-                mbdata = musicbrainzngs.get_recordings_by_isrc(
-                    isrc, includes=['releases'], release_status=['official'])
+                mbdata = musicbrainzngs.get_recordings_by_isrc(isrc,
+                                                               includes=['releases'],
+                                                               release_status=['official'])
             except:  # pylint: disable=bare-except
                 pass
 
         if not mbdata:
             for isrc in isrclist:
                 try:
-                    mbdata = musicbrainzngs.get_recordings_by_isrc(
-                        isrc, includes=['releases'])
+                    mbdata = musicbrainzngs.get_recordings_by_isrc(isrc, includes=['releases'])
                 except:  # pylint: disable=bare-except
                     logging.info('musicbrainz cannot find ISRC %s', isrc)
 
@@ -178,9 +175,9 @@ class MusicBrainzHelper():
 
     def recordingid(self, recordingid):  # pylint: disable=too-many-branches, too-many-return-statements, too-many-statements
         ''' lookup the musicbrainz information based upon recording id '''
-        if not self.config.cparser.value(
-                'musicbrainz/enabled', type=bool) or self.config.cparser.value(
-                    'control/beam', type=bool):
+        if not self.config.cparser.value('musicbrainz/enabled',
+                                         type=bool) or self.config.cparser.value('control/beam',
+                                                                                 type=bool):
             return None
 
         self._setemail()
@@ -207,19 +204,17 @@ class MusicBrainzHelper():
             self._setemail()
 
             try:
-                mbdata = musicbrainzngs.browse_releases(
-                    recording=recordingid,
-                    includes=['labels', 'artist-credits'],
-                    release_status=['official'])
+                mbdata = musicbrainzngs.browse_releases(recording=recordingid,
+                                                        includes=['labels', 'artist-credits'],
+                                                        release_status=['official'])
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('MusicBrainz threw an error: %s', error)
                 return None
 
             if 'release-count' not in mbdata or mbdata['release-count'] == 0:
                 try:
-                    mbdata = musicbrainzngs.browse_releases(
-                        recording=recordingid,
-                        includes=['labels', 'artist-credits'])
+                    mbdata = musicbrainzngs.browse_releases(recording=recordingid,
+                                                            includes=['labels', 'artist-credits'])
                 except:  # pylint: disable=bare-except
                     logging.error('MusicBrainz threw an error: %s', error)
                     return None
@@ -230,11 +225,9 @@ class MusicBrainzHelper():
             variousartist = []
             for release in mbdata['release-list']:
                 if len(newdata['musicbrainzartistid']) > 1 and newdata.get(
-                        'artist'
-                ) and release['artist-credit-phrase'] in newdata['artist']:
+                        'artist') and release['artist-credit-phrase'] in newdata['artist']:
                     namedartist.append(release)
-                elif 'artist' in newdata and release[
-                        'artist-credit-phrase'] == newdata['artist']:
+                elif 'artist' in newdata and release['artist-credit-phrase'] == newdata['artist']:
                     namedartist.append(release)
                 elif release['artist-credit-phrase'] == 'Various Artists':
                     variousartist.append(release)
@@ -247,17 +240,14 @@ class MusicBrainzHelper():
         newdata = {'musicbrainzrecordingid': recordingid}
         try:
             logging.debug('looking up recording id %s', recordingid)
-            mbdata = musicbrainzngs.get_recording_by_id(recordingid,
-                                                        includes=['artists'])
+            mbdata = musicbrainzngs.get_recording_by_id(recordingid, includes=['artists'])
         except Exception as error:  # pylint: disable=broad-except
-            logging.error('MusicBrainz does not know recording id %s: %s',
-                          recordingid, error)
+            logging.error('MusicBrainz does not know recording id %s: %s', recordingid, error)
             return None
 
         if 'recording' in mbdata and 'title' in mbdata['recording']:
             newdata['title'] = mbdata['recording']['title']
-        if 'recording' in mbdata and 'artist-credit-phrase' in mbdata[
-                'recording']:
+        if 'recording' in mbdata and 'artist-credit-phrase' in mbdata['recording']:
             newdata['artist'] = mbdata['recording']['artist-credit-phrase']
             for artist in mbdata['recording']['artist-credit']:
                 if not isinstance(artist, dict):
@@ -268,8 +258,7 @@ class MusicBrainzHelper():
 
         mbdata = releaselookup_noartist(recordingid)
 
-        if not mbdata or 'release-count' not in mbdata or mbdata[
-                'release-count'] == 0:
+        if not mbdata or 'release-count' not in mbdata or mbdata['release-count'] == 0:
             return newdata
 
         mbdata = _pickarelease(newdata, mbdata)
@@ -286,17 +275,14 @@ class MusicBrainzHelper():
         if label:
             newdata['label'] = label
 
-        if 'cover-art-archive' in release and 'artwork' in release[
-                'cover-art-archive'] and release['cover-art-archive'][
-                    'artwork']:
+        if 'cover-art-archive' in release and 'artwork' in release['cover-art-archive'] and release[
+                'cover-art-archive']['artwork']:
             try:
-                newdata['coverimageraw'] = musicbrainzngs.get_image(
-                    release['id'], 'front')
+                newdata['coverimageraw'] = musicbrainzngs.get_image(release['id'], 'front')
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('Failed to get cover art: %s', error)
 
-        newdata['artistwebsites'] = self._websites(
-            newdata['musicbrainzartistid'])
+        newdata['artistwebsites'] = self._websites(newdata['musicbrainzartistid'])
         return newdata
 
     def artistids(self, idlist):
@@ -304,16 +290,15 @@ class MusicBrainzHelper():
 
         self._setemail()
 
-        if not self.config.cparser.value(
-                'musicbrainz/enabled', type=bool) or self.config.cparser.value(
-                    'control/beam', type=bool):
+        if not self.config.cparser.value('musicbrainz/enabled',
+                                         type=bool) or self.config.cparser.value('control/beam',
+                                                                                 type=bool):
             return None
 
         return {'artistwebsites': self._websites(idlist)}
 
     def _websites(self, idlist):
-        if not self.config.cparser.value('acoustidmb/websites',
-                                         type=bool) or not idlist:
+        if not self.config.cparser.value('acoustidmb/websites', type=bool) or not idlist:
             return None
 
         sitelist = []
@@ -321,15 +306,12 @@ class MusicBrainzHelper():
             if self.config.cparser.value('acoustidmb/musicbrainz', type=bool):
                 sitelist.append(f'https://musicbrainz.org/artist/{artistid}')
             try:
-                webdata = musicbrainzngs.get_artist_by_id(
-                    artistid, includes=['url-rels'])
+                webdata = musicbrainzngs.get_artist_by_id(artistid, includes=['url-rels'])
             except Exception as error:  # pylint: disable=broad-except
-                logging.error('MusicBrainz does not know artistid id %s: %s',
-                              artistid, error)
+                logging.error('MusicBrainz does not know artistid id %s: %s', artistid, error)
                 return None
 
-            if not webdata.get('artist') or not webdata['artist'].get(
-                    'url-relation-list'):
+            if not webdata.get('artist') or not webdata['artist'].get('url-relation-list'):
                 continue
 
             convdict = {
@@ -342,8 +324,8 @@ class MusicBrainzHelper():
             for urlrel in webdata['artist']['url-relation-list']:
                 logging.debug('checking %s', urlrel['type'])
                 for src, dest in convdict.items():
-                    if urlrel['type'] == src and self.config.cparser.value(
-                            f'acoustidmb/{dest}', type=bool):
+                    if urlrel['type'] == src and self.config.cparser.value(f'acoustidmb/{dest}',
+                                                                           type=bool):
                         sitelist.append(urlrel['target'])
                         logging.debug('placed %s', dest)
 
@@ -371,8 +353,7 @@ def main():
     nowplaying.bootstrap.set_qt_names()
     # need to make sure config is initialized with something
     nowplaying.config.ConfigFile(bundledir=bundledir)
-    musicbrainz = MusicBrainzHelper(config=nowplaying.config.ConfigFile(
-        bundledir=bundledir))
+    musicbrainz = MusicBrainzHelper(config=nowplaying.config.ConfigFile(bundledir=bundledir))
     metadata = musicbrainz.recordingid(isrc)
     if not metadata:
         print('No information')

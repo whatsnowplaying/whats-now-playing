@@ -32,8 +32,7 @@ class Plugin(RecognitionPlugin):
 
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
-        self.musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
-            self.config)
+        self.musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(self.config)
         self.acoustidmd = {}
         self.fpcalcexe = None
         self.displayname = "AcoustID/MusicBrainz"
@@ -47,12 +46,11 @@ class Plugin(RecognitionPlugin):
         completedprocess = None
         try:
             if sys.platform == "win32":
-                completedprocess = subprocess.run(
-                    command,
-                    stdin=subprocess.DEVNULL,
-                    capture_output=True,
-                    check=True,
-                    creationflags=subprocess.CREATE_NO_WINDOW)
+                completedprocess = subprocess.run(command,
+                                                  stdin=subprocess.DEVNULL,
+                                                  capture_output=True,
+                                                  check=True,
+                                                  creationflags=subprocess.CREATE_NO_WINDOW)
             else:
                 completedprocess = subprocess.run(command,
                                                   stdin=subprocess.DEVNULL,
@@ -60,8 +58,7 @@ class Plugin(RecognitionPlugin):
                                                   check=True)
         except Exception as error:  # pylint: disable=broad-except
             if completedprocess:
-                logging.error('Exception: %s stderr: %s', error,
-                              completedprocess.stderr)
+                logging.error('Exception: %s stderr: %s', error, completedprocess.stderr)
             else:
                 logging.error('Exception: %s', error)
             return None
@@ -82,20 +79,15 @@ class Plugin(RecognitionPlugin):
             counter = 0
             while counter < 3:
                 logging.debug('Performing acoustid lookup')
-                results = acoustid.lookup(apikey,
-                                          fingerprint,
-                                          duration,
-                                          meta=[
-                                              'recordings', 'recordingids',
-                                              'releases', 'tracks', 'usermeta'
-                                          ],
-                                          timeout=delay)
-                if ('error' not in results
-                        or 'rate limit' not in results['error']['message']):
+                results = acoustid.lookup(
+                    apikey,
+                    fingerprint,
+                    duration,
+                    meta=['recordings', 'recordingids', 'releases', 'tracks', 'usermeta'],
+                    timeout=delay)
+                if ('error' not in results or 'rate limit' not in results['error']['message']):
                     break
-                logging.info(
-                    'acoustid complaining about rate limiting. Sleeping then rying again.'
-                )
+                logging.info('acoustid complaining about rate limiting. Sleeping then rying again.')
                 time.sleep(.5)
                 counter += 1
         except acoustid.NoBackendError:
@@ -106,14 +98,12 @@ class Plugin(RecognitionPlugin):
             logging.error("web service request failed: %s", error)
         except Exception as error:  # pylint: disable=broad-except
             results = None
-            logging.error('Problem getting a response from Acoustid: %s',
-                          error)
+            logging.error('Problem getting a response from Acoustid: %s', error)
         if not results:
             return None
 
         if 'error' in results:
-            logging.error('Aborting. acoustid responded with: %s',
-                          results['error']['message'])
+            logging.error('Aborting. acoustid responded with: %s', results['error']['message'])
             return None
 
         return results['results']
@@ -151,8 +141,7 @@ class Plugin(RecognitionPlugin):
             acoustidid = result['id']
             score = result['score']
             if 'recordings' not in result:
-                logging.debug('No recordings for this match, skipping %s',
-                              acoustidid)
+                logging.debug('No recordings for this match, skipping %s', acoustidid)
                 continue
 
             logging.debug('Processing %s', acoustidid)
@@ -182,33 +171,29 @@ class Plugin(RecognitionPlugin):
                         album = release['title']
                     else:
                         album = None
-                    if title and nowplaying.utils.normalize(
-                            title) in completenstr:
+                    if title and nowplaying.utils.normalize(title) in completenstr:
                         score = score + .10
                     artistlist = []
                     artistidlist = []
-                    for trackartist in release['mediums'][0]['tracks'][0][
-                            'artists']:
+                    for trackartist in release['mediums'][0]['tracks'][0]['artists']:
                         if 'name' in trackartist:
                             artistlist.append(trackartist['name'])
                             artistidlist.append(trackartist['id'])
                         elif isinstance(trackartist, str):
                             artistlist.append(trackartist)
                         if trackartist and artistnstr:
-                            if nowplaying.utils.normalize(
-                                    trackartist) == artistnstr:
+                            if nowplaying.utils.normalize(trackartist) == artistnstr:
                                 score = score + .30
                             else:
                                 score = score - .50
-                        if trackartist and nowplaying.utils.normalize(
-                                trackartist) in completenstr:
+                        if trackartist and nowplaying.utils.normalize(trackartist) in completenstr:
                             score = score + .10
 
                     artist = ' & '.join(artistlist)
 
                     logging.debug(
-                        'weighted score = %s, rid = %s, title = %s, artist = %s album = %s',
-                        score, rid, title, artist, album)
+                        'weighted score = %s, rid = %s, title = %s, artist = %s album = %s', score,
+                        rid, title, artist, album)
 
                     if score > lastscore:
                         newdata = {'acoustidid': acoustidid}
@@ -227,11 +212,10 @@ class Plugin(RecognitionPlugin):
         for key, value in newdata.items():
             self.acoustidmd[key] = value
 
-        logging.debug(
-            'picked weighted score = %s, rid = %s, title = %s, artist = %s album = %s',
-            lastscore, self.acoustidmd.get('musicbrainzrecordingid'),
-            self.acoustidmd.get('title'), self.acoustidmd.get('artist'),
-            self.acoustidmd.get('album'))
+        logging.debug('picked weighted score = %s, rid = %s, title = %s, artist = %s album = %s',
+                      lastscore, self.acoustidmd.get('musicbrainzrecordingid'),
+                      self.acoustidmd.get('title'), self.acoustidmd.get('artist'),
+                      self.acoustidmd.get('album'))
 
     def _configure_fpcalc(self, fpcalcexe=None):  # pylint: disable=too-many-return-statements
         ''' deal with all the potential issues of finding and running fpcalc '''
@@ -262,14 +246,11 @@ class Plugin(RecognitionPlugin):
 
         if sys.platform == 'win32':
             try:
-                exts = [
-                    ext.lower() for ext in os.environ["PATHEXT"].split(";")
-                ]
+                exts = [ext.lower() for ext in os.environ["PATHEXT"].split(";")]
                 testex = '.' + fpcalcexepath.name.split('.')[1].lower()
                 logging.debug('Checking %s against %s', testex, exts)
                 if testex not in exts:
-                    logging.error('defined fpcalc [%s] is not executable.',
-                                  fpcalcexe)
+                    logging.error('defined fpcalc [%s] is not executable.', fpcalcexe)
                     return False
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('Testing fpcalc on windows hit: %s', error)
@@ -289,16 +270,14 @@ class Plugin(RecognitionPlugin):
 
         if not self.acoustidmd.get('musicbrainzrecordingid'):
 
-            logging.debug(
-                'No musicbrainzrecordingid in metadata, so use acoustid')
-            if not metadata.get('fpcalcduration') and not metadata.get(
-                    'fpcalcfingerprint'):
+            logging.debug('No musicbrainzrecordingid in metadata, so use acoustid')
+            if not metadata.get('fpcalcduration') and not metadata.get('fpcalcfingerprint'):
                 if not metadata.get('filename'):
                     logging.warning('No filename in metadata')
                     return None
 
-                if not self._configure_fpcalc(fpcalcexe=self.config.cparser.
-                                              value('acoustidmb/fpcalcexe')):
+                if not self._configure_fpcalc(
+                        fpcalcexe=self.config.cparser.value('acoustidmb/fpcalcexe')):
                     logging.error('fpcalc is not configured')
                     return None
 
@@ -326,9 +305,8 @@ class Plugin(RecognitionPlugin):
             )
             if not results:
                 if metadata.get('filename'):
-                    logging.warning(
-                        'acoustid could not recognize %s. Will need to be tagged.',
-                        metadata['filename'])
+                    logging.warning('acoustid could not recognize %s. Will need to be tagged.',
+                                    metadata['filename'])
                 else:
                     logging.warning('could not recognize this track. tag it.')
                 return self.acoustidmd
@@ -336,16 +314,14 @@ class Plugin(RecognitionPlugin):
             self._read_acoustid_tuples(metadata, results)
 
         if not self.acoustidmd.get('musicbrainzrecordingid'):
-            logging.info(
-                'acoustidmb: no musicbrainz rid %s. Returning everything else.',
-                metadata['filename'])
+            logging.info('acoustidmb: no musicbrainz rid %s. Returning everything else.',
+                         metadata['filename'])
             return self.acoustidmd
 
         if musicbrainzlookup := self.musicbrainz.recordingid(
                 self.acoustidmd['musicbrainzrecordingid']):
-            if self.acoustidmd.get(
-                    'musicbrainzartistid') and musicbrainzlookup.get(
-                        'musicbrainzartistid'):
+            if self.acoustidmd.get('musicbrainzartistid') and musicbrainzlookup.get(
+                    'musicbrainzartistid'):
                 del musicbrainzlookup['musicbrainzartistid']
             self.acoustidmd.update(musicbrainzlookup)
         return self.acoustidmd
@@ -367,8 +343,8 @@ class Plugin(RecognitionPlugin):
             startdir = os.path.dirname(self.qwidget.fpcalcexe_lineedit.text())
         else:
             startdir = QDir.homePath()
-        dirname = QFileDialog.getOpenFileName(self.qwidget, 'Select fpcalc',
-                                              startdir, 'fpcalc fpcalc.exe')
+        dirname = QFileDialog.getOpenFileName(self.qwidget, 'Select fpcalc', startdir,
+                                              'fpcalc fpcalc.exe')
         if dirname and dirname[0]:
             self.qwidget.fpcalcexe_lineedit.setText(dirname[0])
 
@@ -386,14 +362,11 @@ class Plugin(RecognitionPlugin):
         qwidget.mb_fallback_checkbox.setChecked(
             self.config.cparser.value('musicbrainz/fallback', type=bool))
 
-        qwidget.emailaddress_lineedit.setText(
-            self.config.cparser.value('musicbrainz/emailaddress'))
+        qwidget.emailaddress_lineedit.setText(self.config.cparser.value('musicbrainz/emailaddress'))
 
-        qwidget.apikey_lineedit.setText(
-            self.config.cparser.value('acoustidmb/acoustidapikey'))
+        qwidget.apikey_lineedit.setText(self.config.cparser.value('acoustidmb/acoustidapikey'))
 
-        qwidget.fpcalcexe_lineedit.setText(
-            self.config.cparser.value('acoustidmb/fpcalcexe'))
+        qwidget.fpcalcexe_lineedit.setText(self.config.cparser.value('acoustidmb/fpcalcexe'))
 
         qwidget.websites_checkbox.setChecked(
             self.config.cparser.value('acoustidmb/websites', type=bool))
@@ -406,50 +379,37 @@ class Plugin(RecognitionPlugin):
                 'discogs',
         ]:
             guiattr = getattr(qwidget, f'ws_{website}_checkbox')
-            guiattr.setChecked(
-                self.config.cparser.value(f'acoustidmb/{website}', type=bool))
+            guiattr.setChecked(self.config.cparser.value(f'acoustidmb/{website}', type=bool))
 
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''
-        if qwidget.acoustid_checkbox.isChecked(
-        ) and not qwidget.apikey_lineedit.text():
-            raise PluginVerifyError(
-                'Acoustid enabled, but no API Key provided.')
+        if qwidget.acoustid_checkbox.isChecked() and not qwidget.apikey_lineedit.text():
+            raise PluginVerifyError('Acoustid enabled, but no API Key provided.')
 
-        if qwidget.musicbrainz_checkbox.isChecked(
-        ) and not qwidget.emailaddress_lineedit.text():
-            raise PluginVerifyError(
-                'Acoustid enabled, but no email address provided.')
+        if qwidget.musicbrainz_checkbox.isChecked() and not qwidget.emailaddress_lineedit.text():
+            raise PluginVerifyError('Acoustid enabled, but no email address provided.')
 
-        if qwidget.acoustid_checkbox.isChecked(
-        ) and not qwidget.fpcalcexe_lineedit.text():
-            raise PluginVerifyError(
-                'Acoustid enabled, but no fpcalc binary provided.')
+        if qwidget.acoustid_checkbox.isChecked() and not qwidget.fpcalcexe_lineedit.text():
+            raise PluginVerifyError('Acoustid enabled, but no fpcalc binary provided.')
 
-        if qwidget.acoustid_checkbox.isChecked(
-        ) and qwidget.fpcalcexe_lineedit.text():
+        if qwidget.acoustid_checkbox.isChecked() and qwidget.fpcalcexe_lineedit.text():
             fpcalcexe = qwidget.fpcalcexe_lineedit.text()
             if not self._configure_fpcalc(fpcalcexe=fpcalcexe):
-                raise PluginVerifyError(
-                    'Acoustid enabled, but fpcalc is not executable.')
+                raise PluginVerifyError('Acoustid enabled, but fpcalc is not executable.')
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
-        self.config.cparser.setValue('acoustidmb/enabled',
-                                     qwidget.acoustid_checkbox.isChecked())
+        self.config.cparser.setValue('acoustidmb/enabled', qwidget.acoustid_checkbox.isChecked())
         self.config.cparser.setValue('musicbrainz/enabled',
                                      qwidget.musicbrainz_checkbox.isChecked())
         self.config.cparser.setValue('musicbrainz/fallback',
                                      qwidget.mb_fallback_checkbox.isChecked())
-        self.config.cparser.setValue('acoustidmb/acoustidapikey',
-                                     qwidget.apikey_lineedit.text())
+        self.config.cparser.setValue('acoustidmb/acoustidapikey', qwidget.apikey_lineedit.text())
         self.config.cparser.setValue('musicbrainz/emailaddress',
                                      qwidget.emailaddress_lineedit.text())
-        self.config.cparser.setValue('acoustidmb/fpcalcexe',
-                                     qwidget.fpcalcexe_lineedit.text())
+        self.config.cparser.setValue('acoustidmb/fpcalcexe', qwidget.fpcalcexe_lineedit.text())
 
-        self.config.cparser.setValue('acoustidmb/websites',
-                                     qwidget.websites_checkbox.isChecked())
+        self.config.cparser.setValue('acoustidmb/websites', qwidget.websites_checkbox.isChecked())
 
         for website in [
                 'bandcamp',
@@ -459,8 +419,7 @@ class Plugin(RecognitionPlugin):
                 'discogs',
         ]:
             guiattr = getattr(qwidget, f'ws_{website}_checkbox')
-            self.config.cparser.setValue(f'acoustidmb/{website}',
-                                         guiattr.isChecked())
+            self.config.cparser.setValue(f'acoustidmb/{website}', guiattr.isChecked())
 
     def defaults(self, qsettings):
         qsettings.setValue('acoustidmb/enabled', False)

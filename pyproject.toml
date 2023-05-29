@@ -90,7 +90,12 @@ qt_qapp_name = "testsuite"
 # List of plugins (as comma separated values of python module names) to load,
 # usually to register additional checkers.
 load-plugins = ["pylint.extensions.no_self_use"]
-ignore = ["nowplaying/beam"]
+ignore-paths = [
+  "nowplaying/beam",
+  "nowplaying/qtrc.py",
+  "nowplaying/vendor",
+  "nowplaying/version.py"
+]
 
 [tool.vendoring]
 destination = "nowplaying/vendor"
@@ -116,3 +121,13 @@ __BUILD_DATE__ = '{build_date:%Y-%m-%dT%H:%M:%SZ}'
 __CURRENT_TAG__ = '{base_version}'
 # pylint: disable=trailing-newlines
 '''
+
+[tool.yapf]
+column_limit = 100
+
+[tool.yapfignore]
+ignore_patterns = [
+  "nowplaying/version.py",
+  "nowplaying/vendor/**",
+  "nowplaying/qtrc.py",
+]

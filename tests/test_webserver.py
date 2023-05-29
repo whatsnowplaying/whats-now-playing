@@ -32,8 +32,7 @@ def getwebserver(bootstrap):
         logging.debug('%s is in use; waiting', port)
         time.sleep(2)
 
-    manager = nowplaying.subprocesses.SubprocessManager(config=config,
-                                                        testmode=True)
+    manager = nowplaying.subprocesses.SubprocessManager(config=config, testmode=True)
     manager.start_webserver()
     time.sleep(5)
     yield config, metadb
@@ -52,9 +51,8 @@ def test_startstopwebserver(getwebserver):  # pylint: disable=redefined-outer-na
 async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-outer-name
     ''' start webserver, read existing data, add new data, then read that '''
     config, metadb = getwebserver
-    config.cparser.setValue(
-        'weboutput/htmltemplate',
-        config.getbundledir().joinpath('templates', 'basic-plain.txt'))
+    config.cparser.setValue('weboutput/htmltemplate',
+                            config.getbundledir().joinpath('templates', 'basic-plain.txt'))
     config.cparser.setValue('weboutput/once', True)
     config.cparser.sync()
     time.sleep(10)
@@ -68,10 +66,7 @@ async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-out
 
     # handle first write
 
-    await metadb.write_to_metadb(metadata={
-        'title': 'testhtmtitle',
-        'artist': 'testhtmartist'
-    })
+    await metadb.write_to_metadb(metadata={'title': 'testhtmtitle', 'artist': 'testhtmartist'})
     time.sleep(1)
     req = requests.get('http://localhost:8899/index.html', timeout=5)
     assert req.status_code == 200
@@ -111,12 +106,10 @@ async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-out
     ''' start webserver, read existing data, add new data, then read that '''
     config, metadb = getwebserver
     config.cparser.setValue('weboutput/httpenabled', 'true')
-    config.cparser.setValue(
-        'weboutput/htmltemplate',
-        config.getbundledir().joinpath('templates', 'basic-plain.txt'))
-    config.cparser.setValue(
-        'textoutput/txttemplate',
-        config.getbundledir().joinpath('templates', 'basic-plain.txt'))
+    config.cparser.setValue('weboutput/htmltemplate',
+                            config.getbundledir().joinpath('templates', 'basic-plain.txt'))
+    config.cparser.setValue('textoutput/txttemplate',
+                            config.getbundledir().joinpath('templates', 'basic-plain.txt'))
     config.cparser.setValue('weboutput/once', True)
     config.cparser.sync()
     time.sleep(10)
@@ -133,10 +126,7 @@ async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-out
     assert req.json() == {}
     # handle first write
 
-    await metadb.write_to_metadb(metadata={
-        'title': 'testtxttitle',
-        'artist': 'testtxtartist'
-    })
+    await metadb.write_to_metadb(metadata={'title': 'testtxttitle', 'artist': 'testtxtartist'})
     time.sleep(1)
     req = requests.get('http://localhost:8899/index.txt', timeout=5)
     assert req.status_code == 200

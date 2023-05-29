@@ -16,10 +16,7 @@ from twitchAPI.oauth import UserAuthenticator, validate_token
 
 import nowplaying.utils
 
-USER_SCOPE = [
-    AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ,
-    AuthScope.CHAT_EDIT
-]
+USER_SCOPE = [AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 
 
 async def get_user_image(twitch, loginname):
@@ -72,8 +69,7 @@ class TwitchLogin:
             return False
 
         try:
-            await TwitchLogin.TWITCH.set_user_authentication(
-                token, USER_SCOPE, refresh_token)
+            await TwitchLogin.TWITCH.set_user_authentication(token, USER_SCOPE, refresh_token)
             TwitchLogin.TWITCH.user_auth_refresh_callback = self.save_refreshed_tokens
             await TwitchLogin.TWITCH.refresh_used_token()
         except Exception as error:  #pylint: disable=broad-except
@@ -91,40 +87,31 @@ class TwitchLogin:
         async with TwitchLogin.TWITCH_LOCK:
             try:
 
-                if self.config.cparser.value(
-                        'twitchbot/clientid') and self.config.cparser.value(
-                            'twitchbot/secret'):
+                if self.config.cparser.value('twitchbot/clientid') and self.config.cparser.value(
+                        'twitchbot/secret'):
                     TwitchLogin.TWITCH = await Twitch(
                         self.config.cparser.value('twitchbot/clientid'),
                         self.config.cparser.value('twitchbot/secret'),
                         session_timeout=self.timeout)
 
                     token = self.config.cparser.value('twitchbot/oldusertoken')
-                    refresh_token = self.config.cparser.value(
-                        'twitchbot/oldrefreshtoken')
-                    oldscopes = self.config.cparser.value(
-                        'twitchbot/oldscopes')
+                    refresh_token = self.config.cparser.value('twitchbot/oldrefreshtoken')
+                    oldscopes = self.config.cparser.value('twitchbot/oldscopes')
 
                     if oldscopes != USER_SCOPE:
                         token = None
 
                     if not await self.attempt_user_auth(token, refresh_token):
-                        auth = UserAuthenticator(TwitchLogin.TWITCH,
-                                                 USER_SCOPE,
-                                                 force_verify=False)
+                        auth = UserAuthenticator(TwitchLogin.TWITCH, USER_SCOPE, force_verify=False)
                         token, refresh_token = await auth.authenticate()
                         oldscopes = USER_SCOPE
 
                         await self.attempt_user_auth(token, refresh_token)
 
-                    self.config.cparser.setValue('twitchbot/oldusertoken',
-                                                 token)
-                    self.config.cparser.setValue('twitchbot/oldrefreshtoken',
-                                                 refresh_token)
-                    self.config.cparser.setValue('twitchbot/oldscopes',
-                                                 USER_SCOPE)
-            except (aiohttp.client_exceptions.ClientConnectorError,
-                    socket.gaierror) as error:
+                    self.config.cparser.setValue('twitchbot/oldusertoken', token)
+                    self.config.cparser.setValue('twitchbot/oldrefreshtoken', refresh_token)
+                    self.config.cparser.setValue('twitchbot/oldscopes', USER_SCOPE)
+            except (aiohttp.client_exceptions.ClientConnectorError, socket.gaierror) as error:
                 logging.error(error)
             except:  # pylint: disable=bare-except
                 for line in traceback.format_exc().splitlines():

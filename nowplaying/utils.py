@@ -10,23 +10,25 @@ import logging
 import os
 import re
 import time
+import typing as t
 import traceback
 
 import jinja2
 import normality
 import PIL.Image
-import pillow_avif  # pylint: disable=unused-import
+import pillow_avif  # pylint: disable=unused-import # pyright: ignore[unusedImport]
 
 STRIPWORDLIST = ['clean', 'dirty', 'explicit', 'official music video']
 STRIPRELIST = [
-    re.compile(r' \((?i:{0})\)'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
-    re.compile(r' - (?i:{0}$)'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
-    re.compile(r' \[(?i:{0})\]'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
+    re.compile(r' \((?i:{0})\)'.format('|'.join(STRIPWORDLIST))),  # pylint: disable=consider-using-f-string
+    re.compile(r' - (?i:{0}$)'.format('|'.join(STRIPWORDLIST))),  # pylint: disable=consider-using-f-string
+    re.compile(r' \[(?i:{0})\]'.format('|'.join(STRIPWORDLIST))),  # pylint: disable=consider-using-f-string
 ]
 
-TRANSPARENT_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC'\
-                  '1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAA'\
-                  'ASUVORK5CYII='
+TRANSPARENT_PNG = ''.join([
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC', '1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAA',
+    'ASUVORK5CYII='
+])
 
 TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
 
@@ -34,16 +36,16 @@ TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
 class HTMLFilter(HTMLParser):
     ''' simple class to strip HTML '''
 
-    def __init__(self, convert_charrefs=True):
+    def __init__(self, convert_charrefs: bool = True):
         super().__init__(convert_charrefs=convert_charrefs)
         self.text = ""
 
-    def handle_data(self, data):
+    def handle_data(self, data: str):
         ''' handle data '''
         self.text += data
 
     @staticmethod
-    def error(message):
+    def error(message: str):
         ''' handle error messages '''
         logging.debug('HTMLFilter: %s', message)
 
@@ -51,9 +53,9 @@ class HTMLFilter(HTMLParser):
 class TemplateHandler():  # pylint: disable=too-few-public-methods
     ''' Set up a template  '''
 
-    def __init__(self, filename=None):
-        self.envdir = envdir = None
-        self.template = None
+    def __init__(self, filename: str = ''):
+        self.envdir: str = ''
+        envdir: str = ''
         self.filename = filename
 
         if not self.filename:
@@ -71,30 +73,30 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
 
         basename = os.path.basename(filename)
 
-        self.template = self.env.get_template(basename)
+        self.template: jinja2.Template = self.env.get_template(basename)
 
     @staticmethod
-    def _finalize(variable):
+    def _finalize(variable: object) -> t.Any:
         ''' helper routine to avoid NoneType exceptions '''
         if variable:
             return variable
         return ''
 
-    def setup_jinja2(self, directory):
+    def setup_jinja2(
+        self, directory: t.Union[str, os.PathLike, t.Sequence[t.Union[str, os.PathLike]]]
+    ) -> jinja2.Environment:
         ''' set up the environment '''
         return jinja2.Environment(loader=jinja2.FileSystemLoader(directory),
                                   finalize=self._finalize,
-                                  autoescape=jinja2.select_autoescape(
-                                      ['htm', 'html', 'xml']))
+                                  autoescape=jinja2.select_autoescape(['htm', 'html', 'xml']))
 
-    def generate(self, metadatadict=None):
+    def generate(self, metadatadict: dict[str, t.Any]) -> str:
         ''' get the generated template '''
         logging.debug('generating data for %s', self.filename)
 
         rendertext = 'Template has syntax errors'
         try:
-            if not self.filename or not os.path.exists(
-                    self.filename) or not self.template:
+            if not self.filename or not os.path.exists(self.filename) or not self.template:
                 return " No template found; check Now Playing settings."
             rendertext = self.template.render(**metadatadict)
         except:  #pylint: disable=bare-except
@@ -103,11 +105,11 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
         return rendertext
 
 
-def image2png(rawdata):
+def image2png(rawdata: bytes) -> bytes:
     ''' convert an image to png '''
 
     if not rawdata:
-        return None
+        return b''
 
     if rawdata.startswith(b'\211PNG\r\n\032\n'):
         logging.debug('already PNG, skipping convert')
@@ -121,18 +123,18 @@ def image2png(rawdata):
         imgbuffer = io.BytesIO(rawdata)
         if image.format != 'PNG':
             image.convert(mode='RGB').save(imgbuffer, format='PNG')
-    except Exception as error:  #pylint: disable=broad-except
+    except Exception as error:  # pylint: disable=broad-except
         logging.debug(error)
-        return None
+        return b''
     logging.debug("Leaving image2png")
     return imgbuffer.getvalue()
 
 
-def image2avif(rawdata):
+def image2avif(rawdata: bytes) -> bytes:
     ''' convert an image to png '''
 
     if not rawdata:
-        return None
+        return b''
 
     if rawdata.startswith(b'\x00\x00\x00 ftypavif'):
         logging.debug('already AVIF, skipping convert')
@@ -146,14 +148,14 @@ def image2avif(rawdata):
         imgbuffer = io.BytesIO(rawdata)
         if image.format != 'AVIF':
             image.convert(mode='RGB').save(imgbuffer, format='AVIF')
-    except Exception as error:  #pylint: disable=broad-except
+    except Exception as error:  # pylint: disable=broad-except
         logging.debug(error)
-        return None
+        return b''
     logging.debug("Leaving image2png")
     return imgbuffer.getvalue()
 
 
-def songpathsubst(config, filename):
+def songpathsubst(config, filename: str) -> str:
     ''' if needed, change the pathing of a file '''
 
     origfilename = filename
@@ -169,6 +171,8 @@ def songpathsubst(config, filename):
     elif slashmode == 'toback':
         newname = filename.replace('/', '\\')
         filename = newname
+    else:
+        newname = filename
 
     if songin := config.cparser.value('quirks/filesubstin'):
         songout = config.cparser.value('quirks/filesubstout')
@@ -178,35 +182,38 @@ def songpathsubst(config, filename):
         try:
             newname = filename.replace(songin, songout)
         except Exception as error:  # pylint: disable=broad-except
-            logging.error('Unable to do path replacement (%s -> %s on %s): %s',
-                          songin, songout, filename, error)
+            logging.error('Unable to do path replacement (%s -> %s on %s): %s', songin, songout,
+                          filename, error)
             return filename
 
     logging.debug('filename substitution: %s -> %s', origfilename, newname)
     return newname
 
 
-def normalize(crazystring):
+def normalize(crazystring: str) -> str:
     ''' take a string and genericize it '''
     if not crazystring:
-        return None
+        return ''
     if len(crazystring) < 4:
         return 'TEXT IS TOO SMALL IGNORE'
-    return normality.normalize(crazystring).replace(' ', '')
+    if text := normality.normalize(crazystring):
+        return text.replace(' ', '')
+    return ''
 
 
-def titlestripper_basic(title=None, title_regex_list=None):
+def titlestripper_basic(title: str = '',
+                        title_regex_list: t.Optional[list[re.Pattern]] = None) -> str:
     ''' Basic title removal '''
     if not title_regex_list or len(title_regex_list) == 0:
         title_regex_list = STRIPRELIST
-    return titlestripper_advanced(title=title,
-                                  title_regex_list=title_regex_list)
+    return titlestripper_advanced(title=title, title_regex_list=title_regex_list)
 
 
-def titlestripper_advanced(title=None, title_regex_list=None):
+def titlestripper_advanced(title: str = '',
+                           title_regex_list: t.Optional[list[re.Pattern]] = None) -> str:
     ''' Basic title removal '''
     if not title:
-        return None
+        return ''
     trackname = copy.deepcopy(title)
     if not title_regex_list or len(title_regex_list) == 0:
         return trackname
@@ -217,10 +224,16 @@ def titlestripper_advanced(title=None, title_regex_list=None):
     return trackname
 
 
-def humanize_time(seconds):
+def humanize_time(seconds: t.Any) -> str:
     ''' convert seconds into hh:mm:ss '''
+
+    try:
+        convseconds = int(float(seconds))
+    except (ValueError,TypeError):
+        return ''
+
     if seconds > 3600:
-        return time.strftime('%H:%M:%S', time.gmtime(int(seconds)))
+        return time.strftime('%H:%M:%S', time.gmtime(convseconds))
     if seconds > 60:
-        return time.strftime('%M:%S', time.gmtime(int(seconds)))
-    return time.strftime('%S', time.gmtime(int(seconds)))
+        return time.strftime('%M:%S', time.gmtime(convseconds))
+    return time.strftime('%S', time.gmtime(convseconds))

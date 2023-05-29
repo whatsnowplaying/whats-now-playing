@@ -37,8 +37,7 @@ def test_songsubst2backward(bootstrap):
     config = bootstrap
     config.cparser.setValue('quirks/filesubst', True)
     config.cparser.setValue('quirks/slashmode', 'toforward')
-    location = nowplaying.utils.songpathsubst(config,
-                                              '\\songs\\myband\\mysong')
+    location = nowplaying.utils.songpathsubst(config, '\\songs\\myband\\mysong')
     assert location == '/songs/myband/mysong'
 
 

@@ -112,8 +112,7 @@ class SeratoCrateReader:
             for subtag in otrk:
                 if subtag[0] != 'ptrk':
                     continue
-                filelist.extend(f'{anchor}{filepart}'
-                                for filepart in subtag[1:])
+                filelist.extend(f'{anchor}{filepart}' for filepart in subtag[1:])
         return filelist
 
 
@@ -340,11 +339,10 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
     async def _setup_watcher(self):
         logging.debug('setting up watcher')
-        self.event_handler = PatternMatchingEventHandler(
-            patterns=['*.session'],
-            ignore_patterns=['.DS_Store'],
-            ignore_directories=True,
-            case_sensitive=False)
+        self.event_handler = PatternMatchingEventHandler(patterns=['*.session'],
+                                                         ignore_patterns=['.DS_Store'],
+                                                         ignore_directories=True,
+                                                         case_sensitive=False)
         self.event_handler.on_modified = self.process_sessions
 
         if self.pollingobserver:
@@ -354,10 +352,9 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             self.observer = Observer()
             logging.debug('Using fsevent observer')
 
-        self.observer.schedule(
-            self.event_handler,
-            str(self.seratodir.joinpath("History", "Sessions")),
-            recursive=False)
+        self.observer.schedule(self.event_handler,
+                               str(self.seratodir.joinpath("History", "Sessions")),
+                               recursive=False)
         self.observer.start()
 
         # process what is already there
@@ -392,8 +389,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
         sessionpath = self.seratodir.joinpath("History", "Sessions")
 
-        sessionlist = sorted(sessionpath.glob('*.session'),
-                             key=lambda path: int(path.stem))
+        sessionlist = sorted(sessionpath.glob('*.session'), key=lambda path: int(path.stem))
         #sessionlist = sorted(seratopath.glob('*.session'),
         #                     key=lambda path: path.stat().st_mtime)
 
@@ -438,8 +434,8 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             if not adat.get('played'):
                 # wasn't played, so skip it
                 continue
-            if adat['deck'] in self.decks and adat.get(
-                    'starttime') < self.decks[adat['deck']].get('starttime'):
+            if adat['deck'] in self.decks and adat.get('starttime') < self.decks[adat['deck']].get(
+                    'starttime'):
                 # started after a deck that is already set
                 continue
             self.decks[adat['deck']] = adat
@@ -489,29 +485,24 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         if self.mixmode == 'newest':
             self.playingadat['starttime'] = datetime.datetime.fromtimestamp(0)
         else:
-            self.playingadat['starttime'] = datetime.datetime.fromtimestamp(
-                time.time())
+            self.playingadat['starttime'] = datetime.datetime.fromtimestamp(time.time())
         self.playingadat['updatedat'] = self.playingadat['starttime']
 
         logging.debug('Find the current playing deck. Starting at time: %s',
                       self.playingadat.get('starttime'))
         for deck, adat in self.decks.items():
-            if self.mixmode == 'newest' and adat.get(
-                    'starttime') > self.playingadat.get('starttime'):
+            if self.mixmode == 'newest' and adat.get('starttime') > self.playingadat.get(
+                    'starttime'):
                 self.playingadat = adat
-                logging.debug(
-                    'Playing = time: %s deck: %d artist: %s title %s',
-                    self.playingadat.get('starttime'), deck,
-                    self.playingadat.get('artist'),
-                    self.playingadat.get('title'))
-            elif self.mixmode == 'oldest' and adat.get(
-                    'starttime') < self.playingadat.get('starttime'):
+                logging.debug('Playing = time: %s deck: %d artist: %s title %s',
+                              self.playingadat.get('starttime'), deck,
+                              self.playingadat.get('artist'), self.playingadat.get('title'))
+            elif self.mixmode == 'oldest' and adat.get('starttime') < self.playingadat.get(
+                    'starttime'):
                 self.playingadat = adat
-                logging.debug(
-                    'Playing = time: %s deck: %d artist: %s title %s',
-                    self.playingadat.get('starttime'), deck,
-                    self.playingadat.get('artist'),
-                    self.playingadat.get('title'))
+                logging.debug('Playing = time: %s deck: %d artist: %s title %s',
+                              self.playingadat.get('starttime'), deck,
+                              self.playingadat.get('artist'), self.playingadat.get('title'))
 
     def getlocalplayingtrack(self, deckskiplist=None):
         ''' parse out last track from binary session file
@@ -555,8 +546,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         try:
             tree = lxml.html.fromstring(page.text)
             # [\n(spaces)artist - title (tabs)]
-            item = tree.xpath(
-                '(//div[@class="playlist-trackname"]/text())[last()]')
+            item = tree.xpath('(//div[@class="playlist-trackname"]/text())[last()]')
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Cannot process %s: %s", self.url, error)
             return
@@ -607,8 +597,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         ''' try to get the cover from tidal '''
         if tmatch := TIDAL_FORMAT.search(str(filename)):
             imgfile = f'{tmatch.group(1)}.jpg'
-            tidalimgpath = self.seratodir.joinpath('Metadata', 'Tidal',
-                                                   imgfile)
+            tidalimgpath = self.seratodir.joinpath('Metadata', 'Tidal', imgfile)
             logging.debug('using tidal image path: %s', tidalimgpath)
             if tidalimgpath.exists():
                 with open(tidalimgpath, 'rb') as fhin:
@@ -626,10 +615,8 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         if not self.playingadat:
             return {}
 
-        if self.playingadat.get('filename') and '.tdl' in self.playingadat.get(
-                'filename'):
-            if coverimage := self._get_tidal_cover(
-                    self.playingadat['filename']):
+        if self.playingadat.get('filename') and '.tdl' in self.playingadat.get('filename'):
+            if coverimage := self._get_tidal_cover(self.playingadat['filename']):
                 self.playingadat['coverimageraw'] = coverimage
 
         return {
@@ -687,9 +674,8 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
     def install(self):
         ''' auto-install for Serato '''
-        seratodir = pathlib.Path(
-            QStandardPaths.standardLocations(
-                QStandardPaths.MusicLocation)[0]).joinpath("_Serato_")
+        seratodir = pathlib.Path(QStandardPaths.standardLocations(
+            QStandardPaths.MusicLocation)[0]).joinpath("_Serato_")
 
         if seratodir.exists():
             self.config.cparser.value('settings/input', 'serato')
@@ -702,8 +688,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         ''' setup the SeratoHandler for this session '''
 
         stilllocal = self.config.cparser.value('serato/local', type=bool)
-        usepoll = self.config.cparser.value('quirks/pollingobserver',
-                                            type=bool)
+        usepoll = self.config.cparser.value('quirks/pollingobserver', type=bool)
 
         # now configured as remote!
         if not stilllocal:
@@ -767,8 +752,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         if self.local:
             interval = 1
         else:
-            interval = self.config.cparser.value('settings/interval',
-                                                 type=float)
+            interval = self.config.cparser.value('settings/interval', type=float)
 
         time.sleep(interval)
 
@@ -810,8 +794,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         qsettings.setValue(
             'serato/libpath',
             os.path.join(
-                QStandardPaths.standardLocations(
-                    QStandardPaths.MusicLocation)[0], "_Serato_"))
+                QStandardPaths.standardLocations(QStandardPaths.MusicLocation)[0], "_Serato_"))
         qsettings.setValue('serato/interval', 10.0)
         qsettings.setValue('serato/local', True)
         qsettings.setValue('serato/mixmode', "newest")
@@ -855,17 +838,14 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         startdir = self.qwidget.local_dir_lineedit.text()
         if not startdir:
             startdir = str(pathlib.Path.home())
-        if libdir := QFileDialog.getExistingDirectory(self.qwidget,
-                                                      'Select directory',
-                                                      startdir):
+        if libdir := QFileDialog.getExistingDirectory(self.qwidget, 'Select directory', startdir):
             self.qwidget.local_dir_lineedit.setText(libdir)
 
     def connect_settingsui(self, qwidget, uihelp):
         ''' connect serato local dir button '''
         self.qwidget = qwidget
         self.uihelp = uihelp
-        self.qwidget.local_dir_button.clicked.connect(
-            self.on_serato_lib_button)
+        self.qwidget.local_dir_button.clicked.connect(self.on_serato_lib_button)
 
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
@@ -901,40 +881,30 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         else:
             qwidget.local_dir_button.setChecked(False)
             qwidget.remote_button.setChecked(True)
-        qwidget.local_dir_lineedit.setText(
-            self.config.cparser.value('serato/libpath'))
-        qwidget.remote_url_lineedit.setText(
-            self.config.cparser.value('serato/url'))
-        qwidget.remote_poll_lineedit.setText(
-            str(self.config.cparser.value('serato/interval')))
+        qwidget.local_dir_lineedit.setText(self.config.cparser.value('serato/libpath'))
+        qwidget.remote_url_lineedit.setText(self.config.cparser.value('serato/url'))
+        qwidget.remote_poll_lineedit.setText(str(self.config.cparser.value('serato/interval')))
         handle_deckskip(self.config.cparser, qwidget)
 
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''
         if qwidget.remote_button.isChecked() and (
-                'https://serato.com/playlists'
-                not in qwidget.remote_url_lineedit.text()
-                and 'https://www.serato.com/playlists'
-                not in qwidget.remote_url_lineedit.text()
+                'https://serato.com/playlists' not in qwidget.remote_url_lineedit.text()
+                and 'https://www.serato.com/playlists' not in qwidget.remote_url_lineedit.text()
                 or len(qwidget.remote_url_lineedit.text()) < 30):
             raise PluginVerifyError('Serato Live Playlist URL is invalid')
 
-        if qwidget.local_button.isChecked() and (
-                '_Serato_' not in qwidget.local_dir_lineedit.text()):
+        if qwidget.local_button.isChecked() and ('_Serato_'
+                                                 not in qwidget.local_dir_lineedit.text()):
             raise PluginVerifyError(
-                r'Serato Library Path is required.  Should point to "\_Serato\_" folder'
-            )
+                r'Serato Library Path is required.  Should point to "\_Serato\_" folder')
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
-        self.config.cparser.setValue('serato/libpath',
-                                     qwidget.local_dir_lineedit.text())
-        self.config.cparser.setValue('serato/local',
-                                     qwidget.local_button.isChecked())
-        self.config.cparser.setValue('serato/url',
-                                     qwidget.remote_url_lineedit.text())
-        self.config.cparser.setValue('serato/interval',
-                                     qwidget.remote_poll_lineedit.text())
+        self.config.cparser.setValue('serato/libpath', qwidget.local_dir_lineedit.text())
+        self.config.cparser.setValue('serato/local', qwidget.local_button.isChecked())
+        self.config.cparser.setValue('serato/url', qwidget.remote_url_lineedit.text())
+        self.config.cparser.setValue('serato/interval', qwidget.remote_poll_lineedit.text())
 
         deckskip = []
         if qwidget.deck1_checkbox.isChecked():

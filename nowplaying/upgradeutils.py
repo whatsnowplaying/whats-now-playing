@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import traceback
+import typing as t
 
 import requests
 
@@ -39,7 +40,7 @@ VERSION_REGEX = re.compile(
 class Version:
     ''' process a version'''
 
-    def __init__(self, version):
+    def __init__(self, version: str):
         self.textversion = version
         vermatch = VERSION_REGEX.match(version.replace('.dirty', ''))
         if not vermatch:
@@ -51,7 +52,7 @@ class Version:
     def _calculate(self):
         olddict = copy.copy(self.chunk)
         for key, value in olddict.items():
-            if value and value.isdigit():
+            if isinstance(value, str) and value.isdigit():
                 self.chunk[key] = int(value)
 
         if self.chunk.get('rc') or self.chunk.get('commitnum'):
@@ -61,10 +62,10 @@ class Version:
         ''' if a pre-release, return True '''
         return self.pre
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.textversion
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         ''' version compare
             do the easy stuff, major > minor > micro '''
         for key in ["major", "minor", "micro"]:
@@ -84,8 +85,8 @@ class Version:
         if self.chunk.get('commitnum') and not other.chunk.get('commitnum'):
             return False
 
-        if (self.chunk.get('commitnum') and other.chunk.get('commitnum') and
-                self.chunk.get('commitnum') != other.chunk.get('commitnum')):
+        if (self.chunk.get('commitnum') and other.chunk.get('commitnum')
+                and self.chunk.get('commitnum') != other.chunk.get('commitnum')):
             return self.chunk.get('commitnum') < other.chunk.get('commitnum')
 
         return False
@@ -103,17 +104,14 @@ class UpgradeBinary:
         if not testmode:
             self.get_versions()
 
-    def get_versions(self, testdata=None):
+    def get_versions(self, testdata: t.Optional[list[dict[str, t.Any]]] = None):  # pylint: disable=too-many-branches
         ''' ask github about current versions '''
         try:
             if not testdata:
                 headers = {
-                    'X-GitHub-Api-Version':
-                    '2022-11-28',
-                    'Accept':
-                    'application/vnd.github.v3+json',
-                    'User-Agent':
-                    'What\'s Now Playing/{nowplaying.version.__VERSION__}',
+                    'X-GitHub-Api-Version': '2022-11-28',
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'What\'s Now Playing/{nowplaying.version.__VERSION__}',
                 }
                 if token := os.getenv('GITHUB_TOKEN'):
                     logging.debug('Using GITHUB_TOKEN')
@@ -123,26 +121,30 @@ class UpgradeBinary:
                     headers=headers,
                     timeout=100)
                 req.raise_for_status()
-                jsonreldata = req.json()
+                jsonreldata: t.Optional[list] = req.json()
             else:
                 jsonreldata = testdata
 
-            for rel in jsonreldata:
-                if not isinstance(rel, dict):
-                    logging.error(rel)
+            if not jsonreldata:
+                logging.error('No data from github. Aborting.')
+                return
+
+            for reldata in jsonreldata:
+                if not isinstance(reldata, dict):
+                    logging.error('Release data from github was not a dict: %s', reldata)
                     break
 
-                if rel.get('draft'):
+                if reldata.get('draft'):
                     continue
 
-                tagname = Version(rel['tag_name'])
-                if rel.get('prerelease'):
-                    if self.prerelease < tagname:
-                        self.prerelease = tagname
-                        self.predata = rel
-                elif self.stable < tagname:
-                    self.stable = tagname
-                    self.stabledata = rel
+                tag_version = Version(reldata['tag_name'])
+                if reldata.get('prerelease'):
+                    if self.prerelease < tag_version:
+                        self.prerelease = tag_version
+                        self.predata = reldata
+                elif self.stable < tag_version:
+                    self.stable = tag_version
+                    self.stabledata = reldata
 
             if self.stable > self.prerelease:
                 self.prerelease = self.stable
@@ -152,7 +154,7 @@ class UpgradeBinary:
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
 
-    def get_upgrade_data(self):
+    def get_upgrade_data(self) -> t.Optional[dict[str, t.Any]]:
         ''' compare our version to fetched version data '''
         if self.myversion.is_prerelease():
             if self.myversion < self.prerelease:

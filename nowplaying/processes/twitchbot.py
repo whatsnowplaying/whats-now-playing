@@ -39,7 +39,7 @@ def stop(pid):
         pass
 
 
-def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argument
+def start(stopevent: threading.Event, bundledir: str, testmode: bool = False):  #pylint: disable=unused-argument
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'TwitchBot'
 
@@ -49,15 +49,11 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
         nowplaying.bootstrap.set_qt_names(appname='testsuite')
     else:
         nowplaying.bootstrap.set_qt_names()
-    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log',
-                                                rotate=False)
-    config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                          logpath=logpath,
-                                          testmode=testmode)
+    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log', rotate=False)
+    config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=logpath, testmode=testmode)
     logging.info('boot up')
     try:
-        twitchbot = nowplaying.twitch.TwitchSupport(stopevent=stopevent,
-                                                    config=config)  # pylint: disable=unused-variable
+        twitchbot = nowplaying.twitch.TwitchSupport(stopevent=stopevent, config=config)  # pylint: disable=unused-variable
         twitchbot.start()
     except Exception as error:  #pylint: disable=broad-except
         logging.error('TrackPoll crashed: %s', error, exc_info=True)
