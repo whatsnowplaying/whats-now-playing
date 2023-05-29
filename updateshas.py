@@ -30,8 +30,7 @@ def main():
 
     for version in sys.argv[2:]:
         subprocess.check_call(['git', 'checkout', '--force', version])
-        for apppath in pathlib.Path(os.path.join('nowplaying',
-                                                 'templates')).iterdir():
+        for apppath in pathlib.Path(os.path.join('nowplaying', 'templates')).iterdir():
             filename = os.path.basename(apppath)
             if filename not in oldshas:
                 oldshas[filename] = {}

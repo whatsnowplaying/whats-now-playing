@@ -13,3 +13,5 @@ nowplaying/version.py
 NowPlaying.egg-info
 nowplaying/qtrc.py
 .DS_Store
+nowplaying.sublime-project
+nowplaying.sublime-workspace

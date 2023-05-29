@@ -9,6 +9,7 @@ import struct
 import os
 import logging
 import logging.config
+import typing as t
 import urllib.parse
 
 logging.config.dictConfig({
@@ -21,25 +22,25 @@ logging.config.dictConfig({
 #from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
 
-METADATA = {}
+METADATA: t.Optional[dict[str, t.Any]] = {}
 
-METADATALIST = ['artist', 'title', 'album', 'key', 'filename', 'bpm']
+METADATALIST: list[str] = ['artist', 'title', 'album', 'key', 'filename', 'bpm']
 
-PLAYLIST = ['name', 'filename']
+PLAYLIST: list[str] = ['name', 'filename']
 
 
 class IcecastProtocol(asyncio.Protocol):
     ''' a terrible implementation of the Icecast SOURCE protocol '''
 
     def __init__(self):
-        self.streaming = False
-        self.previous_page = b''
+        self.streaming: bool = False
+        self.previous_page: bytes = b''
 
-    def connection_made(self, transport):
+    def connection_made(self, transport: asyncio.BaseTransport):
         ''' initial connection gives us a transport to use '''
         self.transport = transport  # pylint: disable=attribute-defined-outside-init
 
-    def data_received(self, data):
+    def data_received(self, data: bytes):
         ''' every time data is received, this method is called '''
 
         if not self.streaming:
@@ -64,17 +65,18 @@ class IcecastProtocol(asyncio.Protocol):
                     pageio.seek(8, os.SEEK_CUR)  # jump over header name
                     self._parse_vorbis_comment(pageio)
 
-    def _parse_page(self, dataio):
+    def _parse_page(self, dataio: io.BufferedIOBase):
         ''' modified from tinytag, modified for here '''
         header_data = dataio.read(27)  # read ogg page header
         while len(header_data) != 0:
-            header = struct.unpack('<4sBBqIIiB', header_data)
+            header: tuple[bytes, int, int, int, int, int, int,
+                          int] = struct.unpack('<4sBBqIIiB', header_data)
             oggs, version, flags, pos, serial, pageseq, crc, segments = header  # pylint: disable=unused-variable
             # self._max_samplenum = max(self._max_samplenum, pos)
             if oggs != b'OggS' or version != 0:
                 logging.debug('Not a valid ogg stream!')
-            segsizes = struct.unpack('B' * segments, dataio.read(segments))
-            total = 0
+            segsizes: tuple[int] = struct.unpack('B' * segments, dataio.read(segments))
+            total: int = 0
             for segsize in segsizes:  # read all segments
                 total += segsize
                 if total < 255:  # less than 255 bytes means end of page
@@ -90,14 +92,13 @@ class IcecastProtocol(asyncio.Protocol):
             header_data = dataio.read(27)
 
     @staticmethod
-    def _query_parse(data):
+    def _query_parse(data: bytes):
         ''' try to parse the query '''
         global METADATA  # pylint: disable=global-statement
         logging.debug('Processing updinfo')
 
         METADATA = {}
-        text = data.decode('utf-8').replace('GET ',
-                                            'http://localhost').split()[0]
+        text = data.decode('utf-8').replace('GET ', 'http://localhost').split()[0]
         url = urllib.parse.urlparse(text)
         if url.path == '/admin/metadata':
             query = urllib.parse.parse_qs(url.query)
@@ -107,11 +108,10 @@ class IcecastProtocol(asyncio.Protocol):
                 if query.get('title'):
                     METADATA['title'] = query['title'][0]
                 if query.get('song'):
-                    METADATA['title'], METADATA['artist'] = query['song'][
-                        0].split('-')
+                    METADATA['title'], METADATA['artist'] = query['song'][0].split('-')
 
     @staticmethod
-    def _parse_vorbis_comment(fh):  # pylint: disable=invalid-name
+    def _parse_vorbis_comment(fh: io.BytesIO):  # pylint: disable=invalid-name
         ''' from tinytag, with slight modifications, pull out metadata '''
         global METADATA  # pylint: disable=global-statement
         comment_type_to_attr_mapping = {
@@ -131,11 +131,11 @@ class IcecastProtocol(asyncio.Protocol):
         logging.debug('Processing vorbis comment')
         METADATA = {}
 
-        vendor_length = struct.unpack('I', fh.read(4))[0]
+        vendor_length: int = struct.unpack('I', fh.read(4))[0]
         fh.seek(vendor_length, os.SEEK_CUR)  # jump over vendor
-        elements = struct.unpack('I', fh.read(4))[0]
+        elements: int = struct.unpack('I', fh.read(4))[0]
         for _ in range(elements):
-            length = struct.unpack('I', fh.read(4))[0]
+            length: int = struct.unpack('I', fh.read(4))[0]
             try:
                 keyvalpair = codecs.decode(fh.read(length), 'UTF-8')
             except UnicodeDecodeError:
@@ -153,9 +153,9 @@ class Plugin(InputPlugin):
         ''' no custom init '''
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Icecast"
-        self.server = None
-        self.mode = None
-        self.lastmetadata = {}
+        self.server: t.Optional[asyncio.Server] = None
+        self.mode: t.Optional[str] = None
+        self.lastmetadata: t.Optional[dict[str, t.Any]] = {}
 
     def install(self):
         ''' auto-install for Icecast '''
@@ -169,19 +169,16 @@ class Plugin(InputPlugin):
 
     def load_settingsui(self, qwidget):
         ''' load values from config and populate page '''
-        qwidget.port_lineedit.setText(
-            self.config.cparser.value('icecast/port'))
+        qwidget.port_lineedit.setText(self.config.cparser.value('icecast/port'))
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
-        self.config.cparser.setValue('icecast/port',
-                                     qwidget.port_lineedit.text())
+        self.config.cparser.setValue('icecast/port', qwidget.port_lineedit.text())
 
     def desc_settingsui(self, qwidget):
         ''' provide a description for the plugins page '''
-        qwidget.setText(
-            'Icecast is a streaming broadcast protocol.'
-            '  This setting should be used for butt, MIXXX, and many others.')
+        qwidget.setText('Icecast is a streaming broadcast protocol.'
+                        '  This setting should be used for butt, MIXXX, and many others.')
 
 #### Data feed methods
 
@@ -195,7 +192,7 @@ class Plugin(InputPlugin):
 
 #### Control methods
 
-    async def start_port(self, port):
+    async def start_port(self, port: int):
         ''' start the icecast server on a particular port '''
 
         loop = asyncio.get_running_loop()
@@ -207,9 +204,7 @@ class Plugin(InputPlugin):
 
     async def start(self):
         ''' any initialization before actual polling starts '''
-        port = self.config.cparser.value('icecast/port',
-                                         type=int,
-                                         defaultValue=8000)
+        port: int = self.config.cparser.value('icecast/port', type=int, defaultValue=8000)
         await self.start_port(port)
 
     async def stop(self):

@@ -8,10 +8,12 @@ import pathlib
 import shutil
 import sys
 import time
+import typing as t
 import webbrowser
 
-from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QDialog, QMessageBox, QDialogButtonBox, QVBoxLayout, QLabel  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
+    QDialog, QMessageBox, QDialogButtonBox, QVBoxLayout, QLabel, QWidget)
 
 import nowplaying.trackrequests
 import nowplaying.twitch.chat
@@ -22,7 +24,7 @@ import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
     ''' Qt Dialog for asking the user to ugprade '''
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: t.Optional[QWidget] = None):
         super().__init__(parent)
         self.setWindowTitle("New Version Available!")
         dialogbuttons = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
@@ -31,11 +33,10 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
         self.buttonbox.rejected.connect(self.reject)
         self.layout = QVBoxLayout()
 
-    def fill_it_in(self, oldversion, newversion):
+    def fill_it_in(self, oldversion: str, newversion: str):
         ''' fill in the upgrade versions and message '''
         messages = [
-            f'Your version: {oldversion}', f'New version: {newversion}',
-            'Download new version?'
+            f'Your version: {oldversion}', f'New version: {newversion}', 'Download new version?'
         ]
 
         for msg in messages:
@@ -48,7 +49,7 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
 class UpgradeConfig:
     ''' methods to upgrade from old configs to new configs '''
 
-    def __init__(self, testdir=None):
+    def __init__(self, testdir: t.Optional[str] = None):
 
         if sys.platform == "win32":
             self.qsettingsformat = QSettings.IniFormat
@@ -60,8 +61,7 @@ class UpgradeConfig:
 
     def _getconfig(self):
         return QSettings(self.qsettingsformat, QSettings.UserScope,
-                         QCoreApplication.organizationName(),
-                         QCoreApplication.applicationName())
+                         QCoreApplication.organizationName(), QCoreApplication.applicationName())
 
     def backup_config(self):
         ''' back up the old config '''
@@ -71,13 +71,11 @@ class UpgradeConfig:
         if self.testdir:
             docpath = self.testdir
         else:  # pragma: no cover
-            docpath = QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation)[0]
-        backupdir = pathlib.Path(docpath).joinpath(
-            QCoreApplication.applicationName(), 'configbackup')
+            docpath = QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
+        backupdir = pathlib.Path(docpath).joinpath(QCoreApplication.applicationName(),
+                                                   'configbackup')
 
-        logging.info('Making a backup of config prior to upgrade: %s',
-                     backupdir)
+        logging.info('Making a backup of config prior to upgrade: %s', backupdir)
         try:
             pathlib.Path(backupdir).mkdir(parents=True, exist_ok=True)
             backup = backupdir.joinpath(f'{datestr}-config.bak')
@@ -104,17 +102,14 @@ class UpgradeConfig:
             return
 
         # these got moved in 3.1.0
-        npsqldb = pathlib.Path(
-            QStandardPaths.standardLocations(
-                QStandardPaths.CacheLocation)[0]).joinpath('npsql.db')
+        npsqldb = pathlib.Path(QStandardPaths.standardLocations(
+            QStandardPaths.CacheLocation)[0]).joinpath('npsql.db')
         npsqldb.unlink(missing_ok=True)
-        webdb = pathlib.Path(
-            QStandardPaths.standardLocations(
-                QStandardPaths.CacheLocation)[0]).joinpath('web.db')
+        webdb = pathlib.Path(QStandardPaths.standardLocations(
+            QStandardPaths.CacheLocation)[0]).joinpath('web.db')
         webdb.unlink(missing_ok=True)
 
-        oldversstr = config.value('settings/configversion',
-                                  defaultValue='3.0.0')
+        oldversstr: str = config.value('settings/configversion', defaultValue='3.0.0')
 
         thisverstr = nowplaying.version.__VERSION__  #pylint: disable=no-member
         oldversion = nowplaying.upgradeutils.Version(oldversstr)
@@ -149,7 +144,7 @@ class UpgradeConfig:
             try:
                 newval = rawconfig.value(newkey)
             except:  # pylint: disable=bare-except
-                pass
+                newval = None
 
             if newval:
                 logging.debug('%s already has value %s', newkey, newval)
@@ -158,8 +153,7 @@ class UpgradeConfig:
             try:
                 oldval = rawconfig.value(oldkey)
             except:  # pylint: disable=bare-except
-                logging.debug('%s vs %s: skipped, no new value', oldkey,
-                              newkey)
+                logging.debug('%s vs %s: skipped, no new value', oldkey, newkey)
                 continue
 
             if oldval:
@@ -175,7 +169,7 @@ class UpgradeConfig:
 class UpgradeTemplates():
     ''' Upgrade templates '''
 
-    def __init__(self, bundledir=None, testdir=None):
+    def __init__(self, bundledir: str, testdir: t.Optional[str] = None):
         self.bundledir = pathlib.Path(bundledir)
         self.apptemplatedir = self.bundledir.joinpath('templates')
         self.testdir = testdir
@@ -184,13 +178,12 @@ class UpgradeTemplates():
                 QCoreApplication.applicationName(), 'templates')
         else:  # pragma: no cover
             self.usertemplatedir = pathlib.Path(
-                QStandardPaths.standardLocations(
-                    QStandardPaths.DocumentsLocation)[0],
+                QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
                 QCoreApplication.applicationName()).joinpath('templates')
         self.usertemplatedir.mkdir(parents=True, exist_ok=True)
         self.alert = False
         self.copied = []
-        self.oldshas = {}
+        self.oldshas: t.Optional[dict[str, dict[str, str]]] = {}
 
         self.setup_templates()
 
@@ -208,17 +201,22 @@ class UpgradeTemplates():
         if shafile.exists():
             with open(shafile, encoding='utf-8') as fhin:
                 self.oldshas = json.loads(fhin.read())
+        else:
+            logging.error('%s file is missing.', shafile)
 
-    def check_preload(self, filename, userhash):
+    def check_preload(self, filename: str, userhash: str) -> t.Optional[str]:
         ''' check if the given file matches a known hash '''
         found = None
         hexdigest = None
+        if not self.oldshas:
+            logging.error('updateshas.json file was not loaded.')
+            return found
         if filename in self.oldshas:
             for version, hexdigest in self.oldshas[filename].items():
                 if userhash == hexdigest:
                     found = version
-        logging.debug('filename = %s, found = %s userhash = %s hexdigest = %s',
-                      filename, found, userhash, hexdigest)
+        logging.debug('filename = %s, found = %s userhash = %s hexdigest = %s', filename, found,
+                      userhash, hexdigest)
         return found
 
     def setup_templates(self):
@@ -231,8 +229,7 @@ class UpgradeTemplates():
 
             if not userpath.exists():
                 shutil.copyfile(apppath, userpath)
-                logging.info('Added %s to %s', apppath.name,
-                             self.usertemplatedir)
+                logging.info('Added %s to %s', apppath.name, self.usertemplatedir)
                 continue
 
             apphash = checksum(apppath)
@@ -244,12 +241,11 @@ class UpgradeTemplates():
             if version := self.check_preload(apppath.name, userhash):
                 userpath.unlink()
                 shutil.copyfile(apppath, userpath)
-                logging.info('Replaced %s from %s with %s', apppath.name,
-                             version, self.usertemplatedir)
+                logging.info('Replaced %s from %s with %s', apppath.name, version,
+                             self.usertemplatedir)
                 continue
 
-            destpath = str(userpath).replace('.txt', '.new')
-            destpath = pathlib.Path(destpath.replace('.htm', '.new'))
+            destpath = userpath.with_suffix('.new')
             if destpath.exists():
                 userhash = checksum(destpath)
                 if apphash == userhash:
@@ -257,8 +253,7 @@ class UpgradeTemplates():
                 destpath.unlink()
 
             self.alert = True
-            logging.info('New version of %s copied to %s', apppath.name,
-                         destpath)
+            logging.info('New version of %s copied to %s', apppath.name, destpath)
             shutil.copyfile(apppath, destpath)
             self.copied.append(apppath.name)
 
@@ -268,8 +263,7 @@ def upgrade_m3u(config, testdir=None):
     if 'VirtualDJ' in config.value('m3u/directory'):
         historypath = pathlib.Path(config.value('m3u/directory'))
         config.setValue('virtualdj/history', config.value('m3u/directory'))
-        config.setValue('virtualdj/playlists',
-                        str(historypath.parent.joinpath('Playlists')))
+        config.setValue('virtualdj/playlists', str(historypath.parent.joinpath('Playlists')))
         config.setValue('settings/input', 'virtualdj')
         if not testdir:
             msgbox = QMessageBox()
@@ -280,8 +274,7 @@ def upgrade_m3u(config, testdir=None):
 
 def upgrade_filters(config):
     ''' setup the recommended filters '''
-    if config.value('settings/stripextras',
-                    type=bool) and not config.value('regex_filter/0'):
+    if config.value('settings/stripextras', type=bool) and not config.value('regex_filter/0'):
         stripworldlist = ['clean', 'dirty', 'explicit', 'official music video']
         joinlist = '|'.join(stripworldlist)
         config.setValue('regex_filter/0', f' \\((?i:{joinlist})\\)')
@@ -317,5 +310,6 @@ def upgrade(bundledir=None):
     except Exception as error:  # pylint: disable=broad-except
         logging.error(error)
 
-    myupgrade = UpgradeConfig()  #pylint: disable=unused-variable
-    myupgrade = UpgradeTemplates(bundledir=bundledir)
+    myupgrade = UpgradeConfig()  # pylint: disable=unused-variable
+    myupgrade = UpgradeTemplates(  #pylint: disable=unused-variable
+        bundledir=bundledir)

@@ -4,6 +4,7 @@
 import logging
 import os
 import re
+import typing as t
 
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
@@ -27,9 +28,9 @@ EXTVDJ_REMIX_RE = re.compile(r'.*<remix>(.+)</remix>.*')
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
 
-    metadata = {'artist': None, 'title': None, 'filename': None}
+    metadata: t.Optional[dict[str, t.Any]] = {'artist': None, 'title': None, 'filename': None}
 
-    def __init__(self, config=None, m3udir=None, qsettings=None):
+    def __init__(self, config=None, m3udir: t.Optional[str] = None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "M3U"
         if m3udir and os.path.exists(m3udir):
@@ -37,7 +38,7 @@ class Plugin(InputPlugin):
         else:
             self.m3udir = None
 
-        self.mixmode = "newest"
+        self.mixmode: str = "newest"
         self.event_handler = None
         self.observer = None
         self._reset_meta()
@@ -50,11 +51,11 @@ class Plugin(InputPlugin):
     def _reset_meta():
         Plugin.metadata = {'artist': None, 'title': None, 'filename': None}
 
-    async def setup_watcher(self, configkey):
+    async def setup_watcher(self, configkey: str):
         ''' set up a custom watch on the m3u dir so meta info
             can update on change'''
 
-        m3udir = self.config.cparser.value(configkey)
+        m3udir: str = self.config.cparser.value(configkey)
         if not self.m3udir or self.m3udir != m3udir:
             await self.stop()
 
@@ -70,7 +71,7 @@ class Plugin(InputPlugin):
         #if len(os.listdir(self.m3udir)) < 1:
         #    pathlib.Path(os.path.join(self.m3udir, 'empty.m3u')).touch()
 
-        self.event_handler = PatternMatchingEventHandler(
+        self.event_handler: PatternMatchingEventHandler = PatternMatchingEventHandler(
             patterns=['*.m3u', '*.m3u8'],
             ignore_patterns=['.DS_Store'],
             ignore_directories=True,
@@ -84,12 +85,10 @@ class Plugin(InputPlugin):
         else:
             logging.debug('Using fsevent observer')
             self.observer = Observer()
-        self.observer.schedule(self.event_handler,
-                               self.m3udir,
-                               recursive=False)
+        self.observer.schedule(self.event_handler, self.m3udir, recursive=False)
         self.observer.start()
 
-    def _verify_file(self, m3ufilename, filestring):
+    def _verify_file(self, m3ufilename: str, filestring: bytes) -> t.Optional[str]:
         found = None
         if b'netsearch://' in filestring or b'http://' in filestring or b'https://' in filestring:
             logging.debug('Remote resource; skipping filename decode')
@@ -116,18 +115,20 @@ class Plugin(InputPlugin):
                 break
         return found
 
-    def _parse_extvdj(self, inputline):
+    def _parse_extvdj(self, inputline: str) -> dict[str, t.Any]:
         ''' read the #EXTVDJ comment extension '''
         metadata = {}
         vdjline = inputline.replace('#EXTVDJ:', '')
 
         try:
-            metadata['title'] = EXTVDJ_TITLE_RE.match(vdjline).group(1)
+            if line := EXTVDJ_TITLE_RE.match(vdjline):
+                metadata['title'] = line.group(1)
         except AttributeError:
             pass
 
         try:
-            metadata['artist'] = EXTVDJ_ARTIST_RE.match(vdjline).group(1)
+            if line := EXTVDJ_ARTIST_RE.match(vdjline):
+                metadata['artist'] = line.group(1)
         except AttributeError:
             pass
 
@@ -141,7 +142,7 @@ class Plugin(InputPlugin):
 
         return metadata
 
-    def _read_full_file(self, filename):
+    def _read_full_file(self, filename: str) -> list[str]:
         ''' read the entire content of a file '''
         content = []
         with open(filename, 'rb') as m3ufh:
@@ -162,8 +163,8 @@ class Plugin(InputPlugin):
             return
 
         filename = event.src_path
-        logging.debug('event type: %s, syn: %s, path: %s', event.event_type,
-                      event.is_synthetic, filename)
+        logging.debug('event type: %s, syn: %s, path: %s', event.event_type, event.is_synthetic,
+                      filename)
 
         # file is empty so ignore it
         if os.stat(filename).st_size == 0:
@@ -189,8 +190,7 @@ class Plugin(InputPlugin):
                     continue
                 trackfile = newline
 
-        logging.debug('attempting to parse \'%s\' with various encodings',
-                      trackfile)
+        logging.debug('attempting to parse \'%s\' with various encodings', trackfile)
 
         audiofilename = None
         if trackfile:
@@ -237,9 +237,7 @@ class Plugin(InputPlugin):
             startdir = self.qwidget.dir_lineedit.text()
         else:
             startdir = QDir.homePath()
-        if dirname := QFileDialog.getExistingDirectory(self.qwidget,
-                                                       'Select directory',
-                                                       startdir):
+        if dirname := QFileDialog.getExistingDirectory(self.qwidget, 'Select directory', startdir):
             self.qwidget.dir_lineedit.setText(dirname)
 
     def connect_settingsui(self, qwidget, uihelp):
@@ -250,8 +248,7 @@ class Plugin(InputPlugin):
 
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
-        qwidget.dir_lineedit.setText(
-            self.config.cparser.value('m3u/directory'))
+        qwidget.dir_lineedit.setText(self.config.cparser.value('m3u/directory'))
 
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''

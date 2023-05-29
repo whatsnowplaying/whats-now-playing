@@ -81,8 +81,7 @@ class MPRIS2Handler():
             logging.error('Unknown service: %s', self.service)
             return builddata
 
-        properties = dbus.Interface(
-            self.proxy, dbus_interface='org.freedesktop.DBus.Properties')
+        properties = dbus.Interface(self.proxy, dbus_interface='org.freedesktop.DBus.Properties')
         if not properties:
             logging.error('Unknown service: %s', self.service)
             return builddata
@@ -235,8 +234,7 @@ class Plugin(InputPlugin):
         servicelist = self.mpris2.get_mpris2_services()
         qwidget.list_widget.clear()
         qwidget.list_widget.addItems(servicelist)
-        if curbutton := qwidget.list_widget.findItems(currentservice,
-                                                      Qt.MatchContains):
+        if curbutton := qwidget.list_widget.findItems(currentservice, Qt.MatchContains):
             curbutton[0].setSelected(True)
 
     def save_settingsui(self, qwidget):

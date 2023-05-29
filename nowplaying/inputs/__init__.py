@@ -2,6 +2,8 @@
 ''' Input Plugin definition '''
 
 import logging
+import typing as t
+
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.plugin import WNPBasePlugin
 
@@ -10,33 +12,33 @@ class InputPlugin(WNPBasePlugin):
     ''' base class of input plugins '''
 
     def __init__(self, config=None, qsettings=None):
-        self.plugintype = 'input'
         super().__init__(config=config, qsettings=qsettings)
+        self.plugintype = 'input'
 
 #### Additional UI method
 
-    def desc_settingsui(self, qwidget):  #pylint: disable=no-self-use
+    def desc_settingsui(self, qwidget):  # pylint: disable=no-self-use
         ''' description of this input '''
         qwidget.setText('No description available.')
 
 #### Autoinstallation methods ####
 
-    def install(self):  # pylint: disable=no-self-use
+    def install(self) -> bool:  # pylint: disable=no-self-use
         ''' if a fresh install, run this '''
         return False
 
 #### Mix Mode menu item methods
 
-    def validmixmodes(self):  #pylint: disable=no-self-use
+    def validmixmodes(self) -> list[str]:  # pylint: disable=no-self-use
         ''' tell ui valid mixmodes '''
         #return ['newest', 'oldest']
         return ['newest']
 
-    def setmixmode(self, mixmode):  #pylint: disable=no-self-use, unused-argument
+    def setmixmode(self, mixmode: str) -> str:  # pylint: disable=no-self-use, unused-argument
         ''' handle user switching the mix mode: TBD '''
         return 'newest'
 
-    def getmixmode(self):  #pylint: disable=no-self-use
+    def getmixmode(self) -> str:  # pylint: disable=no-self-use
         ''' return what the current mixmode is set to '''
 
         # mixmode may only be allowed to be in one state
@@ -47,12 +49,12 @@ class InputPlugin(WNPBasePlugin):
 
 #### Data feed methods
 
-    async def getplayingtrack(self):
+    async def getplayingtrack(self) -> dict[str, t.Any]:
         ''' Get the currently playing track '''
         raise NotImplementedError
 
-    async def getrandomtrack(self, playlist):
-        ''' Get the files associated with a playlist, crate, whatever '''
+    async def getrandomtrack(self, playlist: str) -> t.Optional[str]:
+        ''' Get a file associated with a playlist, crate, whatever '''
         raise NotImplementedError
 
 

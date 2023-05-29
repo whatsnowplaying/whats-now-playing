@@ -5,6 +5,7 @@ import asyncio
 import logging
 import traceback
 import socket
+import typing as t
 
 import aiohttp
 import requests
@@ -16,17 +17,16 @@ from twitchAPI.oauth import UserAuthenticator, validate_token
 
 import nowplaying.utils
 
-USER_SCOPE = [
-    AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ,
-    AuthScope.CHAT_EDIT
-]
+USER_SCOPE = [AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 
 
-async def get_user_image(twitch, loginname):
+async def get_user_image(twitch: Twitch, loginname: str) -> t.Optional[bytes]:
     ''' ask twitch for the user profile image '''
     image = None
     try:
-        user = await first(twitch.get_users(logins=loginname))
+        user = await first(twitch.get_users(logins=[loginname]))
+        if not user:
+            return None
         async with aiohttp.ClientSession() as session:
             async with session.get(user.profile_image_url, timeout=5) as resp:
                 image = nowplaying.utils.image2png(await resp.read())
@@ -35,7 +35,7 @@ async def get_user_image(twitch, loginname):
     return image
 
 
-def qtsafe_validate_token(token):
+def qtsafe_validate_token(token: str) -> t.Optional[str]:
     ''' get valid and get the display name for a token '''
     url = 'https://id.twitch.tv/oauth2/validate'
     headers = {'Authorization': f'OAuth {token}'}
@@ -46,7 +46,7 @@ def qtsafe_validate_token(token):
         logging.error('Twitch Token validation check failed:%s', error)
         return None
 
-    valid = req.json()
+    valid: dict[str, t.Any] = req.json()
     if valid.get('status') == 401:
         logging.debug('Twitch token is invalid')
         return None
@@ -55,14 +55,15 @@ def qtsafe_validate_token(token):
 
 class TwitchLogin:
     ''' manage the global twitch login for clientid/secret '''
-    TWITCH = None
+    TWITCH: t.Optional[Twitch] = None
     TWITCH_LOCK = asyncio.Lock()
 
     def __init__(self, config):
         self.config = config
         self.timeout = aiohttp.ClientTimeout(total=60)
 
-    async def attempt_user_auth(self, token, refresh_token):
+    async def attempt_user_auth(self, token: t.Optional[str],
+                                refresh_token: t.Optional[str]) -> bool:
         ''' try user auth '''
         if not token or not refresh_token:
             return False
@@ -71,9 +72,11 @@ class TwitchLogin:
         if valid.get('status') == 401:
             return False
 
+        if not TwitchLogin.TWITCH:
+            return False
+
         try:
-            await TwitchLogin.TWITCH.set_user_authentication(
-                token, USER_SCOPE, refresh_token)
+            await TwitchLogin.TWITCH.set_user_authentication(token, USER_SCOPE, refresh_token)
             TwitchLogin.TWITCH.user_auth_refresh_callback = self.save_refreshed_tokens
             await TwitchLogin.TWITCH.refresh_used_token()
         except Exception as error:  #pylint: disable=broad-except
@@ -81,7 +84,7 @@ class TwitchLogin:
             return False
         return True
 
-    async def api_login(self):
+    async def api_login(self) -> t.Optional[Twitch]:
         ''' authenticate with the configured clientid/secret '''
 
         if TwitchLogin.TWITCH:
@@ -91,40 +94,32 @@ class TwitchLogin:
         async with TwitchLogin.TWITCH_LOCK:
             try:
 
-                if self.config.cparser.value(
-                        'twitchbot/clientid') and self.config.cparser.value(
-                            'twitchbot/secret'):
+                if self.config.cparser.value('twitchbot/clientid') and self.config.cparser.value(
+                        'twitchbot/secret'):
                     TwitchLogin.TWITCH = await Twitch(
                         self.config.cparser.value('twitchbot/clientid'),
                         self.config.cparser.value('twitchbot/secret'),
                         session_timeout=self.timeout)
 
-                    token = self.config.cparser.value('twitchbot/oldusertoken')
-                    refresh_token = self.config.cparser.value(
+                    token: t.Optional[str] = self.config.cparser.value('twitchbot/oldusertoken')
+                    refresh_token: t.Optional[str] = self.config.cparser.value(
                         'twitchbot/oldrefreshtoken')
-                    oldscopes = self.config.cparser.value(
-                        'twitchbot/oldscopes')
+                    oldscopes: list[AuthScope] = self.config.cparser.value('twitchbot/oldscopes')
 
                     if oldscopes != USER_SCOPE:
                         token = None
 
                     if not await self.attempt_user_auth(token, refresh_token):
-                        auth = UserAuthenticator(TwitchLogin.TWITCH,
-                                                 USER_SCOPE,
-                                                 force_verify=False)
+                        auth = UserAuthenticator(TwitchLogin.TWITCH, USER_SCOPE, force_verify=False)
                         token, refresh_token = await auth.authenticate()
                         oldscopes = USER_SCOPE
 
                         await self.attempt_user_auth(token, refresh_token)
 
-                    self.config.cparser.setValue('twitchbot/oldusertoken',
-                                                 token)
-                    self.config.cparser.setValue('twitchbot/oldrefreshtoken',
-                                                 refresh_token)
-                    self.config.cparser.setValue('twitchbot/oldscopes',
-                                                 USER_SCOPE)
-            except (aiohttp.client_exceptions.ClientConnectorError,
-                    socket.gaierror) as error:
+                    self.config.cparser.setValue('twitchbot/oldusertoken', token)
+                    self.config.cparser.setValue('twitchbot/oldrefreshtoken', refresh_token)
+                    self.config.cparser.setValue('twitchbot/oldscopes', USER_SCOPE)
+            except (aiohttp.client_exceptions.ClientConnectorError, socket.gaierror) as error:
                 logging.error(error)
             except:  # pylint: disable=bare-except
                 for line in traceback.format_exc().splitlines():
@@ -133,7 +128,8 @@ class TwitchLogin:
         logging.debug('exiting lock')
         return TwitchLogin.TWITCH
 
-    async def save_refreshed_tokens(self, usertoken, refreshtoken):
+    async def save_refreshed_tokens(self, usertoken: t.Optional[str],
+                                    refreshtoken: t.Optional[str]):
         ''' every time token is updated, save it '''
         self.config.cparser.setValue('twitchbot/oldusertoken', usertoken)
         self.config.cparser.setValue('twitchbot/oldrefreshtoken', refreshtoken)

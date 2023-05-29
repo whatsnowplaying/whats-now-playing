@@ -4,14 +4,15 @@
 import os
 import ssl
 import sys
+import typing as t
 
 
-def frozen_init(bundledir):
+def frozen_init(bundledir: t.Optional[str]) -> str:
     ''' do some frozen handling '''
+
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
         if not bundledir:
-            bundledir = getattr(sys, '_MEIPASS',
-                                os.path.abspath(os.path.dirname(__file__)))
+            bundledir: str = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
         #
         # Under PyInstaller, always use our CA File
         #
@@ -22,6 +23,6 @@ def frozen_init(bundledir):
                 sys._MEIPASS,  # pylint: disable=protected-access
                 'certifi',
                 'cacert.pem')
-    elif not bundledir:
-        bundledir = os.path.abspath(os.path.dirname(__file__))
+    if not bundledir:
+        bundledir: str = os.path.abspath(os.path.dirname(__file__))
     return bundledir

@@ -3,10 +3,10 @@
 
 import logging
 
-from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
     QApplication, QErrorMessage, QMenu, QMessageBox, QSystemTrayIcon)
-from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module
-from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=no-name-in-module
+from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.config
 import nowplaying.db
@@ -33,18 +33,17 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.menu = QMenu()
 
         # create systemtray options and actions
-        self.aboutwindow = nowplaying.settingsui.load_widget_ui(
-            self.config, 'about')
+        self.aboutwindow = nowplaying.settingsui.load_widget_ui(self.config, 'about')
+        if not self.aboutwindow:
+            raise AssertionError("Unable to load about window. Something is very wrong.")
         nowplaying.settingsui.about_version_text(self.config, self.aboutwindow)
         self.about_action = QAction('About What\'s Now Playing')
         self.menu.addAction(self.about_action)
         self.about_action.setEnabled(True)
         self.about_action.triggered.connect(self.aboutwindow.show)
 
-        self.subprocesses = nowplaying.subprocesses.SubprocessManager(
-            self.config)
-        self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self,
-                                                               beam=beam)
+        self.subprocesses = nowplaying.subprocesses.SubprocessManager(self.config)
+        self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self, beam=beam)
 
         self.settings_action = QAction("Settings")
         self.settings_action.triggered.connect(self.settingswindow.show)
@@ -91,7 +90,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.requestswindow = None
         self._configure_twitchrequests()
 
-    def _configure_beamstatus(self, beam):
+    def _configure_beamstatus(self, beam: bool):
         self.config.cparser.setValue('control/beam', beam)
         # these will get filled in by their various subsystems as required
         self.config.cparser.remove('control/beamport')
@@ -100,8 +99,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.config.cparser.remove('control/beamserverip')
 
     def _configure_twitchrequests(self):
-        self.requestswindow = nowplaying.trackrequests.Requests(
-            config=self.config)
+        self.requestswindow = nowplaying.trackrequests.Requests(config=self.config)
         self.requestswindow.initial_ui()
 
     def _requestswindow(self):
@@ -125,14 +123,14 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.menu.addAction(self.action_pause)
         self.action_pause.setEnabled(False)
 
-    def webenable(self, status):
+    def webenable(self, status: bool):
         ''' If the web server gets in trouble, we need to tell the user '''
         if not status:
             self.settingswindow.disable_web()
             self.settingswindow.show()
             self.pause()
 
-    def obswsenable(self, status):
+    def obswsenable(self, status: bool):
         ''' If the OBS WebSocket gets in trouble, we need to tell the user '''
         if not status:
             self.settingswindow.disable_obsws()
@@ -153,8 +151,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def fix_mixmode_menu(self):
         ''' update the mixmode based upon current rules '''
-        plugins = self.config.cparser.value('settings/input',
-                                            defaultValue=None)
+        plugins = self.config.cparser.value('settings/input', defaultValue=None)
         if not plugins:
             return
 
@@ -200,8 +197,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
             # don't announce empty content
             if not metadata['artist'] and not metadata['title']:
-                logging.warning(
-                    'Both artist and title are empty; skipping notify')
+                logging.warning('Both artist and title are empty; skipping notify')
                 return
 
             if 'artist' in metadata:
@@ -223,9 +219,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
             tip = f'{artist} - {title}'
             self.tray.setIcon(self.icon)
-            self.tray.showMessage('Now Playing ▶ ',
-                                  tip,
-                                  icon=QSystemTrayIcon.NoIcon)
+            self.tray.showMessage('Now Playing ▶ ', tip, icon=QSystemTrayIcon.NoIcon)
             self.tray.show()
 
     def cleanquit(self):
@@ -253,12 +247,11 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def installer(self):
         ''' make some guesses as to what the user needs '''
-        plugin = self.config.cparser.value('settings/input', defaultValue=None)
+        plugin: str = self.config.cparser.value('settings/input', defaultValue=None)
         if plugin and not self.config.validate_source(plugin):
             self.config.cparser.remove('settings/input')
             msgbox = QErrorMessage()
-            msgbox.showMessage(
-                f'Configured source {plugin} is not supported. Reconfiguring.')
+            msgbox.showMessage(f'Configured source {plugin} is not supported. Reconfiguring.')
             msgbox.show()
             msgbox.exec()
         elif not plugin:
@@ -274,8 +267,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         for plugin in plugins:
             if plugins[plugin].install():
-                self.config.cparser.setValue('settings/input',
-                                             plugin.split('.')[-1])
+                self.config.cparser.setValue('settings/input', plugin.split('.')[-1])
                 break
 
         twitchchatsettings = nowplaying.twitch.chat.TwitchChatSettings()

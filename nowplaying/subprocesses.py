@@ -1,9 +1,26 @@
 #!/usr/bin/env python3
 ''' handle all of the big sub processes used for output '''
 
+import dataclasses
 import importlib
 import logging
 import multiprocessing
+from types import ModuleType
+
+
+#
+# process should be t.Optional[multiprocessing.Process] but it is too stupid to
+# realize that if you check the value for None and then do things, that it won't
+# be None. So it is easier to just declare it as Process and then exempt
+# the two cases where it is set to None rather than exempt the many, many
+# references to the Process class.
+#
+@dataclasses.dataclass
+class ProcessTracker:
+    ''' keep track of launched processes '''
+    module: ModuleType
+    process: multiprocessing.Process
+    stopevent = multiprocessing.Event()
 
 
 class SubprocessManager:
@@ -14,27 +31,22 @@ class SubprocessManager:
         self.testmode = testmode
         self.obswsobj = None
         self.manager = multiprocessing.Manager()
-        self.processes = {}
         if self.config.cparser.value('control/beam', type=bool):
             processlist = ['trackpoll', 'beamsender']
         else:
-            processlist = [
-                'trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver'
-            ]
+            processlist = ['trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver']
 
+        self.processes: dict[str, ProcessTracker] = {}
         for name in processlist:
-            self.processes[name] = {
-                'module':
-                importlib.import_module(f'nowplaying.processes.{name}'),
-                'process': None,
-                'stopevent': self.manager.Event(),
-            }
+            self.processes[name] = ProcessTracker(
+                module=importlib.import_module(f'nowplaying.processes.{name}'),
+                process=None)  # pyright: ignore[reportGeneralTypeIssues]
 
     def start_all_processes(self):
         ''' start our various threads '''
 
         for key, module in self.processes.items():
-            module['stopevent'].clear()
+            module.stopevent.clear()
             func = getattr(self, f'start_{key}')
             func()
 
@@ -42,9 +54,9 @@ class SubprocessManager:
         ''' stop all the subprocesses '''
 
         for key, module in self.processes.items():
-            if module.get('process'):
+            if module.process:
                 logging.debug('Early notifying %s', key)
-                module['stopevent'].set()
+                module.stopevent.set()
 
         for key in self.processes:
             func = getattr(self, f'stop_{key}')
@@ -53,38 +65,43 @@ class SubprocessManager:
         if not self.config.cparser.value('control/beam', type=bool):
             self.stop_obsws()
 
-    def _process_start(self, processname):
+    def _process_start(self, processname: str):
         ''' Start trackpoll '''
-        if not self.processes[processname]['process']:
+        if not self.processes[processname].process:
             logging.info('Starting %s', processname)
-            self.processes[processname]['stopevent'].clear()
-            self.processes[processname]['process'] = multiprocessing.Process(
-                target=getattr(self.processes[processname]['module'], 'start'),
+            self.processes[processname].stopevent.clear()
+            self.processes[processname].process = multiprocessing.Process(
+                target=getattr(self.processes[processname].module, 'start'),
                 name=processname,
                 args=(
-                    self.processes[processname]['stopevent'],
+                    self.processes[processname].stopevent,
                     self.config.getbundledir(),
                     self.testmode,
                 ))
-            self.processes[processname]['process'].start()
+            if self.processes[processname].process:
+                self.processes[processname].process.start()
+            else:
+                logging.error('Failed to launch %s', processname)
 
     def _process_stop(self, processname):
-        if self.processes[processname]['process']:
+        if self.processes[processname].process:
             logging.debug('Notifying %s', processname)
-            self.processes[processname]['stopevent'].set()
-            if processname in ['twitchbot']:
-                func = getattr(self.processes[processname]['module'], 'stop')
-                func(self.processes[processname]['process'].pid)
+            self.processes[processname].stopevent.set()
+            try:
+                if func := getattr(self.processes[processname].module, 'stop'):
+                    func(self.processes[processname].process.pid)
+            except AttributeError:
+                pass
             logging.debug('Waiting for %s', processname)
-            self.processes[processname]['process'].join(10)
-            if self.processes[processname]['process'].is_alive():
+            self.processes[processname].process.join(10)
+            if self.processes[processname].process.is_alive():
                 logging.info('Terminating %s %s forcefully', processname,
-                             self.processes[processname]['process'].pid)
-                self.processes[processname]['process'].terminate()
-            self.processes[processname]['process'].join(5)
-            self.processes[processname]['process'].close()
-            del self.processes[processname]['process']
-            self.processes[processname]['process'] = None
+                             self.processes[processname].process.pid)
+                self.processes[processname].process.terminate()
+            self.processes[processname].process.join(5)
+            self.processes[processname].process.close()
+            del self.processes[processname].process
+            self.processes[processname].process = None  # pyright: ignore[reportGeneralTypeIssues]
         logging.debug('%s should be stopped', processname)
 
     def start_discordbot(self):

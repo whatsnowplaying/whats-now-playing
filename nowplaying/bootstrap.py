@@ -5,16 +5,16 @@ import logging
 import logging.handlers
 import pathlib
 import sys
+import typing as t
 
 from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QErrorMessage  # pylint: disable=no-name-in-module
 
 
-def verify_python_version():
+def verify_python_version() -> bool:
     ''' make sure the correct version of python is being used '''
 
-    if sys.version_info[0] < 3 or (sys.version_info[0] == 3
-                                   and sys.version_info[1] < 10):
+    if sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 10):
         msgbox = QErrorMessage()
         msgbox.showMessage('Python Version must be 3.10 or higher.  Exiting.')
         msgbox.show()
@@ -24,11 +24,11 @@ def verify_python_version():
     return True
 
 
-def set_qt_names(app=None,
-                 domain='com.github.whatsnowplaying',
-                 appname='NowPlaying'):
+def set_qt_names(app: t.Optional[QCoreApplication] = None,
+                 domain: str = 'com.github.whatsnowplaying',
+                 appname: str = 'NowPlaying'):
     ''' bootstrap Qt for configuration '''
-    #QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
+    # QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     if not app:
         app = QCoreApplication.instance()
     if not app:
@@ -38,7 +38,9 @@ def set_qt_names(app=None,
     app.setApplicationName(appname)
 
 
-def setuplogging(logdir=None, logname='debug.log', rotate=False):
+def setuplogging(logdir: t.Union[str, pathlib.Path | None] = None,
+                 logname: str = 'debug.log',
+                 rotate: bool = False) -> pathlib.Path:
     ''' configure logging '''
     besuretorotate = False
 
@@ -49,8 +51,7 @@ def setuplogging(logdir=None, logname='debug.log', rotate=False):
             logpath = logpath.parent
     else:
         logpath = pathlib.Path(
-            QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation)[0],
+            QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
             QCoreApplication.applicationName()).joinpath('logs')
     logpath.mkdir(parents=True, exist_ok=True)
     logfile = logpath.joinpath(logname)

@@ -33,16 +33,11 @@ import nowplaying.trackrequests
 class BeamHandler():  # pylint: disable=too-many-instance-attributes
     ''' send the local track information to a server '''
 
-    def __init__(self,
-                 bundledir=None,
-                 config=None,
-                 stopevent=None,
-                 testmode=False):
+    def __init__(self, bundledir=None, config=None, stopevent=None, testmode=False):
         threading.current_thread().name = 'BeamSender'
         self.testmode = testmode
         if not config:
-            config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                                  testmode=testmode)
+            config = nowplaying.config.ConfigFile(bundledir=bundledir, testmode=testmode)
         self.config = config
         self.stopevent = stopevent
         self.tasks = set()
@@ -52,8 +47,8 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
         self.port = None
         self.ipaddr = None
         self.connection = None
-        self.requests = nowplaying.trackrequests.Requests(
-            config=self.config, stopevent=self.stopevent)
+        self.requests = nowplaying.trackrequests.Requests(config=self.config,
+                                                          stopevent=self.stopevent)
         signal.signal(signal.SIGINT, self.forced_stop)
         try:
             loop = asyncio.get_running_loop()
@@ -115,15 +110,12 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                 url = f'ws://{self.ipaddr}:{self.port}/v1/beam'
                 try:
                     async with ClientSession().ws_connect(url) as connection:
-                        while not self.stopevent.is_set(
-                        ) and not connection.closed:
+                        while not self.stopevent.is_set() and not connection.closed:
                             if not tasks:
-                                task = loop.create_task(
-                                    self._websocket_listener(connection))
+                                task = loop.create_task(self._websocket_listener(connection))
                                 tasks.add(task)
                                 task.add_done_callback(tasks.discard)
-                                task = loop.create_task(
-                                    self._websocket_metadata_write(connection))
+                                task = loop.create_task(self._websocket_metadata_write(connection))
                                 tasks.add(task)
                                 task.add_done_callback(tasks.discard)
                             await asyncio.sleep(1)
@@ -183,8 +175,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
             try:
                 data, addr = sock.recvfrom(n_bytes)
             except (BlockingIOError, InterruptedError):
-                loop.add_reader(filedes, udp_recvfrom, loop, sock, n_bytes,
-                                fut, True)
+                loop.add_reader(filedes, udp_recvfrom, loop, sock, n_bytes, fut, True)
             else:
                 fut.set_result((data, addr))
             return fut
@@ -213,20 +204,17 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                 if port != self.port:
                     logging.debug('updating port to %s', port)
                     self.port = port
-                    self.config.cparser.setValue('control/beamserverport',
-                                                 self.port)
+                    self.config.cparser.setValue('control/beamserverport', self.port)
 
                 if idname != self.idname:
                     logging.debug('updating idname to %s', idname)
                     self.idname = idname
-                    self.config.cparser.setValue('control/beamservername',
-                                                 self.idname)
+                    self.config.cparser.setValue('control/beamservername', self.idname)
 
                 if ipaddr != self.ipaddr:
                     logging.debug('updating ipaddr to %s', ipaddr)
                     self.ipaddr = ipaddr
-                    self.config.cparser.setValue('control/beamserverip',
-                                                 self.ipaddr)
+                    self.config.cparser.setValue('control/beamserverip', self.ipaddr)
 
         except:  # pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
@@ -246,8 +234,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
         for key in nowplaying.db.METADATABLOBLIST:
             if metadata.get(key):
                 newkey = key.replace('raw', 'base64')
-                metadata[newkey] = base64.b64encode(
-                    metadata[key]).decode('utf-8')
+                metadata[newkey] = base64.b64encode(metadata[key]).decode('utf-8')
                 del metadata[key]
         return metadata
 
@@ -266,13 +253,11 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
         # taken care of it
         try:
             if reqdata.get('type') == 'Generic':
-                await self.requests.user_track_request(
-                    reqdata, reqdata.get('username'),
-                    reqdata.get('user_input'))
+                await self.requests.user_track_request(reqdata, reqdata.get('username'),
+                                                       reqdata.get('user_input'))
             elif reqdata.get('type') == 'Roulette':
-                await self.requests.user_roulette_request(
-                    reqdata, reqdata.get('username'),
-                    reqdata.get('user_input'))
+                await self.requests.user_roulette_request(reqdata, reqdata.get('username'),
+                                                          reqdata.get('user_input'))
         except:  #pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
@@ -289,8 +274,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
         # pause a bit
         prefilter = None
 
-        while not prefilter and not self.stopevent.is_set(
-        ) and not connection.closed:
+        while not prefilter and not self.stopevent.is_set() and not connection.closed:
             if self.stopevent.is_set() or connection.closed:
                 return 0
             prefilter = self.metadb.read_last_meta()
@@ -370,11 +354,8 @@ def start(stopevent=None, bundledir=None, testmode=False):
     else:
         testmode = False
         nowplaying.bootstrap.set_qt_names()
-    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log',
-                                                rotate=False)
-    config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                          logpath=logpath,
-                                          testmode=testmode)
+    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log', rotate=False)
+    config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=logpath, testmode=testmode)
 
     logging.info('boot up')
 

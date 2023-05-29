@@ -11,8 +11,8 @@ class RecognitionPlugin(WNPBasePlugin):
     ''' base class of recognition plugins '''
 
     def __init__(self, config=None, qsettings=None):
-        self.plugintype = 'recognition'
         super().__init__(config=config, qsettings=qsettings)
+        self.plugintype = 'recognition'
 
 #### Recognition methods
 
@@ -31,9 +31,7 @@ class RecognitionPlugin(WNPBasePlugin):
         ''' determine a reasonable, minimal delay '''
 
         try:
-            delay = self.config.cparser.value('settings/delay',
-                                              type=float,
-                                              defaultValue=10.0)
+            delay = self.config.cparser.value('settings/delay', type=float, defaultValue=10.0)
         except ValueError:
             delay = 10.0
 

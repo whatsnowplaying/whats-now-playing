@@ -40,8 +40,8 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
         self.loop = None
         self.testmode = False
         self.site = None
-        self.trackrequests = nowplaying.trackrequests.Requests(
-            config=self.config, stopevent=self.stopevent)
+        self.trackrequests = nowplaying.trackrequests.Requests(config=self.config,
+                                                               stopevent=self.stopevent)
         self.tasks = set()
 
     def install(self):
@@ -68,8 +68,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
             valuelist = ['time', 'clientname', 'ipaddr', 'source', 'version']
 
             for column, cbtype in enumerate(valuelist):
-                host_status.setItem(
-                    row, column, QTableWidgetItem(str(kwargs.get(cbtype, ''))))
+                host_status.setItem(row, column, QTableWidgetItem(str(kwargs.get(cbtype, ''))))
             host_status.resizeColumnsToContents()
 
         port = self.config.cparser.value('control/beamport', type=int)
@@ -78,8 +77,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
             return
 
         try:
-            beamhosts = requests.get(f'http://localhost:{port}/v1/beamhosts',
-                                     timeout=3)
+            beamhosts = requests.get(f'http://localhost:{port}/v1/beamhosts', timeout=3)
         except Exception as error:  #pylint: disable=broad-except
             logging.error('unable to get beam hosts: %s', error)
             return
@@ -167,12 +165,10 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
                                             port=None,
                                             family=socket.AF_INET)
             allips = [ip[-1][0] for ip in interfaces]
-            msg = struct.pack(f'<II{namelen}s', self.port, namelen,
-                              idname.encode())
+            msg = struct.pack(f'<II{namelen}s', self.port, namelen, idname.encode())
             logging.debug('Broadcasting %s %s', idname, self.port)
             for ipaddr in allips:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
-                                     socket.IPPROTO_UDP)  # UDP
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)  # UDP
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
                 sock.bind((ipaddr, 0))
                 try:
@@ -188,8 +184,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
 
         prefilter = {
             k: v
-            for k, v in json['metadata'].items()
-            if v is not None and k not in [
+            for k, v in json['metadata'].items() if v is not None and k not in [
                 'artistbannerraw',
                 'artistfanartraw',
                 'artistlogoraw',
@@ -262,8 +257,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
                 if msg.type == aiohttp.WSMsgType.ERROR:
                     self.port = None
                     self.ipaddr = None
-                    logging.error('ws connection closed with exception %s',
-                                  websocket.exception())
+                    logging.error('ws connection closed with exception %s', websocket.exception())
                     break
 
                 if self.stopevent.is_set() or websocket.closed:
@@ -300,10 +294,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
             while not self.stopevent.is_set() and not websocket.closed:
                 entries = []
                 async for row in self.trackrequests.get_all_generator():
-                    await websocket.send_json({
-                        'msgtype': 'REQUEST',
-                        'request': row
-                    })
+                    await websocket.send_json({'msgtype': 'REQUEST', 'request': row})
                     entries.append(row['reqid'])
                 for entry in entries:
                     self.trackrequests.erase_id(entry)
@@ -349,8 +340,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
     async def _on_shutdown(app):
         ''' handle shutdown '''
         for websocket in set(app['websockets']):
-            await websocket.close(code=WSCloseCode.GOING_AWAY,
-                                  message='Server shutdown')
+            await websocket.close(code=WSCloseCode.GOING_AWAY, message='Server shutdown')
 
     @staticmethod
     async def _on_cleanup(app):

@@ -8,6 +8,7 @@ import typing as t
 
 import nowplaying  # pylint: disable=unused-import, cyclic-import
 
+
 def import_plugins(namespace: types.ModuleType) -> dict[str, types.ModuleType]:
     ''' import plugins and return an object
         with all of them '''

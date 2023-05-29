@@ -53,39 +53,26 @@ def write_virtualdj8(virtualdj, filename):
 def write_extvdj_remix(virtualdj):
     ''' create virtualdj file with VDJ '''
     with open(virtualdj, 'w', encoding='utf-8') as virtualdjfn:
+        virtualdjfn.write('#EXTVDJ:<time>21:39</time><lastplaytime>1674884385</lastplaytime>')
         virtualdjfn.write(
-            '#EXTVDJ:<time>21:39</time><lastplaytime>1674884385</lastplaytime>'
-        )
-        virtualdjfn.write(
-            '<artist>j. period</artist><title>Buddy [Remix]</title><remix>feat. De La Soul'
-        )
-        virtualdjfn.write(
-            f', Jungle Brothers, Q-Tip & Queen Latifah</remix>{os.linesep}')
+            '<artist>j. period</artist><title>Buddy [Remix]</title><remix>feat. De La Soul')
+        virtualdjfn.write(f', Jungle Brothers, Q-Tip & Queen Latifah</remix>{os.linesep}')
         virtualdjfn.write(f'netsearch://dz715352532{os.linesep}')
 
 
 def write_extvdj_virtualdj8(virtualdj):
     ''' create virtualdj file with VDJ '''
     with open(virtualdj, 'w', encoding='utf-8') as virtualdjfn:
+        virtualdjfn.write('#EXTVDJ:<time>21:39</time><lastplaytime>1674884385</lastplaytime>')
         virtualdjfn.write(
-            '#EXTVDJ:<time>21:39</time><lastplaytime>1674884385</lastplaytime>'
-        )
-        virtualdjfn.write(
-            '<artist>j. period</artist><title>Buddy [Remix]</title><remix>feat. De La Soul'
-        )
-        virtualdjfn.write(
-            f', Jungle Brothers, Q-Tip & Queen Latifah</remix>{os.linesep}')
+            '<artist>j. period</artist><title>Buddy [Remix]</title><remix>feat. De La Soul')
+        virtualdjfn.write(f', Jungle Brothers, Q-Tip & Queen Latifah</remix>{os.linesep}')
         virtualdjfn.write(f'netsearch://dz715352532{os.linesep}')
+        virtualdjfn.write('#EXTVDJ:<time>21:41</time><lastplaytime>1674884510</lastplaytime>')
         virtualdjfn.write(
-            '#EXTVDJ:<time>21:41</time><lastplaytime>1674884510</lastplaytime>'
-        )
-        virtualdjfn.write(
-            f'<artist>Kid \'N Play</artist><title>Can You Dig That</title>{os.linesep}'
-        )
+            f'<artist>Kid \'N Play</artist><title>Can You Dig That</title>{os.linesep}')
         virtualdjfn.write(f'netsearch://dz85144450{os.linesep}')
-        virtualdjfn.write(
-            '#EXTVDJ:<time>21:45</time><lastplaytime>1674884707</lastplaytime>'
-        )
+        virtualdjfn.write('#EXTVDJ:<time>21:45</time><lastplaytime>1674884707</lastplaytime>')
         virtualdjfn.write('<artist>Lords Of The Underground</artist>')
         virtualdjfn.write(f'<title>Chief Rocka</title>{os.linesep}')
         virtualdjfn.write(f'netsearch://dz3130706{os.linesep}')
@@ -94,9 +81,7 @@ def write_extvdj_virtualdj8(virtualdj):
 def write_extvdj_ampersand(virtualdj):
     ''' create virtualdj file with VDJ '''
     with open(virtualdj, 'w', encoding='utf-8') as virtualdjfn:
-        virtualdjfn.write(
-            '#EXTVDJ:<time>08:43</time><lastplaytime>1675701805</lastplaytime>'
-        )
+        virtualdjfn.write('#EXTVDJ:<time>08:43</time><lastplaytime>1675701805</lastplaytime>')
         virtualdjfn.write('<artist>Nick Cave & The Bad Seeds</artist>')
         virtualdjfn.write(f'<title>Hollywood</title>{os.linesep}')
         virtualdjfn.write(f'netsearch://dz1873796677{os.linesep}')
@@ -165,8 +150,7 @@ async def test_no2newvirtualdj(virtualdj_bootstrap, getroot):  # pylint: disable
     ''' automated integration test '''
     config = virtualdj_bootstrap
     myvirtualdjdir = config.cparser.value('virtualdj/history')
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=myvirtualdjdir)
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     metadata = await plugin.getplayingtrack()
     await plugin.start()
     await asyncio.sleep(5)
@@ -175,8 +159,7 @@ async def test_no2newvirtualdj(virtualdj_bootstrap, getroot):  # pylint: disable
     assert not metadata.get('title')
     assert not metadata.get('filename')
 
-    testmp3 = os.path.join(getroot, 'tests', 'audio',
-                           '15_Ghosts_II_64kb_orig.mp3')
+    testmp3 = os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.mp3')
     virtualdjfile = os.path.join(myvirtualdjdir, 'test.m3u')
     write_virtualdj(virtualdjfile, testmp3)
     await asyncio.sleep(1)
@@ -194,23 +177,19 @@ async def test_no2newvirtualdjpolltest(virtualdj_bootstrap, getroot):  # pylint:
     config = virtualdj_bootstrap
     myvirtualdjdir = config.cparser.value('virtualdj/history')
     config.cparser.setValue('quirks/pollingobserver', True)
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=myvirtualdjdir)
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     metadata = await plugin.getplayingtrack()
     await plugin.start()
     await asyncio.sleep(5)
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert not metadata.get('filename')
-    assert isinstance(plugin.observer,
-                      watchdog.observers.polling.PollingObserver)
+    assert isinstance(plugin.observer, watchdog.observers.polling.PollingObserver)
 
-    testmp3 = os.path.join(getroot, 'tests', 'audio',
-                           '15_Ghosts_II_64kb_orig.mp3')
+    testmp3 = os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.mp3')
     virtualdjfile = os.path.join(myvirtualdjdir, 'test.m3u')
     write_virtualdj(virtualdjfile, testmp3)
-    await asyncio.sleep(
-        10)  # needs to be long enough that the poller finds the update!
+    await asyncio.sleep(10)  # needs to be long enough that the poller finds the update!
     metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
@@ -224,14 +203,12 @@ async def test_noencodingvirtualdj8(virtualdj_bootstrap, getroot):  # pylint: di
     ''' automated integration test '''
     config = virtualdj_bootstrap
     myvirtualdjdir = config.cparser.value('virtualdj/history')
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=myvirtualdjdir)
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     await plugin.start()
     await asyncio.sleep(5)
     metadata = await plugin.getplayingtrack()
 
-    testmp3 = os.path.join(getroot, 'tests', 'audio',
-                           '15_Ghosts_II_64kb_orig.mp3')
+    testmp3 = os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.mp3')
     virtualdjfile = os.path.join(myvirtualdjdir, 'test.m3u')
     write_virtualdj8(virtualdjfile, testmp3)
     await asyncio.sleep(1)
@@ -248,12 +225,10 @@ async def test_encodingvirtualdj(virtualdj_bootstrap, getroot):  # pylint: disab
     ''' automated integration test '''
     config = virtualdj_bootstrap
     myvirtualdjdir = config.cparser.value('virtualdj/history')
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=myvirtualdjdir)
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     await plugin.start()
     await asyncio.sleep(5)
-    testmp3 = os.path.join(getroot, 'tests', 'audio',
-                           '15_Ghosts_II_64kb_füllytâgged.mp3')
+    testmp3 = os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_füllytâgged.mp3')
     virtualdjfile = os.path.join(myvirtualdjdir, 'test.m3u')
     write_virtualdj(virtualdjfile, testmp3)
     await asyncio.sleep(1)
@@ -270,8 +245,7 @@ async def test_vdjvirtualdj_normal(virtualdj_bootstrap):  # pylint: disable=rede
     ''' automated integration test '''
     config = virtualdj_bootstrap
     myvirtualdjdir = config.cparser.value('virtualdj/history')
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=myvirtualdjdir)
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     await plugin.start()
     await asyncio.sleep(5)
     virtualdjfile = os.path.join(myvirtualdjdir, 'test.m3u')
@@ -292,8 +266,7 @@ async def test_vdjvirtualdj_remix(virtualdj_bootstrap):  # pylint: disable=redef
     myvirtualdjdir = config.cparser.value('virtualdj/history')
     config.cparser.setValue('virtualdj/useremix', True)
     config.cparser.sync()
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=myvirtualdjdir)
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     await plugin.start()
     await asyncio.sleep(5)
     virtualdjfile = os.path.join(myvirtualdjdir, 'test.m3u')
@@ -302,8 +275,7 @@ async def test_vdjvirtualdj_remix(virtualdj_bootstrap):  # pylint: disable=redef
     metadata = await plugin.getplayingtrack()
     assert metadata.get('artist') == 'j. period'
     assert metadata.get(
-        'title'
-    ) == 'Buddy [Remix] (feat. De La Soul, Jungle Brothers, Q-Tip & Queen Latifah)'
+        'title') == 'Buddy [Remix] (feat. De La Soul, Jungle Brothers, Q-Tip & Queen Latifah)'
     assert not metadata.get('filename')
     await plugin.stop()
     await asyncio.sleep(5)
@@ -316,8 +288,7 @@ async def test_vdjvirtualdj_noremix(virtualdj_bootstrap):  # pylint: disable=red
     myvirtualdjdir = config.cparser.value('virtualdj/history')
     config.cparser.setValue('virtualdj/useremix', False)
     config.cparser.sync()
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=myvirtualdjdir)
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     await plugin.start()
     await asyncio.sleep(5)
     virtualdjfile = os.path.join(myvirtualdjdir, 'test.m3u')
@@ -336,8 +307,7 @@ async def test_vdjvirtualdj_ampersand(virtualdj_bootstrap):  # pylint: disable=r
     ''' automated integration test '''
     config = virtualdj_bootstrap
     myvirtualdjdir = config.cparser.value('virtualdj/history')
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=myvirtualdjdir)
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     await plugin.start()
     await asyncio.sleep(5)
     virtualdjfile = os.path.join(myvirtualdjdir, 'test.m3u')
@@ -356,8 +326,7 @@ async def test_no2newvirtualdj8(virtualdj_bootstrap, getroot):  # pylint: disabl
     ''' automated integration test '''
     config = virtualdj_bootstrap
     myvirtualdjdir = config.cparser.value('virtualdj/history')
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=myvirtualdjdir)
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     await plugin.start()
     await asyncio.sleep(5)
     metadata = await plugin.getplayingtrack()
@@ -365,8 +334,7 @@ async def test_no2newvirtualdj8(virtualdj_bootstrap, getroot):  # pylint: disabl
     assert not metadata.get('title')
     assert not metadata.get('filename')
 
-    testmp3 = os.path.join(getroot, 'tests', 'audio',
-                           '15_Ghosts_II_64kb_füllytâgged.mp3')
+    testmp3 = os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_füllytâgged.mp3')
     virtualdjfile = os.path.join(myvirtualdjdir, 'test.m3u')
     write_virtualdj8(virtualdjfile, testmp3)
     await asyncio.sleep(1)
@@ -384,8 +352,7 @@ async def test_virtualdjrelative(virtualdj_bootstrap):  # pylint: disable=redefi
     config = virtualdj_bootstrap
     myvirtualdjdir = config.cparser.value('virtualdj/history')
     myvirtualdjpath = pathlib.Path(myvirtualdjdir)
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=myvirtualdjdir)
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     await plugin.start()
     await asyncio.sleep(5)
     metadata = await plugin.getplayingtrack()
@@ -398,8 +365,7 @@ async def test_virtualdjrelative(virtualdj_bootstrap):  # pylint: disable=redefi
     myvirtualdjpath.joinpath(testmp3).touch()
     virtualdjfile = myvirtualdjpath.joinpath('test.m3u')
     write_virtualdj(virtualdjfile, testmp3)
-    fullpath = myvirtualdjpath.joinpath('fakedir',
-                                        '15_Ghosts_II_64kb_orig.mp3')
+    fullpath = myvirtualdjpath.joinpath('fakedir', '15_Ghosts_II_64kb_orig.mp3')
     await asyncio.sleep(1)
     metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
@@ -419,11 +385,9 @@ async def test_virtualdjrelativesubst(virtualdj_bootstrap, getroot):  # pylint: 
     if sys.platform == 'darwin':
         myvirtualdjdir = myvirtualdjdir.resolve()
     config.cparser.setValue('quirks/filesubst', True)
-    config.cparser.setValue('quirks/filesubstin',
-                            str(myvirtualdjdir.joinpath('fakedir')))
+    config.cparser.setValue('quirks/filesubstin', str(myvirtualdjdir.joinpath('fakedir')))
     config.cparser.setValue('quirks/filesubstout', str(audiodir))
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=str(myvirtualdjdir))
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=str(myvirtualdjdir))
     await plugin.start()
     await asyncio.sleep(5)
     metadata = await plugin.getplayingtrack()
@@ -431,16 +395,14 @@ async def test_virtualdjrelativesubst(virtualdj_bootstrap, getroot):  # pylint: 
     assert not metadata.get('title')
     assert not metadata.get('filename')
 
-    testmp3 = str(
-        pathlib.Path('fakedir').joinpath('15_Ghosts_II_64kb_orig.mp3'))
+    testmp3 = str(pathlib.Path('fakedir').joinpath('15_Ghosts_II_64kb_orig.mp3'))
     myvirtualdjdir.joinpath('fakedir').mkdir(parents=True, exist_ok=True)
     myvirtualdjdir.joinpath(testmp3).touch()
     virtualdjfile = str(myvirtualdjdir.joinpath('test.m3u'))
     write_virtualdj(virtualdjfile, testmp3)
     await asyncio.sleep(5)
     metadata = await plugin.getplayingtrack()
-    assert metadata['filename'] == str(
-        audiodir.joinpath('15_Ghosts_II_64kb_orig.mp3'))
+    assert metadata['filename'] == str(audiodir.joinpath('15_Ghosts_II_64kb_orig.mp3'))
     await plugin.stop()
     await asyncio.sleep(5)
 
@@ -450,8 +412,7 @@ async def test_virtualdjstream(virtualdj_bootstrap):  # pylint: disable=redefine
     ''' automated integration test '''
     config = virtualdj_bootstrap
     myvirtualdjdir = config.cparser.value('virtualdj/history')
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=myvirtualdjdir)
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     await plugin.start()
     await asyncio.sleep(5)
     metadata = await plugin.getplayingtrack()
@@ -495,8 +456,7 @@ async def test_playlist_read(virtualdj_bootstrap, getroot):  # pylint: disable=r
     playlistdir = getroot.joinpath('tests', 'playlists', 'virtualdj')
     myvirtualdjdir = config.cparser.value('virtualdj/history')
     config.cparser.setValue('virtualdj/playlists', playlistdir)
-    plugin = nowplaying.inputs.virtualdj.Plugin(config=config,
-                                                m3udir=myvirtualdjdir)
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     plugin.initdb()
     filename = await plugin.getrandomtrack('videos')
     assert filename
