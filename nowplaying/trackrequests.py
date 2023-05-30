@@ -147,7 +147,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             except sqlite3.OperationalError as error:
                 logging.error(error)
 
-    async def add_roulette_dupelist(self, artist, playlist):
+    async def add_roulette_dupelist(self, artist: str, playlist: str):
         ''' add a record to the dupe list '''
         if not self.databasefile.exists():
             logging.error('%s does not exist, refusing to add.', self.databasefile)
@@ -404,7 +404,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             newdata = await self._get_and_del_request_lookup(sql, datatuple)
         return newdata
 
-    async def get_request(self, metadata: dict[str, t.Any]) -> dict[str, bytes | str]:
+    async def get_request(self, metadata: dict[str, t.Any]) -> dict[str, t.Any]:
         ''' if a track gets played, finish out the request '''
         if not self.config.cparser.value('settings/requests'):
             return {}

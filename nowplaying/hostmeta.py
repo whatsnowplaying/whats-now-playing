@@ -6,6 +6,7 @@
 import datetime
 import socket
 import logging
+import typing as t
 
 try:
     import netifaces
@@ -13,11 +14,11 @@ try:
 except ImportError:
     IFACES = False
 
-HOSTFQDN = None
-HOSTNAME = None
-HOSTIP = None
-TIMESTAMP = None
-TIMEDELTA = datetime.timedelta(minutes=10)
+HOSTFQDN: t.Optional[str] = None
+HOSTNAME: t.Optional[str] = None
+HOSTIP: t.Optional[str] = None
+TIMESTAMP: t.Optional[datetime.datetime] = None
+TIMEDELTA: datetime.timedelta = datetime.timedelta(minutes=10)
 
 
 def trysocket():

@@ -4,6 +4,8 @@
 import asyncio
 import logging
 import traceback
+import typing as t
+from uuid import UUID
 
 from twitchAPI.pubsub import PubSub
 from twitchAPI.helper import first
@@ -14,6 +16,7 @@ import nowplaying.config
 import nowplaying.db
 import nowplaying.metadata
 import nowplaying.trackrequests
+import nowplaying.twitch.chat
 import nowplaying.twitch.utils
 
 USER_SCOPE = [AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
@@ -29,26 +32,28 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
 
     '''
 
-    def __init__(self, config=None, stopevent=None):
+    def __init__(self, config=None, stopevent: asyncio.Event = None):
         self.config = config
         self.stopevent = stopevent
         self.filelists = None
         self.chat = None
-        self.uuid = None
+        self.uuid: t.Optional[UUID] = None
         self.pubsub = None
         self.requests = nowplaying.trackrequests.Requests(config=config, stopevent=stopevent)
         self.widgets = None
         self.watcher = None
         self.twitch = None
 
-    async def callback_redemption(self, uuid, data):  # pylint: disable=unused-argument
+    async def callback_redemption(self, uuid: UUID, data: dict[str, t.Any]):  # pylint: disable=unused-argument
         ''' handle the channel point redemption '''
         redemptitle = data['data']['redemption']['reward']['title']
         user = data['data']['redemption']['user']['display_name']
         if data['data']['redemption'].get('user_input'):
             user_input = data['data']['redemption'].get('user_input')
         else:
-            user_input = None
+            user_input = ''
+
+        reply = {}
 
         if setting := await self.requests.find_twitchtext(redemptitle):
             setting['userimage'] = await nowplaying.twitch.utils.get_user_image(self.twitch, user)
@@ -61,10 +66,13 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
             elif setting.get('type') == 'GifWords':
                 reply = await self.requests.gifwords_request(setting, user, user_input)
 
-            if self.chat and setting.get('command'):
+            if self.chat and setting.get('command') and isinstance(setting['command'],
+                                                                   str) and reply:
                 await self.chat.redemption_to_chat_request_bridge(setting['command'], reply)
 
-    async def run_redemptions(self, twitchlogin, chat):  # pylint: disable=too-many-branches
+    async def run_redemptions(  # pylint: disable=too-many-branches
+            self, twitchlogin: nowplaying.twitch.utils.TwitchLogin,
+            chat: t.Optional[nowplaying.twitch.chat.TwitchChat]):
         ''' twitch redemptions '''
 
         # stop sleep loop if:
@@ -131,6 +139,11 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                 await twitchlogin.cache_token_del()
                 continue
 
+            if not user:
+                logging.error('pubsub getusers failed')
+                await twitchlogin.cache_token_del()
+                continue
+
             # you can either start listening before or after you started pubsub.
             try:
                 self.uuid = await self.pubsub.listen_channel_points(user.id,
@@ -146,6 +159,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
     async def stop(self):
         ''' stop the twitch redemption support '''
         if self.pubsub:
-            await self.pubsub.unlisten(self.uuid)
+            if self.uuid:
+                await self.pubsub.unlisten(self.uuid)
             self.pubsub.stop()
             logging.debug('pubsub stopped')

@@ -229,7 +229,7 @@ def humanize_time(seconds: t.Any) -> str:
 
     try:
         convseconds = int(float(seconds))
-    except (ValueError,TypeError):
+    except (ValueError, TypeError):
         return ''
 
     if seconds > 3600:

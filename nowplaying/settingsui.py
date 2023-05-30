@@ -21,7 +21,7 @@ try:
     import nowplaying.qtrc  # pylint: disable=import-error, no-name-in-module
 except ModuleNotFoundError:
     pass
-import nowplaying.twitch
+import nowplaying.twitch.settings
 import nowplaying.twitch.chat
 import nowplaying.trackrequests
 import nowplaying.uihelp
@@ -41,7 +41,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.errormessage: t.Optional[QWidget] = None  # pyright: ignore[reportGeneralTypeIssues]
         self.widgets: dict[str, QWidget | None] = {}
         self.settingsclasses = {
-            'twitch': nowplaying.twitch.TwitchSettings(),
+            'twitch': nowplaying.twitch.settings.TwitchSettings(),
             'twitchchat': nowplaying.twitch.chat.TwitchChatSettings(),
             'requests': nowplaying.trackrequests.RequestSettings(),
         }
@@ -61,7 +61,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if self.config.initialized:
             self.settingsclasses['twitchchat'].update_twitchbot_commands(self.config)
 
-    def _setup_widgets(self, uiname: str, displayname=None):
+    def _setup_widgets(self, uiname: str, displayname: t.Optional[str] = None):
         self.widgets[uiname] = load_widget_ui(self.config, f'{uiname}')
         if not self.widgets[uiname]:
             return
@@ -135,7 +135,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if curbutton := self.qtui.settings_list.findItems('general', Qt.MatchContains):
             self.qtui.settings_list.setCurrentItem(curbutton[0])
 
-    def _load_list_item(self, name, qobject, displayname):
+    def _load_list_item(self, name: str, qobject: t.Optional[QWidget],
+                        displayname: t.Optional[str]):
         if not displayname:
             displayname = qobject.property('displayName')
             if not displayname:  # sourcery skip: hoist-if-from-if
@@ -145,14 +146,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     displayname = name.capitalize()
         self.qtui.settings_list.addItem(displayname)
 
-    def _set_stacked_display(self, index):
+    def _set_stacked_display(self, index: int):
         self.qtui.settings_stack.setCurrentIndex(index)
 
-    def _connect_beamstatus_widget(self, qobject):
+    def _connect_beamstatus_widget(self, qobject: QWidget):
         ''' refresh the status'''
         qobject.refresh_button.clicked.connect(self.on_beamstatus_refresh_button)
 
-    def _connect_webserver_widget(self, qobject):
+    def _connect_webserver_widget(self, qobject: QWidget):
         ''' file in the hostname/ip and connect the template button'''
 
         data = nowplaying.hostmeta.gethostmeta()
@@ -164,24 +165,24 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         qobject.template_button.clicked.connect(self.on_html_template_button)
 
-    def _connect_textoutput_widget(self, qobject):
+    def _connect_textoutput_widget(self, qobject: QWidget):
         ''' connect the general buttons to non-built-ins '''
         qobject.texttemplate_button.clicked.connect(self.on_text_template_button)
         qobject.textoutput_button.clicked.connect(self.on_text_saveas_button)
 
-    def _connect_discordbot_widget(self, qobject):
+    def _connect_discordbot_widget(self, qobject: QWidget):
         ''' connect the artistextras buttons to non-built-ins '''
         qobject.template_button.clicked.connect(self.on_discordbot_template_button)
 
-    def _connect_artistextras_widget(self, qobject):
+    def _connect_artistextras_widget(self, qobject: QWidget):
         ''' connect the artistextras buttons to non-built-ins '''
         qobject.clearcache_button.clicked.connect(self.on_artistextras_clearcache_button)
 
-    def _connect_obsws_widget(self, qobject):
+    def _connect_obsws_widget(self, qobject: QWidget):
         ''' connect obsws button to template picker'''
         qobject.template_button.clicked.connect(self.on_obsws_template_button)
 
-    def _connect_filter_widget(self, qobject):
+    def _connect_filter_widget(self, qobject: QWidget):
         '''  connect regex filter to template picker'''
         qobject.add_recommended_button.clicked.connect(self.on_filter_add_recommended_button)
         qobject.test_button.clicked.connect(self.on_filter_test_button)
@@ -192,7 +193,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         ''' tell config to trigger plugins to update windows '''
         self.config.plugins_connect_settingsui(self.widgets, self.uihelp)
 
-    def _set_source_description(self, index):
+    def _set_source_description(self, index: int):
         item = self.widgets['source'].sourcelist.item(index)
         plugin = item.text().lower()
         self.config.plugins_description('inputs', plugin, self.widgets['source'].description)
@@ -337,7 +338,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.widgets['quirks'].song_out_path_lineedit.setText(
             self.config.cparser.value('quirks/filesubstout'))
 
-        slashmode = self.config.cparser.value('quirks/slashmode')
+        slashmode: str = self.config.cparser.value('quirks/slashmode')
 
         if not slashmode:
             slashmode = 'nochange'
@@ -596,13 +597,13 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     @Slot()
     def on_artistextras_clearcache_button(self):
         ''' clear the cache button was pushed '''
-        cachedbfile = self.config.cparser.value('artistextras/cachedbfile')
+        cachedbfile: t.Optional[str] = self.config.cparser.value('artistextras/cachedbfile')
         if not cachedbfile:
             return
 
         cachedbfilepath = pathlib.Path(cachedbfile)
-        if cachedbfilepath.exists() and 'imagecache' in str(cachedbfile):
-            logging.debug('Deleting %s', cachedbfilepath)
+        if cachedbfilepath.exists() and 'imagecache' in cachedbfile:
+            logging.debug('Deleting %s', cachedbfile)
             cachedbfilepath.unlink()
 
     @Slot()
@@ -640,7 +641,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.uihelp.template_picker_lineedit(self.widgets['webserver'].template_lineedit,
                                                  limit='*.htm *.html')
 
-    def _filter_regex_load(self, regex=None):
+    def _filter_regex_load(self, regex: t.Optional[str] = None):
         ''' setup the filter table '''
         regexitem = QListWidgetItem()
         if regex:

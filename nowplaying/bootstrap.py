@@ -38,7 +38,7 @@ def set_qt_names(app: t.Optional[QCoreApplication] = None,
     app.setApplicationName(appname)
 
 
-def setuplogging(logdir: t.Optional[str] = None,
+def setuplogging(logdir: t.Union[str, pathlib.Path | None] = None,
                  logname: str = 'debug.log',
                  rotate: bool = False) -> pathlib.Path:
     ''' configure logging '''

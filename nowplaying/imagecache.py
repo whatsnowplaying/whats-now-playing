@@ -72,7 +72,7 @@ class ImageCache:
         self.stopevent = stopevent
 
     @staticmethod
-    def _normalize_artist(artist):
+    def _normalize_artist(artist: str) -> str:
         return normality.normalize(artist).replace(' ', '')
 
     def setup_sql(self, initialize=False):
@@ -101,13 +101,13 @@ class ImageCache:
         self.cache.clear()
         self.cache.cull()
 
-    def random_fetch(self, artist, imagetype):
+    def random_fetch(self, artist: str, imagetype: str) -> dict[str, t.Any]:
         ''' fetch a random row from a cache for the artist '''
         normalartist = self._normalize_artist(artist)
-        data = None
+        data = {}
         if not self.databasefile.exists():
             self.setup_sql()
-            return None
+            return {}
 
         with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
@@ -127,11 +127,11 @@ class ImageCache:
                 error_code = error.sqlite_errorcode
                 error_name = error.sqlite_name
                 logging.error('Error %s [Errno %s]: %s', msg, error_code, error_name)
-                return None
+                return {}
 
             row = cursor.fetchone()
             if not row:
-                return None
+                return {}
 
             data = {
                 'artist': row['artist'],
@@ -142,9 +142,9 @@ class ImageCache:
 
         return data
 
-    def random_image_fetch(self, artist, imagetype):
+    def random_image_fetch(self, artist: str, imagetype: str) -> t.Optional[bytes]:
         ''' fetch a random image from an artist '''
-        image = None
+        image: t.Optional[bytes] = None
         while data := self.random_fetch(artist, imagetype):
             try:
                 image = self.cache[data['cachekey']]
@@ -155,13 +155,13 @@ class ImageCache:
                 break
         return image
 
-    def find_url(self, url):
+    def find_url(self, url: str) -> dict[str, t.Any]:
         ''' update metadb '''
 
-        data = None
+        data = {}
         if not self.databasefile.exists():
             self.setup_sql()
-            return None
+            return {}
 
         with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
@@ -173,7 +173,7 @@ class ImageCache:
                 error_code = error.sqlite_errorcode
                 error_name = error.sqlite_name
                 logging.error('Error %s [Errno %s]: %s', msg, error_code, error_name)
-                return None
+                return {}
 
             if row := cursor.fetchone():
                 data = {
@@ -185,13 +185,13 @@ class ImageCache:
                 }
         return data
 
-    def find_cachekey(self, cachekey):
+    def find_cachekey(self, cachekey: str) -> dict[str, t.Any]:
         ''' update metadb '''
 
-        data = None
+        data = {}
         if not self.databasefile.exists():
             self.setup_sql()
-            return None
+            return {}
 
         with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
@@ -199,7 +199,7 @@ class ImageCache:
             try:
                 cursor.execute('''SELECT * FROM artistsha WHERE cachekey=?''', (cachekey, ))
             except sqlite3.OperationalError:
-                return None
+                return {}
 
             if row := cursor.fetchone():
                 data = {
@@ -212,7 +212,7 @@ class ImageCache:
 
         return data
 
-    def fill_queue(self, config, artist, imagetype, urllist):
+    def fill_queue(self, config, artist: str, imagetype: str, urllist: list[str]):
         ''' fill the queue '''
 
         if not self.databasefile.exists():
@@ -233,19 +233,19 @@ class ImageCache:
         for url in random.sample(urllist, min(len(urllist), maxart)):
             self.put_db_url(artist=normalartist, imagetype=imagetype, url=url)
 
-    def get_next_dlset(self):
+    def get_next_dlset(self) -> list[dict[str, str]]:
         ''' update metadb '''
 
-        def dict_factory(cursor, row):
+        def dict_factory(cursor: sqlite3.Cursor, row: sqlite3.Row):
             d = {}
             for idx, col in enumerate(cursor.description):
                 d[col[0]] = row[idx]
             return d
 
-        dataset = None
+        dataset = []
         if not self.databasefile.exists():
             logging.error('imagecache does not exist yet?')
-            return None
+            return []
 
         with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = dict_factory
@@ -257,7 +257,7 @@ class ImageCache:
  ORDER BY TIMESTAMP DESC''')
             except sqlite3.OperationalError as error:
                 logging.error(error)
-                return None
+                return []
 
             dataset = cursor.fetchall()
 
@@ -270,7 +270,7 @@ class ImageCache:
 ORDER BY TIMESTAMP DESC''')
             except sqlite3.OperationalError as error:
                 logging.error(error)
-                return None
+                return []
 
             dataset = cursor.fetchall()
 
@@ -457,7 +457,7 @@ VALUES (?,?,?);
                 self.erase_url(url)
         logging.debug('Finished image cache verification: %s/%s images', count, startsize)
 
-    def queue_process(self, logpath, maxworkers=5):
+    def queue_process(self, logpath: pathlib.Path, maxworkers=5):
         ''' Process to download stuff in the background to avoid the GIL '''
 
         threading.current_thread().name = 'ICQueue'

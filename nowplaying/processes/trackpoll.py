@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import multiprocessing
+from multiprocessing.synchronize import Event
 import os
 import pathlib
 import signal
@@ -10,6 +11,8 @@ import socket
 import threading
 import time
 import traceback
+from types import ModuleType
+import typing as t
 import sys
 
 import nowplaying.bootstrap
@@ -17,6 +20,7 @@ import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
 import nowplaying.imagecache
+from nowplaying.inputs import InputPlugin
 import nowplaying.inputs
 import nowplaying.metadata
 import nowplaying.pluginimporter
@@ -32,7 +36,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         Do the heavy lifting of reading from the DJ software
     '''
 
-    def __init__(self, stopevent=None, config=None, testmode=False):
+    def __init__(self,
+                 stopevent: Event,
+                 config: nowplaying.config.ConfigFile = None,
+                 testmode=False):
         self.datestr = time.strftime("%Y%m%d-%H%M%S")
         self.stopevent = stopevent
         # we can't use asyncio's because it doesn't work on Windows
@@ -48,15 +55,15 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             self.loop = asyncio.new_event_loop()
         self._resetcurrent()
         self.testmode = testmode
-        self.input = None
-        self.previousinput = None
-        self.inputname = None
-        self.plugins = nowplaying.pluginimporter.import_plugins(nowplaying.inputs)
+        self.input: InputPlugin = nowplaying.inputs.InputPlugin()
+        self.previousinput: str = ''
+        self.plugins: dict[str,
+                           ModuleType] = nowplaying.pluginimporter.import_plugins(nowplaying.inputs)
         self.previoustxttemplate = None
         self.txttemplatehandler = None
-        self.imagecache = None
-        self.icprocess = None
-        self.trackrequests = None
+        self.imagecache: nowplaying.imagecache.ImageCache = None
+        self.icprocess: multiprocessing.Process = None
+        self.trackrequests: nowplaying.trackrequests.Requests = None
         if not self.config.cparser.value('control/beam', type=bool):
             self._setup_imagecache()
             self.trackrequests = nowplaying.trackrequests.Requests(config=self.config,
@@ -89,16 +96,16 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             task.add_done_callback(self.tasks.remove)
             self.tasks.add(task)
 
-    async def switch_input_plugin(self):
+    async def switch_input_plugin(self) -> bool:
         ''' handle user switching source input while running '''
         if not self.previousinput or self.previousinput != self.config.cparser.value(
                 'settings/input'):
             if self.input:
                 logging.info('stopping %s', self.previousinput)
                 await self.input.stop()
-            self.previousinput = self.config.cparser.value('settings/input')
-            self.input = self.plugins[f'nowplaying.inputs.{self.previousinput}'].Plugin(
-                config=self.config)
+            self.previousinput: str = self.config.cparser.value('settings/input')
+            self.input: InputPlugin = self.plugins[
+                f'nowplaying.inputs.{self.previousinput}'].Plugin(config=self.config)
             logging.info('Starting %s plugin', self.previousinput)
             if not self.input:
                 return False
@@ -147,14 +154,14 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         ''' stop trackpoll thread gracefully '''
         logging.debug('Stopping trackpoll')
         self.stopevent.set()
-        if self.icprocess:
+        if self.icprocess and self.imagecache:
             logging.debug('stopping imagecache')
             self.imagecache.stop_process()
             logging.debug('joining imagecache')
             self.icprocess.join()
         if self.input:
             await self.input.stop()
-        self.plugins = None
+        self.plugins = {}
         loop = asyncio.get_running_loop()
         if not self.testmode:
             loop.stop()
@@ -163,7 +170,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         ''' caught an int signal so tell the world to stop '''
         self.stopevent.set()
 
-    def _verify_filename(self, metadata):
+    def _verify_filename(self, metadata: dict[str, t.Any]) -> dict[str, t.Any]:
         ''' verify filename actual exists and/or needs path substitution '''
         if metadata.get('filename'):
             filepath = pathlib.Path(metadata['filename'])
@@ -176,7 +183,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                     del metadata['filename']
         return metadata
 
-    def _check_title_for_path(self, title, filename):
+    def _check_title_for_path(self, title: t.Optional[str],
+                              filename: t.Optional[str]) -> tuple[t.Optional[str], t.Optional[str]]:
         ''' if title actually contains a filename, move it to filename '''
 
         if not title:
@@ -196,7 +204,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         return title, filename
 
     @staticmethod
-    def _ismetaempty(metadata):
+    def _ismetaempty(metadata: dict[str, t.Any]) -> bool:
         ''' need at least one value '''
 
         if not metadata:
@@ -204,7 +212,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         return not any(key in metadata and metadata[key] for key in COREMETA)
 
-    def _ismetasame(self, metadata):
+    def _ismetasame(self, metadata: dict[str, t.Any]) -> bool:
         ''' same as current check '''
         if not self.currentmeta:
             return False
@@ -217,23 +225,23 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         return True
 
     @staticmethod
-    def _isignored(metadata):
+    def _isignored(metadata: dict[str, t.Any]) -> bool:
         ''' bail out if the text NPIGNORE appears in the comment field '''
         if metadata.get('comments') and 'NPIGNORE' in metadata['comments']:
             return True
         return False
 
-    async def checkskip(self, nextmeta):
+    async def checkskip(self, nextmeta: dict[str, t.Any]) -> bool:
         ''' check if this metadata is meant to be skipped '''
         for skiptype in ['comment', 'genre']:
-            skipdata = self.config.cparser.value(f'trackskip/{skiptype}', defaultValue=None)
+            skipdata: str = self.config.cparser.value(f'trackskip/{skiptype}', defaultValue=None)
             if not skipdata:
                 continue
             if skipdata in nextmeta.get(skiptype, ''):
                 return True
         return False
 
-    async def _fillinmetadata(self, metadata):
+    async def _fillinmetadata(self, metadata: dict[str, t.Any]) -> dict[str, t.Any]:
         ''' keep a copy of our fetched data '''
 
         # Fill in as much metadata as possible. everything
@@ -356,6 +364,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             self.currentmeta['artistthumbraw'] = self.currentmeta['coverimageraw']
 
     def _write_to_text(self):
+        configtemplate: str = ''
+        configfile: str = ''
         if configfile := self.config.cparser.value('textoutput/file'):
             if configtemplate := self.config.cparser.value('textoutput/txttemplate'):
                 if not self.previoustxttemplate or self.previoustxttemplate != configtemplate:
@@ -369,7 +379,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
     async def _half_delay_write(self):
         try:
-            delay = self.config.cparser.value('settings/delay', type=float, defaultValue=1.0)
+            delay: float = self.config.cparser.value('settings/delay', type=float, defaultValue=1.0)
         except ValueError:
             delay = 1.0
         delay /= 2
@@ -380,8 +390,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         if not self.config.cparser.value('artistextras/enabled', type=bool):
             return
 
-        workers = self.config.cparser.value('artistextras/processes', type=int)
-        sizelimit = self.config.cparser.value('artistextras/cachesize', type=int)
+        workers: int = self.config.cparser.value('artistextras/processes', type=int)
+        sizelimit: int = self.config.cparser.value('artistextras/cachesize', type=int)
 
         self.imagecache = nowplaying.imagecache.ImageCache(sizelimit=sizelimit,
                                                            stopevent=self.stopevent)
@@ -449,7 +459,7 @@ def stop(pid):
         pass
 
 
-def start(stopevent: threading.Event, bundledir: str, testmode: bool = False):  #pylint: disable=unused-argument
+def start(stopevent: Event, bundledir: str, testmode: bool = False):  #pylint: disable=unused-argument
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'TrackPoll'
 

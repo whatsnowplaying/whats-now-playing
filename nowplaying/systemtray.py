@@ -247,7 +247,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def installer(self):
         ''' make some guesses as to what the user needs '''
-        plugin = self.config.cparser.value('settings/input', defaultValue=None)
+        plugin: str = self.config.cparser.value('settings/input', defaultValue=None)
         if plugin and not self.config.validate_source(plugin):
             self.config.cparser.remove('settings/input')
             msgbox = QErrorMessage()

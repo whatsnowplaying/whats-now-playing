@@ -10,6 +10,7 @@ import pathlib
 import platform
 import socket
 import traceback
+import typing as t
 
 import aiohttp  # pylint: disable=import-error
 
@@ -17,7 +18,7 @@ import jinja2  # pylint: disable=import-error
 
 from twitchAPI.twitch import Twitch  # pylint: disable=import-error
 from twitchAPI.types import AuthScope  # pylint: disable=import-error
-from twitchAPI.chat import Chat, ChatEvent  # pylint: disable=import-error
+from twitchAPI.chat import (Chat, ChatEvent, ChatCommand)  # pylint: disable=import-error
 from twitchAPI.oauth import validate_token  # pylint: disable=import-error
 
 from PySide6.QtCore import QCoreApplication, QStandardPaths, Slot  # pylint: disable=import-error, no-name-in-module
@@ -43,8 +44,10 @@ TWITCHBOT_CHECKBOXES = [
 class TwitchChat:  #pylint: disable=too-many-instance-attributes
     ''' handle twitch chat '''
 
-    def __init__(self, config=None, stopevent=None):
+    def __init__(self, config=None, stopevent: t.Optional[asyncio.Event] = None):
         self.config = config
+        if not stopevent:
+            stopevent = asyncio.Event()
         self.stopevent = stopevent
         self.watcher = None
         self.requests = nowplaying.trackrequests.Requests(config=config, stopevent=stopevent)
@@ -60,13 +63,13 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         self.starttime = datetime.datetime.utcnow()
         self.timeout = aiohttp.ClientTimeout(total=60)
 
-    async def _try_custom_token(self, token):
+    async def _try_custom_token(self, token: str):
         ''' if a custom token has been provided, try it. '''
         if self.twitch and self.twitchcustom:
             await self.twitch.close()
         if token:
             try:
-                tokenval = await validate_token(token)
+                tokenval: dict[str, t.Any] = await validate_token(token)
                 if tokenval.get('status') == 401:
                     logging.error(tokenval['message'])
                 else:
@@ -88,14 +91,14 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
 
-    async def _token_validation(self):
+    async def _token_validation(self) -> t.Optional[str]:
         if token := self.config.cparser.value('twitchbot/chattoken'):
             if 'oauth:' in token:
                 token = token.replace('oauth:', '')
                 self.config.cparser.setValue('twitchbot/chattoken', token)
             logging.debug('validating old token')
             try:
-                valid = await validate_token(token)
+                valid: dict[str, t.Any] = await validate_token(token)
                 if valid.get('status') == 401:
                     token = None
                     logging.error('Old twitchbot-specific token has expired')
@@ -161,7 +164,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                                            self.on_twitchchat_whatsnowplayingversion)
                 for configitem in self.config.cparser.childGroups():
                     if 'twitchbot-command-' in configitem:
-                        command = configitem.replace('twitchbot-command-', '')
+                        command: str = configitem.replace('twitchbot-command-', '')
                         self.chat.register_command(command, self.on_twitchchat_message)
 
                 self.chat.start()
@@ -169,7 +172,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 try:
                     loop = asyncio.get_running_loop()
                 except Exception as error:  #pylint: disable=broad-except
-                    logging.debug(error)
+                    logging.error(error)
+                    await asyncio.sleep(10)
+                    continue
                 await asyncio.sleep(1)
                 task = loop.create_task(self._setup_timer())
                 self.tasks.add(task)
@@ -193,10 +198,10 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         ''' twitch chatbot has connected, now join '''
         await ready_event.chat.join_room(self.config.cparser.value('twitchbot/channel'))
 
-    async def on_twitchchat_message(self, msg):
+    async def on_twitchchat_message(self, msg: ChatCommand):
         ''' twitch chatbot incoming message '''
         self.config.get()
-        commandchar = self.config.cparser.value('twitchbot/commandchar')
+        commandchar: str = self.config.cparser.value('twitchbot/commandchar')
         if not commandchar:
             commandchar = '!'
             self.config.cparser.setValue('twitchbot/commandchar', '!')
@@ -216,10 +221,11 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             await self.chat.send_message(self.config.cparser.value('twitchbot/channel'), content)
-        return
 
-    def check_command_perms(self, profile, command):
+    def check_command_perms(self, profile: dict[str, int], command) -> bool:
         ''' given the profile, check if the command is allowed to be executed '''
+
+        logging.debug('here')
         self.config.get()
 
         # shortcut the 'anyone' commands
@@ -227,22 +233,27 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             return True
 
         self.config.cparser.beginGroup(f'twitchbot-command-{command}')
-        perms = {
+        perms: dict[str, bool] = {
             key: self.config.cparser.value(key, type=bool)
             for key in self.config.cparser.childKeys()
         }
         self.config.cparser.endGroup()
 
         if perms:
-            return any(
-                profile.get(usertype) and profile[usertype] > 0 for usertype in perms.items())
-
+            for usertype, allowed in perms.items():
+                try:
+                    if allowed and profile.get(usertype) and int(profile[usertype]) > 0:
+                        return True
+                except (TypeError, ValueError):
+                    logging.error('Unexpected value for user badge: %s = %s', usertype,
+                                  profile[usertype])
+            return False
         return True
 
-    async def do_command(self, msg):  # pylint: disable=unused-argument
+    async def do_command(self, msg: ChatCommand):  # pylint: disable=unused-argument
         ''' process a command '''
 
-        metadata = {'cmduser': msg.user.display_name}
+        metadata: dict[str, t.Any] = {'cmduser': msg.user.display_name}
         commandlist = msg.text[1:].split()
         metadata['cmdtarget'] = []
         if len(commandlist) > 1:
@@ -265,7 +276,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
         await self._post_template(msg=msg, template=cmdfile, moremetadata=metadata)
 
-    async def redemption_to_chat_request_bridge(self, command, metadata):
+    async def redemption_to_chat_request_bridge(self, command: str, metadata: dict[str, t.Any]):
         ''' respond in chat when a redemption request triggers '''
         if self.config.cparser.value('twitchbot/chatrequests',
                                      type=bool) and self.config.cparser.value('twitchbot/chat',
@@ -273,7 +284,8 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             cmdfile = f'twitchbot_{command}.txt'
             await self._post_template(template=cmdfile, moremetadata=metadata)
 
-    async def handle_request(self, command, params, username):  # pylint: disable=unused-argument
+    async def handle_request(
+            self, command: str, params: list[str], username: str) -> t.Optional[dict[str, t.Any]]:  # pylint: disable=unused-argument
         ''' handle the channel point redemption '''
         reply = None
         logging.debug('got command: %s', command)
@@ -294,13 +306,13 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         return reply
 
     @staticmethod
-    def _finalize(variable):
+    def _finalize(variable: t.Any) -> str:
         ''' helper routine to avoid NoneType exceptions '''
         if variable:
             return variable
         return ''
 
-    def setup_jinja2(self, directory):
+    def setup_jinja2(self, directory: pathlib.Path) -> jinja2.Environment:
         ''' set up the environment '''
         return jinja2.Environment(loader=jinja2.FileSystemLoader(directory),
                                   finalize=self._finalize,
@@ -320,9 +332,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
     async def _delay_write(self):
         ''' handle the twitch chat delay '''
         try:
-            delay = self.config.cparser.value('twitchbot/announcedelay',
-                                              type=float,
-                                              defaultValue=1.0)
+            delay: float = self.config.cparser.value('twitchbot/announcedelay',
+                                                     type=float,
+                                                     defaultValue=1.0)
         except ValueError:
             delay = 1.0
         logging.debug('got delay of %s', delay)
@@ -394,7 +406,11 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
 
-    async def _post_template(self, msg=None, template=None, moremetadata=None):  #pylint: disable=too-many-branches
+    async def _post_template(  #pylint: disable=too-many-branches
+            self,
+            msg=None,
+            template: t.Optional[str] = None,
+            moremetadata: t.Optional[dict[str, t.Any]] = None):
         ''' take a template, fill it in, and post it '''
         if not template:
             return
@@ -409,37 +425,39 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         if moremetadata:
             metadata |= moremetadata
 
-        if self.templatedir.joinpath(template).is_file():
-            try:
-                j2template = self.jinja2.get_template(template)
-                message = j2template.render(metadata)
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error('template %s rendering failure: %s', template, error)
-                return
+        if not self.templatedir.joinpath(template).is_file():
+            return
 
-            messages = message.split(SPLITMESSAGETEXT)
-            try:
-                for content in messages:
-                    if not self.chat.is_connected():
-                        logging.error('Twitch chat is not connected. Not sending message.')
-                        return
-                    if msg:
-                        try:
-                            await msg.reply(content)
-                        except:  #pylint: disable=bare-except
-                            for line in traceback.format_exc().splitlines():
-                                logging.error(line)
-                            await self.chat.send_message(
-                                self.config.cparser.value('twitchbot/channel'), content)
-                    else:
+        try:
+            j2template = self.jinja2.get_template(template)
+            message = j2template.render(metadata)
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error('template %s rendering failure: %s', template, error)
+            return
+
+        messages = message.split(SPLITMESSAGETEXT)
+        try:
+            for content in messages:
+                if not self.chat or not self.chat.is_connected():
+                    logging.error('Twitch chat is not connected. Not sending message.')
+                    return
+                if msg:
+                    try:
+                        await msg.reply(content)
+                    except:  #pylint: disable=bare-except
+                        for line in traceback.format_exc().splitlines():
+                            logging.error(line)
                         await self.chat.send_message(self.config.cparser.value('twitchbot/channel'),
                                                      content)
-            except ConnectionResetError:
-                logging.debug('Twitch appears to be down.  Cannot send message.')
-            except:  #pylint: disable=bare-except
-                for line in traceback.format_exc().splitlines():
-                    logging.error(line)
-                logging.error('Unknown problem.')
+                else:
+                    await self.chat.send_message(self.config.cparser.value('twitchbot/channel'),
+                                                 content)
+        except ConnectionResetError:
+            logging.debug('Twitch appears to be down.  Cannot send message.')
+        except:  #pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
+            logging.error('Unknown problem.')
 
     async def stop(self):
         ''' stop the twitch chat support '''
