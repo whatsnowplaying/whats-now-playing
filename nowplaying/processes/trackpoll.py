@@ -364,9 +364,9 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             self.currentmeta['artistthumbraw'] = self.currentmeta['coverimageraw']
 
     def _write_to_text(self):
-        configtemplate: str = ''
         configfile: str = ''
         if configfile := self.config.cparser.value('textoutput/file'):
+            configtemplate: str = ''
             if configtemplate := self.config.cparser.value('textoutput/txttemplate'):
                 if not self.previoustxttemplate or self.previoustxttemplate != configtemplate:
                     self.txttemplatehandler = nowplaying.utils.TemplateHandler(

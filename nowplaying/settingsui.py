@@ -348,15 +348,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.widgets['quirks'].slash_toback.setChecked(False)
             self.widgets['quirks'].slash_toforward.setChecked(False)
 
-        if slashmode == 'toforward':
-            self.widgets['quirks'].slash_nochange.setChecked(False)
-            self.widgets['quirks'].slash_toback.setChecked(False)
-            self.widgets['quirks'].slash_toforward.setChecked(True)
-
-        if slashmode == 'toback':
+        elif slashmode == 'toback':
             self.widgets['quirks'].slash_nochange.setChecked(False)
             self.widgets['quirks'].slash_toback.setChecked(True)
             self.widgets['quirks'].slash_toforward.setChecked(False)
+        elif slashmode == 'toforward':
+            self.widgets['quirks'].slash_nochange.setChecked(False)
+            self.widgets['quirks'].slash_toback.setChecked(False)
+            self.widgets['quirks'].slash_toforward.setChecked(True)
 
     def _upd_win_plugins(self):
         ''' tell config to trigger plugins to update windows '''
