@@ -28,20 +28,20 @@ class WNPBasePlugin:
 
 #### Settings UI methods
 
-    def defaults(self, qsettings: QWidget) -> None:
+    def defaults(self, qsettings: QWidget):
         ''' (re-)set the default configuration values for this plugin '''
 
-    def connect_settingsui(self, qwidget: QWidget, uihelp) -> None:
+    def connect_settingsui(self, qwidget: QWidget, uihelp):
         ''' connect any UI elements such as buttons '''
         self.qwidget = qwidget
         self.uihelp = uihelp
 
-    def load_settingsui(self, qwidget: QWidget) -> None:
+    def load_settingsui(self, qwidget: QWidget):
         ''' load values from config and populate page '''
 
     def verify_settingsui(self, qwidget: QWidget) -> bool:  #pylint: disable=no-self-use, unused-argument
         ''' verify the values in the UI prior to saving '''
         return True
 
-    def save_settingsui(self, qwidget: QWidget) -> None:
+    def save_settingsui(self, qwidget: QWidget):
         ''' take the settings page and save it '''

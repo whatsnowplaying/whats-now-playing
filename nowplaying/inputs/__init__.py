@@ -49,7 +49,7 @@ class InputPlugin(WNPBasePlugin):
 
 #### Data feed methods
 
-    async def getplayingtrack(self) -> dict[str, t.Any]:
+    async def getplayingtrack(self) -> t.Optional[dict]:
         ''' Get the currently playing track '''
         raise NotImplementedError
 
