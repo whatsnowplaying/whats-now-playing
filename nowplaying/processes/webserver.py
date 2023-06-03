@@ -52,23 +52,17 @@ INDEXREFRESH = \
 class WebHandler():  # pylint: disable=too-many-public-methods
     ''' aiohttp built server that does both http and websocket '''
 
-    def __init__(self,
-                 bundledir=None,
-                 config=None,
-                 stopevent=None,
-                 testmode=False):
+    def __init__(self, bundledir=None, config=None, stopevent=None, testmode=False):
         threading.current_thread().name = 'WebServer'
         self.tasks = set()
         self.testmode = testmode
         if not config:
-            config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                                  testmode=testmode)
+            config = nowplaying.config.ConfigFile(bundledir=bundledir, testmode=testmode)
         self.port = config.cparser.value('weboutput/httpport', type=int)
         enabled = config.cparser.value('weboutput/httpenabled', type=bool)
         self.databasefile = pathlib.Path(
-            QStandardPaths.standardLocations(
-                QStandardPaths.CacheLocation)[0]).joinpath(
-                    'webserver', 'web.db')
+            QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]).joinpath(
+                'webserver', 'web.db')
         self._init_webdb()
         self.stopevent = stopevent
 
@@ -76,13 +70,11 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             try:
                 time.sleep(5)
                 config.get()
-                enabled = config.cparser.value('weboutput/httpenabled',
-                                               type=bool)
+                enabled = config.cparser.value('weboutput/httpenabled', type=bool)
             except KeyboardInterrupt:
                 sys.exit(0)
 
-        self.magicstopurl = ''.join(
-            secrets.choice(string.ascii_letters) for _ in range(32))
+        self.magicstopurl = ''.join(secrets.choice(string.ascii_letters) for _ in range(32))
 
         logging.info('Secret url to quit websever: %s', self.magicstopurl)
 
@@ -92,8 +84,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         except RuntimeError:
             self.loop = asyncio.new_event_loop()
 
-        self.loop.run_until_complete(
-            self.start_server(host='0.0.0.0', port=self.port))
+        self.loop.run_until_complete(self.start_server(host='0.0.0.0', port=self.port))
         self.loop.run_forever()
 
     def _init_webdb(self):
@@ -119,8 +110,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         for key in nowplaying.db.METADATABLOBLIST:
             if metadata.get(key):
                 newkey = key.replace('raw', 'base64')
-                metadata[newkey] = base64.b64encode(
-                    metadata[key]).decode('utf-8')
+                metadata[newkey] = base64.b64encode(metadata[key]).decode('utf-8')
                 del metadata[key]
         if metadata.get('dbid'):
             del metadata['dbid']
@@ -136,46 +126,39 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     async def index_htm_handler(self, request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(
-            request,
-            request.app['config'].cparser.value('weboutput/htmltemplate'))
+            request, request.app['config'].cparser.value('weboutput/htmltemplate'))
 
     async def artistbanner_htm_handler(self, request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(
-            request, request.app['config'].cparser.value(
-                'weboutput/artistbannertemplate'))
+            request, request.app['config'].cparser.value('weboutput/artistbannertemplate'))
 
     async def artistlogo_htm_handler(self, request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(
-            request, request.app['config'].cparser.value(
-                'weboutput/artistlogotemplate'))
+            request, request.app['config'].cparser.value('weboutput/artistlogotemplate'))
 
     async def artistthumb_htm_handler(self, request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(
-            request, request.app['config'].cparser.value(
-                'weboutput/artistthumbtemplate'))
+            request, request.app['config'].cparser.value('weboutput/artistthumbtemplate'))
 
     async def artistfanartlaunch_htm_handler(self, request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(
-            request, request.app['config'].cparser.value(
-                'weboutput/artistfanarttemplate'))
+            request, request.app['config'].cparser.value('weboutput/artistfanarttemplate'))
 
     async def gifwords_launch_htm_handler(self, request):
         ''' handle gifwords output '''
 
         htmloutput = await self._htm_handler(
-            request,
-            request.app['config'].cparser.value('weboutput/gifwordstemplate'))
+            request, request.app['config'].cparser.value('weboutput/gifwordstemplate'))
         return web.Response(content_type='text/html', text=htmloutput)
 
     async def requesterlaunch_htm_handler(self, request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(
-            request,
-            request.app['config'].cparser.value('weboutput/requestertemplate'))
+            request, request.app['config'].cparser.value('weboutput/requestertemplate'))
 
     @staticmethod
     async def _htm_handler(request, template, metadata=None):  # pylint: disable=unused-argument
@@ -186,10 +169,9 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 metadata = await request.app['metadb'].read_last_meta_async()
             if not metadata:
                 metadata = nowplaying.hostmeta.gethostmeta()
-                metadata['httpport'] = request.app['config'].cparser.value(
-                    'weboutput/httpport', type=int)
-            templatehandler = nowplaying.utils.TemplateHandler(
-                filename=template)
+                metadata['httpport'] = request.app['config'].cparser.value('weboutput/httpport',
+                                                                           type=int)
+            templatehandler = nowplaying.utils.TemplateHandler(filename=template)
             htmloutput = templatehandler.generate(metadata)
         except:  #pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
@@ -215,15 +197,11 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         # |       |   NA    |      |  -> send refresh because not ready or something broke
 
         if not metadata or not metadata.get('dbid') or not template:
-            return web.Response(status=202,
-                                content_type='text/html',
-                                text=INDEXREFRESH)
+            return web.Response(status=202, content_type='text/html', text=INDEXREFRESH)
 
         if lastid == 0 or lastid != metadata['dbid'] or not once:
             await self.setlastid(request, metadata['dbid'], source)
-            htmloutput = await self._htm_handler(request,
-                                                 template,
-                                                 metadata=metadata)
+            htmloutput = await self._htm_handler(request, template, metadata=metadata)
             return web.Response(content_type='text/html', text=htmloutput)
 
         return web.Response(content_type='text/html', text=INDEXREFRESH)
@@ -232,8 +210,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     async def setlastid(request, lastid, source):
         ''' get the lastid sent by http/html '''
         await request.app['statedb'].execute(
-            'INSERT OR REPLACE INTO lastprocessed(lastid, source) VALUES (?,?) ',
-            [lastid, source])
+            'INSERT OR REPLACE INTO lastprocessed(lastid, source) VALUES (?,?) ', [lastid, source])
         await request.app['statedb'].commit()
 
     @staticmethod
@@ -258,8 +235,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             request.app['config'].get()
             try:
                 templatehandler = nowplaying.utils.TemplateHandler(
-                    filename=request.app['config'].cparser.value(
-                        'textoutput/txttemplate'))
+                    filename=request.app['config'].cparser.value('textoutput/txttemplate'))
                 txtoutput = templatehandler.generate(metadata)
             except Exception as error:  #pylint: disable=broad-except
                 logging.error('indextxt_handler: %s', error)
@@ -325,16 +301,14 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         trackrequest = nowplaying.trackrequests.Requests(request.app['config'])
 
         try:
-            while (not self.stopevent.is_set() and not endloop
-                   and not websocket.closed):
+            while (not self.stopevent.is_set() and not endloop and not websocket.closed):
                 metadata = await trackrequest.check_for_gifwords()
                 if not metadata.get('image'):
                     await websocket.send_json({'noimage': True})
                     await asyncio.sleep(5)
                     continue
 
-                metadata['imagebase64'] = base64.b64encode(
-                    metadata['image']).decode('utf-8')
+                metadata['imagebase64'] = base64.b64encode(metadata['image']).decode('utf-8')
                 del metadata['image']
                 try:
                     if websocket.closed:
@@ -362,8 +336,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         endloop = False
 
         try:
-            while not self.stopevent.is_set(
-            ) and not endloop and not websocket.closed:
+            while not self.stopevent.is_set() and not endloop and not websocket.closed:
                 metadata = await request.app['metadb'].read_last_meta_async()
                 if not metadata or not metadata.get('artist'):
                     await asyncio.sleep(5)
@@ -379,12 +352,11 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
                 if imagedata:
                     metadata['artistfanartraw'] = imagedata
-                elif request.app['config'].cparser.value(
-                        'artistextras/coverfornofanart', type=bool):
+                elif request.app['config'].cparser.value('artistextras/coverfornofanart',
+                                                         type=bool):
                     metadata['artistfanartraw'] = metadata.get('coverimageraw')
                 else:
-                    metadata[
-                        'artistfanartraw'] = nowplaying.utils.TRANSPARENT_PNG_BIN
+                    metadata['artistfanartraw'] = nowplaying.utils.TRANSPARENT_PNG_BIN
 
                 try:
                     if websocket.closed:
@@ -393,14 +365,12 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 except ConnectionResetError:
                     logging.debug('Lost a client')
                     endloop = True
-                delay = request.app['config'].cparser.value(
-                    'artistextras/fanartdelay', type=int)
+                delay = request.app['config'].cparser.value('artistextras/fanartdelay', type=int)
                 await asyncio.sleep(delay)
             if not websocket.closed:
                 await websocket.send_json({'last': True})
         except Exception as error:  #pylint: disable=broad-except
-            logging.error('websocket artistfanart streamer exception: %s',
-                          error)
+            logging.error('websocket artistfanart streamer exception: %s', error)
         finally:
             await websocket.close()
             request.app['websockets'].discard(websocket)
@@ -436,15 +406,12 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         request.app['websockets'].add(websocket)
 
         try:
-            mytime = await self._wss_do_update(websocket,
-                                               request.app['metadb'])
+            mytime = await self._wss_do_update(websocket, request.app['metadb'])
             while not self.stopevent.is_set() and not websocket.closed:
-                while mytime > request.app[
-                        'watcher'].updatetime and not self.stopevent.is_set():
+                while mytime > request.app['watcher'].updatetime and not self.stopevent.is_set():
                     await asyncio.sleep(1)
 
-                mytime = await self._wss_do_update(websocket,
-                                                   request.app['metadb'])
+                mytime = await self._wss_do_update(websocket, request.app['metadb'])
                 await asyncio.sleep(1)
             if not websocket.closed:
                 await websocket.send_json({'last': True})
@@ -469,14 +436,11 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                         await websocket.close()
                     elif msg.data == 'last':
                         logging.debug('got last')
-                        await self.websocket_lastjson_handler(
-                            request, websocket)
+                        await self.websocket_lastjson_handler(request, websocket)
                     else:
-                        await websocket.send_str(
-                            'some websocket message payload')
+                        await websocket.send_str('some websocket message payload')
                 elif msg.type == aiohttp.WSMsgType.ERROR:
-                    logging.error('ws connection closed with exception %s',
-                                  websocket.exception())
+                    logging.error('ws connection closed with exception %s', websocket.exception())
         except Exception as error:  #pylint: disable=broad-except
             logging.error('Websocket handler error: %s', error)
         finally:
@@ -511,8 +475,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             web.get('/request.htm', self.requesterlaunch_htm_handler),
             web.get('/ws', self.websocket_handler),
             web.get('/wsstream', self.websocket_streamer),
-            web.get('/wsartistfanartstream',
-                    self.websocket_artistfanart_streamer),
+            web.get('/wsartistfanartstream', self.websocket_artistfanart_streamer),
             web.get('/wsgifwordsstream', self.websocket_gifwords_streamer),
             web.get(f'/{self.magicstopurl}', self.stop_server),
         ])
@@ -557,8 +520,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     async def on_shutdown(app):
         ''' handle shutdown '''
         for websocket in set(app['websockets']):
-            await websocket.close(code=WSCloseCode.GOING_AWAY,
-                                  message='Server shutdown')
+            await websocket.close(code=WSCloseCode.GOING_AWAY, message='Server shutdown')
 
     @staticmethod
     async def on_cleanup(app):
@@ -579,8 +541,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         ''' caught an int signal so tell the world to stop '''
         try:
             logging.debug('telling webserver to stop via http')
-            requests.get(f'http://localhost:{self.port}/{self.magicstopurl}',
-                         timeout=5)
+            requests.get(f'http://localhost:{self.port}/{self.magicstopurl}', timeout=5)
         except Exception as error:  # pylint: disable=broad-except
             logging.info(error)
         for task in self.tasks:
@@ -608,11 +569,8 @@ def start(stopevent=None, bundledir=None, testmode=False):
     else:
         testmode = False
         nowplaying.bootstrap.set_qt_names()
-    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log',
-                                                rotate=False)
-    config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                          logpath=logpath,
-                                          testmode=testmode)
+    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log', rotate=False)
+    config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=logpath, testmode=testmode)
 
     logging.info('boot up')
 

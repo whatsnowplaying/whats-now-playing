@@ -28,9 +28,7 @@ def test_reset2(getroot):
     config.cparser.sync()
     assert config.cparser.value('fake/setting')
     del config
-    config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                          reset=True,
-                                          testmode=True)
+    config = nowplaying.config.ConfigFile(bundledir=bundledir, reset=True, testmode=True)
     assert not config.cparser.value('fake/setting')
 
 
@@ -61,10 +59,8 @@ def test_get1(bootstrap):
     assert not config.notif
     assert config.txttemplate == str(
         pathlib.Path(
-            QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation)[0],
-            QCoreApplication.applicationName()).joinpath(
-                'templates', 'basic-plain.txt'))
+            QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
+            QCoreApplication.applicationName()).joinpath('templates', 'basic-plain.txt'))
 
     config.cparser.setValue('settings/initialized', True)
     config.cparser.setValue('settings/loglevel', 'invalid1')

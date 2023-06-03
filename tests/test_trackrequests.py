@@ -18,14 +18,11 @@ async def trackrequestbootstrap(bootstrap, getroot):  # pylint: disable=redefine
     stopevent = asyncio.Event()
     config = bootstrap
     config.cparser.setValue('settings/input', 'jsonreader')
-    playlistpath = pathlib.Path(getroot).joinpath('tests', 'playlists', 'json',
-                                                  'test.json')
+    playlistpath = pathlib.Path(getroot).joinpath('tests', 'playlists', 'json', 'test.json')
     config.pluginobjs['inputs']['nowplaying.inputs.jsonreader'].load_playlists(
         getroot, playlistpath)
     config.cparser.sync()
-    yield nowplaying.trackrequests.Requests(stopevent=stopevent,
-                                            config=config,
-                                            testmode=True)
+    yield nowplaying.trackrequests.Requests(stopevent=stopevent, config=config, testmode=True)
     stopevent.set()
     await asyncio.sleep(2)
 
@@ -36,8 +33,7 @@ async def test_trackrequest_artisttitlenoquote(trackrequestbootstrap):  # pylint
 
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request({'displayname': 'test'},
-                                                 'user', 'artist - title')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user', 'artist - title')
     assert data['artist'] == 'artist'
     assert data['title'] == 'title'
     assert data['requester'] == 'user'
@@ -50,8 +46,8 @@ async def test_trackrequest_artisttitlenoquotespaces(trackrequestbootstrap):  # 
 
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request(
-        {'displayname': 'test'}, 'user', '      artist     -      title    ')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user',
+                                                 '      artist     -      title    ')
     assert data['artist'] == 'artist'
     assert data['title'] == 'title'
     assert data['requester'] == 'user'
@@ -79,8 +75,8 @@ async def test_trackrequest_artisttitlequotes(trackrequestbootstrap):  # pylint:
 
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request({'displayname': 'test'},
-                                                 'user', 'artist - "title"')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user',
+                                                 'artist - "title"')
     assert data['artist'] == 'artist'
     assert data['title'] == 'title'
     assert data['requester'] == 'user'
@@ -93,8 +89,8 @@ async def test_trackrequest_artisttitlequotesspaces(trackrequestbootstrap):  # p
 
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request(
-        {'displayname': 'test'}, 'user', '    artist    -     "title"   ')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user',
+                                                 '    artist    -     "title"   ')
     assert data['artist'] == 'artist'
     assert data['title'] == 'title'
     assert data['requester'] == 'user'
@@ -107,8 +103,8 @@ async def test_trackrequest_titlequotesartist(trackrequestbootstrap):  # pylint:
 
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request({'displayname': 'test'},
-                                                 'user', '"title" - artist')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user',
+                                                 '"title" - artist')
     assert data['artist'] == 'artist'
     assert data['title'] == 'title'
     assert data['requester'] == 'user'
@@ -121,8 +117,8 @@ async def test_trackrequest_titlequotesbyartist(trackrequestbootstrap):  # pylin
 
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request({'displayname': 'test'},
-                                                 'user', '"title" by artist')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user',
+                                                 '"title" by artist')
     assert data['artist'] == 'artist'
     assert data['title'] == 'title'
     assert data['requester'] == 'user'
@@ -135,9 +131,8 @@ async def test_trackrequest_quotedweirdal(trackrequestbootstrap):  # pylint: dis
 
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request(
-        {'displayname': 'test'}, 'user',
-        '"Weird Al" Yankovic - This Is The Life.')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user',
+                                                 '"Weird Al" Yankovic - This Is The Life.')
     assert data['artist'] == '"Weird Al" Yankovic'
     assert data['title'] == 'This Is The Life.'
     assert data['requester'] == 'user'
@@ -150,9 +145,8 @@ async def test_trackrequest_quotedchampagne(trackrequestbootstrap):  # pylint: d
 
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request(
-        {'displayname': 'test'}, 'user',
-        'Evelyn "Champagne" King - "I\'m In Love"')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user',
+                                                 'Evelyn "Champagne" King - "I\'m In Love"')
     assert data['artist'] == 'Evelyn "Champagne" King'
     assert data['title'] == 'I\'m In Love'
     assert data['requester'] == 'user'
@@ -165,8 +159,8 @@ async def test_trackrequest_xtcfornigel(trackrequestbootstrap):  # pylint: disab
 
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request(
-        {'displayname': 'test'}, 'user', 'xtc - making plans for nigel')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user',
+                                                 'xtc - making plans for nigel')
     assert data['artist'] == 'xtc'
     assert data['title'] == 'making plans for nigel'
     assert data['requester'] == 'user'
@@ -179,8 +173,8 @@ async def test_trackrequest_xtcforatnigel(trackrequestbootstrap):  # pylint: dis
 
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request(
-        {'displayname': 'test'}, 'user', 'xtc - making plans for @nigel')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user',
+                                                 'xtc - making plans for @nigel')
     assert data['artist'] == 'xtc'
     assert data['title'] == 'making plans'
     assert data['requester'] == 'user'
@@ -193,8 +187,7 @@ async def test_trackrequest_nospace(trackrequestbootstrap):  # pylint: disable=r
 
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request({'displayname': 'test'},
-                                                 'user', 'artist-title')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user', 'artist-title')
     assert data['artist'] == 'artist'
     assert data['title'] == 'title'
     assert data['requester'] == 'user'
@@ -211,18 +204,14 @@ async def test_trackrequest_rouletterequest(trackrequestbootstrap):  # pylint: d
     trackrequest.config.cparser.setValue('settings/requests', True)
     trackrequest.config.cparser.sync()
 
-    data = await trackrequest.user_roulette_request(
-        {
-            'displayname': 'test',
-            'playlist': 'testlist'
-        }, 'user', 'artist-title')
+    data = await trackrequest.user_roulette_request({
+        'displayname': 'test',
+        'playlist': 'testlist'
+    }, 'user', 'artist-title')
     assert data['requester'] == 'user'
     assert data['requestdisplayname'] == 'test'
 
-    data = await trackrequest.get_request({
-        'artist': 'Nine Inch Nails',
-        'title': '15 Ghosts II'
-    })
+    data = await trackrequest.get_request({'artist': 'Nine Inch Nails', 'title': '15 Ghosts II'})
     assert data['requester'] == 'user'
     assert data['requestdisplayname'] == 'test'
     assert data['requesterimageraw']
@@ -238,18 +227,14 @@ async def test_trackrequest_rouletterequest_normalized(trackrequestbootstrap):  
     trackrequest.config.cparser.setValue('settings/requests', True)
     trackrequest.config.cparser.sync()
 
-    data = await trackrequest.user_roulette_request(
-        {
-            'displayname': 'test',
-            'playlist': 'testlist'
-        }, 'user', 'artist-title')
+    data = await trackrequest.user_roulette_request({
+        'displayname': 'test',
+        'playlist': 'testlist'
+    }, 'user', 'artist-title')
     assert data['requester'] == 'user'
     assert data['requestdisplayname'] == 'test'
 
-    data = await trackrequest.get_request({
-        'artist': 'Níne Ínch Näíls',
-        'title': '15 Ghosts II'
-    })
+    data = await trackrequest.get_request({'artist': 'Níne Ínch Näíls', 'title': '15 Ghosts II'})
     assert data['requester'] == 'user'
     assert data['requestdisplayname'] == 'test'
     assert data['requesterimageraw']
@@ -266,16 +251,12 @@ async def test_trackrequest_getrequest_artist(trackrequestbootstrap):  # pylint:
     trackrequest.config.cparser.sync()
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request({'displayname': 'test'},
-                                                 'user', 'Nine Inch Nails')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user', 'Nine Inch Nails')
     logging.debug(data)
     assert data['requestartist'] == 'Nine Inch Nails'
     assert not data['requesttitle']
 
-    data = await trackrequest.get_request({
-        'artist': 'Níne Ínch Näíls',
-        'title': '15 Ghosts II'
-    })
+    data = await trackrequest.get_request({'artist': 'Níne Ínch Näíls', 'title': '15 Ghosts II'})
     assert data['requester'] == 'user'
     assert data['requestdisplayname'] == 'test'
     assert data['requesterimageraw']
@@ -292,16 +273,12 @@ async def test_trackrequest_getrequest_title(trackrequestbootstrap):  # pylint: 
     trackrequest.config.cparser.sync()
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request({'displayname': 'test'},
-                                                 'user', '"15 Ghosts II"')
+    data = await trackrequest.user_track_request({'displayname': 'test'}, 'user', '"15 Ghosts II"')
     logging.debug(data)
     assert not data['requestartist']
     assert data['requesttitle'] == '15 Ghosts II'
 
-    data = await trackrequest.get_request({
-        'artist': 'Níne Ínch Näíls',
-        'title': '15 Ghosts II'
-    })
+    data = await trackrequest.get_request({'artist': 'Níne Ínch Näíls', 'title': '15 Ghosts II'})
     assert data['requester'] == 'user'
     assert data['requestdisplayname'] == 'test'
     assert data['requesterimageraw']
@@ -313,8 +290,7 @@ async def test_twofer(bootstrap, getroot):  # pylint: disable=redefined-outer-na
     stopevent = asyncio.Event()
     config = bootstrap
     config.cparser.setValue('settings/input', 'json')
-    playlistpath = pathlib.Path(getroot).joinpath('tests', 'playlists', 'json',
-                                                  'test.json')
+    playlistpath = pathlib.Path(getroot).joinpath('tests', 'playlists', 'json', 'test.json')
     config.pluginobjs['inputs']['nowplaying.inputs.jsonreader'].load_playlists(
         getroot, playlistpath)
     config.cparser.sync()

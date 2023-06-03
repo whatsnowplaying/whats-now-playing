@@ -63,9 +63,7 @@ class ArtistExtrasPlugin():
         ''' determine a reasonable, minimal delay '''
 
         try:
-            delay = self.config.cparser.value('settings/delay',
-                                              type=float,
-                                              defaultValue=10.0)
+            delay = self.config.cparser.value('settings/delay', type=float, defaultValue=10.0)
         except ValueError:
             delay = 10.0
 

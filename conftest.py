@@ -59,9 +59,7 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
     with tempfile.TemporaryDirectory() as newpath:
         bundledir = pathlib.Path(getroot).joinpath('nowplaying')
         nowplaying.bootstrap.set_qt_names(domain=DOMAIN, appname='testsuite')
-        config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                              logpath=newpath,
-                                              testmode=True)
+        config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=newpath, testmode=True)
         config.cparser.setValue('acoustidmb/enabled', False)
         config.cparser.sync()
         yield config
@@ -81,20 +79,17 @@ def clear_old_testsuite():
         qsettingsformat = QSettings.NativeFormat
 
     nowplaying.bootstrap.set_qt_names(appname='testsuite')
-    config = QSettings(qsettingsformat, QSettings.SystemScope,
-                       QCoreApplication.organizationName(),
+    config = QSettings(qsettingsformat, QSettings.SystemScope, QCoreApplication.organizationName(),
                        QCoreApplication.applicationName())
     config.clear()
     config.sync()
 
-    cachedir = pathlib.Path(
-        QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0])
+    cachedir = pathlib.Path(QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0])
     if 'testsuite' in cachedir.name and cachedir.exists():
         logging.info('Removing %s', cachedir)
         shutil.rmtree(cachedir)
 
-    config = QSettings(qsettingsformat, QSettings.UserScope,
-                       QCoreApplication.organizationName(),
+    config = QSettings(qsettingsformat, QSettings.UserScope, QCoreApplication.organizationName(),
                        QCoreApplication.applicationName())
     config.clear()
     config.sync()

@@ -58,14 +58,13 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self.trackrequests = None
         if not self.config.cparser.value('control/beam', type=bool):
             self._setup_imagecache()
-            self.trackrequests = nowplaying.trackrequests.Requests(
-                config=self.config, stopevent=self.stopevent)
+            self.trackrequests = nowplaying.trackrequests.Requests(config=self.config,
+                                                                   stopevent=self.stopevent)
             self.trackrequests.clear_roulette_artist_dupes()
 
         self.tasks = set()
         nowplaying.textoutput.deltxttrack(self.config)
-        self.metadataprocessors = nowplaying.metadata.MetadataProcessors(
-            config=self.config)
+        self.metadataprocessors = nowplaying.metadata.MetadataProcessors(config=self.config)
         self.create_tasks()
         if not testmode:
             self.loop.run_forever()
@@ -81,13 +80,11 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         task.add_done_callback(self.tasks.remove)
         self.tasks.add(task)
         if self.trackrequests:
-            task = self.loop.create_task(
-                self.trackrequests.watch_for_respin(self.stopevent))
+            task = self.loop.create_task(self.trackrequests.watch_for_respin(self.stopevent))
             task.add_done_callback(self.tasks.remove)
             self.tasks.add(task)
         if self.imagecache:
-            task = self.loop.create_task(
-                self.imagecache.verify_cache_timer(self.stopevent))
+            task = self.loop.create_task(self.imagecache.verify_cache_timer(self.stopevent))
             task.add_done_callback(self.tasks.remove)
             self.tasks.add(task)
 
@@ -99,9 +96,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 logging.info('stopping %s', self.previousinput)
                 await self.input.stop()
             self.previousinput = self.config.cparser.value('settings/input')
-            self.input = self.plugins[
-                f'nowplaying.inputs.{self.previousinput}'].Plugin(
-                    config=self.config)
+            self.input = self.plugins[f'nowplaying.inputs.{self.previousinput}'].Plugin(
+                config=self.config)
             logging.info('Starting %s plugin', self.previousinput)
             if not self.input:
                 return False
@@ -125,8 +121,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         # sleep until we have something to do
         while not self.stopevent.is_set() and not self.config.getpause(
-        ) and not self.config.cparser.value('settings/input',
-                                            defaultValue=None):
+        ) and not self.config.cparser.value('settings/input', defaultValue=None):
             await asyncio.sleep(.5)
             self.config.get()
 
@@ -140,12 +135,9 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             try:
                 await self.gettrack()
             except Exception as error:  #pylint: disable=broad-except
-                logging.error('Failed attempting to get a track: %s',
-                              error,
-                              exc_info=True)
+                logging.error('Failed attempting to get a track: %s', error, exc_info=True)
 
-        if not self.testmode and self.config.cparser.value('setlist/enabled',
-                                                           type=bool):
+        if not self.testmode and self.config.cparser.value('setlist/enabled', type=bool):
             nowplaying.db.create_setlist(self.config)
         await self.stop()
         logging.debug('Trackpoll stopped gracefully.')
@@ -175,12 +167,11 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         if metadata.get('filename'):
             filepath = pathlib.Path(metadata['filename'])
             if not filepath.exists():
-                metadata['filename'] = nowplaying.utils.songpathsubst(
-                    self.config, metadata['filename'])
+                metadata['filename'] = nowplaying.utils.songpathsubst(self.config,
+                                                                      metadata['filename'])
                 filepath = pathlib.Path(metadata['filename'])
                 if not filepath.exists():
-                    logging.error('cannot find %s; removing from metadata',
-                                  metadata['filename'])
+                    logging.error('cannot find %s; removing from metadata', metadata['filename'])
                     del metadata['filename']
         return metadata
 
@@ -234,8 +225,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
     async def checkskip(self, nextmeta):
         ''' check if this metadata is meant to be skipped '''
         for skiptype in ['comment', 'genre']:
-            skipdata = self.config.cparser.value(f'trackskip/{skiptype}',
-                                                 defaultValue=None)
+            skipdata = self.config.cparser.value(f'trackskip/{skiptype}', defaultValue=None)
             if not skipdata:
                 continue
             if skipdata in nextmeta.get(skiptype, ''):
@@ -263,19 +253,18 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         if metadata.get('title'):
             (metadata['title'],
-             metadata['filename']) = self._check_title_for_path(
-                 metadata['title'], metadata.get('filename'))
+             metadata['filename']) = self._check_title_for_path(metadata['title'],
+                                                                metadata.get('filename'))
 
         for key in COREMETA:
             if key in metadata and not metadata[key]:
                 del metadata[key]
 
         try:
-            metadata = await self.metadataprocessors.getmoremetadata(
-                metadata=metadata, imagecache=self.imagecache)
+            metadata = await self.metadataprocessors.getmoremetadata(metadata=metadata,
+                                                                     imagecache=self.imagecache)
             if duration := metadata.get('duration'):
-                metadata['duration_hhmmss'] = nowplaying.utils.humanize_time(
-                    duration)
+                metadata['duration_hhmmss'] = nowplaying.utils.humanize_time(duration)
         except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
@@ -283,8 +272,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         for key in COREMETA:
             if key not in metadata:
-                logging.info('Track missing %s data, setting it to blank.',
-                             key)
+                logging.info('Track missing %s data, setting it to blank.', key)
                 metadata[key] = ''
         return metadata
 
@@ -306,8 +294,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             await asyncio.sleep(5)
             return
 
-        if self._ismetaempty(nextmeta) or self._ismetasame(
-                nextmeta) or self._isignored(nextmeta):
+        if self._ismetaempty(nextmeta) or self._ismetasame(nextmeta) or self._isignored(nextmeta):
             return
 
         # fill in the blanks and make it live
@@ -321,12 +308,11 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             logging.error('Ignoring the crash and just keep going!')
             self.currentmeta = nextmeta
 
-        logging.info('Potential new track: %s / %s',
-                     self.currentmeta['artist'], self.currentmeta['title'])
+        logging.info('Potential new track: %s / %s', self.currentmeta['artist'],
+                     self.currentmeta['title'])
 
         if await self.checkskip(nextmeta):
-            logging.info('Skipping %s / %s', self.currentmeta['artist'],
-                         self.currentmeta['title'])
+            logging.info('Skipping %s / %s', self.currentmeta['artist'], self.currentmeta['title'])
             return
 
         # try to interleave downloads in-between the delay
@@ -339,16 +325,14 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         # checkagain
         nextcheck = await self.input.getplayingtrack()
-        if not self._ismetaempty(nextcheck) and not self._ismetasame(
-                nextcheck):
+        if not self._ismetaempty(nextcheck) and not self._ismetasame(nextcheck):
             logging.info('Track changed during delay, skipping')
             self.currentmeta = oldmeta
             return
 
         if self.config.cparser.value(
                 'settings/requests',
-                type=bool) and not self.config.cparser.value('control/beam',
-                                                             type=bool):
+                type=bool) and not self.config.cparser.value('control/beam', type=bool):
             if data := await self.trackrequests.get_request(self.currentmeta):
                 self.currentmeta.update(data)
 
@@ -361,38 +345,30 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
     def _artfallbacks(self):
         if self.config.cparser.value(
-                'artistextras/coverfornologos',
-                type=bool) and not self.currentmeta.get(
-                    'artistlogoraw') and self.currentmeta.get('coverimageraw'):
-            self.currentmeta['artistlogoraw'] = self.currentmeta[
-                'coverimageraw']
+                'artistextras/coverfornologos', type=bool
+        ) and not self.currentmeta.get('artistlogoraw') and self.currentmeta.get('coverimageraw'):
+            self.currentmeta['artistlogoraw'] = self.currentmeta['coverimageraw']
 
         if self.config.cparser.value(
                 'artistextras/coverfornothumbs', type=bool
-        ) and not self.currentmeta.get(
-                'artistthumbraw') and self.currentmeta.get('coverimageraw'):
-            self.currentmeta['artistthumbraw'] = self.currentmeta[
-                'coverimageraw']
+        ) and not self.currentmeta.get('artistthumbraw') and self.currentmeta.get('coverimageraw'):
+            self.currentmeta['artistthumbraw'] = self.currentmeta['coverimageraw']
 
     def _write_to_text(self):
         if configfile := self.config.cparser.value('textoutput/file'):
-            if configtemplate := self.config.cparser.value(
-                    'textoutput/txttemplate'):
+            if configtemplate := self.config.cparser.value('textoutput/txttemplate'):
                 if not self.previoustxttemplate or self.previoustxttemplate != configtemplate:
                     self.txttemplatehandler = nowplaying.utils.TemplateHandler(
                         filename=configtemplate)
                     self.previoustxttemplate = configtemplate
-                nowplaying.textoutput.writetxttrack(
-                    config=self.config,
-                    filename=configfile,
-                    templatehandler=self.txttemplatehandler,
-                    metadata=self.currentmeta)
+                nowplaying.textoutput.writetxttrack(config=self.config,
+                                                    filename=configfile,
+                                                    templatehandler=self.txttemplatehandler,
+                                                    metadata=self.currentmeta)
 
     async def _half_delay_write(self):
         try:
-            delay = self.config.cparser.value('settings/delay',
-                                              type=float,
-                                              defaultValue=1.0)
+            delay = self.config.cparser.value('settings/delay', type=float, defaultValue=1.0)
         except ValueError:
             delay = 1.0
         delay /= 2
@@ -404,63 +380,56 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             return
 
         workers = self.config.cparser.value('artistextras/processes', type=int)
-        sizelimit = self.config.cparser.value('artistextras/cachesize',
-                                              type=int)
+        sizelimit = self.config.cparser.value('artistextras/cachesize', type=int)
 
-        self.imagecache = nowplaying.imagecache.ImageCache(
-            sizelimit=sizelimit, stopevent=self.stopevent)
-        self.config.cparser.setValue('artistextras/cachedbfile',
-                                     self.imagecache.databasefile)
-        self.icprocess = multiprocessing.Process(
-            target=self.imagecache.queue_process,
-            name='ICProcess',
-            args=(
-                self.config.logpath,
-                workers,
-            ))
+        self.imagecache = nowplaying.imagecache.ImageCache(sizelimit=sizelimit,
+                                                           stopevent=self.stopevent)
+        self.config.cparser.setValue('artistextras/cachedbfile', self.imagecache.databasefile)
+        self.icprocess = multiprocessing.Process(target=self.imagecache.queue_process,
+                                                 name='ICProcess',
+                                                 args=(
+                                                     self.config.logpath,
+                                                     workers,
+                                                 ))
         self.icprocess.start()
 
     def _start_artistfanartpool(self):
-        if not self.config.cparser.value(
-                'artistextras/enabled',
-                type=bool) or self.config.cparser.value('control/beam',
-                                                        type=bool):
+        if not self.config.cparser.value('artistextras/enabled',
+                                         type=bool) or self.config.cparser.value('control/beam',
+                                                                                 type=bool):
             return
 
         if self.currentmeta.get('artistfanarturls'):
             dedupe = list(dict.fromkeys(self.currentmeta['artistfanarturls']))
             self.currentmeta['artistfanarturls'] = dedupe
-            self.imagecache.fill_queue(
-                config=self.config,
-                artist=self.currentmeta['artist'],
-                imagetype='artistfanart',
-                urllist=self.currentmeta['artistfanarturls'])
+            self.imagecache.fill_queue(config=self.config,
+                                       artist=self.currentmeta['artist'],
+                                       imagetype='artistfanart',
+                                       urllist=self.currentmeta['artistfanarturls'])
             del self.currentmeta['artistfanarturls']
 
     async def _process_imagecache(self):
         if not self.currentmeta.get('artist') or self.config.cparser.value(
-                'control/beam', type=bool) or not self.config.cparser.value(
-                    'artistextras/enabled', type=bool):
+                'control/beam',
+                type=bool) or not self.config.cparser.value('artistextras/enabled', type=bool):
             return
 
         def fillin(self):
             tryagain = False
 
             if not self.imagecache:
-                logging.debug(
-                    'Artist Extras was enabled without restart; skipping image downloads'
-                )
+                logging.debug('Artist Extras was enabled without restart; skipping image downloads')
                 return True
 
             for key in ['artistthumb', 'artistlogo', 'artistbanner']:
                 logging.debug('Calling %s', key)
                 rawkey = f'{key}raw'
                 if not self.currentmeta.get(rawkey):
-                    image = self.imagecache.random_image_fetch(
-                        artist=self.currentmeta['artist'], imagetype=key)
+                    image = self.imagecache.random_image_fetch(artist=self.currentmeta['artist'],
+                                                               imagetype=key)
                     if not image:
-                        logging.debug('did not get an image for %s %s %s', key,
-                                      rawkey, self.currentmeta['artist'])
+                        logging.debug('did not get an image for %s %s %s', key, rawkey,
+                                      self.currentmeta['artist'])
                         tryagain = True
                     self.currentmeta[rawkey] = image
             return tryagain
@@ -489,11 +458,8 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
         nowplaying.bootstrap.set_qt_names(appname='testsuite')
     else:
         nowplaying.bootstrap.set_qt_names()
-    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log',
-                                                rotate=False)
-    config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                          logpath=logpath,
-                                          testmode=testmode)
+    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log', rotate=False)
+    config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=logpath, testmode=testmode)
     try:
         TrackPoll(  # pylint: disable=unused-variable
             stopevent=stopevent,

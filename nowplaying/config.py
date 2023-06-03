@@ -38,8 +38,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self.testmode = testmode
         self.logpath = logpath
         self.basedir = pathlib.Path(
-            QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation)[0],
+            QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
             QCoreApplication.applicationName())
         self.initialized = False
         if logpath:
@@ -119,12 +118,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         except TypeError:
             pass
 
-        self.txttemplate = self.cparser.value('textoutput/txttemplate',
-                                              defaultValue=None)
+        self.txttemplate = self.cparser.value('textoutput/txttemplate', defaultValue=None)
 
         try:
-            self.initialized = self.cparser.value('settings/initialized',
-                                                  type=bool)
+            self.initialized = self.cparser.value('settings/initialized', type=bool)
         except TypeError:
             pass
 
@@ -173,26 +170,19 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue('obsws/port', '4455')
         settings.setValue('obsws/secret', '')
         settings.setValue('obsws/source', '')
-        settings.setValue('obsws/template',
-                          str(self.templatedir.joinpath("basic-plain.txt")))
+        settings.setValue('obsws/template', str(self.templatedir.joinpath("basic-plain.txt")))
 
-        settings.setValue('weboutput/htmltemplate',
-                          str(self.templatedir.joinpath("basic-web.htm")))
-        settings.setValue(
-            'weboutput/artistbannertemplate',
-            str(self.templatedir.joinpath("ws-artistbanner-nofade.htm")))
-        settings.setValue(
-            'weboutput/artistlogotemplate',
-            str(self.templatedir.joinpath("ws-artistlogo-nofade.htm")))
-        settings.setValue(
-            'weboutput/artistthumbtemplate',
-            str(self.templatedir.joinpath("ws-artistthumb-nofade.htm")))
-        settings.setValue(
-            'weboutput/artistfanarttemplate',
-            str(self.templatedir.joinpath("ws-artistfanart-nofade.htm")))
-        settings.setValue(
-            'weboutput/gifwordstemplate',
-            str(self.templatedir.joinpath("ws-gifwords-fade.htm")))
+        settings.setValue('weboutput/htmltemplate', str(self.templatedir.joinpath("basic-web.htm")))
+        settings.setValue('weboutput/artistbannertemplate',
+                          str(self.templatedir.joinpath("ws-artistbanner-nofade.htm")))
+        settings.setValue('weboutput/artistlogotemplate',
+                          str(self.templatedir.joinpath("ws-artistlogo-nofade.htm")))
+        settings.setValue('weboutput/artistthumbtemplate',
+                          str(self.templatedir.joinpath("ws-artistthumb-nofade.htm")))
+        settings.setValue('weboutput/artistfanarttemplate',
+                          str(self.templatedir.joinpath("ws-artistfanart-nofade.htm")))
+        settings.setValue('weboutput/gifwordstemplate',
+                          str(self.templatedir.joinpath("ws-gifwords-fade.htm")))
         settings.setValue('weboutput/requestertemplate',
                           str(self.templatedir.joinpath("ws-requests.htm")))
         settings.setValue('weboutput/httpenabled', True)
@@ -209,8 +199,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
     def _initial_plugins(self):
 
-        self.plugins['inputs'] = nowplaying.pluginimporter.import_plugins(
-            nowplaying.inputs)
+        self.plugins['inputs'] = nowplaying.pluginimporter.import_plugins(nowplaying.inputs)
         if self.beam and self.plugins['inputs']['nowplaying.inputs.beam']:
             del self.plugins['inputs']['nowplaying.inputs.beam']
         self.pluginobjs['inputs'] = {}
@@ -230,8 +219,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             self.pluginobjs[plugintype] = {}
             removelist = []
             for key in plugtypelist:
-                self.pluginobjs[plugintype][key] = self.plugins[plugintype][
-                    key].Plugin(config=self, qsettings=settings)
+                self.pluginobjs[plugintype][key] = self.plugins[plugintype][key].Plugin(
+                    config=self, qsettings=settings)
                 if self.testmode or self.pluginobjs[plugintype][key].available:
                     self.pluginobjs[plugintype][key].defaults(settings)
                 else:
@@ -262,9 +251,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         for plugintype, plugtypelist in self.plugins.items():
             for key in plugtypelist:
                 widgetkey = key.split('.')[-1]
-                if (widgetkey == inputname
-                        and plugintype == 'inputs') or (plugintype
-                                                        != 'inputs'):
+                if (widgetkey == inputname and plugintype == 'inputs') or (plugintype != 'inputs'):
                     self.pluginobjs[plugintype][key].verify_settingsui(
                         qtwidgets[f'{plugintype}_{widgetkey}'])
 
@@ -278,8 +265,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
     def plugins_description(self, plugintype, plugin, qtwidget):
         ''' configure the defaults for input plugins '''
-        self.pluginobjs[plugintype][
-            f'nowplaying.{plugintype}.{plugin}'].desc_settingsui(qtwidget)
+        self.pluginobjs[plugintype][f'nowplaying.{plugintype}.{plugin}'].desc_settingsui(qtwidget)
 
     # pylint: disable=too-many-arguments
     def put(self, initialized, notif, loglevel):
@@ -295,8 +281,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         ''' save the current set '''
 
         self.cparser.setValue('settings/initialized', self.initialized)
-        self.cparser.setValue('settings/lastsavedate',
-                              time.strftime("%Y%m%d%H%M%S"))
+        self.cparser.setValue('settings/lastsavedate', time.strftime("%Y%m%d%H%M%S"))
         self.cparser.setValue('settings/loglevel', self.loglevel)
         self.cparser.setValue('settings/notif', self.notif)
 
@@ -368,23 +353,20 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     def validmixmodes(self):
         ''' get valid mixmodes '''
         plugin = self.cparser.value('settings/input')
-        inputplugin = self.plugins['inputs'][
-            f'nowplaying.inputs.{plugin}'].Plugin(config=self)
+        inputplugin = self.plugins['inputs'][f'nowplaying.inputs.{plugin}'].Plugin(config=self)
         return inputplugin.validmixmodes()
 
     def setmixmode(self, mixmode):
         ''' set the mixmode by calling the plugin '''
 
         plugin = self.cparser.value('settings/input')
-        inputplugin = self.plugins['inputs'][
-            f'nowplaying.inputs.{plugin}'].Plugin(config=self)
+        inputplugin = self.plugins['inputs'][f'nowplaying.inputs.{plugin}'].Plugin(config=self)
         return inputplugin.setmixmode(mixmode)
 
     def getmixmode(self):
         ''' get current mix mode '''
         plugin = self.cparser.value('settings/input')
-        inputplugin = self.plugins['inputs'][
-            f'nowplaying.inputs.{plugin}'].Plugin(config=self)
+        inputplugin = self.plugins['inputs'][f'nowplaying.inputs.{plugin}'].Plugin(config=self)
         return inputplugin.getmixmode()
 
     @staticmethod
@@ -396,23 +378,19 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         ''' get the setlist directory '''
         if not self.setlistdir:
             self.setlistdir = os.path.join(
-                QStandardPaths.standardLocations(
-                    QStandardPaths.DocumentsLocation)[0],
+                QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
                 QCoreApplication.applicationName(), 'setlists')
         return self.setlistdir
 
     def getregexlist(self):
         ''' get the regex title filter '''
-        if not self.striprelist or self.lastloaddate < self.cparser.value(
-                'settings/lastsavedate'):
+        if not self.striprelist or self.lastloaddate < self.cparser.value('settings/lastsavedate'):
             try:
                 self.striprelist = [
                     re.compile(self.cparser.value(configitem))
-                    for configitem in self.cparser.allKeys()
-                    if 'regex_filter/' in configitem
+                    for configitem in self.cparser.allKeys() if 'regex_filter/' in configitem
                 ]
                 self.lastloaddate = self.cparser.value('settings/lastsavedate')
             except re.error as error:
-                logging.error('Filter error with \'%s\': %s', error.pattern,
-                              error.msg)
+                logging.error('Filter error with \'%s\': %s', error.pattern, error.msg)
         return self.striprelist

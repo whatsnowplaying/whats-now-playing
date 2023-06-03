@@ -69,8 +69,7 @@ def test_version_300rc1_to_current():  # pylint: disable=redefined-outer-name
             qsettingsformat = QSettings.IniFormat
         else:
             qsettingsformat = QSettings.NativeFormat
-        teststr = ''.join(
-            random.choice(string.ascii_lowercase) for _ in range(5))
+        teststr = ''.join(random.choice(string.ascii_lowercase) for _ in range(5))
         oldfilename = make_fake_300_config(teststr)
         oldchecksum = checksum(oldfilename)
         backupdir = os.path.join(newpath, 'testsuite', 'configbackup')
@@ -79,8 +78,7 @@ def test_version_300rc1_to_current():  # pylint: disable=redefined-outer-name
         nowplaying.bootstrap.set_qt_names(appname='testsuite')
         upgrade = nowplaying.upgrade.UpgradeConfig(testdir=newpath)  #pylint: disable=unused-variable
         config = QSettings(qsettingsformat, QSettings.UserScope,
-                           QCoreApplication.organizationName(),
-                           QCoreApplication.applicationName())
+                           QCoreApplication.organizationName(), QCoreApplication.applicationName())
         newfilename = config.fileName()
         config.sync()
         fakevalue = config.value('settings/notdefault')

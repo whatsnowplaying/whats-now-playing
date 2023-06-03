@@ -8,8 +8,7 @@ import re
 
 # pylint: disable=no-name-in-module
 from PySide6.QtCore import Slot, QFile, Qt
-from PySide6.QtWidgets import (QErrorMessage, QFileDialog, QWidget,
-                               QListWidgetItem)
+from PySide6.QtWidgets import (QErrorMessage, QFileDialog, QWidget, QListWidgetItem)
 from PySide6.QtGui import QIcon
 from PySide6.QtUiTools import QUiLoader
 import PySide6.QtXml  # pylint: disable=unused-import, import-error
@@ -58,8 +57,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         # if system hasn't been initialized, then
         # twitch chat files are irrelevant
         if self.config.initialized:
-            self.settingsclasses['twitchchat'].update_twitchbot_commands(
-                self.config)
+            self.settingsclasses['twitchchat'].update_twitchbot_commands(self.config)
 
     def _setup_widgets(self, uiname, displayname=None):
         self.widgets[uiname] = load_widget_ui(self.config, f'{uiname}')
@@ -91,9 +89,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         else:
             baseuis = [
-                'general', 'source', 'filter', 'trackskip', 'textoutput',
-                'webserver', 'twitch', 'twitchchat', 'requests',
-                'artistextras', 'obsws', 'discordbot', 'quirks'
+                'general', 'source', 'filter', 'trackskip', 'textoutput', 'webserver', 'twitch',
+                'twitchchat', 'requests', 'artistextras', 'obsws', 'discordbot', 'quirks'
             ]
 
         for uiname in baseuis:
@@ -110,12 +107,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 if plugintype == "inputs":
                     self.widgets['source'].sourcelist.addItem(
                         self.config.pluginobjs[plugintype][key].displayname)
-                    self.widgets[
-                        'source'].sourcelist.currentRowChanged.connect(
-                            self._set_source_description)
-                self._setup_widgets(
-                    f'{plugintype}_{pkey}',
-                    self.config.pluginobjs[plugintype][key].displayname)
+                    self.widgets['source'].sourcelist.currentRowChanged.connect(
+                        self._set_source_description)
+                self._setup_widgets(f'{plugintype}_{pkey}',
+                                    self.config.pluginobjs[plugintype][key].displayname)
 
         self._setup_widgets('about')
 
@@ -126,19 +121,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     'requests',
             ]:
                 self.settingsclasses[key].load(self.config, self.widgets[key])
-                self.settingsclasses[key].connect(self.uihelp,
-                                                  self.widgets[key])
+                self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
 
         self._connect_plugins()
 
-        self.qtui.settings_list.currentRowChanged.connect(
-            self._set_stacked_display)
+        self.qtui.settings_list.currentRowChanged.connect(self._set_stacked_display)
         self.qtui.cancel_button.clicked.connect(self.on_cancel_button)
         self.qtui.reset_button.clicked.connect(self.on_reset_button)
         self.qtui.save_button.clicked.connect(self.on_save_button)
         self.errormessage = QErrorMessage(self.qtui)
-        if curbutton := self.qtui.settings_list.findItems(
-                'general', Qt.MatchContains):
+        if curbutton := self.qtui.settings_list.findItems('general', Qt.MatchContains):
             self.qtui.settings_list.setCurrentItem(curbutton[0])
 
     def _load_list_item(self, name, qobject, displayname):
@@ -156,8 +148,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _connect_beamstatus_widget(self, qobject):
         ''' refresh the status'''
-        qobject.refresh_button.clicked.connect(
-            self.on_beamstatus_refresh_button)
+        qobject.refresh_button.clicked.connect(self.on_beamstatus_refresh_button)
 
     def _connect_webserver_widget(self, qobject):
         ''' file in the hostname/ip and connect the template button'''
@@ -173,19 +164,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _connect_textoutput_widget(self, qobject):
         ''' connect the general buttons to non-built-ins '''
-        qobject.texttemplate_button.clicked.connect(
-            self.on_text_template_button)
+        qobject.texttemplate_button.clicked.connect(self.on_text_template_button)
         qobject.textoutput_button.clicked.connect(self.on_text_saveas_button)
 
     def _connect_discordbot_widget(self, qobject):
         ''' connect the artistextras buttons to non-built-ins '''
-        qobject.template_button.clicked.connect(
-            self.on_discordbot_template_button)
+        qobject.template_button.clicked.connect(self.on_discordbot_template_button)
 
     def _connect_artistextras_widget(self, qobject):
         ''' connect the artistextras buttons to non-built-ins '''
-        qobject.clearcache_button.clicked.connect(
-            self.on_artistextras_clearcache_button)
+        qobject.clearcache_button.clicked.connect(self.on_artistextras_clearcache_button)
 
     def _connect_obsws_widget(self, qobject):
         ''' connect obsws button to template picker'''
@@ -193,8 +181,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _connect_filter_widget(self, qobject):
         '''  connect regex filter to template picker'''
-        qobject.add_recommended_button.clicked.connect(
-            self.on_filter_add_recommended_button)
+        qobject.add_recommended_button.clicked.connect(self.on_filter_add_recommended_button)
         qobject.test_button.clicked.connect(self.on_filter_test_button)
         qobject.add_button.clicked.connect(self.on_filter_regex_add_button)
         qobject.del_button.clicked.connect(self.on_filter_regex_del_button)
@@ -206,8 +193,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def _set_source_description(self, index):
         item = self.widgets['source'].sourcelist.item(index)
         plugin = item.text().lower()
-        self.config.plugins_description('inputs', plugin,
-                                        self.widgets['source'].description)
+        self.config.plugins_description('inputs', plugin, self.widgets['source'].description)
 
     def upd_win(self):
         ''' update the settings window '''
@@ -243,8 +229,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         ''' textoutput settings '''
         self.widgets['textoutput'].textoutput_lineedit.setText(
             self.config.cparser.value('textoutput/file'))
-        self.widgets['textoutput'].texttemplate_lineedit.setText(
-            self.config.txttemplate)
+        self.widgets['textoutput'].texttemplate_lineedit.setText(self.config.txttemplate)
         self.widgets['textoutput'].append_checkbox.setChecked(
             self.config.cparser.value('textoutput/fileappend', type=bool))
         self.widgets['textoutput'].clear_checkbox.setChecked(
@@ -256,22 +241,15 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.widgets['artistextras'].artistextras_checkbox.setChecked(
             self.config.cparser.value('artistextras/enabled', type=bool))
         self.widgets['artistextras'].missingfanart_checkbox.setChecked(
-            self.config.cparser.value('artistextras/coverfornofanart',
-                                      type=bool))
+            self.config.cparser.value('artistextras/coverfornofanart', type=bool))
         self.widgets['artistextras'].missinglogos_checkbox.setChecked(
-            self.config.cparser.value('artistextras/coverfornologos',
-                                      type=bool))
+            self.config.cparser.value('artistextras/coverfornologos', type=bool))
         self.widgets['artistextras'].missingthumbs_checkbox.setChecked(
-            self.config.cparser.value('artistextras/coverfornothumbs',
-                                      type=bool))
+            self.config.cparser.value('artistextras/coverfornothumbs', type=bool))
 
-        for art in [
-                'banners', 'processes', 'fanart', 'logos', 'thumbnails',
-                'sizelimit'
-        ]:
+        for art in ['banners', 'processes', 'fanart', 'logos', 'thumbnails', 'sizelimit']:
             guiattr = getattr(self.widgets['artistextras'], f'{art}_spin')
-            guiattr.setValue(
-                self.config.cparser.value(f'artistextras/{art}', type=int))
+            guiattr.setValue(self.config.cparser.value(f'artistextras/{art}', type=int))
 
     def _upd_win_filters(self):
         ''' update the filter settings '''
@@ -282,8 +260,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         for configitem in self.config.cparser.allKeys():
             if 'regex_filter/' in configitem:
-                self._filter_regex_load(
-                    regex=self.config.cparser.value(configitem))
+                self._filter_regex_load(regex=self.config.cparser.value(configitem))
 
     def _upd_win_trackskip(self):
         ''' update the trackskip settings to match config '''
@@ -298,15 +275,13 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.widgets['general'].recog_artist_checkbox.setChecked(
             self.config.cparser.value('recognition/replaceartist', type=bool))
         self.widgets['general'].recog_artistwebsites_checkbox.setChecked(
-            self.config.cparser.value('recognition/replaceartistwebsites',
-                                      type=bool))
+            self.config.cparser.value('recognition/replaceartistwebsites', type=bool))
 
     def _upd_win_input(self):
         ''' this is totally wrong and will need to get dealt
             with as part of ui code redesign '''
         currentinput = self.config.cparser.value('settings/input')
-        if curbutton := self.widgets['source'].sourcelist.findItems(
-                currentinput, Qt.MatchContains):
+        if curbutton := self.widgets['source'].sourcelist.findItems(currentinput, Qt.MatchContains):
             self.widgets['source'].sourcelist.setCurrentItem(curbutton[0])
 
     def _upd_win_webserver(self):
@@ -324,16 +299,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         ''' update the obsws settings to match config '''
         self.widgets['obsws'].enable_checkbox.setChecked(
             self.config.cparser.value('obsws/enabled', type=bool))
-        self.widgets['obsws'].source_lineedit.setText(
-            self.config.cparser.value('obsws/source'))
-        self.widgets['obsws'].host_lineedit.setText(
-            self.config.cparser.value('obsws/host'))
-        self.widgets['obsws'].port_lineedit.setText(
-            str(self.config.cparser.value('obsws/port')))
-        self.widgets['obsws'].secret_lineedit.setText(
-            self.config.cparser.value('obsws/secret'))
-        self.widgets['obsws'].template_lineedit.setText(
-            self.config.cparser.value('obsws/template'))
+        self.widgets['obsws'].source_lineedit.setText(self.config.cparser.value('obsws/source'))
+        self.widgets['obsws'].host_lineedit.setText(self.config.cparser.value('obsws/host'))
+        self.widgets['obsws'].port_lineedit.setText(str(self.config.cparser.value('obsws/port')))
+        self.widgets['obsws'].secret_lineedit.setText(self.config.cparser.value('obsws/secret'))
+        self.widgets['obsws'].template_lineedit.setText(self.config.cparser.value('obsws/template'))
 
     def _upd_win_discordbot(self):
         ''' update the obsws settings to match config '''
@@ -394,8 +364,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.upd_win()
         self.widgets['webserver'].enable_checkbox.setChecked(False)
         self.upd_conf()
-        self.errormessage.showMessage(
-            'HTTP Server settings are invalid. Bad port?')
+        self.errormessage.showMessage('HTTP Server settings are invalid. Bad port?')
 
     def disable_obsws(self):
         ''' if the OBS WebSocket gets in trouble, this gets called '''
@@ -409,16 +378,15 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def upd_conf(self):
         ''' update the configuration '''
 
-        self.config.cparser.setValue(
-            'settings/delay', self.widgets['general'].delay_lineedit.text())
+        self.config.cparser.setValue('settings/delay',
+                                     self.widgets['general'].delay_lineedit.text())
         loglevel = self.widgets['general'].logging_combobox.currentText()
 
         self._upd_conf_input()
 
-        self.config.put(
-            initialized=True,
-            notif=self.widgets['general'].notify_checkbox.isChecked(),
-            loglevel=loglevel)
+        self.config.put(initialized=True,
+                        notif=self.widgets['general'].notify_checkbox.isChecked(),
+                        loglevel=loglevel)
 
         logging.getLogger().setLevel(loglevel)
 
@@ -446,59 +414,44 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.config.cparser.sync()
 
     def _upd_conf_textoutput(self):
-        self.config.cparser.setValue(
-            'setlist/enabled',
-            self.widgets['textoutput'].setlist_checkbox.isChecked())
-        self.config.txttemplate = self.widgets[
-            'textoutput'].texttemplate_lineedit.text()
-        self.config.cparser.setValue(
-            'textoutput/file',
-            self.widgets['textoutput'].textoutput_lineedit.text())
-        self.config.cparser.setValue('textoutput/txttemplate',
-                                     self.config.txttemplate)
-        self.config.cparser.setValue(
-            'textoutput/fileappend',
-            self.widgets['textoutput'].append_checkbox.isChecked())
-        self.config.cparser.setValue(
-            'textoutput/clearonstartup',
-            self.widgets['textoutput'].clear_checkbox.isChecked())
+        self.config.cparser.setValue('setlist/enabled',
+                                     self.widgets['textoutput'].setlist_checkbox.isChecked())
+        self.config.txttemplate = self.widgets['textoutput'].texttemplate_lineedit.text()
+        self.config.cparser.setValue('textoutput/file',
+                                     self.widgets['textoutput'].textoutput_lineedit.text())
+        self.config.cparser.setValue('textoutput/txttemplate', self.config.txttemplate)
+        self.config.cparser.setValue('textoutput/fileappend',
+                                     self.widgets['textoutput'].append_checkbox.isChecked())
+        self.config.cparser.setValue('textoutput/clearonstartup',
+                                     self.widgets['textoutput'].clear_checkbox.isChecked())
 
     def _upd_conf_trackskip(self):
-        self.config.cparser.setValue(
-            'trackskip/genre', self.widgets['trackskip'].genre_lineedit.text())
-        self.config.cparser.setValue(
-            'trackskip/comment',
-            self.widgets['trackskip'].comment_lineedit.text())
+        self.config.cparser.setValue('trackskip/genre',
+                                     self.widgets['trackskip'].genre_lineedit.text())
+        self.config.cparser.setValue('trackskip/comment',
+                                     self.widgets['trackskip'].comment_lineedit.text())
 
     def _upd_conf_artistextras(self):
-        self.config.cparser.setValue(
-            'artistextras/enabled',
-            self.widgets['artistextras'].artistextras_checkbox.isChecked())
+        self.config.cparser.setValue('artistextras/enabled',
+                                     self.widgets['artistextras'].artistextras_checkbox.isChecked())
         self.config.cparser.setValue(
             'artistextras/coverfornofanart',
             self.widgets['artistextras'].missingfanart_checkbox.isChecked())
-        self.config.cparser.setValue(
-            'artistextras/coverfornologos',
-            self.widgets['artistextras'].missinglogos_checkbox.isChecked())
+        self.config.cparser.setValue('artistextras/coverfornologos',
+                                     self.widgets['artistextras'].missinglogos_checkbox.isChecked())
         self.config.cparser.setValue(
             'artistextras/coverfornothumbs',
             self.widgets['artistextras'].missingthumbs_checkbox.isChecked())
 
-        for art in [
-                'banners', 'processes', 'fanart', 'logos', 'thumbnails',
-                'fanartdelay'
-        ]:
+        for art in ['banners', 'processes', 'fanart', 'logos', 'thumbnails', 'fanartdelay']:
             guiattr = getattr(self.widgets['artistextras'], f'{art}_spin')
-            self.config.cparser.setValue(f'artistextras/{art}',
-                                         guiattr.value())
+            self.config.cparser.setValue(f'artistextras/{art}', guiattr.value())
 
     def _upd_conf_recognition(self):
-        self.config.cparser.setValue(
-            'recognition/replacetitle',
-            self.widgets['general'].recog_title_checkbox.isChecked())
-        self.config.cparser.setValue(
-            'recognition/replaceartist',
-            self.widgets['general'].recog_artist_checkbox.isChecked())
+        self.config.cparser.setValue('recognition/replacetitle',
+                                     self.widgets['general'].recog_title_checkbox.isChecked())
+        self.config.cparser.setValue('recognition/replaceartist',
+                                     self.widgets['general'].recog_artist_checkbox.isChecked())
         self.config.cparser.setValue(
             'recognition/replaceartistwebsites',
             self.widgets['general'].recog_artistwebsites_checkbox.isChecked())
@@ -521,8 +474,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         # itself.  Hitting stop makes it go through
         # the loop again
 
-        oldenabled = self.config.cparser.value('weboutput/httpenabled',
-                                               type=bool)
+        oldenabled = self.config.cparser.value('weboutput/httpenabled', type=bool)
         oldport = self.config.cparser.value('weboutput/httpport', type=int)
 
         httpenabled = self.widgets['webserver'].enable_checkbox.isChecked()
@@ -533,12 +485,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         self.config.cparser.setValue('weboutput/httpenabled', httpenabled)
         self.config.cparser.setValue('weboutput/httpport', httpport)
-        self.config.cparser.setValue(
-            'weboutput/htmltemplate',
-            self.widgets['webserver'].template_lineedit.text())
-        self.config.cparser.setValue(
-            'weboutput/once',
-            self.widgets['webserver'].once_checkbox.isChecked())
+        self.config.cparser.setValue('weboutput/htmltemplate',
+                                     self.widgets['webserver'].template_lineedit.text())
+        self.config.cparser.setValue('weboutput/once',
+                                     self.widgets['webserver'].once_checkbox.isChecked())
 
         if oldenabled != httpenabled or oldport != httpport:
             self.tray.subprocesses.restart_webserver()
@@ -549,16 +499,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         oldenabled = self.config.cparser.value('obsws/enabled', type=bool)
         newenabled = self.widgets['obsws'].enable_checkbox.isChecked()
 
-        self.config.cparser.setValue(
-            'obsws/source', self.widgets['obsws'].source_lineedit.text())
-        self.config.cparser.setValue(
-            'obsws/host', self.widgets['obsws'].host_lineedit.text())
-        self.config.cparser.setValue(
-            'obsws/port', self.widgets['obsws'].port_lineedit.text())
-        self.config.cparser.setValue(
-            'obsws/secret', self.widgets['obsws'].secret_lineedit.text())
-        self.config.cparser.setValue(
-            'obsws/template', self.widgets['obsws'].template_lineedit.text())
+        self.config.cparser.setValue('obsws/source', self.widgets['obsws'].source_lineedit.text())
+        self.config.cparser.setValue('obsws/host', self.widgets['obsws'].host_lineedit.text())
+        self.config.cparser.setValue('obsws/port', self.widgets['obsws'].port_lineedit.text())
+        self.config.cparser.setValue('obsws/secret', self.widgets['obsws'].secret_lineedit.text())
+        self.config.cparser.setValue('obsws/template',
+                                     self.widgets['obsws'].template_lineedit.text())
         self.config.cparser.setValue('obsws/enabled', newenabled)
 
         if oldenabled != newenabled:
@@ -569,14 +515,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         enabled = self.widgets['discordbot'].enable_checkbox.isChecked()
 
-        self.config.cparser.setValue(
-            'discord/clientid',
-            self.widgets['discordbot'].clientid_lineedit.text())
-        self.config.cparser.setValue(
-            'discord/token', self.widgets['discordbot'].token_lineedit.text())
-        self.config.cparser.setValue(
-            'discord/template',
-            self.widgets['discordbot'].template_lineedit.text())
+        self.config.cparser.setValue('discord/clientid',
+                                     self.widgets['discordbot'].clientid_lineedit.text())
+        self.config.cparser.setValue('discord/token',
+                                     self.widgets['discordbot'].token_lineedit.text())
+        self.config.cparser.setValue('discord/template',
+                                     self.widgets['discordbot'].template_lineedit.text())
         self.config.cparser.setValue('discord/enabled', enabled)
 
     def verify_regex_filters(self):
@@ -589,8 +533,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             try:
                 re.compile(item)
             except re.error as error:
-                self.errormessage.showMessage(
-                    f'Filter error with \'{item}\': {error.msg}')
+                self.errormessage.showMessage(f'Filter error with \'{item}\': {error.msg}')
                 return False
         return True
 
@@ -611,23 +554,20 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if not self.verify_regex_filters():
             return
 
-        self.config.cparser.setValue(
-            'settings/stripextras',
-            self.widgets['filter'].stripextras_checkbox.isChecked())
+        self.config.cparser.setValue('settings/stripextras',
+                                     self.widgets['filter'].stripextras_checkbox.isChecked())
         reset_filters(self.widgets['filter'].regex_list, self.config.cparser)
 
     def _upd_conf_quirks(self):
         ''' update the quirks settings to match config '''
 
         # file system notification method
-        self.config.cparser.value(
-            'quirks/pollingobserver',
-            self.widgets['quirks'].fs_poll_button.isChecked())
+        self.config.cparser.value('quirks/pollingobserver',
+                                  self.widgets['quirks'].fs_poll_button.isChecked())
 
         # s,in,out,g
-        self.config.cparser.setValue(
-            'quirks/filesubst',
-            self.widgets['quirks'].song_subst_checkbox.isChecked())
+        self.config.cparser.setValue('quirks/filesubst',
+                                     self.widgets['quirks'].song_subst_checkbox.isChecked())
 
         if self.widgets['quirks'].slash_toback.isChecked():
             self.config.cparser.setValue('quirks/slashmode', 'toback')
@@ -636,12 +576,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if self.widgets['quirks'].slash_nochange.isChecked():
             self.config.cparser.setValue('quirks/slashmode', 'nochange')
 
-        self.config.cparser.setValue(
-            'quirks/filesubstin',
-            self.widgets['quirks'].song_in_path_lineedit.text())
-        self.config.cparser.setValue(
-            'quirks/filesubstout',
-            self.widgets['quirks'].song_out_path_lineedit.text())
+        self.config.cparser.setValue('quirks/filesubstin',
+                                     self.widgets['quirks'].song_in_path_lineedit.text())
+        self.config.cparser.setValue('quirks/filesubstout',
+                                     self.widgets['quirks'].song_out_path_lineedit.text())
 
     @Slot()
     def on_text_saveas_button(self):
@@ -650,8 +588,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             startdir = os.path.dirname(startfile)
         else:
             startdir = '.'
-        if filename := QFileDialog.getSaveFileName(self, 'Open file', startdir,
-                                                   '*.txt'):
+        if filename := QFileDialog.getSaveFileName(self, 'Open file', startdir, '*.txt'):
             self.widgets['textoutput'].textoutput_lineedit.setText(filename[0])
 
     @Slot()
@@ -672,34 +609,30 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         ipaddr = self.config.cparser.value('control/beamserverip')
         idname = self.config.cparser.value('control/beamservername')
         if port := self.config.cparser.value('control/beamserverport'):
-            self.widgets['beamstatus'].server_label.setText(
-                f'{idname}({ipaddr}):{port}')
+            self.widgets['beamstatus'].server_label.setText(f'{idname}({ipaddr}):{port}')
         else:
             self.widgets['beamstatus'].server_label.setText('Not connected')
 
     @Slot()
     def on_text_template_button(self):
         ''' file template button clicked action '''
-        self.uihelp.template_picker_lineedit(
-            self.widgets['textoutput'].texttemplate_lineedit)
+        self.uihelp.template_picker_lineedit(self.widgets['textoutput'].texttemplate_lineedit)
 
     @Slot()
     def on_discordbot_template_button(self):
         ''' discordbot template button clicked action '''
-        self.uihelp.template_picker_lineedit(
-            self.widgets['discordbot'].template_lineedit)
+        self.uihelp.template_picker_lineedit(self.widgets['discordbot'].template_lineedit)
 
     @Slot()
     def on_obsws_template_button(self):
         ''' obsws template button clicked action '''
-        self.uihelp.template_picker_lineedit(
-            self.widgets['obsws'].template_lineedit)
+        self.uihelp.template_picker_lineedit(self.widgets['obsws'].template_lineedit)
 
     @Slot()
     def on_html_template_button(self):
         ''' html template button clicked action '''
-        self.uihelp.template_picker_lineedit(
-            self.widgets['webserver'].template_lineedit, limit='*.htm *.html')
+        self.uihelp.template_picker_lineedit(self.widgets['webserver'].template_lineedit,
+                                             limit='*.htm *.html')
 
     def _filter_regex_load(self, regex=None):
         ''' setup the filter table '''
@@ -737,8 +670,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         for row in range(rowcount):
             item = self.widgets['filter'].regex_list.item(row).text()
             striprelist.append(re.compile(item))
-        result = nowplaying.utils.titlestripper_advanced(
-            title=title, title_regex_list=striprelist)
+        result = nowplaying.utils.titlestripper_advanced(title=title, title_regex_list=striprelist)
         self.widgets['filter'].result_label.setText(result)
         result = nowplaying.utils.titlestripper_advanced(
             title=title, title_regex_list=self.config.getregexlist())
@@ -763,19 +695,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.upd_win()
         self.qtui.close()
 
-        if not self.config.cparser.value(
-                'settings/input',
-                defaultValue=None) or not self.config.initialized:
+        if not self.config.cparser.value('settings/input',
+                                         defaultValue=None) or not self.config.initialized:
             self.tray.cleanquit()
 
     @Slot()
     def on_reset_button(self):
         ''' cancel button clicked action '''
         self.config.reset()
-        SettingsUI.httpenabled = self.config.cparser.value(
-            'weboutput/httpenabled', type=bool)
-        SettingsUI.httpport = self.config.cparser.value('weboutput/httpport',
-                                                        type=int)
+        SettingsUI.httpenabled = self.config.cparser.value('weboutput/httpenabled', type=bool)
+        SettingsUI.httpport = self.config.cparser.value('weboutput/httpport', type=int)
         self.upd_win()
 
     @Slot()

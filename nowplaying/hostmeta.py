@@ -37,8 +37,7 @@ def trysocket():
         try:
             HOSTIP = socket.gethostbyname(HOSTFQDN)
         except Exception as error:  # pylint: disable = broad-except
-            logging.error('Getting IP information via socket failed: %s',
-                          error)
+            logging.error('Getting IP information via socket failed: %s', error)
 
 
 def trynetifaces():
@@ -48,10 +47,7 @@ def trynetifaces():
     try:
         gws = netifaces.gateways()
         defnic = gws['default'][netifaces.AF_INET][1]
-        defnicipinfo = netifaces.ifaddresses(defnic).setdefault(
-            netifaces.AF_INET, [{
-                'addr': None
-            }])
+        defnicipinfo = netifaces.ifaddresses(defnic).setdefault(netifaces.AF_INET, [{'addr': None}])
         HOSTIP = defnicipinfo[0]['addr']
     except Exception as error:  # pylint: disable = broad-except
         logging.error('Getting IP information via netifaces failed: %s', error)
@@ -77,8 +73,7 @@ def gethostmeta():
 
     logging.debug('Attempting to get DNS information')
 
-    if not TIMESTAMP or (datetime.datetime.now() - TIMESTAMP
-                         > TIMEDELTA) or not HOSTNAME:
+    if not TIMESTAMP or (datetime.datetime.now() - TIMESTAMP > TIMEDELTA) or not HOSTNAME:
         trysocket()
         # sourcery skip: hoist-repeated-if-condition
         if not HOSTIP and IFACES:

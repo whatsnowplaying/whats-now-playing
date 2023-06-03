@@ -17,12 +17,10 @@ async def test_15ghosts2_mp3_orig(bootstrap, getroot):
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
-    metadatain = {
-        'filename':
-        os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.mp3')
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadatain = {'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.mp3')}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['album'] == 'Ghosts I - IV'
     assert metadataout['artist'] == 'Nine Inch Nails'
     assert metadataout['bitrate'] == 64000
@@ -38,12 +36,11 @@ async def test_15ghosts2_mp3_fullytagged(bootstrap, getroot):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     metadatain = {
-        'filename':
-        os.path.join(getroot, 'tests', 'audio',
-                     '15_Ghosts_II_64kb_füllytâgged.mp3')
+        'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_füllytâgged.mp3')
     }
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['acoustidid'] == '02d23182-de8b-493e-a6e1-e011bfdacbcf'
     assert metadataout['album'] == 'Ghosts I-IV'
     assert metadataout['albumartist'] == 'Nine Inch Nails'
@@ -54,13 +51,9 @@ async def test_15ghosts2_mp3_fullytagged(bootstrap, getroot):
     assert metadataout['date'] == '2008'
     assert metadataout['isrc'] == ['USTC40852243']
     assert metadataout['label'] == 'The Null Corporation'
-    assert metadataout[
-        'musicbrainzalbumid'] == '3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a'
-    assert metadataout['musicbrainzartistid'] == [
-        'b7ffd2af-418f-4be2-bdd1-22f8b48613da'
-    ]
-    assert metadataout[
-        'musicbrainzrecordingid'] == '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
+    assert metadataout['musicbrainzalbumid'] == '3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a'
+    assert metadataout['musicbrainzartistid'] == ['b7ffd2af-418f-4be2-bdd1-22f8b48613da']
+    assert metadataout['musicbrainzrecordingid'] == '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
     assert metadataout['title'] == '15 Ghosts II'
     assert metadataout['duration'] == 110
 
@@ -72,11 +65,11 @@ async def test_15ghosts2_flac_orig(bootstrap, getroot):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     metadatain = {
-        'filename':
-        os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.flac')
+        'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.flac')
     }
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['album'] == 'Ghosts I - IV'
     assert metadataout['artist'] == 'Nine Inch Nails'
     assert metadataout['track'] == '15'
@@ -90,12 +83,10 @@ async def test_15ghosts2_m4a_orig(bootstrap, getroot):
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
-    metadatain = {
-        'filename':
-        os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.m4a')
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadatain = {'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.m4a')}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['album'] == 'Ghosts I - IV'
     assert metadataout['artist'] == 'Nine Inch Nails'
     assert metadataout['bitrate'] == 705600
@@ -111,11 +102,11 @@ async def test_15ghosts2_aiff_orig(bootstrap, getroot):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     metadatain = {
-        'filename':
-        os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.aiff')
+        'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.aiff')
     }
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['album'] == 'Ghosts I - IV'
     assert metadataout['artist'] == 'Nine Inch Nails'
     assert metadataout['track'] == '15'
@@ -130,12 +121,11 @@ async def test_15ghosts2_flac_fullytagged(bootstrap, getroot):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     metadatain = {
-        'filename':
-        os.path.join(getroot, 'tests', 'audio',
-                     '15_Ghosts_II_64kb_füllytâgged.flac')
+        'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_füllytâgged.flac')
     }
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
 
     assert metadataout['acoustidid'] == '02d23182-de8b-493e-a6e1-e011bfdacbcf'
     assert metadataout['album'] == 'Ghosts I-IV'
@@ -147,13 +137,9 @@ async def test_15ghosts2_flac_fullytagged(bootstrap, getroot):
     assert metadataout['date'] == '2008-03-02'
     assert metadataout['isrc'] == ['USTC40852243']
     assert metadataout['label'] == 'The Null Corporation'
-    assert metadataout[
-        'musicbrainzalbumid'] == '3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a'
-    assert metadataout['musicbrainzartistid'] == [
-        'b7ffd2af-418f-4be2-bdd1-22f8b48613da'
-    ]
-    assert metadataout[
-        'musicbrainzrecordingid'] == '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
+    assert metadataout['musicbrainzalbumid'] == '3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a'
+    assert metadataout['musicbrainzartistid'] == ['b7ffd2af-418f-4be2-bdd1-22f8b48613da']
+    assert metadataout['musicbrainzrecordingid'] == '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
     assert metadataout['title'] == '15 Ghosts II'
     assert metadataout['duration'] == 113
 
@@ -165,12 +151,11 @@ async def test_15ghosts2_m4a_fullytagged(bootstrap, getroot):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     metadatain = {
-        'filename':
-        os.path.join(getroot, 'tests', 'audio',
-                     '15_Ghosts_II_64kb_füllytâgged.m4a')
+        'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_füllytâgged.m4a')
     }
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
 
     assert metadataout['acoustidid'] == '02d23182-de8b-493e-a6e1-e011bfdacbcf'
     assert metadataout['album'] == 'Ghosts I-IV'
@@ -182,13 +167,9 @@ async def test_15ghosts2_m4a_fullytagged(bootstrap, getroot):
     assert metadataout['date'] == '2008-03-02'
     assert metadataout['isrc'] == ['USTC40852243']
     assert metadataout['label'] == 'The Null Corporation'
-    assert metadataout[
-        'musicbrainzalbumid'] == '3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a'
-    assert metadataout['musicbrainzartistid'] == [
-        'b7ffd2af-418f-4be2-bdd1-22f8b48613da'
-    ]
-    assert metadataout[
-        'musicbrainzrecordingid'] == '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
+    assert metadataout['musicbrainzalbumid'] == '3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a'
+    assert metadataout['musicbrainzartistid'] == ['b7ffd2af-418f-4be2-bdd1-22f8b48613da']
+    assert metadataout['musicbrainzrecordingid'] == '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
     assert metadataout['title'] == '15 Ghosts II'
     assert metadataout['duration'] == 113
 
@@ -200,12 +181,11 @@ async def test_15ghosts2_aiff_fullytagged(bootstrap, getroot):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     metadatain = {
-        'filename':
-        os.path.join(getroot, 'tests', 'audio',
-                     '15_Ghosts_II_64kb_füllytâgged.aiff')
+        'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_füllytâgged.aiff')
     }
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
 
     assert metadataout['album'] == 'Ghosts I-IV'
     assert metadataout['albumartist'] == 'Nine Inch Nails'
@@ -251,8 +231,9 @@ and Trent Reznor alike have refused to identify NIN as an industrial band.
 ' songwriter, instrumentalist, and sole member of Nine Inch Nails for 28 years. This changed' \
 ' in December 2016 when Atticus Ross officially became the second member of the band.'
 
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     logging.debug(metadataout['artistshortbio'])
     assert metadataout['artistshortbio'] == shortbio
     assert metadataout['album'] == 'Ghosts I - IV'
@@ -271,8 +252,9 @@ async def test_stripre_cleandash(bootstrap):
     config.cparser.setValue('settings/stripextras', True)
     nowplaying.upgrade.upgrade_filters(config.cparser)
     metadatain = {'title': 'Test - Clean'}
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['title'] == 'Test'
 
 
@@ -285,8 +267,9 @@ async def test_stripre_nocleandash(bootstrap):
     config.cparser.setValue('settings/stripextras', False)
     nowplaying.upgrade.upgrade_filters(config.cparser)
     metadatain = {'title': 'Test - Clean'}
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['title'] == 'Test - Clean'
 
 
@@ -299,8 +282,9 @@ async def test_stripre_cleanparens(bootstrap):
     config.cparser.setValue('settings/stripextras', True)
     nowplaying.upgrade.upgrade_filters(config.cparser)
     metadatain = {'title': 'Test (Clean)'}
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['title'] == 'Test'
 
 
@@ -313,8 +297,9 @@ async def test_stripre_cleanextraparens(bootstrap):
     config.cparser.setValue('settings/stripextras', True)
     nowplaying.upgrade.upgrade_filters(config.cparser)
     metadatain = {'title': 'Test (Clean) (Single Mix)'}
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['title'] == 'Test (Single Mix)'
 
 
@@ -327,8 +312,9 @@ async def test_publisher_not_label(bootstrap):
     config.cparser.setValue('settings/stripextras', False)
     nowplaying.upgrade.upgrade_filters(config.cparser)
     metadatain = {'publisher': 'Cool Music Publishing'}
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['label'] == 'Cool Music Publishing'
     assert not metadataout.get('publisher')
 
@@ -341,8 +327,9 @@ async def test_year_not_date(bootstrap):
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
     metadatain = {'year': '1999'}
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['date'] == '1999'
     assert not metadataout.get('year')
 
@@ -354,11 +341,10 @@ async def test_url_dedupe1(bootstrap):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
-    metadatain = {
-        'artistwebsites': ['http://example.com', 'http://example.com/']
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadatain = {'artistwebsites': ['http://example.com', 'http://example.com/']}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['artistwebsites'] == ['http://example.com/']
 
 
@@ -369,11 +355,10 @@ async def test_url_dedupe2(bootstrap):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
-    metadatain = {
-        'artistwebsites': ['http://example.com', 'https://example.com/']
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadatain = {'artistwebsites': ['http://example.com', 'https://example.com/']}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['artistwebsites'] == ['https://example.com/']
 
 
@@ -384,11 +369,10 @@ async def test_url_dedupe3(bootstrap):
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
-    metadatain = {
-        'artistwebsites': ['https://example.com', 'http://example.com/']
-    }
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadatain = {'artistwebsites': ['https://example.com', 'http://example.com/']}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['artistwebsites'] == ['https://example.com/']
 
 
@@ -400,13 +384,12 @@ async def test_url_dedupe4(bootstrap):
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
     metadatain = {
-        'artistwebsites': [
-            'https://example.com', 'https://whatsnowplaying.github.io',
-            'http://example.com/'
-        ]
+        'artistwebsites':
+        ['https://example.com', 'https://whatsnowplaying.github.io', 'http://example.com/']
     }
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['artistwebsites'] == [
         'https://example.com/', 'https://whatsnowplaying.github.io/'
     ]
@@ -420,8 +403,9 @@ async def test_broken_duration(bootstrap):
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
     metadatain = {'duration': '1 hour 10 minutes'}
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert not metadataout.get('duration')
 
 
@@ -433,6 +417,7 @@ async def test_str_duration(bootstrap):
     config.cparser.setValue('musicbrainz/enabled', False)
     config.cparser.setValue('settings/stripextras', False)
     metadatain = {'duration': '1'}
-    metadataout = await nowplaying.metadata.MetadataProcessors(
-        config=config).getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
     assert metadataout['duration'] == 1

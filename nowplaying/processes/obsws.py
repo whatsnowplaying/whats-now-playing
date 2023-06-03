@@ -45,8 +45,7 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
     def start(self):
         ''' run our thread '''
 
-        if self.config.cparser.value('obsws/enabled',
-                                     type=bool) and not self.watcher:
+        if self.config.cparser.value('obsws/enabled', type=bool) and not self.watcher:
             self.watcher = self.metadb.watcher()
             self.watcher.start(customhandler=self.process_update)
             self.process_update(None)
@@ -112,8 +111,7 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
             return None
 
         template = self.config.cparser.value('obsws/template')
-        if templatehandler := nowplaying.utils.TemplateHandler(
-                filename=template):
+        if templatehandler := nowplaying.utils.TemplateHandler(filename=template):
             return templatehandler.generate(metadatadict=metadata)
 
         if clear:
@@ -150,8 +148,7 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
             self.obswsport = obswsport
             self.obswshost = obswshost
             try:
-                parameters = simpleobsws.IdentificationParameters(
-                    ignoreNonFatalRequestChecks=False)
+                parameters = simpleobsws.IdentificationParameters(ignoreNonFatalRequestChecks=False)
                 self.client = simpleobsws.WebSocketClient(
                     url=f'ws://{self.obswshost}:{self.obswsport}',
                     password=self.obswssecret,
@@ -187,11 +184,8 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
         nowplaying.bootstrap.set_qt_names(appname='testsuite')
     else:
         nowplaying.bootstrap.set_qt_names()
-    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log',
-                                                rotate=False)
-    config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                          logpath=logpath,
-                                          testmode=testmode)
+    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log', rotate=False)
+    config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=logpath, testmode=testmode)
     try:
         OBSWebSocketHandler(  # pylint: disable=unused-variable
             stopevent=stopevent,

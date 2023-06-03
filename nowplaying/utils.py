@@ -84,8 +84,7 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
         ''' set up the environment '''
         return jinja2.Environment(loader=jinja2.FileSystemLoader(directory),
                                   finalize=self._finalize,
-                                  autoescape=jinja2.select_autoescape(
-                                      ['htm', 'html', 'xml']))
+                                  autoescape=jinja2.select_autoescape(['htm', 'html', 'xml']))
 
     def generate(self, metadatadict=None):
         ''' get the generated template '''
@@ -93,8 +92,7 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
 
         rendertext = 'Template has syntax errors'
         try:
-            if not self.filename or not os.path.exists(
-                    self.filename) or not self.template:
+            if not self.filename or not os.path.exists(self.filename) or not self.template:
                 return " No template found; check Now Playing settings."
             rendertext = self.template.render(**metadatadict)
         except:  #pylint: disable=bare-except
@@ -178,8 +176,8 @@ def songpathsubst(config, filename):
         try:
             newname = filename.replace(songin, songout)
         except Exception as error:  # pylint: disable=broad-except
-            logging.error('Unable to do path replacement (%s -> %s on %s): %s',
-                          songin, songout, filename, error)
+            logging.error('Unable to do path replacement (%s -> %s on %s): %s', songin, songout,
+                          filename, error)
             return filename
 
     logging.debug('filename substitution: %s -> %s', origfilename, newname)
@@ -199,8 +197,7 @@ def titlestripper_basic(title=None, title_regex_list=None):
     ''' Basic title removal '''
     if not title_regex_list or len(title_regex_list) == 0:
         title_regex_list = STRIPRELIST
-    return titlestripper_advanced(title=title,
-                                  title_regex_list=title_regex_list)
+    return titlestripper_advanced(title=title, title_regex_list=title_regex_list)
 
 
 def titlestripper_advanced(title=None, title_regex_list=None):

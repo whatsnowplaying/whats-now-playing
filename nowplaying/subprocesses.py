@@ -18,14 +18,11 @@ class SubprocessManager:
         if self.config.cparser.value('control/beam', type=bool):
             processlist = ['trackpoll', 'beamsender']
         else:
-            processlist = [
-                'trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver'
-            ]
+            processlist = ['trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver']
 
         for name in processlist:
             self.processes[name] = {
-                'module':
-                importlib.import_module(f'nowplaying.processes.{name}'),
+                'module': importlib.import_module(f'nowplaying.processes.{name}'),
                 'process': None,
                 'stopevent': self.manager.Event(),
             }

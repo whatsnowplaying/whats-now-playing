@@ -59,8 +59,7 @@ def test_settingsui_save(bootstrap, qtbot):
     rect = settingsui.widgets['source'].sourcelist.visualItemRect(item)
     center = rect.center()
 
-    assert settingsui.widgets['source'].sourcelist.itemAt(
-        center).text() == item.text()
+    assert settingsui.widgets['source'].sourcelist.itemAt(center).text() == item.text()
 
     settingsui.widgets['webserver'].enable_checkbox.setChecked(False)
 

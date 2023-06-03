@@ -43,11 +43,7 @@ MAX_FANART_DOWNLOADS = 50
 class ImageCache:
     ''' database operations for caches '''
 
-    def __init__(self,
-                 sizelimit=1,
-                 initialize=False,
-                 cachedir=None,
-                 stopevent=None):
+    def __init__(self, sizelimit=1, initialize=False, cachedir=None, stopevent=None):
         if not cachedir:
             self.cachedir = pathlib.Path(
                 QStandardPaths.standardLocations(
@@ -61,11 +57,10 @@ class ImageCache:
         if not self.databasefile.exists():
             initialize = True
         self.httpcachefile = self.cachedir.joinpath('http')
-        self.cache = diskcache.Cache(
-            directory=self.cachedir.joinpath('diskcache'),
-            timeout=30,
-            eviction_policy='least-frequently-used',
-            size_limit=sizelimit * 1024 * 1024 * 1024)
+        self.cache = diskcache.Cache(directory=self.cachedir.joinpath('diskcache'),
+                                     timeout=30,
+                                     eviction_policy='least-frequently-used',
+                                     size_limit=sizelimit * 1024 * 1024 * 1024)
         if initialize:
             self.setup_sql(initialize=True)
         self.session = None
@@ -127,8 +122,7 @@ class ImageCache:
                 msg = str(error)
                 error_code = error.sqlite_errorcode
                 error_name = error.sqlite_name
-                logging.error('Error %s [Errno %s]: %s', msg, error_code,
-                              error_name)
+                logging.error('Error %s [Errno %s]: %s', msg, error_code, error_name)
                 return None
 
             row = cursor.fetchone()
@@ -140,8 +134,7 @@ class ImageCache:
                 'cachekey': row['cachekey'],
                 'url': row['url'],
             }
-            logging.debug('random got %s/%s/%s', imagetype, row['artist'],
-                          row['cachekey'])
+            logging.debug('random got %s/%s/%s', imagetype, row['artist'], row['cachekey'])
 
         return data
 
@@ -170,14 +163,12 @@ class ImageCache:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:
-                cursor.execute('''SELECT * FROM artistsha WHERE url=?''',
-                               (url, ))
+                cursor.execute('''SELECT * FROM artistsha WHERE url=?''', (url, ))
             except sqlite3.OperationalError as error:
                 msg = str(error)
                 error_code = error.sqlite_errorcode
                 error_name = error.sqlite_name
-                logging.error('Error %s [Errno %s]: %s', msg, error_code,
-                              error_name)
+                logging.error('Error %s [Errno %s]: %s', msg, error_code, error_name)
                 return None
 
             if row := cursor.fetchone():
@@ -202,8 +193,7 @@ class ImageCache:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:
-                cursor.execute('''SELECT * FROM artistsha WHERE cachekey=?''',
-                               (cachekey, ))
+                cursor.execute('''SELECT * FROM artistsha WHERE cachekey=?''', (cachekey, ))
             except sqlite3.OperationalError:
                 return None
 
@@ -225,24 +215,16 @@ class ImageCache:
             self.setup_sql()
 
         if 'logo' in imagetype:
-            maxart = config.cparser.value('artistextras/logos',
-                                          defaultValue=3,
-                                          type=int)
+            maxart = config.cparser.value('artistextras/logos', defaultValue=3, type=int)
         elif 'banner' in imagetype:
-            maxart = config.cparser.value('artistextras/banners',
-                                          defaultValue=3,
-                                          type=int)
+            maxart = config.cparser.value('artistextras/banners', defaultValue=3, type=int)
         elif 'thumb' in imagetype:
-            maxart = config.cparser.value('artistextras/thumbnails',
-                                          defaultValue=3,
-                                          type=int)
+            maxart = config.cparser.value('artistextras/thumbnails', defaultValue=3, type=int)
         else:
-            maxart = config.cparser.value('artistextras/fanart',
-                                          defaultValue=20,
-                                          type=int)
+            maxart = config.cparser.value('artistextras/fanart', defaultValue=20, type=int)
 
-        logging.debug('Putting %s unfiltered for %s/%s',
-                      min(len(urllist), maxart), imagetype, artist)
+        logging.debug('Putting %s unfiltered for %s/%s', min(len(urllist), maxart), imagetype,
+                      artist)
         normalartist = self._normalize_artist(artist)
         for url in random.sample(urllist, min(len(urllist), maxart)):
             self.put_db_url(artist=normalartist, imagetype=imagetype, url=url)
@@ -265,8 +247,7 @@ class ImageCache:
             connection.row_factory = dict_factory
             cursor = connection.cursor()
             try:
-                cursor.execute(
-                    '''SELECT * FROM artistsha WHERE cachekey IS NULL
+                cursor.execute('''SELECT * FROM artistsha WHERE cachekey IS NULL
  AND EXISTS (SELECT * FROM artistsha
  WHERE imagetype='artistthumb' OR imagetype='artistbanner' OR imagetype='artistlogo')
  ORDER BY TIMESTAMP DESC''')
@@ -281,8 +262,7 @@ class ImageCache:
                 return dataset
 
             try:
-                cursor.execute(
-                    '''SELECT * FROM artistsha WHERE cachekey IS NULL
+                cursor.execute('''SELECT * FROM artistsha WHERE cachekey IS NULL
 ORDER BY TIMESTAMP DESC''')
             except sqlite3.OperationalError as error:
                 logging.error(error)
@@ -321,8 +301,7 @@ INSERT OR REPLACE INTO
                 msg = str(error)
                 error_code = error.sqlite_errorcode
                 error_name = error.sqlite_name
-                logging.error('Error %s [Errno %s]: %s', msg, error_code,
-                              error_name)
+                logging.error('Error %s [Errno %s]: %s', msg, error_code, error_name)
                 return
 
     def put_db_url(self, artist, url, imagetype=None):
@@ -385,12 +364,9 @@ VALUES (?,?,?);
 
         # It was retrieved once before so put it back in the queue
         # if it fails in the queue, it will be deleted
-        logging.debug('Cache %s  url %s has left cache, requeue it.', cachekey,
-                      data['url'])
+        logging.debug('Cache %s  url %s has left cache, requeue it.', cachekey, data['url'])
         self.erase_url(data['url'])
-        self.put_db_url(artist=data['artist'],
-                        imagetype=data['imagetype'],
-                        url=data['url'])
+        self.put_db_url(artist=data['artist'], imagetype=data['imagetype'], url=data['url'])
         return
 
     def image_dl(self, imagedict):
@@ -448,8 +424,7 @@ VALUES (?,?,?);
 
         try:
             logging.debug('Starting image cache verification')
-            async with aiosqlite.connect(self.databasefile,
-                                         timeout=30) as connection:
+            async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 sql = 'SELECT cachekey, url FROM artistsha'
                 async with connection.execute(sql) as cursor:
@@ -476,8 +451,7 @@ VALUES (?,?,?);
                 count -= 1
                 logging.debug('%s/%s expired', key, url)
                 self.erase_url(url)
-        logging.debug('Finished image cache verification: %s/%s images', count,
-                      startsize)
+        logging.debug('Finished image cache verification: %s/%s images', count, startsize)
 
     def queue_process(self, logpath, maxworkers=5):
         ''' Process to download stuff in the background to avoid the GIL '''
@@ -488,8 +462,7 @@ VALUES (?,?,?);
         self.erase_url('STOPWNP')
         endloop = False
         oldset = []
-        with concurrent.futures.ProcessPoolExecutor(
-                max_workers=maxworkers) as executor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=maxworkers) as executor:
             while not endloop and not self.stopevent.is_set():
                 if dataset := self.get_next_dlset():
                     # sometimes images are downloaded but not
@@ -498,10 +471,7 @@ VALUES (?,?,?);
                     newset = []
                     newdataset = []
                     for entry in dataset:
-                        newset.append({
-                            'url': entry['url'],
-                            'time': int(time.time())
-                        })
+                        newset.append({'url': entry['url'], 'time': int(time.time())})
                         if entry['url'] == 'STOPWNP':
                             endloop = True
                             break
@@ -509,12 +479,10 @@ VALUES (?,?,?);
                         for oldentry in oldcopy:
                             if int(time.time()) - oldentry['time'] > 180:
                                 oldset.remove(oldentry)
-                                logging.debug(
-                                    'removing %s from the previously processed queue',
-                                    oldentry['url'])
+                                logging.debug('removing %s from the previously processed queue',
+                                              oldentry['url'])
                         if all(u['url'] != entry['url'] for u in oldset):
-                            logging.debug('skipping in-progress url %s ',
-                                          entry['url'])
+                            logging.debug('skipping in-progress url %s ', entry['url'])
                         else:
                             newdataset.append(entry)
                     oldset = newset

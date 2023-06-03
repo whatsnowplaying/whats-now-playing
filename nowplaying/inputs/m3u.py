@@ -70,11 +70,10 @@ class Plugin(InputPlugin):
         #if len(os.listdir(self.m3udir)) < 1:
         #    pathlib.Path(os.path.join(self.m3udir, 'empty.m3u')).touch()
 
-        self.event_handler = PatternMatchingEventHandler(
-            patterns=['*.m3u', '*.m3u8'],
-            ignore_patterns=['.DS_Store'],
-            ignore_directories=True,
-            case_sensitive=False)
+        self.event_handler = PatternMatchingEventHandler(patterns=['*.m3u', '*.m3u8'],
+                                                         ignore_patterns=['.DS_Store'],
+                                                         ignore_directories=True,
+                                                         case_sensitive=False)
         self.event_handler.on_modified = self._read_track
         self.event_handler.on_created = self._read_track
 
@@ -84,9 +83,7 @@ class Plugin(InputPlugin):
         else:
             logging.debug('Using fsevent observer')
             self.observer = Observer()
-        self.observer.schedule(self.event_handler,
-                               self.m3udir,
-                               recursive=False)
+        self.observer.schedule(self.event_handler, self.m3udir, recursive=False)
         self.observer.start()
 
     def _verify_file(self, m3ufilename, filestring):
@@ -162,8 +159,8 @@ class Plugin(InputPlugin):
             return
 
         filename = event.src_path
-        logging.debug('event type: %s, syn: %s, path: %s', event.event_type,
-                      event.is_synthetic, filename)
+        logging.debug('event type: %s, syn: %s, path: %s', event.event_type, event.is_synthetic,
+                      filename)
 
         # file is empty so ignore it
         if os.stat(filename).st_size == 0:
@@ -189,8 +186,7 @@ class Plugin(InputPlugin):
                     continue
                 trackfile = newline
 
-        logging.debug('attempting to parse \'%s\' with various encodings',
-                      trackfile)
+        logging.debug('attempting to parse \'%s\' with various encodings', trackfile)
 
         audiofilename = None
         if trackfile:
@@ -237,9 +233,7 @@ class Plugin(InputPlugin):
             startdir = self.qwidget.dir_lineedit.text()
         else:
             startdir = QDir.homePath()
-        if dirname := QFileDialog.getExistingDirectory(self.qwidget,
-                                                       'Select directory',
-                                                       startdir):
+        if dirname := QFileDialog.getExistingDirectory(self.qwidget, 'Select directory', startdir):
             self.qwidget.dir_lineedit.setText(dirname)
 
     def connect_settingsui(self, qwidget, uihelp):
@@ -250,8 +244,7 @@ class Plugin(InputPlugin):
 
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
-        qwidget.dir_lineedit.setText(
-            self.config.cparser.value('m3u/directory'))
+        qwidget.dir_lineedit.setText(self.config.cparser.value('m3u/directory'))
 
     def verify_settingsui(self, qwidget):
         ''' no verification to do '''

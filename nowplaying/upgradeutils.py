@@ -84,8 +84,8 @@ class Version:
         if self.chunk.get('commitnum') and not other.chunk.get('commitnum'):
             return False
 
-        if (self.chunk.get('commitnum') and other.chunk.get('commitnum') and
-                self.chunk.get('commitnum') != other.chunk.get('commitnum')):
+        if (self.chunk.get('commitnum') and other.chunk.get('commitnum')
+                and self.chunk.get('commitnum') != other.chunk.get('commitnum')):
             return self.chunk.get('commitnum') < other.chunk.get('commitnum')
 
         return False
@@ -108,12 +108,9 @@ class UpgradeBinary:
         try:
             if not testdata:
                 headers = {
-                    'X-GitHub-Api-Version':
-                    '2022-11-28',
-                    'Accept':
-                    'application/vnd.github.v3+json',
-                    'User-Agent':
-                    'What\'s Now Playing/{nowplaying.version.__VERSION__}',
+                    'X-GitHub-Api-Version': '2022-11-28',
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'What\'s Now Playing/{nowplaying.version.__VERSION__}',
                 }
                 if token := os.getenv('GITHUB_TOKEN'):
                     logging.debug('Using GITHUB_TOKEN')

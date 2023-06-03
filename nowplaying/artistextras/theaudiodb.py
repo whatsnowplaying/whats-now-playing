@@ -37,9 +37,7 @@ class Plugin(ArtistExtrasPlugin):
         delay = self.calculate_delay()
         try:
             logging.debug('Fetching %s', api)
-            page = requests.get(
-                f'https://theaudiodb.com/api/v1/json/{apikey}/{api}',
-                timeout=delay)
+            page = requests.get(f'https://theaudiodb.com/api/v1/json/{apikey}/{api}', timeout=delay)
         except (
                 requests.exceptions.ReadTimeout,  # pragma: no cover
                 urllib3.exceptions.ReadTimeoutError,
@@ -57,13 +55,11 @@ class Plugin(ArtistExtrasPlugin):
         for fieldname in ['strArtist', 'strArtistAlternate']:
             if artdata.get(fieldname) and nowplaying.utils.normalize(
                     artdata[fieldname]) in self.fnstr:
-                logging.debug('theaudiodb Trusting %s: %s', fieldname,
-                              artdata[fieldname])
+                logging.debug('theaudiodb Trusting %s: %s', fieldname, artdata[fieldname])
                 found = True
             else:
-                logging.debug(
-                    'theaudiodb not Trusting %s vs. %s', self.fnstr,
-                    nowplaying.utils.normalize(artdata.get(fieldname)))
+                logging.debug('theaudiodb not Trusting %s vs. %s', self.fnstr,
+                              nowplaying.utils.normalize(artdata.get(fieldname)))
         return found
 
     def _handle_extradata(self, extradata, metadata, imagecache):  # pylint: disable=too-many-branches
@@ -78,18 +74,16 @@ class Plugin(ArtistExtrasPlugin):
             if not self._check_artist(artdata):
                 continue
 
-            if not metadata.get('artistlongbio') and self.config.cparser.value(
-                    'theaudiodb/bio', type=bool):
+            if not metadata.get('artistlongbio') and self.config.cparser.value('theaudiodb/bio',
+                                                                               type=bool):
                 if f'strBiography{lang1}' in artdata:
                     bio += self._filter(artdata[f'strBiography{lang1}'])
-                elif self.config.cparser.value(
-                        'theaudiodb/bio_iso_en_fallback',
-                        type=bool) and 'strBiographyEN' in artdata:
+                elif self.config.cparser.value('theaudiodb/bio_iso_en_fallback',
+                                               type=bool) and 'strBiographyEN' in artdata:
                     bio += self._filter(artdata['strBiographyEN'])
 
-            if self.config.cparser.value(
-                    'theaudiodb/websites',
-                    type=bool) and artdata.get('strWebsite'):
+            if self.config.cparser.value('theaudiodb/websites',
+                                         type=bool) and artdata.get('strWebsite'):
                 webstr = 'https://' + artdata['strWebsite']
                 if not metadata.get('artistwebsites'):
                     metadata['artistwebsites'] = []
@@ -97,24 +91,24 @@ class Plugin(ArtistExtrasPlugin):
 
             if imagecache:
                 if not metadata.get('artistbannerraw') and artdata.get(
-                        'strArtistBanner') and self.config.cparser.value(
-                            'theaudiodb/banners', type=bool):
+                        'strArtistBanner') and self.config.cparser.value('theaudiodb/banners',
+                                                                         type=bool):
                     imagecache.fill_queue(config=self.config,
                                           artist=oldartist,
                                           imagetype='artistbanner',
                                           urllist=[artdata['strArtistBanner']])
 
                 if not metadata.get('artistlogoraw') and artdata.get(
-                        'strArtistLogo') and self.config.cparser.value(
-                            'theaudiodb/logos', type=bool):
+                        'strArtistLogo') and self.config.cparser.value('theaudiodb/logos',
+                                                                       type=bool):
                     imagecache.fill_queue(config=self.config,
                                           artist=oldartist,
                                           imagetype='artistlogo',
                                           urllist=[artdata['strArtistLogo']])
 
                 if not metadata.get('artistthumbraw') and artdata.get(
-                        'strArtistThumb') and self.config.cparser.value(
-                            'theaudiodb/thumbnails', type=bool):
+                        'strArtistThumb') and self.config.cparser.value('theaudiodb/thumbnails',
+                                                                        type=bool):
                     imagecache.fill_queue(config=self.config,
                                           artist=oldartist,
                                           imagetype='artistthumb',
@@ -126,8 +120,7 @@ class Plugin(ArtistExtrasPlugin):
                         if artdata.get(artstring):
                             if not metadata.get('artistfanarturls'):
                                 metadata['artistfanarturls'] = []
-                            metadata['artistfanarturls'].append(
-                                artdata[artstring])
+                            metadata['artistfanarturls'].append(artdata[artstring])
 
         if bio:
             metadata['artistlongbio'] = bio
@@ -153,26 +146,22 @@ class Plugin(ArtistExtrasPlugin):
         self.fnstr = nowplaying.utils.normalize(metadata['artist'])
 
         if metadata.get('musicbrainzartistid'):
-            logging.debug('got musicbrainzartistid: %s',
-                          metadata['musicbrainzartistid'])
+            logging.debug('got musicbrainzartistid: %s', metadata['musicbrainzartistid'])
             for mbid in metadata['musicbrainzartistid']:
                 if newdata := self.artistdatafrommbid(apikey, mbid):
                     extradata.extend(artist for artist in newdata['artists']
                                      if self._check_artist(artist))
         if not extradata and metadata.get('artist'):
             logging.debug('got artist')
-            if artistdata := self.artistdatafromname(apikey,
-                                                     metadata['artist']):
+            if artistdata := self.artistdatafromname(apikey, metadata['artist']):
                 extradata.extend(artist for artist in artistdata.get('artists')
                                  if self._check_artist(artist))
             elif self.there.match(metadata['artist']):
                 logging.debug('Trying without a leading \'The\'')
                 oldartist = metadata['artist']
                 metadata['artist'] = self.there.sub('', metadata['artist'])
-                if artistdata := self.artistdatafromname(
-                        apikey, metadata['artist']):
-                    extradata.extend(artist
-                                     for artist in artistdata.get('artists')
+                if artistdata := self.artistdatafromname(apikey, metadata['artist']):
+                    extradata.extend(artist for artist in artistdata.get('artists')
                                      if self._check_artist(artist))
                 else:
                     metadata['artist'] = oldartist
@@ -202,8 +191,8 @@ class Plugin(ArtistExtrasPlugin):
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this plug-in '''
         return [
-            'artistbannerraw', 'artistlongbio', 'artistlogoraw',
-            'artistthumbraw', 'theaudiodb-artistfanarturls'
+            'artistbannerraw', 'artistlongbio', 'artistlogoraw', 'artistthumbraw',
+            'theaudiodb-artistfanarturls'
         ]
 
     def connect_settingsui(self, qwidget, uihelp):
@@ -215,15 +204,12 @@ class Plugin(ArtistExtrasPlugin):
             qwidget.theaudiodb_checkbox.setChecked(True)
         else:
             qwidget.theaudiodb_checkbox.setChecked(False)
-        qwidget.apikey_lineedit.setText(
-            self.config.cparser.value('theaudiodb/apikey'))
-        qwidget.bio_iso_lineedit.setText(
-            self.config.cparser.value('theaudiodb/bio_iso'))
+        qwidget.apikey_lineedit.setText(self.config.cparser.value('theaudiodb/apikey'))
+        qwidget.bio_iso_lineedit.setText(self.config.cparser.value('theaudiodb/bio_iso'))
 
         for field in ['banners', 'bio', 'fanart', 'logos', 'thumbnails']:
             func = getattr(qwidget, f'{field}_checkbox')
-            func.setChecked(
-                self.config.cparser.value(f'theaudiodb/{field}', type=bool))
+            func.setChecked(self.config.cparser.value(f'theaudiodb/{field}', type=bool))
 
     def verify_settingsui(self, qwidget):
         ''' pass '''
@@ -231,26 +217,18 @@ class Plugin(ArtistExtrasPlugin):
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
 
-        self.config.cparser.setValue('theaudiodb/enabled',
-                                     qwidget.theaudiodb_checkbox.isChecked())
-        self.config.cparser.setValue('theaudiodb/apikey',
-                                     qwidget.apikey_lineedit.text())
-        self.config.cparser.setValue('theaudiodb/bio_iso',
-                                     qwidget.bio_iso_lineedit.text())
+        self.config.cparser.setValue('theaudiodb/enabled', qwidget.theaudiodb_checkbox.isChecked())
+        self.config.cparser.setValue('theaudiodb/apikey', qwidget.apikey_lineedit.text())
+        self.config.cparser.setValue('theaudiodb/bio_iso', qwidget.bio_iso_lineedit.text())
         self.config.cparser.setValue('theaudiodb/bio_iso_en_fallback',
                                      qwidget.bio_iso_en_checkbox.isChecked())
 
-        for field in [
-                'banners', 'bio', 'fanart', 'logos', 'thumbnails', 'websites'
-        ]:
+        for field in ['banners', 'bio', 'fanart', 'logos', 'thumbnails', 'websites']:
             func = getattr(qwidget, f'{field}_checkbox')
-            self.config.cparser.setValue(f'theaudiodb/{field}',
-                                         func.isChecked())
+            self.config.cparser.setValue(f'theaudiodb/{field}', func.isChecked())
 
     def defaults(self, qsettings):
-        for field in [
-                'banners', 'bio', 'fanart', 'logos', 'thumbnails', 'websites'
-        ]:
+        for field in ['banners', 'bio', 'fanart', 'logos', 'thumbnails', 'websites']:
             qsettings.setValue(f'theaudiodb/{field}', False)
 
         qsettings.setValue('theaudiodb/enabled', False)

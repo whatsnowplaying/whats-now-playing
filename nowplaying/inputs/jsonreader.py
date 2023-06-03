@@ -25,12 +25,8 @@ class Plugin(InputPlugin):
 
     async def getplayingtrack(self):
         ''' Get the currently playing track '''
-        await asyncio.sleep(
-            self.config.cparser.value('jsoninput/delay',
-                                      type=int,
-                                      defaultValue=5))
-        filepath = pathlib.Path(
-            self.config.cparser.value('jsoninput/filename'))
+        await asyncio.sleep(self.config.cparser.value('jsoninput/delay', type=int, defaultValue=5))
+        filepath = pathlib.Path(self.config.cparser.value('jsoninput/filename'))
 
         if not filepath.exists():
             logging.error('%s does not exist', filepath)

@@ -53,12 +53,10 @@ async def getseratoplugin(serato_bootstrap, getroot, request):  # pylint: disabl
     else:
         datadir = mark.kwargs['datadir']
         config.cparser.setValue('serato/local', True)
-        config.cparser.setValue('serato/libpath',
-                                os.path.join(getroot, 'tests', datadir))
+        config.cparser.setValue('serato/libpath', os.path.join(getroot, 'tests', datadir))
         if 'mixmode' in mark.kwargs:
             config.cparser.setValue('serato/mixmode', mark.kwargs['mixmode'])
-        touchdir(os.path.join(getroot, 'tests', datadir, 'History',
-                              'Sessions'))
+        touchdir(os.path.join(getroot, 'tests', datadir, 'History', 'Sessions'))
     config.cparser.sync()
     plugin = nowplaying.inputs.serato.Plugin(config=config)
     await plugin.start(testmode=True)
@@ -80,14 +78,11 @@ def results(expected, metadata):
 async def test_serato_remote2(getseratoplugin, getroot, httpserver):  # pylint: disable=redefined-outer-name
     ''' test serato remote '''
     plugin = getseratoplugin
-    with open(os.path.join(getroot, 'tests', 'seratolive',
-                           '2021_08_25_pong.html'),
+    with open(os.path.join(getroot, 'tests', 'seratolive', '2021_08_25_pong.html'),
               encoding='utf8') as inputfh:
         content = inputfh.readlines()
-    httpserver.expect_request('/index.html').respond_with_data(
-        ''.join(content))
-    plugin.config.cparser.setValue('serato/url',
-                                   httpserver.url_for('/index.html'))
+    httpserver.expect_request('/index.html').respond_with_data(''.join(content))
+    plugin.config.cparser.setValue('serato/url', httpserver.url_for('/index.html'))
     plugin.config.cparser.sync()
     metadata = await plugin.getplayingtrack()
 
@@ -108,8 +103,7 @@ async def test_serato24_mac_oldest(getseratoplugin):  # pylint: disable=redefine
         'bpm': 109,
         'date': '1991',
         'deck': 2,
-        'filename':
-        '/Users/aw/Music/songs/LĪVE/Mental Jewelry/08 Take My Anthem.mp3',
+        'filename': '/Users/aw/Music/songs/LĪVE/Mental Jewelry/08 Take My Anthem.mp3',
         'genre': 'Rock',
         'key': 'G#m',
         'label': 'Radioactive Records',
@@ -130,8 +124,7 @@ async def test_serato24_mac_newest(getseratoplugin):  # pylint: disable=redefine
         'bpm': 91,
         'date': '1997',
         'deck': 1,
-        'filename':
-        "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3",
+        'filename': "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3",
         'genre': 'Rock',
         'key': 'C#m',
         'label': 'Radioactive Records',

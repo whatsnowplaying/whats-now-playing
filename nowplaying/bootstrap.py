@@ -13,8 +13,7 @@ from PySide6.QtWidgets import QErrorMessage  # pylint: disable=no-name-in-module
 def verify_python_version():
     ''' make sure the correct version of python is being used '''
 
-    if sys.version_info[0] < 3 or (sys.version_info[0] == 3
-                                   and sys.version_info[1] < 10):
+    if sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 10):
         msgbox = QErrorMessage()
         msgbox.showMessage('Python Version must be 3.10 or higher.  Exiting.')
         msgbox.show()
@@ -24,9 +23,7 @@ def verify_python_version():
     return True
 
 
-def set_qt_names(app=None,
-                 domain='com.github.whatsnowplaying',
-                 appname='NowPlaying'):
+def set_qt_names(app=None, domain='com.github.whatsnowplaying', appname='NowPlaying'):
     ''' bootstrap Qt for configuration '''
     #QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     if not app:
@@ -49,8 +46,7 @@ def setuplogging(logdir=None, logname='debug.log', rotate=False):
             logpath = logpath.parent
     else:
         logpath = pathlib.Path(
-            QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation)[0],
+            QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
             QCoreApplication.applicationName()).joinpath('logs')
     logpath.mkdir(parents=True, exist_ok=True)
     logfile = logpath.joinpath(logname)

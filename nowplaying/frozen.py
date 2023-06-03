@@ -10,8 +10,7 @@ def frozen_init(bundledir):
     ''' do some frozen handling '''
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
         if not bundledir:
-            bundledir = getattr(sys, '_MEIPASS',
-                                os.path.abspath(os.path.dirname(__file__)))
+            bundledir = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
         #
         # Under PyInstaller, always use our CA File
         #

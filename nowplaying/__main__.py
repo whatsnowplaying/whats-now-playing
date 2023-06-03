@@ -66,8 +66,7 @@ def actualmain(beam=False):  # pragma: no cover
             if not nowplaying.bootstrap.verify_python_version():
                 sys.exit(1)
 
-            config = nowplaying.config.ConfigFile(logpath=logpath,
-                                                  bundledir=bundledir)
+            config = nowplaying.config.ConfigFile(logpath=logpath, bundledir=bundledir)
             logging.getLogger().setLevel(config.loglevel)
             logging.captureWarnings(True)
             logging.debug('Using pidfile %s/%s', pid.piddir, pid.pidname)

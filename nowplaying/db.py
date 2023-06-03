@@ -71,8 +71,8 @@ LISTFIELDS = [
 # but putting it here triggers side-effects to force it to be
 # treated as binary
 METADATABLOBLIST = [
-    'artistbannerraw', 'artistfanartraw', 'artistlogoraw', 'artistthumbraw',
-    'coverimageraw', 'requesterimageraw'
+    'artistbannerraw', 'artistfanartraw', 'artistlogoraw', 'artistthumbraw', 'coverimageraw',
+    'requesterimageraw'
 ]
 
 
@@ -91,11 +91,10 @@ class DBWatcher:
         directory = os.path.dirname(self.databasefile)
         filename = os.path.basename(self.databasefile)
         logging.info('Watching for changes on %s', self.databasefile)
-        self.event_handler = PatternMatchingEventHandler(
-            patterns=[filename],
-            ignore_patterns=['.DS_Store'],
-            ignore_directories=True,
-            case_sensitive=False)
+        self.event_handler = PatternMatchingEventHandler(patterns=[filename],
+                                                         ignore_patterns=['.DS_Store'],
+                                                         ignore_directories=True,
+                                                         case_sensitive=False)
         if not customhandler:
             self.event_handler.on_modified = self.update_time
             self.event_handler.on_created = self.update_time
@@ -133,9 +132,8 @@ class MetadataDB:
             self.databasefile = pathlib.Path(databasefile)
         else:  # pragma: no cover
             self.databasefile = pathlib.Path(
-                QStandardPaths.standardLocations(
-                    QStandardPaths.CacheLocation)[0]).joinpath(
-                        'metadb', 'npsql.db')
+                QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]).joinpath(
+                    'metadb', 'npsql.db')
 
         if not self.databasefile.exists() or initialize:
             logging.debug('Setting up a new DB')
@@ -149,10 +147,7 @@ class MetadataDB:
         ''' update metadb '''
 
         def filterkeys(mydict):
-            return {
-                key: mydict[key]
-                for key in METADATALIST + METADATABLOBLIST if key in mydict
-            }
+            return {key: mydict[key] for key in METADATALIST + METADATABLOBLIST if key in mydict}
 
         logging.debug('Called write_to_metadb')
         if (not metadata or not METADATALIST or 'title' not in metadata
@@ -163,8 +158,7 @@ class MetadataDB:
         if not self.databasefile.exists():
             self.setupsql()
 
-        async with aiosqlite.connect(self.databasefile,
-                                     timeout=10) as connection:
+        async with aiosqlite.connect(self.databasefile, timeout=10) as connection:
             # do not want to modify the original dictionary
             # otherwise Bad Things(tm) will happen
             mdcopy = copy.deepcopy(metadata)
@@ -175,8 +169,7 @@ class MetadataDB:
 
             cursor = await connection.cursor()
 
-            logging.debug('Adding record with %s/%s', mdcopy['artist'],
-                          mdcopy['title'])
+            logging.debug('Adding record with %s/%s', mdcopy['artist'], mdcopy['title'])
 
             for key in METADATABLOBLIST:
                 if key not in mdcopy:
@@ -207,9 +200,7 @@ class MetadataDB:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:
-                cursor.execute(
-                    '''SELECT artist, title FROM currentmeta ORDER BY id DESC'''
-                )
+                cursor.execute('''SELECT artist, title FROM currentmeta ORDER BY id DESC''')
             except sqlite3.OperationalError:
                 return None
 
@@ -217,10 +208,7 @@ class MetadataDB:
 
         previouslist = []
         if records:
-            previouslist.extend({
-                'artist': row['artist'],
-                'title': row['title']
-            } for row in records)
+            previouslist.extend({'artist': row['artist'], 'title': row['title']} for row in records)
 
         return previouslist
 
@@ -231,14 +219,11 @@ class MetadataDB:
             logging.error('MetadataDB does not exist yet?')
             return None
 
-        async with aiosqlite.connect(self.databasefile,
-                                     timeout=10) as connection:
+        async with aiosqlite.connect(self.databasefile, timeout=10) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
             try:
-                await cursor.execute(
-                    '''SELECT artist, title FROM currentmeta ORDER BY id DESC'''
-                )
+                await cursor.execute('''SELECT artist, title FROM currentmeta ORDER BY id DESC''')
             except sqlite3.OperationalError:
                 return None
 
@@ -246,10 +231,7 @@ class MetadataDB:
 
         previouslist = []
         if records:
-            previouslist.extend({
-                'artist': row['artist'],
-                'title': row['title']
-            } for row in records)
+            previouslist.extend({'artist': row['artist'], 'title': row['title']} for row in records)
 
         return previouslist
 
@@ -277,13 +259,11 @@ class MetadataDB:
             logging.error('MetadataDB does not exist yet?')
             return None
 
-        async with aiosqlite.connect(self.databasefile,
-                                     timeout=10) as connection:
+        async with aiosqlite.connect(self.databasefile, timeout=10) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
             try:
-                await cursor.execute(
-                    '''SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1''')
+                await cursor.execute('''SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1''')
             except sqlite3.OperationalError:
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
@@ -309,8 +289,7 @@ class MetadataDB:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
             try:
-                cursor.execute(
-                    '''SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1''')
+                cursor.execute('''SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1''')
             except sqlite3.OperationalError:
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)

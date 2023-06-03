@@ -19,13 +19,11 @@ class UIHelp:
             startdir = os.path.dirname(startfile)
         elif not startdir:
             startdir = os.path.join(self.config.templatedir, "templates")
-        if filename := QFileDialog.getOpenFileName(self.qtui, 'Open file',
-                                                   startdir, limit):
+        if filename := QFileDialog.getOpenFileName(self.qtui, 'Open file', startdir, limit):
             return filename[0]
         return None
 
     def template_picker_lineedit(self, qwidget, limit='*.txt'):
         ''' generic code to pick a template file '''
-        if filename := self.template_picker(startfile=qwidget.text(),
-                                            limit=limit):
+        if filename := self.template_picker(startfile=qwidget.text(), limit=limit):
             qwidget.setText(filename)

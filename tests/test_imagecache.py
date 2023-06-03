@@ -31,8 +31,7 @@ def get_imagecache(bootstrap):
         logging.debug(newpathdir)
         logpath = newpathdir.joinpath('debug.log')
         stopevent = multiprocessing.Event()
-        imagecache = nowplaying.imagecache.ImageCache(cachedir=newpathdir,
-                                                      stopevent=stopevent)
+        imagecache = nowplaying.imagecache.ImageCache(cachedir=newpathdir, stopevent=stopevent)
         icprocess = multiprocessing.Process(target=imagecache.queue_process,
                                             name='ICProcess',
                                             args=(
@@ -51,14 +50,8 @@ def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
     ''' testing queue filling '''
     config, imagecache = get_imagecache
 
-    imagecache.fill_queue(config=config,
-                          artist='Gary Numan',
-                          imagetype='fanart',
-                          urllist=TEST_URLS)
-    imagecache.fill_queue(config=config,
-                          artist='Gary Numan',
-                          imagetype='fanart',
-                          urllist=TEST_URLS)
+    imagecache.fill_queue(config=config, artist='Gary Numan', imagetype='fanart', urllist=TEST_URLS)
+    imagecache.fill_queue(config=config, artist='Gary Numan', imagetype='fanart', urllist=TEST_URLS)
     time.sleep(5)
 
     page = requests.get(TEST_URLS[2], timeout=10)
@@ -72,17 +65,12 @@ def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
             logging.debug('Found it at %s', cachekey)
 
 
-@pytest.mark.xfail(sys.platform == "win32",
-                   reason="Windows cannot close fast enough")
+@pytest.mark.xfail(sys.platform == "win32", reason="Windows cannot close fast enough")
 def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
     ''' get a 'random' image' '''
     config, imagecache = get_imagecache  # pylint: disable=unused-variable
 
-    imagedict = {
-        'url': TEST_URLS[0],
-        'artist': 'Gary Numan',
-        'imagetype': 'fanart'
-    }
+    imagedict = {'url': TEST_URLS[0], 'artist': 'Gary Numan', 'imagetype': 'fanart'}
 
     imagecache.image_dl(imagedict)
 
@@ -90,8 +78,7 @@ def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
     assert data_find['artist'] == 'garynuman'
     assert data_find['imagetype'] == 'fanart'
 
-    data_random = imagecache.random_fetch(artist='Gary Numan',
-                                          imagetype='fanart')
+    data_random = imagecache.random_fetch(artist='Gary Numan', imagetype='fanart')
     assert data_random['artist'] == 'garynuman'
     assert data_random['cachekey']
     assert data_random['url'] == TEST_URLS[0]
@@ -99,8 +86,7 @@ def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
     data_findkey = imagecache.find_cachekey(data_random['cachekey'])
     assert data_findkey
 
-    image = imagecache.random_image_fetch(artist='Gary Numan',
-                                          imagetype='fanart')
+    image = imagecache.random_image_fetch(artist='Gary Numan', imagetype='fanart')
     cachedimage = imagecache.cache[data_random['cachekey']]
     assert image == cachedimage
 
@@ -116,10 +102,8 @@ def test_randomfailure(get_imagecache):  # pylint: disable=redefined-outer-name
     assert imagecache.databasefile.exists()
 
     imagecache.databasefile.unlink()
-    image = imagecache.random_image_fetch(artist='Gary Numan',
-                                          imagetype='fanart')
+    image = imagecache.random_image_fetch(artist='Gary Numan', imagetype='fanart')
     assert not image
 
-    image = imagecache.random_image_fetch(artist='Gary Numan',
-                                          imagetype='fanart')
+    image = imagecache.random_image_fetch(artist='Gary Numan', imagetype='fanart')
     assert not image

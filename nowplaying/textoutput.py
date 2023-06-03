@@ -18,11 +18,7 @@ def deltxttrack(config=None):
         writetxttrack(config, clear=True)
 
 
-def writetxttrack(config=None,
-                  filename=None,
-                  templatehandler=None,
-                  metadata=None,
-                  clear=False):
+def writetxttrack(config=None, filename=None, templatehandler=None, metadata=None, clear=False):
     ''' write new track info '''
 
     if not filename and not config:

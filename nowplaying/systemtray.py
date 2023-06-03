@@ -33,18 +33,15 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.menu = QMenu()
 
         # create systemtray options and actions
-        self.aboutwindow = nowplaying.settingsui.load_widget_ui(
-            self.config, 'about')
+        self.aboutwindow = nowplaying.settingsui.load_widget_ui(self.config, 'about')
         nowplaying.settingsui.about_version_text(self.config, self.aboutwindow)
         self.about_action = QAction('About What\'s Now Playing')
         self.menu.addAction(self.about_action)
         self.about_action.setEnabled(True)
         self.about_action.triggered.connect(self.aboutwindow.show)
 
-        self.subprocesses = nowplaying.subprocesses.SubprocessManager(
-            self.config)
-        self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self,
-                                                               beam=beam)
+        self.subprocesses = nowplaying.subprocesses.SubprocessManager(self.config)
+        self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self, beam=beam)
 
         self.settings_action = QAction("Settings")
         self.settings_action.triggered.connect(self.settingswindow.show)
@@ -100,8 +97,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.config.cparser.remove('control/beamserverip')
 
     def _configure_twitchrequests(self):
-        self.requestswindow = nowplaying.trackrequests.Requests(
-            config=self.config)
+        self.requestswindow = nowplaying.trackrequests.Requests(config=self.config)
         self.requestswindow.initial_ui()
 
     def _requestswindow(self):
@@ -153,8 +149,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def fix_mixmode_menu(self):
         ''' update the mixmode based upon current rules '''
-        plugins = self.config.cparser.value('settings/input',
-                                            defaultValue=None)
+        plugins = self.config.cparser.value('settings/input', defaultValue=None)
         if not plugins:
             return
 
@@ -200,8 +195,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
             # don't announce empty content
             if not metadata['artist'] and not metadata['title']:
-                logging.warning(
-                    'Both artist and title are empty; skipping notify')
+                logging.warning('Both artist and title are empty; skipping notify')
                 return
 
             if 'artist' in metadata:
@@ -223,9 +217,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
             tip = f'{artist} - {title}'
             self.tray.setIcon(self.icon)
-            self.tray.showMessage('Now Playing ▶ ',
-                                  tip,
-                                  icon=QSystemTrayIcon.NoIcon)
+            self.tray.showMessage('Now Playing ▶ ', tip, icon=QSystemTrayIcon.NoIcon)
             self.tray.show()
 
     def cleanquit(self):
@@ -257,8 +249,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         if plugin and not self.config.validate_source(plugin):
             self.config.cparser.remove('settings/input')
             msgbox = QErrorMessage()
-            msgbox.showMessage(
-                f'Configured source {plugin} is not supported. Reconfiguring.')
+            msgbox.showMessage(f'Configured source {plugin} is not supported. Reconfiguring.')
             msgbox.show()
             msgbox.exec()
         elif not plugin:
@@ -274,8 +265,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         for plugin in plugins:
             if plugins[plugin].install():
-                self.config.cparser.setValue('settings/input',
-                                             plugin.split('.')[-1])
+                self.config.cparser.setValue('settings/input', plugin.split('.')[-1])
                 break
 
         twitchchatsettings = nowplaying.twitch.chat.TwitchChatSettings()

@@ -96,8 +96,7 @@ class IcecastProtocol(asyncio.Protocol):
         logging.debug('Processing updinfo')
 
         METADATA = {}
-        text = data.decode('utf-8').replace('GET ',
-                                            'http://localhost').split()[0]
+        text = data.decode('utf-8').replace('GET ', 'http://localhost').split()[0]
         url = urllib.parse.urlparse(text)
         if url.path == '/admin/metadata':
             query = urllib.parse.parse_qs(url.query)
@@ -107,8 +106,7 @@ class IcecastProtocol(asyncio.Protocol):
                 if query.get('title'):
                     METADATA['title'] = query['title'][0]
                 if query.get('song'):
-                    METADATA['title'], METADATA['artist'] = query['song'][
-                        0].split('-')
+                    METADATA['title'], METADATA['artist'] = query['song'][0].split('-')
 
     @staticmethod
     def _parse_vorbis_comment(fh):  # pylint: disable=invalid-name
@@ -169,19 +167,16 @@ class Plugin(InputPlugin):
 
     def load_settingsui(self, qwidget):
         ''' load values from config and populate page '''
-        qwidget.port_lineedit.setText(
-            self.config.cparser.value('icecast/port'))
+        qwidget.port_lineedit.setText(self.config.cparser.value('icecast/port'))
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
-        self.config.cparser.setValue('icecast/port',
-                                     qwidget.port_lineedit.text())
+        self.config.cparser.setValue('icecast/port', qwidget.port_lineedit.text())
 
     def desc_settingsui(self, qwidget):
         ''' provide a description for the plugins page '''
-        qwidget.setText(
-            'Icecast is a streaming broadcast protocol.'
-            '  This setting should be used for butt, MIXXX, and many others.')
+        qwidget.setText('Icecast is a streaming broadcast protocol.'
+                        '  This setting should be used for butt, MIXXX, and many others.')
 
 #### Data feed methods
 
@@ -207,9 +202,7 @@ class Plugin(InputPlugin):
 
     async def start(self):
         ''' any initialization before actual polling starts '''
-        port = self.config.cparser.value('icecast/port',
-                                         type=int,
-                                         defaultValue=8000)
+        port = self.config.cparser.value('icecast/port', type=int, defaultValue=8000)
         await self.start_port(port)
 
     async def stop(self):
