@@ -3,7 +3,7 @@
 
 import sys
 
-from nowplaying.exceptions import PluginVerifyError
+#from nowplaying.exceptions import PluginVerifyError
 from nowplaying.plugin import WNPBasePlugin
 
 
@@ -11,8 +11,8 @@ class RecognitionPlugin(WNPBasePlugin):
     ''' base class of recognition plugins '''
 
     def __init__(self, config=None, qsettings=None):
-        self.plugintype = 'recognition'
         super().__init__(config=config, qsettings=qsettings)
+        self.plugintype = 'recognition'
 
 #### Recognition methods
 
