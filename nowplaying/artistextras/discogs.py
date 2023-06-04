@@ -10,8 +10,8 @@ import socket
 import requests.exceptions
 import urllib3.exceptions
 import nowplaying.vendor.discogs_client
+from nowplaying.vendor.discogs_client import models
 
-import nowplaying.config
 from nowplaying.artistextras import ArtistExtrasPlugin
 
 
@@ -25,7 +25,30 @@ class Plugin(ArtistExtrasPlugin):
         self.version = config.version
         self.there = re.compile('(?i)^the ')
 
-    def _find_discogs_releaselist(self, metadata):
+    def _get_apikey(self):
+        apikey = self.config.cparser.value('discogs/apikey')
+        if not apikey or not self.config.cparser.value('discogs/enabled', type=bool):
+            return None
+        return apikey
+
+    def _setup_client(self):
+        ''' setup the discogs client '''
+        if apikey := self._get_apikey():
+            delay = self.calculate_delay()
+            self.client = nowplaying.vendor.discogs_client.Client(
+                f'whatsnowplaying/{self.config.version}', user_token=apikey)
+            self.client.set_timeout(connect=delay, read=delay)
+            return True
+        return False
+
+    def _find_discogs_artist_releaselist(self, metadata):
+
+        if not self.client and not self._setup_client():
+            return None
+
+        if not self.client:
+            return None
+
         try:
             logging.debug('Fetching %s - %s', metadata['artist'], metadata['album'])
             resultlist = self.client.search(metadata['album'],
@@ -43,18 +66,12 @@ class Plugin(ArtistExtrasPlugin):
             return None
 
         return next(
-            (result.artists[0] for result in resultlist
-             if isinstance(result, nowplaying.vendor.discogs_client.models.Release)),
+            (result.artists[0] for result in resultlist if isinstance(result, models.Release)),
             None,
         )
 
     def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches, too-many-return-statements
         ''' download content '''
-
-        apikey = self.config.cparser.value('discogs/apikey')
-
-        if not apikey or not self.config.cparser.value('discogs/enabled', type=bool):
-            return None
 
         # discogs basically works by search for a combination of
         # artist and album so we need both
@@ -62,20 +79,20 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug('artist or album is empty, skipping')
             return None
 
-        oldartist = metadata['artist']
+        if not self.client and not self._setup_client():
+            logging.error('No discogs apikey or client setup failed.')
+            return None
 
         if not self.client:
-            delay = self.calculate_delay()
-            self.client = nowplaying.vendor.discogs_client.Client(f'whatsnowplaying/{self.version}',
-                                                                  user_token=apikey)
-            self.client.set_timeout(connect=delay, read=delay)
+            return None
 
-        artistresultlist = self._find_discogs_releaselist(metadata)
+        oldartist = metadata['artist']
+        artistresultlist = self._find_discogs_artist_releaselist(metadata)
 
         if not artistresultlist and self.there.match(metadata['artist']):
             logging.debug('Trying without a leading \'The\'')
             metadata['artist'] = self.there.sub('', metadata['artist'])
-            artistresultlist = self._find_discogs_releaselist(metadata)
+            artistresultlist = self._find_discogs_artist_releaselist(metadata)
 
         if not artistresultlist:
             logging.debug('discogs did not find it')
@@ -115,9 +132,6 @@ class Plugin(ArtistExtrasPlugin):
         ''' return list of what is provided by this plug-in '''
         return ['artistlongbio', 'artistthumbraw', 'discogs-artistfanarturls', 'artistwebsites']
 
-    def connect_settingsui(self, qwidget, uihelp):
-        ''' pass '''
-
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''
         if self.config.cparser.value('discogs/enabled', type=bool):
@@ -129,9 +143,6 @@ class Plugin(ArtistExtrasPlugin):
         for field in ['bio', 'fanart', 'thumbnails', 'websites']:
             func = getattr(qwidget, f'{field}_checkbox')
             func.setChecked(self.config.cparser.value(f'discogs/{field}', type=bool))
-
-    def verify_settingsui(self, qwidget):
-        ''' pass '''
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''

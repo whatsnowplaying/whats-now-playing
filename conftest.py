@@ -9,7 +9,7 @@ import sys
 import tempfile
 
 import pytest
-from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.bootstrap
 import nowplaying.config
