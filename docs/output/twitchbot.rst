@@ -103,6 +103,9 @@ Twitch Chat Configuration
 #. Check Enable
 #. To have the bot announce new tracks in chat, select the template.
 
+By default, the bot will respond to user commands in the form of Twitch Replies.  If you
+would prefer the bot just post a message, uncheck the Replies option.
+
 You are now ready to set permissions on user interactive commands.
 
 Setting Permissions

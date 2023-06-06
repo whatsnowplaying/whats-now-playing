@@ -398,6 +398,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         ''' take a template, fill it in, and post it '''
         if not template:
             return
+        if not self.chat:
+            logging.debug('Twitch chat is not configured?!?')
+            return
         metadata = await self.metadb.read_last_meta_async()
         if not metadata:
             metadata = {}
@@ -423,7 +426,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                     if not self.chat.is_connected():
                         logging.error('Twitch chat is not connected. Not sending message.')
                         return
-                    if msg:
+                    if msg and self.config.cparser.value('twitchbot/usereplies', type=bool):
                         try:
                             await msg.reply(content)
                         except:  #pylint: disable=bare-except
@@ -537,6 +540,7 @@ class TwitchChatSettings:
         widget.announce_lineedit.setText(config.cparser.value('twitchbot/announce'))
         widget.commandchar_lineedit.setText(config.cparser.value('twitchbot/commandchar'))
         widget.announce_delay_lineedit.setText(config.cparser.value('twitchbot/announcedelay'))
+        widget.replies_checkbox.setChecked(config.cparser.value('twitchbot/usereplies', type=bool))
 
     @staticmethod
     def save(config, widget, subprocesses):  #pylint: disable=unused-argument
@@ -567,6 +571,7 @@ class TwitchChatSettings:
         config.cparser.setValue('twitchbot/commandchar', widget.commandchar_lineedit.text())
 
         config.cparser.setValue('twitchbot/announcedelay', widget.announce_delay_lineedit.text())
+        config.cparser.setValue('twitchbot/usereplies', widget.replies_checkbox.isChecked())
 
         reset_commands(widget.command_perm_table, config.cparser)
 

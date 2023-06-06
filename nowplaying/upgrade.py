@@ -107,7 +107,7 @@ class UpgradeConfig:
             QStandardPaths.CacheLocation)[0]).joinpath('web.db')
         webdb.unlink(missing_ok=True)
 
-        oldversstr = config.value('settings/configversion', defaultValue='3.0.0')
+        oldversstr: str = config.value('settings/configversion', defaultValue='3.0.0')
 
         thisverstr = nowplaying.version.__VERSION__  #pylint: disable=no-member
         oldversion = nowplaying.upgradeutils.Version(oldversstr)
@@ -137,10 +137,25 @@ class UpgradeConfig:
         if int(oldversstr[0]) < 4 and config.value('settings/input') == 'm3u':
             upgrade_m3u(config=rawconfig, testdir=self.testdir)
 
+        if oldversion < nowplaying.upgradeutils.Version('4.0.5'):
+            oldusereplies = rawconfig.value('twitchbot/usereplies')
+            if not oldusereplies:
+                logging.debug('Setting twitchbot to use replies by default')
+                config.setValue('twitchbot/usereplies', True)
+
+        self._oldkey_to_newkey(rawconfig, config, mapping)
+
+        config.setValue('settings/configversion', thisverstr)
+        config.sync()
+
+    @staticmethod
+    def _oldkey_to_newkey(oldconfig, newconfig, mapping):
+        ''' remap keys '''
         for oldkey, newkey in mapping.items():
             logging.debug('processing %s - %s', oldkey, newkey)
+            newval = None
             try:
-                newval = rawconfig.value(newkey)
+                newval = oldconfig.value(newkey)
             except:  # pylint: disable=bare-except
                 pass
 
@@ -149,19 +164,16 @@ class UpgradeConfig:
                 continue
 
             try:
-                oldval = rawconfig.value(oldkey)
+                oldval = oldconfig.value(oldkey)
             except:  # pylint: disable=bare-except
                 logging.debug('%s vs %s: skipped, no new value', oldkey, newkey)
                 continue
 
             if oldval:
                 logging.debug('Setting %s from %s', newkey, oldkey)
-                config.setValue(newkey, oldval)
+                newconfig.setValue(newkey, oldval)
             else:
                 logging.debug('%s does not exist', oldkey)
-
-        config.setValue('settings/configversion', thisverstr)
-        config.sync()
 
 
 class UpgradeTemplates():
