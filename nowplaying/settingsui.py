@@ -20,7 +20,7 @@ try:
     import nowplaying.qtrc  # pylint: disable=import-error, no-name-in-module
 except ModuleNotFoundError:
     pass
-import nowplaying.twitch
+import nowplaying.twitch.settings
 import nowplaying.twitch.chat
 import nowplaying.trackrequests
 import nowplaying.uihelp
@@ -40,7 +40,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.errormessage = None
         self.widgets = {}
         self.settingsclasses = {
-            'twitch': nowplaying.twitch.TwitchSettings(),
+            'twitch': nowplaying.twitch.settings.TwitchSettings(),
             'twitchchat': nowplaying.twitch.chat.TwitchChatSettings(),
             'requests': nowplaying.trackrequests.RequestSettings(),
         }

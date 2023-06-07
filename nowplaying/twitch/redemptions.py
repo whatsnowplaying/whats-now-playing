@@ -50,19 +50,21 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         else:
             user_input = None
 
+        reqdata = {}
+
         if setting := await self.requests.find_twitchtext(redemptitle):
             setting['userimage'] = await nowplaying.twitch.utils.get_user_image(self.twitch, user)
             if setting.get('type') == 'Generic':
-                reply = await self.requests.user_track_request(setting, user, user_input)
+                reqdata = await self.requests.user_track_request(setting, user, user_input)
             elif setting.get('type') == 'Roulette':
-                reply = await self.requests.user_roulette_request(setting, user, user_input)
+                reqdata = await self.requests.user_roulette_request(setting, user, user_input)
             elif setting.get('type') == 'Twofer':
-                reply = await self.requests.twofer_request(setting, user, user_input)
+                reqdata = await self.requests.twofer_request(setting, user, user_input)
             elif setting.get('type') == 'GifWords':
-                reply = await self.requests.gifwords_request(setting, user, user_input)
+                reqdata = await self.requests.gifwords_request(setting, user, user_input)
 
             if self.chat and setting.get('command'):
-                await self.chat.redemption_to_chat_request_bridge(setting['command'], reply)
+                await self.chat.redemption_to_chat_request_bridge(setting['command'], reqdata)
 
     async def run_redemptions(self, twitchlogin, chat):  # pylint: disable=too-many-branches
         ''' twitch redemptions '''
@@ -121,6 +123,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                 await asyncio.sleep(60)
                 continue
 
+            user = None
             try:
                 user = await first(
                     self.twitch.get_users(logins=[self.config.cparser.value('twitchbot/channel')]))
@@ -128,6 +131,11 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
                 logging.error('pubsub getusers failed')
+                await twitchlogin.cache_token_del()
+                continue
+
+            if not user:
+                logging.error('pubusb getusers failed')
                 await twitchlogin.cache_token_del()
                 continue
 
@@ -146,6 +154,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
     async def stop(self):
         ''' stop the twitch redemption support '''
         if self.pubsub:
-            await self.pubsub.unlisten(self.uuid)
+            if self.uuid:
+                await self.pubsub.unlisten(self.uuid)
             self.pubsub.stop()
             logging.debug('pubsub stopped')

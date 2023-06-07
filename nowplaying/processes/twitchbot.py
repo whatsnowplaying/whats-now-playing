@@ -15,7 +15,7 @@ import threading
 
 import nowplaying.bootstrap
 import nowplaying.frozen
-import nowplaying.twitch
+import nowplaying.twitch.launch
 
 # 1. create a bot account, be sure to enable multiple logins per email
 # 2. enable 2FA
@@ -53,7 +53,7 @@ def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argume
     config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=logpath, testmode=testmode)
     logging.info('boot up')
     try:
-        twitchbot = nowplaying.twitch.TwitchSupport(stopevent=stopevent, config=config)  # pylint: disable=unused-variable
+        twitchbot = nowplaying.twitch.launch.TwitchLaunch(stopevent=stopevent, config=config)  # pylint: disable=unused-variable
         twitchbot.start()
     except Exception as error:  #pylint: disable=broad-except
         logging.error('TrackPoll crashed: %s', error, exc_info=True)

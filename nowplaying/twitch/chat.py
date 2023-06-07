@@ -169,7 +169,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 try:
                     loop = asyncio.get_running_loop()
                 except Exception as error:  #pylint: disable=broad-except
-                    logging.debug(error)
+                    logging.error(error)
+                    await asyncio.sleep(10)
+                    continue
                 await asyncio.sleep(1)
                 task = loop.create_task(self._setup_timer())
                 self.tasks.add(task)
@@ -234,9 +236,14 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         self.config.cparser.endGroup()
 
         if perms:
-            return any(
-                profile.get(usertype) and profile[usertype] > 0 for usertype in perms.items())
-
+            for usertype, allowed in perms.items():
+                try:
+                    if allowed and profile.get(usertype) and int(profile[usertype]) > 0:
+                        return True
+                except (TypeError, ValueError):
+                    logging.error('Unexpected value for user badge: %s = %s', usertype,
+                                  profile[usertype])
+            return False
         return True
 
     async def do_command(self, msg):  # pylint: disable=unused-argument
@@ -265,13 +272,13 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
         await self._post_template(msg=msg, template=cmdfile, moremetadata=metadata)
 
-    async def redemption_to_chat_request_bridge(self, command, metadata):
+    async def redemption_to_chat_request_bridge(self, command, reqdata):
         ''' respond in chat when a redemption request triggers '''
         if self.config.cparser.value('twitchbot/chatrequests',
                                      type=bool) and self.config.cparser.value('twitchbot/chat',
                                                                               type=bool):
             cmdfile = f'twitchbot_{command}.txt'
-            await self._post_template(template=cmdfile, moremetadata=metadata)
+            await self._post_template(template=cmdfile, moremetadata=reqdata)
 
     async def handle_request(self, command, params, username):  # pylint: disable=unused-argument
         ''' handle the channel point redemption '''
@@ -412,37 +419,40 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         if moremetadata:
             metadata |= moremetadata
 
-        if self.templatedir.joinpath(template).is_file():
-            try:
-                j2template = self.jinja2.get_template(template)
-                message = j2template.render(metadata)
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error('template %s rendering failure: %s', template, error)
-                return
+        if not self.templatedir.joinpath(template).is_file():
+            logging.debug('%s is not a file.', template)
+            return
 
-            messages = message.split(SPLITMESSAGETEXT)
-            try:
-                for content in messages:
-                    if not self.chat.is_connected():
-                        logging.error('Twitch chat is not connected. Not sending message.')
-                        return
-                    if msg and self.config.cparser.value('twitchbot/usereplies', type=bool):
-                        try:
-                            await msg.reply(content)
-                        except:  #pylint: disable=bare-except
-                            for line in traceback.format_exc().splitlines():
-                                logging.error(line)
-                            await self.chat.send_message(
-                                self.config.cparser.value('twitchbot/channel'), content)
-                    else:
+        try:
+            j2template = self.jinja2.get_template(template)
+            message = j2template.render(metadata)
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error('template %s rendering failure: %s', template, error)
+            return
+
+        messages = message.split(SPLITMESSAGETEXT)
+        try:
+            for content in messages:
+                if not self.chat.is_connected():
+                    logging.error('Twitch chat is not connected. Not sending message.')
+                    return
+                if msg and self.config.cparser.value('twitchbot/usereplies', type=bool):
+                    try:
+                        await msg.reply(content)
+                    except:  #pylint: disable=bare-except
+                        for line in traceback.format_exc().splitlines():
+                            logging.error(line)
                         await self.chat.send_message(self.config.cparser.value('twitchbot/channel'),
                                                      content)
-            except ConnectionResetError:
-                logging.debug('Twitch appears to be down.  Cannot send message.')
-            except:  #pylint: disable=bare-except
-                for line in traceback.format_exc().splitlines():
-                    logging.error(line)
-                logging.error('Unknown problem.')
+                else:
+                    await self.chat.send_message(self.config.cparser.value('twitchbot/channel'),
+                                                 content)
+        except ConnectionResetError:
+            logging.debug('Twitch appears to be down.  Cannot send message.')
+        except:  #pylint: disable=bare-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
+            logging.error('Unknown problem.')
 
     async def stop(self):
         ''' stop the twitch chat support '''

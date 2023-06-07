@@ -23,7 +23,9 @@ async def get_user_image(twitch, loginname):
     ''' ask twitch for the user profile image '''
     image = None
     try:
-        user = await first(twitch.get_users(logins=loginname))
+        user = await first(twitch.get_users(logins=[loginname]))
+        if not user:
+            return None
         async with aiohttp.ClientSession() as session:
             async with session.get(user.profile_image_url, timeout=5) as resp:
                 image = nowplaying.utils.image2png(await resp.read())
@@ -66,6 +68,9 @@ class TwitchLogin:
 
         valid = await validate_token(token)
         if valid.get('status') == 401:
+            return False
+
+        if not TwitchLogin.TWITCH:
             return False
 
         try:
