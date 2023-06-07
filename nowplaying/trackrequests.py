@@ -561,7 +561,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
 
         result = None
         streamer = self.config.cparser.value('twitch/channel')
-        client_key = f'whatsnowplaying/{VERSION}/{streamer}'
+        client_key = f'whatsnowplaying/{self.config.version}/{streamer}'
 
         params = {
             'media_filter': 'gif',
