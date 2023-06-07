@@ -18,7 +18,6 @@ from PySide6.QtUiTools import QUiLoader  # pylint: disable=import-error, no-name
 
 import nowplaying.db
 import nowplaying.metadata
-from nowplaying import __version__ as VERSION
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.utils import TRANSPARENT_PNG_BIN
 
