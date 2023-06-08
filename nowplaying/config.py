@@ -385,7 +385,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     def getregexlist(self):
         ''' get the regex title filter '''
         try:
-            if self.lastloaddate < self.cparser.value('settings/lastsavedate', type=int):
+            if self.lastloaddate == 0 or self.lastloaddate < self.cparser.value(
+                    'settings/lastsavedate', type=int):
                 self.striprelist = [
                     re.compile(self.cparser.value(configitem))
                     for configitem in self.cparser.allKeys() if 'regex_filter/' in configitem
