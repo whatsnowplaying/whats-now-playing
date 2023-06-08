@@ -375,7 +375,7 @@ VALUES (?,?,?);
         threading.current_thread().name = 'ICFollower'
         logging.getLogger('requests_cache').setLevel(logging.CRITICAL + 1)
         logging.getLogger('aiosqlite').setLevel(logging.CRITICAL + 1)
-        session = requests_cache.CachedSession(self.httpcachefile)
+        session = requests_cache.CachedSession(str(self.httpcachefile))
         cachekey = str(uuid.uuid4())
 
         logging.debug("Downloading %s %s", cachekey, imagedict['url'])

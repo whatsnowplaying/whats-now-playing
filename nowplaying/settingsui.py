@@ -34,6 +34,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def __init__(self, tray, beam):
 
         self.config = nowplaying.config.ConfigFile(beam=beam)
+        if not self.config:
+            logging.error('FATAL ERROR: Cannot get configuration!')
+            raise RuntimeError("Cannot get configuration")
         self.tray = tray
         super().__init__()
         self.qtui = None
@@ -49,7 +52,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.load_qtui()
         if not self.config.iconfile:
             self.tray.cleanquit()
-        self.qtui.setWindowIcon(QIcon(str(self.config.iconfile)))
+        if self.qtui:
+            self.qtui.setWindowIcon(QIcon(str(self.config.iconfile)))
 
     def post_tray_init(self):
         ''' after the systemtray is fully loaded, do this '''
@@ -345,12 +349,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.widgets['quirks'].slash_toback.setChecked(False)
             self.widgets['quirks'].slash_toforward.setChecked(False)
 
-        if slashmode == 'toforward':
+        elif slashmode == 'toforward':
             self.widgets['quirks'].slash_nochange.setChecked(False)
             self.widgets['quirks'].slash_toback.setChecked(False)
             self.widgets['quirks'].slash_toforward.setChecked(True)
 
-        if slashmode == 'toback':
+        elif slashmode == 'toback':
             self.widgets['quirks'].slash_nochange.setChecked(False)
             self.widgets['quirks'].slash_toback.setChecked(True)
             self.widgets['quirks'].slash_toforward.setChecked(False)
@@ -364,7 +368,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.upd_win()
         self.widgets['webserver'].enable_checkbox.setChecked(False)
         self.upd_conf()
-        self.errormessage.showMessage('HTTP Server settings are invalid. Bad port?')
+        if self.errormessage:
+            self.errormessage.showMessage('HTTP Server settings are invalid. Bad port?')
 
     def disable_obsws(self):
         ''' if the OBS WebSocket gets in trouble, this gets called '''
@@ -372,8 +377,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.widgets['obsws'].enable_checkbox.setChecked(False)
         self.upd_conf()
         self.upd_win()
-        self.errormessage.showMessage(
-            'OBS WebServer settings are invalid. Bad port? Wrong password?')
+        if self.errormessage:
+            self.errormessage.showMessage(
+                'OBS WebServer settings are invalid. Bad port? Wrong password?')
 
     def upd_conf(self):
         ''' update the configuration '''
@@ -599,7 +605,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             return
 
         cachedbfilepath = pathlib.Path(cachedbfile)
-        if cachedbfilepath.exists() and 'imagecache' in str(cachedbfile):
+        if cachedbfilepath.exists() and 'imagecache' in cachedbfile:
             logging.debug('Deleting %s', cachedbfilepath)
             cachedbfilepath.unlink()
 
@@ -616,23 +622,27 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     @Slot()
     def on_text_template_button(self):
         ''' file template button clicked action '''
-        self.uihelp.template_picker_lineedit(self.widgets['textoutput'].texttemplate_lineedit)
+        if self.uihelp:
+            self.uihelp.template_picker_lineedit(self.widgets['textoutput'].texttemplate_lineedit)
 
     @Slot()
     def on_discordbot_template_button(self):
         ''' discordbot template button clicked action '''
-        self.uihelp.template_picker_lineedit(self.widgets['discordbot'].template_lineedit)
+        if self.uihelp:
+            self.uihelp.template_picker_lineedit(self.widgets['discordbot'].template_lineedit)
 
     @Slot()
     def on_obsws_template_button(self):
         ''' obsws template button clicked action '''
-        self.uihelp.template_picker_lineedit(self.widgets['obsws'].template_lineedit)
+        if self.uihelp:
+            self.uihelp.template_picker_lineedit(self.widgets['obsws'].template_lineedit)
 
     @Slot()
     def on_html_template_button(self):
         ''' html template button clicked action '''
-        self.uihelp.template_picker_lineedit(self.widgets['webserver'].template_lineedit,
-                                             limit='*.htm *.html')
+        if self.uihelp:
+            self.uihelp.template_picker_lineedit(self.widgets['webserver'].template_lineedit,
+                                                 limit='*.htm *.html')
 
     def _filter_regex_load(self, regex=None):
         ''' setup the filter table '''
@@ -693,7 +703,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if self.tray:
             self.tray.settings_action.setEnabled(True)
         self.upd_win()
-        self.qtui.close()
+        if self.qtui:
+            self.qtui.close()
 
         if not self.config.cparser.value('settings/input',
                                          defaultValue=None) or not self.config.initialized:
@@ -714,14 +725,21 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if curbutton := self.widgets['source'].sourcelist.currentItem():
             inputtext = curbutton.text().lower()
 
+        if not inputtext:
+            if self.errormessage:
+                self.errormessage.showMessage('No source has been chosen')
+            return
+
         try:
             self.config.plugins_verify_settingsui(inputtext, self.widgets)
         except PluginVerifyError as error:
-            self.errormessage.showMessage(error.message)
+            if self.errormessage:
+                self.errormessage.showMessage(error.message)
             return
 
         if not self.widgets['source'].sourcelist.currentItem():
-            self.errormessage.showMessage('File to write is required')
+            if self.errormessage:
+                self.errormessage.showMessage('File to write is required')
             return
 
         if not self.config.cparser.value('control/beam', type=bool):
@@ -736,7 +754,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 try:
                     self.settingsclasses[key].verify(self.widgets[key])
                 except PluginVerifyError as error:
-                    self.errormessage.showMessage(error.message)
+                    if self.errormessage:
+                        self.errormessage.showMessage(error.message)
                     return
 
         self.config.unpause()
@@ -751,17 +770,20 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if self.tray:
             self.tray.settings_action.setEnabled(False)
         self.upd_win()
-        self.qtui.show()
-        self.qtui.setFocus()
+        if self.qtui:
+            self.qtui.show()
+            self.qtui.setFocus()
 
     def close(self):
         ''' close the system tray '''
         self.tray.settings_action.setEnabled(True)
-        self.qtui.hide()
+        if self.qtui:
+            self.qtui.hide()
 
     def exit(self):
         ''' exit the tray '''
-        self.qtui.close()
+        if self.qtui:
+            self.qtui.close()
 
 
 def about_version_text(config, qwidget):
@@ -784,5 +806,6 @@ def load_widget_ui(config, name):
         qwidget = loader.load(ui_file)
     except RuntimeError as error:
         logging.warning('Unable to load the UI for %s: %s', name, error)
+        return None
     ui_file.close()
     return qwidget

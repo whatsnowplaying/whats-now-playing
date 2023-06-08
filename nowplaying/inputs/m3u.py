@@ -119,12 +119,14 @@ class Plugin(InputPlugin):
         vdjline = inputline.replace('#EXTVDJ:', '')
 
         try:
-            metadata['title'] = EXTVDJ_TITLE_RE.match(vdjline).group(1)
+            if line := EXTVDJ_TITLE_RE.match(vdjline):
+                metadata['title'] = line.group(1)
         except AttributeError:
             pass
 
         try:
-            metadata['artist'] = EXTVDJ_ARTIST_RE.match(vdjline).group(1)
+            if line := EXTVDJ_ARTIST_RE.match(vdjline):
+                metadata['artist'] = line.group(1)
         except AttributeError:
             pass
 

@@ -146,9 +146,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         ''' stop trackpoll thread gracefully '''
         logging.debug('Stopping trackpoll')
         self.stopevent.set()
-        if self.icprocess:
+        if self.imagecache:
             logging.debug('stopping imagecache')
             self.imagecache.stop_process()
+        if self.icprocess:
             logging.debug('joining imagecache')
             self.icprocess.join()
         if self.input:

@@ -87,7 +87,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
         self.iconfile = self.find_icon_file()
         self.uidir = self.find_ui_file()
-        self.lastloaddate = None
+        self.lastloaddate = 0
         self.setlistdir = None
         self.striprelist = []
 
@@ -384,13 +384,13 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
     def getregexlist(self):
         ''' get the regex title filter '''
-        if not self.striprelist or self.lastloaddate < self.cparser.value('settings/lastsavedate'):
-            try:
+        try:
+            if self.lastloaddate < self.cparser.value('settings/lastsavedate', type=int):
                 self.striprelist = [
                     re.compile(self.cparser.value(configitem))
                     for configitem in self.cparser.allKeys() if 'regex_filter/' in configitem
                 ]
-                self.lastloaddate = self.cparser.value('settings/lastsavedate')
-            except re.error as error:
-                logging.error('Filter error with \'%s\': %s', error.pattern, error.msg)
+                self.lastloaddate = self.cparser.value('settings/lastsavedate', type=int)
+        except re.error as error:
+            logging.error('Filter error with \'%s\': %s', error.pattern, error.msg)
         return self.striprelist

@@ -2,12 +2,11 @@
 # pylint: disable=invalid-name
 ''' support for musicbrainz '''
 
-import os
-import sys
-
 import logging
 import logging.config
 import logging.handlers
+import os
+import sys
 
 import musicbrainzngs
 

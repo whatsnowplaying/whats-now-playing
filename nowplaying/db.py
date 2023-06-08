@@ -329,6 +329,10 @@ class MetadataDB:
 def create_setlist(config=None, databasefile=None):
     ''' create the setlist '''
 
+    if not config or not databasefile:
+        logging.debug("config=%s / databasefile=%s", config is None, databasefile)
+        return
+
     datestr = time.strftime("%Y%m%d-%H%M%S")
     setlistpath = pathlib.Path(config.getsetlistdir())
     logging.debug('setlistpath = %s', setlistpath)
@@ -354,8 +358,8 @@ def create_setlist(config=None, databasefile=None):
     previoustrack.reverse()
 
     setlistfn = setlistpath.joinpath(f'{datestr}.md')
-    max_artist_size = max(len(t.get('artist')) for t in previoustrack)
-    max_title_size = max(len(t.get('title')) for t in previoustrack)
+    max_artist_size = max(len(trk.get('artist', '')) for trk in previoustrack)
+    max_title_size = max(len(trk.get('title', '')) for trk in previoustrack)
 
     max_artist_size = max(max_artist_size, len('ARTIST'))
     max_title_size = max(max_title_size, len('TITLE'))
