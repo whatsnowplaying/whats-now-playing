@@ -145,7 +145,7 @@ class ImageCache:
             try:
                 image = self.cache[data['cachekey']]
             except KeyError as error:
-                logging.error('random: %s', error)
+                logging.error('random: cannot fetch key %s', error)
                 self.erase_cachekey(data['cachekey'])
             if image:
                 break
@@ -345,7 +345,6 @@ VALUES (?,?,?);
         with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()
-            logging.debug('Delete %s for reasons', url)
             try:
                 cursor.execute('DELETE FROM artistsha WHERE url=?;', (url, ))
             except sqlite3.OperationalError:

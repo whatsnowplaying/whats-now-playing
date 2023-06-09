@@ -13,6 +13,7 @@ import time
 import traceback
 
 import jinja2
+from nltk.tokenize.casual import reduce_lengthening
 import normality
 import PIL.Image
 import pillow_avif  # pylint: disable=unused-import
@@ -94,7 +95,10 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
         try:
             if not self.filename or not os.path.exists(self.filename) or not self.template:
                 return " No template found; check Now Playing settings."
-            rendertext = self.template.render(**metadatadict)
+            if metadatadict:
+                rendertext = self.template.render(**metadatadict)
+            else:
+                rendertext = self.template.render()
         except:  #pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
@@ -167,6 +171,8 @@ def songpathsubst(config, filename):
     elif slashmode == 'toback':
         newname = filename.replace('/', '\\')
         filename = newname
+    else:
+        newname = filename
 
     if songin := config.cparser.value('quirks/filesubstin'):
         songout = config.cparser.value('quirks/filesubstout')
@@ -190,7 +196,9 @@ def normalize(crazystring):
         return None
     if len(crazystring) < 4:
         return 'TEXT IS TOO SMALL IGNORE'
-    return normality.normalize(crazystring).replace(' ', '')
+    if text := normality.normalize(crazystring):
+        return text.replace(' ', '')
+    return None
 
 
 def titlestripper_basic(title=None, title_regex_list=None):
@@ -216,8 +224,13 @@ def titlestripper_advanced(title=None, title_regex_list=None):
 
 def humanize_time(seconds):
     ''' convert seconds into hh:mm:ss '''
+    try:
+        convseconds = int(float(seconds))
+    except (ValueError, TypeError):
+        return ''
+
     if seconds > 3600:
-        return time.strftime('%H:%M:%S', time.gmtime(int(seconds)))
+        return time.strftime('%H:%M:%S', time.gmtime(convseconds))
     if seconds > 60:
-        return time.strftime('%M:%S', time.gmtime(int(seconds)))
-    return time.strftime('%S', time.gmtime(int(seconds)))
+        return time.strftime('%M:%S', time.gmtime(convseconds))
+    return time.strftime('%S', time.gmtime(convseconds))

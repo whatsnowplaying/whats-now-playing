@@ -189,7 +189,9 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         ''' user input needs to be normalized for best case matches '''
         if not crazystring:
             return ''
-        return normality.normalize(crazystring).replace(' ', '')
+        if text := normality.normalize(crazystring):
+            return text.replace(' ', '')
+        return ''
 
     async def add_to_db(self, data):
         ''' add an entry to the db '''
@@ -197,8 +199,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             logging.error('%s does not exist, refusing to add.', self.databasefile)
             return
 
-        data['normalizedartist'] = self.normalize(data.get('artist'))
-        data['normalizedtitle'] = self.normalize(data.get('title'))
+        data['normalizedartist'] = self.normalize(data.get('artist', ''))
+        data['normalizedtitle'] = self.normalize(data.get('title', ''))
 
         if data.get('reqid'):
             reqid = data['reqid']
@@ -305,6 +307,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         plugin = self.config.cparser.value('settings/input')
         tryagain = True
         counter = 10
+        metadata = None
         while tryagain and counter > 0:
             counter -= 1
             roulette = await self.config.pluginobjs['inputs'][f'nowplaying.inputs.{plugin}'
@@ -313,7 +316,12 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                 config=self.config).getmoremetadata(metadata={'filename': roulette},
                                                     skipplugins=True)
 
-            if not artistdupes or metadata.get('artist') not in artistdupes:
+            if not metadata:
+                logging.error('Did not get any metadata from %s', roulette)
+                continue
+
+            if not artistdupes or (metadata.get('artist')
+                                   and metadata['artist'] not in artistdupes):
                 tryagain = False
                 await asyncio.sleep(.5)
             if tryagain:

@@ -16,6 +16,8 @@ import url_normalize
 
 import nowplaying.config
 import nowplaying.hostmeta
+import nowplaying.musicbrainz
+import nowplaying.utils
 import nowplaying.vendor.audio_metadata
 from nowplaying.vendor.audio_metadata.formats.mp4_tags import MP4FreeformDecoders
 
@@ -24,7 +26,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
     ''' Run through a bunch of different metadata processors '''
 
     def __init__(self, config=None):
-        self.metadata = None
+        self.metadata = {}
         self.imagecache = None
         if config:
             self.config = config
@@ -33,7 +35,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     async def getmoremetadata(self, metadata=None, imagecache=None, skipplugins=False):
         ''' take metadata and process it '''
-        self.metadata = metadata
+        if metadata:
+            self.metadata = metadata
+        else:
+            self.metadata = {}
         self.imagecache = imagecache
 
         if 'artistfanarturls' not in self.metadata:
@@ -72,7 +77,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         return self.metadata
 
     def _fix_duration(self):
-        if not self.metadata.get('duration'):
+        if not self.metadata or not self.metadata.get('duration'):
             return
 
         try:
@@ -85,6 +90,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self.metadata['duration'] = duration
 
     def _strip_identifiers(self):
+        if not self.metadata:
+            return
 
         if self.config.cparser.value('settings/stripextras',
                                      type=bool) and self.metadata.get('title'):
@@ -92,11 +99,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 title=self.metadata['title'], title_regex_list=self.config.getregexlist())
 
     def _uniqlists(self):
+        if not self.metadata:
+            return
 
         if self.metadata.get('artistwebsites'):
-            newlist = [
-                url_normalize.url_normalize(url) for url in self.metadata.get('artistwebsites')
-            ]
+            newlist = [url_normalize.url_normalize(url) for url in self.metadata['artistwebsites']]
             self.metadata['artistwebsites'] = newlist
 
         lists = ['artistwebsites', 'isrc', 'musicbrainzartistid']
@@ -119,6 +126,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     def _process_hostmeta(self):
         ''' add the host metadata so other subsystems can use it '''
+        if self.metadata is None:
+            self.metadata = {}
+
         if self.config.cparser.value('weboutput/httpenabled', type=bool):
             self.metadata['httpport'] = self.config.cparser.value('weboutput/httpport', type=int)
         hostmeta = nowplaying.hostmeta.gethostmeta()
@@ -130,7 +140,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     def _process_tinytag(self):
         ''' given a chunk of metadata, try to fill in more '''
-        if not self.metadata.get('filename'):
+        if not self.metadata or not self.metadata.get('filename'):
             return
 
         try:
@@ -163,7 +173,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
     def _process_image2png(self):
         # always convert to png
 
-        if 'coverimageraw' not in self.metadata or not self.metadata['coverimageraw']:
+        if not self.metadata or 'coverimageraw' not in self.metadata or not self.metadata[
+                'coverimageraw']:
             return
 
         self.metadata['coverimageraw'] = nowplaying.utils.image2png(self.metadata['coverimageraw'])
@@ -171,6 +182,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self.metadata['coverurl'] = 'cover.png'
 
     def _musicbrainz(self):
+        if not self.metadata:
+            return None
+
         musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
         metalist = musicbrainz.providerinfo()
 
@@ -204,7 +218,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         ''' at least see if album can be found '''
 
         # user does not want fallback support
-        if not self.config.cparser.value('musicbrainz/fallback', type=bool):
+        if not self.metadata or not self.config.cparser.value('musicbrainz/fallback', type=bool):
             return
 
         # either missing key data or has already been processed
@@ -251,24 +265,27 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             with concurrent.futures.ThreadPoolExecutor(max_workers=3,
                                                        thread_name_prefix='artistextras') as pool:
                 for plugin in self.config.plugins['artistextras']:
-                    metalist = self.config.pluginobjs['artistextras'][plugin].providerinfo()
-                    loop = asyncio.get_running_loop()
-                    tasks.append(
-                        loop.run_in_executor(
-                            pool, self.config.pluginobjs['artistextras'][plugin].download,
-                            self.metadata, self.imagecache))
+                    try:
+                        metalist = self.config.pluginobjs['artistextras'][plugin].providerinfo()
+                        loop = asyncio.get_running_loop()
+                        tasks.append(
+                            loop.run_in_executor(
+                                pool, self.config.pluginobjs['artistextras'][plugin].download,
+                                self.metadata, self.imagecache))
+
+                    except Exception as error:  # pylint: disable=broad-except
+                        logging.error('%s threw exception %s', plugin, error, exc_info=True)
 
             for task in tasks:
-                try:
-                    if addmeta := await task:
-                        self.metadata = recognition_replacement(config=self.config,
-                                                                metadata=self.metadata,
-                                                                addmeta=addmeta)
-
-                except Exception as error:  # pylint: disable=broad-except
-                    logging.error('%s threw exception %s', plugin, error, exc_info=True)
+                if addmeta := await task:
+                    self.metadata = recognition_replacement(config=self.config,
+                                                            metadata=self.metadata,
+                                                            addmeta=addmeta)
 
     def _generate_short_bio(self):
+        if not self.metadata:
+            return
+
         message = self.metadata['artistlongbio']
         message = message.replace('\n', ' ')
         message = message.replace('\r', ' ')
@@ -286,11 +303,15 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
     ''' run through audio_metadata '''
 
     def __init__(self, config=None):
-        self.metadata = None
+        self.metadata = {}
         self.config = config
 
     def process(self, metadata):
         ''' process it '''
+
+        if not metadata:
+            return metadata
+
         if not metadata.get('filename'):
             return metadata
 
@@ -345,6 +366,10 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
                                                 addmeta=tempdata)
 
     def _process_audio_metadata_id3_usertext(self, usertextlist):
+
+        if not self.metadata:
+            self.metadata = {}
+
         for usertext in usertextlist:
             if usertext.description == 'Acoustid Id':
                 self.metadata['acoustidid'] = usertext.text[0]
@@ -357,7 +382,10 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
             elif usertext.description == 'originalyear':
                 self.metadata['date'] = usertext.text[0]
 
-    def _process_audio_metadata_othertags(self, tags):
+    def _process_audio_metadata_othertags(self, tags):  # pylint: disable=too-many-branches
+        if not self.metadata:
+            self.metadata = {}
+
         if 'discnumber' in tags and 'disc' not in self.metadata:
             text = tags['discnumber'][0].replace('[', '').replace(']', '')
             try:
@@ -388,6 +416,8 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
             self._process_audio_metadata_id3_usertext(tags.usertext)
 
     def _process_audio_metadata_remaps(self, tags):
+        if not self.metadata:
+            self.metadata = {}
 
         # single:
 
@@ -420,6 +450,9 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
                     self.metadata[dest] = [str(tags[src])]
 
     def _process_audio_metadata(self):  # pylint: disable=too-many-branches
+        if not self.metadata or not self.metadata.get('filename'):
+            return
+
         try:
             base = nowplaying.vendor.audio_metadata.load(self.metadata['filename'])
         except Exception as error:  # pylint: disable=broad-except
@@ -467,6 +500,9 @@ def recognition_replacement(config=None, metadata=None, addmeta=None):
     # if there is nothing in addmeta, then just bail early
     if not addmeta:
         return metadata
+
+    if not metadata:
+        metadata = {}
 
     for meta in addmeta:
         if meta in ['artist', 'title', 'artistwebsites']:

@@ -4,4 +4,6 @@
 pip-upgrader
 pyinstaller==5.11.0
 pyinstaller_versionfile==2.1.1
+pylint
+pyright
 yapf

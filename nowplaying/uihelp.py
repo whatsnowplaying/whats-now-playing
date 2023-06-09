@@ -10,6 +10,10 @@ class UIHelp:
     ''' utility functions for GUI code'''
 
     def __init__(self, config, qtui):
+        if not config:
+            raise AssertionError('config cannot be empty')
+        if not qtui:
+            raise AssertionError('qtui cannot be empty')
         self.config = config
         self.qtui = qtui
 

@@ -90,6 +90,7 @@ class MusicBrainzHelper():
             return None
 
         self._setemail()
+        mydict = {}
 
         addmeta = {
             'artist': metadata.get('artist'),
@@ -144,6 +145,7 @@ class MusicBrainzHelper():
             return None
 
         self._setemail()
+        mbdata = {}
 
         for isrc in isrclist:
             try:
@@ -210,7 +212,7 @@ class MusicBrainzHelper():
                 try:
                     mbdata = musicbrainzngs.browse_releases(recording=recordingid,
                                                             includes=['labels', 'artist-credits'])
-                except:  # pylint: disable=bare-except
+                except Exception as error:  # pylint: disable=broad-except
                     logging.error('MusicBrainz threw an error: %s', error)
                     return None
             return mbdata

@@ -51,7 +51,7 @@ class Version:
     def _calculate(self):
         olddict = copy.copy(self.chunk)
         for key, value in olddict.items():
-            if value and value.isdigit():
+            if isinstance(value, str) and value.isdigit():
                 self.chunk[key] = int(value)
 
         if self.chunk.get('rc') or self.chunk.get('commitnum'):
@@ -103,7 +103,7 @@ class UpgradeBinary:
         if not testmode:
             self.get_versions()
 
-    def get_versions(self, testdata=None):
+    def get_versions(self, testdata=None):  # pylint: disable=too-many-branches
         ''' ask github about current versions '''
         try:
             if not testdata:
@@ -123,6 +123,10 @@ class UpgradeBinary:
                 jsonreldata = req.json()
             else:
                 jsonreldata = testdata
+
+            if not jsonreldata:
+                logging.error('No data from Github. Aborting.')
+                return None
 
             for rel in jsonreldata:
                 if not isinstance(rel, dict):

@@ -211,11 +211,18 @@ class UpgradeTemplates():
         if shafile.exists():
             with open(shafile, encoding='utf-8') as fhin:
                 self.oldshas = json.loads(fhin.read())
+        else:
+            logging.error('%s file is missing.', shafile)
 
     def check_preload(self, filename, userhash):
         ''' check if the given file matches a known hash '''
         found = None
         hexdigest = None
+
+        if not self.oldshas:
+            logging.error('updateshas.json file was not loaded.')
+            return None
+
         if filename in self.oldshas:
             for version, hexdigest in self.oldshas[filename].items():
                 if userhash == hexdigest:
@@ -250,8 +257,7 @@ class UpgradeTemplates():
                              self.usertemplatedir)
                 continue
 
-            destpath = str(userpath).replace('.txt', '.new')
-            destpath = pathlib.Path(destpath.replace('.htm', '.new'))
+            destpath = userpath.with_suffix('.new')
             if destpath.exists():
                 userhash = checksum(destpath)
                 if apphash == userhash:
