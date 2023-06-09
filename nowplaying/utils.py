@@ -13,7 +13,6 @@ import time
 import traceback
 
 import jinja2
-from nltk.tokenize.casual import reduce_lengthening
 import normality
 import PIL.Image
 import pillow_avif  # pylint: disable=unused-import
@@ -70,7 +69,7 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
             self.envdir = envdir
             self.env = self.setup_jinja2(self.envdir)
 
-        basename = os.path.basename(filename)
+        basename = os.path.basename(self.filename)
 
         self.template = self.env.get_template(basename)
 

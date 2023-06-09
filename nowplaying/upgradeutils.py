@@ -126,7 +126,7 @@ class UpgradeBinary:
 
             if not jsonreldata:
                 logging.error('No data from Github. Aborting.')
-                return None
+                return
 
             for rel in jsonreldata:
                 if not isinstance(rel, dict):

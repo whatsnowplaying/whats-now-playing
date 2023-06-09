@@ -1,6 +1,22 @@
 
 # Changelog
 
+## Version 4.0.5 - Unreleased
+
+* Musicbrainz fill-in feature should be less crash-prone
+* Ability to force Twitch chat bot to post rather than reply
+* Twitch bot permissions should be more reliable
+* Quite a few small bug fixes all over that could potentially lead to crashes
+* Dependency fixes as usual
+* Some log cleanup
+* Minor perf enhancements here and there
+* Experimental: duration/duration_hhmmss
+* keep menu item running longer so users do not think the app is actually
+  shut down
+* document the windows media support
+* change source code line length to 100
+* change how plugins are defined
+
 ## Version 4.0.4 - 2023-05-07
 
 * Experimental feature: Given an option to use Musicbrainz to fill in missing
