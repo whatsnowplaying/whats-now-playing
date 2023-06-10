@@ -3,7 +3,7 @@
 set -e
 
 apt-get update
-apt-get -y install git rsync
+apt-get -y install git rsync python3.11-venv
 
 python3 -m venv /tmp/venv
 . /tmp/venv/bin/activate
