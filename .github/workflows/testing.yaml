@@ -129,7 +129,6 @@ jobs:
           COVERALLS_PARALLEL: true
           COVERALLS_FLAG_NAME: windows
         run: |
-          source /tmp/venv/bin/activate
           coveralls --service=github
 
   testing-linux:
