@@ -35,6 +35,7 @@ LASTANNOUNCED = {'artist': None, 'title': None}
 SPLITMESSAGETEXT = '****SPLITMESSSAGEHERE****'
 
 # needs to match ui file
+# missing premium, hype-train, artist-badge
 TWITCHBOT_CHECKBOXES = [
     'anyone', 'broadcaster', 'moderator', 'subscriber', 'founder', 'conductor', 'vip', 'bits'
 ]
