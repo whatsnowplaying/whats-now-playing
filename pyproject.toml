@@ -12,6 +12,26 @@ hook-dirs = "nowplaying.__pyinstaller:get_hook_dirs"
 [project.scripts]
 NowPlaying = "nowplaying.__main__:main"
 
+[tool.coverage.run]
+omit = [
+  "nowplaying/qtrc.py",
+  "nowplaying/vendor/*",
+  "nowplaying/__pyinstaller/*",
+  ]
+concurrency = ["multiprocessing","thread"]
+relative_files = true
+source = ["nowplaying"]
+
+[tool.coverage.report]
+ignore_errors = true
+# Regexes for lines to exclude from consideration
+exclude_lines = [
+    # Have to re-enable the standard pragma
+    "pragma: no cover",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "raise PluginVerifyError"
+]
 
 [tool.setuptools]
 include-package-data = true
@@ -78,7 +98,6 @@ qt_api = "pyside6"
 log_cli = true
 addopts = [
   "--cov=nowplaying",
-  "--cov-config=.coveragerc",
   "--cov-report=html",
   "-ra",
 ]
