@@ -2,6 +2,7 @@
 ''' test winmedia ... ok, not really. '''
 
 import asyncio
+import logging
 
 import pytest
 import nowplaying.twitch.chat  # pylint: disable=import-error
@@ -17,6 +18,7 @@ def setup_generic_commands(config):
             else:
                 config.cparser.setValue(f'{cmd}cmd/{checkbox}', False)
 
+
 @pytest.mark.asyncio
 async def test_twitchchat_perms(bootstrap):  # pylint: disable=redefined-outer-name
     ''' test twitchbot perms '''
@@ -29,14 +31,14 @@ async def test_twitchchat_perms(bootstrap):  # pylint: disable=redefined-outer-n
 
     streamerprofile = {'broadcaster': '1', 'subscriber': '9'}
     moderatorprofile = {'moderator': '1', 'subscriber': '24'}
-    hypetrainprofile = {'vip':'1','subscriber':'3012','hype-train':'1'}
+    hypetrainprofile = {'vip': '1', 'subscriber': '3012', 'hype-train': '1'}
 
-    assert chat.check_command_perms(streamerprofile, 'broadcastercmd')
-    assert chat.check_command_perms(streamerprofile, 'subscribercmd')
-    assert chat.check_command_perms(streamerprofile, 'anyonecmd')
-    assert not chat.check_command_perms(streamerprofile, 'moderatorcmd')
-    assert chat.check_command_perms(moderatorprofile, 'anyonecmd')
-    assert chat.check_command_perms(moderatorprofile, 'moderatorcmd')
-    assert not chat.check_command_perms(moderatorprofile, 'broadcastercmd')
+    for profile in [streamerprofile, moderatorprofile, hypetrainprofile]:
+        for box in nowplaying.twitch.chat.TWITCHBOT_CHECKBOXES:
+            logging.debug('Checking %s vs %s', profile, box)
+            if box == 'anyone' or profile.get(box):
+                assert chat.check_command_perms(profile, f'{box}cmd')
+            else:
+                assert not chat.check_command_perms(profile, f'{box}cmd')
 
     stopevent.set()
