@@ -5,6 +5,10 @@ set -e
 apt-get update
 apt-get -y install git rsync
 
+python3 -m venv /tmp/venv
+. /tmp/venv/bin/activate
+python3 -m pip install --upgrade pip
+
 pip3 install ".[docs]"
 make -C docs clean
 make -C docs html
