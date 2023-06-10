@@ -3,6 +3,7 @@ omit =
   nowplaying/qtrc.py
   nowplaying/vendor/*
   nowplaying/__pyinstaller/*
+  /private/*
 concurrency = multiprocessing
 relative_files = True
 
