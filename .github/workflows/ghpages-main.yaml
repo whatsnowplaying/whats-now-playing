@@ -6,7 +6,10 @@ name: website
 
 # execute this workflow automatically when a we push to master
 on:  # yamllint disable-line rule:truthy
-  push:
+  workflow_run:
+    workflows: ["Testing"]
+    types:
+      - completed
     branches: [main]
 
 permissions:
@@ -28,6 +31,20 @@ jobs:
           apt-get update
           apt-get install -y git python3-pip
           git clone "https://token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" .
+          chown -R $(id -u):$(id -g) "${PWD}"
+        shell: bash
+
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: full-coverage
+
+      - name: test
+        run: |
           chown -R $(id -u):$(id -g) "${PWD}"
         shell: bash
 

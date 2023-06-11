@@ -14,6 +14,10 @@ pip3 install ".[docs]"
 make -C docs clean
 make -C docs html
 
+if [[ -d ../htmlcov ]]; then
+  rsync -av ../htmlcov docs/_build/html
+fi
+
 if [[ -n "${GITHUB_WRITE_TOKEN}" ]]; then
 
   git config --global user.name "${GITHUB_ACTOR}"
