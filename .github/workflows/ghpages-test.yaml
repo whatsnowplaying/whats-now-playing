@@ -7,7 +7,7 @@ name: website-test
 # execute this workflow automatically when a we push to master
 on:  # yamllint disable-line rule:truthy
   workflow_run:
-    workflows: ["testing"]
+    workflows: ["testing", "testing / merge"]
     types:
       - completed
 
