@@ -201,9 +201,9 @@ jobs:
             FPCALC=/usr/bin/fpcalc
             export FPCALC
             popd
-            source /tmp/venv/bin/activate
           fi
-          pytest -s tests
+          source /tmp/venv/bin/activate
+          pytest -s
       - name: artifact linux test
         uses: actions/upload-artifact@v3
         if: always()
