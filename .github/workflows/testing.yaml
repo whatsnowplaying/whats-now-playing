@@ -147,14 +147,16 @@ jobs:
       - name: setup X11xvfb
         run: |
           sudo apt install \
-            libxkbcommon-x11-0 \
+            libxcb-cursor0 \
             libxcb-icccm4 \
             libxcb-image0 \
             libxcb-keysyms1 \
             libxcb-randr0 \
             libxcb-render-util0 \
-            libxcb-xinerama0 \
+            libxcb-shape0 \
             libxcb-xfixes0 \
+            libxcb-xinerama0 \
+            libxkbcommon-x11-0 \
             x11-utils
           /sbin/start-stop-daemon \
             --start --quiet \
