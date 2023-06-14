@@ -329,7 +329,7 @@ class MetadataDB:
 def create_setlist(config=None, databasefile=None):
     ''' create the setlist '''
 
-    if not config or not databasefile:
+    if not config:
         logging.debug("config=%s / databasefile=%s", config is None, databasefile)
         return
 
