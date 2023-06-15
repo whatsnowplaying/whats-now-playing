@@ -309,9 +309,8 @@ def upgrade(bundledir=None):
 
     try:
         upgradebin = nowplaying.upgradeutils.UpgradeBinary()
-        data = upgradebin.get_upgrade_data()
 
-        if data:
+        if data:= upgradebin.get_upgrade_data()
             dialog = UpgradeDialog()
             dialog.fill_it_in(upgradebin.myversion, data['tag_name'])
             if dialog.exec():
