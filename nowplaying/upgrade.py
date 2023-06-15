@@ -310,15 +310,14 @@ def upgrade(bundledir=None):
     try:
         upgradebin = nowplaying.upgradeutils.UpgradeBinary()
         data = upgradebin.get_upgrade_data()
-        if not data:
-            return
 
-        dialog = UpgradeDialog()
-        dialog.fill_it_in(upgradebin.myversion, data['tag_name'])
-        if dialog.exec():
-            webbrowser.open(data['html_url'])
-            logging.info('User wants to upgrade; exiting')
-            sys.exit(0)
+        if data:
+            dialog = UpgradeDialog()
+            dialog.fill_it_in(upgradebin.myversion, data['tag_name'])
+            if dialog.exec():
+                webbrowser.open(data['html_url'])
+                logging.info('User wants to upgrade; exiting')
+                sys.exit(0)
     except Exception as error:  # pylint: disable=broad-except
         logging.error(error)
 
