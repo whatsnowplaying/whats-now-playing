@@ -218,7 +218,8 @@ for execname, execpy in executables.items():
                 'CFBundleVersion': getcfbundleversion(),
                 'LSMinimumSystemVersion': osxminimumversion(),
                 'LSUIElement': True,
-                'NSHumanReadableCopyright': osxcopyright()
+                'NSHumanReadableCopyright': osxcopyright(),
+                'NSAppleMusicUsageDescription': 'This application uses Apple Music data to provide title data.'
             })
 
     elif sys.platform == 'win32':
