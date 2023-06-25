@@ -94,6 +94,8 @@ class Plugin(ArtistExtrasPlugin):
             metadata['artist'] = self.there.sub('', metadata['artist'])
             artistresultlist = self._find_discogs_artist_releaselist(metadata)
 
+        metadata['artist'] = oldartist
+
         if not artistresultlist:
             logging.debug('discogs did not find it')
             return None

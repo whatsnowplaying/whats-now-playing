@@ -163,8 +163,8 @@ class Plugin(ArtistExtrasPlugin):
                 if artistdata := self.artistdatafromname(apikey, metadata['artist']):
                     extradata.extend(artist for artist in artistdata.get('artists')
                                      if self._check_artist(artist))
-                else:
-                    metadata['artist'] = oldartist
+
+                metadata['artist'] = oldartist
 
         if not extradata:
             return None
