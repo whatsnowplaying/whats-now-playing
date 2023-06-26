@@ -3,7 +3,7 @@
 #
 coveralls
 psutil==5.9.5
-pytest==7.3.2
+pytest==7.4.0
 pytest-asyncio==0.21.0
 pytest-cov==4.1.0
 pytest-httpserver==1.0.8
