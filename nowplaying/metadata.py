@@ -4,6 +4,7 @@
 import asyncio
 import concurrent.futures
 import logging
+import re
 import os
 import string
 import sys
@@ -20,6 +21,8 @@ import nowplaying.musicbrainz
 import nowplaying.utils
 import nowplaying.vendor.audio_metadata
 from nowplaying.vendor.audio_metadata.formats.mp4_tags import MP4FreeformDecoders
+
+NOTE_RE = re.compile('N(?i:ote):')
 
 
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
@@ -292,6 +295,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         message = str(message).strip()
         text = textwrap.TextWrapper(width=450).wrap(message)[0]
         tokens = nltk.sent_tokenize(text)
+
+        nonotes = [sent for sent in tokens if not NOTE_RE.match(sent)]
+        tokens = nonotes
 
         if tokens[-1][-1] in string.punctuation and tokens[-1][-1] not in [':', ',', ';', '-']:
             self.metadata['artistshortbio'] = ' '.join(tokens)

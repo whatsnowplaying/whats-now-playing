@@ -6,6 +6,8 @@ import os
 
 import pytest
 
+import nowplaying.metadata  # pylint: disable=import-error
+
 PLUGINS = []
 
 if os.environ.get('DISCOGS_API_KEY'):
@@ -130,6 +132,28 @@ def test_noimagecache(getconfiguredplugin):  # pylint: disable=redefined-outer-n
             assert data['artistlongbio']
         else:
             assert not data
+
+
+def test_discogs_note_stripping(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' noimagecache '''
+
+    config = bootstrap
+    imagecaches, plugins = configureplugins(config)  # pylint: disable=unusued-variable
+    for pluginname in PLUGINS:
+        if 'discogs' not in pluginname:
+            continue
+        logging.debug('Testing %s', pluginname)
+        data = plugins[pluginname].download(
+            {
+                'title': 'Tiny Dancer',
+                'album': 'Diamonds',
+                'artist': 'Elton John'
+            }, imagecache=None)
+        assert data['artistlongbio']
+        mpproc = nowplaying.metadata.MetadataProcessors(config=config)
+        mpproc.metadata = data
+        mpproc._generate_short_bio() # pylint: disable=protected-access
+        assert 'Note:' not in mpproc.metadata['artistshortbio']
 
 
 def test_missingallartistdata(getconfiguredplugin):  # pylint: disable=redefined-outer-name
