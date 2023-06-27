@@ -189,32 +189,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return None
 
         musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
-        metalist = musicbrainz.providerinfo()
-
-        addmeta = {}
-
-        if self.metadata.get('musicbrainzrecordingid'):
-            logging.debug('musicbrainz recordingid detected; attempting shortcuts')
-            if any(meta not in self.metadata for meta in metalist):
-                addmeta = musicbrainz.recordingid(self.metadata['musicbrainzrecordingid'])
-                self.metadata = recognition_replacement(config=self.config,
-                                                        metadata=self.metadata,
-                                                        addmeta=addmeta)
-        elif self.metadata.get('isrc'):
-            logging.debug('Preprocessing with musicbrainz isrc')
-            if any(meta not in self.metadata for meta in metalist):
-                addmeta = musicbrainz.isrc(self.metadata['isrc'])
-                self.metadata = recognition_replacement(config=self.config,
-                                                        metadata=self.metadata,
-                                                        addmeta=addmeta)
-        elif self.metadata.get('musicbrainzartistid'):
-            logging.debug('Preprocessing with musicbrainz artistid')
-            if any(meta not in self.metadata for meta in metalist):
-                addmeta = musicbrainz.artistids(self.metadata['musicbrainzartistid'])
-                self.metadata = recognition_replacement(config=self.config,
-                                                        metadata=self.metadata,
-                                                        addmeta=addmeta)
-
+        addmeta = musicbrainz.recognize(self.metadata)
+        self.metadata = recognition_replacement(config=self.config,
+                                                metadata=self.metadata,
+                                                addmeta=addmeta)
         return addmeta
 
     def _mb_fallback(self):

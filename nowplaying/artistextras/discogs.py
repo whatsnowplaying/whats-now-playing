@@ -49,10 +49,20 @@ class Plugin(ArtistExtrasPlugin):
         if not self.client:
             return None
 
+        artistnum = 0
+        artistname = metadata['artist']
+        # 'https://www.discogs.com/artist/<ARTISTNUM>'
+        discogs_website = [url for url in metadata['artistwebsites'] if 'discogs' in url]
+        if len(discogs_website) == 1:
+            artistnum = discogs_website[0].split('/')[-1]
+            artist = self.client.artist(artistnum)
+            artistname = artist.name
+            logging.debug('Found a singular discogs artist URL using %s instead of %s', artistname,
+                          metadata['artist'])
+
         try:
-            logging.debug('Fetching %s - %s', metadata['artist'], metadata['album'])
-            resultlist = self.client.search(metadata['album'],
-                                            artist=metadata['artist'],
+            logging.debug('Fetching %s - %s', artistname, metadata['album'])
+            resultlist = self.client.search(metadata['album'], artist=artistname,
                                             type='title').page(1)
         except (
                 requests.exceptions.ReadTimeout,  # pragma: no cover

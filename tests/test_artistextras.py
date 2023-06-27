@@ -156,7 +156,7 @@ def test_discogs_note_stripping(bootstrap):  # pylint: disable=redefined-outer-n
         mpproc = nowplaying.metadata.MetadataProcessors(config=config)
         mpproc.metadata = data
         assert 'Note:' in mpproc.metadata['artistlongbio']
-        mpproc._generate_short_bio() # pylint: disable=protected-access
+        mpproc._generate_short_bio()  # pylint: disable=protected-access
         assert 'Note:' not in mpproc.metadata['artistshortbio']
 
 

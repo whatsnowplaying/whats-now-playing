@@ -69,11 +69,11 @@ class Plugin(ArtistExtrasPlugin):
 
             artist = artistrequest.json()
 
-            if artist.get('name') and nowplaying.utils.normalize(artist['name']) in fnstr:
-                logging.debug("fanarttv Trusting : %s", artist['name'])
-            else:
-                logging.debug("fanarttv Not trusting: %s vs %s", artist.get('name'), fnstr)
-                continue
+            # if artist.get('name') and nowplaying.utils.normalize(artist['name']) in fnstr:
+            #     logging.debug("fanarttv Trusting : %s", artist['name'])
+            # else:
+            #     logging.debug("fanarttv Not trusting: %s vs %s", artist.get('name'), fnstr)
+            #     continue
 
             if artist.get('musicbanner') and self.config.cparser.value('fanarttv/banners',
                                                                        type=bool):

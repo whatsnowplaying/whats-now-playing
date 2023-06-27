@@ -53,13 +53,13 @@ class Plugin(ArtistExtrasPlugin):
         ''' is this actually the artist we are looking for? '''
         found = False
         for fieldname in ['strArtist', 'strArtistAlternate']:
-            if artdata.get(fieldname) and nowplaying.utils.normalize(
-                    artdata[fieldname]) in self.fnstr:
-                logging.debug('theaudiodb Trusting %s: %s', fieldname, artdata[fieldname])
-                found = True
-            else:
-                logging.debug('theaudiodb not Trusting %s vs. %s', self.fnstr,
-                              nowplaying.utils.normalize(artdata.get(fieldname)))
+            if artdata.get(fieldname) and self.fnstr:
+                normalized = nowplaying.utils.normalize(artdata[fieldname])
+                if normalized and normalized in self.fnstr:
+                    logging.debug('theaudiodb Trusting %s: %s', fieldname, artdata[fieldname])
+                    return True
+            logging.debug('theaudiodb not Trusting %s vs. %s', self.fnstr,
+                          nowplaying.utils.normalize(artdata.get(fieldname)))
         return found
 
     def _handle_extradata(self, extradata, metadata, imagecache):  # pylint: disable=too-many-branches
@@ -145,13 +145,16 @@ class Plugin(ArtistExtrasPlugin):
         extradata = []
         self.fnstr = nowplaying.utils.normalize(metadata['artist'])
 
+        # if musicbrainz lookup fails, then there likely isn't
+        # data in theaudiodb that matches.
         if metadata.get('musicbrainzartistid'):
             logging.debug('got musicbrainzartistid: %s', metadata['musicbrainzartistid'])
             for mbid in metadata['musicbrainzartistid']:
                 if newdata := self.artistdatafrommbid(apikey, mbid):
                     extradata.extend(artist for artist in newdata['artists']
                                      if self._check_artist(artist))
-        if not extradata and metadata.get('artist'):
+
+        elif metadata.get('artist'):
             logging.debug('got artist')
             if artistdata := self.artistdatafromname(apikey, metadata['artist']):
                 extradata.extend(artist for artist in artistdata.get('artists')
