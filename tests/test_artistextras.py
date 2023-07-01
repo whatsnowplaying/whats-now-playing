@@ -138,7 +138,7 @@ def test_discogs_note_stripping(bootstrap):  # pylint: disable=redefined-outer-n
     ''' noimagecache '''
 
     config = bootstrap
-    imagecaches, plugins = configureplugins(config)  # pylint: disable=unusued-variable
+    imagecaches, plugins = configureplugins(config)  # pylint: disable=unused-variable
     for pluginname in PLUGINS:
         if 'discogs' not in pluginname:
             continue
