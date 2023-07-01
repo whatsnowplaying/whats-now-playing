@@ -138,6 +138,9 @@ def test_discogs_note_stripping(bootstrap):  # pylint: disable=redefined-outer-n
     ''' noimagecache '''
 
     config = bootstrap
+    if 'discogs' in PLUGINS:
+        configuresettings('discogs', config.cparser)
+        config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
     imagecaches, plugins = configureplugins(config)  # pylint: disable=unused-variable
     for pluginname in PLUGINS:
         if 'discogs' not in pluginname:
@@ -152,6 +155,7 @@ def test_discogs_note_stripping(bootstrap):  # pylint: disable=redefined-outer-n
         assert data['artistlongbio']
         mpproc = nowplaying.metadata.MetadataProcessors(config=config)
         mpproc.metadata = data
+        assert 'Note:' in mpproc.metadata['artistlongbio']
         mpproc._generate_short_bio() # pylint: disable=protected-access
         assert 'Note:' not in mpproc.metadata['artistshortbio']
 
