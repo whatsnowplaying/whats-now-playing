@@ -70,6 +70,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 self.metadata['date'] = self.metadata['year']
             del self.metadata['year']
 
+        if 'date' in self.metadata and (not self.metadata['date'] or self.metadata['date'] == '0'):
+            del self.metadata['date']
+
         if self.metadata.get('artistlongbio') and not self.metadata.get('artistshortbio'):
             self._generate_short_bio()
 

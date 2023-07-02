@@ -421,3 +421,25 @@ async def test_str_duration(bootstrap):
                                                                ).getmoremetadata(metadata=metadatain
                                                                                  )
     assert metadataout['duration'] == 1
+
+
+@pytest.mark.asyncio
+async def test_year_zeronum(bootstrap):
+    ''' automated integration test '''
+    config = bootstrap
+    metadatain = {'date': 0}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
+    assert not metadataout.get('date')
+
+
+@pytest.mark.asyncio
+async def test_year_zerostr(bootstrap):
+    ''' automated integration test '''
+    config = bootstrap
+    metadatain = {'date': '0'}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
+    assert not metadataout.get('date')
