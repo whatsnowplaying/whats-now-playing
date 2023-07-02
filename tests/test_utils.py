@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 ''' test utils not covered elsewhere '''
 
-from os import name
 import nowplaying.utils  # pylint: disable=import-error
 
 
