@@ -58,8 +58,8 @@ class Plugin(ArtistExtrasPlugin):
                 artistnum = discogs_website[0].split('/')[-1]
                 artist = self.client.artist(artistnum)
                 artistname = artist.name
-                logging.debug('Found a singular discogs artist URL using %s instead of %s', artistname,
-                              metadata['artist'])
+                logging.debug('Found a singular discogs artist URL using %s instead of %s',
+                              artistname, metadata['artist'])
 
         try:
             logging.debug('Fetching %s - %s', artistname, metadata['album'])

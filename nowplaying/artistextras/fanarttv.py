@@ -10,9 +10,9 @@ import requests
 import requests.exceptions
 import urllib3.exceptions
 
-import nowplaying.config
+#import nowplaying.config
 from nowplaying.artistextras import ArtistExtrasPlugin
-import nowplaying.utils
+#import nowplaying.utils
 
 
 class Plugin(ArtistExtrasPlugin):

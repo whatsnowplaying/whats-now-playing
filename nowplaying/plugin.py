@@ -10,7 +10,9 @@ from PySide6.QtWidgets import QWidget  # pylint: disable=import-error, no-name-i
 class WNPBasePlugin:
     ''' base class of plugins '''
 
-    def __init__(self, config=None, qsettings: t.Optional[QWidget] = None):
+    def __init__(self,
+                 config: t.Optional['nowplaying.config.ConfigFile'] = None,
+                 qsettings: t.Optional[QWidget] = None):
         self.available: bool = True
         self.plugintype: str = ''
         self.config = config
