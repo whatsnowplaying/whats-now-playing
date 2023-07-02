@@ -52,13 +52,14 @@ class Plugin(ArtistExtrasPlugin):
         artistnum = 0
         artistname = metadata['artist']
         # 'https://www.discogs.com/artist/<ARTISTNUM>'
-        discogs_website = [url for url in metadata['artistwebsites'] if 'discogs' in url]
-        if len(discogs_website) == 1:
-            artistnum = discogs_website[0].split('/')[-1]
-            artist = self.client.artist(artistnum)
-            artistname = artist.name
-            logging.debug('Found a singular discogs artist URL using %s instead of %s', artistname,
-                          metadata['artist'])
+        if metadata.get('artistwebsites'):
+            discogs_website = [url for url in metadata['artistwebsites'] if 'discogs' in url]
+            if len(discogs_website) == 1:
+                artistnum = discogs_website[0].split('/')[-1]
+                artist = self.client.artist(artistnum)
+                artistname = artist.name
+                logging.debug('Found a singular discogs artist URL using %s instead of %s', artistname,
+                              metadata['artist'])
 
         try:
             logging.debug('Fetching %s - %s', artistname, metadata['album'])

@@ -60,7 +60,7 @@ class Plugin(ArtistExtrasPlugin):
         if not metadata.get('musicbrainzartistid'):
             return None
 
-        fnstr = nowplaying.utils.normalize(metadata['artist'])
+        #fnstr = nowplaying.utils.normalize(metadata['artist'])
         logging.debug('got musicbrainzartistid: %s', metadata['musicbrainzartistid'])
         for artistid in metadata['musicbrainzartistid']:
             artistrequest = self._fetch(apikey, artistid)
