@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' test utils not covered elsewhere '''
 
+from os import name
 import nowplaying.utils  # pylint: disable=import-error
 
 
@@ -182,3 +183,42 @@ def test_image2avif(getroot):
     avifdata2 = nowplaying.utils.image2avif(avifdata)
     assert avifdata.startswith(b'\x00\x00\x00 ftypavif')
     assert avifdata2 == avifdata
+
+
+def test_artist_variations1():
+    ''' verify artist variation '''
+    namelist = nowplaying.utils.artist_name_variations("The Call")
+    assert namelist[0] == "the call"
+    assert namelist[1] == "call"
+    assert len(namelist) == 2
+
+
+def test_artist_variations2():
+    ''' verify artist variation '''
+    namelist = nowplaying.utils.artist_name_variations("Prince")
+    assert namelist[0] == "prince"
+    assert len(namelist) == 1
+
+
+def test_artist_variations3():
+    ''' verify artist variation '''
+    namelist = nowplaying.utils.artist_name_variations("Presidents of the United States of America")
+    assert namelist[0] == "presidents of the united states of america"
+    assert len(namelist) == 1
+
+
+def test_artist_variations4():
+    ''' verify artist variation '''
+    namelist = nowplaying.utils.artist_name_variations("Grimes feat Janelle Monáe")
+    assert namelist[0] == "grimes feat janelle monáe"
+    assert namelist[1] == "grimes feat janelle monae"
+    assert namelist[2] == "grimes"
+    assert len(namelist) == 3
+
+
+def test_artist_variations5():
+    ''' verify artist variation '''
+    namelist = nowplaying.utils.artist_name_variations("G feat J and featuring U")
+    assert namelist[0] == "g feat j and featuring u"
+    assert namelist[1] == "g"
+    assert len(namelist) == 2

@@ -4,7 +4,6 @@
 import logging
 import logging.config
 import logging.handlers
-import re
 import socket
 
 import requests.exceptions
@@ -13,6 +12,7 @@ import nowplaying.vendor.discogs_client
 from nowplaying.vendor.discogs_client import models
 
 from nowplaying.artistextras import ArtistExtrasPlugin
+import nowplaying.utils
 
 
 class Plugin(ArtistExtrasPlugin):
@@ -23,7 +23,6 @@ class Plugin(ArtistExtrasPlugin):
         self.displayname = "Discogs"
         self.client = None
         self.version = config.version
-        self.there = re.compile('(?i)^the ')
 
     def _get_apikey(self):
         apikey = self.config.cparser.value('discogs/apikey')
@@ -98,12 +97,11 @@ class Plugin(ArtistExtrasPlugin):
             return None
 
         oldartist = metadata['artist']
-        artistresultlist = self._find_discogs_artist_releaselist(metadata)
-
-        if not artistresultlist and self.there.match(metadata['artist']):
-            logging.debug('Trying without a leading \'The\'')
-            metadata['artist'] = self.there.sub('', metadata['artist'])
+        for variation in nowplaying.utils.artist_name_variations(metadata['artist']):
+            metadata['artist'] = variation
             artistresultlist = self._find_discogs_artist_releaselist(metadata)
+            if artistresultlist:
+                break
 
         metadata['artist'] = oldartist
 

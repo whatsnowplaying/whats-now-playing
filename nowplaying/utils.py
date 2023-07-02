@@ -30,6 +30,11 @@ TRANSPARENT_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC'\
 
 TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
 
+ARTIST_VARIATIONS_RE = [
+    re.compile('(?i)^the (.*)'),
+    re.compile(r'(?i)^(.*?)( feat.* .*)$'),
+]
+
 
 class HTMLFilter(HTMLParser):
     ''' simple class to strip HTML '''
@@ -233,3 +238,18 @@ def humanize_time(seconds):
     if seconds > 60:
         return time.strftime('%M:%S', time.gmtime(convseconds))
     return time.strftime('%S', time.gmtime(convseconds))
+
+
+def artist_name_variations(artistname: str) -> list[str]:
+    ''' turn an artistname into various computed variations '''
+    lowername = artistname.lower()
+    names = [lowername]
+    if normalized := normality.normalize(lowername):
+        names.append(normalized)
+    for recheck in ARTIST_VARIATIONS_RE:
+        if matched := recheck.match(lowername):
+            names.append(matched.group(1))
+            if normalized := normality.normalize(matched.group(1)):
+                names.append(normalized)
+    dedupe = list(dict.fromkeys(names))
+    return dedupe

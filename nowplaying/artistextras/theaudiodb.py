@@ -4,7 +4,6 @@
 import logging
 import logging.config
 import logging.handlers
-import re
 import socket
 
 import requests
@@ -24,7 +23,6 @@ class Plugin(ArtistExtrasPlugin):
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.fnstr = None
-        self.there = re.compile('(?i)^the ')
         self.displayname = "TheAudioDB"
 
     @staticmethod
@@ -155,18 +153,11 @@ class Plugin(ArtistExtrasPlugin):
 
         elif metadata.get('artist'):
             logging.debug('got artist')
-            if artistdata := self.artistdatafromname(apikey, metadata['artist']):
-                extradata.extend(artist for artist in artistdata.get('artists')
-                                 if self._check_artist(artist))
-            elif self.there.match(metadata['artist']):
-                logging.debug('Trying without a leading \'The\'')
-                oldartist = metadata['artist']
-                metadata['artist'] = self.there.sub('', metadata['artist'])
-                if artistdata := self.artistdatafromname(apikey, metadata['artist']):
+            for variation in nowplaying.utils.artist_name_variations(metadata['artist']):
+                if artistdata := self.artistdatafromname(apikey, variation):
                     extradata.extend(artist for artist in artistdata.get('artists')
                                      if self._check_artist(artist))
-
-                metadata['artist'] = oldartist
+                    break
 
         if not extradata:
             return None
