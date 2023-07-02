@@ -28,7 +28,7 @@ NOTE_RE = re.compile('N(?i:ote):')
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
     ''' Run through a bunch of different metadata processors '''
 
-    def __init__(self, config=None):
+    def __init__(self, config: 'nowplaying.config.ConfigFile' = None):
         self.metadata = {}
         self.imagecache = None
         if config:
@@ -65,13 +65,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 self.metadata['label'] = self.metadata['publisher']
             del self.metadata['publisher']
 
-        if 'year' in self.metadata:
-            if 'date' not in self.metadata:
-                self.metadata['date'] = self.metadata['year']
-            del self.metadata['year']
-
-        if 'date' in self.metadata and (not self.metadata['date'] or self.metadata['date'] == '0'):
-            del self.metadata['date']
+        self._fix_dates()
 
         if self.metadata.get('artistlongbio') and not self.metadata.get('artistshortbio'):
             self._generate_short_bio()
@@ -81,6 +75,19 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self._strip_identifiers()
         self._fix_duration()
         return self.metadata
+
+    def _fix_dates(self):
+        ''' take care of year / date cleanup '''
+        if not self.metadata:
+            return
+
+        if 'year' in self.metadata:
+            if 'date' not in self.metadata:
+                self.metadata['date'] = self.metadata['year']
+            del self.metadata['year']
+
+        if 'date' in self.metadata and (not self.metadata['date'] or self.metadata['date'] == '0'):
+            del self.metadata['date']
 
     def _fix_duration(self):
         if not self.metadata or not self.metadata.get('duration'):
@@ -289,7 +296,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
     ''' run through audio_metadata '''
 
-    def __init__(self, config=None):
+    def __init__(self, config: 'nowplaying.config.ConfigFile' = None):
         self.metadata = {}
         self.config = config
 
@@ -482,7 +489,9 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
             self.metadata['coverimageraw'] = base.pictures[0].data
 
 
-def recognition_replacement(config=None, metadata=None, addmeta=None):
+def recognition_replacement(config: 'nowplaying.config.ConfigFile' = None,
+                            metadata=None,
+                            addmeta=None):
     ''' handle any replacements '''
     # if there is nothing in addmeta, then just bail early
     if not addmeta:
@@ -512,13 +521,13 @@ def main():
     logging.captureWarnings(True)
     bundledir = os.path.abspath(os.path.dirname(__file__))
     config = nowplaying.config.ConfigFile(bundledir=bundledir)
-    metadata = {'filename': sys.argv[1]}
+    testmeta = {'filename': sys.argv[1]}
     myclass = MetadataProcessors(config=config)
-    metadata = asyncio.run(myclass.getmoremetadata(metadata=metadata))
-    if 'coverimageraw' in metadata:
+    testdata = asyncio.run(myclass.getmoremetadata(metadata=testmeta))
+    if 'coverimageraw' in testdata:
         print('got an image')
-        del metadata['coverimageraw']
-    print(metadata)
+        del testdata['coverimageraw']
+    print(testdata)
 
 
 if __name__ == "__main__":
