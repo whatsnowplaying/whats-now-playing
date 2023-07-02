@@ -51,7 +51,6 @@ class Plugin(ArtistExtrasPlugin):
 
     def _check_artist(self, artdata):
         ''' is this actually the artist we are looking for? '''
-        found = False
         for fieldname in ['strArtist', 'strArtistAlternate']:
             if artdata.get(fieldname) and self.fnstr:
                 normalized = nowplaying.utils.normalize(artdata[fieldname])
@@ -60,7 +59,7 @@ class Plugin(ArtistExtrasPlugin):
                     return True
             logging.debug('theaudiodb not Trusting %s vs. %s', self.fnstr,
                           nowplaying.utils.normalize(artdata.get(fieldname)))
-        return found
+        return False
 
     def _handle_extradata(self, extradata, metadata, imagecache):  # pylint: disable=too-many-branches
         ''' deal with the various bits of data '''
