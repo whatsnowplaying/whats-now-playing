@@ -249,8 +249,7 @@ def humanize_time(seconds):
 def artist_name_variations(artistname: str) -> list[str]:
     ''' turn an artistname into various computed variations '''
     lowername = artistname.lower()
-    names = [lowername]
-    names.append(lowername.translate(CUSTOM_TRANSLATE))
+    names = [lowername, lowername.translate(CUSTOM_TRANSLATE)]
     if normalized := normality.normalize(lowername):
         names.append(normalized)
         names.append(normalized.translate(CUSTOM_TRANSLATE))
