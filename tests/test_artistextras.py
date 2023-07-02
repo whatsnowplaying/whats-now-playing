@@ -203,16 +203,8 @@ def test_badmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
                 'musicbrainzartistid': ['xyz']
             },
             imagecache=imagecaches[pluginname])
-        if pluginname == 'theaudiodb':
-            assert data['artistfanarturls']
-            assert data['artistlongbio']
-            assert data['artistwebsites']
-            assert imagecaches[pluginname].urls['Nine Inch Nails']['artistbanner']
-            assert imagecaches[pluginname].urls['Nine Inch Nails']['artistlogo']
-            assert imagecaches[pluginname].urls['Nine Inch Nails']['artistthumb']
-        else:
-            assert not data
-            assert not imagecaches[pluginname].urls
+        assert not data
+        assert not imagecaches[pluginname].urls
 
 
 def test_onlymbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
