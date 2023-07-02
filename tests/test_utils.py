@@ -222,3 +222,33 @@ def test_artist_variations5():
     assert namelist[0] == "g feat j and featuring u"
     assert namelist[1] == "g"
     assert len(namelist) == 2
+
+
+def test_artist_variations6():
+    ''' verify artist variation '''
+    namelist = nowplaying.utils.artist_name_variations("MӨЯIS BLΛK feat. grabyourface")
+    assert namelist[0] == "mөяis blλk feat. grabyourface"
+    assert namelist[1] == "moris blak feat. grabyourface"
+    assert namelist[2] == "mөяis blλk feat grabyourface"
+    assert namelist[3] == "moris blak feat grabyourface"
+    assert namelist[4] == "mөяis blλk"
+    assert namelist[5] == "moris blak"
+    assert len(namelist) == 6
+
+
+def test_artist_variations7():
+    ''' verify artist variation '''
+    namelist = nowplaying.utils.artist_name_variations("†HR33ΔM")
+    assert namelist[0] == "†hr33δm"
+    assert namelist[1] == "thr33am"
+    assert namelist[2] == "hr33δm"
+    assert namelist[3] == "hr33am"
+    assert len(namelist) == 4
+
+
+def test_artist_variations8():
+    ''' verify artist variation '''
+    namelist = nowplaying.utils.artist_name_variations("Ultra Naté")
+    assert namelist[0] == "ultra naté"
+    assert namelist[1] == "ultra nate"
+    assert len(namelist) == 2
