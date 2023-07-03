@@ -13,6 +13,9 @@ def getmusicbrainz(bootstrap):
     config = bootstrap
     config.cparser.setValue('acoustidmb/enabled', False)
     config.cparser.setValue('musicbrainz/enabled', True)
+    config.cparser.setValue('acoustidmb/websites', True)
+    for site in ['bandcamp', 'homepage', 'lastfm', 'discogs']:
+        config.cparser.setValue(f'acoustidmb/{site}', True)
     config.cparser.setValue('acoustidmb/emailaddress', 'aw+wnptest@effectivemachines.com')
     return nowplaying.musicbrainz.MusicBrainzHelper(config=config)
 

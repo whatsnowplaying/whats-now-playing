@@ -322,8 +322,12 @@ class MusicBrainzHelper():
             for urlrel in webdata['artist']['url-relation-list']:
                 logging.debug('checking %s', urlrel['type'])
                 for src, dest in convdict.items():
-                    if urlrel['type'] == src and self.config.cparser.value(f'acoustidmb/{dest}',
-                                                                           type=bool):
+                    if self.config.cparser.value('discogs/enabled',
+                                                 type=bool) and urlrel['type'] == 'discogs':
+                        sitelist.append(urlrel['target'])
+                        logging.debug('placed %s', dest)
+                    elif urlrel['type'] == src and self.config.cparser.value(f'acoustidmb/{dest}',
+                                                                             type=bool):
                         sitelist.append(urlrel['target'])
                         logging.debug('placed %s', dest)
 
