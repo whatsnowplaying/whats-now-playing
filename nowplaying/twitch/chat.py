@@ -365,8 +365,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 logging.error('Twitch chat is not connected. Cannot announce.')
                 return
 
-            anntemplstr = self.config.cparser.value('twitchbot/announce')
-            if anntemplstr:
+            if anntemplstr := self.config.cparser.value('twitchbot/announce'):
                 anntemplpath = pathlib.Path(anntemplstr)
             else:
                 logging.debug('No user template to announce is set. Trying track.')
