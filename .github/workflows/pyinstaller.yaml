@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: icu
         run: |
-          brew update --preinstall
+          brew update --preinstall || true
           brew install pkg-config icu4c
       - name: checkout
         uses: actions/checkout@v3

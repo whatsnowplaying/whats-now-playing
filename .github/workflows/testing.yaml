@@ -24,7 +24,7 @@ jobs:
           python-version: '3.10'
       - name: install homebrew dependencies
         run: |
-          brew update #--preinstall
+          brew update --preinstall || true
           brew install pkg-config icu4c
       - name: install python dependencies
         run: |
