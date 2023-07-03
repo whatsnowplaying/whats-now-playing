@@ -458,11 +458,14 @@ async def test_discogs_from_mb(bootstrap):  # pylint: disable=redefined-outer-na
     config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
     config.cparser.setValue('musicbrainz/enabled', True)
     config.cparser.setValue('discogs/enabled', True)
+    config.cparser.setValue('discogs/bio', True)
     config.cparser.setValue('musicbrainz/fallback', True)
     metadatain = {'artist': 'TR/ST', 'title': 'Iris'}
     logging.debug(config.cparser.value('acoustidmb/homepage', type=bool))
     mdp = nowplaying.metadata.MetadataProcessors(config=config)
     metadataout = await mdp.getmoremetadata(metadata=metadatain)
+    del metadataout['coverimageraw']
+    logging.debug(metadataout)
     assert metadataout['album'] == 'Iris'
     assert metadataout['artistwebsites'] == ['https://www.discogs.com/artist/2028711']
     assert metadataout['artist'] == 'TR/ST'
