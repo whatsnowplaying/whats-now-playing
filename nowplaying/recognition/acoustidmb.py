@@ -429,15 +429,10 @@ class Plugin(RecognitionPlugin):
         qsettings.setValue('acoustidmb/websites', False)
         qsettings.setValue('musicbrainz/fallback', False)
 
-        for website in [
-                'bandcamp',
-                'homepage',
-                'lastfm',
-                'musicbrainz',
-                'discogs',
-        ]:
+        for website in ['bandcamp', 'homepage', 'lastfm', 'musicbrainz']:
             qsettings.setValue(f'acoustidmb/{website}', False)
-        qsettings.setValue('acoustidmb/homepage', True)
+
+        qsettings.setValue('acoustidmb/discogs', True)
 
 
 def main():

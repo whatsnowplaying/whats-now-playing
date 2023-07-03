@@ -296,7 +296,8 @@ class MusicBrainzHelper():
         return {'artistwebsites': self._websites(idlist)}
 
     def _websites(self, idlist):
-        if not self.config.cparser.value('acoustidmb/websites', type=bool) or not idlist:
+
+        if not idlist:
             return None
 
         sitelist = []
