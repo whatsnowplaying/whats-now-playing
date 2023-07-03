@@ -76,7 +76,6 @@ class MusicBrainzHelper():
                             continue
                 logging.debug('checking %s', recording['id'])
                 if riddata := self.recordingid(recording['id']):
-                    logging.debug('selected %s', recording['id'])
                     return riddata
 
         return riddata
@@ -114,6 +113,8 @@ class MusicBrainzHelper():
             riddata = self._pickarecording(addmeta, mydict)
         if not riddata:
             riddata = self._pickarecording(addmeta, mydict, allowothers=True)
+        logging.debug('metadata added artistid = %s / recordingid = %s',
+                      riddata.get('musicbrainzartistid'), riddata.get('musicbrainzrecordingid'))
         return riddata
 
     def recognize(self, metadata):

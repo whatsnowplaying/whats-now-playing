@@ -159,3 +159,16 @@ def test_fallback7(getmusicbrainz):  # pylint: disable=redefined-outer-name
     #
     assert newdata['musicbrainzartistid'] == ['09095919-c549-4f33-9555-70df9dd941e1']
     assert newdata['album'] == 'The Perfect Girl'
+
+
+def test_fallback8(getmusicbrainz):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    mbhelper = getmusicbrainz
+    metadata = {'artist': 'TR/ST', 'title': 'Iris'}
+    newdata = mbhelper.lastditcheffort(metadata)
+    #
+    # Not the best choice, but passable
+    #
+    assert newdata['musicbrainzartistid'] == ['b8e3d1ae-5983-4af1-b226-aa009b294111']
+    assert newdata['musicbrainzrecordingid'] == '9ecf96f5-dbba-4fda-a5cf-7728837fb1b6'
+    assert newdata['album'] == 'Iris'
