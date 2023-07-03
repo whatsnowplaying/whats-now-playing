@@ -365,8 +365,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 logging.error('Twitch chat is not connected. Cannot announce.')
                 return
 
-            anntemplstr = self.config.cparser.value('twitchbot/announce')
-            if anntemplstr:
+            if anntemplstr := self.config.cparser.value('twitchbot/announce'):
                 anntemplpath = pathlib.Path(anntemplstr)
             else:
                 logging.debug('No user template to announce is set. Trying track.')
@@ -388,7 +387,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 return
 
             if metadata['artist'] == LASTANNOUNCED['artist'] and \
-               metadata['title'] == LASTANNOUNCED['title']:
+                   metadata['title'] == LASTANNOUNCED['title']:
                 logging.warning(
                     'Same artist and title or doubled event notification; skipping announcement.')
                 return
