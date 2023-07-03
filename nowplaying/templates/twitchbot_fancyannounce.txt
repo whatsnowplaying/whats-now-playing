@@ -1,0 +1,14 @@
+{% if requester %}  This {{requestdisplayname}} track was requested by @{{ requester }}.  {% endif %}
+{% if artist %}{{ artist }} - {% endif %}"{{ title }}"
+{% if artistwebsites %}
+{% for website in artistwebsites %}
+{% if 'bandcamp' in website %} | Bandcamp: {{ website }}
+{% elif 'discogs' in website %} | Discogs: {{ website }}
+{% elif 'musicbrainz' in website %} | MusicBrainz: {{ website }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if artistshortbio %}
+{{ startnewmessage }}
+{{ artistshortbio }}
+{% endif %}

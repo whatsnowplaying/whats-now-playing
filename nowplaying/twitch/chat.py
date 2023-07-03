@@ -44,7 +44,9 @@ TWITCHBOT_CHECKBOXES = [
 class TwitchChat:  #pylint: disable=too-many-instance-attributes
     ''' handle twitch chat '''
 
-    def __init__(self, config=None, stopevent=None):
+    def __init__(self,
+                 config: 'nowplaying.config.ConfigFile' = None,
+                 stopevent: asyncio.Event = None):
         self.config = config
         self.stopevent = stopevent
         self.watcher = None
@@ -363,13 +365,15 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 logging.error('Twitch chat is not connected. Cannot announce.')
                 return
 
-            anntemplate = self.config.cparser.value('twitchbot/announce')
-            if not anntemplate:
-                logging.debug('No template to announce')
-                return
+            anntemplstr = self.config.cparser.value('twitchbot/announce')
+            if anntemplstr:
+                anntemplpath = pathlib.Path(anntemplstr)
+            else:
+                logging.debug('No user template to announce is set. Trying track.')
+                anntemplpath = self.config.templatedir.joinpath('twitchbot_track.txt')
 
-            if not pathlib.Path(anntemplate).exists():
-                logging.error('Annoucement template %s does not exist.', anntemplate)
+            if not anntemplpath.exists():
+                logging.error('Annoucement template %s does not exist.', anntemplpath)
                 return
 
             metadata = await self.metadb.read_last_meta_async()
@@ -394,10 +398,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
             await self._delay_write()
 
-            logging.info('Announcing %s', self.config.cparser.value('twitchbot/announce'))
+            logging.info('Announcing %s', anntemplpath)
 
-            await self._post_template(
-                template=pathlib.Path(self.config.cparser.value('twitchbot/announce')).name)
+            await self._post_template(template=anntemplpath.name)
         except:  #pylint: disable=bare-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
