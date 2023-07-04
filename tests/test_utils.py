@@ -251,3 +251,11 @@ def test_artist_variations8():
     assert namelist[0] == "ultra naté"
     assert namelist[1] == "ultra nate"
     assert len(namelist) == 2
+
+
+def test_artist_variations9():
+    ''' verify artist variation '''
+    namelist = nowplaying.utils.artist_name_variations("A★Teens")
+    assert namelist[0] == "a★teens"
+    assert namelist[1] == "a teens"  # less than ideal
+    assert len(namelist) == 2

@@ -2,8 +2,6 @@
 ''' start of support of discogs '''
 
 import logging
-import logging.config
-import logging.handlers
 import socket
 
 import requests.exceptions
@@ -22,7 +20,6 @@ class Plugin(ArtistExtrasPlugin):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Discogs"
         self.client = None
-        self.version = config.version
 
     def _get_apikey(self):
         apikey = self.config.cparser.value('discogs/apikey')
@@ -56,9 +53,20 @@ class Plugin(ArtistExtrasPlugin):
             if len(discogs_website) == 1:
                 artistnum = discogs_website[0].split('/')[-1]
                 artist = self.client.artist(artistnum)
-                artistname = artist.name
+                artistname = str(artist.name)
                 logging.debug('Found a singular discogs artist URL using %s instead of %s',
                               artistname, metadata['artist'])
+            elif len(discogs_website) > 1:
+                for website in discogs_website:
+                    artistnum = website.split('/')[-1]
+                    artist = self.client.artist(artistnum)
+                    webartistname = str(artist.name)
+                    if nowplaying.utils.normalize(webartistname) == nowplaying.utils.normalize(
+                            metadata['artist']):
+                        logging.debug(
+                            'Found near exact match discogs artist URL %s using %s instead of %s',
+                            website, webartistname, metadata['artist'])
+                        artistname = webartistname
 
         try:
             logging.debug('Fetching %s - %s', artistname, metadata['album'])

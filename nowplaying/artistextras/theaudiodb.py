@@ -51,12 +51,15 @@ class Plugin(ArtistExtrasPlugin):
         ''' is this actually the artist we are looking for? '''
         for fieldname in ['strArtist', 'strArtistAlternate']:
             if artdata.get(fieldname) and self.fnstr:
-                normalized = nowplaying.utils.normalize(artdata[fieldname])
+                normalized = nowplaying.utils.normalize(artdata[fieldname],
+                                                        sizecheck=4,
+                                                        nospaces=True)
                 if normalized and normalized in self.fnstr:
                     logging.debug('theaudiodb Trusting %s: %s', fieldname, artdata[fieldname])
                     return True
-            logging.debug('theaudiodb not Trusting %s vs. %s', self.fnstr,
-                          nowplaying.utils.normalize(artdata.get(fieldname)))
+            logging.debug(
+                'theaudiodb not Trusting %s vs. %s', self.fnstr,
+                nowplaying.utils.normalize(artdata.get(fieldname), sizecheck=4, nospaces=True))
         return False
 
     def _handle_extradata(self, extradata, metadata, imagecache):  # pylint: disable=too-many-branches
@@ -140,7 +143,7 @@ class Plugin(ArtistExtrasPlugin):
             return None
 
         extradata = []
-        self.fnstr = nowplaying.utils.normalize(metadata['artist'])
+        self.fnstr = nowplaying.utils.normalize(metadata['artist'], sizecheck=4, nospaces=True)
 
         # if musicbrainz lookup fails, then there likely isn't
         # data in theaudiodb that matches.

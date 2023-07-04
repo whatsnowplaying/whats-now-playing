@@ -18,7 +18,6 @@ import logging.handlers
 
 import aiosqlite
 import diskcache
-import normality
 import requests_cache
 
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
@@ -67,10 +66,6 @@ class ImageCache:
         self.logpath = None
         self.stopevent = stopevent
 
-    @staticmethod
-    def _normalize_artist(artist):
-        return normality.normalize(artist).replace(' ', '')
-
     def setup_sql(self, initialize=False):
         ''' create the database '''
 
@@ -99,7 +94,7 @@ class ImageCache:
 
     def random_fetch(self, artist, imagetype):
         ''' fetch a random row from a cache for the artist '''
-        normalartist = self._normalize_artist(artist)
+        normalartist = nowplaying.utils.normalize(artist, sizecheck=0, nospaces=True)
         data = None
         if not self.databasefile.exists():
             self.setup_sql()
@@ -225,7 +220,7 @@ class ImageCache:
 
         logging.debug('Putting %s unfiltered for %s/%s', min(len(urllist), maxart), imagetype,
                       artist)
-        normalartist = self._normalize_artist(artist)
+        normalartist = nowplaying.utils.normalize(artist, sizecheck=0, nospaces=True)
         for url in random.sample(urllist, min(len(urllist), maxart)):
             self.put_db_url(artist=normalartist, imagetype=imagetype, url=url)
 
@@ -281,7 +276,7 @@ ORDER BY TIMESTAMP DESC''')
             logging.error('imagecache does not exist yet?')
             return
 
-        normalartist = self._normalize_artist(artist)
+        normalartist = nowplaying.utils.normalize(artist, sizecheck=0, nospaces=True)
         with sqlite3.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = connection.cursor()

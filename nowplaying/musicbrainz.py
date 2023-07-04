@@ -318,6 +318,7 @@ class MusicBrainzHelper():
                 'official homepage': 'homepage',
                 'last.fm': 'lastfm',
                 'discogs': 'discogs',
+                'wikidata': 'wikidata'
             }
 
             for urlrel in webdata['artist']['url-relation-list']:
@@ -327,11 +328,13 @@ class MusicBrainzHelper():
                                                  type=bool) and urlrel['type'] == 'discogs':
                         sitelist.append(urlrel['target'])
                         logging.debug('placed %s', dest)
+                    elif urlrel['type'] == 'wikidata':
+                        sitelist.append(urlrel['target'])
                     elif urlrel['type'] == src and self.config.cparser.value(f'acoustidmb/{dest}',
                                                                              type=bool):
                         sitelist.append(urlrel['target'])
                         logging.debug('placed %s', dest)
-
+        logging.debug(sitelist)
         return sitelist
 
     def providerinfo(self):  # pylint: disable=no-self-use

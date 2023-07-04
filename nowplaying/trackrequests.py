@@ -7,10 +7,10 @@ import pathlib
 import re
 import sqlite3
 import traceback
+import typing as t
 
 import aiohttp
 import aiosqlite  #pylint: disable=import-error
-import normality  #pylint: disable=import-error
 
 from PySide6.QtCore import Slot, QFile, QFileSystemWatcher, QStandardPaths  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtWidgets import QComboBox, QHeaderView, QTableWidgetItem  # pylint: disable=import-error, no-name-in-module
@@ -19,7 +19,7 @@ from PySide6.QtUiTools import QUiLoader  # pylint: disable=import-error, no-name
 import nowplaying.db
 import nowplaying.metadata
 from nowplaying.exceptions import PluginVerifyError
-from nowplaying.utils import TRANSPARENT_PNG_BIN
+import nowplaying.utils
 
 USERREQUEST_TEXT = [
     'artist', 'title', 'displayname', 'type', 'playlist', 'username', 'filename', 'user_input',
@@ -185,12 +185,10 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         return dataset
 
     @staticmethod
-    def normalize(crazystring):
-        ''' user input needs to be normalized for best case matches '''
-        if not crazystring:
-            return ''
-        if text := normality.normalize(crazystring):
-            return text.replace(' ', '')
+    def _normalize(text: t.Optional[str]) -> str:
+        ''' db normalize '''
+        if text := nowplaying.utils.normalize(text, sizecheck=0, nospaces=True):
+            return text
         return ''
 
     async def add_to_db(self, data):
@@ -199,8 +197,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             logging.error('%s does not exist, refusing to add.', self.databasefile)
             return
 
-        data['normalizedartist'] = self.normalize(data.get('artist', ''))
-        data['normalizedtitle'] = self.normalize(data.get('title', ''))
+        data['normalizedartist'] = self._normalize(data.get('artist', ''))
+        data['normalizedtitle'] = self._normalize(data.get('title', ''))
 
         if data.get('reqid'):
             reqid = data['reqid']
@@ -392,8 +390,8 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         newdata = await self._get_and_del_request_lookup(sql, datatuple)
 
         if not newdata:
-            artist = self.normalize(artist)
-            title = self.normalize(title)
+            artist = self._normalize(artist)
+            title = self._normalize(title)
             logging.debug('trying normalized artist >%s< / title >%s<', artist, title)
             sql = 'SELECT * FROM userrequest WHERE normalizedartist=? AND normalizedtitle=?'
             datatuple = artist, title
@@ -428,7 +426,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             return None
 
         if not newdata.get('requesterimageraw'):
-            newdata['requesterimageraw'] = TRANSPARENT_PNG_BIN
+            newdata['requesterimageraw'] = nowplaying.utils.TRANSPARENT_PNG_BIN
 
         return newdata
 
@@ -557,7 +555,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
 
         content = {
             'imageurl': None,
-            'image': TRANSPARENT_PNG_BIN,
+            'image': nowplaying.utils.TRANSPARENT_PNG_BIN,
             'keywords': search_terms,
         }
 

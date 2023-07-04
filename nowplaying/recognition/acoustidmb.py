@@ -109,18 +109,19 @@ class Plugin(RecognitionPlugin):
         return results['results']
 
     def _read_acoustid_tuples(self, metadata, results):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
+        fnstr = ''
         if metadata.get('filename'):
-            fnstr = nowplaying.utils.normalize(metadata['filename'])
-        else:
-            fnstr = ''
+            fnstr = nowplaying.utils.normalize(metadata['filename'], sizecheck=4, nospaces=True)
+            if not fnstr:
+                fnstr = ''
 
         artist = metadata.get('artist')
         title = metadata.get('title')
         if artist and title and artist in title and len(artist) > 3:
             title = title.replace(artist, '')
         title = nowplaying.utils.titlestripper_basic(title=title)
-        artistnstr = nowplaying.utils.normalize(artist)
-        titlenstr = nowplaying.utils.normalize(title)
+        artistnstr = nowplaying.utils.normalize(artist, sizecheck=4, nospaces=True)
+        titlenstr = nowplaying.utils.normalize(title, sizecheck=4, nospaces=True)
 
         if not artistnstr:
             artistnstr = ''
@@ -160,10 +161,12 @@ class Plugin(RecognitionPlugin):
                                 albumartist = artist['name']
                             elif isinstance(artist, str):
                                 albumartist = artist
+                            else:
+                                albumartist = ''
                             if albumartist == 'Various Artists':
                                 score = score - .10
                             elif albumartist and nowplaying.utils.normalize(
-                                    albumartist) in completenstr:
+                                    albumartist, sizecheck=4, nospaces=True) in completenstr:
                                 score = score + .20
 
                     title = release['mediums'][0]['tracks'][0]['title']
@@ -171,7 +174,8 @@ class Plugin(RecognitionPlugin):
                         album = release['title']
                     else:
                         album = None
-                    if title and nowplaying.utils.normalize(title) in completenstr:
+                    if title and nowplaying.utils.normalize(title, sizecheck=4,
+                                                            nospaces=True) in completenstr:
                         score = score + .10
                     artistlist = []
                     artistidlist = []
@@ -182,11 +186,13 @@ class Plugin(RecognitionPlugin):
                         elif isinstance(trackartist, str):
                             artistlist.append(trackartist)
                         if trackartist and artistnstr:
-                            if nowplaying.utils.normalize(trackartist) == artistnstr:
+                            if nowplaying.utils.normalize(trackartist, sizecheck=4,
+                                                          nospaces=True) == artistnstr:
                                 score = score + .30
                             else:
                                 score = score - .50
-                        if trackartist and nowplaying.utils.normalize(trackartist) in completenstr:
+                        if trackartist and nowplaying.utils.normalize(
+                                trackartist, sizecheck=4, nospaces=True) in completenstr:
                             score = score + .10
 
                     artist = ' & '.join(artistlist)
@@ -223,10 +229,14 @@ class Plugin(RecognitionPlugin):
         if fpcalcexe and not os.environ.get("FPCALC"):
             os.environ.setdefault("FPCALC", fpcalcexe)
             os.environ["FPCALC"] = fpcalcexe
+        elif sys.platform == 'linux':
+            if pathlib.Path('/usr/bin/fpcalc').exists():
+                os.environ.setdefault("FPCALC", '/usr/bin/fpcalc')
+                os.environ["FPCALC"] = '/usr/bin/fpcalc'
 
         try:
             fpcalcexe = os.environ["FPCALC"]
-        except NameError:
+        except (NameError, KeyError):
             logging.error('fpcalc is not configured')
             return False
 

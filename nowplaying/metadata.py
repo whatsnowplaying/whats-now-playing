@@ -128,6 +128,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if self.metadata.get('artistwebsites'):
             newlist = []
             for url in self.metadata['artistwebsites']:
+                if 'wikidata' in url:
+                    continue
                 if 'http:' not in url:
                     newlist.append(url)
                     continue

@@ -160,6 +160,36 @@ def test_discogs_note_stripping(bootstrap):  # pylint: disable=redefined-outer-n
         assert 'Note:' not in mpproc.metadata['artistshortbio']
 
 
+def test_discogs_weblocation1(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' noimagecache '''
+
+    config = bootstrap
+    if 'discogs' in PLUGINS:
+        configuresettings('discogs', config.cparser)
+        config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    imagecaches, plugins = configureplugins(config)  # pylint: disable=unused-variable
+    for pluginname in PLUGINS:
+        if 'discogs' not in pluginname:
+            continue
+        logging.debug('Testing %s', pluginname)
+        data = plugins[pluginname].download(
+            {
+                'title':
+                'Computer Blue',
+                'album':
+                'Purple Rain',
+                'artist':
+                'Prince and The Revolution',
+                'artistwebsites': [
+                    'https://www.discogs.com/artist/271351', 'https://www.discogs.com/artist/28795',
+                    'https://www.discogs.com/artist/293637',
+                    'https://www.discogs.com/artist/342899', 'https://www.discogs.com/artist/79903',
+                    'https://www.discogs.com/artist/571633', 'https://www.discogs.com/artist/96774'
+                ]
+            },
+            imagecache=None)
+        assert 'NOTE: If The Revolution are credited without Prince' in data['artistlongbio']
+
 def test_missingallartistdata(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' missing all artist data '''
     imagecaches, plugins = getconfiguredplugin
