@@ -334,7 +334,6 @@ class MusicBrainzHelper():
                                                                              type=bool):
                         sitelist.append(urlrel['target'])
                         logging.debug('placed %s', dest)
-        logging.debug(sitelist)
         return sitelist
 
     def providerinfo(self):  # pylint: disable=no-self-use
