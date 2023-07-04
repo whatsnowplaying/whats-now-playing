@@ -109,7 +109,7 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
                 rendertext = self.template.render(**metadatadict)
             else:
                 rendertext = self.template.render()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
         return rendertext
