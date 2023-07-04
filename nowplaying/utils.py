@@ -216,8 +216,8 @@ def normalize(text: t.Optional[str], sizecheck: int = 0, nospaces: bool = False)
         return None
     if len(text) < sizecheck:
         return 'TEXT IS TOO SMALL IGNORE'
-    if normaltext := normalize_text(text):
-        if nospaces:
+    if nospaces:
+        if normaltext := normalize_text(text):
             return normaltext.replace(' ', '')
     return normaltext
 
