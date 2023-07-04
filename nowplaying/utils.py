@@ -109,7 +109,7 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
                 rendertext = self.template.render(**metadatadict)
             else:
                 rendertext = self.template.render()
-        except:  #pylint: disable=bare-except
+        except Exception:
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
         return rendertext
@@ -185,9 +185,7 @@ def songpathsubst(config, filename):
         newname = filename
 
     if songin := config.cparser.value('quirks/filesubstin'):
-        songout = config.cparser.value('quirks/filesubstout')
-        if not songout:
-            songout = ''
+        songout = config.cparser.value('quirks/filesubstout') or ''
 
         try:
             newname = filename.replace(songin, songout)
@@ -216,9 +214,9 @@ def normalize(text: t.Optional[str], sizecheck: int = 0, nospaces: bool = False)
         return None
     if len(text) < sizecheck:
         return 'TEXT IS TOO SMALL IGNORE'
-    if normaltext := normalize_text(text):
-        if nospaces:
-            return normaltext.replace(' ', '')
+    normaltext = normalize_text(text) or text
+    if nospaces:
+        return normaltext.replace(' ', '')
     return normaltext
 
 
