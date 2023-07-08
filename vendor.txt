@@ -1,3 +1,4 @@
 git+https://github.com/whatsnowplaying/audio-metadata.git@nowplaying
 git+https://github.com/whatsnowplaying/discogs_client@nowplaying
 git+https://github.com/whatsnowplaying/pid@main
+git+https://github.com/whatsnowplaying/wptools@nowplaying

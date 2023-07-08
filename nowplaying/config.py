@@ -243,15 +243,17 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         for plugintype, plugtypelist in self.plugins.items():
             for key in plugtypelist:
                 widgetkey = key.split('.')[-1]
-                self.pluginobjs[plugintype][key].load_settingsui(
-                    qtwidgets[f'{plugintype}_{widgetkey}'])
+                if qtwidgets[f'{plugintype}_{widgetkey}']:
+                    self.pluginobjs[plugintype][key].load_settingsui(
+                        qtwidgets[f'{plugintype}_{widgetkey}'])
 
     def plugins_verify_settingsui(self, inputname, qtwidgets):
         ''' configure the defaults for plugins '''
         for plugintype, plugtypelist in self.plugins.items():
             for key in plugtypelist:
                 widgetkey = key.split('.')[-1]
-                if (widgetkey == inputname and plugintype == 'inputs') or (plugintype != 'inputs'):
+                if (widgetkey == inputname and plugintype == 'inputs'
+                    ) or (plugintype != 'inputs') and qtwidgets[f'{plugintype}_{widgetkey}']:
                     self.pluginobjs[plugintype][key].verify_settingsui(
                         qtwidgets[f'{plugintype}_{widgetkey}'])
 
@@ -260,12 +262,15 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         for plugintype, plugtypelist in self.plugins.items():
             for key in plugtypelist:
                 widgetkey = key.split('.')[-1]
-                self.pluginobjs[plugintype][key].save_settingsui(
-                    qtwidgets[f'{plugintype}_{widgetkey}'])
+                if qtwidgets[f'{plugintype}_{widgetkey}']:
+                    self.pluginobjs[plugintype][key].save_settingsui(
+                        qtwidgets[f'{plugintype}_{widgetkey}'])
 
     def plugins_description(self, plugintype, plugin, qtwidget):
         ''' configure the defaults for input plugins '''
-        self.pluginobjs[plugintype][f'nowplaying.{plugintype}.{plugin}'].desc_settingsui(qtwidget)
+        if qtwidget:
+            self.pluginobjs[plugintype][f'nowplaying.{plugintype}.{plugin}'].desc_settingsui(
+                qtwidget)
 
     # pylint: disable=too-many-arguments
     def put(self, initialized, notif, loglevel):

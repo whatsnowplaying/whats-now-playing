@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>wikimedia_ui</class>
+ <widget class="QWidget" name="wikimedia_ui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Wikimedia</string>
+  </property>
+  <widget class="QCheckBox" name="wikimedia_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>40</y>
+     <width>361</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enable Metadata by Wikimedia</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="wikimedia_desclabel">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>240</y>
+     <width>591</width>
+     <height>101</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Wikidata is a free, collaborative, multilingual, secondary database, collecting structured data to provide support for Wikipedia, Wikimedia Commons, the other wikis of the Wikimedia movement, and to anyone in the world. </string>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QWidget" name="horizontalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>120</y>
+     <width>541</width>
+     <height>80</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="checkbox_layout">
+    <item>
+     <widget class="QCheckBox" name="fanart_checkbox">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Fanart</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="thumbnails_checkbox">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Thumbnails</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="websites_checkbox">
+      <property name="text">
+       <string>Websites</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QCheckBox" name="bio_checkbox">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>80</y>
+     <width>88</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Biography</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>wikimedia_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>fanart_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>190</x>
+     <y>51</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>72</x>
+     <y>231</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>wikimedia_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>thumbnails_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>190</x>
+     <y>51</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>85</x>
+     <y>291</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>wikimedia_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>bio_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>190</x>
+     <y>51</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>70</x>
+     <y>164</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>wikimedia_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>websites_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>190</x>
+     <y>51</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>491</x>
+     <y>159</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

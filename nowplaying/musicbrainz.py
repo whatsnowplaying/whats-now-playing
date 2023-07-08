@@ -2,6 +2,7 @@
 # pylint: disable=invalid-name
 ''' support for musicbrainz '''
 
+import contextlib
 import logging
 import logging.config
 import logging.handlers
@@ -146,13 +147,10 @@ class MusicBrainzHelper():
         mbdata = {}
 
         for isrc in isrclist:
-            try:
+            with contextlib.suppress(Exception):
                 mbdata = musicbrainzngs.get_recordings_by_isrc(isrc,
                                                                includes=['releases'],
                                                                release_status=['official'])
-            except Exception:  # pylint: disable=broad-except
-                pass
-
         if not mbdata:
             for isrc in isrclist:
                 try:
@@ -331,7 +329,7 @@ class MusicBrainzHelper():
                                                                              type=bool):
                         sitelist.append(urlrel['target'])
                         logging.debug('placed %s', dest)
-        return sitelist
+        return list(dict.fromkeys(sitelist))
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this recognition system '''

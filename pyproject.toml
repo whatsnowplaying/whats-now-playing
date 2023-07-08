@@ -51,6 +51,7 @@ packages = [
   "nowplaying.vendor.audio_metadata.tbm_utils",
   "nowplaying.vendor.discogs_client",
   "nowplaying.vendor.pid",
+  "nowplaying.vendor.wptools"
 ]
 license-files = ["LICENSE.txt"]
 

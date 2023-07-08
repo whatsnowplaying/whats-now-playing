@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' user interface to configure '''
 
+import contextlib
 import logging
 import os
 import pathlib
@@ -68,12 +69,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if not self.widgets[uiname]:
             return
 
-        try:
+        with contextlib.suppress(AttributeError):
             qobject_connector = getattr(self, f'_connect_{uiname}_widget')
             qobject_connector(self.widgets[uiname])
-        except AttributeError:
-            pass
-
         self.qtui.settings_stack.addWidget(self.widgets[uiname])
         self._load_list_item(f'{uiname}', self.widgets[uiname], displayname)
 
@@ -323,6 +321,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def _upd_win_quirks(self):
         ''' update the quirks settings to match config '''
 
+        def _set_quirks_modes(arg0, arg1, arg2):
+            self.widgets['quirks'].slash_nochange.setChecked(arg0)
+            self.widgets['quirks'].slash_toback.setChecked(arg1)
+            self.widgets['quirks'].slash_toforward.setChecked(arg2)
+
         # file system notification method
         if self.config.cparser.value('quirks/pollingobserver', type=bool):
             self.widgets['quirks'].fs_events_button.setChecked(False)
@@ -342,19 +345,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         slashmode = self.config.cparser.value('quirks/slashmode') or 'nochange'
 
         if slashmode == 'nochange':
-            self.widgets['quirks'].slash_nochange.setChecked(True)
-            self.widgets['quirks'].slash_toback.setChecked(False)
-            self.widgets['quirks'].slash_toforward.setChecked(False)
-
+            _set_quirks_modes(True, False, False)
         elif slashmode == 'toforward':
-            self.widgets['quirks'].slash_nochange.setChecked(False)
-            self.widgets['quirks'].slash_toback.setChecked(False)
-            self.widgets['quirks'].slash_toforward.setChecked(True)
-
+            _set_quirks_modes(False, False, True)
         elif slashmode == 'toback':
-            self.widgets['quirks'].slash_nochange.setChecked(False)
-            self.widgets['quirks'].slash_toback.setChecked(True)
-            self.widgets['quirks'].slash_toforward.setChecked(False)
+            _set_quirks_modes(False, True, False)
 
     def _upd_win_plugins(self):
         ''' tell config to trigger plugins to update windows '''

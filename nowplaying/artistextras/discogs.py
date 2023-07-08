@@ -52,8 +52,8 @@ class Plugin(ArtistExtrasPlugin):
             artistnum = discogs_websites[0].split('/')[-1]
             artist = self.client.artist(artistnum)
             artistname = str(artist.name)
-            logging.debug('Found a singular discogs artist URL using %s instead of %s',
-                          artistname, metadata['artist'])
+            logging.debug('Found a singular discogs artist URL using %s instead of %s', artistname,
+                          metadata['artist'])
         elif len(discogs_websites) > 1:
             for website in discogs_websites:
                 artistnum = website.split('/')[-1]
@@ -67,7 +67,6 @@ class Plugin(ArtistExtrasPlugin):
                     artistname = webartistname
                     break
         return artistname
-
 
     def _find_discogs_artist_releaselist(self, metadata):
         ''' given metadata, find the releases for an artist '''
