@@ -2,11 +2,9 @@
 ''' start of support of discogs '''
 
 import logging
-import nowplaying.vendor.wptools as wptools
+from nowplaying.vendor import wptools
 
 from nowplaying.artistextras import ArtistExtrasPlugin
-import nowplaying.utils
-
 
 class Plugin(ArtistExtrasPlugin):
     ''' handler for discogs '''
