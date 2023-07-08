@@ -182,7 +182,7 @@ class Plugin(InputPlugin):
                     if '#EXTVDJ' in newline.decode('utf-8'):
                         trackextvdj = newline.decode('utf-8')
                         continue
-                except:  # pylint: disable=bare-except
+                except Exception:  # pylint: disable=broad-except
                     pass
                 if not newline or newline[0] == '#':
                     continue

@@ -91,7 +91,6 @@ class TwitchLogin:
         logging.debug('entering lock')
         async with TwitchLogin.TWITCH_LOCK:
             try:
-
                 if self.config.cparser.value('twitchbot/clientid') and self.config.cparser.value(
                         'twitchbot/secret'):
                     TwitchLogin.TWITCH = await Twitch(
@@ -118,7 +117,7 @@ class TwitchLogin:
                     self.config.cparser.setValue('twitchbot/oldscopes', USER_SCOPE)
             except (aiohttp.client_exceptions.ClientConnectorError, socket.gaierror) as error:
                 logging.error(error)
-            except:  # pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
                 return None
@@ -147,7 +146,7 @@ class TwitchLogin:
             logging.debug('refresh token is invalid, removing')
             self.config.cparser.remove('twitchbot/oldrefreshtoken')
             self.config.save()
-        except:  # pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
 

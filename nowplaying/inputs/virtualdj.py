@@ -135,9 +135,8 @@ class Plugin(M3UPlugin):
 
     def on_playlistdir_button(self):
         ''' filename button clicked action'''
-        startdir = self.qwidget.playlistdir_lineedit.text()
-        if not startdir:
-            startdir = str(pathlib.Path.home().joinpath('Documents', 'VirtualDJ'))
+        startdir = self.qwidget.playlistdir_lineedit.text() or str(pathlib.Path.home().joinpath(
+            'Documents', 'VirtualDJ'))
         if filename := QFileDialog.getExistingDirectory(self.qwidget, 'Select directory', startdir):
             self.qwidget.playlistdir_lineedit.setText(filename[0])
 

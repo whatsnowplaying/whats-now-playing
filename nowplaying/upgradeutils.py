@@ -149,7 +149,7 @@ class UpgradeBinary:
                 self.prerelease = self.stable
                 self.predata = self.stabledata
 
-        except:  # pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
 

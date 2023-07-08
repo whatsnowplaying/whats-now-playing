@@ -156,7 +156,7 @@ class UpgradeConfig:
             newval = None
             try:
                 newval = oldconfig.value(newkey)
-            except:  # pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 pass
 
             if newval:
@@ -165,7 +165,7 @@ class UpgradeConfig:
 
             try:
                 oldval = oldconfig.value(oldkey)
-            except:  # pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 logging.debug('%s vs %s: skipped, no new value', oldkey, newkey)
                 continue
 

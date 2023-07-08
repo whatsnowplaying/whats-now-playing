@@ -835,9 +835,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
     def on_serato_lib_button(self):
         ''' lib button clicked action'''
-        startdir = self.qwidget.local_dir_lineedit.text()
-        if not startdir:
-            startdir = str(pathlib.Path.home())
+        startdir = self.qwidget.local_dir_lineedit.text() or str(pathlib.Path.home())
         if libdir := QFileDialog.getExistingDirectory(self.qwidget, 'Select directory', startdir):
             self.qwidget.local_dir_lineedit.setText(libdir)
 

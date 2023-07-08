@@ -115,7 +115,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                 # starting up PubSub
                 self.pubsub = PubSub(self.twitch)
                 self.pubsub.start()
-            except:  #pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
                 logging.error('pubsub failed to start')
@@ -127,7 +127,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
             try:
                 user = await first(
                     self.twitch.get_users(logins=[self.config.cparser.value('twitchbot/channel')]))
-            except:  #pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
                 logging.error('pubsub getusers failed')
@@ -144,7 +144,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
                 self.uuid = await self.pubsub.listen_channel_points(user.id,
                                                                     self.callback_redemption)
                 loggedin = True
-            except:  #pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
                 logging.error('pubsub listen_channel_points failed')

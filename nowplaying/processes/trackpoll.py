@@ -289,7 +289,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         try:
             nextmeta = await self.input.getplayingtrack()
-        except:  #pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             await asyncio.sleep(5)
@@ -302,7 +302,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         oldmeta = self.currentmeta
         try:
             self.currentmeta = await self._fillinmetadata(nextmeta)
-        except:  #pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             await asyncio.sleep(5)

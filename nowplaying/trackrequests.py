@@ -469,7 +469,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                     }
                     reqid = row['reqid']
                     await self.erase_gifwords_id(reqid)
-        except:  #pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
         return content

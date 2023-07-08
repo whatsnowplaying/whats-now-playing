@@ -60,7 +60,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         self.twitchcustom = False
         self.chat = None
         self.tasks = set()
-        self.starttime = datetime.datetime.utcnow()
+        self.starttime = datetime.datetime.now(datetime.timezone.utc)
         self.timeout = aiohttp.ClientTimeout(total=60)
 
     async def _try_custom_token(self, token):
@@ -87,7 +87,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                         scope=[AuthScope.CHAT_READ, AuthScope.CHAT_EDIT],
                         validate=False)
                     self.twitchcustom = True
-            except:  # pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
 
@@ -183,7 +183,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 logging.error(error)
                 await asyncio.sleep(60)
                 continue
-            except:  #pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
                 await asyncio.sleep(60)
@@ -211,13 +211,13 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
     async def on_twitchchat_whatsnowplayingversion(self, cmd):
         ''' handle !whatsnowplayingversion '''
         inputsource = self.config.cparser.value('settings/input')
-        delta = datetime.datetime.utcnow() - self.starttime
+        delta = datetime.datetime.now(datetime.timezone.utc) - self.starttime
         plat = platform.platform()
         content = (f'whatsnowplaying v{self.config.version} by @modernmeerkat. '
                    f'Using {inputsource} on {plat}. Running for {delta}.')
         try:
             await cmd.reply(content)
-        except:  #pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             await self.chat.send_message(self.config.cparser.value('twitchbot/channel'), content)
@@ -346,10 +346,10 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 task = loop.create_task(self._async_announce_track())
                 self.tasks.add(task)
                 task.add_done_callback(self.tasks.discard)
-            except:  # pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 loop = asyncio.new_event_loop()
                 loop.run_until_complete(self._async_announce_track())
-        except:  #pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             logging.error('watcher failed')
@@ -387,7 +387,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 return
 
             if metadata['artist'] == LASTANNOUNCED['artist'] and \
-               metadata['title'] == LASTANNOUNCED['title']:
+                   metadata['title'] == LASTANNOUNCED['title']:
                 logging.warning(
                     'Same artist and title or doubled event notification; skipping announcement.')
                 return
@@ -400,7 +400,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             logging.info('Announcing %s', anntemplpath)
 
             await self._post_template(template=anntemplpath.name)
-        except:  #pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
 
@@ -411,9 +411,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         if not self.chat:
             logging.debug('Twitch chat is not configured?!?')
             return
-        metadata = await self.metadb.read_last_meta_async()
-        if not metadata:
-            metadata = {}
+        metadata = await self.metadb.read_last_meta_async() or {}
         if 'coverimageraw' in metadata:
             del metadata['coverimageraw']
         metadata['cmdtarget'] = None
@@ -442,7 +440,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 if msg and self.config.cparser.value('twitchbot/usereplies', type=bool):
                     try:
                         await msg.reply(content)
-                    except:  #pylint: disable=bare-except
+                    except Exception:  # pylint: disable=broad-except
                         for line in traceback.format_exc().splitlines():
                             logging.error(line)
                         await self.chat.send_message(self.config.cparser.value('twitchbot/channel'),
@@ -452,7 +450,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                                                  content)
         except ConnectionResetError:
             logging.debug('Twitch appears to be down.  Cannot send message.')
-        except:  #pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             logging.error('Unknown problem.')

@@ -71,7 +71,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods
         try:
             hostname = socket.gethostname()
             hostip = socket.gethostbyname(hostname)
-        except:  # pylint: disable = bare-except
+        except Exception:  # pylint: disable=broad-except
             pass
 
         if hostname:
@@ -96,9 +96,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-few-public-methods
         self.widgets['source'].description.setText(f'You hit {index}.')
 
     def _load_list_item(self, name, qobject):
-        displayname = qobject.property('displayName')
-        if not displayname:
-            displayname = name.capitalize()
+        displayname = qobject.property('displayName') or name.capitalize()
         self.qtui.settings_list.addItem(displayname)
 
     def _set_stacked_display(self, index):

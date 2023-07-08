@@ -173,7 +173,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                                                                            type=int)
             templatehandler = nowplaying.utils.TemplateHandler(filename=template)
             htmloutput = templatehandler.generate(metadata)
-        except:  #pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
         return htmloutput
@@ -258,7 +258,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             metadata = await request.app['metadb'].read_last_meta_async()
             if metadata and metadata.get(imgtype):
                 image = metadata[imgtype]
-        except:  #pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
         return web.Response(content_type='image/png', body=image)
@@ -286,7 +286,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             try:
                 del metadata['dbid']
                 data = self._base64ifier(metadata)
-            except:  # pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 for line in traceback.format_exc().splitlines():
                     logging.debug(line)
         return web.json_response(data)

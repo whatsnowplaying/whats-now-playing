@@ -427,7 +427,7 @@ VALUES (?,?,?);
                         if url == 'STOPWNP':
                             continue
                         cachekeys[row['cachekey']] = url
-        except:  # pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
 

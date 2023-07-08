@@ -111,9 +111,8 @@ class Plugin(RecognitionPlugin):
     def _read_acoustid_tuples(self, metadata, results):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
         fnstr = ''
         if metadata.get('filename'):
-            fnstr = nowplaying.utils.normalize(metadata['filename'], sizecheck=4, nospaces=True)
-            if not fnstr:
-                fnstr = ''
+            fnstr = nowplaying.utils.normalize(metadata['filename'], sizecheck=4,
+                                               nospaces=True) or ''
 
         artist = metadata.get('artist')
         title = metadata.get('title')

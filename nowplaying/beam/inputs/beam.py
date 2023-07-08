@@ -284,7 +284,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
         while not self.stopevent.is_set() and not websocket.closed:
             try:
                 await websocket.send_json({'msgtype': 'PING'})
-            except:  #pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 pass
             await asyncio.sleep(5 * 60)
 
@@ -299,7 +299,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
                 for entry in entries:
                     self.trackrequests.erase_id(entry)
                 await asyncio.sleep(5)
-        except:  #pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
 

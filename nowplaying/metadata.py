@@ -386,14 +386,14 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
             text = tags['discnumber'][0].replace('[', '').replace(']', '')
             try:
                 self.metadata['disc'], self.metadata['disc_total'] = text.split('/')
-            except:  # pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 pass
 
         if 'tracknumber' in tags and 'track' not in self.metadata:
             text = tags['tracknumber'][0].replace('[', '').replace(']', '')
             try:
                 self.metadata['track'], self.metadata['track_total'] = text.split('/')
-            except:  # pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 pass
 
         for websitetag in ['WOAR', 'website']:

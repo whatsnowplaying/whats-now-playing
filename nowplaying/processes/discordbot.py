@@ -77,7 +77,7 @@ class DiscordSupport:
         except pypresence.exceptions.DiscordError as error:
             logging.error(error)
             return
-        except:  # pylint: disable=bare-except
+        except Exception:  #pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             return
@@ -109,7 +109,7 @@ class DiscordSupport:
         except ConnectionRefusedError:
             logging.error('Cannot connect to discord client.')
             del self.client['ipc']
-        except:  # pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             del self.client['ipc']
@@ -165,7 +165,7 @@ class DiscordSupport:
                         try:
                             await func(templateout)
 
-                        except:  #pylint: disable=bare-except
+                        except Exception:  # pylint: disable=broad-except
                             for line in traceback.format_exc().splitlines():
                                 logging.error(line)
                             del self.client[mode]

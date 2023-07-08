@@ -207,9 +207,8 @@ class Plugin(IcecastPlugin):
 
     def _on_traktor_browse_button(self):
         ''' user clicked traktor browse button '''
-        startdir = self.qwidget.traktor_collection_lineedit.text()
-        if not startdir:
-            startdir = str(pathlib.Path.home().joinpath('Documents', 'Native Instruments'))
+        startdir = self.qwidget.traktor_collection_lineedit.text() or str(
+            pathlib.Path.home().joinpath('Documents', 'Native Instruments'))
         if filename := QFileDialog.getOpenFileName(self.qwidget, 'Open collection file', startdir,
                                                    '*.nml'):
             self.qwidget.traktor_collection_lineedit.setText(filename[0])

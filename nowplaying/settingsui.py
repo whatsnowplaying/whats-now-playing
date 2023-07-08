@@ -339,10 +339,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.widgets['quirks'].song_out_path_lineedit.setText(
             self.config.cparser.value('quirks/filesubstout'))
 
-        slashmode = self.config.cparser.value('quirks/slashmode')
-
-        if not slashmode:
-            slashmode = 'nochange'
+        slashmode = self.config.cparser.value('quirks/slashmode') or 'nochange'
 
         if slashmode == 'nochange':
             self.widgets['quirks'].slash_nochange.setChecked(True)

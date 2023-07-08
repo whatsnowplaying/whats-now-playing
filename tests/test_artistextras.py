@@ -190,6 +190,7 @@ def test_discogs_weblocation1(bootstrap):  # pylint: disable=redefined-outer-nam
             imagecache=None)
         assert 'NOTE: If The Revolution are credited without Prince' in data['artistlongbio']
 
+
 def test_missingallartistdata(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' missing all artist data '''
     imagecaches, plugins = getconfiguredplugin

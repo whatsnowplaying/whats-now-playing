@@ -128,7 +128,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                     logging.debug(error)
                     self._remove_control()
 
-        except:  # pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
 
@@ -216,7 +216,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                     self.ipaddr = ipaddr
                     self.config.cparser.setValue('control/beamserverip', self.ipaddr)
 
-        except:  # pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
         if sock:
@@ -258,7 +258,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
             elif reqdata.get('type') == 'Roulette':
                 await self.requests.user_roulette_request(reqdata, reqdata.get('username'),
                                                           reqdata.get('user_input'))
-        except:  #pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
 

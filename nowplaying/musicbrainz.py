@@ -30,10 +30,8 @@ class MusicBrainzHelper():
         ''' make sure the musicbrainz fetch has an email address set
             according to their requirements '''
         if not self.emailaddressset:
-            emailaddress = self.config.cparser.value('musicbrainz/emailaddress')
-
-            if not emailaddress:
-                emailaddress = 'aw@effectivemachines.com'
+            emailaddress = self.config.cparser.value(
+                'musicbrainz/emailaddress') or 'aw@effectivemachines.com'
 
             musicbrainzngs.set_useragent('whats-now-playing', self.config.version, emailaddress)
             self.emailaddressset = True
@@ -103,9 +101,8 @@ class MusicBrainzHelper():
             mydict = musicbrainzngs.search_recordings(artist=addmeta['artist'],
                                                       recording=addmeta['title'],
                                                       release=addmeta['album'])
-            riddata = self._pickarecording(addmeta, mydict)
-            if not riddata:
-                riddata = self._pickarecording(addmeta, mydict, allowothers=True)
+            riddata = self._pickarecording(addmeta, mydict) or self._pickarecording(
+                addmeta, mydict, allowothers=True)
 
         if not riddata:
             mydict = musicbrainzngs.search_recordings(artist=metadata['artist'],
@@ -153,14 +150,14 @@ class MusicBrainzHelper():
                 mbdata = musicbrainzngs.get_recordings_by_isrc(isrc,
                                                                includes=['releases'],
                                                                release_status=['official'])
-            except:  # pylint: disable=bare-except
+            except Exception:  # pylint: disable=broad-except
                 pass
 
         if not mbdata:
             for isrc in isrclist:
                 try:
                     mbdata = musicbrainzngs.get_recordings_by_isrc(isrc, includes=['releases'])
-                except:  # pylint: disable=bare-except
+                except Exception:  # pylint: disable=broad-except
                     logging.info('musicbrainz cannot find ISRC %s', isrc)
 
         if 'isrc' not in mbdata or 'recording-list' not in mbdata['isrc']:

@@ -58,7 +58,7 @@ class Plugin(InputPlugin):
             if byte_buffer := bytearray(
                     buffer_reader.read_buffer(buffer_reader.unconsumed_buffer_length)):
                 return nowplaying.utils.image2png(byte_buffer)
-        except:  # pylint: disable=bare-except
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
         return None

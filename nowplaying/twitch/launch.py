@@ -74,7 +74,7 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
             self.tasks.add(task)
             task.add_done_callback(self.tasks.discard)
             self.loop.run_forever()
-        except:  #pylint: disable=bare-except:
+        except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             logging.error('Twitch support crashed')
