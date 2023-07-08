@@ -17,7 +17,7 @@ See also:
 - https://www.mediawiki.org/wiki/Manual:Page_table
 """
 
-import html2text
+from bs4 import BeautifulSoup
 
 from . import core
 from . import utils
@@ -321,7 +321,8 @@ class WPToolsPage(WPToolsRESTBase,
         extract = page.get('extract')
         if extract:
             self.data['extract'] = extract
-            extext = html2text.html2text(extract)
+            soup = BeautifulSoup(extract, 'html.parser')
+            extext = soup.get_text()
             if extext:
                 self.data['extext'] = extext.strip()
 

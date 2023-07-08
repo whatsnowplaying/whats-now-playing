@@ -45,3 +45,9 @@ python-dateutil
 # required to install
 #
 versioningit==2.2.0
+
+#
+# wptools
+#
+BeautifulSoup4
+lxml
