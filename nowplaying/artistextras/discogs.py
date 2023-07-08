@@ -37,8 +37,8 @@ class Plugin(ArtistExtrasPlugin):
             return True
         return False
 
-    def _find_discogs_artist_releaselist(self, metadata):
-
+    def _find_discogs_website(self, metadata):
+        ''' use websites listing to find discogs entries '''
         if not self.client and not self._setup_client():
             return None
 
@@ -47,26 +47,37 @@ class Plugin(ArtistExtrasPlugin):
 
         artistnum = 0
         artistname = metadata['artist']
-        # 'https://www.discogs.com/artist/<ARTISTNUM>'
-        if metadata.get('artistwebsites'):
-            discogs_website = [url for url in metadata['artistwebsites'] if 'discogs' in url]
-            if len(discogs_website) == 1:
-                artistnum = discogs_website[0].split('/')[-1]
+        discogs_websites = [url for url in metadata['artistwebsites'] if 'discogs' in url]
+        if len(discogs_websites) == 1:
+            artistnum = discogs_websites[0].split('/')[-1]
+            artist = self.client.artist(artistnum)
+            artistname = str(artist.name)
+            logging.debug('Found a singular discogs artist URL using %s instead of %s',
+                          artistname, metadata['artist'])
+        elif len(discogs_websites) > 1:
+            for website in discogs_websites:
+                artistnum = website.split('/')[-1]
                 artist = self.client.artist(artistnum)
-                artistname = str(artist.name)
-                logging.debug('Found a singular discogs artist URL using %s instead of %s',
-                              artistname, metadata['artist'])
-            elif len(discogs_website) > 1:
-                for website in discogs_website:
-                    artistnum = website.split('/')[-1]
-                    artist = self.client.artist(artistnum)
-                    webartistname = str(artist.name)
-                    if nowplaying.utils.normalize(webartistname) == nowplaying.utils.normalize(
-                            metadata['artist']):
-                        logging.debug(
-                            'Found near exact match discogs artist URL %s using %s instead of %s',
-                            website, webartistname, metadata['artist'])
-                        artistname = webartistname
+                webartistname = str(artist.name)
+                if nowplaying.utils.normalize(webartistname) == nowplaying.utils.normalize(
+                        metadata['artist']):
+                    logging.debug(
+                        'Found near exact match discogs artist URL %s using %s instead of %s',
+                        website, webartistname, metadata['artist'])
+                    artistname = webartistname
+                    break
+        return artistname
+
+
+    def _find_discogs_artist_releaselist(self, metadata):
+        ''' given metadata, find the releases for an artist '''
+        if not self.client and not self._setup_client():
+            return None
+
+        if not self.client:
+            return None
+
+        artistname = self._find_discogs_website(metadata)
 
         try:
             logging.debug('Fetching %s - %s', artistname, metadata['album'])
@@ -105,6 +116,7 @@ class Plugin(ArtistExtrasPlugin):
             return None
 
         oldartist = metadata['artist']
+        artistresultlist = None
         for variation in nowplaying.utils.artist_name_variations(metadata['artist']):
             metadata['artist'] = variation
             artistresultlist = self._find_discogs_artist_releaselist(metadata)
