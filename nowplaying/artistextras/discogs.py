@@ -39,14 +39,15 @@ class Plugin(ArtistExtrasPlugin):
 
     def _find_discogs_website(self, metadata):
         ''' use websites listing to find discogs entries '''
-        if not self.client and not self._setup_client():
-            return None
 
-        if not self.client:
-            return None
+        artistname = metadata['artist']
+        if not self.client and not self._setup_client():
+            return artistname
+
+        if not self.client or not metadata.get('artistwebsites'):
+            return artistname
 
         artistnum = 0
-        artistname = metadata['artist']
         discogs_websites = [url for url in metadata['artistwebsites'] if 'discogs' in url]
         if len(discogs_websites) == 1:
             artistnum = discogs_websites[0].split('/')[-1]
