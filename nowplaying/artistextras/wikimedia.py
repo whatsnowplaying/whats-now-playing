@@ -15,22 +15,28 @@ class Plugin(ArtistExtrasPlugin):
         self.displayname = "Wikimedia"
         self.priority = 1000
 
-    def download(self, metadata=None, imagecache=None):
-        ''' download content '''
-
+    def _check_missing(self, metadata):
+        ''' check for missing required data '''
         if not self.config or not self.config.cparser.value('wikimedia/enabled', type=bool):
             logging.debug('not configured')
-            return {}
+            return True
 
         if not metadata:
             logging.debug('no metadata?')
+            return True
+
+        if not metadata.get('artistwebsites'):
+            logging.debug('No artistwebsites.')
+            return True
+        return False
+
+    def download(self, metadata=None, imagecache=None):
+        ''' download content '''
+
+        if self._check_missing(metadata):
             return {}
 
         mymeta = {}
-        if not metadata.get('artistwebsites'):
-            logging.debug('No artistwebsites.')
-            return {}
-
         wikidata_websites = [url for url in metadata['artistwebsites'] if 'wikidata' in url]
         if not wikidata_websites:
             logging.debug('no wikidata entity')

@@ -3,7 +3,6 @@
 
 import logging
 import os
-from nowplaying.artistextras import wikimedia
 
 import pytest
 
