@@ -207,6 +207,10 @@ class Plugin(ArtistExtrasPlugin):
         for field in ['banners', 'bio', 'fanart', 'logos', 'thumbnails']:
             func = getattr(qwidget, f'{field}_checkbox')
             func.setChecked(self.config.cparser.value(f'theaudiodb/{field}', type=bool))
+        if self.config.cparser.value('theaudiodb/bio_iso_en_fallback', type=bool):
+            qwidget.bio_iso_en_checkbox.setChecked(True)
+        else:
+            qwidget.bio_iso_en_checkbox.setChecked(False)
 
     def verify_settingsui(self, qwidget):
         ''' pass '''

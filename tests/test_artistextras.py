@@ -386,3 +386,32 @@ def test_notfound(getconfiguredplugin):  # pylint: disable=redefined-outer-name
             imagecache=imagecaches[pluginname])
         assert not data
         assert not imagecaches[pluginname].urls
+
+
+def test_wikimedia_langfallback1(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' noimagecache '''
+
+    config = bootstrap
+    configuresettings('wikimedia', config.cparser)
+    config.cparser.setValue('wikimedia/bio_iso', 'zh')
+    _, plugins = configureplugins(config)
+    data = plugins['wikimedia'].download(
+        {'artistwebsites': [
+            'https://www.wikidata.org/wiki/Q7766138',
+        ]}, imagecache=None)
+    assert 'video' in data.get('artistlongbio')
+
+
+def test_wikimedia_langfallback2(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' noimagecache '''
+
+    config = bootstrap
+    configuresettings('wikimedia', config.cparser)
+    config.cparser.setValue('wikimedia/bio_iso', 'zh')
+    config.cparser.setValue('wikimedia/bio_iso_en_fallback', False)
+    _, plugins = configureplugins(config)
+    data = plugins['wikimedia'].download(
+        {'artistwebsites': [
+            'https://www.wikidata.org/wiki/Q7766138',
+        ]}, imagecache=None)
+    assert not data.get('artistlongbio')

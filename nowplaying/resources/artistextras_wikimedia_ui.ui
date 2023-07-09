@@ -25,6 +25,9 @@
    <property name="text">
     <string>Enable Metadata by Wikimedia</string>
    </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
   </widget>
   <widget class="QLabel" name="wikimedia_desclabel">
    <property name="geometry">
@@ -55,7 +58,7 @@
     <item>
      <widget class="QCheckBox" name="fanart_checkbox">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="text">
        <string>Fanart</string>
@@ -65,7 +68,7 @@
     <item>
      <widget class="QCheckBox" name="thumbnails_checkbox">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="text">
        <string>Thumbnails</string>
@@ -81,9 +84,44 @@
     </item>
    </layout>
   </widget>
-  <widget class="QCheckBox" name="bio_checkbox">
+  <widget class="QLabel" name="bio_iso_label">
    <property name="enabled">
     <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>80</y>
+     <width>121</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Language ISO Code</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="bio_iso_en_checkbox">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>440</x>
+     <y>80</y>
+     <width>111</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Fallback to EN</string>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="bio_checkbox">
+   <property name="enabled">
+    <bool>true</bool>
    </property>
    <property name="geometry">
     <rect>
@@ -95,6 +133,22 @@
    </property>
    <property name="text">
     <string>Biography</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="bio_iso_lineedit">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>280</x>
+     <y>80</y>
+     <width>121</width>
+     <height>26</height>
+    </rect>
    </property>
   </widget>
  </widget>
@@ -135,22 +189,6 @@
   <connection>
    <sender>wikimedia_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>bio_checkbox</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>190</x>
-     <y>51</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>70</x>
-     <y>164</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>wikimedia_checkbox</sender>
-   <signal>toggled(bool)</signal>
    <receiver>websites_checkbox</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
@@ -161,6 +199,38 @@
     <hint type="destinationlabel">
      <x>491</x>
      <y>159</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>bio_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>bio_iso_en_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>83</x>
+     <y>91</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>495</x>
+     <y>91</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>bio_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>bio_iso_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>83</x>
+     <y>91</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>340</x>
+     <y>92</y>
     </hint>
    </hints>
   </connection>

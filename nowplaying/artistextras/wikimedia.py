@@ -30,8 +30,33 @@ class Plugin(ArtistExtrasPlugin):
             return True
         return False
 
+    def _get_page(self, entity, lang):
+        logging.debug("Processing %s", entity)
+        try:
+            page = wptools.page(wikibase=entity, lang=lang, silent=True)
+            page.get()
+        except Exception:  # pylint: disable=broad-except
+            page = None
+            if self.config.cparser.value('wikimedia/bio_iso_en_fallback',
+                                         type=bool) and lang != 'en':
+                try:
+                    page = wptools.page(wikibase=entity, lang='en', silent=True)
+                    page.get()
+                except Exception:  # pylint: disable=broad-except
+                    page = None
+        return page
+
     def download(self, metadata=None, imagecache=None):
         ''' download content '''
+
+        def _get_bio():
+            if page.data['extext']:
+                mymeta['artistlongbio'] = page.data['extext']
+            elif lang != 'en' and self.config.cparser.value('wikimedia/bio_iso_en_fallback',
+                                                            type=bool):
+                temppage = self._get_page(entity, 'en')
+                if temppage.data['extext']:
+                    mymeta['artistlongbio'] = temppage.data['extext']
 
         if self._check_missing(metadata):
             return {}
@@ -42,14 +67,16 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug('no wikidata entity')
             return {}
 
+        lang = self.config.cparser.value('wikimedia/bio_iso', type=str) or 'en'
         for website in wikidata_websites:
             entity = website.split('/')[-1]
-            logging.debug("Processing %s", entity)
-            page = wptools.page(wikibase=entity, silent=True)
-            page.get()
+            page = self._get_page(entity, lang)
+            if not page:
+                continue
 
-            if page.data['extext'] and self.config.cparser.value('wikimedia/bio', type=bool):
-                mymeta['artistlongbio'] = page.data['extext']
+            if self.config.cparser.value('wikimedia/bio', type=bool):
+                _get_bio()
+
             if page.data['claims'].get('P434'):
                 mymeta['musicbrainzartistid'] = page.data['claims'].get('P434')
             mymeta['artistwebsites'] = []
@@ -89,6 +116,11 @@ class Plugin(ArtistExtrasPlugin):
         for field in ['bio', 'fanart', 'thumbnails', 'websites']:
             func = getattr(qwidget, f'{field}_checkbox')
             func.setChecked(self.config.cparser.value(f'wikimedia/{field}', type=bool))
+        qwidget.bio_iso_lineedit.setText(self.config.cparser.value('wikimedia/bio_iso'))
+        if self.config.cparser.value('wikimedia/bio_iso_en_fallback', type=bool):
+            qwidget.bio_iso_en_checkbox.setChecked(True)
+        else:
+            qwidget.bio_iso_en_checkbox.setChecked(False)
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
@@ -98,9 +130,15 @@ class Plugin(ArtistExtrasPlugin):
         for field in ['bio', 'fanart', 'thumbnails', 'websites']:
             func = getattr(qwidget, f'{field}_checkbox')
             self.config.cparser.setValue(f'wikimedia/{field}', func.isChecked())
+        self.config.cparser.setValue('wikimedia/bio_iso',
+                                     str(qwidget.bio_iso_lineedit.text()).lower())
+        self.config.cparser.setValue('wikimedia/bio_iso_en_fallback',
+                                     qwidget.bio_iso_en_checkbox.isChecked())
 
     def defaults(self, qsettings):
         for field in ['bio', 'fanart', 'thumbnails', 'websites']:
             qsettings.setValue(f'wikimedia/{field}', False)
 
         qsettings.setValue('wikimedia/enabled', False)
+        qsettings.setValue('wikimedia/bio_iso', 'en')
+        qsettings.setValue('wikimedia/bio_iso_en_fallback', True)
