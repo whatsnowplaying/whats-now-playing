@@ -19,6 +19,7 @@ class WNPBasePlugin:
         self.qwidget: t.Optional[QWidget] = None
         self.uihelp = None
         self.displayname: str = ''
+        self.priority = 0
 
         if qsettings:
             self.defaults(qsettings)

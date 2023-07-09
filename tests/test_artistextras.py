@@ -3,12 +3,13 @@
 
 import logging
 import os
+from nowplaying.artistextras import wikimedia
 
 import pytest
 
 import nowplaying.metadata  # pylint: disable=import-error
 
-PLUGINS = []
+PLUGINS = ['wikimedia']
 
 if os.environ.get('DISCOGS_API_KEY'):
     PLUGINS.append('discogs')
@@ -16,9 +17,6 @@ if os.environ.get('FANARTTV_API_KEY'):
     PLUGINS.append('fanarttv')
 if os.environ.get('THEAUDIODB_API_KEY'):
     PLUGINS.append('theaudiodb')
-
-if not PLUGINS:
-    pytest.skip("skipping, no API keys for artistextras are available", allow_module_level=True)
 
 
 class FakeImageCache:  # pylint: disable=too-few-public-methods
@@ -63,6 +61,7 @@ def configuresettings(pluginname, cparser):
 def getconfiguredplugin(bootstrap):
     ''' automated integration test '''
     config = bootstrap
+    configuresettings('wikimedia', config.cparser)
     if 'discogs' in PLUGINS:
         configuresettings('discogs', config.cparser)
         config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
@@ -72,6 +71,8 @@ def getconfiguredplugin(bootstrap):
     if 'theaudiodb' in PLUGINS:
         configuresettings('theaudiodb', config.cparser)
         config.cparser.setValue('theaudiodb/apikey', os.environ['THEAUDIODB_API_KEY'])
+    if 'theaudiodb' in PLUGINS:
+        configuresettings('theaudiodb', config.cparser)
     yield configureplugins(config)
 
 
@@ -328,14 +329,14 @@ def test_all(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     imagecaches, plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
-
-        data = plugins[pluginname].download(
-            {
-                'artist': 'Nine Inch Nails',
-                'album': 'The Downward Spiral',
-                'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da'],
-            },
-            imagecache=imagecaches[pluginname])
+        metadata = {
+            'artist': 'Nine Inch Nails',
+            'album': 'The Downward Spiral',
+            'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da'],
+        }
+        if pluginname == 'wikimedia':
+            metadata['artistwebsites'] = ['https://www.wikidata.org/wiki/Q11647']
+        data = plugins[pluginname].download(metadata, imagecache=imagecaches[pluginname])
         if pluginname in ['discogs', 'theaudiodb']:
             assert data['artistlongbio']
             assert data['artistwebsites']
@@ -352,13 +353,14 @@ def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
 
-        data = plugins[pluginname].download(
-            {
-                'artist': 'The Nine Inch Nails',
-                'album': 'The Downward Spiral',
-                'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da'],
-            },
-            imagecache=imagecaches[pluginname])
+        metadata = {
+            'artist': 'The Nine Inch Nails',
+            'album': 'The Downward Spiral',
+            'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da'],
+        }
+        if pluginname == 'wikimedia':
+            metadata['artistwebsites'] = ['https://www.wikidata.org/wiki/Q11647']
+        data = plugins[pluginname].download(metadata, imagecache=imagecaches[pluginname])
         logging.debug(imagecaches['theaudiodb'].urls)
         if pluginname in ['discogs', 'theaudiodb']:
             assert data['artistlongbio']

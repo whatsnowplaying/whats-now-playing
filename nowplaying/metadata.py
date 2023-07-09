@@ -36,6 +36,17 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         else:
             self.config = nowplaying.config.ConfigFile()
 
+        self.extraslist = self._sortextras()
+
+    def _sortextras(self):
+        extras = {}
+        for plugin in self.config.plugins['artistextras']:
+            priority = self.config.pluginobjs['artistextras'][plugin].priority
+            if not extras.get(priority):
+                extras[priority] = []
+            extras[priority].append(plugin)
+        return dict(reversed(list(extras.items())))
+
     async def getmoremetadata(self, metadata=None, imagecache=None, skipplugins=False):
         ''' take metadata and process it '''
         if metadata:
@@ -257,23 +268,24 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             tasks = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=3,
                                                        thread_name_prefix='artistextras') as pool:
-                for plugin in self.config.plugins['artistextras']:
-                    try:
-                        metalist = self.config.pluginobjs['artistextras'][plugin].providerinfo()
-                        loop = asyncio.get_running_loop()
-                        tasks.append(
-                            loop.run_in_executor(
-                                pool, self.config.pluginobjs['artistextras'][plugin].download,
-                                self.metadata, self.imagecache))
+                for priority in self.extraslist:
+                    for plugin in self.extraslist[priority]:
+                        try:
+                            metalist = self.config.pluginobjs['artistextras'][plugin].providerinfo()
+                            loop = asyncio.get_running_loop()
+                            tasks.append(
+                                loop.run_in_executor(
+                                    pool, self.config.pluginobjs['artistextras'][plugin].download,
+                                    self.metadata, self.imagecache))
 
-                    except Exception as error:  # pylint: disable=broad-except
-                        logging.error('%s threw exception %s', plugin, error, exc_info=True)
+                        except Exception as error:  # pylint: disable=broad-except
+                            logging.error('%s threw exception %s', plugin, error, exc_info=True)
 
-            for task in tasks:
-                if addmeta := await task:
-                    self.metadata = recognition_replacement(config=self.config,
-                                                            metadata=self.metadata,
-                                                            addmeta=addmeta)
+                for task in tasks:
+                    if addmeta := await task:
+                        self.metadata = recognition_replacement(config=self.config,
+                                                                metadata=self.metadata,
+                                                                addmeta=addmeta)
 
     def _generate_short_bio(self):
         if not self.metadata:

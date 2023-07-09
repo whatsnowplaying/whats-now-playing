@@ -23,6 +23,7 @@ class Plugin(ArtistExtrasPlugin):
         self.client = None
         self.version = config.version
         self.displayname = "fanart.tv"
+        self.priority = 50
 
     def _fetch(self, apikey, artistid):
         artistrequest = None

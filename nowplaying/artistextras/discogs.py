@@ -115,6 +115,7 @@ class Plugin(ArtistExtrasPlugin):
         if not self.client:
             return None
 
+        addmeta = {}
         oldartist = metadata['artist']
         artistresultlist = None
         for variation in nowplaying.utils.artist_name_variations(metadata['artist']):
@@ -130,19 +131,18 @@ class Plugin(ArtistExtrasPlugin):
             return None
 
         if self.config.cparser.value('discogs/bio', type=bool):
-            metadata['artistlongbio'] = artistresultlist.profile_plaintext
+            addmeta['artistlongbio'] = artistresultlist.profile_plaintext
 
         if self.config.cparser.value('discogs/websites', type=bool):
-            metadata['artistwebsites'] = artistresultlist.urls
+            addmeta['artistwebsites'] = artistresultlist.urls
 
         if not imagecache:
-            return metadata
+            return addmeta
 
         if not artistresultlist.images:
-            return metadata
+            return addmeta
 
-        if not metadata.get('artistfanarturls'):
-            metadata['artistfanarturls'] = []
+        addmeta['artistfanarturls'] = []
 
         for record in artistresultlist.images:
             if record['type'] == 'primary' and record.get('uri150') and self.config.cparser.value(
@@ -153,11 +153,10 @@ class Plugin(ArtistExtrasPlugin):
                                       urllist=[record['uri150']])
 
             if record['type'] == 'secondary' and record.get('uri') and self.config.cparser.value(
-                    'discogs/fanart',
-                    type=bool) and record['uri'] not in metadata['artistfanarturls']:
-                metadata['artistfanarturls'].append(record['uri'])
+                    'discogs/fanart', type=bool):
+                addmeta['artistfanarturls'].append(record['uri'])
 
-        return metadata
+        return addmeta
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this plug-in '''
