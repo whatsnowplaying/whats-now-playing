@@ -20,6 +20,7 @@ class Plugin(ArtistExtrasPlugin):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Discogs"
         self.client = None
+        self.addmeta = {}
 
     def _get_apikey(self):
         apikey = self.config.cparser.value('discogs/apikey')
@@ -37,7 +38,29 @@ class Plugin(ArtistExtrasPlugin):
             return True
         return False
 
-    def _find_discogs_website(self, metadata):
+    def _process_metadata(self, artistname, artist, imagecache):
+        ''' update metadata based upon an artist record '''
+        if artist.images and imagecache:
+            self.addmeta['artistfanarturls'] = []
+            for record in artist.images:
+                if record['type'] == 'primary' and record.get(
+                        'uri150') and self.config.cparser.value('discogs/thumbnails', type=bool):
+                    imagecache.fill_queue(config=self.config,
+                                          artist=artistname,
+                                          imagetype='artistthumb',
+                                          urllist=[record['uri150']])
+
+                if record['type'] == 'secondary' and record.get(
+                        'uri') and self.config.cparser.value('discogs/fanart', type=bool):
+                    self.addmeta['artistfanarturls'].append(record['uri'])
+
+        if self.config.cparser.value('discogs/bio', type=bool):
+            self.addmeta['artistlongbio'] = artist.profile_plaintext
+
+        if self.config.cparser.value('discogs/websites', type=bool):
+            self.addmeta['artistwebsites'] = artist.urls
+
+    def _find_discogs_website(self, metadata, imagecache):
         ''' use websites listing to find discogs entries '''
 
         artistname = metadata['artist']
@@ -48,6 +71,7 @@ class Plugin(ArtistExtrasPlugin):
             return artistname
 
         artistnum = 0
+        artist = None
         discogs_websites = [url for url in metadata['artistwebsites'] if 'discogs' in url]
         if len(discogs_websites) == 1:
             artistnum = discogs_websites[0].split('/')[-1]
@@ -67,7 +91,12 @@ class Plugin(ArtistExtrasPlugin):
                         website, webartistname, metadata['artist'])
                     artistname = webartistname
                     break
-        return artistname
+                artist = None
+        if artist:
+            self._process_metadata(metadata['artist'], artist, imagecache)
+            return True
+
+        return False
 
     def _find_discogs_artist_releaselist(self, metadata):
         ''' given metadata, find the releases for an artist '''
@@ -77,8 +106,7 @@ class Plugin(ArtistExtrasPlugin):
         if not self.client:
             return None
 
-        artistname = self._find_discogs_website(metadata)
-
+        artistname = metadata['artist']
         try:
             logging.debug('Fetching %s - %s', artistname, metadata['album'])
             resultlist = self.client.search(metadata['album'], artist=artistname,
@@ -115,7 +143,11 @@ class Plugin(ArtistExtrasPlugin):
         if not self.client:
             return None
 
-        addmeta = {}
+        self.addmeta = {}
+
+        if self._find_discogs_website(metadata, imagecache):
+            return self.addmeta
+
         oldartist = metadata['artist']
         artistresultlist = None
         for variation in nowplaying.utils.artist_name_variations(metadata['artist']):
@@ -130,33 +162,8 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug('discogs did not find it')
             return None
 
-        if self.config.cparser.value('discogs/bio', type=bool):
-            addmeta['artistlongbio'] = artistresultlist.profile_plaintext
-
-        if self.config.cparser.value('discogs/websites', type=bool):
-            addmeta['artistwebsites'] = artistresultlist.urls
-
-        if not imagecache:
-            return addmeta
-
-        if not artistresultlist.images:
-            return addmeta
-
-        addmeta['artistfanarturls'] = []
-
-        for record in artistresultlist.images:
-            if record['type'] == 'primary' and record.get('uri150') and self.config.cparser.value(
-                    'discogs/thumbnails', type=bool):
-                imagecache.fill_queue(config=self.config,
-                                      artist=oldartist,
-                                      imagetype='artistthumb',
-                                      urllist=[record['uri150']])
-
-            if record['type'] == 'secondary' and record.get('uri') and self.config.cparser.value(
-                    'discogs/fanart', type=bool):
-                addmeta['artistfanarturls'].append(record['uri'])
-
-        return addmeta
+        self._process_metadata(metadata['artist'], artistresultlist, imagecache)
+        return self.addmeta
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this plug-in '''
