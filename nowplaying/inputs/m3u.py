@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' Read m3u files '''
 
+import contextlib
 import logging
 import os
 import re
@@ -118,26 +119,17 @@ class Plugin(InputPlugin):
         metadata = {}
         vdjline = inputline.replace('#EXTVDJ:', '')
 
-        try:
+        with contextlib.suppress(AttributeError):
             if line := EXTVDJ_TITLE_RE.match(vdjline):
                 metadata['title'] = line.group(1)
-        except AttributeError:
-            pass
-
-        try:
+        with contextlib.suppress(AttributeError):
             if line := EXTVDJ_ARTIST_RE.match(vdjline):
                 metadata['artist'] = line.group(1)
-        except AttributeError:
-            pass
-
         if self.config.cparser.value('virtualdj/useremix', type=bool):
-            try:
+            with contextlib.suppress(AttributeError):
                 remix = EXTVDJ_REMIX_RE.match(vdjline).group(1)
                 if metadata.get('title'):
                     metadata['title'] += f' ({remix})'
-            except AttributeError:
-                pass
-
         return metadata
 
     def _read_full_file(self, filename):
@@ -178,12 +170,10 @@ class Plugin(InputPlugin):
                 if not newline:
                     break
                 newline = newline.rstrip()
-                try:
+                with contextlib.suppress(Exception):
                     if '#EXTVDJ' in newline.decode('utf-8'):
                         trackextvdj = newline.decode('utf-8')
                         continue
-                except Exception:  # pylint: disable=broad-except
-                    pass
                 if not newline or newline[0] == '#':
                     continue
                 trackfile = newline

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>M3U</string>
+   <string>DJUCED</string>
   </property>
   <widget class="QWidget" name="horizontalLayoutWidget">
    <property name="geometry">
@@ -26,7 +26,7 @@
     <item>
      <widget class="QLabel" name="dir_label">
       <property name="text">
-       <string>M3U Directory</string>
+       <string>DJUCED Directory</string>
       </property>
      </widget>
     </item>
@@ -52,7 +52,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>M3U support is for a variety of tools, including Virtual DJ.  Select the directory where the .m3u file exists.  Now Playing will read any new/updated m3u file in it.</string>
+    <string>DJUCED is the software provided by Hercules for their series of controllers.</string>
    </property>
    <property name="wordWrap">
     <bool>true</bool>
