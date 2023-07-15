@@ -1,9 +1,10 @@
+#!/usr/bin/env python3
+''' djuced support '''
+
+
 import asyncio
-import contextlib
 import logging
-from os import path
 import pathlib
-import xml.etree.ElementTree
 
 import sqlite3
 import aiosqlite
@@ -19,7 +20,7 @@ from nowplaying.inputs import InputPlugin
 import nowplaying.utils
 
 
-class Plugin(InputPlugin):
+class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     ''' handler for NowPlaying '''
 
     metadata = {'artist': None, 'title': None, 'filename': None}

@@ -9,6 +9,7 @@ Each has its own screen to configure them.
    :maxdepth: 2
    :caption: Contents:
 
+   djuced
    icecast
    m3u
    mpris2
