@@ -123,7 +123,6 @@ class Plugin(ArtistExtrasPlugin):
                                 metadata['artistfanarturls'] = []
                             metadata['artistfanarturls'].append(artdata[artstring])
 
-        print(f' theaudiodb: >{bio}<')
         if bio:
             metadata['artistlongbio'] = bio
 
