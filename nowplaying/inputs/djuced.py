@@ -194,8 +194,19 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         return Plugin.metadata
 
     async def getrandomtrack(self, playlist):
-        ''' not supported '''
-        return None
+        ''' get a random track '''
+        dbfile = pathlib.Path(self.djuceddir).joinpath('DJUCED.db')
+        sql = 'SELECT data FROM playlist2 WHERE name=? and type=3 ORDER BY random() LIMIT 1'
+        async with aiosqlite.connect(dbfile, timeout=30) as connection:
+            connection.row_factory = sqlite3.Row
+            cursor = await connection.cursor()
+            await cursor.execute(sql, (playlist,))
+            row = await cursor.fetchone()
+            await connection.commit()
+            if not row:
+                return None
+
+            return row['filename']
 
     async def stop(self):
         ''' stop the m3u plugin '''

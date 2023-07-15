@@ -7,6 +7,8 @@ DJUCED is DJ software built by Guillemot Corporation for their line of Hercules 
 
       NOTE: This source does not support Oldest mix mode.
 
+      NOTE: Only tested with DJUCED 6.0.1
+
 Instructions
 ------------
 
