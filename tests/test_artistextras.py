@@ -360,7 +360,6 @@ def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-name
         if pluginname == 'wikimedia':
             metadata['artistwebsites'] = ['https://www.wikidata.org/wiki/Q11647']
         data = plugins[pluginname].download(metadata, imagecache=imagecaches[pluginname])
-        logging.debug(imagecaches['theaudiodb'].urls)
         if pluginname in ['discogs', 'theaudiodb']:
             assert data['artistlongbio']
             assert data['artistwebsites']

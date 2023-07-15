@@ -62,13 +62,11 @@ class Plugin(ArtistExtrasPlugin):
 
     def _find_discogs_website(self, metadata, imagecache):
         ''' use websites listing to find discogs entries '''
-
-        artistname = metadata['artist']
         if not self.client and not self._setup_client():
-            return artistname
+            return False
 
         if not self.client or not metadata.get('artistwebsites'):
-            return artistname
+            return False
 
         artistnum = 0
         artist = None
@@ -146,6 +144,7 @@ class Plugin(ArtistExtrasPlugin):
         self.addmeta = {}
 
         if self._find_discogs_website(metadata, imagecache):
+            logging.debug('used discogs website')
             return self.addmeta
 
         oldartist = metadata['artist']
