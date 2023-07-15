@@ -388,7 +388,7 @@ def test_notfound(getconfiguredplugin):  # pylint: disable=redefined-outer-name
 
 
 def test_wikimedia_langfallback1(bootstrap):  # pylint: disable=redefined-outer-name
-    ''' noimagecache '''
+    ''' not english test '''
 
     config = bootstrap
     configuresettings('wikimedia', config.cparser)
@@ -402,7 +402,7 @@ def test_wikimedia_langfallback1(bootstrap):  # pylint: disable=redefined-outer-
 
 
 def test_wikimedia_langfallback2(bootstrap):  # pylint: disable=redefined-outer-name
-    ''' noimagecache '''
+    ''' not english test '''
 
     config = bootstrap
     configuresettings('wikimedia', config.cparser)
