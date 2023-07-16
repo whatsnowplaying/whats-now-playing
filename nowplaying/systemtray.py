@@ -236,7 +236,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.subprocesses.stop_all_processes()
 
     def fresh_start_quit(self):
-        ''' wipe the currect config '''
+        ''' wipe the current config '''
         self.exit_everything()
         self.config.initialized = False
         self.config.cparser.sync()
