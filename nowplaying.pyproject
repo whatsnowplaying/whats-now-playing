@@ -8,6 +8,7 @@
         "nowplaying/resources/artistextras_wikimedia_ui.ui",
         "nowplaying/resources/discordbot_ui.ui",
         "nowplaying/resources/filter_ui.ui",
+        "nowplaying/resources/destroy_ui.ui",
         "nowplaying/resources/general_ui.ui",
         "nowplaying/resources/inputs_beam_ui.ui",
         "nowplaying/resources/inputs_djuced_ui.ui",

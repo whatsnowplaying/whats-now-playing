@@ -114,6 +114,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 self._setup_widgets(f'{plugintype}_{pkey}',
                                     self.config.pluginobjs[plugintype][key].displayname)
 
+        self._setup_widgets('destroy')
         self._setup_widgets('about')
 
         if not self.config.cparser.value('control/beam', type=bool):
@@ -147,6 +148,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _set_stacked_display(self, index):
         self.qtui.settings_stack.setCurrentIndex(index)
+
+    def _connect_destroy_widget(self, qobject):
+        qobject.startover_button.clicked.connect(self.fresh_start)
 
     def _connect_beamstatus_widget(self, qobject):
         ''' refresh the status'''
@@ -578,6 +582,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                                      self.widgets['quirks'].song_in_path_lineedit.text())
         self.config.cparser.setValue('quirks/filesubstout',
                                      self.widgets['quirks'].song_out_path_lineedit.text())
+
+    @Slot()
+    def fresh_start(self):
+        ''' trigger a fresh start '''
+        if self.widgets['destroy'].areyousure_checkbox.isChecked():
+            self.tray.fresh_start_quit()
 
     @Slot()
     def on_text_saveas_button(self):

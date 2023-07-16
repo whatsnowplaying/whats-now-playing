@@ -16,10 +16,10 @@
   <widget class="QListWidget" name="settings_list">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>20</y>
-     <width>131</width>
-     <height>481</height>
+     <x>0</x>
+     <y>10</y>
+     <width>141</width>
+     <height>501</height>
     </rect>
    </property>
   </widget>
@@ -39,9 +39,9 @@
   <widget class="QWidget" name="horizontalLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>10</x>
+     <x>0</x>
      <y>520</y>
-     <width>781</width>
+     <width>791</width>
      <height>41</height>
     </rect>
    </property>

@@ -3,6 +3,7 @@
 
 import asyncio
 import concurrent.futures
+import contextlib
 import logging
 import re
 import os
@@ -396,18 +397,13 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
 
         if 'discnumber' in tags and 'disc' not in self.metadata:
             text = tags['discnumber'][0].replace('[', '').replace(']', '')
-            try:
+            with contextlib.suppress(Exception):
                 self.metadata['disc'], self.metadata['disc_total'] = text.split('/')
-            except Exception:  # pylint: disable=broad-except
-                pass
 
         if 'tracknumber' in tags and 'track' not in self.metadata:
             text = tags['tracknumber'][0].replace('[', '').replace(']', '')
-            try:
+            with contextlib.suppress(Exception):
                 self.metadata['track'], self.metadata['track_total'] = text.split('/')
-            except Exception:  # pylint: disable=broad-except
-                pass
-
         for websitetag in ['WOAR', 'website']:
             if websitetag in tags and 'artistwebsites' not in self.metadata:
                 if isinstance(tags[websitetag], list):

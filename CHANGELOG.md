@@ -1,14 +1,18 @@
 
 # Changelog
 
-## Version 4.0.7 - Unreleased
+## Version 4.1.0 - Unreleased
+
+* IMPORTANT! SOME SETTINGS WILL BE CHANGED:
+  * Artist Extras support is now on
+  * Musicbrainz support and Musicbrainz fallback is now on
+  * The new Wikimedia support is now on (see below)
 
 * Added experimental support for DJUCED DJ software!
-* Reworked metadata gathering again and likely lost some performance in the
-  process.  But the higher quality sources should now be picked first.
 * Added Wikimedia as a source if the wikidata entity URL is available
   as an artist website, such as if Musicbrainz website data is selected.
-  Enabled by default on new installs.
+* Reworked metadata gathering again and likely lost some performance in the
+  process.  But the higher quality sources should now be picked first.
 * Discogs should now honor Discogs artist URLs if they are available
   in the artist website data.
 * With the last two in mind, discogs and wikidata links from Musicbrainz
@@ -16,7 +20,6 @@
 * Fixed some issues with 'The' disappearing from artist names.
 * Musicbrainz lookups should be much more reliable when certain tags
   are defined.
-* For new installs, Musicbrainz support is now defaulted to on.
 * It should now do a better job of using various manipulations of names.
   For example, MӨЯIS BLΛK will also trigger searches for Moris Blak
   in many places. Probably not perfect, but something is better than
@@ -27,7 +30,6 @@
   as a more complex example of what can be done with the twitch bot.
 * Twitch chat now has a default announcement template that will be set
   on new installs.
-* Artist Extras now defaults to on for new installs.
 * Changed the method by which the software looks for the 'Documents'
   folder on new installs because Windows 11 really wants you to use
   OneDrive.

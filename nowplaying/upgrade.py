@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' all things upgrade '''
 
+import contextlib
 import hashlib
 import json
 import logging
@@ -137,10 +138,19 @@ class UpgradeConfig:
         if int(oldversstr[0]) < 4 and config.value('settings/input') == 'm3u':
             upgrade_m3u(config=rawconfig, testdir=self.testdir)
 
+        if oldversion < nowplaying.upgradeutils.Version('4.1.0'):
+            for key in [
+                    'acoustidmb/discogs', 'artistextras/enabled', 'musicbrainz/enabled',
+                    'musicbrainz/fallback'
+            ]:
+                if not config.value(key, type=bool):
+                    logging.info('Upgrade to 4.1.0 defaults: enabled %s ', key)
+                    config.setValue(key, True)
+
         if oldversion < nowplaying.upgradeutils.Version('4.0.5'):
             oldusereplies = rawconfig.value('twitchbot/usereplies')
             if not oldusereplies:
-                logging.debug('Setting twitchbot to use replies by default')
+                logging.info('Setting twitchbot to use replies by default')
                 config.setValue('twitchbot/usereplies', True)
 
         self._oldkey_to_newkey(rawconfig, config, mapping)
@@ -154,11 +164,8 @@ class UpgradeConfig:
         for oldkey, newkey in mapping.items():
             logging.debug('processing %s - %s', oldkey, newkey)
             newval = None
-            try:
+            with contextlib.suppress(Exception):
                 newval = oldconfig.value(newkey)
-            except Exception:  # pylint: disable=broad-except
-                pass
-
             if newval:
                 logging.debug('%s already has value %s', newkey, newval)
                 continue

@@ -220,11 +220,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self.tray.showMessage('Now Playing ▶ ', tip, icon=QSystemTrayIcon.NoIcon)
             self.tray.show()
 
-    def cleanquit(self):
+    def exit_everything(self):
         ''' quit app and cleanup '''
 
         logging.debug('Starting shutdown')
-        self.requestswindow.close_window()
+        if self.requestswindow:
+            self.requestswindow.close_window()
 
         self.action_pause.setEnabled(False)
         self.request_action.setEnabled(False)
@@ -234,14 +235,34 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self.subprocesses.stop_all_processes()
 
+    def fresh_start_quit(self):
+        ''' wipe the currect config '''
+        self.exit_everything()
+        self.config.initialized = False
+        self.config.cparser.sync()
+        for key in self.config.cparser.allKeys():
+            self.config.cparser.remove(key)
+        self.config.cparser.sync()
+
+        self._exit_app()
+
+    def cleanquit(self):
+        ''' quit app and cleanup '''
+
+        self.exit_everything()
         self.config.get()
         if not self.config.initialized:
             self.config.cparser.clear()
             self.config.cparser.sync()
 
+        self._exit_app()
+
+    def _exit_app(self):
+        ''' actually exit '''
         app = QApplication.instance()
         logging.info('shutting qapp down v%s', self.config.version)
-        app.exit(0)
+        if app:
+            app.exit(0)
 
     def installer(self):
         ''' make some guesses as to what the user needs '''
