@@ -24,6 +24,7 @@ async def test_15ghosts2_mp3_orig(bootstrap, getroot):
     assert metadataout['album'] == 'Ghosts I - IV'
     assert metadataout['artist'] == 'Nine Inch Nails'
     assert metadataout['bitrate'] == 64000
+    assert metadataout['imagecacheartist'] == 'nineinchnails'
     assert metadataout['track'] == '15'
     assert metadataout['title'] == '15 Ghosts II'
     assert metadataout['duration'] == 110
@@ -49,6 +50,7 @@ async def test_15ghosts2_mp3_fullytagged(bootstrap, getroot):
     assert metadataout['coverimagetype'] == 'png'
     assert metadataout['coverurl'] == 'cover.png'
     assert metadataout['date'] == '2008'
+    assert metadataout['imagecacheartist'] == 'nineinchnails'
     assert metadataout['isrc'] == ['USTC40852243']
     assert metadataout['label'] == 'The Null Corporation'
     assert metadataout['musicbrainzalbumid'] == '3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a'
@@ -72,6 +74,7 @@ async def test_15ghosts2_flac_orig(bootstrap, getroot):
                                                                                  )
     assert metadataout['album'] == 'Ghosts I - IV'
     assert metadataout['artist'] == 'Nine Inch Nails'
+    assert metadataout['imagecacheartist'] == 'nineinchnails'
     assert metadataout['track'] == '15'
     assert metadataout['title'] == '15 Ghosts II'
     assert metadataout['duration'] == 113
@@ -90,6 +93,7 @@ async def test_15ghosts2_m4a_orig(bootstrap, getroot):
     assert metadataout['album'] == 'Ghosts I - IV'
     assert metadataout['artist'] == 'Nine Inch Nails'
     assert metadataout['bitrate'] == 705600
+    assert metadataout['imagecacheartist'] == 'nineinchnails'
     assert metadataout['track'] == '15'
     assert metadataout['title'] == '15 Ghosts II'
     assert metadataout['duration'] == 113
@@ -109,6 +113,7 @@ async def test_15ghosts2_aiff_orig(bootstrap, getroot):
                                                                                  )
     assert metadataout['album'] == 'Ghosts I - IV'
     assert metadataout['artist'] == 'Nine Inch Nails'
+    assert metadataout['imagecacheartist'] == 'nineinchnails'
     assert metadataout['track'] == '15'
     assert metadataout['title'] == '15 Ghosts II'
     assert metadataout['duration'] == 113
@@ -135,6 +140,7 @@ async def test_15ghosts2_flac_fullytagged(bootstrap, getroot):
     assert metadataout['coverimagetype'] == 'png'
     assert metadataout['coverurl'] == 'cover.png'
     assert metadataout['date'] == '2008-03-02'
+    assert metadataout['imagecacheartist'] == 'nineinchnails'
     assert metadataout['isrc'] == ['USTC40852243']
     assert metadataout['label'] == 'The Null Corporation'
     assert metadataout['musicbrainzalbumid'] == '3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a'
@@ -165,6 +171,7 @@ async def test_15ghosts2_m4a_fullytagged(bootstrap, getroot):
     assert metadataout['coverimagetype'] == 'png'
     assert metadataout['coverurl'] == 'cover.png'
     assert metadataout['date'] == '2008-03-02'
+    assert metadataout['imagecacheartist'] == 'nineinchnails'
     assert metadataout['isrc'] == ['USTC40852243']
     assert metadataout['label'] == 'The Null Corporation'
     assert metadataout['musicbrainzalbumid'] == '3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a'
@@ -192,6 +199,7 @@ async def test_15ghosts2_aiff_fullytagged(bootstrap, getroot):
     assert metadataout['artist'] == 'Nine Inch Nails'
     assert metadataout['coverimagetype'] == 'png'
     assert metadataout['coverurl'] == 'cover.png'
+    assert metadataout['imagecacheartist'] == 'nineinchnails'
     assert metadataout['isrc'] == ['USTC40852243']
     assert metadataout['title'] == '15 Ghosts II'
     assert metadataout['duration'] == 113
@@ -239,6 +247,7 @@ and Trent Reznor alike have refused to identify NIN as an industrial band.
     assert metadataout['album'] == 'Ghosts I - IV'
     assert metadataout['artist'] == 'Nine Inch Nails'
     assert metadataout['bitrate'] == 64000
+    assert metadataout['imagecacheartist'] == 'nineinchnails'
     assert metadataout['track'] == '15'
     assert metadataout['title'] == '15 Ghosts II'
 
@@ -470,6 +479,7 @@ async def test_discogs_from_mb(bootstrap):  # pylint: disable=redefined-outer-na
     assert metadataout['artistwebsites'] == ['https://www.discogs.com/artist/2028711']
     assert metadataout['artist'] == 'TR/ST'
     assert metadataout['date'] == '2019-07-25'
+    assert metadataout['imagecacheartist'] == 'trst'
     assert metadataout['label'] == 'House Arrest'
     assert metadataout['musicbrainzartistid'] == ['b8e3d1ae-5983-4af1-b226-aa009b294111']
     assert metadataout['musicbrainzrecordingid'] == '9ecf96f5-dbba-4fda-a5cf-7728837fb1b6'

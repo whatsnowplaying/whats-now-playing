@@ -125,8 +125,10 @@ def test_noimagecache(getconfiguredplugin):  # pylint: disable=redefined-outer-n
         data = plugins[pluginname].download(
             {
                 'album': 'The Downward Spiral',
-                'artist': 'Nine Inch Nails'
-            }, imagecache=None)
+                'artist': 'Nine Inch Nails',
+                'imagecacheartist': 'nineinchnails'
+            },
+            imagecache=None)
         if pluginname in ['discogs', 'theaudiodb']:
             assert data['artistwebsites']
             assert data['artistlongbio']
@@ -150,8 +152,10 @@ def test_discogs_note_stripping(bootstrap):  # pylint: disable=redefined-outer-n
             {
                 'title': 'Tiny Dancer',
                 'album': 'Diamonds',
-                'artist': 'Elton John'
-            }, imagecache=None)
+                'artist': 'Elton John',
+                'imagecacheartist': 'eltonjohn'
+            },
+            imagecache=None)
         assert data['artistlongbio']
         mpproc = nowplaying.metadata.MetadataProcessors(config=config)
         mpproc.metadata = data
@@ -185,7 +189,9 @@ def test_discogs_weblocation1(bootstrap):  # pylint: disable=redefined-outer-nam
                     'https://www.discogs.com/artist/293637',
                     'https://www.discogs.com/artist/342899', 'https://www.discogs.com/artist/79903',
                     'https://www.discogs.com/artist/571633', 'https://www.discogs.com/artist/96774'
-                ]
+                ],
+                'imagecacheartist':
+                'princeandtherevoluion'
             },
             imagecache=None)
         assert 'NOTE: If The Revolution are credited without Prince' in data['artistlongbio']
@@ -208,15 +214,19 @@ def test_missingmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-na
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
 
-        data = plugins[pluginname].download({'artist': 'Nine Inch Nails'},
-                                            imagecache=imagecaches[pluginname])
+        data = plugins[pluginname].download(
+            {
+                'artist': 'Nine Inch Nails',
+                'imagecacheartist': 'nineinchnails'
+            },
+            imagecache=imagecaches[pluginname])
         if pluginname == 'theaudiodb':
             assert data['artistfanarturls']
             assert data['artistlongbio']
             assert data['artistwebsites']
-            assert imagecaches[pluginname].urls['Nine Inch Nails']['artistbanner']
-            assert imagecaches[pluginname].urls['Nine Inch Nails']['artistlogo']
-            assert imagecaches[pluginname].urls['Nine Inch Nails']['artistthumb']
+            assert imagecaches[pluginname].urls['nineinchnails']['artistbanner']
+            assert imagecaches[pluginname].urls['nineinchnails']['artistlogo']
+            assert imagecaches[pluginname].urls['nineinchnails']['artistthumb']
         else:
             assert not data
             assert not imagecaches[pluginname].urls
@@ -232,7 +242,8 @@ def test_featuring1(getconfiguredplugin):  # pylint: disable=redefined-outer-nam
             {
                 'artist': 'Grimes feat Janelle Monáe',
                 'title': 'Venus Fly',
-                'album': 'Art Angel'
+                'album': 'Art Angel',
+                'imagecacheartist': 'grimesfeatjanellemonae'
             },
             imagecache=imagecaches[pluginname])
         if pluginname == 'discogs':
@@ -243,9 +254,9 @@ def test_featuring1(getconfiguredplugin):  # pylint: disable=redefined-outer-nam
             assert data['artistfanarturls']
             assert data['artistlongbio']
             assert data['artistwebsites']
-            assert imagecaches[pluginname].urls['Grimes feat Janelle Monáe']['artistbanner']
-            assert imagecaches[pluginname].urls['Grimes feat Janelle Monáe']['artistlogo']
-            assert imagecaches[pluginname].urls['Grimes feat Janelle Monáe']['artistthumb']
+            assert imagecaches[pluginname].urls['grimesfeatjanellemonae']['artistbanner']
+            assert imagecaches[pluginname].urls['grimesfeatjanellemonae']['artistlogo']
+            assert imagecaches[pluginname].urls['grimesfeatjanellemonae']['artistthumb']
 
 
 def test_featuring2(getconfiguredplugin):  # pylint: disable=redefined-outer-name
@@ -258,7 +269,8 @@ def test_featuring2(getconfiguredplugin):  # pylint: disable=redefined-outer-nam
             {
                 'artist': 'MӨЯIS BLΛK feat. grabyourface',
                 'title': 'Complicate',
-                'album': 'Irregular Revisions'
+                'album': 'Irregular Revisions',
+                'imagecacheartist': 'morisblakfeatgrabyourface'
             },
             imagecache=imagecaches[pluginname])
         if pluginname == 'discogs':
@@ -308,6 +320,7 @@ def test_artist_and_mbid(getconfiguredplugin):  # pylint: disable=redefined-oute
             {
                 'artist': 'Nine Inch Nails',
                 'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da'],
+                'imagecacheartist': 'nineinchnails',
             },
             imagecache=imagecaches[pluginname])
         if pluginname == 'theaudiodb':
@@ -315,9 +328,9 @@ def test_artist_and_mbid(getconfiguredplugin):  # pylint: disable=redefined-oute
             assert data['artistwebsites']
         if pluginname in ['fanarttv', 'theaudiodb']:
             assert data['artistfanarturls']
-            assert imagecaches[pluginname].urls['Nine Inch Nails']['artistbanner']
-            assert imagecaches[pluginname].urls['Nine Inch Nails']['artistlogo']
-            assert imagecaches[pluginname].urls['Nine Inch Nails']['artistthumb']
+            assert imagecaches[pluginname].urls['nineinchnails']['artistbanner']
+            assert imagecaches[pluginname].urls['nineinchnails']['artistlogo']
+            assert imagecaches[pluginname].urls['nineinchnails']['artistthumb']
         else:
             assert not data
             assert not imagecaches[pluginname].urls
@@ -332,6 +345,7 @@ def test_all(getconfiguredplugin):  # pylint: disable=redefined-outer-name
             'artist': 'Nine Inch Nails',
             'album': 'The Downward Spiral',
             'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da'],
+            'imagecacheartist': 'nineinchnails',
         }
         if pluginname == 'wikimedia':
             metadata['artistwebsites'] = ['https://www.wikidata.org/wiki/Q11647']
@@ -340,8 +354,8 @@ def test_all(getconfiguredplugin):  # pylint: disable=redefined-outer-name
             assert data['artistlongbio']
             assert data['artistwebsites']
         if pluginname in ['fanarttv', 'theaudiodb']:
-            assert imagecaches[pluginname].urls['Nine Inch Nails']['artistbanner']
-            assert imagecaches[pluginname].urls['Nine Inch Nails']['artistlogo']
+            assert imagecaches[pluginname].urls['nineinchnails']['artistbanner']
+            assert imagecaches[pluginname].urls['nineinchnails']['artistlogo']
         assert data['artistfanarturls']
 
 
@@ -356,6 +370,7 @@ def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-name
             'artist': 'The Nine Inch Nails',
             'album': 'The Downward Spiral',
             'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da'],
+            'imagecacheartist': 'nineinchnails'
         }
         if pluginname == 'wikimedia':
             metadata['artistwebsites'] = ['https://www.wikidata.org/wiki/Q11647']
@@ -364,10 +379,10 @@ def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-name
             assert data['artistlongbio']
             assert data['artistwebsites']
         if pluginname in ['fanarttv', 'theaudiodb']:
-            assert imagecaches[pluginname].urls['The Nine Inch Nails']['artistbanner']
-            assert imagecaches[pluginname].urls['The Nine Inch Nails']['artistlogo']
+            assert imagecaches[pluginname].urls['nineinchnails']['artistbanner']
+            assert imagecaches[pluginname].urls['nineinchnails']['artistlogo']
         assert data['artistfanarturls']
-        assert imagecaches[pluginname].urls['The Nine Inch Nails']['artistthumb']
+        assert imagecaches[pluginname].urls['nineinchnails']['artistthumb']
 
 
 def test_notfound(getconfiguredplugin):  # pylint: disable=redefined-outer-name
