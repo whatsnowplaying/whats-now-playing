@@ -28,6 +28,9 @@
 * Twitch chat now has a default announcement template that will be set
   on new installs.
 * Artist Extras now defaults to on for new installs.
+* Changed the method by which the software looks for the 'Documents'
+  folder on new installs because Windows 11 really wants you to use
+  OneDrive.
 
 ## Version 4.0.6 - 2023-06-15
 
