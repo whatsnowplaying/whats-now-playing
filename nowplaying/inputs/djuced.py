@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 ''' djuced support '''
 
-
 import asyncio
 import logging
 import pathlib
@@ -200,7 +199,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         async with aiosqlite.connect(dbfile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
-            await cursor.execute(sql, (playlist,))
+            await cursor.execute(sql, (playlist, ))
             row = await cursor.fetchone()
             await connection.commit()
             if not row:

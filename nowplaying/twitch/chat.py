@@ -365,14 +365,14 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 logging.error('Twitch chat is not connected. Cannot announce.')
                 return
 
-            if anntemplstr := self.config.cparser.value('twitchbot/announce'):
-                anntemplpath = pathlib.Path(anntemplstr)
-            else:
-                logging.debug('No user template to announce is set. Trying track.')
-                anntemplpath = self.config.templatedir.joinpath('twitchbot_track.txt')
+            anntemplstr = self.config.cparser.value('twitchbot/announce')
+            if not anntemplstr:
+                logging.error('Announcement template is not defined.')
+                return
 
+            anntemplpath = pathlib.Path(anntemplstr)
             if not anntemplpath.exists():
-                logging.error('Annoucement template %s does not exist.', anntemplpath)
+                logging.error('Annoucement template %s does not exist.', anntemplstr)
                 return
 
             metadata = await self.metadb.read_last_meta_async()
@@ -592,6 +592,13 @@ class TwitchChatSettings:
         filelist = os.listdir(config.templatedir)
         existing = config.cparser.childGroups()
         alert = False
+
+        if not config.cparser.value('twitchbot/chat', type=bool):
+            anntemplstr = config.cparser.value('twitchbot/announce')
+            if not anntemplstr:
+                anntemplpath = config.templatedir.joinpath('twitchbot_track.txt')
+                if anntemplpath.exists():
+                    config.cparser.setValue('twitchbot/announce', str(anntemplpath))
 
         for file in filelist:
             if not fnmatch.fnmatch(file, 'twitchbot_*.txt'):
