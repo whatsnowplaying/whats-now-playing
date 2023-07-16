@@ -395,8 +395,8 @@ class Plugin(RecognitionPlugin):
         if qwidget.acoustid_checkbox.isChecked() and not qwidget.apikey_lineedit.text():
             raise PluginVerifyError('Acoustid enabled, but no API Key provided.')
 
-        if qwidget.musicbrainz_checkbox.isChecked() and not qwidget.emailaddress_lineedit.text():
-            raise PluginVerifyError('Acoustid enabled, but no email address provided.')
+        #if qwidget.musicbrainz_checkbox.isChecked() and not qwidget.emailaddress_lineedit.text():
+        #    raise PluginVerifyError('Musicbrainz enabled, but no email address provided.')
 
         if qwidget.acoustid_checkbox.isChecked() and not qwidget.fpcalcexe_lineedit.text():
             raise PluginVerifyError('Acoustid enabled, but no fpcalc binary provided.')
@@ -436,7 +436,6 @@ class Plugin(RecognitionPlugin):
         qsettings.setValue('acoustidmb/emailaddress', None)
         qsettings.setValue('acoustidmb/fpcalcexe', None)
         qsettings.setValue('acoustidmb/websites', False)
-        qsettings.setValue('musicbrainz/fallback', False)
 
         for website in ['bandcamp', 'homepage', 'lastfm', 'musicbrainz']:
             qsettings.setValue(f'acoustidmb/{website}', False)

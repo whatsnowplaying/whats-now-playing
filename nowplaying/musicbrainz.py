@@ -13,6 +13,7 @@ import musicbrainzngs
 
 import nowplaying.bootstrap
 import nowplaying.config
+from nowplaying.utils import normalize_text, artist_name_variations
 
 
 class MusicBrainzHelper():
@@ -51,7 +52,8 @@ class MusicBrainzHelper():
                 continue
             for release in recording['release-list']:
                 title = release['title']
-                if testdata.get('album') and testdata['album'] != title:
+                if testdata.get('album') and normalize_text(
+                        testdata['album']) != normalize_text(title):
                     logging.debug('skipped %s <> %s', title, testdata['album'])
                     continue
                 if release.get('artist-credit'
@@ -99,16 +101,23 @@ class MusicBrainzHelper():
 
         logging.debug('Starting data: %s', addmeta)
         if addmeta['album']:
-            mydict = musicbrainzngs.search_recordings(artist=addmeta['artist'],
-                                                      recording=addmeta['title'],
-                                                      release=addmeta['album'])
-            riddata = self._pickarecording(addmeta, mydict) or self._pickarecording(
-                addmeta, mydict, allowothers=True)
+            for artist in artist_name_variations(addmeta['artist']):
+                mydict = musicbrainzngs.search_recordings(artist=artist,
+                                                          recording=addmeta['title'],
+                                                          release=addmeta['album'])
+                riddata = self._pickarecording(addmeta, mydict) or self._pickarecording(
+                    addmeta, mydict, allowothers=True)
+                if riddata:
+                    break
 
         if not riddata:
-            mydict = musicbrainzngs.search_recordings(artist=metadata['artist'],
-                                                      recording=metadata['title'])
-            riddata = self._pickarecording(addmeta, mydict)
+            for artist in artist_name_variations(addmeta['artist']):
+                mydict = musicbrainzngs.search_recordings(artist=artist,
+                                                          recording=metadata['title'])
+                riddata = self._pickarecording(addmeta, mydict)
+                if riddata:
+                    break
+
         if not riddata:
             riddata = self._pickarecording(addmeta, mydict, allowothers=True)
         logging.debug('metadata added artistid = %s / recordingid = %s',
@@ -220,7 +229,8 @@ class MusicBrainzHelper():
                 if len(newdata['musicbrainzartistid']) > 1 and newdata.get(
                         'artist') and release['artist-credit-phrase'] in newdata['artist']:
                     namedartist.append(release)
-                elif 'artist' in newdata and release['artist-credit-phrase'] == newdata['artist']:
+                elif 'artist' in newdata and normalize_text(
+                        release['artist-credit-phrase']) == normalize_text(newdata['artist']):
                     namedartist.append(release)
                 elif release['artist-credit-phrase'] == 'Various Artists':
                     variousartist.append(release)

@@ -137,8 +137,8 @@ class Plugin(ArtistExtrasPlugin):
 
     def defaults(self, qsettings):
         for field in ['bio', 'fanart', 'thumbnails', 'websites']:
-            qsettings.setValue(f'wikimedia/{field}', False)
+            qsettings.setValue(f'wikimedia/{field}', True)
 
-        qsettings.setValue('wikimedia/enabled', False)
+        qsettings.setValue('wikimedia/enabled', True)
         qsettings.setValue('wikimedia/bio_iso', 'en')
         qsettings.setValue('wikimedia/bio_iso_en_fallback', True)

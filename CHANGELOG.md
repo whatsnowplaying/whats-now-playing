@@ -26,6 +26,7 @@
   as a more complex example of what can be done with the twitch bot.
 * Twitch chat now has a default announcement template that will be set
   on new installs.
+* Artist Extras now defaults to on for new installs.
 
 ## Version 4.0.6 - 2023-06-15
 

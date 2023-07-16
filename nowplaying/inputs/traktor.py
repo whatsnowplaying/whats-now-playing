@@ -175,8 +175,7 @@ class Plugin(IcecastPlugin):
 
     def install(self):
         ''' auto-install for Icecast '''
-        nidir = pathlib.Path.home().joinpath('Documents', 'Native Instruments')
-
+        nidir = self.config.userdocs.joinpath('Native Instruments')
         if nidir.exists():
             for entry in os.scandir(nidir):
                 if entry.is_dir() and 'Traktor' in entry.name:
@@ -192,7 +191,7 @@ class Plugin(IcecastPlugin):
     def defaults(self, qsettings):
         ''' (re-)set the default configuration values for this plugin '''
         qsettings.setValue('traktor/port', '8000')
-        nidir = pathlib.Path.home().joinpath('Documents', 'Native Instruments')
+        nidir = self.config.userdocs.joinpath('Native Instruments')
         if nidir.exists():
             if collist := list(nidir.glob('**/collection.nml')):
                 collist.sort(key=lambda x: x.stat().st_mtime)
@@ -208,7 +207,7 @@ class Plugin(IcecastPlugin):
     def _on_traktor_browse_button(self):
         ''' user clicked traktor browse button '''
         startdir = self.qwidget.traktor_collection_lineedit.text() or str(
-            pathlib.Path.home().joinpath('Documents', 'Native Instruments'))
+            self.config.userdocs.joinpath('Native Instruments'))
         if filename := QFileDialog.getOpenFileName(self.qwidget, 'Open collection file', startdir,
                                                    '*.nml'):
             self.qwidget.traktor_collection_lineedit.setText(filename[0])

@@ -202,10 +202,19 @@ def normalize_text(text: t.Optional[str]) -> t.Optional[str]:
     ''' take a string and genercize it '''
     if not text:
         return None
-    transtext = text.translate(CUSTOM_TRANSLATE)
+    transtext = unsmartquotes(text.translate(CUSTOM_TRANSLATE))
     if normal := normality.normalize(transtext):
         return normal
     return transtext
+
+
+def unsmartquotes(text: str) -> str:
+    ''' swap smart quotes '''
+    return text \
+            .replace("\u2018", "'") \
+            .replace("\u2019", "'") \
+            .replace("\u201c", '"') \
+            .replace("\u201d", '"')
 
 
 def normalize(text: t.Optional[str], sizecheck: int = 0, nospaces: bool = False) -> t.Optional[str]:
@@ -257,7 +266,7 @@ def humanize_time(seconds):
 
 def artist_name_variations(artistname: str) -> list[str]:
     ''' turn an artistname into various computed variations '''
-    lowername = artistname.lower()
+    lowername = unsmartquotes(artistname.lower())
     names = [lowername, lowername.translate(CUSTOM_TRANSLATE)]
     if normalized := normality.normalize(lowername):
         names.append(normalized)

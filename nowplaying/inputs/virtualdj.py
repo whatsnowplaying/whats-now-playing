@@ -75,7 +75,7 @@ class Plugin(M3UPlugin):
 
     def install(self):
         ''' locate Virtual DJ '''
-        vdjdir = pathlib.Path.home().joinpath('Documents', 'VirtualDJ')
+        vdjdir = self.config.userdocs.joinpath('VirtualDJ')
         if vdjdir.exists():
             self.config.cparser.value('settings/input', 'virtualdj')
             self.config.cparser.value('virtualdj/history', str(vdjdir.joinpath('History')))
@@ -124,7 +124,7 @@ class Plugin(M3UPlugin):
 
     def defaults(self, qsettings):
         ''' (re-)set the default configuration values for this plugin '''
-        vdjdir = pathlib.Path.home().joinpath('Documents', 'VirtualDJ')
+        vdjdir = self.config.userdocs.joinpath('VirtualDJ')
         qsettings.setValue('virtualdj/history', str(vdjdir.joinpath('History')))
         qsettings.setValue('virtualdj/playlists', str(vdjdir.joinpath('Playlists')))
         qsettings.setValue('virtualdj/useremix', True)
@@ -135,8 +135,8 @@ class Plugin(M3UPlugin):
 
     def on_playlistdir_button(self):
         ''' filename button clicked action'''
-        startdir = self.qwidget.playlistdir_lineedit.text() or str(pathlib.Path.home().joinpath(
-            'Documents', 'VirtualDJ'))
+        startdir = self.qwidget.playlistdir_lineedit.text() or str(
+            self.config.userdocs.joinpath('VirtualDJ'))
         if filename := QFileDialog.getExistingDirectory(self.qwidget, 'Select directory', startdir):
             self.qwidget.playlistdir_lineedit.setText(filename[0])
 
@@ -145,7 +145,7 @@ class Plugin(M3UPlugin):
         if self.qwidget.historydir_lineedit.text():
             startdir = self.qwidget.historydir_lineedit.text()
         else:
-            startdir = str(pathlib.Path.home().joinpath('Documents', 'VirtualDJ', 'History'))
+            startdir = str(self.config.userdocs.joinpath('VirtualDJ', 'History'))
         if dirname := QFileDialog.getExistingDirectory(self.qwidget, 'Select directory', startdir):
             self.qwidget.historydir_lineedit.setText(dirname)
 

@@ -11,7 +11,6 @@ from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 from watchdog.events import PatternMatchingEventHandler
 
-from PySide6.QtCore import QDir  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 from nowplaying.exceptions import PluginVerifyError
@@ -37,7 +36,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def install(self):
         ''' locate Virtual DJ '''
-        djuceddir = pathlib.Path.home().joinpath('Documents', 'DJUCED')
+        djuceddir = self.config.userdocs.joinpath('DJUCED')
         if djuceddir.exists():
             self.config.cparser.value('settings/input', 'djuced')
             self.config.cparser.value('djuced/directory', str(djuceddir))
@@ -61,7 +60,8 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         self.djuceddir = djuceddir
         if not self.djuceddir:
-            logging.error('DJUCED Directory Path does not exist: %s', self.djuceddir)
+            logging.error('DJUCED Directory Path not configured/does not exist: %s', self.djuceddir)
+            await asyncio.sleep(1)
             return
 
         logging.info('Watching for changes on %s', self.djuceddir)
@@ -107,7 +107,11 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         txtfile = pathlib.Path(self.djuceddir).joinpath('playing.txt')
         with open(txtfile, encoding='utf-8') as fhin:
             while line := fhin.readline():
-                title, deck, artist, album = line.split(' | ')
+                try:
+                    title, deck, artist, album = line.split(' | ')
+                except ValueError:
+                    logging.error('text file output is not formatted correctly')
+                    return None
                 album = album.rstrip()
                 if Plugin.decktracker.get(deck) and Plugin.decktracker[deck][
                         'title'] == title and Plugin.decktracker[deck]['artist'] == artist:
@@ -220,9 +224,14 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if self.qwidget.dir_lineedit.text():
             startdir = self.qwidget.dir_lineedit.text()
         else:
-            startdir = QDir.homePath()
+            startdir = str(self.config.userdocs.joinpath('DJUCED'))
         if dirname := QFileDialog.getExistingDirectory(self.qwidget, 'Select directory', startdir):
             self.qwidget.dir_lineedit.setText(dirname)
+
+    def defaults(self, qsettings):
+        ''' (re-)set the default configuration values for this plugin '''
+        djuced = self.config.userdocs.joinpath('DJUCED')
+        qsettings.setValue('djuced/directory', str(djuced))
 
     def connect_settingsui(self, qwidget, uihelp):
         ''' connect m3u button to filename picker'''

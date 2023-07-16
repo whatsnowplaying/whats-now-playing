@@ -36,6 +36,7 @@ class Plugin(ArtistExtrasPlugin):
                 f'whatsnowplaying/{self.config.version}', user_token=apikey)
             self.client.set_timeout(connect=delay, read=delay)
             return True
+        logging.error('Discogs API key is either wrong or missing.')
         return False
 
     def _process_metadata(self, artistname, artist, imagecache):
@@ -127,6 +128,9 @@ class Plugin(ArtistExtrasPlugin):
 
     def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches, too-many-return-statements
         ''' download content '''
+
+        if not self.config.cparser.value('discogs/enabled', type=bool):
+            return None
 
         # discogs basically works by search for a combination of
         # artist and album so we need both

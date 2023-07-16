@@ -37,6 +37,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self.beam = beam
         self.testmode = testmode
         self.logpath = logpath
+        self.userdocs = pathlib.Path(
+            QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0])
         self.basedir = pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0],
             QCoreApplication.applicationName())
@@ -137,9 +139,12 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
                              QCoreApplication.organizationName(),
                              QCoreApplication.applicationName())
 
-        settings.setValue('artistextras/enabled', False)
+        settings.setValue('artistextras/enabled', True)
         for field in ['banners', 'logos', 'thumbnails']:
             settings.setValue(f'artistextras/{field}', 2)
+
+        settings.setValue('musicbrainz/enabled', True)
+        settings.setValue('musicbrainz/fallback', True)
 
         settings.setValue('artistextras/fanart', 10)
         settings.setValue('artistextras/processes', 5)

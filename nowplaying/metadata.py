@@ -105,7 +105,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         try:
-            duration = int(self.metadata['duration'])
+            duration = int(float(self.metadata['duration']))
         except ValueError:
             logging.debug('Cannot convert duration = %s', self.metadata['duration'])
             del self.metadata['duration']
