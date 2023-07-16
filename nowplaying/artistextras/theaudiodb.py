@@ -69,7 +69,6 @@ class Plugin(ArtistExtrasPlugin):
 
         bio = ''
 
-        oldartist = metadata['artist']
         for artdata in extradata:  # pylint: disable=too-many-nested-blocks
 
             if not self._check_artist(artdata):
