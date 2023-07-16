@@ -54,6 +54,7 @@ METADATALIST = [
     'musicbrainzalbumid',
     'musicbrainzartistid',
     'musicbrainzrecordingid',
+    'imagecacheartist',
     'requestdisplayname',
     'requester',
     'title',

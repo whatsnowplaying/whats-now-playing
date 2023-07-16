@@ -92,7 +92,7 @@ class Plugin(ArtistExtrasPlugin):
                     break
                 artist = None
         if artist:
-            self._process_metadata(metadata['artist'], artist, imagecache)
+            self._process_metadata(metadata['imagecacheartist'], artist, imagecache)
             return True
 
         return False
@@ -165,7 +165,7 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug('discogs did not find it')
             return None
 
-        self._process_metadata(metadata['artist'], artistresultlist, imagecache)
+        self._process_metadata(metadata['imagecacheartist'], artistresultlist, imagecache)
         return self.addmeta
 
     def providerinfo(self):  # pylint: disable=no-self-use

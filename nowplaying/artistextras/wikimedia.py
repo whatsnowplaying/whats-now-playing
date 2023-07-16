@@ -97,7 +97,7 @@ class Plugin(ArtistExtrasPlugin):
             if imagecache and thumbs and self.config.cparser.value('wikimedia/thumbnails',
                                                                    type=bool):
                 imagecache.fill_queue(config=self.config,
-                                      artist=metadata['artist'],
+                                      artist=metadata['imagecacheartist'],
                                       imagetype='artistthumb',
                                       urllist=thumbs)
         return mymeta

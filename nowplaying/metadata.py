@@ -69,8 +69,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 logging.error(line)
             logging.error('Ignoring sub-metaproc failure.')
 
-        if not skipplugins:
-            await self._process_plugins()
+        await self._process_plugins(skipplugins)
 
         if 'publisher' in self.metadata:
             if 'label' not in self.metadata:
@@ -245,7 +244,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 logging.error(line)
             logging.error('Ignoring fallback failure.')
 
-    async def _process_plugins(self):
+    async def _process_plugins(self, skipplugins):
         addmeta = self._musicbrainz()
 
         for plugin in self.config.plugins['recognition']:
@@ -262,6 +261,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     logging.error('%s threw exception %s', plugin, error, exc_info=True)
 
         self._mb_fallback()
+
+        if self.metadata and self.metadata.get('artist'):
+            self.metadata['imagecacheartist'] = nowplaying.utils.normalize_text(
+                self.metadata['artist'])
+
+        if skipplugins:
+            return
 
         if self.config.cparser.value(
                 'artistextras/enabled',

@@ -3,6 +3,7 @@
 
 import asyncio
 import base64
+import contextlib
 import logging
 import logging.config
 import os
@@ -342,13 +343,11 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                     await asyncio.sleep(5)
                     continue
 
-                artist = metadata['artist']
                 imagedata = None
-                try:
+
+                with contextlib.suppress(KeyError):
                     imagedata = request.app['imagecache'].random_image_fetch(
-                        artist=artist, imagetype='artistfanart')
-                except KeyError:
-                    pass
+                        artist=metadata['imagecacheartist'], imagetype='artistfanart')
 
                 if imagedata:
                     metadata['artistfanartraw'] = imagedata
@@ -551,10 +550,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 def stop(pid):
     ''' stop the web server -- called from Tray '''
     logging.info('sending INT to %s', pid)
-    try:
+    with contextlib.suppress(ProcessLookupError):
         os.kill(pid, signal.SIGINT)
-    except ProcessLookupError:
-        pass
 
 
 def start(stopevent=None, bundledir=None, testmode=False):

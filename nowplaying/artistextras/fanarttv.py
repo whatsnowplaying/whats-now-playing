@@ -80,7 +80,7 @@ class Plugin(ArtistExtrasPlugin):
                                                                        type=bool):
                 banner = sorted(artist['musicbanner'], key=lambda x: x['likes'], reverse=True)
                 imagecache.fill_queue(config=self.config,
-                                      artist=metadata['artist'],
+                                      artist=metadata['imagecacheartist'],
                                       imagetype='artistbanner',
                                       urllist=[x['url'] for x in banner])
 
@@ -92,7 +92,7 @@ class Plugin(ArtistExtrasPlugin):
                     logo = sorted(artist['musiclogo'], key=lambda x: x['likes'], reverse=True)
                 if logo:
                     imagecache.fill_queue(config=self.config,
-                                          artist=metadata['artist'],
+                                          artist=metadata['imagecacheartist'],
                                           imagetype='artistlogo',
                                           urllist=[x['url'] for x in logo])
 
@@ -100,7 +100,7 @@ class Plugin(ArtistExtrasPlugin):
                                                                        type=bool):
                 thumbnail = sorted(artist['artistthumb'], key=lambda x: x['likes'], reverse=True)
                 imagecache.fill_queue(config=self.config,
-                                      artist=metadata['artist'],
+                                      artist=metadata['imagecacheartist'],
                                       imagetype='artistthumb',
                                       urllist=[x['url'] for x in thumbnail])
 
