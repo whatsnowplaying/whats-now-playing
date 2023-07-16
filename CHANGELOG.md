@@ -8,6 +8,7 @@
   process.  But the higher quality sources should now be picked first.
 * Added Wikimedia as a source if the wikidata entity URL is available
   as an artist website, such as if Musicbrainz website data is selected.
+  Enabled by default on new installs.
 * Discogs should now honor Discogs artist URLs if they are available
   in the artist website data.
 * With the last two in mind, discogs and wikidata links from Musicbrainz
