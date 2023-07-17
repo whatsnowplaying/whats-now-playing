@@ -4,7 +4,7 @@
 coveralls
 psutil==5.9.5
 pytest==7.4.0
-pytest-asyncio==0.21.0
+pytest-asyncio==0.21.1
 pytest-cov==4.1.0
 pytest-httpserver==1.0.8
 pytest-qt==4.2.0
