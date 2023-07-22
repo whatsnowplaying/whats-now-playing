@@ -3,6 +3,7 @@
 ''' support for musicbrainz '''
 
 import contextlib
+import functools
 import logging
 import logging.config
 import logging.handlers
@@ -13,7 +14,21 @@ import musicbrainzngs
 
 import nowplaying.bootstrap
 import nowplaying.config
-from nowplaying.utils import normalize_text, artist_name_variations
+from nowplaying.utils import normalize_text, normalize, artist_name_variations
+
+
+@functools.lru_cache(maxsize=128, typed=False)
+def _verify_artist_name(artistname, artistcredit):
+    logging.debug('called verify_artist_name: %s %s', artistname, artistcredit)
+    if 'Various Artists' in artistcredit:
+        logging.debug('skipped %s -- VA')
+        return False
+    normname = normalize(artistname, nospaces=True)
+    normcredit = normalize(artistcredit, nospaces=True)
+    if not normname or not normcredit or normname not in normcredit:
+        logging.debug('rejecting %s (ours) not in %s (mb)', normname, normcredit)
+        return False
+    return True
 
 
 class MusicBrainzHelper():
@@ -33,23 +48,62 @@ class MusicBrainzHelper():
             according to their requirements '''
         if not self.emailaddressset:
             emailaddress = self.config.cparser.value(
-                'musicbrainz/emailaddress') or 'aw@effectivemachines.com'
+                'musicbrainz/emailaddress') or 'aw+wnp@effectivemachines.com'
 
             musicbrainzngs.set_useragent('whats-now-playing', self.config.version, emailaddress)
             self.emailaddressset = True
 
-    def _pickarecording(self, testdata, mbdata, allowothers=False):  #pylint: disable=too-many-branches
+    def _pickarecording(self, testdata, mbdata, allowothers=False):  #pylint: disable=too-many-statements, too-many-branches
         ''' core routine for last ditch '''
 
+        def _check_build_artid():
+            if len(recording['artist-credit']) > 1:
+                artname = ''
+                artid = []
+                for artdata in recording['artist-credit']:
+                    if isinstance(artdata, dict):
+                        artname = artname + artdata['name']
+                        artid.append(artdata['artist']['id'])
+                    else:
+                        artname = artname + artdata
+
+                if not _verify_artist_name(testdata.get('artist'), artname):
+                    return []
+                mbartid = artid
+            else:
+                if not _verify_artist_name(testdata.get('artist'),
+                                           recording['artist-credit'][0]['name']):
+                    return []
+                #logging.debug(recording)
+                mbartid = [recording['artist-credit'][0]['artist']['id']]
+            return mbartid
+
+        def _check_not_allow_others():
+            if 'Compilation' in relgroup['type']:
+                logging.debug('skipped %s -- compilation type', title)
+                return False
+            if relgroup.get('secondary-type-list'):
+                if 'Compilation' in relgroup['secondary-type-list']:
+                    logging.debug('skipped %s -- 2nd compilation', title)
+                    return False
+                if 'Live' in relgroup['secondary-type-list']:
+                    logging.debug('skipped %s -- 2nd live', title)
+                    return False
+            return True
+
         riddata = {}
+        mbartid = []
         if not mbdata.get('recording-list'):
             return riddata
+
+        variousartistrid = None
         for recording in mbdata['recording-list']:
             rid = recording['id']
             logging.debug('recording id = %s', rid)
             if not recording.get('release-list'):
                 logging.debug('skipping recording id %s -- no releases', rid)
                 continue
+            mbartid = _check_build_artid()
             for release in recording['release-list']:
                 title = release['title']
                 if testdata.get('album') and normalize_text(
@@ -57,28 +111,28 @@ class MusicBrainzHelper():
                     logging.debug('skipped %s <> %s', title, testdata['album'])
                     continue
                 if release.get('artist-credit'
-                               ) and 'Various Artists' in release['artist-credit'][0]['name']:
-                    logging.debug('skipped %s -- VA', title)
+                               ) and release['artist-credit'][0]['name'] == 'Various Artists':
+                    if not variousartistrid:
+                        variousartistrid = rid
+                        logging.debug('saving various artist just in case')
+                    else:
+                        logging.debug('already have a various artist')
                     continue
                 relgroup = release['release-group']
                 if not relgroup:
                     logging.debug('skipped %s -- no rel group', title)
                     continue
-                if not allowothers:
-                    if 'Compilation' in relgroup['type']:
-                        logging.debug('skipped %s -- compilation type', title)
-                        continue
-                    if relgroup.get('secondary-type-list'):
-                        if 'Compilation' in relgroup['secondary-type-list']:
-                            logging.debug('skipped %s -- 2nd compilation', title)
-                            continue
-                        if 'Live' in relgroup['secondary-type-list']:
-                            logging.debug('skipped %s -- 2nd live', title)
-                            continue
+                if not allowothers and not _check_not_allow_others():
+                    continue
                 logging.debug('checking %s', recording['id'])
                 if riddata := self.recordingid(recording['id']):
                     return riddata
-
+        if not riddata and variousartistrid:
+            logging.debug('Using a previous analyzed various artist release')
+            if riddata := self.recordingid(variousartistrid):
+                riddata['musicbrainzartistid'] = mbartid
+                return riddata
+        logging.debug('Exitting pick a recording')
         return riddata
 
     def lastditcheffort(self, metadata):
@@ -112,16 +166,29 @@ class MusicBrainzHelper():
 
         if not riddata:
             for artist in artist_name_variations(addmeta['artist']):
+                logging.debug('Trying %s', artist)
                 mydict = musicbrainzngs.search_recordings(artist=artist,
-                                                          recording=metadata['title'])
+                                                          recording=metadata['title'],
+                                                          strict=True)
+
+                if mydict['recording-count'] == 0:
+                    logging.debug('strict is too strict')
+                    mydict = musicbrainzngs.search_recordings(artist=artist,
+                                                              recording=metadata['title'])
+                if mydict['recording-count'] > 100:
+                    logging.debug('too many, going stricter')
+                    query = (f"artist:{artist} AND recording:{metadata['title']} AND "
+                             f"primarytype:album AND -secondarytype:(compilation live)")
+                    mydict = musicbrainzngs.search_recordings(query=query)
                 riddata = self._pickarecording(addmeta, mydict)
                 if riddata:
                     break
 
         if not riddata:
             riddata = self._pickarecording(addmeta, mydict, allowothers=True)
-        logging.debug('metadata added artistid = %s / recordingid = %s',
-                      riddata.get('musicbrainzartistid'), riddata.get('musicbrainzrecordingid'))
+        if riddata:
+            logging.debug('metadata added artistid = %s / recordingid = %s',
+                          riddata.get('musicbrainzartistid'), riddata.get('musicbrainzrecordingid'))
         return riddata
 
     def recognize(self, metadata):
@@ -175,6 +242,7 @@ class MusicBrainzHelper():
                                reverse=True)
         return self.recordingid(recordinglist[0]['id'])
 
+    @functools.lru_cache(maxsize=128, typed=False)
     def recordingid(self, recordingid):  # pylint: disable=too-many-branches, too-many-return-statements, too-many-statements
         ''' lookup the musicbrainz information based upon recording id '''
         if not self.config.cparser.value('musicbrainz/enabled',
@@ -286,6 +354,7 @@ class MusicBrainzHelper():
                 logging.error('Failed to get cover art: %s', error)
 
         newdata['artistwebsites'] = self._websites(newdata['musicbrainzartistid'])
+        #self.recordingid_tempcache[recordingid] = newdata
         return newdata
 
     def artistids(self, idlist):
@@ -327,7 +396,7 @@ class MusicBrainzHelper():
             }
 
             for urlrel in webdata['artist']['url-relation-list']:
-                logging.debug('checking %s', urlrel['type'])
+                #logging.debug('checking %s', urlrel['type'])
                 for src, dest in convdict.items():
                     if self.config.cparser.value('discogs/enabled',
                                                  type=bool) and urlrel['type'] == 'discogs':
