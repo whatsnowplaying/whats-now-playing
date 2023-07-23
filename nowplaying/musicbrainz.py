@@ -8,6 +8,7 @@ import logging
 import logging.config
 import logging.handlers
 import os
+import re
 import sys
 
 from nowplaying.vendor import musicbrainzngs
@@ -15,6 +16,8 @@ from nowplaying.vendor import musicbrainzngs
 import nowplaying.bootstrap
 import nowplaying.config
 from nowplaying.utils import normalize_text, normalize, artist_name_variations
+
+REMIX_RE = re.compile(r'^(.*) [\(\[].*[\)\]]$')
 
 
 @functools.lru_cache(maxsize=128, typed=False)
@@ -135,15 +138,7 @@ class MusicBrainzHelper():
         logging.debug('Exitting pick a recording')
         return riddata
 
-    def lastditcheffort(self, metadata):
-        ''' there is like no data, so... '''
-
-        if not self.config.cparser.value('musicbrainz/enabled',
-                                         type=bool) or self.config.cparser.value('control/beam',
-                                                                                 type=bool):
-            return None
-
-        self._setemail()
+    def _lastditchrid(self, metadata):
         mydict = {}
 
         addmeta = {
@@ -177,16 +172,43 @@ class MusicBrainzHelper():
                                                               recording=metadata['title'])
                 if mydict['recording-count'] > 100:
                     logging.debug('too many, going stricter')
-                    query = (f"artist:{artist} AND recording:{metadata['title']} AND "
-                             f"primarytype:album AND -secondarytype:(compilation live)")
-                    mydict = musicbrainzngs.search_recordings(query=query)
+                    query = (
+                        f"artist:{artist} AND recording:\"{metadata['title']}\" AND "
+                        "-(secondarytype:compilation OR secondarytype:live) AND status:official")
+                    logging.debug(query)
+                    mydict = musicbrainzngs.search_recordings(query=query, limit=100)
                 riddata = self._pickarecording(addmeta, mydict)
                 if riddata:
                     break
 
         if not riddata:
             riddata = self._pickarecording(addmeta, mydict, allowothers=True)
+        return riddata
+
+    def lastditcheffort(self, metadata):
+        ''' there is like no data, so... '''
+
+        if not self.config.cparser.value('musicbrainz/enabled',
+                                         type=bool) or self.config.cparser.value('control/beam',
+                                                                                 type=bool):
+            return None
+
+        self._setemail()
+
+        riddata = self._lastditchrid(metadata)
+        if not riddata and REMIX_RE.match(metadata['title']):
+            moddata = metadata
+            moddata['title'] = REMIX_RE.match(metadata['title']).group(1)
+            riddata = self._lastditchrid(moddata)
+
         if riddata:
+            if riddata['title'] != metadata['title']:
+                for delitem in [
+                        'musicbrainzrecordingid', 'album', 'date', 'coverimageraw', 'genre'
+                ]:
+                    if delitem in riddata:
+                        del riddata[delitem]
+                logging.debug(riddata)
             logging.debug('metadata added artistid = %s / recordingid = %s',
                           riddata.get('musicbrainzartistid'), riddata.get('musicbrainzrecordingid'))
         return riddata
@@ -311,21 +333,31 @@ class MusicBrainzHelper():
         newdata = {'musicbrainzrecordingid': recordingid}
         try:
             logging.debug('looking up recording id %s', recordingid)
-            mbdata = musicbrainzngs.get_recording_by_id(recordingid, includes=['artists'])
+            mbdata = musicbrainzngs.get_recording_by_id(recordingid, includes=['artists', 'genres'])
         except Exception as error:  # pylint: disable=broad-except
             logging.error('MusicBrainz does not know recording id %s: %s', recordingid, error)
             return None
 
-        if 'recording' in mbdata and 'title' in mbdata['recording']:
-            newdata['title'] = mbdata['recording']['title']
-        if 'recording' in mbdata and 'artist-credit-phrase' in mbdata['recording']:
-            newdata['artist'] = mbdata['recording']['artist-credit-phrase']
-            for artist in mbdata['recording']['artist-credit']:
-                if not isinstance(artist, dict):
-                    continue
-                if not newdata.get('musicbrainzartistid'):
-                    newdata['musicbrainzartistid'] = []
-                newdata['musicbrainzartistid'].append(artist['artist']['id'])
+        if 'recording' in mbdata:
+            if 'title' in mbdata['recording']:
+                newdata['title'] = mbdata['recording']['title']
+            if 'artist-credit-phrase' in mbdata['recording']:
+                newdata['artist'] = mbdata['recording']['artist-credit-phrase']
+                for artist in mbdata['recording']['artist-credit']:
+                    if not isinstance(artist, dict):
+                        continue
+                    if not newdata.get('musicbrainzartistid'):
+                        newdata['musicbrainzartistid'] = []
+                    newdata['musicbrainzartistid'].append(artist['artist']['id'])
+            if 'first-release-date' in mbdata['recording']:
+                newdata['date'] = mbdata['recording']['first-release-date']
+            if 'genre-list' in mbdata['recording']:
+                newdata['genres'] = []
+                for genre in sorted(mbdata['recording']['genre-list'],
+                                    key=lambda d: d['count'],
+                                    reverse=True):
+                    newdata['genres'].extend(genre['name'])
+                newdata['genre'] = '/'.join(newdata['genres'])
 
         mbdata = releaselookup_noartist(recordingid)
 
@@ -340,7 +372,7 @@ class MusicBrainzHelper():
         release = mbdata[0]
         if 'title' in release:
             newdata['album'] = release['title']
-        if 'date' in release:
+        if 'date' in release and not newdata.get('date'):
             newdata['date'] = release['date']
         label = read_label(release)
         if label:
@@ -413,13 +445,8 @@ class MusicBrainzHelper():
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this recognition system '''
         return [
-            'album',
-            'artist',
-            'artistwebsites',
-            'coverimageraw',
-            'date',
-            'label',
-            'title',
+            'album', 'artist', 'artistwebsites', 'coverimageraw', 'date', 'label', 'title', 'genre',
+            'genres'
         ]
 
 

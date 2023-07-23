@@ -98,6 +98,7 @@ async def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
         'fpcalcduration': None,
         'fpcalcfingerprint': None,
         'genre': None,
+        'genres': None,
         'hostfqdn': None,
         'hostip': None,
         'hostname': None,
@@ -147,6 +148,7 @@ async def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'key': 'C#m',
         'label': 'Radioactive Records',
         'title': 'Lakini\'s Juice',
+        'genres': ['trip-hop', 'electronic', 'country']
     }
 
     await metadb.write_to_metadb(metadata=expected)
@@ -179,6 +181,7 @@ async def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
         'fpcalcduration': None,
         'fpcalcfingerprint': None,
         'genre': 'Rock',
+        'genres': ['trip-hop', 'electronic', 'country'],
         'hostfqdn': None,
         'hostip': None,
         'hostname': None,

@@ -43,6 +43,7 @@ METADATALIST = [
     'fpcalcduration',
     'fpcalcfingerprint',
     'genre',
+    'genres',
     'hostfqdn',
     'hostip',
     'hostname',
@@ -64,6 +65,7 @@ METADATALIST = [
 
 LISTFIELDS = [
     'artistwebsites',
+    'genres',
     'isrc',
     'musicbrainzartistid',
 ]
@@ -150,7 +152,7 @@ class MetadataDB:
         def filterkeys(mydict):
             return {key: mydict[key] for key in METADATALIST + METADATABLOBLIST if key in mydict}
 
-        logging.debug('Called write_to_metadb')
+        logging.debug('Called (async) write_to_metadb')
         if (not metadata or not METADATALIST or 'title' not in metadata
                 or 'artist' not in metadata):
             logging.debug('metadata is either empty or too incomplete')
