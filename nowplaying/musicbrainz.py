@@ -208,7 +208,6 @@ class MusicBrainzHelper():
                 ]:
                     if delitem in riddata:
                         del riddata[delitem]
-                logging.debug(riddata)
             logging.debug('metadata added artistid = %s / recordingid = %s',
                           riddata.get('musicbrainzartistid'), riddata.get('musicbrainzrecordingid'))
         return riddata

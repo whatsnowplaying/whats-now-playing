@@ -20,6 +20,9 @@
 * Fixed some issues with 'The' disappearing from artist names.
 * Musicbrainz lookups should be much more reliable when certain tags
   are defined.
+* Template variable 'genres' has been added as a _list_ as opposed to
+  'genre' which is a single string.  Only Musicbrainz currently supports
+  filling in 'genres'.
 * It should now do a better job of using various manipulations of names.
   For example, MӨЯIS BLΛK will also trigger searches for Moris Blak
   in many places. Probably not perfect, but something is better than
