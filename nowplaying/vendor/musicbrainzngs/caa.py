@@ -1,0 +1,185 @@
+# This file is part of the musicbrainzngs library
+# Copyright (C) Alastair Porter, Wieland Hoffmann, and others
+# This file is distributed under a BSD-2-Clause type license.
+# See the COPYING file for more information.
+
+__all__ = [
+    'set_caa_hostname', 'get_image_list', 'get_release_group_image_list',
+    'get_release_group_image_front', 'get_image_front', 'get_image_back',
+    'get_image'
+    ]
+
+import json
+import urllib.parse
+
+import requests
+
+from nowplaying.vendor.musicbrainzngs import musicbrainz
+from nowplaying.vendor.musicbrainzngs.util import _unicode
+
+hostname = "coverartarchive.org"
+https = True
+
+
+def set_caa_hostname(new_hostname, use_https=False):
+    """Set the base hostname for Cover Art Archive requests.
+    Defaults to 'coverartarchive.org', accessing over https.
+    For backwards compatibility, `use_https` is False by default.
+
+    :param str new_hostname: The hostname (and port) of the CAA server to connect to
+    :param bool use_https: `True` if the host should be accessed using https. Default is `False`
+"""
+    global hostname
+    global https
+    hostname = new_hostname
+    https = use_https
+
+
+def _caa_request(mbid, imageid=None, size=None, entitytype="release"):
+    """ Make a CAA request.
+
+    :param imageid: ``front``, ``back`` or a number from the listing obtained
+                    with :meth:`get_image_list`.
+    :type imageid: str
+
+    :param size: "250", "500", "1200"
+    :type size: str or None
+
+    :param entitytype: ``release`` or ``release-group``
+    :type entitytype: str
+    """
+    # Construct the full URL for the request, including hostname and
+    # query string.
+    path = [entitytype, mbid]
+    if imageid and size:
+        path.append(f"{imageid}-{size}")
+    elif imageid:
+        path.append(imageid)
+    url = urllib.parse.urlunparse(
+        (
+            'https' if https else 'http',
+            hostname,
+            f"/{'/'.join(path)}",
+            '',
+            '',
+            '',
+        )
+    )
+    musicbrainz._log.debug(f"GET request for {url}")
+
+    headers = {}
+    if musicbrainz._useragent != "":
+        headers['User-Agent'] = musicbrainz._useragent
+        musicbrainz._log.debug(f"requesting with UA {musicbrainz._useragent}")
+
+    # Make request.
+    req = requests.Request("GET", url, headers=headers)
+    # Useragent isn't needed for CAA, but we'll add it if it exists
+
+    resp = musicbrainz._safe_read(req)
+
+    if imageid:
+        # If we asked for an image, return the image
+        return resp.content
+    else:
+        # Otherwise it's json
+        return resp.json()
+
+
+def get_image_list(releaseid):
+    """Get the list of cover art associated with a release.
+
+    The return value is the deserialized response of the `JSON listing
+    <http://musicbrainz.org/doc/Cover_Art_Archive/API#.2Frelease.2F.7Bmbid.7D.2F>`_
+    returned by the Cover Art Archive API.
+
+    If an error occurs then a :class:`~musicbrainzngs.ResponseError` will
+    be raised with one of the following HTTP codes:
+
+    * 400: `releaseid` is not a valid UUID
+    * 404: The release with an MBID of `releaseid` does not exist or
+           there is no cover art available for it.
+    * 503: Ratelimit exceeded
+    """
+    return _caa_request(releaseid)
+
+
+def get_release_group_image_list(releasegroupid):
+    """Get the list of cover art associated with a release group.
+
+    The return value is the deserialized response of the `JSON listing
+    <http://musicbrainz.org/doc/Cover_Art_Archive/API#.2Frelease-group.2F.7Bmbid.7D.2F>`_
+    returned by the Cover Art Archive API.
+
+    If an error occurs then a :class:`~musicbrainzngs.ResponseError` will
+    be raised with one of the following HTTP codes:
+
+    * 400: `releasegroupid` is not a valid UUID
+    * 404: The release group with an MBID of `releasegroupid` does not exist or
+           there is no cover art available for it.
+    * 503: Ratelimit exceeded
+    """
+    return _caa_request(releasegroupid, entitytype="release-group")
+
+
+def get_release_group_image_front(releasegroupid, size=None):
+    """Download the front cover art for a release group.
+    The `size` argument and the possible error conditions are the same as for
+    :meth:`get_image`.
+    """
+    return get_image(releasegroupid, "front", size=size,
+                     entitytype="release-group")
+
+
+def get_image_front(releaseid, size=None):
+    """Download the front cover art for a release.
+    The `size` argument and the possible error conditions are the same as for
+    :meth:`get_image`.
+    """
+    return get_image(releaseid, "front", size=size)
+
+
+def get_image_back(releaseid, size=None):
+    """Download the back cover art for a release.
+    The `size` argument and the possible error conditions are the same as for
+    :meth:`get_image`.
+    """
+    return get_image(releaseid, "back", size=size)
+
+
+def get_image(mbid, coverid, size=None, entitytype="release"):
+    """Download cover art for a release. The coverart file to download
+    is specified by the `coverid` argument.
+
+    If `size` is not specified, download the largest copy present, which can be
+    very large.
+
+    If an error occurs then a :class:`~musicbrainzngs.ResponseError`
+    will be raised with one of the following HTTP codes:
+
+    * 400: `releaseid` is not a valid UUID or `coverid` is invalid
+    * 404: The release with an MBID of `releaseid` does not exist or no cover
+           art with an id of `coverid` exists.
+    * 503: Ratelimit exceeded
+
+    :param coverid: ``front``, ``back`` or a number from the listing obtained
+                    with :meth:`get_image_list`
+    :type coverid: int or str
+
+    :param size: "250", "500", "1200" or None. If it is None, the largest
+                 available picture will be downloaded. If the image originally
+                 uploaded to the Cover Art Archive was smaller than the
+                 requested size, only the original image will be returned.
+    :type size: str or None
+
+    :param entitytype: The type of entity for which to download the cover art.
+                       This is either ``release`` or ``release-group``.
+    :type entitytype: str
+    :return: The binary image data
+    :type: str
+    """
+    if isinstance(coverid, int):
+        coverid = "%d" % (coverid, )
+    if isinstance(size, int):
+        size = "%d" % (size, )
+    return _caa_request(mbid, coverid, size=size, entitytype=entitytype)

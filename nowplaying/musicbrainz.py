@@ -10,7 +10,7 @@ import logging.handlers
 import os
 import sys
 
-import musicbrainzngs
+from nowplaying.vendor import musicbrainzngs
 
 import nowplaying.bootstrap
 import nowplaying.config
