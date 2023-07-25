@@ -11,6 +11,8 @@ import os
 import re
 import sys
 
+from PIL.Image import new
+
 from nowplaying.vendor import musicbrainzngs
 
 import nowplaying.bootstrap
@@ -355,7 +357,7 @@ class MusicBrainzHelper():
                 for genre in sorted(mbdata['recording']['genre-list'],
                                     key=lambda d: d['count'],
                                     reverse=True):
-                    newdata['genres'].extend(genre['name'])
+                    newdata['genres'].append(genre['name'])
                 newdata['genre'] = '/'.join(newdata['genres'])
 
         mbdata = releaselookup_noartist(recordingid)
