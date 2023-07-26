@@ -11,8 +11,6 @@ import os
 import re
 import sys
 
-from PIL.Image import new
-
 from nowplaying.vendor import musicbrainzngs
 
 import nowplaying.bootstrap
