@@ -484,3 +484,35 @@ async def test_discogs_from_mb(bootstrap):  # pylint: disable=redefined-outer-na
     assert metadataout['musicbrainzartistid'] == ['b8e3d1ae-5983-4af1-b226-aa009b294111']
     assert metadataout['musicbrainzrecordingid'] == '9ecf96f5-dbba-4fda-a5cf-7728837fb1b6'
     assert metadataout['title'] == 'Iris'
+
+
+@pytest.mark.asyncio
+async def test_keeptitle_despite_mb(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' noimagecache '''
+
+    if not os.environ.get('DISCOGS_API_KEY'):
+        return
+
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/homepage', False)
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    config.cparser.setValue('musicbrainz/enabled', True)
+    config.cparser.setValue('musicbrainz/fallback', True)
+    metadatain = {
+        'artist': 'Simple Minds',
+        'title': 'Don\'t You (Forget About Me) (DJ Paulharwood Remix)'
+    }
+    logging.debug(config.cparser.value('acoustidmb/homepage', type=bool))
+    mdp = nowplaying.metadata.MetadataProcessors(config=config)
+    metadataout = await mdp.getmoremetadata(metadata=metadatain)
+    logging.debug(metadataout)
+    assert not metadataout.get('album')
+    assert metadataout['artistwebsites'] == ['https://www.discogs.com/artist/18547']
+    assert metadataout['artist'] == 'Simple Minds'
+    assert not metadataout.get('date')
+    assert metadataout['imagecacheartist'] == 'simple minds'
+    assert not metadataout.get('label')
+    assert metadataout['musicbrainzartistid'] == ['f41490ce-fe39-435d-86c0-ab5ce098b423']
+    assert not metadataout.get('musicbrainzrecordingid')
+    assert metadataout['title'] == 'Don\'t You (Forget About Me) (DJ Paulharwood Remix)'

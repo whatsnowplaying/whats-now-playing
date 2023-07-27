@@ -138,14 +138,8 @@ class MusicBrainzHelper():
         logging.debug('Exitting pick a recording')
         return riddata
 
-    def _lastditchrid(self, metadata):
+    def _lastditchrid(self, addmeta):
         mydict = {}
-
-        addmeta = {
-            'artist': metadata.get('artist'),
-            'title': metadata.get('title'),
-            'album': metadata.get('album')
-        }
         riddata = {}
 
         logging.debug('Starting data: %s', addmeta)
@@ -163,17 +157,17 @@ class MusicBrainzHelper():
             for artist in artist_name_variations(addmeta['artist']):
                 logging.debug('Trying %s', artist)
                 mydict = musicbrainzngs.search_recordings(artist=artist,
-                                                          recording=metadata['title'],
+                                                          recording=addmeta['title'],
                                                           strict=True)
 
                 if mydict['recording-count'] == 0:
                     logging.debug('strict is too strict')
                     mydict = musicbrainzngs.search_recordings(artist=artist,
-                                                              recording=metadata['title'])
+                                                              recording=addmeta['title'])
                 if mydict['recording-count'] > 100:
                     logging.debug('too many, going stricter')
                     query = (
-                        f"artist:{artist} AND recording:\"{metadata['title']}\" AND "
+                        f"artist:{artist} AND recording:\"{addmeta['title']}\" AND "
                         "-(secondarytype:compilation OR secondarytype:live) AND status:official")
                     logging.debug(query)
                     mydict = musicbrainzngs.search_recordings(query=query, limit=100)
@@ -195,16 +189,26 @@ class MusicBrainzHelper():
 
         self._setemail()
 
-        riddata = self._lastditchrid(metadata)
-        if not riddata and REMIX_RE.match(metadata['title']):
-            moddata = metadata
-            moddata['title'] = REMIX_RE.match(metadata['title']).group(1)
-            riddata = self._lastditchrid(moddata)
+        addmeta = {
+            'artist': metadata.get('artist'),
+            'title': metadata.get('title'),
+            'album': metadata.get('album')
+        }
+
+        riddata = self._lastditchrid(addmeta)
+        if not riddata and REMIX_RE.match(addmeta['title']):
+            addmeta['title'] = REMIX_RE.match(addmeta['title']).group(1)
+            riddata = self._lastditchrid(addmeta)
 
         if riddata:
-            if riddata['title'] != metadata['title']:
+            if riddata['title'] != metadata.get('title'):
                 for delitem in [
-                        'musicbrainzrecordingid', 'album', 'date', 'coverimageraw', 'genre'
+                        'album',
+                        'coverimageraw',
+                        'date',
+                        'genre',
+                        'label',
+                        'musicbrainzrecordingid',
                 ]:
                     if delitem in riddata:
                         del riddata[delitem]
