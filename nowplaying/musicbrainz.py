@@ -254,12 +254,12 @@ class MusicBrainzHelper():
         for isrc in isrclist:
             with contextlib.suppress(Exception):
                 mbdata = musicbrainzngs.get_recordings_by_isrc(
-                    isrc, includes=['releases', 'release-group-rels'], release_status=['official'])
+                    isrc, includes=['releases'], release_status=['official'])
         if not mbdata:
             for isrc in isrclist:
                 try:
                     mbdata = musicbrainzngs.get_recordings_by_isrc(
-                        isrc, includes=['releases', 'release-group-rels'])
+                        isrc, includes=['releases'])
                 except Exception as error:  # pylint: disable=broad-except
                     logging.info('musicbrainz cannot find ISRC %s: %s', isrc, error)
 
