@@ -244,7 +244,7 @@ class ImageCache:
             try:
                 cursor.execute('''SELECT * FROM artistsha WHERE cachekey IS NULL
  AND EXISTS (SELECT * FROM artistsha
- WHERE imagetype='artistthumb' OR imagetype='artistbanner' OR imagetype='artistlogo')
+ WHERE imagetype='artistthumbnail' OR imagetype='artistbanner' OR imagetype='artistlogo')
  ORDER BY TIMESTAMP DESC''')
             except sqlite3.OperationalError as error:
                 logging.error(error)

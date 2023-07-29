@@ -351,9 +351,16 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             self.currentmeta['artistlogoraw'] = self.currentmeta['coverimageraw']
 
         if self.config.cparser.value(
-                'artistextras/coverfornothumbs', type=bool
-        ) and not self.currentmeta.get('artistthumbraw') and self.currentmeta.get('coverimageraw'):
-            self.currentmeta['artistthumbraw'] = self.currentmeta['coverimageraw']
+                'artistextras/coverfornothumbs', type=bool) and not self.currentmeta.get(
+                    'artistthumbnailraw') and self.currentmeta.get('coverimageraw'):
+            self.currentmeta['artistthumbnailraw'] = self.currentmeta['coverimageraw']
+
+        if not self.currentmeta.get('coverimageraw') and self.imagecache:
+            if imagetype := self.config.cparser.value('artistextras/nocoverfallback'):
+                imagetype = imagetype.lower()
+                if imagetype != 'none':
+                    self.currentmeta['coverimageraw'] = self.imagecache.random_image_fetch(
+                        artist=self.currentmeta['imagecacheartist'], imagetype=f'artist{imagetype}')
 
     def _write_to_text(self):
         if configfile := self.config.cparser.value('textoutput/file'):
@@ -422,7 +429,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 logging.debug('Artist Extras was enabled without restart; skipping image downloads')
                 return True
 
-            for key in ['artistthumb', 'artistlogo', 'artistbanner']:
+            for key in ['artistthumbnail', 'artistlogo', 'artistbanner']:
                 logging.debug('Calling %s', key)
                 rawkey = f'{key}raw'
                 if not self.currentmeta.get(rawkey):

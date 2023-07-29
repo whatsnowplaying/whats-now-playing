@@ -8,6 +8,10 @@
   * Musicbrainz support and Musicbrainz fallback is now on
   * The new Wikimedia support is now on (see below)
 
+* IMPORTANT! 'artistthumb' has been renamed to 'artistthumbnail'
+  in the metadata. For most users, this change is invisible, but
+  if you use the API directly, be aware of this change.
+
 * Added experimental support for DJUCED DJ software!
 * Added Wikimedia as a source if the wikidata entity URL is available
   as an artist website, such as if Musicbrainz website data is selected.
@@ -20,6 +24,9 @@
 * Fixed some issues with 'The' disappearing from artist names.
 * Musicbrainz lookups should be much more reliable when certain tags
   are defined.
+* If covers cannot be found, other artwork may now be substituted via the
+  artistextras settings.
+* A new websocket example template that just shows the cover is now available.
 * Template variable 'genres' has been added as a _list_ as opposed to
   'genre' which is a single string.  Only Musicbrainz currently supports
   filling in 'genres'.

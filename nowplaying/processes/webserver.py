@@ -139,10 +139,10 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         return await self._metacheck_htm_handler(
             request, request.app['config'].cparser.value('weboutput/artistlogotemplate'))
 
-    async def artistthumb_htm_handler(self, request):
+    async def artistthumbnail_htm_handler(self, request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(
-            request, request.app['config'].cparser.value('weboutput/artistthumbtemplate'))
+            request, request.app['config'].cparser.value('weboutput/artistthumbnailtemplate'))
 
     async def artistfanartlaunch_htm_handler(self, request):
         ''' handle web output '''
@@ -276,9 +276,9 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         ''' handle artist logo image '''
         return await self._image_handler('artistlogoraw', request)
 
-    async def artistthumb_handler(self, request):
+    async def artistthumbnail_handler(self, request):
         ''' handle artist logo image '''
-        return await self._image_handler('artistthumbraw', request)
+        return await self._image_handler('artistthumbnailraw', request)
 
     async def api_v1_last_handler(self, request):
         ''' v1/last just returns the metadata'''
@@ -464,8 +464,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             web.get('/artistbanner.htm', self.artistbanner_htm_handler),
             web.get('/artistlogo.png', self.artistlogo_handler),
             web.get('/artistlogo.htm', self.artistlogo_htm_handler),
-            web.get('/artistthumb.png', self.artistthumb_handler),
-            web.get('/artistthumb.htm', self.artistthumb_htm_handler),
+            web.get('/artistthumb.png', self.artistthumbnail_handler),
+            web.get('/artistthumb.htm', self.artistthumbnail_htm_handler),
             web.get('/favicon.ico', self.favicon_handler),
             web.get('/gifwords.htm', self.gifwords_launch_htm_handler),
             web.get('/index.htm', self.index_htm_handler),

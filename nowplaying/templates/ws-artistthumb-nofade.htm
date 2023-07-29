@@ -2,7 +2,7 @@
 <html>
    <head>
       <meta charset="utf-8" >
-      <title>artistthumb</title>
+      <title>artistthumbnail</title>
       <style>
          .container {
             text-align: center;
@@ -23,8 +23,8 @@
    <body>
 
 
-      <div class="container" id="artistthumb">
-         <div id="artistthumb"></div>
+      <div class="container" id="artistthumbnail">
+         <div id="artistthumbnail"></div>
       </div>
 
       <script type = "text/javascript">
@@ -40,10 +40,10 @@
                      var metadata = JSON.parse(event.data);
                      console.log(metadata.artist);
                      var img = document.createElement("img")
-                     img.src = 'data:image/png;base64,' + metadata.artistthumbbase64;
+                     img.src = 'data:image/png;base64,' + metadata.artistthumbnailbase64;
                      img.className = 'img-scale';
                      if (metadata.artist) {
-                        $("#artistthumb").html(img);
+                        $("#artistthumbnail").html(img);
                      }
                   };
 

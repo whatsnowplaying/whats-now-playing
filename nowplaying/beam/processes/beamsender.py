@@ -288,7 +288,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                 'artistlogoraw',
                 'artistlongbio',
                 'artistshortbio',
-                'artistthumbraw',
+                'artistthumbnailraw',
                 'dbid',
                 'coverurl',
                 'filename',

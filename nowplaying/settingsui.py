@@ -27,6 +27,9 @@ import nowplaying.trackrequests
 import nowplaying.uihelp
 import nowplaying.utils
 
+LOGGING_COMBOBOX = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'FATAL', 'CRITICAL']
+NOCOVER_COMBOBOX = ['None', 'Fanart', 'Logo', 'Thumbnail']
+
 
 # settings UI
 class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-instance-attributes
@@ -244,6 +247,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.config.cparser.value('setlist/enabled', type=bool))
 
     def _upd_win_artistextras(self):
+        self.widgets['artistextras'].coverart_combobox.clear()
+        self.widgets['artistextras'].coverart_combobox.addItems(NOCOVER_COMBOBOX)
+        current = self.config.cparser.value('artistextras/nocoverfallback', type=str) or 'None'
+        currentval = NOCOVER_COMBOBOX.index(current.capitalize())
+        self.widgets['artistextras'].coverart_combobox.setCurrentIndex(currentval)
         self.widgets['artistextras'].artistextras_checkbox.setChecked(
             self.config.cparser.value('artistextras/enabled', type=bool))
         self.widgets['artistextras'].missingfanart_checkbox.setChecked(
@@ -448,6 +456,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         for art in ['banners', 'processes', 'fanart', 'logos', 'thumbnails', 'fanartdelay']:
             guiattr = getattr(self.widgets['artistextras'], f'{art}_spin')
             self.config.cparser.setValue(f'artistextras/{art}', guiattr.value())
+
+        current = self.widgets['artistextras'].coverart_combobox.currentText()
+        self.config.cparser.setValue('artistextras/nocoverfallback', current.lower())
 
     def _upd_conf_recognition(self):
         self.config.cparser.setValue('recognition/replacetitle',

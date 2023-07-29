@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' Input Plugin definition '''
 
+import contextlib
 #import logging
 import sys
 import typing as t
@@ -33,10 +34,8 @@ class ArtistExtrasPlugin(WNPBasePlugin):
 
         delay: float = 10.0
 
-        try:
+        with contextlib.suppress(ValueError):
             delay = self.config.cparser.value('settings/delay', type=float, defaultValue=10.0)
-        except ValueError:
-            pass
 
         if sys.platform == 'win32':
             delay = max(delay / 2, 10)

@@ -3,6 +3,7 @@
    config file parsing/handling
 '''
 
+import contextlib
 import logging
 import os
 import pathlib
@@ -110,22 +111,15 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         ''' refresh values '''
 
         self.cparser.sync()
-        try:
+        with contextlib.suppress(TypeError):
             self.loglevel = self.cparser.value('settings/loglevel')
-        except TypeError:
-            pass
 
-        try:
+        with contextlib.suppress(TypeError):
             self.notif = self.cparser.value('settings/notif', type=bool)
-        except TypeError:
-            pass
-
         self.txttemplate = self.cparser.value('textoutput/txttemplate', defaultValue=None)
 
-        try:
+        with contextlib.suppress(TypeError):
             self.initialized = self.cparser.value('settings/initialized', type=bool)
-        except TypeError:
-            pass
 
     def validate_source(self, plugin):
         ''' verify the source input '''
@@ -153,6 +147,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue('artistextras/coverfornofanart', True)
         settings.setValue('artistextras/coverfornologos', False)
         settings.setValue('artistextras/coverfornothumbs', True)
+        settings.setValue('artistextras/nocoverfallback', 'none')
 
         settings.setValue('recognition/replacetitle', False)
         settings.setValue('recognition/replaceartist', False)
@@ -182,7 +177,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
                           str(self.templatedir.joinpath("ws-artistbanner-nofade.htm")))
         settings.setValue('weboutput/artistlogotemplate',
                           str(self.templatedir.joinpath("ws-artistlogo-nofade.htm")))
-        settings.setValue('weboutput/artistthumbtemplate',
+        settings.setValue('weboutput/artistthumbnailtemplate',
                           str(self.templatedir.joinpath("ws-artistthumb-nofade.htm")))
         settings.setValue('weboutput/artistfanarttemplate',
                           str(self.templatedir.joinpath("ws-artistfanart-nofade.htm")))

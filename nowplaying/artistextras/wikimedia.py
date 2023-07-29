@@ -98,7 +98,7 @@ class Plugin(ArtistExtrasPlugin):
                                                                    type=bool):
                 imagecache.fill_queue(config=self.config,
                                       artist=metadata['imagecacheartist'],
-                                      imagetype='artistthumb',
+                                      imagetype='artistthumbnail',
                                       urllist=thumbs)
         return mymeta
 

@@ -226,7 +226,7 @@ def test_missingmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-na
             assert data['artistwebsites']
             assert imagecaches[pluginname].urls['nineinchnails']['artistbanner']
             assert imagecaches[pluginname].urls['nineinchnails']['artistlogo']
-            assert imagecaches[pluginname].urls['nineinchnails']['artistthumb']
+            assert imagecaches[pluginname].urls['nineinchnails']['artistthumbnail']
         else:
             assert not data
             assert not imagecaches[pluginname].urls
@@ -256,7 +256,7 @@ def test_featuring1(getconfiguredplugin):  # pylint: disable=redefined-outer-nam
             assert data['artistwebsites']
             assert imagecaches[pluginname].urls['grimesfeatjanellemonae']['artistbanner']
             assert imagecaches[pluginname].urls['grimesfeatjanellemonae']['artistlogo']
-            assert imagecaches[pluginname].urls['grimesfeatjanellemonae']['artistthumb']
+            assert imagecaches[pluginname].urls['grimesfeatjanellemonae']['artistthumbnail']
 
 
 def test_featuring2(getconfiguredplugin):  # pylint: disable=redefined-outer-name
@@ -330,7 +330,7 @@ def test_artist_and_mbid(getconfiguredplugin):  # pylint: disable=redefined-oute
             assert data['artistfanarturls']
             assert imagecaches[pluginname].urls['nineinchnails']['artistbanner']
             assert imagecaches[pluginname].urls['nineinchnails']['artistlogo']
-            assert imagecaches[pluginname].urls['nineinchnails']['artistthumb']
+            assert imagecaches[pluginname].urls['nineinchnails']['artistthumbnail']
         else:
             assert not data
             assert not imagecaches[pluginname].urls
@@ -382,7 +382,7 @@ def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-name
             assert imagecaches[pluginname].urls['nineinchnails']['artistbanner']
             assert imagecaches[pluginname].urls['nineinchnails']['artistlogo']
         assert data['artistfanarturls']
-        assert imagecaches[pluginname].urls['nineinchnails']['artistthumb']
+        assert imagecaches[pluginname].urls['nineinchnails']['artistthumbnail']
 
 
 def test_notfound(getconfiguredplugin):  # pylint: disable=redefined-outer-name

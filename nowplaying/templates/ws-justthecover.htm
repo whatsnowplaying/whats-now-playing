@@ -4,6 +4,12 @@
       <meta charset="utf-8" >
       <title>covercard</title>
       <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
+      <style>
+        img {
+          max-width: 90vw;
+          max-height: 90vh;
+        }
+    </style>
   </head>
    <body>
 
@@ -40,7 +46,7 @@
             }
 
             if ("WebSocket" in window) {
-               start("ws://{{ hostip }}:{{ httpport }}/wsstream")
+               start("ws://{{hostip}}:{{httpport}}/wsstream")
             }
 
       </script>

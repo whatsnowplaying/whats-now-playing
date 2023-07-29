@@ -106,12 +106,12 @@ class Plugin(ArtistExtrasPlugin):
                                           imagetype='artistlogo',
                                           urllist=[artdata['strArtistLogo']])
 
-                if not metadata.get('artistthumbraw') and artdata.get(
+                if not metadata.get('artistthumbnailraw') and artdata.get(
                         'strArtistThumb') and self.config.cparser.value('theaudiodb/thumbnails',
                                                                         type=bool):
                     imagecache.fill_queue(config=self.config,
                                           artist=metadata['imagecacheartist'],
-                                          imagetype='artistthumb',
+                                          imagetype='artistthumbnail',
                                           urllist=[artdata['strArtistThumb']])
 
                 if self.config.cparser.value('theaudiodb/fanart', type=bool):
@@ -187,7 +187,7 @@ class Plugin(ArtistExtrasPlugin):
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this plug-in '''
         return [
-            'artistbannerraw', 'artistlongbio', 'artistlogoraw', 'artistthumbraw',
+            'artistbannerraw', 'artistlongbio', 'artistlogoraw', 'artistthumbnailraw',
             'theaudiodb-artistfanarturls'
         ]
 

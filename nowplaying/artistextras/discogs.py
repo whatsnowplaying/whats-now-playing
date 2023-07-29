@@ -48,7 +48,7 @@ class Plugin(ArtistExtrasPlugin):
                         'uri150') and self.config.cparser.value('discogs/thumbnails', type=bool):
                     imagecache.fill_queue(config=self.config,
                                           artist=artistname,
-                                          imagetype='artistthumb',
+                                          imagetype='artistthumbnail',
                                           urllist=[record['uri150']])
 
                 if record['type'] == 'secondary' and record.get(
@@ -170,7 +170,7 @@ class Plugin(ArtistExtrasPlugin):
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this plug-in '''
-        return ['artistlongbio', 'artistthumbraw', 'discogs-artistfanarturls', 'artistwebsites']
+        return ['artistlongbio', 'artistthumbnailraw', 'discogs-artistfanarturls', 'artistwebsites']
 
     def load_settingsui(self, qwidget):
         ''' draw the plugin's settings page '''

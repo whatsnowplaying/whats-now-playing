@@ -190,7 +190,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
                 'artistlogoraw',
                 'artistlongbio',
                 'artistshortbio',
-                'artistthumbraw',
+                'artistthumbnailraw',
                 'coverurl',
                 'dbid',
                 'filename',

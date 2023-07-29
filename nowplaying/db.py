@@ -74,7 +74,7 @@ LISTFIELDS = [
 # but putting it here triggers side-effects to force it to be
 # treated as binary
 METADATABLOBLIST = [
-    'artistbannerraw', 'artistfanartraw', 'artistlogoraw', 'artistthumbraw', 'coverimageraw',
+    'artistbannerraw', 'artistfanartraw', 'artistlogoraw', 'artistthumbnailraw', 'coverimageraw',
     'requesterimageraw'
 ]
 
