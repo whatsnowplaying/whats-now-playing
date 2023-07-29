@@ -19,6 +19,9 @@ from nowplaying.utils import normalize_text, normalize, artist_name_variations
 
 REMIX_RE = re.compile(r'^(.*) [\(\[].*[\)\]]$')
 
+musicbrainzngs.musicbrainz._max_retries = 3  # pylint: disable=protected-access
+musicbrainzngs.musicbrainz._timeout = 30  # pylint: disable=protected-access
+
 
 @functools.lru_cache(maxsize=128, typed=False)
 def _verify_artist_name(artistname, artistcredit):

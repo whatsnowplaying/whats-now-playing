@@ -25,7 +25,7 @@ _log = logging.getLogger("musicbrainzngs")
 _max_retries = 8
 
 _timeout = 60
-_retry = Retry(total=8, backoff_factor=2, status_forcelist=[500, 502, 503])
+_retry = Retry(total=_max_retries, backoff_factor=2, status_forcelist=[500, 502, 503])
 
 LUCENE_SPECIAL = r'([+\-&|!(){}\[\]\^"~*?:\\\/])'
 
