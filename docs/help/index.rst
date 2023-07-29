@@ -5,6 +5,7 @@ Help
    :maxdepth: 2
    :caption: Contents:
 
+   accuracy
    howdoi
    troubleshooting
    bugreports

@@ -1,6 +1,11 @@
 How Do I...
 ===========
 
+Improve Results (cover art, biography, etc)
+-------------------------------------------
+
+See the page on `Accuracy <accuracy.html>`_
+
 Change the Twitch command from `!track` to `!song`?
 ---------------------------------------------------
 
