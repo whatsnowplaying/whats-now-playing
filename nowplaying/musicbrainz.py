@@ -21,6 +21,10 @@ REMIX_RE = re.compile(r'^(.*) [\(\[].*[\)\]]$')
 
 musicbrainzngs.musicbrainz._max_retries = 3  # pylint: disable=protected-access
 musicbrainzngs.musicbrainz._timeout = 30  # pylint: disable=protected-access
+# WNP (typically) has large lulls between 2-3 calls that need to happen
+# quickly. so double the rate of calls to speed things up but still
+# keep a rate limiter in case the DJ is doing something stupid
+musicbrainzngs.set_rate_limit(limit_or_interval=.5)
 
 
 @functools.lru_cache(maxsize=128, typed=False)
