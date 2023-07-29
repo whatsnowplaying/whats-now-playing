@@ -81,7 +81,7 @@ VALID_INCLUDES = {
         "artist-credits", "discids", "isrcs",
         "recording-level-rels", "work-level-rels", "annotation", "aliases"
     ] + RELATION_INCLUDES,
-    'isrc': ["artists", "releases", "isrcs"],
+    'isrc': ["artists", "releases"] + RELATION_INCLUDES,
     'iswc': ["artists"],
     'collection': ['releases'],
 }

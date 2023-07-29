@@ -260,8 +260,8 @@ class MusicBrainzHelper():
                 try:
                     mbdata = musicbrainzngs.get_recordings_by_isrc(
                         isrc, includes=['releases', 'release-group-rels'])
-                except Exception:  # pylint: disable=broad-except
-                    logging.info('musicbrainz cannot find ISRC %s', isrc)
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.info('musicbrainz cannot find ISRC %s: %s', isrc, error)
 
         if 'isrc' not in mbdata or 'recording-list' not in mbdata['isrc']:
             return None
