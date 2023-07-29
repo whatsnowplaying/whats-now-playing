@@ -10,26 +10,26 @@ of most important to least important:
 4. Artist + Title
 5. Title
 
-Even after all of that, sometimes things that you think should be found aren't, such as cover art. 
-Unlike a lot of software, **What's Now Playing** errs on the side of caution.  
+Even after all of that, sometimes things that you think should be found aren't, such as cover art.
+Unlike a lot of software, **What's Now Playing** errs on the side of caution.
 
 For example of what I mean, let's take a real world example.  While
-testing some of the audio recognition and metadata downloading capabilities, 
+testing some of the audio recognition and metadata downloading capabilities,
 `Pet Shop Boys - "Vocal" <https://www.youtube.com/watch?v=qNR8gQAoYCs>`_ was used as an input with no
 modification the metadata (so, in other words, very much wrong and very much a mess).
-Virutal DJ reported the song came from the album 
-`Electric <https://musicbrainz.org/release/eeb0aa28-b7c9-4109-b8a6-e08611a6ca84>`_ and 
+Virutal DJ reported the song came from the album
+`Electric <https://musicbrainz.org/release/eeb0aa28-b7c9-4109-b8a6-e08611a6ca84>`_ and
 provided the cover art for that album.  **What's Now Playing** with AcoustID enabled reported that
 the song was actually "Vocal (Radio Edit)" and appears on the album
 `Spex CD #110 <https://musicbrainz.org/release/2ccfa7d1-8918-4c41-9945-e302a6053bd8>`_.
 Since (at least as of this writing) that album does not have cover art, no cover art was provided.
 
-Which one is correct? Neither and both. It really depends upon the individual DJ's goals.  From a 
+Which one is correct? Neither and both. It really depends upon the individual DJ's goals.  From a
 software perspective, they are both an answer to the cover art question. It also demonstrates how
 a bit of manipulation of the title can yield very different results.
 
-This example is also important when working with systems such as Deezer, Tidal, etc, or even WinMedia as 
-(ultimately) the source of your music.  In the listing above, we are almost always at #4 since many 
+This example is also important when working with systems such as Deezer, Tidal, etc, or even WinMedia as
+(ultimately) the source of your music.  In the listing above, we are almost always at #4 since many
 pieces of the software invovled do not provide the album information.  Since there is no other
 information, it can sometimes be a bit hit or miss.
 
