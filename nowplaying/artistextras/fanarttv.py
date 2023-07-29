@@ -98,9 +98,7 @@ class Plugin(ArtistExtrasPlugin):
 
             if artist.get('artistthumb') and self.config.cparser.value('fanarttv/thumbnails',
                                                                        type=bool):
-                thumbnail = sorted(artist['artistthumbnail'],
-                                   key=lambda x: x['likes'],
-                                   reverse=True)
+                thumbnail = sorted(artist['artistthumb'], key=lambda x: x['likes'], reverse=True)
                 imagecache.fill_queue(config=self.config,
                                       artist=metadata['imagecacheartist'],
                                       imagetype='artistthumbnail',
