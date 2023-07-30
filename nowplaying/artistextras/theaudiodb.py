@@ -123,6 +123,7 @@ class Plugin(ArtistExtrasPlugin):
                                 metadata['artistfanarturls'] = []
                             metadata['artistfanarturls'].append(artdata[artstring])
                             if not gotonefanart:
+                                gotonefanart = True
                                 imagecache.fill_queue(config=self.config,
                                                       artist=metadata['imagecacheartist'],
                                                       imagetype='artistfanart',
