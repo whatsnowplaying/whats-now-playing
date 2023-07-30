@@ -46,7 +46,7 @@ class Plugin(ArtistExtrasPlugin):
                     page = None
         return page
 
-    def download(self, metadata=None, imagecache=None):
+    def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches
         ''' download content '''
 
         def _get_bio():

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 ''' thread to poll music player '''
+
 import asyncio
+import contextlib
 import multiprocessing
 import logging
 import os
@@ -233,7 +235,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 return True
         return False
 
-    async def _fillinmetadata(self, metadata):
+    async def _fillinmetadata(self, metadata):  # pylint: disable=too-many-branches
         ''' keep a copy of our fetched data '''
 
         # Fill in as much metadata as possible. everything
@@ -455,10 +457,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 def stop(pid):
     ''' stop the web server -- called from Tray '''
     logging.info('sending INT to %s', pid)
-    try:
+    with contextlib.suppress(ProcessLookupError):
         os.kill(pid, signal.SIGINT)
-    except ProcessLookupError:
-        pass
 
 
 def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argument
