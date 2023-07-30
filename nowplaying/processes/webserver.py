@@ -126,6 +126,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
     async def index_htm_handler(self, request):
         ''' handle web output '''
+        request.app['config'].cparser.sync()
         return await self._metacheck_htm_handler(
             request, request.app['config'].cparser.value('weboutput/htmltemplate'))
 
@@ -169,6 +170,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             if not metadata:
                 metadata = await request.app['metadb'].read_last_meta_async()
             if not metadata:
+                request.app['config'].cparser.sync()
                 metadata = nowplaying.hostmeta.gethostmeta()
                 metadata['httpport'] = request.app['config'].cparser.value('weboutput/httpport',
                                                                            type=int)
@@ -187,6 +189,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         request.app['config'].get()
         metadata = await request.app['metadb'].read_last_meta_async()
         lastid = await self.getlastid(request, source)
+        request.app['config'].cparser.sync()
         once = request.app['config'].cparser.value('weboutput/once', type=bool)
         #once = False
 
@@ -235,6 +238,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         if metadata:
             request.app['config'].get()
             try:
+                request.app['config'].cparser.sync()
                 templatehandler = nowplaying.utils.TemplateHandler(
                     filename=request.app['config'].cparser.value('textoutput/txttemplate'))
                 txtoutput = templatehandler.generate(metadata)
@@ -349,6 +353,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                     imagedata = request.app['imagecache'].random_image_fetch(
                         artist=metadata['imagecacheartist'], imagetype='artistfanart')
 
+                request.app['config'].cparser.sync()
                 if imagedata:
                     metadata['artistfanartraw'] = imagedata
                 elif request.app['config'].cparser.value('artistextras/coverfornofanart',
