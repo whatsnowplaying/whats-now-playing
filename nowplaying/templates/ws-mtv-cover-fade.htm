@@ -1,87 +1,118 @@
 <!DOCTYPE HTML>
 <html>
-   <head>
-      <meta charset="utf-8" >
-      <title>Titlecard</title>
-      <link href="https://db.onlinewebfonts.com/c/de58fdcb98299a76fccd3c0cb4e5a6c0?family=Kabel" rel="stylesheet" type="text/css"/>
-      <style>
-         .container {
-           margin: 1px;
-           width: 2500px;
-           height: 200px;
-           float: left;
-           font-size: 36px;
-           font-family: "Kabel";
-           line-height: 30%;
-           text-shadow: 4px 4px #000000;
-           color: #FFF;
-           text-indent: 1%;
-         }
-         .npimage {
-           margin: 10px;
-           float: left;
-           max-height: 190px;
-           min-height: 190px;
-           width: auto;
-         }
-      </style>
-      <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
-  </head>
-   <body>
 
-      <div class="container" id="titlecard">
-         <div class="npimage" id="cover"></div>
-         <p><div id="artist"></div></p>
-         <p><div id="title"></div></p>
-         <p><div id="album"></div></p>
-         <p><div id="label"></div></p>
-      </div>
+    <head>
+        <meta charset="utf-8">
+        <title>Titlecard</title>
+        <link href="https://db.onlinewebfonts.com/c/de58fdcb98299a76fccd3c0cb4e5a6c0?family=Kabel" rel="stylesheet" type="text/css" />
+        <style>
+            .container {
+                display: flex;
+                align-items: center;
+                margin: 1px;
+                width: 100vw;
+                height: 100vh;
+                float: left;
+                font-size: 36px;
+                font-family: "Kabel";
+                line-height: 30%;
+                text-shadow: 4px 4px #000000;
+                color: #FFF;
+                margin-bottom: 10px;
+            }
 
-      <script type = "text/javascript">
-            function start(websocketServerLocation){
-                  // Let us open a web socket
-                  var ws = new WebSocket(websocketServerLocation);
+            .center {
+                align-items: center;
+                justify-content: center;
+            }
 
-                  ws.onopen = function() {
-                     console.log('ws connected');
-                  };
+            .spacer {
+                width:100vw;
+                margin: 0 auto;
+                content:"";
+                margin-bottom: 10px;
+            }
 
-                  ws.onmessage = function (event) {
-                     var metadata = JSON.parse(event.data);
-                     console.log(metadata.title);
-                     var img = document.createElement("img")
-                     img.src = 'data:image/png;base64,' + metadata.coverimagebase64;
-                     img.className = "npimage"
-                     $('#titlecard').hide()
-                     if (metadata.title) {
+            .txtdiv {
+                margin: 1px;
+                line-height: 100%;
+                max-width: 70vw;
+            }
+
+            .npimage {
+                margin: 10px;
+                float: left;
+                max-height: 100vh;
+                min-height: 100vh;
+                width: auto;
+            }
+        </style>
+        <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
+    </head>
+
+    <body>
+
+        <div class="container" id="titlecard">
+            <div class="npimage" id="cover"></div>
+            <div class="center">
+                <div class="spacer"></div>
+                <div class="txtdiv" id="artist"></div>
+                <div class="spacer"></div>
+                <div class="txtdiv" id="title"></div>
+                <div class="spacer"></div>
+                <div class="txtdiv" id="album"></div>
+                <div class="spacer"></div>
+                <div class="txtdiv" id="label"></div>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            function start(websocketServerLocation) {
+                // Let us open a web socket
+                var ws = new WebSocket(websocketServerLocation);
+
+                ws.onopen = function() {
+                    console.log('ws connected');
+                };
+
+                ws.onmessage = function(event) {
+                    var metadata = JSON.parse(event.data);
+                    console.log(metadata.title);
+                    var img = document.createElement("img")
+                    img.src = 'data:image/png;base64,' + metadata.coverimagebase64;
+                    img.className = "npimage"
+                    $('#titlecard').hide()
+                    if (metadata.title) {
                         $("#cover").html(img);
-                        $("#title").html('\"'+metadata.title+'\"');
+                        $("#title").html('\"' + metadata.title + '\"');
                         $("#artist").html(metadata.artist);
                         $("#album").html(metadata.album);
                         $("#label").html(metadata.label);
                         $('#titlecard').delay(2000).fadeIn(2000);
                         $('#titlecard').delay(10000).fadeOut(2000);
-                     } else {
+                    } else {
                         $("#cover").html('');
                         $("#title").html('');
                         $("#artist").html('');
                         $("#album").html('');
                         $("#label").html('');
-                     }
-                     $('#titlecard').hide()
-                  };
+                    }
+                    $('#titlecard').hide()
+                };
 
-                  ws.onclose = function(){
-                     // Try to reconnect in 5 seconds
-                     setTimeout(function(){start(websocketServerLocation)}, 5000);
+                ws.onclose = function() {
+                    // Try to reconnect in 5 seconds
+                    setTimeout(function() {
+                        start(websocketServerLocation)
+                    }, 5000);
                 };
             }
 
             if ("WebSocket" in window) {
-               start("ws://{{ hostip }}:{{ httpport }}/wsstream")
+                start("ws://{{hostip}}:{{httpport}}/wsstream")
             }
+        </script>
 
-      </script>
+    </body>
 
-   </body>
 </html>

@@ -1,63 +1,61 @@
 <!DOCTYPE HTML>
 <html>
-   <head>
-      <meta charset="utf-8" >
-      <title>artistthumbnail</title>
-      <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
-      <style>
-         .container {
-            text-align: center;
-            max-width: 1280px;
-            max-height: 800px;
-         }
-         .img-scale {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            overflow: hidden;
-            max-width: 1280px;
-            max-height: 800px;
-         }
-      </style>
-  </head>
-   <body>
 
+    <head>
+        <meta charset="utf-8">
+        <title>covercard</title>
+        <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
+        <style>
+            img {
+                max-width: 99vw;
+                max-height: 99vh;
+                width: 99vw;
+                height: auto;
+                justify-content: center;
+                align-content: center;
+                align-items: center;
+            }
+        </style>
+    </head>
 
-      <div class="container" id="artistfanart">
-         <div id="artistfanart"></div>
-      </div>
+    <body>
 
-      <script type = "text/javascript">
-            function start(websocketServerLocation){
-                  // Let us open a web socket
-                  var ws = new WebSocket(websocketServerLocation);
+        <div class="npimage" id="artistfanart"></div>
 
-                  ws.onopen = function() {
-                     console.log('ws connected');
-                  };
+        <script type="text/javascript">
+            function start(websocketServerLocation) {
+                // Let us open a web socket
+                var ws = new WebSocket(websocketServerLocation);
 
-                  ws.onmessage = function (event) {
-                     var metadata = JSON.parse(event.data);
-                     console.log(metadata.artist);
-                     var img = document.createElement("img")
-                     img.src = 'data:image/png;base64,' + metadata.artistfanartbase64;
-                     img.className = 'img-scale';
-                     if (metadata.artist) {
+                ws.onopen = function() {
+                    console.log('ws connected');
+                };
+
+                ws.onmessage = function(event) {
+                    var metadata = JSON.parse(event.data);
+                    console.log(metadata.artist);
+                    var img = document.createElement("img")
+                    img.src = 'data:image/png;base64,' + metadata.artistfanartbase64;
+                    if (metadata.artist) {
                         $("#artistfanart").html(img);
-                     }
-                  };
+                    } else {
+                        $("#artistfanart").html('');
+                    }
+                };
 
-                  ws.onclose = function(){
-                     // Try to reconnect in 5 seconds
-                     setTimeout(function(){start(websocketServerLocation)}, 5000);
+                ws.onclose = function() {
+                    // Try to reconnect in 5 seconds
+                    setTimeout(function() {
+                        start(websocketServerLocation)
+                    }, 5000);
                 };
             }
 
             if ("WebSocket" in window) {
-               start("ws://{{ hostip }}:{{ httpport }}/wsartistfanartstream")
+                start("ws://{{ hostip }}:{{ httpport }}/wsartistfanartstream")
             }
+        </script>
 
-      </script>
+    </body>
 
-   </body>
 </html>
