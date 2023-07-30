@@ -213,3 +213,12 @@ def test_fallback_acdc_tnt_dots(getmusicbrainz):  # pylint: disable=redefined-ou
     # ideally, we'd just return the artistid bz the rest of the info is wrong
     #
     assert not metadata.get('musicbrainzrecordingid')
+
+
+def test_fallback_davidbowie(getmusicbrainz):  # pylint: disable=redefined-outer-name
+    ''' this one failed to get bio once '''
+    mbhelper = getmusicbrainz
+    metadata = {'artist': 'David Bowie', 'title': 'Golden Years (Live on Serious Moonlight Tour)'}
+    newdata = mbhelper.lastditcheffort(metadata)
+    assert newdata.get('musicbrainzartistid') == ['5441c29d-3602-4898-b1a1-b77fa23b8e50']
+    assert not newdata.get('musicbrainzrecordingid')

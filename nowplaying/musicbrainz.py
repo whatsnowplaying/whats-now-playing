@@ -89,7 +89,7 @@ class MusicBrainzHelper():
             return mbartid
 
         def _check_not_allow_others():
-            if 'Compilation' in relgroup['type']:
+            if relgroup.get('type') and 'Compilation' in relgroup['type']:
                 logging.debug('skipped %s -- compilation type', title)
                 return False
             if relgroup.get('secondary-type-list'):
@@ -145,9 +145,14 @@ class MusicBrainzHelper():
         logging.debug('Exitting pick a recording')
         return riddata
 
-    def _lastditchrid(self, addmeta):
+    def _lastditchrid(self, metadata):
         mydict = {}
         riddata = {}
+        addmeta = {
+            'artist': metadata.get('artist'),
+            'title': metadata.get('title'),
+            'album': metadata.get('album')
+        }
 
         if addmeta.get('musicbrainzrecordingid'):
             logging.debug('Skipping fallback: already have a rid')
