@@ -455,6 +455,30 @@ async def test_year_zerostr(bootstrap):
 
 
 @pytest.mark.asyncio
+async def test_youtube(bootstrap):
+    ''' test the stupid hack for youtube downloaded videos '''
+    config = bootstrap
+    metadatain = {
+        'artist': 'fakeartist',
+        'title': 'Pet Shop Boys - Can You Forgive Her?',
+        'comments': 'http://youtube.com/watch?v=xxxxxxx'
+    }
+    logging.debug(config.cparser.value('acoustidmb/homepage', type=bool))
+    mdp = nowplaying.metadata.MetadataProcessors(config=config)
+    metadataout = await mdp.getmoremetadata(metadata=metadatain)
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
+    assert metadataout['album'] == 'Very Relentless'
+    assert metadataout['artist'] == 'Pet Shop Boys'
+    assert metadataout['imagecacheartist'] == 'pet shop boys'
+    assert metadataout['label'] == 'EMI'
+    assert metadataout['musicbrainzartistid'] == ['be540c02-7898-4b79-9acc-c8122c7d9e83']
+    assert metadataout['musicbrainzrecordingid'] == '0e0bc5b5-28d0-4f42-8bf8-1cf4187ee738'
+    assert metadataout['title'] == 'Can You Forgive Her?'
+
+
+@pytest.mark.asyncio
 async def test_discogs_from_mb(bootstrap):  # pylint: disable=redefined-outer-name
     ''' noimagecache '''
 

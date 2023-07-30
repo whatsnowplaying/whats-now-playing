@@ -149,6 +149,10 @@ class MusicBrainzHelper():
         mydict = {}
         riddata = {}
 
+        if addmeta.get('musicbrainzrecordingid'):
+            logging.debug('Skipping fallback: already have a rid')
+            return None
+
         logging.debug('Starting data: %s', addmeta)
         if addmeta['album']:
             for artist in artist_name_variations(addmeta['artist']):
@@ -184,6 +188,8 @@ class MusicBrainzHelper():
 
         if not riddata:
             riddata = self._pickarecording(addmeta, mydict, allowothers=True)
+        if not riddata:
+            logging.debug('Last ditch MB lookup failed. Sorry.')
         return riddata
 
     def lastditcheffort(self, metadata):
@@ -257,13 +263,13 @@ class MusicBrainzHelper():
 
         for isrc in isrclist:
             with contextlib.suppress(Exception):
-                mbdata = musicbrainzngs.get_recordings_by_isrc(
-                    isrc, includes=['releases'], release_status=['official'])
+                mbdata = musicbrainzngs.get_recordings_by_isrc(isrc,
+                                                               includes=['releases'],
+                                                               release_status=['official'])
         if not mbdata:
             for isrc in isrclist:
                 try:
-                    mbdata = musicbrainzngs.get_recordings_by_isrc(
-                        isrc, includes=['releases'])
+                    mbdata = musicbrainzngs.get_recordings_by_isrc(isrc, includes=['releases'])
                 except Exception as error:  # pylint: disable=broad-except
                     logging.info('musicbrainz cannot find ISRC %s: %s', isrc, error)
 

@@ -358,7 +358,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         if not self.currentmeta.get('coverimageraw') and self.imagecache:
             if imagetype := self.config.cparser.value('artistextras/nocoverfallback'):
                 imagetype = imagetype.lower()
-                if imagetype != 'none':
+                if imagetype != 'none' and self.currentmeta.get('imagecacheartist'):
                     self.currentmeta['coverimageraw'] = self.imagecache.random_image_fetch(
                         artist=self.currentmeta['imagecacheartist'], imagetype=f'artist{imagetype}')
 

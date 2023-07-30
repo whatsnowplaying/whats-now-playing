@@ -2,6 +2,7 @@
 ''' pull out metadata '''
 
 import asyncio
+import copy
 import concurrent.futures
 import contextlib
 import logging
@@ -24,6 +25,7 @@ import nowplaying.vendor.audio_metadata
 from nowplaying.vendor.audio_metadata.formats.mp4_tags import MP4FreeformDecoders
 
 NOTE_RE = re.compile('N(?i:ote):')
+YOUTUBE_RE = re.compile('^https?://[www.]*youtube.com/watch.v=')
 
 
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
@@ -177,12 +179,16 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         if tag:
             for key in [
-                    'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'comments', 'composer',
-                    'disc', 'disc_total', 'duration', 'genre', 'key', 'lang', 'publisher', 'title',
-                    'track', 'track_total', 'year'
+                    'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'comment', 'comments',
+                    'composer', 'disc', 'disc_total', 'duration', 'genre', 'key', 'lang',
+                    'publisher', 'title', 'track', 'track_total', 'year'
             ]:
                 if key not in self.metadata and hasattr(tag, key) and getattr(tag, key):
                     self.metadata[key] = getattr(tag, key)
+
+            if self.metadata.get('comment') and not self.metadata.get('comments'):
+                self.metadata['comments'] = self.metadata['comment']
+                del self.metadata['comment']
 
             if getattr(tag, 'extra'):
                 extra = getattr(tag, 'extra')
@@ -221,6 +227,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
     def _mb_fallback(self):
         ''' at least see if album can be found '''
 
+        addmeta = {}
         # user does not want fallback support
         if not self.metadata or not self.config.cparser.value('musicbrainz/fallback', type=bool):
             return
@@ -239,6 +246,36 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata = recognition_replacement(config=self.config,
                                                     metadata=self.metadata,
                                                     addmeta=addmeta)
+        except Exception:  #pylint: disable=broad-except
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
+            logging.error('Ignoring fallback failure.')
+            return
+
+        # handle the youtube download case special
+        if (not addmeta or not addmeta.get('album')) and ' - ' in self.metadata['title']:
+            if comments := self.metadata.get('comments'):
+                if YOUTUBE_RE.match(comments):
+                    self._mb_youtube_fallback(musicbrainz)
+
+    def _mb_youtube_fallback(self, musicbrainz):
+        if not self.metadata:
+            return
+        addmeta2 = copy.deepcopy(self.metadata)
+        artist, title = self.metadata['title'].split(' - ')
+        addmeta2['artist'] = artist
+        addmeta2['title'] = title
+        addmeta2['imagecacheartist'] = nowplaying.utils.normalize_text(artist)
+
+        logging.debug('Youtube video fallback with %s and %s', artist, title)
+
+        try:
+            if addmeta := musicbrainz.lastditcheffort(addmeta2):
+                self.metadata['artist'] = artist
+                self.metadata['title'] = title
+                self.metadata = recognition_replacement(config=self.config,
+                                                        metadata=self.metadata,
+                                                        addmeta=addmeta)
         except Exception:  #pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
@@ -338,6 +375,7 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
 
         def _itunes(tempdata, freeform):
             convdict = {
+                'comment': 'comments',
                 'LABEL': 'label',
                 'originaldate': 'date',
                 'DISCSUBTITLE': 'discsubtitle',
@@ -437,6 +475,7 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
             'musicbrainz album id': 'musicbrainzalbumid',
             'musicbrainz_trackid': 'musicbrainzrecordingid',
             'publisher': 'label',
+            'comment': 'comments',
         }
 
         for src, dest in convdict.items():
@@ -475,6 +514,7 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
                 'albumartist',
                 'artist',
                 'bpm',
+                'comment',
                 'comments',
                 'composer',
                 'discsubtitle',
