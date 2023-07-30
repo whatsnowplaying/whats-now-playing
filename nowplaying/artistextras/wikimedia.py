@@ -92,7 +92,7 @@ class Plugin(ArtistExtrasPlugin):
                                          ] and self.config.cparser.value('wikimedia/fanart',
                                                                          type=bool):
                         mymeta['artistfanarturls'].append(image['url'])
-                        if not gotonefanart:
+                        if not gotonefanart and imagecache:
                             gotonefanart = True
                             imagecache.fill_queue(config=self.config,
                                                   artist=metadata['imagecacheartist'],

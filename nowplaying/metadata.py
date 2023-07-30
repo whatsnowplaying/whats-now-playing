@@ -25,7 +25,7 @@ import nowplaying.vendor.audio_metadata
 from nowplaying.vendor.audio_metadata.formats.mp4_tags import MP4FreeformDecoders
 
 NOTE_RE = re.compile('N(?i:ote):')
-YOUTUBE_MATCH_RE = re.compile(r'^https?://[www.]*youtube.com/watch.v=(?:.{11})')
+YOUTUBE_MATCH_RE = re.compile('^https?://[www.]*youtube.com/watch.v=')
 
 
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
