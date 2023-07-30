@@ -25,7 +25,7 @@ import nowplaying.vendor.audio_metadata
 from nowplaying.vendor.audio_metadata.formats.mp4_tags import MP4FreeformDecoders
 
 NOTE_RE = re.compile('N(?i:ote):')
-YOUTUBE_RE = re.compile('^https?://[www.]*youtube.com/watch.v=')
+YOUTUBE_MATCH_RE = re.compile(r'^https?://[www.]*youtube.com/watch.v=(?:.{11})')
 
 
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
@@ -255,7 +255,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         # handle the youtube download case special
         if (not addmeta or not addmeta.get('album')) and ' - ' in self.metadata['title']:
             if comments := self.metadata.get('comments'):
-                if YOUTUBE_RE.match(comments):
+                if YOUTUBE_MATCH_RE.match(comments):
                     self._mb_youtube_fallback(musicbrainz)
 
     def _mb_youtube_fallback(self, musicbrainz):
@@ -263,9 +263,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
         addmeta2 = copy.deepcopy(self.metadata)
         artist, title = self.metadata['title'].split(' - ')
-        addmeta2['artist'] = artist
-        addmeta2['title'] = title
-        addmeta2['imagecacheartist'] = nowplaying.utils.normalize_text(artist)
+        addmeta2['artist'] = artist.strip()
+        addmeta2['title'] = title.strip()
 
         logging.debug('Youtube video fallback with %s and %s', artist, title)
 
@@ -442,7 +441,7 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
         if 'discnumber' in tags and 'disc' not in self.metadata:
             text = tags['discnumber'][0].replace('[', '').replace(']', '')
             with contextlib.suppress(Exception):
-                self.metadata['disc'], self.metadata['disc_total'] = text.split('/')
+                self.metadata['disc'], self.metadata['disc_total'] = text.split('/', maxsplit=2)
 
         if 'tracknumber' in tags and 'track' not in self.metadata:
             text = tags['tracknumber'][0].replace('[', '').replace(']', '')

@@ -17,7 +17,7 @@ import nowplaying.bootstrap
 import nowplaying.config
 from nowplaying.utils import normalize_text, normalize, artist_name_variations
 
-REMIX_RE = re.compile(r'^(.*) [\(\[].*[\)\]]$')
+REMIX_RE = re.compile(r'^\s*(.*)\s+[\(\[].*[\)\]]$')
 
 musicbrainzngs.musicbrainz._max_retries = 3  # pylint: disable=protected-access
 musicbrainzngs.musicbrainz._timeout = 30  # pylint: disable=protected-access

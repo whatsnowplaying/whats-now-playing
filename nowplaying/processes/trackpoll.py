@@ -245,7 +245,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         for key in COREMETA:
             fetched = f'fetched{key}'
             if key in metadata:
-                metadata[fetched] = metadata[key]
+                if isinstance(metadata[key], str):
+                    metadata[fetched] = metadata[key].strip()
+                else:
+                    metadata[fetched] = metadata[key]
             else:
                 metadata[fetched] = None
 
@@ -323,6 +326,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         await self._half_delay_write()
         await self._process_imagecache()
         self._start_artistfanartpool()
+        await asyncio.sleep(0.5)
 
         # checkagain
         nextcheck = await self.input.getplayingtrack()
@@ -337,6 +341,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             if data := await self.trackrequests.get_request(self.currentmeta):
                 self.currentmeta.update(data)
 
+        self._start_artistfanartpool()
         self._artfallbacks()
 
         if not self.testmode:

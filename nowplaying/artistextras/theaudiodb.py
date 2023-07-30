@@ -115,12 +115,18 @@ class Plugin(ArtistExtrasPlugin):
                                           urllist=[artdata['strArtistThumb']])
 
                 if self.config.cparser.value('theaudiodb/fanart', type=bool):
+                    gotonefanart = False
                     for num in ['', '2', '3', '4']:
                         artstring = f'strArtistFanart{num}'
                         if artdata.get(artstring):
                             if not metadata.get('artistfanarturls'):
                                 metadata['artistfanarturls'] = []
                             metadata['artistfanarturls'].append(artdata[artstring])
+                            if not gotonefanart:
+                                imagecache.fill_queue(config=self.config,
+                                                      artist=metadata['imagecacheartist'],
+                                                      imagetype='artistfanart',
+                                                      urllist=[artdata[artstring]])
 
         if bio:
             metadata['artistlongbio'] = bio

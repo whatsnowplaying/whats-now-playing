@@ -43,6 +43,7 @@ class Plugin(ArtistExtrasPlugin):
         ''' update metadata based upon an artist record '''
         if artist.images and imagecache:
             self.addmeta['artistfanarturls'] = []
+            gotonefanart = False
             for record in artist.images:
                 if record['type'] == 'primary' and record.get(
                         'uri150') and self.config.cparser.value('discogs/thumbnails', type=bool):
@@ -53,6 +54,12 @@ class Plugin(ArtistExtrasPlugin):
 
                 if record['type'] == 'secondary' and record.get(
                         'uri') and self.config.cparser.value('discogs/fanart', type=bool):
+                    if not gotonefanart:
+                        imagecache.fill_queue(config=self.config,
+                                              artist=artistname,
+                                              imagetype='artistfanart',
+                                              urllist=[record['uri']])
+                        gotonefanart = True
                     self.addmeta['artistfanarturls'].append(record['uri'])
 
         if self.config.cparser.value('discogs/bio', type=bool):

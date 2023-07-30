@@ -37,5 +37,15 @@ For white labels, mixes, etc, the software will try as much as it can to locate 
 isn't always successful.  In most cases, artist information is usually available.  For mixes that
 are more than one person (e.g., "A vs B"-types), the software will generally pick _one_.
 
+In general, the primary principal thus far has been:  if the actual track can't be found, then supply
+artist-level data.  If nothing about the artist can be found, then supply nothing extra.
+
+Note that when it comes to finding the actual track: the more precise the better. For example:
+
+  * The Farm's "All Together Now" vs. "Altogether Now"
+  * Prince "Purple Rain" vs. Prince and the Revolution "Purple Rain"
+
+Each of those give slightly different results.
+
 Improving the quality of the data is an ongoing project.  If you see something that you think _should_
 work but doesn't, feel free to submit a `bug report <bugreports.html>`_ or visit `discord <../contact.html>`_

@@ -372,7 +372,7 @@ VALUES (?,?,?);
         session = requests_cache.CachedSession(str(self.httpcachefile))
         cachekey = str(uuid.uuid4())
 
-        logging.debug("Downloading %s %s", cachekey, imagedict['url'])
+        logging.debug("Downloading %s %s %s", imagedict['imagetype'], cachekey, imagedict['url'])
         try:
             headers = {
                 'user-agent':

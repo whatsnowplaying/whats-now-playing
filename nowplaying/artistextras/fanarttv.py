@@ -106,9 +106,16 @@ class Plugin(ArtistExtrasPlugin):
 
             if self.config.cparser.value('fanarttv/fanart',
                                          type=bool) and artist.get('artistbackground'):
+                gotonefanart = False
                 for image in artist['artistbackground']:
                     if not metadata.get('artistfanarturls'):
                         metadata['artistfanarturls'] = []
+                    if not gotonefanart:
+                        gotonefanart = True
+                        imagecache.fill_queue(config=self.config,
+                                              artist=metadata['imagecacheartist'],
+                                              imagetype='artistfanart',
+                                              urllist=[image['url']])
                     metadata['artistfanarturls'].append(image['url'])
 
         return metadata
