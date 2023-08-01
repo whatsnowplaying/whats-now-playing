@@ -1,54 +1,58 @@
 <!DOCTYPE HTML>
 <html>
-   <head>
-      <meta charset="utf-8" >
-      <title>covercard</title>
-      <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
-      <style>
+
+<head>
+    <meta charset="utf-8">
+    <title>covercard</title>
+    <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
+    <style>
         img {
-          max-width: 90vw;
-          max-height: 90vh;
+            max-width: 90vw;
+            max-height: 90vh;
         }
     </style>
-  </head>
-   <body>
+</head>
 
-      <div class="container" id="titlecard">
-         <div class="npimage" id="cover"></div>
-      </div>
+<body>
 
-      <script type = "text/javascript">
-            function start(websocketServerLocation){
-                  // Let us open a web socket
-                  var ws = new WebSocket(websocketServerLocation);
+    <div class="container" id="titlecard">
+        <div class="npimage" id="cover"></div>
+    </div>
 
-                  ws.onopen = function() {
-                     console.log('ws connected');
-                  };
+    <script type="text/javascript">
+        function start(websocketServerLocation) {
+            // Let us open a web socket
+            var ws = new WebSocket(websocketServerLocation);
 
-                  ws.onmessage = function (event) {
-                     var metadata = JSON.parse(event.data);
-                     console.log(metadata.title);
-                     var img = document.createElement("img")
-                     img.src = 'data:image/png;base64,' + metadata.coverimagebase64;
-                     img.className = "npimage"
-                     if (metadata.title) {
-                        $("#cover").html(img);
-                     } else {
-                        $("#cover").html('');
-                     }
-                  };
+            ws.onopen = function() {
+                console.log('ws connected');
+            };
 
-                  ws.onclose = function(){
-                     // Try to reconnect in 5 seconds
-                     setTimeout(function(){start(websocketServerLocation)}, 5000);
-                };
-            }
+            ws.onmessage = function(event) {
+                var metadata = JSON.parse(event.data);
+                console.log(metadata.title);
+                var img = document.createElement("img")
+                img.src = 'data:image/png;base64,' + metadata.coverimagebase64;
+                img.className = "npimage"
+                if (metadata.title) {
+                    $("#cover").html(img);
+                } else {
+                    $("#cover").html('');
+                }
+            };
 
-            if ("WebSocket" in window) {
-               start("ws://{{hostip}}:{{httpport}}/wsstream")
-            }
+            ws.onclose = function() {
+                // Try to reconnect in 5 seconds
+                setTimeout(function() {
+                    start(websocketServerLocation)
+                }, 5000);
+            };
+        }
 
-      </script>
-   </body>
+        if ("WebSocket" in window) {
+            start("ws://{{hostip}}:{{httpport}}/wsstream")
+        }
+    </script>
+</body>
+
 </html>

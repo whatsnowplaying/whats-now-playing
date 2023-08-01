@@ -1,59 +1,64 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" http-equiv="refresh" content="30" >
+
+<head>
+    <meta charset="utf-8" http-equiv="refresh" content="30">
     <title>Titlecard</title>
-    <link href="https://db.onlinewebfonts.com/c/de58fdcb98299a76fccd3c0cb4e5a6c0?family=Kabel" rel="stylesheet" type="text/css"/>
+    <link href="https://db.onlinewebfonts.com/c/de58fdcb98299a76fccd3c0cb4e5a6c0?family=Kabel" rel="stylesheet" type="text/css" />
 
     <style>
-      div {
-        import url(https://db.onlinewebfonts.com/c/de58fdcb98299a76fccd3c0cb4e5a6c0?family=Kabel);
-        margin: 1px;
-        width: 2500px;
-        display: none;
-        height: 300px;
-        float: left;
-        font-size: 48px;
-        font-family: "Kabel";
-        line-height: 30%;
-        text-shadow: 4px 4px #000000;
-      }
-      #titlecard {
-        color: #FFF;
-        text-indent: 1%;
-      }
-      img {
-        margin: 10px;
-        display: block;
-        float: left;
-        max-height: 90%
-      }
+        div {
+            import url(https://db.onlinewebfonts.com/c/de58fdcb98299a76fccd3c0cb4e5a6c0?family=Kabel);
+            margin: 1px;
+            width: 2500px;
+            display: none;
+            height: 300px;
+            float: left;
+            font-size: 48px;
+            font-family: "Kabel";
+            line-height: 30%;
+            text-shadow: 4px 4px #000000;
+        }
+
+        #titlecard {
+            color: #FFF;
+            text-indent: 1%;
+        }
+
+        img {
+            margin: 10px;
+            display: block;
+            float: left;
+            max-height: 90%
+        }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
-  </head>
-  <body>
+</head>
+
+<body>
     <div id="titlecard">
-      {% if coverurl %}
-      <img src="{{ coverurl }}">
-      {% endif %}
-      {% if artist %}
-      <p>{{ artist }}</p>
-      {% endif %}
-      {% if title %}
-      <p>"{{ title }}"</p>
-      {% endif %}
-      {% if album is not none %}
-      <p>{{ album }}</p>
-      {% endif %}
-      {% if label is not none %}
-      <p>{{ label }}</p>
-      {% endif %}
+        {% if coverurl %}
+        <img src="{{ coverurl }}">
+        {% endif %}
+        {% if artist %}
+        <p>{{ artist }}</p>
+        {% endif %}
+        {% if title %}
+        <p>"{{ title }}"</p>
+        {% endif %}
+        {% if album is not none %}
+        <p>{{ album }}</p>
+        {% endif %}
+        {% if label is not none %}
+        <p>{{ label }}</p>
+        {% endif %}
     </div>
     <script>
-      $(document).ready(function() {
-        $('#titlecard').delay(2000).fadeIn(2000);
-        $('#titlecard').delay(5000).fadeOut(2000);
-      });
+        $(document).ready(function() {
+            $('#titlecard').delay(2000).fadeIn(2000);
+            $('#titlecard').delay(5000).fadeOut(2000);
+        });
     </script>
-  </body>
+</body>
+
 </html>

@@ -1,50 +1,55 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="utf-8" http-equiv="refresh" content="30">
     <title>Titlecard</title>
     <style>
-      div {
-        margin: 3px;
-        width: 1600px;
-        display: none;
-        height: 1600px;
-        float: right;
-        font-size: 48px;
-        font-family: sans-serif;
-      }
-      #titlecard {
-        background-color: #fff;
-        color: #000;
-        text-indent: 5%;
-      }
-      img {
-        max-height:600px;
-        max-width:1600px;
-        height:auto;
-        width:auto;
-      }
+        div {
+            margin: 3px;
+            width: 1600px;
+            display: none;
+            height: 1600px;
+            float: right;
+            font-size: 48px;
+            font-family: sans-serif;
+        }
+
+        #titlecard {
+            background-color: #fff;
+            color: #000;
+            text-indent: 5%;
+        }
+
+        img {
+            max-height: 600px;
+            max-width: 1600px;
+            height: auto;
+            width: auto;
+        }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
-  </head>
-  <body>
+</head>
+
+<body>
     <div id="titlecard">
-      <img src="{{ coverurl }}" alt="{{ album }} cover">
-      <p>Title: {{ title }} [Track: {{ track }} / {{ track_total }}]</p>
-      <p>Language: {{ lang }}</p>
-      <p>Genre: {{ genre }} / BPM: {{ bpm }} / Key: {{ key }}</p>
-      <p>Artist: {{ artist }}</p>
-      <p>Composer: {{ composer }}</p>
-      <p>Album: {{ album }} [Disc: {{ disc }} / {{ disc_total }} ]</p>
-      <p>Album Artist: {{ albumartist }}</p>
-      <p>Label: {{ label }}</p>
-      <p>Date: {{ date }}</p>
+        <img src="{{ coverurl }}" alt="{{ album }} cover">
+        <p>Title: {{ title }} [Track: {{ track }} / {{ track_total }}]</p>
+        <p>Language: {{ lang }}</p>
+        <p>Genre: {{ genre }} / BPM: {{ bpm }} / Key: {{ key }}</p>
+        <p>Artist: {{ artist }}</p>
+        <p>Composer: {{ composer }}</p>
+        <p>Album: {{ album }} [Disc: {{ disc }} / {{ disc_total }} ]</p>
+        <p>Album Artist: {{ albumartist }}</p>
+        <p>Label: {{ label }}</p>
+        <p>Date: {{ date }}</p>
     </div>
     <script>
-      $(document).ready(function() {
-        $('#titlecard').delay(1000).fadeIn(2000);
-        $('#titlecard').delay(6000).fadeOut(2000);
-      });
+        $(document).ready(function() {
+            $('#titlecard').delay(1000).fadeIn(2000);
+            $('#titlecard').delay(6000).fadeOut(2000);
+        });
     </script>
-  </body>
+</body>
+
 </html>

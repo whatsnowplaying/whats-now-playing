@@ -1,69 +1,73 @@
 <!DOCTYPE HTML>
 <html>
-   <head>
-      <meta charset="utf-8" >
-      <title>gifwords</title>
-      <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
-      <style>
-         .container {
+
+<head>
+    <meta charset="utf-8">
+    <title>gifwords</title>
+    <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
+    <style>
+        .container {
             text-align: center;
             max-width: 1280px;
             max-height: 800px;
-         }
-         .img-scale {
+        }
+
+        .img-scale {
             width: 100%;
             height: 100%;
             object-fit: contain;
             overflow: hidden;
             max-width: 1280px;
             max-height: 800px;
-         }
-      </style>
-  </head>
-   <body>
+        }
+    </style>
+</head>
+
+<body>
 
 
-      <div class="container" id="gifwordsart">
-         <div class="img-scle" id="gifwordsartimg"></div>
-      </div>
+    <div class="container" id="gifwordsart">
+        <div class="img-scle" id="gifwordsartimg"></div>
+    </div>
 
-      <script type = "text/javascript">
-            function start(websocketServerLocation){
-                  // Let us open a web socket
-                  var ws = new WebSocket(websocketServerLocation);
+    <script type="text/javascript">
+        function start(websocketServerLocation) {
+            // Let us open a web socket
+            var ws = new WebSocket(websocketServerLocation);
 
-                  ws.onopen = function() {
-                     console.log('ws connected');
-                  };
+            ws.onopen = function() {
+                console.log('ws connected');
+            };
 
-                  ws.onmessage = function (event) {
-                     var metadata = JSON.parse(event.data);
-                     var img = document.createElement("img");
-                     $('#gifwordsart').hide();
-                     if (metadata.imagebase64) {
-                        console.log('here');
-                        img.src = 'data:image/gif;base64,' + metadata.imagebase64;
-                        $("#gifwordsartimg").html(img);
-                        $('#gifwordsart').delay(200).fadeIn(200);
-                        $('#gifwordsart').delay(10000).fadeOut(200);
-                     } else {
-                        $("#gifwordsartimg").html('');
-                     }
-                     $('#gifwordsart').hide();
-                  }
-
-                  ws.onclose = function(){
-                     // Try to reconnect in 5 seconds
-                     setTimeout(function(){start(websocketServerLocation)}, 5000);
-                };
+            ws.onmessage = function(event) {
+                var metadata = JSON.parse(event.data);
+                var img = document.createElement("img");
+                $('#gifwordsart').hide();
+                if (metadata.imagebase64) {
+                    console.log('here');
+                    img.src = 'data:image/gif;base64,' + metadata.imagebase64;
+                    $("#gifwordsartimg").html(img);
+                    $('#gifwordsart').delay(200).fadeIn(200);
+                    $('#gifwordsart').delay(10000).fadeOut(200);
+                } else {
+                    $("#gifwordsartimg").html('');
+                }
+                $('#gifwordsart').hide();
             }
 
-            if ("WebSocket" in window) {
-               start("ws://{{ hostip }}:{{ httpport }}/wsgifwordsstream")
-            }
+            ws.onclose = function() {
+                // Try to reconnect in 5 seconds
+                setTimeout(function() {
+                    start(websocketServerLocation)
+                }, 5000);
+            };
+        }
 
-      </script>
+        if ("WebSocket" in window) {
+            start("ws://{{ hostip }}:{{ httpport }}/wsgifwordsstream")
+        }
+    </script>
 
-   </body>
+</body>
+
 </html>
-

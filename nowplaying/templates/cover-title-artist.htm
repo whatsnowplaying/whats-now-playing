@@ -1,49 +1,54 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="utf-8" http-equiv="refresh" content="30">
     <title>Titlecard</title>
     <style>
-      div {
-        margin: 3px;
-        width: 1600px;
-        display: none;
-        height: 300px;
-        float: right;
-        font-size: 48px;
-        font-family: sans-serif;
-      }
-      #titlecard {
-        background-color: #555;
-        color: #fff;
-        text-indent: 5%;
-      }
-      img {
-        margin: 10px;
-        display: block;
-        float: left;
-        max-height: 90%
-      }
+        div {
+            margin: 3px;
+            width: 1600px;
+            display: none;
+            height: 300px;
+            float: right;
+            font-size: 48px;
+            font-family: sans-serif;
+        }
+
+        #titlecard {
+            background-color: #555;
+            color: #fff;
+            text-indent: 5%;
+        }
+
+        img {
+            margin: 10px;
+            display: block;
+            float: left;
+            max-height: 90%
+        }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
-  </head>
-  <body>
+</head>
+
+<body>
     {% if title %}
     <div id="titlecard">
-      {% if coverurl %}
-      <img src="{{ coverurl }}">
-      {% endif %}
-      <p>"{{ title }}"</p>
-      {% if artist %}
-      <p>{{ artist }}</p>
-      {% endif %}
+        {% if coverurl %}
+        <img src="{{ coverurl }}">
+        {% endif %}
+        <p>"{{ title }}"</p>
+        {% if artist %}
+        <p>{{ artist }}</p>
+        {% endif %}
     </div>
     <script>
-      $(document).ready(function() {
-        $('#titlecard').delay(1000).fadeIn(2000);
-        $('#titlecard').delay(6000).fadeOut(2000);
-      });
+        $(document).ready(function() {
+            $('#titlecard').delay(1000).fadeIn(2000);
+            $('#titlecard').delay(6000).fadeOut(2000);
+        });
     </script>
     {% endif %}
-  </body>
+</body>
+
 </html>
