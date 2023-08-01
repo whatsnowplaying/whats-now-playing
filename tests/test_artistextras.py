@@ -447,6 +447,7 @@ def test_wikimedia_humantetris_en(bootstrap):  # pylint: disable=redefined-outer
     assert data.get('artistshortbio') == 'Russian post-punk band from Moscow'
     assert not data.get('artistlongbio')
 
+
 def test_wikimedia_humantetris_de(bootstrap):  # pylint: disable=redefined-outer-name
     ''' not english test '''
 

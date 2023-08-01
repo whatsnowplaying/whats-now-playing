@@ -463,7 +463,6 @@ async def test_youtube(bootstrap):
         'title': 'Pet Shop Boys - Can You Forgive Her?',
         'comments': 'http://youtube.com/watch?v=xxxxxxx'
     }
-    logging.debug(config.cparser.value('acoustidmb/homepage', type=bool))
     mdp = nowplaying.metadata.MetadataProcessors(config=config)
     metadataout = await mdp.getmoremetadata(metadata=metadatain)
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config
@@ -494,11 +493,9 @@ async def test_discogs_from_mb(bootstrap):  # pylint: disable=redefined-outer-na
     config.cparser.setValue('discogs/bio', True)
     config.cparser.setValue('musicbrainz/fallback', True)
     metadatain = {'artist': 'TR/ST', 'title': 'Iris'}
-    logging.debug(config.cparser.value('acoustidmb/homepage', type=bool))
     mdp = nowplaying.metadata.MetadataProcessors(config=config)
     metadataout = await mdp.getmoremetadata(metadata=metadatain)
     del metadataout['coverimageraw']
-    logging.debug(metadataout)
     assert metadataout['album'] == 'Iris'
     assert metadataout['artistwebsites'] == ['https://www.discogs.com/artist/2028711']
     assert metadataout['artist'] == 'TR/ST'
@@ -527,10 +524,8 @@ async def test_keeptitle_despite_mb(bootstrap):  # pylint: disable=redefined-out
         'artist': 'Simple Minds',
         'title': 'Don\'t You (Forget About Me) (DJ Paulharwood Remix)'
     }
-    logging.debug(config.cparser.value('acoustidmb/homepage', type=bool))
     mdp = nowplaying.metadata.MetadataProcessors(config=config)
     metadataout = await mdp.getmoremetadata(metadata=metadatain)
-    logging.debug(metadataout)
     assert not metadataout.get('album')
     assert metadataout['artistwebsites'] == ['https://www.discogs.com/artist/18547']
     assert metadataout['artist'] == 'Simple Minds'
@@ -540,3 +535,93 @@ async def test_keeptitle_despite_mb(bootstrap):  # pylint: disable=redefined-out
     assert metadataout['musicbrainzartistid'] == ['f41490ce-fe39-435d-86c0-ab5ce098b423']
     assert not metadataout.get('musicbrainzrecordingid')
     assert metadataout['title'] == 'Don\'t You (Forget About Me) (DJ Paulharwood Remix)'
+
+
+@pytest.mark.asyncio
+async def test_15ghosts2_m4a_fake_origdate(bootstrap, getroot):
+    ''' automated integration test '''
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    metadatain = {
+        'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_fake_origdate.m4a')
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
+    assert metadataout['date'] == '1982-01-01'
+
+
+@pytest.mark.asyncio
+async def test_15ghosts2_m4a_fake_origyear(bootstrap, getroot):
+    ''' automated integration test '''
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    metadatain = {
+        'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_fake_origyear.m4a')
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
+    assert metadataout['date'] == '1983'
+
+
+@pytest.mark.asyncio
+async def test_15ghosts2_m4a_fake_both(bootstrap, getroot):
+    ''' automated integration test '''
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    metadatain = {
+        'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_fake_ody.m4a')
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
+    assert metadataout['date'] == '1982-01-01'
+
+
+@pytest.mark.asyncio
+async def test_15ghosts2_mp3_fake_origdate(bootstrap, getroot):
+    ''' automated integration test '''
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    metadatain = {
+        'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_fake_origdate.mp3')
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
+    assert metadataout['date'] == '1982'
+
+
+@pytest.mark.asyncio
+async def test_15ghosts2_mp3_fake_origyear(bootstrap, getroot):
+    ''' automated integration test '''
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    metadatain = {
+        'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_fake_origyear.mp3')
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
+    assert metadataout['date'] == '1983'
+
+
+@pytest.mark.asyncio
+async def test_15ghosts2_mp3_fake_origboth(bootstrap, getroot):
+    ''' automated integration test '''
+    config = bootstrap
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    metadatain = {
+        'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_fake_ody.mp3')
+    }
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config
+                                                               ).getmoremetadata(metadata=metadatain
+                                                                                 )
+    assert metadataout['date'] == '1982'

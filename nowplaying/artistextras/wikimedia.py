@@ -91,9 +91,9 @@ class Plugin(ArtistExtrasPlugin):
             if page.images():
                 gotonefanart = False
                 for image in page.images(['kind', 'url']):
-                    if image.get('url') and image['kind'] in ['wikidata-image', 'parse-image'
-                                         ] and self.config.cparser.value('wikimedia/fanart',
-                                                                         type=bool):
+                    if image.get('url') and image['kind'] in [
+                            'wikidata-image', 'parse-image'
+                    ] and self.config.cparser.value('wikimedia/fanart', type=bool):
                         mymeta['artistfanarturls'].append(image['url'])
                         if not gotonefanart and imagecache:
                             gotonefanart = True

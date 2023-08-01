@@ -181,6 +181,12 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         if tag:
+            if not self.metadata.get('date'):
+                for datetype in ['originalyear', 'originalyear', 'date', 'year']:
+                    if hasattr(tag, datetype) and getattr(tag, datetype):
+                        self.metadata['date'] = getattr(tag, datetype)
+                        break
+
             for key in [
                     'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'comment', 'comments',
                     'composer', 'disc', 'disc_total', 'duration', 'genre', 'key', 'lang',
@@ -198,9 +204,6 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 for key in ['isrc']:
                     if extra.get(key):
                         self.metadata[key] = extra[key].split('/')
-
-            if 'date' not in self.metadata and hasattr(tag, 'year') and getattr(tag, 'year'):
-                self.metadata['date'] = getattr(tag, 'year')
 
             if 'coverimageraw' not in self.metadata:
                 self.metadata['coverimageraw'] = tag.get_image()
@@ -359,6 +362,7 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
     def __init__(self, config: 'nowplaying.config.ConfigFile' = None):
         self.metadata = {}
         self.config = config
+        self.originaldate = False
 
     def process(self, metadata):
         ''' process it '''
@@ -379,6 +383,7 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
             convdict = {
                 'comment': 'comments',
                 'LABEL': 'label',
+                'originalyear': 'date',
                 'originaldate': 'date',
                 'DISCSUBTITLE': 'discsubtitle',
                 'Acoustid Id': 'acoustidid',
@@ -387,7 +392,11 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
             }
 
             for src, dest in convdict.items():
-                if freeform['name'] == src and not tempdata.get(dest):
+                if src == 'originaldate' and not self.originaldate:
+                    tempdata[dest] = MP4FreeformDecoders[freeform.data_type](freeform.value)
+                if src in ['originaldate', 'originalyear']:
+                    self.originaldate = True
+                if (src == 'originaldate') or (freeform['name'] == src and not tempdata.get(dest)):
                     tempdata[dest] = MP4FreeformDecoders[freeform.data_type](freeform.value)
 
             convdict = {
@@ -402,12 +411,10 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
                     if tempdata.get(dest):
                         tempdata[dest].append(
                             str(MP4FreeformDecoders[freeform.data_type](freeform.value)))
-
                     else:
                         tempdata[dest] = [
                             str(MP4FreeformDecoders[freeform.data_type](freeform.value))
                         ]
-
             return tempdata
 
         tempdata = {}
@@ -434,8 +441,12 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
                 self.metadata['musicbrainzalbumid'] = usertext.text[0]
             elif usertext.description == 'MusicBrainz Artist Id':
                 self.metadata['musicbrainzartistid'] = usertext.text
-            elif usertext.description == 'originalyear':
+            elif usertext.description == 'originalyear' and not self.originaldate:
                 self.metadata['date'] = usertext.text[0]
+                self.originaldate = True
+            elif usertext.description == 'originaldate':
+                self.metadata['date'] = usertext.text[0]
+                self.originaldate = True
 
     def _process_audio_metadata_othertags(self, tags):  # pylint: disable=too-many-branches
         if not self.metadata:
@@ -478,11 +489,15 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
             'musicbrainz_trackid': 'musicbrainzrecordingid',
             'publisher': 'label',
             'comment': 'comments',
+            'originaldate': 'date',
         }
 
         for src, dest in convdict.items():
             if not self.metadata.get(dest) and src in tags:
                 self.metadata[dest] = str(tags[src][0])
+                if src == 'originaldate':
+                    self.originaldate = True
+                    self.originalyear = True
 
         # lists
         convdict = {
