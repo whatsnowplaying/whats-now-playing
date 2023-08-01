@@ -12,6 +12,11 @@
   in the metadata. For most users, this change is invisible, but
   if you use the API directly, be aware of this change.
 
+* IMPORTANT! Many of the bundled OBS browser templates have been changed to
+  scale to the size of the window. You _may_ need to remove the default
+  CSS in the OBS Browser Source properties in order for things to work
+  properly, such as flowing very long song titles.
+
 * Added experimental support for DJUCED DJ software!
 * Added Wikimedia as a source if the wikidata entity URL is available
   as an artist website, such as if Musicbrainz website data is selected.

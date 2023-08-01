@@ -46,8 +46,12 @@ Settings
 OBS Settings
 ------------
 
-Once the webserver is enabled, hop into OBS and configure a Browser source.  Set the size to match
-the HTML template you are using.  (Check the ``width`` and ``height`` values in the bundled templates).
+Once the webserver is enabled, hop into OBS and configure a Browser source and use one of the URLs below.
+Set the size to match the HTML template you are using. (Check the ``width`` and ``height`` values in the bundled templates).
+Some will autoscale and some require a specific size.
+You will also want to remove the CSS in the box as it will likely cause problems with the CSS that is in the
+template files.
+
 Then place the OBS source wherever you would like.
 
 .. image:: images/obs-browser-settings.png
