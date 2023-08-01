@@ -3,67 +3,59 @@
 
 <head>
     <meta charset="utf-8">
-    <title>artistlogo</title>
+    <title>covercard</title>
+    <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
     <style>
-        .container {
-            text-align: center;
-            max-width: 480px;
-            max-height: 200px;
-        }
-
-        .img-scale {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            overflow: hidden;
-            max-width: 480px;
-            max-height: 200px;
+        img {
+            max-width: 99vw;
+            max-height: 99vh;
+            width: 99vw;
+            height: auto;
+            justify-content: center;
+            align-content: center;
+            align-items: center;
         }
 
     </style>
-    <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
 </head>
 
-<body>
+<div id="artistlogo"></div>
 
+<script type="text/javascript">
+    function start(websocketServerLocation) {
+        // Let us open a web socket
+        var ws = new WebSocket(websocketServerLocation);
 
-    <div class="container" id="artistlogo">
-        <div id="artistlogo"></div>
-    </div>
+        ws.onopen = function() {
+            console.log('ws connected');
+        };
 
-    <script type="text/javascript">
-        function start(websocketServerLocation) {
-            // Let us open a web socket
-            var ws = new WebSocket(websocketServerLocation);
+        ws.onmessage = function(event) {
+            var metadata = JSON.parse(event.data);
+            console.log(metadata.artist);
+            var img = document.createElement("img")
+            img.src = 'data:image/png;base64,' + metadata.artistlogobase64;
+            img.className = 'img-scale';
+            if (metadata.artist) {
+                $("#artistlogo").html(img);
+            } else {
+                $("#artistlogo").html('');
+            }
+        };
 
-            ws.onopen = function() {
-                console.log('ws connected');
-            };
+        ws.onclose = function() {
+            // Try to reconnect in 5 seconds
+            setTimeout(function() {
+                start(websocketServerLocation)
+            }, 5000);
+        };
+    }
 
-            ws.onmessage = function(event) {
-                var metadata = JSON.parse(event.data);
-                console.log(metadata.artist);
-                var img = document.createElement("img")
-                img.src = 'data:image/png;base64,' + metadata.artistlogobase64;
-                img.className = 'img-scale';
-                if (metadata.artist) {
-                    $("#artistlogo").html(img);
-                }
-            };
+    if ("WebSocket" in window) {
+        start("ws://{{ hostip }}:{{ httpport }}/wsstream")
+    }
 
-            ws.onclose = function() {
-                // Try to reconnect in 5 seconds
-                setTimeout(function() {
-                    start(websocketServerLocation)
-                }, 5000);
-            };
-        }
-
-        if ("WebSocket" in window) {
-            start("ws://{{ hostip }}:{{ httpport }}/wsstream")
-        }
-
-    </script>
+</script>
 
 </body>
 

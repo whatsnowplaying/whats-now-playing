@@ -3,33 +3,23 @@
 
 <head>
     <meta charset="utf-8">
-    <title>artistthumbnail</title>
+    <title>thumbnail</title>
+    <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
     <style>
-        .container {
-            text-align: center;
-            max-width: 200px;
-            max-height: 200px;
-        }
-
-        .img-scale {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            overflow: hidden;
-            max-width: 200px;
-            max-height: 200px;
+        img {
+            max-width: 100vw;
+            max-height: 100vh;
+            width: auto;
+            height: 99vh;
+            justify-content: center;
         }
 
     </style>
-    <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
 </head>
 
 <body>
 
-
-    <div class="container" id="artistthumbnail">
-        <div id="artistthumbnail"></div>
-    </div>
+    <div id="thumbnail"></div>
 
     <script type="text/javascript">
         function start(websocketServerLocation) {
@@ -42,12 +32,13 @@
 
             ws.onmessage = function(event) {
                 var metadata = JSON.parse(event.data);
-                console.log(metadata.artist);
+                console.log(metadata.title);
                 var img = document.createElement("img")
                 img.src = 'data:image/png;base64,' + metadata.artistthumbnailbase64;
-                img.className = 'img-scale';
-                if (metadata.artist) {
-                    $("#artistthumbnail").html(img);
+                if (metadata.title) {
+                    $("#thumbnail").html(img);
+                } else {
+                    $("#thumbnail").html('');
                 }
             };
 
@@ -60,11 +51,10 @@
         }
 
         if ("WebSocket" in window) {
-            start("ws://{{ hostip }}:{{ httpport }}/wsstream")
+            start("ws://{{hostip}}:{{httpport}}/wsstream")
         }
 
     </script>
-
 </body>
 
 </html>

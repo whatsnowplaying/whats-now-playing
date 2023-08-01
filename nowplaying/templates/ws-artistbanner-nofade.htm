@@ -4,30 +4,22 @@
 <head>
     <meta charset="utf-8">
     <title>artistbanner</title>
+    <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
     <style>
-        .container {
-            text-align: center;
-            max-height: 200px;
-        }
-
-        .img-scale {
+        img {
+            max-width: 100vw;
+            max-height: 100vh;
             width: 100%;
-            height: 100%;
-            object-fit: contain;
-            overflow: hidden;
-            max-height: 200px;
+            height: auto;
+            justify-content: center;
         }
 
     </style>
-    <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
 </head>
 
 <body>
 
-
-    <div class="container" id="artistbanner">
-        <div id="artistbanner"></div>
-    </div>
+    <div id="artistbanner"></div>
 
     <script type="text/javascript">
         function start(websocketServerLocation) {
@@ -43,9 +35,10 @@
                 console.log(metadata.artist);
                 var img = document.createElement("img")
                 img.src = 'data:image/png;base64,' + metadata.artistbannerbase64;
-                img.className = 'img-scale';
                 if (metadata.artist) {
                     $("#artistbanner").html(img);
+                } else {
+                    $("#artistbanner").html('');
                 }
             };
 
@@ -58,11 +51,10 @@
         }
 
         if ("WebSocket" in window) {
-            start("ws://{{ hostip }}:{{ httpport }}/wsstream")
+            start("ws://{{hostip}}:{{httpport}}/wsstream")
         }
 
     </script>
-
 </body>
 
 </html>

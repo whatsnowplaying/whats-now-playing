@@ -7,8 +7,11 @@
     <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
     <style>
         img {
-            max-width: 90vw;
-            max-height: 90vh;
+            max-width: 100vw;
+            max-height: 100vh;
+            width: auto;
+            height: 99vh;
+            justify-content: center;
         }
 
     </style>
@@ -16,9 +19,7 @@
 
 <body>
 
-    <div class="container" id="titlecard">
-        <div class="npimage" id="cover"></div>
-    </div>
+    <div id="cover"></div>
 
     <script type="text/javascript">
         function start(websocketServerLocation) {
@@ -34,7 +35,6 @@
                 console.log(metadata.title);
                 var img = document.createElement("img")
                 img.src = 'data:image/png;base64,' + metadata.coverimagebase64;
-                img.className = "npimage"
                 if (metadata.title) {
                     $("#cover").html(img);
                 } else {

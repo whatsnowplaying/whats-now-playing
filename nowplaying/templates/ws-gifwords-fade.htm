@@ -7,68 +7,66 @@
     <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
     <style>
         .container {
-            text-align: center;
-            max-width: 1280px;
-            max-height: 800px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .img-scale {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            overflow: hidden;
-            max-width: 1280px;
-            max-height: 800px;
+        img {
+            max-width: 99vw;
+            max-height: 99vh;
+            width: auto;
+            height: 99vw;
+            justify-content: center;
+            align-content: center;
+            align-items: center;
         }
 
     </style>
 </head>
 
-<body>
+<div class="container" id="gifwordsart">
+    <div id="gifwordsartimg"></div>
+</div>
 
+<script type="text/javascript">
+    function start(websocketServerLocation) {
+        // Let us open a web socket
+        var ws = new WebSocket(websocketServerLocation);
 
-    <div class="container" id="gifwordsart">
-        <div class="img-scle" id="gifwordsartimg"></div>
-    </div>
+        ws.onopen = function() {
+            console.log('ws connected');
+        };
 
-    <script type="text/javascript">
-        function start(websocketServerLocation) {
-            // Let us open a web socket
-            var ws = new WebSocket(websocketServerLocation);
-
-            ws.onopen = function() {
-                console.log('ws connected');
-            };
-
-            ws.onmessage = function(event) {
-                var metadata = JSON.parse(event.data);
-                var img = document.createElement("img");
-                $('#gifwordsart').hide();
-                if (metadata.imagebase64) {
-                    console.log('here');
-                    img.src = 'data:image/gif;base64,' + metadata.imagebase64;
-                    $("#gifwordsartimg").html(img);
-                    $('#gifwordsart').delay(200).fadeIn(200);
-                    $('#gifwordsart').delay(10000).fadeOut(200);
-                } else {
-                    $("#gifwordsartimg").html('');
-                }
-                $('#gifwordsart').hide();
+        ws.onmessage = function(event) {
+            var metadata = JSON.parse(event.data);
+            var img = document.createElement("img");
+            $('#gifwordsart').hide();
+            if (metadata.imagebase64) {
+                console.log('here');
+                img.src = 'data:image/gif;base64,' + metadata.imagebase64;
+                $("#gifwordsartimg").html(img);
+                $('#gifwordsart').delay(200).fadeIn(200);
+                $('#gifwordsart').delay(10000).fadeOut(200);
+            } else {
+                $("#gifwordsartimg").html('');
             }
-
-            ws.onclose = function() {
-                // Try to reconnect in 5 seconds
-                setTimeout(function() {
-                    start(websocketServerLocation)
-                }, 5000);
-            };
+            $('#gifwordsart').hide();
         }
 
-        if ("WebSocket" in window) {
-            start("ws://{{ hostip }}:{{ httpport }}/wsgifwordsstream")
-        }
+        ws.onclose = function() {
+            // Try to reconnect in 5 seconds
+            setTimeout(function() {
+                start(websocketServerLocation)
+            }, 5000);
+        };
+    }
 
-    </script>
+    if ("WebSocket" in window) {
+        start("ws://{{ hostip }}:{{ httpport }}/wsgifwordsstream")
+    }
+
+</script>
 
 </body>
 

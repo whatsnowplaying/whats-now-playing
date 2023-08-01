@@ -3,22 +3,17 @@
 
 <head>
     <meta charset="utf-8">
-    <title>artistthumbnail</title>
+    <title>covercard</title>
     <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
     <style>
-        .container {
-            text-align: center;
-            max-width: 1280px;
-            max-height: 800px;
-        }
-
-        .img-scale {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            overflow: hidden;
-            max-width: 1280px;
-            max-height: 800px;
+        img {
+            max-width: 99vw;
+            max-height: 99vh;
+            width: 99vw;
+            height: auto;
+            justify-content: center;
+            align-content: center;
+            align-items: center;
         }
 
     </style>
@@ -26,10 +21,7 @@
 
 <body>
 
-
-    <div class="container" id="artistfanart">
-        <div id="artistfanart"></div>
-    </div>
+    <div class="npimage" id="artistfanart"></div>
 
     <script type="text/javascript">
         function start(websocketServerLocation) {
@@ -45,9 +37,10 @@
                 console.log(metadata.artist);
                 var img = document.createElement("img")
                 img.src = 'data:image/png;base64,' + metadata.artistfanartbase64;
-                img.className = 'img-scale';
                 if (metadata.artist) {
                     $("#artistfanart").html(img);
+                } else {
+                    $("#artistfanart").html('');
                 }
             };
 
