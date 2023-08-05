@@ -402,12 +402,13 @@ def test_notfound(getconfiguredplugin):  # pylint: disable=redefined-outer-name
         assert not imagecaches[pluginname].urls
 
 
-def test_wikimedia_langfallback1(bootstrap):  # pylint: disable=redefined-outer-name
+def test_wikimedia_langfallback_zh_to_en(bootstrap):  # pylint: disable=redefined-outer-name
     ''' not english test '''
 
     config = bootstrap
     configuresettings('wikimedia', config.cparser)
     config.cparser.setValue('wikimedia/bio_iso', 'zh')
+    config.cparser.setValue('wikimedia/bio_iso_en_fallback', True)
     _, plugins = configureplugins(config)
     data = plugins['wikimedia'].download(
         {'artistwebsites': [
@@ -416,7 +417,7 @@ def test_wikimedia_langfallback1(bootstrap):  # pylint: disable=redefined-outer-
     assert 'video' in data.get('artistlongbio')
 
 
-def test_wikimedia_langfallback2(bootstrap):  # pylint: disable=redefined-outer-name
+def test_wikimedia_langfallback_zh_to_none(bootstrap):  # pylint: disable=redefined-outer-name
     ''' not english test '''
 
     config = bootstrap
@@ -458,4 +459,4 @@ def test_wikimedia_humantetris_de(bootstrap):  # pylint: disable=redefined-outer
         {'artistwebsites': [
             'https://www.wikidata.org/wiki/Q60845849',
         ]}, imagecache=None)
-    assert data.get('artistlongbio') == 'Human Tetris ist eine Band aus Moskau'
+    assert 'Human Tetris ist eine Band aus Moskau' in data.get('artistlongbio')
