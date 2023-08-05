@@ -429,3 +429,33 @@ def test_wikimedia_langfallback2(bootstrap):  # pylint: disable=redefined-outer-
             'https://www.wikidata.org/wiki/Q7766138',
         ]}, imagecache=None)
     assert not data.get('artistlongbio')
+
+
+def test_wikimedia_humantetris_en(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' not english test '''
+
+    config = bootstrap
+    configuresettings('wikimedia', config.cparser)
+    config.cparser.setValue('wikimedia/bio_iso', 'en')
+    config.cparser.setValue('wikimedia/bio_iso_en_fallback', False)
+    _, plugins = configureplugins(config)
+    data = plugins['wikimedia'].download(
+        {'artistwebsites': [
+            'https://www.wikidata.org/wiki/Q60845849',
+        ]}, imagecache=None)
+    assert data.get('artistshortbio') == 'Russian post-punk band from Moscow'
+    assert not data.get('artistlongbio')
+
+def test_wikimedia_humantetris_de(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' not english test '''
+
+    config = bootstrap
+    configuresettings('wikimedia', config.cparser)
+    config.cparser.setValue('wikimedia/bio_iso', 'de')
+    config.cparser.setValue('wikimedia/bio_iso_en_fallback', True)
+    _, plugins = configureplugins(config)
+    data = plugins['wikimedia'].download(
+        {'artistwebsites': [
+            'https://www.wikidata.org/wiki/Q60845849',
+        ]}, imagecache=None)
+    assert data.get('artistlongbio') == 'Human Tetris ist eine Band aus Moskau'

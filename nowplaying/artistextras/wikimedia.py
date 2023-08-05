@@ -50,13 +50,16 @@ class Plugin(ArtistExtrasPlugin):
         ''' download content '''
 
         def _get_bio():
-            if page.data['extext']:
+            if page.data.get('extext'):
                 mymeta['artistlongbio'] = page.data['extext']
             elif lang != 'en' and self.config.cparser.value('wikimedia/bio_iso_en_fallback',
                                                             type=bool):
                 temppage = self._get_page(entity, 'en')
-                if temppage.data['extext']:
+                if temppage.data.get('extext'):
                     mymeta['artistlongbio'] = temppage.data['extext']
+
+            if not mymeta.get('artistlongbio') and page.data.get('description'):
+                mymeta['artistshortbio'] = page.data['description']
 
         if self._check_missing(metadata):
             return {}

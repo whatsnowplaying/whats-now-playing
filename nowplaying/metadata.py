@@ -83,6 +83,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if self.metadata.get('artistlongbio') and not self.metadata.get('artistshortbio'):
             self._generate_short_bio()
 
+        if not self.metadata.get('artistlongbio') and self.metadata.get('artistshortbio'):
+            self.metadata['artistlongbio'] = self.metadata['artistshortbio']
+
         self._uniqlists()
 
         self._strip_identifiers()
