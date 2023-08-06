@@ -2,7 +2,6 @@
 # pylint: disable=invalid-name
 ''' support for musicbrainz '''
 
-from cgi import test
 import contextlib
 import functools
 import logging
