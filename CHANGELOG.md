@@ -7,12 +7,24 @@
   * Artist Extras support is now on
   * Musicbrainz support and Musicbrainz fallback is now on
   * The new Wikimedia support is now on (see below)
-
 * IMPORTANT! 'artistthumb' has been renamed to 'artistthumbnail'
   in the metadata. For most users, this change is invisible, but
   if you use the API directly, be aware of this change.
-
-* Added experimental support for DJUCED DJ software!
+* IMPORTANT! All of the default templates have had their formatting
+  cleaned up here and there.  Additionally, many of the `ws-` files
+  have had their CSS cleaned up so that they scale more much more
+  proportionaly to the browser window. In OBS, you will likely need
+  to remove any excess CSS in the Properties setting in order for
+  them to work correctly.  This change makes it possible to use,
+  for example, the rotating artist fanart collection in place of
+  artist thumbnails as well as have a better chance of success with
+  extremely long track titles.
+* EXPERIMENTAL! Added support for DJUCED DJ software!
+* EXPERIMENTAL! Special handling for Youtube downloaded content that
+  hasn't been properly tagged.
+* EXPERIMENTAL! When doing some data lookups, if a song is a remix
+  then fallback to the non-remixed version to at least try to locate
+  artist data.
 * Added Wikimedia as a source if the wikidata entity URL is available
   as an artist website, such as if Musicbrainz website data is selected.
 * Reworked metadata gathering again and likely lost some performance in the
@@ -26,23 +38,39 @@
   are defined.
 * If covers cannot be found, other artwork may now be substituted via the
   artistextras settings.
-* A new websocket example template that just shows the cover is now available.
+* A new websocket example template (`ws-justthecoverhtm`) that just shows
+  the cover is now available.
 * Template variable 'genres' has been added as a _list_ as opposed to
   'genre' which is a single string.  Only Musicbrainz currently supports
-  filling in 'genres'.
+  filling in the 'genres' variable.
 * It should now do a better job of using various manipulations of names.
   For example, MӨЯIS BLΛK will also trigger searches for Moris Blak
   in many places. Probably not perfect, but something is better than
   nothing.
-* Better support for "artist feat. artist" tags.
+* Better support for "artist feat. artist" and other forms of multiple
+  artists working together.  However, as a trade-off, some identification
+  features that used to work no longer do. For example, "Prince & The
+  Revolution" will get recognized for "Purple Rain", but just
+  "Prince" may not.)
 * theaudiodb language fallback should now work better.
 * Added a new twitchbot template that shows track and bio information
   as a more complex example of what can be done with the twitch bot.
 * Twitch chat now has a default announcement template that will be set
   on new installs.
-* Changed the method by which the software looks for the 'Documents'
+* If `Original Date` or `Original Year` tags are able to be read, those
+  will be used in place of `Date` and `Year` tags.
+* Some comments metadata tags that were not being read correctly should have
+  a higher chance of success now.
+* Internal: Changed the method by which the software looks for the 'Documents'
   folder on new installs because Windows 11 really wants you to use
   OneDrive.
+* Internal: Artwork caching should now work much better when substitutions
+  are being done using recognition with the new `imagecacheartist` DB value.
+* Internal: Greatly improved a lot of out timeout problems by adding some
+  timeout values to many of the 3rd party frameworks in use.  As a result,
+  there are a lot more customized bits rather than using off-the-shelf
+  components. :(
+* Internal: The usual dependency updates.
 
 ## Version 4.0.6 - 2023-06-15
 
