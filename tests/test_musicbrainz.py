@@ -65,29 +65,63 @@ def test_fallback_dansesociety(getmusicbrainz):  # pylint: disable=redefined-out
     assert newdata['album'] == 'Somewhere'
 
 
+@pytest.mark.xfail(reason='Returns wrong data')
 def test_fallback_prince_compblue(getmusicbrainz):  # pylint: disable=redefined-outer-name
     ''' test technically wrong artist, missing album '''
     mbhelper = getmusicbrainz
     #
-    # MB has this classified as Prince & The Revolution. So we get a
-    # weird (but valid!) answer back because the input is technically wrong!
+    # MB has this (correctly) classified as Prince & The Revolution. But if someone has it
+    # misclassified, they really should get no data. But there is an album out there
+    # that lists it as Prince soooo....
     #
     metadata = {'artist': 'Prince', 'title': 'Computer Blue'}
     newdata = mbhelper.lastditcheffort(metadata)
-    assert newdata['musicbrainzartistid'] == ['070d193a-845c-479f-980e-bef15710653e']
+    assert not newdata.get('musicbrainzartistid')
 
 
 def test_fallback_prince_compblue_purplerain(getmusicbrainz):  # pylint: disable=redefined-outer-name
     ''' same, but with album '''
     mbhelper = getmusicbrainz
     #
-    # Now if the album is there, hopefully that helps...
+    # With the album and the new filtering code, this one should also fail
+    # because the only Purple Rain requires The Revolution
     #
     metadata = {'artist': 'Prince', 'title': 'Computer Blue', 'album': 'Purple Rain'}
     newdata = mbhelper.lastditcheffort(metadata)
-    assert newdata['musicbrainzartistid'] == [
+    assert not newdata.get('musicbrainzartistid')
+
+
+def test_fallback_princeandther_compblue_purplerain(getmusicbrainz):  # pylint: disable=redefined-outer-name
+    ''' same, but with album '''
+    mbhelper = getmusicbrainz
+    #
+    # With the album and the new filtering code, this one should now work
+    # because the only Purple Rain requires The Revolution
+    #
+    metadata = {
+        'artist': 'Prince & The Revolution',
+        'title': 'Computer Blue',
+        'album': 'Purple Rain'
+    }
+    newdata = mbhelper.lastditcheffort(metadata)
+    assert newdata.get('musicbrainzartistid') == [
         '070d193a-845c-479f-980e-bef15710653e', '4c8ead39-b9df-4c56-a27c-51bc049cfd48'
     ]
+    assert newdata.get('musicbrainzrecordingid') == '4df9885e-6aec-4f11-8180-64d4c133d57c'
+
+
+def test_fallback_princeandther_compblue(getmusicbrainz):  # pylint: disable=redefined-outer-name
+    ''' same, but without album '''
+    mbhelper = getmusicbrainz
+    #
+    # this one should also work
+    #
+    metadata = {'artist': 'Prince & The Revolution', 'title': 'Computer Blue'}
+    newdata = mbhelper.lastditcheffort(metadata)
+    assert newdata.get('musicbrainzartistid') == [
+        '070d193a-845c-479f-980e-bef15710653e', '4c8ead39-b9df-4c56-a27c-51bc049cfd48'
+    ]
+    assert newdata.get('musicbrainzrecordingid') == '4df9885e-6aec-4f11-8180-64d4c133d57c'
 
 
 def test_fallback_snapvsmartin(getmusicbrainz):  # pylint: disable=redefined-outer-name
@@ -115,7 +149,6 @@ def test_fallback_sandervsrobbie(getmusicbrainz):  # pylint: disable=redefined-o
     assert newdata['album'] == 'Close My Eyes'
 
 
-#@pytest.mark.xfail(reason="Non-deterministic at the moment")
 def test_fallback_klfvsent(getmusicbrainz):  # pylint: disable=redefined-outer-name
     ''' test two artists + remix '''
     mbhelper = getmusicbrainz
@@ -130,7 +163,6 @@ def test_fallback_klfvsent(getmusicbrainz):  # pylint: disable=redefined-outer-n
     assert newdata['album'] == 'Solid State Logik 1'
 
 
-@pytest.mark.xfail(reason="used to work now does not with tightening")
 def test_fallback_mareux(getmusicbrainz):  # pylint: disable=redefined-outer-name
     ''' test single but w/wrong remix '''
     mbhelper = getmusicbrainz
@@ -189,7 +221,6 @@ def test_fallback_jackielipson(getmusicbrainz):  # pylint: disable=redefined-out
     assert not newdata.get('album')
 
 
-@pytest.mark.xfail(reason="pass in extra data")
 def test_fallback_acdc_tnt_nodots(getmusicbrainz):  # pylint: disable=redefined-outer-name
     ''' test missing song and remix with wrong name '''
     mbhelper = getmusicbrainz
@@ -202,7 +233,6 @@ def test_fallback_acdc_tnt_nodots(getmusicbrainz):  # pylint: disable=redefined-
     assert not metadata.get('musicbrainzrecordingid')
 
 
-@pytest.mark.xfail(reason="pass in extra data")
 def test_fallback_acdc_tnt_dots(getmusicbrainz):  # pylint: disable=redefined-outer-name
     ''' test missing song but at least this time remix has correct name '''
     mbhelper = getmusicbrainz
@@ -221,4 +251,16 @@ def test_fallback_davidbowie(getmusicbrainz):  # pylint: disable=redefined-outer
     metadata = {'artist': 'David Bowie', 'title': 'Golden Years (Live on Serious Moonlight Tour)'}
     newdata = mbhelper.lastditcheffort(metadata)
     assert newdata.get('musicbrainzartistid') == ['5441c29d-3602-4898-b1a1-b77fa23b8e50']
+    assert not newdata.get('musicbrainzrecordingid')
+
+
+def test_fallback_complex_and_with_feature(getmusicbrainz):  # pylint: disable=redefined-outer-name
+    ''' a very complex one. get the wrong recording id which is correctly rejected though '''
+    mbhelper = getmusicbrainz
+    metadata = {'artist': 'Troye Sivan & Kacey Musgraves feat Mark Ronson', 'title': 'Easy'}
+    newdata = mbhelper.lastditcheffort(metadata)
+    assert newdata.get('musicbrainzartistid') == [
+        'e5712ceb-c37a-4c49-a11c-ccf4e21852d4', 'd1393ecb-431b-4fde-a6ea-d769f2f040cb',
+        'c3c82bdc-d9e7-4836-9746-c24ead47ca19'
+    ]
     assert not newdata.get('musicbrainzrecordingid')
