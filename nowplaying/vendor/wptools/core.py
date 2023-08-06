@@ -38,6 +38,7 @@ class WPTools(object):
         """
         self.cache = {}
         self.data = {}
+        self.timeout = 30
 
         self.flags = {
             'silent': kwargs.get('silent') or False,
@@ -59,6 +60,9 @@ class WPTools(object):
 
         if kwargs.get('wiki'):
             self.params.update({'wiki': kwargs.get('wiki')})
+
+        if kwargs.get('timeout'):
+            self.timeout = kwargs.get('timeout')
 
     def _build_showstr(self, seed):
         """
@@ -171,7 +175,7 @@ class WPTools(object):
                             wiki=self.params.get('wiki'),
                             endpoint=self.params.get('endpoint'))
         qstr = self._query(action, qobj)
-        response = requests.get(qstr, qobj.status)
+        response = requests.get(qstr, qobj.status, timeout=self.timeout)
         self.cache[action]['query'] = qstr
         self.cache[action]['response'] = response.json()
 
