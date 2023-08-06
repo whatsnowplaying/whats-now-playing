@@ -169,7 +169,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
     def _process_audio_metadata(self):
         self.metadata = AudioMetadataRunner(config=self.config).process(metadata=self.metadata)
 
-    def _process_tinytag(self):
+    def _process_tinytag(self):  # pylint: disable=too-many-branches
         ''' given a chunk of metadata, try to fill in more '''
         if not self.metadata or not self.metadata.get('filename'):
             return
@@ -497,7 +497,6 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
                 self.metadata[dest] = str(tags[src][0])
                 if src == 'originaldate':
                     self.originaldate = True
-                    self.originalyear = True
 
         # lists
         convdict = {
