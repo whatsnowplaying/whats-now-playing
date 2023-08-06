@@ -126,40 +126,34 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
     async def index_htm_handler(self, request):
         ''' handle web output '''
-        return await self._metacheck_htm_handler(
-            request, request.app['config'].cparser.value('weboutput/htmltemplate'))
+        return await self._metacheck_htm_handler(request, 'weboutput/htmltemplate')
 
     async def artistbanner_htm_handler(self, request):
         ''' handle web output '''
-        return await self._metacheck_htm_handler(
-            request, request.app['config'].cparser.value('weboutput/artistbannertemplate'))
+        return await self._metacheck_htm_handler(request, 'weboutput/artistbannertemplate')
 
     async def artistlogo_htm_handler(self, request):
         ''' handle web output '''
-        return await self._metacheck_htm_handler(
-            request, request.app['config'].cparser.value('weboutput/artistlogotemplate'))
+        return await self._metacheck_htm_handler(request, 'weboutput/artistlogotemplate')
 
     async def artistthumbnail_htm_handler(self, request):
         ''' handle web output '''
-        return await self._metacheck_htm_handler(
-            request, request.app['config'].cparser.value('weboutput/artistthumbnailtemplate'))
+        return await self._metacheck_htm_handler(request, 'weboutput/artistthumbnailtemplate')
 
     async def artistfanartlaunch_htm_handler(self, request):
         ''' handle web output '''
-        return await self._metacheck_htm_handler(
-            request, request.app['config'].cparser.value('weboutput/artistfanarttemplate'))
+        return await self._metacheck_htm_handler(request, 'weboutput/artistfanarttemplate')
 
     async def gifwords_launch_htm_handler(self, request):
         ''' handle gifwords output '''
-
+        request.app['config'].cparser.sync()
         htmloutput = await self._htm_handler(
             request, request.app['config'].cparser.value('weboutput/gifwordstemplate'))
         return web.Response(content_type='text/html', text=htmloutput)
 
     async def requesterlaunch_htm_handler(self, request):
         ''' handle web output '''
-        return await self._metacheck_htm_handler(
-            request, request.app['config'].cparser.value('weboutput/requestertemplate'))
+        return await self._metacheck_htm_handler(request, 'weboutput/requestertemplate')
 
     @staticmethod
     async def _htm_handler(request, template, metadata=None):  # pylint: disable=unused-argument
@@ -179,9 +173,10 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 logging.error(line)
         return htmloutput
 
-    async def _metacheck_htm_handler(self, request, template):  # pylint: disable=unused-argument
+    async def _metacheck_htm_handler(self, request, cfgtemplate):  # pylint: disable=unused-argument
         ''' handle static html files after checking metadata'''
-
+        request.app['config'].cparser.sync()
+        template = request.app['config'].cparser.value(cfgtemplate)
         source = os.path.basename(template)
         htmloutput = ""
         request.app['config'].get()

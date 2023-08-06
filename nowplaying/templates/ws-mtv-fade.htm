@@ -7,24 +7,35 @@
     <link href="https://db.onlinewebfonts.com/c/de58fdcb98299a76fccd3c0cb4e5a6c0?family=Kabel" rel="stylesheet" type="text/css" />
     <style>
         .container {
+            display: flex;
+            align-items: center;
             margin: 1px;
-            width: 2500px;
-            height: 200px;
+            width: 90vw;
+            height: 90vh;
             float: left;
             font-size: 36px;
             font-family: "Kabel";
             line-height: 30%;
             text-shadow: 4px 4px #000000;
             color: #FFF;
-            text-indent: 1%;
+            margin-bottom: 0px;
         }
 
-        .npimage {
-            margin: 10px;
-            float: left;
-            max-height: 190px;
-            min-height: 190px;
-            width: auto;
+        .center {
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spacer {
+            width: 90%;
+            margin: 0 auto;
+            content: "";
+            margin-bottom: 10px;
+        }
+
+        .txtdiv {
+            line-height: 100%;
+            max-width: 90vw;
         }
 
     </style>
@@ -34,18 +45,16 @@
 <body>
 
     <div class="container" id="titlecard">
-        <p>
-        <div id="artist"></div>
-        </p>
-        <p>
-        <div id="title"></div>
-        </p>
-        <p>
-        <div id="album"></div>
-        </p>
-        <p>
-        <div id="label"></div>
-        </p>
+        <div class="center">
+            <div class="spacer"></div>
+            <div class="txtdiv" id="artist"></div>
+            <div class="spacer"></div>
+            <div class="txtdiv" id="title"></div>
+            <div class="spacer"></div>
+            <div class="txtdiv" id="album"></div>
+            <div class="spacer"></div>
+            <div class="txtdiv" id="label"></div>
+        </div>
     </div>
 
     <script type="text/javascript">
@@ -86,7 +95,7 @@
         }
 
         if ("WebSocket" in window) {
-            start("ws://{{ hostip }}:{{ httpport }}/wsstream")
+            start("ws://{{hostip}}:{{httpport}}/wsstream")
         }
 
     </script>
