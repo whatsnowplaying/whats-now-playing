@@ -1,16 +1,7 @@
 #!/usr/bin/env python3
 ''' test virtualdj '''
 
-import asyncio
-import pathlib
-import os
-import sys
-
-import logging
-import tempfile
-
 import pytest
-import watchdog.observers.polling  # pylint: disable=import-error
 
 import nowplaying.inputs.traktor  # pylint: disable=import-error
 import nowplaying.utils  # pylint: disable=import-error
@@ -38,6 +29,7 @@ async def test_read_collections(bootstrap, getroot):
     track = await plugin.getrandomtrack(playlist='videos')
     assert track
     data = await traktor.lookup(artist="Divine", title="Shoot Your Shot")
+    assert data
     assert data['artist'] == 'Divine'
     assert data['title'] == 'Shoot Your Shot'
     assert data['album'] == 'The Best of Divine'
