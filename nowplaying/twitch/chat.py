@@ -56,6 +56,8 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]).joinpath(
                 QCoreApplication.applicationName(), 'templates')
         self.jinja2 = self.setup_jinja2(self.templatedir)
+        self.jinja2ann = self.setup_jinja2(self.templatedir)
+        self.anndir = None
         self.twitch = None
         self.twitchcustom = False
         self.chat = None
@@ -273,7 +275,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                                                   msg.user.display_name):
                 metadata |= reply
 
-        await self._post_template(msg=msg, template=cmdfile, moremetadata=metadata)
+        await self._post_template(msg=msg, templatein=cmdfile, moremetadata=metadata)
 
     async def redemption_to_chat_request_bridge(self, command, reqdata):
         ''' respond in chat when a redemption request triggers '''
@@ -281,7 +283,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                                      type=bool) and self.config.cparser.value('twitchbot/chat',
                                                                               type=bool):
             cmdfile = f'twitchbot_{command}.txt'
-            await self._post_template(template=cmdfile, moremetadata=reqdata)
+            await self._post_template(templatein=cmdfile, moremetadata=reqdata)
 
     async def handle_request(self, command, params, username):  # pylint: disable=unused-argument
         ''' handle the channel point redemption '''
@@ -375,6 +377,10 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 logging.error('Annoucement template %s does not exist.', anntemplstr)
                 return
 
+            if not self.anndir or self.anndir != anntemplpath.parent:
+                self.anndir = anntemplpath.parent
+                self.jinja2ann = self.setup_jinja2(self.anndir)
+
             metadata = await self.metadb.read_last_meta_async()
 
             if not metadata:
@@ -399,14 +405,16 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
             logging.info('Announcing %s', anntemplpath)
 
-            await self._post_template(template=anntemplpath.name)
+            await self._post_template(templatein=anntemplpath, jinja2driver=self.jinja2ann)
         except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
 
-    async def _post_template(self, msg=None, template=None, moremetadata=None):  #pylint: disable=too-many-branches
+    async def _post_template(self, msg=None, templatein=None, moremetadata=None, jinja2driver=None):  #pylint: disable=too-many-branches
         ''' take a template, fill it in, and post it '''
-        if not template:
+        if not jinja2driver:
+            jinja2driver = self.jinja2
+        if not templatein:
             return
         if not self.chat:
             logging.debug('Twitch chat is not configured?!?')
@@ -420,12 +428,20 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         if moremetadata:
             metadata |= moremetadata
 
-        if not self.templatedir.joinpath(template).is_file():
-            logging.debug('%s is not a file.', template)
+        if isinstance(templatein, pathlib.Path):
+            if not templatein.is_file():
+                logging.debug('%s is not a file.', template)
+                return
+            else:
+                template = templatein.name
+        elif not self.templatedir.joinpath(templatein).is_file():
+            logging.debug('%s is not a file.', templatein)
             return
+        else:
+            template = templatein
 
         try:
-            j2template = self.jinja2.get_template(template)
+            j2template = jinja2driver.get_template(template)
             message = j2template.render(metadata)
         except Exception as error:  # pylint: disable=broad-except
             logging.error('template %s rendering failure: %s', template, error)
