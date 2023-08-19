@@ -430,10 +430,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
         if isinstance(templatein, pathlib.Path):
             if not templatein.is_file():
-                logging.debug('%s is not a file.', template)
+                logging.debug('%s is not a file.', str(templatein))
                 return
-            else:
-                template = templatein.name
+            template = templatein.name
         elif not self.templatedir.joinpath(templatein).is_file():
             logging.debug('%s is not a file.', templatein)
             return
