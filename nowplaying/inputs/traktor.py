@@ -161,7 +161,7 @@ class Traktor:
             if not row:
                 return None
 
-            return row['filename']
+            return str(row['filename'])
 
 
 class Plugin(IcecastPlugin):
