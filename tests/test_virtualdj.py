@@ -11,11 +11,11 @@ import tempfile
 
 import pytest
 import watchdog.events
-import watchdog.observers.polling   # pylint: disable=import-error
+import watchdog.observers.polling  # pylint: disable=import-error
 
-import nowplaying.inputs.m3u        # pylint: disable=import-error
+import nowplaying.inputs.m3u  # pylint: disable=import-error
 import nowplaying.inputs.virtualdj  # pylint: disable=import-error
-import nowplaying.utils             # pylint: disable=import-error
+import nowplaying.utils  # pylint: disable=import-error
 
 
 @pytest.fixture
@@ -295,11 +295,12 @@ async def test_m3u_remix(virtualdj_bootstrap):  # pylint: disable=redefined-oute
 
     plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=myvirtualdjdir)
     myevent = watchdog.events.FileModifiedEvent(virtualdjfile)
-    plugin._reset_meta()
-    plugin._read_track(myevent)
+    plugin._read_track(myevent)  # pylint: disable=protected-access
     assert plugin.metadata['artist'] == 'j. period'
-    assert plugin.metadata['title'] == 'Buddy [Remix] (feat. De La Soul, Jungle Brothers, Q-Tip & Queen Latifah)'
+    assert plugin.metadata[
+        'title'] == 'Buddy [Remix] (feat. De La Soul, Jungle Brothers, Q-Tip & Queen Latifah)'
     await plugin.stop()
+
 
 @pytest.mark.asyncio
 async def test_vdjvirtualdj_noremix(virtualdj_bootstrap):  # pylint: disable=redefined-outer-name

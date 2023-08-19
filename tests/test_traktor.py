@@ -7,7 +7,6 @@ import nowplaying.inputs.traktor  # pylint: disable=import-error
 import nowplaying.utils  # pylint: disable=import-error
 
 
-
 def results(expected, metadata):
     ''' take a metadata result and compare to expected '''
     for expkey in expected:
@@ -16,6 +15,7 @@ def results(expected, metadata):
         del metadata[expkey]
 
     assert metadata == {}
+
 
 @pytest.mark.asyncio
 async def test_read_collections(bootstrap, getroot):
@@ -33,6 +33,7 @@ async def test_read_collections(bootstrap, getroot):
     assert data['artist'] == 'Divine'
     assert data['title'] == 'Shoot Your Shot'
     assert data['album'] == 'The Best of Divine'
+
 
 # @pytest.mark.asyncio
 # async def test_playlist_read(virtualdj_bootstrap, getroot):  # pylint: disable=redefined-outer-name
