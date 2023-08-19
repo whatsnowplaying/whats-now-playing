@@ -10,10 +10,12 @@ import logging
 import tempfile
 
 import pytest
-import watchdog.observers.polling  # pylint: disable=import-error
+import watchdog.events
+import watchdog.observers.polling   # pylint: disable=import-error
 
+import nowplaying.inputs.m3u        # pylint: disable=import-error
 import nowplaying.inputs.virtualdj  # pylint: disable=import-error
-import nowplaying.utils  # pylint: disable=import-error
+import nowplaying.utils             # pylint: disable=import-error
 
 
 @pytest.fixture
@@ -280,6 +282,24 @@ async def test_vdjvirtualdj_remix(virtualdj_bootstrap):  # pylint: disable=redef
     await plugin.stop()
     await asyncio.sleep(5)
 
+
+@pytest.mark.asyncio
+async def test_m3u_remix(virtualdj_bootstrap):  # pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config = virtualdj_bootstrap
+    myvirtualdjdir = config.cparser.value('virtualdj/history')
+    config.cparser.setValue('virtualdj/useremix', True)
+    config.cparser.sync()
+    virtualdjfile = os.path.join(myvirtualdjdir, 'test.m3u')
+    write_extvdj_remix(virtualdjfile)
+
+    plugin = nowplaying.inputs.m3u.Plugin(config=config, m3udir=myvirtualdjdir)
+    myevent = watchdog.events.FileModifiedEvent(virtualdjfile)
+    plugin._reset_meta()
+    plugin._read_track(myevent)
+    assert plugin.metadata['artist'] == 'j. period'
+    assert plugin.metadata['title'] == 'Buddy [Remix] (feat. De La Soul, Jungle Brothers, Q-Tip & Queen Latifah)'
+    await plugin.stop()
 
 @pytest.mark.asyncio
 async def test_vdjvirtualdj_noremix(virtualdj_bootstrap):  # pylint: disable=redefined-outer-name
