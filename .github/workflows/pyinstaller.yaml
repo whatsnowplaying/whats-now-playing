@@ -20,7 +20,7 @@ jobs:
           brew update --preinstall || true
           brew install pkg-config icu4c
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: update tags
@@ -45,7 +45,7 @@ jobs:
     runs-on: windows-2019
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: update tags
