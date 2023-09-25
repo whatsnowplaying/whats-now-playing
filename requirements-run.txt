@@ -43,7 +43,7 @@ python-dateutil
 #
 # required to install
 #
-versioningit==2.2.0
+versioningit==2.2.1
 
 #
 # wptools
