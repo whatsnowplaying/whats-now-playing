@@ -11,7 +11,7 @@ import requests
 
 from twitchAPI.twitch import Twitch
 from twitchAPI.helper import first
-from twitchAPI.types import AuthScope, InvalidRefreshTokenException
+from twitchAPI.type import AuthScope, InvalidRefreshTokenException
 from twitchAPI.oauth import UserAuthenticator, validate_token
 
 import nowplaying.utils

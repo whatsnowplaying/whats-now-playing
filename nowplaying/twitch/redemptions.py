@@ -7,7 +7,7 @@ import traceback
 
 from twitchAPI.pubsub import PubSub
 from twitchAPI.helper import first
-from twitchAPI.types import AuthScope
+from twitchAPI.type import AuthScope
 
 import nowplaying.bootstrap
 import nowplaying.config

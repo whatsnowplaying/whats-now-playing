@@ -16,7 +16,7 @@ import aiohttp  # pylint: disable=import-error
 import jinja2  # pylint: disable=import-error
 
 from twitchAPI.twitch import Twitch  # pylint: disable=import-error
-from twitchAPI.types import AuthScope  # pylint: disable=import-error
+from twitchAPI.type import AuthScope  # pylint: disable=import-error
 from twitchAPI.chat import Chat, ChatEvent  # pylint: disable=import-error
 from twitchAPI.oauth import validate_token  # pylint: disable=import-error
 
