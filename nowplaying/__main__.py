@@ -19,7 +19,7 @@ import nowplaying.frozen
 import nowplaying.systemtray
 import nowplaying.upgrade
 from nowplaying.vendor.pid import PidFile
-from nowplaying.vendor.pid.base import PidFileAlreadyLockedError
+from nowplaying.vendor.pid.base import PidFileAlreadyLockedError, PidFileAlreadyRunningError
 
 #
 # as of now, there isn't really much here to test... basic bootstrap stuff
@@ -75,8 +75,8 @@ def actualmain(beam=False):  # pragma: no cover
             qapp.setWindowIcon(icon)
             exitval = qapp.exec_()
             logging.info('shutting main down v%s', config.version)
-    except (PidFileAlreadyLockedError, BlockingIOError):
-        pass
+    except (PidFileAlreadyLockedError, BlockingIOError, PidFileAlreadyRunningError):
+        nowplaying.bootstrap.already_running()
 
     sys.exit(exitval)
 

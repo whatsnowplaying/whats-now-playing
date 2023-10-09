@@ -23,6 +23,14 @@ def verify_python_version():
     return True
 
 
+def already_running():
+    ''' errorbox if app is already running '''
+    msgbox = QErrorMessage()
+    msgbox.showMessage("What's Now Playing appears to be already running.")
+    msgbox.show()
+    msgbox.exec()
+
+
 def set_qt_names(app=None, domain='com.github.whatsnowplaying', appname='NowPlaying'):
     ''' bootstrap Qt for configuration '''
     #QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
