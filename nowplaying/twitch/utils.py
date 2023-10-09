@@ -16,7 +16,10 @@ from twitchAPI.oauth import UserAuthenticator, validate_token
 
 import nowplaying.utils
 
-USER_SCOPE = [AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHANNEL_MANAGE_REDEMPTIONS, AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
+USER_SCOPE = [
+    AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHANNEL_MANAGE_REDEMPTIONS, AuthScope.CHAT_READ,
+    AuthScope.CHAT_EDIT
+]
 
 
 async def get_user_image(twitch, loginname):
