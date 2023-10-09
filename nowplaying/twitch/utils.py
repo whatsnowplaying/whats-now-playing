@@ -16,7 +16,7 @@ from twitchAPI.oauth import UserAuthenticator, validate_token
 
 import nowplaying.utils
 
-USER_SCOPE = [AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
+USER_SCOPE = [AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHANNEL_MANAGE_REDEMPTIONS, AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 
 
 async def get_user_image(twitch, loginname):
@@ -100,21 +100,15 @@ class TwitchLogin:
 
                     token = self.config.cparser.value('twitchbot/oldusertoken')
                     refresh_token = self.config.cparser.value('twitchbot/oldrefreshtoken')
-                    oldscopes = self.config.cparser.value('twitchbot/oldscopes')
-
-                    if oldscopes != USER_SCOPE:
-                        token = None
 
                     if not await self.attempt_user_auth(token, refresh_token):
                         auth = UserAuthenticator(TwitchLogin.TWITCH, USER_SCOPE, force_verify=False)
                         token, refresh_token = await auth.authenticate()
-                        oldscopes = USER_SCOPE
 
                         await self.attempt_user_auth(token, refresh_token)
 
                     self.config.cparser.setValue('twitchbot/oldusertoken', token)
                     self.config.cparser.setValue('twitchbot/oldrefreshtoken', refresh_token)
-                    self.config.cparser.setValue('twitchbot/oldscopes', USER_SCOPE)
             except (aiohttp.client_exceptions.ClientConnectorError, socket.gaierror) as error:
                 logging.error(error)
             except Exception:  # pylint: disable=broad-except
