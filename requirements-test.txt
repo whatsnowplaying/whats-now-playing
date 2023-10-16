@@ -2,7 +2,7 @@
 # tests
 #
 coveralls
-psutil==5.9.5
+psutil==5.9.6
 pytest==7.4.2
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
