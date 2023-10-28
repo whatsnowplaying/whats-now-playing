@@ -13,7 +13,7 @@ pillow==10.1.0
 pillow_avif_plugin==1.4.1
 pyacoustid==1.2.2
 pypresence==4.3.0
-PySide6==6.5.3
+PySide6==6.6.0
 requests-cache==1.1.0
 requests==2.31.0
 simpleobsws==1.4.0
