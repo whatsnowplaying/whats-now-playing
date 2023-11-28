@@ -12,8 +12,10 @@ if [[ -z "${SYSTEM}" ]]; then
     Darwin)
       SYSTEM=macosx
       ;;
+    MINGW54*)
+      SYSTEM=windows
+      ;;
     *)
-      echo "Got ${UNAMESYS}"
       ;;
   esac
 fi
