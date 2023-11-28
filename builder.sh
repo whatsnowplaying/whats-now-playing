@@ -46,6 +46,7 @@ fi
 
 case "${SYSTEM}" in
   windows)
+    env
     echo "*****"
     echo "* Building a virtual environment"
     echo "****"
