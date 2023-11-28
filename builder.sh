@@ -98,6 +98,8 @@ echo "****"
 echo "*****"
 echo "* Compiling Qt resources"
 echo "****"
+ls "${PYTHONBINDIR}/"
+command -v pyside6-rcc
 
 "${PYTHONBINDIR}/pyside6-rcc" nowplaying/resources/settings.qrc > nowplaying/qtrc.py
 
