@@ -12,7 +12,7 @@ if [[ -z "${SYSTEM}" ]]; then
     Darwin)
       SYSTEM=macosx
       ;;
-    MINGW54*)
+    MINGW*)
       SYSTEM=windows
       ;;
     *)
