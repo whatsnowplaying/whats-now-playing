@@ -13,6 +13,7 @@ if [[ -z "${SYSTEM}" ]]; then
       SYSTEM=macosx
       ;;
     *)
+      echo "Got ${UNAMESYS}"
       ;;
   esac
 fi
@@ -47,6 +48,10 @@ fi
 case "${SYSTEM}" in
   windows)
     env
+    echo $TEMP
+    echo $TMP
+    echo $TMPDIR
+    set
     echo "*****"
     echo "* Building a virtual environment"
     echo "****"
