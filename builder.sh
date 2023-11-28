@@ -98,16 +98,26 @@ echo "****"
 echo "*****"
 echo "* Compiling Qt resources"
 echo "****"
-ls "${PYTHONBINDIR}/"
-command -v pyside6-rcc
 
-"${PYTHONBINDIR}/pyside6-rcc" nowplaying/resources/settings.qrc > nowplaying/qtrc.py
+if [[ -x "${PYTHONBINDIR}/pyside6-rcc" ]]; then
+  "${PYTHONBINDIR}/pyside6-rcc" nowplaying/resources/settings.qrc > nowplaying/qtrc.py
+else
+  rcc=$(command -v pyside6-rcc)
+  echo "Using ${rcc}"
+  pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
+fi
 
 echo "*****"
 echo "* Making binary with PyInstaller "
 echo "****"
 
-"${PYTHONBINDIR}/pyinstaller" NowPlaying.spec
+if [[ -x "${PYTHONBINDIR}/pyinstaller" ]]; then
+  "${PYTHONBINDIR}/pyinstaller" NowPlaying.spec
+else
+  rcc=$(command -v pyinstaller)
+  echo "Using ${rcc}"
+  pyinstaller NowPlaying.spec
+fi
 
 echo "*****"
 echo "* Cleanup "
