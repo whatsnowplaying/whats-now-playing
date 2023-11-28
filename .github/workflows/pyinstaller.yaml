@@ -33,7 +33,7 @@ jobs:
         run: |
           export PATH="/usr/local/opt/icu4c/bin:/usr/local/opt/icu4c/sbin:${PATH}"
           export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/opt/icu4c/lib/pkgconfig"
-          ./builder.sh macosx
+          ./builder.sh
       - name: artifact dist
         uses: actions/upload-artifact@v3
         with:
@@ -57,7 +57,7 @@ jobs:
       - name: run builder
         shell: bash
         run: |
-          ./builder.sh windows
+          ./builder.sh
       - name: artifact dist
         uses: actions/upload-artifact@v3
         with:
