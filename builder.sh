@@ -49,17 +49,13 @@ fi
 
 case "${SYSTEM}" in
   windows)
-    env
-    echo $TEMP
-    echo $TMP
-    echo $TMPDIR
-    set
     echo "*****"
     echo "* Building a virtual environment"
     echo "****"
-    "${PYTHONBIN}" -m venv /tmp/build-venv
+    rm -rf "${TMP}/build-venv" || true
+    "${PYTHONBIN}" -m venv "${TMP}/build-venv"
     # shellcheck disable=SC1091
-    source /tmp/build-venv/scripts/activate
+    source "${TMP}/build-venv/scripts/activate"
     ;;
   *)
     echo "*****"
