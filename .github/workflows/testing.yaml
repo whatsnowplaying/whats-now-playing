@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - name: install homebrew dependencies
@@ -85,7 +85,7 @@ jobs:
       - name: update tags
         run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - name: install dependencies
@@ -141,7 +141,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - name: setup X11xvfb
@@ -237,7 +237,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - name: install dependencies
