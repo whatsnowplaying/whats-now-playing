@@ -29,7 +29,7 @@ jobs:
           githubtoken: ${{ secrets.GITHUB_TOKEN }}
       - name: Artifact output
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: apacheyetustestpatchactionout
           path: ${{ github.workspace }}/out
