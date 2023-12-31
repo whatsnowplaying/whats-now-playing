@@ -58,7 +58,7 @@ jobs:
           source /tmp/venv/bin/activate
           pytest --durations=10 -s tests
       - name: artifact mac test
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mac-11-coverage
@@ -115,7 +115,7 @@ jobs:
           fi
           pytest --durations=10 -s tests
       - name: artifact windows test
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: win-coverage
@@ -207,7 +207,7 @@ jobs:
           source /tmp/venv/bin/activate
           pytest --durations=10 -s
       - name: artifact linux test
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: linux-coverage
@@ -247,7 +247,7 @@ jobs:
           python3 -m pip install --upgrade pip
           pip install ".[test]"
       - name: download coverage files
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: display artifacts
@@ -259,7 +259,7 @@ jobs:
           coverage combine artifacts/*/.coverage artifacts/*/.coverage.*
           coverage html
       - name: artifact full tests
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: full-coverage

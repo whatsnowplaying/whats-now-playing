@@ -35,7 +35,7 @@ jobs:
           export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/opt/icu4c/lib/pkgconfig"
           ./builder.sh
       - name: artifact dist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: mac-11-dist
           path: "*.zip"
@@ -59,7 +59,7 @@ jobs:
         run: |
           ./builder.sh
       - name: artifact dist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-dist
           path: "NowPlaying*windows"
