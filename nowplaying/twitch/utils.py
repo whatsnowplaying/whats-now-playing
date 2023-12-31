@@ -47,8 +47,12 @@ def qtsafe_validate_token(token):
     except Exception as error:  #pylint: disable=broad-except
         logging.error('Twitch Token validation check failed:%s', error)
         return None
+    try:
+        valid = req.json()
+    except Exception as error:  #pylint: disable=broad-except
+        logging.error('Twitch Token validation/bad json:%s', error)
+        return None
 
-    valid = req.json()
     if valid.get('status') == 401:
         logging.debug('Twitch token is invalid')
         return None
