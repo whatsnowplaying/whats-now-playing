@@ -5,6 +5,12 @@ import pytest
 
 import nowplaying.musicbrainz  # pylint: disable=import-error
 
+# either one of these is valid for Computer Blue
+COMPBLUERID = [
+    'a65e5f7f-6ebc-4a2b-b476-1a10bee5b822',  # regular
+    '4df9885e-6aec-4f11-8180-64d4c133d57c'  # remaster
+]
+
 
 @pytest.fixture
 def getmusicbrainz(bootstrap):
@@ -107,7 +113,7 @@ def test_fallback_princeandther_compblue_purplerain(getmusicbrainz):  # pylint: 
     assert newdata.get('musicbrainzartistid') == [
         '070d193a-845c-479f-980e-bef15710653e', '4c8ead39-b9df-4c56-a27c-51bc049cfd48'
     ]
-    assert newdata.get('musicbrainzrecordingid') == '4df9885e-6aec-4f11-8180-64d4c133d57c'
+    assert newdata.get('musicbrainzrecordingid') in COMPBLUERID
 
 
 def test_fallback_princeandther_compblue(getmusicbrainz):  # pylint: disable=redefined-outer-name
@@ -121,7 +127,7 @@ def test_fallback_princeandther_compblue(getmusicbrainz):  # pylint: disable=red
     assert newdata.get('musicbrainzartistid') == [
         '070d193a-845c-479f-980e-bef15710653e', '4c8ead39-b9df-4c56-a27c-51bc049cfd48'
     ]
-    assert newdata.get('musicbrainzrecordingid') == '4df9885e-6aec-4f11-8180-64d4c133d57c'
+    assert newdata.get('musicbrainzrecordingid') in COMPBLUERID
 
 
 def test_fallback_snapvsmartin(getmusicbrainz):  # pylint: disable=redefined-outer-name
