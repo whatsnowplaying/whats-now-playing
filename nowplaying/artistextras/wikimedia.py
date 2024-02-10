@@ -70,7 +70,7 @@ class Plugin(ArtistExtrasPlugin):
             return {}
 
         mymeta = {}
-        try:
+        try:  # pylint: disable=too-many-nested-blocks
             wikidata_websites = [url for url in metadata['artistwebsites'] if 'wikidata' in url]
             if not wikidata_websites:
                 logging.debug('no wikidata entity')
@@ -116,7 +116,7 @@ class Plugin(ArtistExtrasPlugin):
                                           artist=metadata['imagecacheartist'],
                                           imagetype='artistthumbnail',
                                           urllist=thumbs)
-        except Exception:
+        except Exception:    # pylint: disable=broad-except
             logging.error("Metadata breaks wikimedia: %s", metadata)
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
