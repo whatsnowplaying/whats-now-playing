@@ -1,6 +1,24 @@
 
 # Changelog
 
+## Version 4.2.0 - In Progress
+
+* Better handling of when the program is already running.
+  It should help prevent some weird crashes.
+* Error logging for when wikimedia attempts to continue
+  but the program doesn't handle it.
+* A few minor template changes.
+* Twitch scope has changed and may request new permissions.
+* Twitch scope is no longer saved in the configuration to allow
+  for a future update to the Twitch code.
+* Better error handling for when the Twitch token check fails.
+
+* Internal changes:
+  * Upgrade to Python 3.11
+  * Many, many dependency updates which fix various bugs and
+    security problems.
+  * Support attempting to build on older macOS releases
+
 ## Version 4.1.0 - 2023-08-20
 
 * IMPORTANT! SOME SETTINGS WILL BE CHANGED:

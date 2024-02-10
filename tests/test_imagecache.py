@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 ''' test metadata DB '''
 
+#import asyncio
+import contextlib
 import logging
 import multiprocessing
 import pathlib
+import shutil
 import sys
 import tempfile
 import time
 
 import pytest
+import pytest_asyncio
 import requests
 
 import nowplaying.imagecache  # pylint: disable=import-error
@@ -21,12 +25,13 @@ TEST_URLS = [
 ]
 
 
-@pytest.fixture
-def get_imagecache(bootstrap):
+@pytest_asyncio.fixture
+async def get_imagecache(bootstrap):
     ''' setup the image cache for testing '''
     config = bootstrap
     workers = 2
-    with tempfile.TemporaryDirectory() as newpath:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as newpath:
+        rmdir = newpath
         newpathdir = pathlib.Path(newpath)
         logging.debug(newpathdir)
         logpath = newpathdir.joinpath('debug.log')
@@ -43,8 +48,12 @@ def get_imagecache(bootstrap):
         stopevent.set()
         imagecache.stop_process()
         icprocess.join()
-        pathlib.Path(imagecache.databasefile).unlink()
-
+        with contextlib.suppress(Exception):
+            newname = pathlib.Path(imagecache.databasefile).rename("bad.db")
+            newname.unlink()
+    with contextlib.suppress(Exception):
+        if pathlib.Path(rmdir).exists():
+            shutil.rmtree(rmdir)
 
 def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
     ''' testing queue filling '''
@@ -66,7 +75,8 @@ def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
 
 
 @pytest.mark.xfail(sys.platform == "win32", reason="Windows cannot close fast enough")
-def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
     ''' get a 'random' image' '''
     config, imagecache = get_imagecache  # pylint: disable=unused-variable
 
@@ -90,8 +100,9 @@ def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
     cachedimage = imagecache.cache[data_random['cachekey']]
     assert image == cachedimage
 
-
-def test_randomfailure(get_imagecache):  # pylint: disable=redefined-outer-name
+@pytest.mark.xfail(sys.platform == "win32", reason="Windows cannot close fast enough")
+@pytest.mark.asyncio
+async def test_randomfailure(get_imagecache):  # pylint: disable=redefined-outer-name
     ''' test db del 1 '''
     config, imagecache = get_imagecache  # pylint: disable=unused-variable
 
@@ -101,7 +112,10 @@ def test_randomfailure(get_imagecache):  # pylint: disable=redefined-outer-name
     imagecache.setup_sql()
     assert imagecache.databasefile.exists()
 
-    imagecache.databasefile.unlink()
+    with contextlib.suppress(Exception):
+        imagecache.databasefile.rename("./bad.db")
+        imagecache.databasefile.unlink()
+
     image = imagecache.random_image_fetch(artist='Gary Numan', imagetype='fanart')
     assert not image
 

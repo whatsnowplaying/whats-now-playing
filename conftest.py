@@ -56,14 +56,16 @@ def getroot(pytestconfig):
 @pytest.fixture
 def bootstrap(getroot):  # pylint: disable=redefined-outer-name
     ''' bootstrap a configuration '''
-    with tempfile.TemporaryDirectory() as newpath:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as newpath:
+        rmdir = newpath
         bundledir = pathlib.Path(getroot).joinpath('nowplaying')
         nowplaying.bootstrap.set_qt_names(domain=DOMAIN, appname='testsuite')
         config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=newpath, testmode=True)
         config.cparser.setValue('acoustidmb/enabled', False)
         config.cparser.sync()
         yield config
-
+    if pathlib.Path(rmdir).exists():
+        shutil.rmtree(rmdir)
 
 #
 # OS X has a lot of caching wrt preference files

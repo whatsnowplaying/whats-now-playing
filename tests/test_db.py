@@ -1,33 +1,52 @@
 #!/usr/bin/env python3
 ''' test metadata DB '''
 
+#import asyncio
+import contextlib
 import os
+import pathlib
+import shutil
 import tempfile
 
 import pytest
+import pytest_asyncio
 
 import nowplaying.db  # pylint: disable=import-error
 import nowplaying.utils  # pylint: disable=import-error
 
 
-@pytest.fixture
-def getmetadb(bootstrap):
+@pytest_asyncio.fixture
+async def getmetadb(bootstrap):
     ''' create a temporary directory '''
     config = bootstrap  # pylint: disable=unused-variable
-    with tempfile.TemporaryDirectory() as newpath:
-        yield nowplaying.db.MetadataDB(databasefile=os.path.join(newpath, 'test.db'),
-                                       initialize=True)
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as newpath:
+        rmdir = newpath
+        metadb = nowplaying.db.MetadataDB(databasefile=os.path.join(newpath, 'test.db'),
+                                      initialize=True)
+        yield metadb
+        del metadb
 
+    #windows sucks
+    with contextlib.suppress(Exception):
+        if pathlib.Path(rmdir).exists():
+            shutil.rmtree(rmdir)
 
-@pytest.fixture
-def config_and_getmetadb(bootstrap):
+@pytest_asyncio.fixture
+async def config_and_getmetadb(bootstrap):
     ''' create a temporary directory '''
     config = bootstrap  # pylint: disable=unused-variable
-    with tempfile.TemporaryDirectory() as newpath:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as newpath:
+        rmdir = newpath
         config.setlistdir = os.path.join(newpath, 'sl')
-        yield config, nowplaying.db.MetadataDB(databasefile=os.path.join(newpath, 'test.db'),
+        metadb = nowplaying.db.MetadataDB(databasefile=os.path.join(newpath, 'test.db'),
                                                initialize=True)
+        yield config, metadb
+        del metadb
 
+    # Windows sucks
+    with contextlib.suppress(Exception):
+        if pathlib.Path(rmdir).exists():
+            shutil.rmtree(rmdir)
 
 def results(expected, metadata):
     ''' take a metadata result and compare to expected '''

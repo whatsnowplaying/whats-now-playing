@@ -42,8 +42,8 @@ PYTHON_VERSION=$("${PYTHONBIN}" --version)
 PYTHON_VERSION=${PYTHON_VERSION#* }
 IFS="." read -ra PY_VERSION <<< "${PYTHON_VERSION}"
 
-if [[ ${PY_VERSION[0]} -ne 3 && ${PY_VERSION[1]} -ne 10 ]]; then
-  echo "Building requires version Python 3.10.  Binaries with 3.11 have been known to have issues."
+if [[ ${PY_VERSION[0]} -ne 3 && ${PY_VERSION[1]} -lt 10 ]]; then
+  echo "Building requires at least version Python 3.10."
   exit 1
 fi
 

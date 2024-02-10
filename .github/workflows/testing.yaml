@@ -21,7 +21,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       - name: install homebrew dependencies
         run: |
           brew update --preinstall || true
@@ -78,6 +78,8 @@ jobs:
   testing-win:
     runs-on: windows-2019
     steps:
+      - run: Set-MpPreference -DisableRealtimeMonitoring $true
+        shell: powershell
       - name: checkout
         uses: actions/checkout@v4
         with:
@@ -87,7 +89,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       - name: install dependencies
         run: |
           python fix_win_ver.py
@@ -131,7 +133,99 @@ jobs:
         run: |
           coveralls --service=github
 
-  testing-linux:
+  testing-linux311:
+    runs-on: ubuntu-latest
+    env:
+      DISPLAY: ':99.0'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: setup X11xvfb
+        run: |
+          sudo apt install \
+            libxcb-cursor0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-xfixes0 \
+            libxcb-xinerama0 \
+            libxkbcommon-x11-0 \
+            x11-utils
+          /sbin/start-stop-daemon \
+            --start --quiet \
+            --pidfile /tmp/custom_xvfb_99.pid \
+            --make-pidfile --background \
+            --exec /usr/bin/Xvfb -- :99 \
+            -screen 0 1920x1200x24 -ac +extension GLX
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            --no-install-recommends \
+            --no-install-suggests \
+            libchromaprint-tools \
+            libdbus-1-dev \
+            libegl1 \
+            python3-dbus \
+            python3-pip
+
+          #
+          #
+          # dbus breaks venv so just skip it
+          # since we are just doing unit tests
+          #
+          #
+          python3 -m venv /tmp/venv
+          source /tmp/venv/bin/activate
+          python3 -m pip install --upgrade pip
+          pip install ".[test,osspecials]"
+          pip uninstall -y nowplaying
+          versioningit --write
+          python setupnltk.py
+      - name: tests
+        shell: bash
+        env:
+          ACOUSTID_TEST_APIKEY: ${{ secrets.ACOUSTID_TEST_APIKEY }}  # pragma: allowlist secret
+          DISCOGS_API_KEY: ${{ secrets.DISCOGS_API_KEY }}  # pragma: allowlist secret
+          FANARTTV_API_KEY: ${{ secrets.FANARTTV_API_KEY }}  # pragma: allowlist secret
+          THEAUDIODB_API_KEY: ${{ secrets.THEAUDIODB_API_KEY }}  # pragma: allowlist secret
+        run: |
+          if [[ -n "${ACOUSTID_TEST_APIKEY}" ]]; then
+            pushd /tmp
+            FPCALC=/usr/bin/fpcalc
+            export FPCALC
+            popd
+          fi
+          source /tmp/venv/bin/activate
+          pytest --durations=10 -s
+      - name: artifact linux test
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux311-coverage
+          path: |
+            .coverage
+            .coverage.*
+            htmlcov
+      - name: coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
+          COVERALLS_PARALLEL: true
+          COVERALLS_FLAG_NAME: linux311
+        run: |
+          source /tmp/venv/bin/activate
+          coveralls --service=github
+
+  testing-linux310:
     runs-on: ubuntu-latest
     env:
       DISPLAY: ':99.0'
@@ -189,7 +283,6 @@ jobs:
           pip uninstall -y nowplaying
           versioningit --write
           python setupnltk.py
-
       - name: tests
         shell: bash
         env:
@@ -210,7 +303,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: linux-coverage
+          name: linux310-coverage
           path: |
             .coverage
             .coverage.*
@@ -219,7 +312,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           COVERALLS_PARALLEL: true
-          COVERALLS_FLAG_NAME: linux
+          COVERALLS_FLAG_NAME: linux310
         run: |
           source /tmp/venv/bin/activate
           coveralls --service=github
@@ -229,7 +322,8 @@ jobs:
     needs:
       - testing-mac-11
       - testing-win
-      - testing-linux
+      - testing-linux310
+      - testing-linux311
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -239,7 +333,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       - name: install dependencies
         run: |
           python3 -m venv /tmp/venv
