@@ -11,6 +11,7 @@ import re
 import ssl
 import sys
 import time
+import typing as t
 
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
 
@@ -93,6 +94,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self.lastloaddate = 0
         self.setlistdir = None
         self.striprelist = []
+        self.testdir: t.Optional[pathlib.Path] = None
 
     def _force_set_statics(self):
         ''' make sure these are always set '''

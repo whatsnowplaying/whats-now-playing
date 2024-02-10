@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 ''' pytest fixtures '''
 
+import contextlib
 import logging
 import os
 import pathlib
 import shutil
 import sys
 import tempfile
+import unittest.mock
 
 import pytest
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.bootstrap
 import nowplaying.config
+import nowplaying.db
 
 # if sys.platform == 'darwin':
 #     import psutil
@@ -56,13 +59,34 @@ def getroot(pytestconfig):
 @pytest.fixture
 def bootstrap(getroot):  # pylint: disable=redefined-outer-name
     ''' bootstrap a configuration '''
-    with tempfile.TemporaryDirectory() as newpath:
-        bundledir = pathlib.Path(getroot).joinpath('nowplaying')
-        nowplaying.bootstrap.set_qt_names(domain=DOMAIN, appname='testsuite')
-        config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=newpath, testmode=True)
-        config.cparser.setValue('acoustidmb/enabled', False)
-        config.cparser.sync()
-        yield config
+    with contextlib.suppress(PermissionError):  # Windows blows
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as newpath:
+
+            dbinit_patch = unittest.mock.patch('nowplaying.db.MetadataDB.init_db_var')
+            dbinit_mock = dbinit_patch.start()
+            dbdir = pathlib.Path(newpath).joinpath('mdb')
+            dbdir.mkdir()
+            dbfile = dbdir.joinpath('test.db')
+            dbinit_mock.return_value = dbfile
+
+            with unittest.mock.patch.dict(os.environ, {
+                    "WNP_CONFIG_TEST_DIR": str(newpath),
+                    "WNP_METADB_TEST_FILE": str(dbfile)
+            }):
+                rmdir = newpath
+                bundledir = pathlib.Path(getroot).joinpath('nowplaying')
+                nowplaying.bootstrap.set_qt_names(domain=DOMAIN, appname='testsuite')
+                config = nowplaying.config.ConfigFile(bundledir=bundledir,
+                                                      logpath=newpath,
+                                                      testmode=True)
+                config.cparser.setValue('acoustidmb/enabled', False)
+                config.cparser.sync()
+                config.testdir = pathlib.Path(newpath)
+
+                yield config
+                dbinit_mock.stop()
+            if pathlib.Path(rmdir).exists():
+                shutil.rmtree(rmdir)
 
 
 #

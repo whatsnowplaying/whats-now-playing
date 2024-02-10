@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 ''' test metadata DB '''
 
+#import asyncio
 import logging
 import multiprocessing
-import pathlib
 import sys
-import tempfile
 import time
 
 import pytest
+import pytest_asyncio
 import requests
 
 import nowplaying.imagecache  # pylint: disable=import-error
@@ -21,29 +21,27 @@ TEST_URLS = [
 ]
 
 
-@pytest.fixture
-def get_imagecache(bootstrap):
+@pytest_asyncio.fixture
+async def get_imagecache(bootstrap):
     ''' setup the image cache for testing '''
     config = bootstrap
     workers = 2
-    with tempfile.TemporaryDirectory() as newpath:
-        newpathdir = pathlib.Path(newpath)
-        logging.debug(newpathdir)
-        logpath = newpathdir.joinpath('debug.log')
-        stopevent = multiprocessing.Event()
-        imagecache = nowplaying.imagecache.ImageCache(cachedir=newpathdir, stopevent=stopevent)
-        icprocess = multiprocessing.Process(target=imagecache.queue_process,
-                                            name='ICProcess',
-                                            args=(
-                                                logpath,
-                                                workers,
-                                            ))
-        icprocess.start()
-        yield config, imagecache
-        stopevent.set()
-        imagecache.stop_process()
-        icprocess.join()
-        pathlib.Path(imagecache.databasefile).unlink()
+    dbdir = config.testdir.joinpath('imagecache')
+    dbdir.mkdir()
+    logpath = config.testdir.joinpath('debug.log')
+    stopevent = multiprocessing.Event()
+    imagecache = nowplaying.imagecache.ImageCache(cachedir=dbdir, stopevent=stopevent)
+    icprocess = multiprocessing.Process(target=imagecache.queue_process,
+                                        name='ICProcess',
+                                        args=(
+                                            logpath,
+                                            workers,
+                                        ))
+    icprocess.start()
+    yield config, imagecache
+    stopevent.set()
+    imagecache.stop_process()
+    icprocess.join()
 
 
 def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
@@ -65,8 +63,9 @@ def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
             logging.debug('Found it at %s', cachekey)
 
 
-@pytest.mark.xfail(sys.platform == "win32", reason="Windows cannot close fast enough")
-def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
+#@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
+@pytest.mark.asyncio
+async def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
     ''' get a 'random' image' '''
     config, imagecache = get_imagecache  # pylint: disable=unused-variable
 
@@ -91,7 +90,9 @@ def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
     assert image == cachedimage
 
 
-def test_randomfailure(get_imagecache):  # pylint: disable=redefined-outer-name
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
+@pytest.mark.asyncio
+async def test_randomfailure(get_imagecache):  # pylint: disable=redefined-outer-name
     ''' test db del 1 '''
     config, imagecache = get_imagecache  # pylint: disable=unused-variable
 
@@ -102,6 +103,7 @@ def test_randomfailure(get_imagecache):  # pylint: disable=redefined-outer-name
     assert imagecache.databasefile.exists()
 
     imagecache.databasefile.unlink()
+
     image = imagecache.random_image_fetch(artist='Gary Numan', imagetype='fanart')
     assert not image
 

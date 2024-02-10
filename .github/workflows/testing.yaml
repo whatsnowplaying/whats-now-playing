@@ -21,7 +21,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       - name: install homebrew dependencies
         run: |
           brew update --preinstall || true
@@ -66,20 +66,23 @@ jobs:
           path: |
             .coverage
             .coverage.*
-            htmlcov
-      - name: codecov
-        uses: codecov/codecov-action@v4
-        with:
-          fail_ci_if_error: true  # optional (default = false)
-          files: ./coverage.xml  # optional
-          flags: unittests  # optional
-          name: codecov-mac11  # optional
-          token: ${{ secrets.CODECOV_TOKEN }}  # required
-          verbose: true  # optional (default = false)
+      #       htmlcov
+      # - name: codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     fail_ci_if_error: true  # optional (default = false)
+      #     files: ./coverage.xml  # optional
+      #     flags: unittests  # optional
+      #     name: codecov-mac11  # optional
+      #     token: ${{ secrets.CODECOV_TOKEN }}  # required
+      #     verbose: true  # optional (default = false)
+
 
   testing-win:
     runs-on: windows-2019
     steps:
+      - run: Set-MpPreference -DisableRealtimeMonitoring $true
+        shell: powershell
       - name: checkout
         uses: actions/checkout@v4
         with:
@@ -89,7 +92,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       - name: install dependencies
         run: |
           python fix_win_ver.py
@@ -126,18 +129,22 @@ jobs:
             .coverage
             .coverage.*
             htmlcov
-      - name: codecov
-        uses: codecov/codecov-action@v4
-        with:
-          fail_ci_if_error: true  # optional (default = false)
-          files: ./coverage.xml  # optional
-          flags: unittests  # optional
-          name: codecov-windows  # optional
-          token: ${{ secrets.CODECOV_TOKEN }}  # required
-          verbose: true  # optional (default = false)
+      # - name: codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     fail_ci_if_error: true  # optional (default = false)
+      #     files: ./coverage.xml  # optional
+      #     flags: unittests  # optional
+      #     name: codecov-windows  # optional
+      #     token: ${{ secrets.CODECOV_TOKEN }}  # required
+      #     verbose: true  # optional (default = false)
+
 
   testing-linux:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.11"]
     env:
       DISPLAY: ':99.0'
     steps:
@@ -148,7 +155,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: ${{ matrix.python }}
       - name: setup X11xvfb
         run: |
           sudo apt install \
@@ -194,7 +201,6 @@ jobs:
           pip uninstall -y nowplaying
           versioningit --write
           python setupnltk.py
-
       - name: tests
         shell: bash
         env:
@@ -216,20 +222,20 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: linux-coverage
+          name: linux-coverage-${{ matrix.python }}
           path: |
             .coverage
             .coverage.*
             htmlcov
-      - name: codecov
-        uses: codecov/codecov-action@v4
-        with:
-          fail_ci_if_error: true  # optional (default = false)
-          files: ./coverage.xml  # optional
-          flags: unittests  # optional
-          name: codecov-linux  # optional
-          token: ${{ secrets.CODECOV_TOKEN }}  # required
-          verbose: true  # optional (default = false)
+      # - name: codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     fail_ci_if_error: true  # optional (default = false)
+      #     files: ./coverage.xml  # optional
+      #     flags: unittests  # optional
+      #     name: codecov-linux-${{matrix.python}}  # optional
+      #     token: ${{ secrets.CODECOV_TOKEN }}  # required
+      #     verbose: true  # optional (default = false)
 
 
   merge:
@@ -247,7 +253,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       - name: install dependencies
         run: |
           python3 -m venv /tmp/venv
@@ -265,7 +271,6 @@ jobs:
         run: |
           source /tmp/venv/bin/activate
           coverage combine artifacts/*/.coverage artifacts/*/.coverage.*
-          coverage html
           coverage xml
       - name: artifact full tests
         uses: actions/upload-artifact@v4

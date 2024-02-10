@@ -116,7 +116,7 @@ class Plugin(ArtistExtrasPlugin):
                                           artist=metadata['imagecacheartist'],
                                           imagetype='artistthumbnail',
                                           urllist=thumbs)
-        except Exception:    # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             logging.error("Metadata breaks wikimedia: %s", metadata)
             for line in traceback.format_exc().splitlines():
                 logging.error(line)

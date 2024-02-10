@@ -5,28 +5,12 @@ import os
 import sys
 import tempfile
 
-import psutil
-
 from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
+
+from tests.upgrade.upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
 
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.upgrade  # pylint: disable=import-error
-
-if sys.platform == 'darwin':
-    import pwd
-
-
-def reboot_macosx_prefs():
-    ''' work around Mac OS X's preference caching '''
-    if sys.platform == 'darwin':
-        for process in psutil.process_iter():
-            try:
-                if 'cfprefsd' in process.name() and pwd.getpwuid(
-                        os.getuid()).pw_name == process.username():
-                    process.terminate()
-                    process.wait()
-            except psutil.NoSuchProcess:
-                pass
 
 
 def test_noconfigfile():  # pylint: disable=redefined-outer-name
@@ -45,6 +29,7 @@ def test_noconfigfile():  # pylint: disable=redefined-outer-name
         config.setValue('fakevalue', 'force')
         config.sync()
         filename = config.fileName()
+
         assert os.path.exists(filename)
         assert not os.path.exists(backupdir)
         config.clear()

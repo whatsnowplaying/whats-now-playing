@@ -8,25 +8,13 @@ import string
 import sys
 import tempfile
 
-import psutil
-
 from PySide6.QtCore import QCoreApplication, QSettings  # pylint: disable=no-name-in-module
+
+from tests.upgrade.upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
+
 
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.upgrade  # pylint: disable=import-error
-
-if sys.platform == 'darwin':
-    import pwd
-
-
-def reboot_macosx_prefs():
-    ''' work around Mac OS X's preference caching '''
-    if sys.platform == 'darwin':
-        for process in psutil.process_iter():
-            if 'cfprefsd' in process.name() and pwd.getpwuid(
-                    os.getuid()).pw_name == process.username():
-                process.terminate()
-                process.wait()
 
 
 def make_fake_300_config(fakestr):

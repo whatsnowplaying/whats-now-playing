@@ -29,10 +29,10 @@ watchdog==4.0.0
 # audio-metadata
 #
 attrs>=18.2
-bidict==0.*
+bidict<1
 bitstruct>=6.0,<9.0
 more-itertools>=4.0,<11.0
-pprintpp==0.*
+pprintpp<1
 wrapt==1.16.0
 
 #

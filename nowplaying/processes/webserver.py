@@ -49,6 +49,12 @@ INDEXREFRESH = \
     '<head><meta http-equiv="refresh" content="5" ></head>' \
     '<body></body></html>\n'
 
+CONFIG_KEY = web.AppKey('config', nowplaying.config.ConfigFile)
+METADB_KEY = web.AppKey("metadb", nowplaying.db.MetadataDB)
+WS_KEY = web.AppKey("websockets", weakref.WeakSet)
+IC_KEY = web.AppKey("imagecache", nowplaying.imagecache.ImageCache)
+WATCHER_KEY = web.AppKey("watcher", nowplaying.db.DBWatcher)
+
 
 class WebHandler():  # pylint: disable=too-many-public-methods
     ''' aiohttp built server that does both http and websocket '''
@@ -146,9 +152,9 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
     async def gifwords_launch_htm_handler(self, request):
         ''' handle gifwords output '''
-        request.app['config'].cparser.sync()
+        request.app[CONFIG_KEY].cparser.sync()
         htmloutput = await self._htm_handler(
-            request, request.app['config'].cparser.value('weboutput/gifwordstemplate'))
+            request, request.app[CONFIG_KEY].cparser.value('weboutput/gifwordstemplate'))
         return web.Response(content_type='text/html', text=htmloutput)
 
     async def requesterlaunch_htm_handler(self, request):
@@ -161,11 +167,11 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         htmloutput = INDEXREFRESH
         try:
             if not metadata:
-                metadata = await request.app['metadb'].read_last_meta_async()
+                metadata = await request.app[METADB_KEY].read_last_meta_async()
             if not metadata:
                 metadata = nowplaying.hostmeta.gethostmeta()
-                metadata['httpport'] = request.app['config'].cparser.value('weboutput/httpport',
-                                                                           type=int)
+                metadata['httpport'] = request.app[CONFIG_KEY].cparser.value('weboutput/httpport',
+                                                                             type=int)
             templatehandler = nowplaying.utils.TemplateHandler(filename=template)
             htmloutput = templatehandler.generate(metadata)
         except Exception:  # pylint: disable=broad-except
@@ -175,14 +181,14 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
     async def _metacheck_htm_handler(self, request, cfgtemplate):  # pylint: disable=unused-argument
         ''' handle static html files after checking metadata'''
-        request.app['config'].cparser.sync()
-        template = request.app['config'].cparser.value(cfgtemplate)
+        request.app[CONFIG_KEY].cparser.sync()
+        template = request.app[CONFIG_KEY].cparser.value(cfgtemplate)
         source = os.path.basename(template)
         htmloutput = ""
-        request.app['config'].get()
-        metadata = await request.app['metadb'].read_last_meta_async()
+        request.app[CONFIG_KEY].get()
+        metadata = await request.app[METADB_KEY].read_last_meta_async()
         lastid = await self.getlastid(request, source)
-        once = request.app['config'].cparser.value('weboutput/once', type=bool)
+        once = request.app[CONFIG_KEY].cparser.value('weboutput/once', type=bool)
         #once = False
 
         # | dbid  |  lastid | once |
@@ -225,13 +231,13 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     @staticmethod
     async def indextxt_handler(request):
         ''' handle static index.txt '''
-        metadata = await request.app['metadb'].read_last_meta_async()
+        metadata = await request.app[METADB_KEY].read_last_meta_async()
         txtoutput = ""
         if metadata:
-            request.app['config'].get()
+            request.app[CONFIG_KEY].get()
             try:
                 templatehandler = nowplaying.utils.TemplateHandler(
-                    filename=request.app['config'].cparser.value('textoutput/txttemplate'))
+                    filename=request.app[CONFIG_KEY].cparser.value('textoutput/txttemplate'))
                 txtoutput = templatehandler.generate(metadata)
             except Exception as error:  #pylint: disable=broad-except
                 logging.error('indextxt_handler: %s', error)
@@ -241,7 +247,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     @staticmethod
     async def favicon_handler(request):
         ''' handle favicon.ico '''
-        return web.FileResponse(path=request.app['config'].iconfile)
+        return web.FileResponse(path=request.app[CONFIG_KEY].iconfile)
 
     @staticmethod
     async def _image_handler(imgtype, request):
@@ -251,7 +257,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         # this makes the client code significantly easier
         image = nowplaying.utils.TRANSPARENT_PNG_BIN
         try:
-            metadata = await request.app['metadb'].read_last_meta_async()
+            metadata = await request.app[METADB_KEY].read_last_meta_async()
             if metadata and metadata.get(imgtype):
                 image = metadata[imgtype]
         except Exception:  # pylint: disable=broad-except
@@ -278,7 +284,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     async def api_v1_last_handler(self, request):
         ''' v1/last just returns the metadata'''
         data = {}
-        if metadata := await request.app['metadb'].read_last_meta_async():
+        if metadata := await request.app[METADB_KEY].read_last_meta_async():
             try:
                 del metadata['dbid']
                 data = self._base64ifier(metadata)
@@ -291,10 +297,10 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         ''' handle continually streamed updates '''
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
-        request.app['websockets'].add(websocket)
+        request.app[WS_KEY].add(websocket)
         endloop = False
 
-        trackrequest = nowplaying.trackrequests.Requests(request.app['config'])
+        trackrequest = nowplaying.trackrequests.Requests(request.app[CONFIG_KEY])
 
         try:
             while (not self.stopevent.is_set() and not endloop and not websocket.closed):
@@ -321,19 +327,19 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             logging.error('websocket gifwords streamer exception: %s', error)
         finally:
             await websocket.close()
-            request.app['websockets'].discard(websocket)
+            request.app[WS_KEY].discard(websocket)
         return websocket
 
     async def websocket_artistfanart_streamer(self, request):
         ''' handle continually streamed updates '''
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
-        request.app['websockets'].add(websocket)
+        request.app[WS_KEY].add(websocket)
         endloop = False
 
         try:
             while not self.stopevent.is_set() and not endloop and not websocket.closed:
-                metadata = await request.app['metadb'].read_last_meta_async()
+                metadata = await request.app[METADB_KEY].read_last_meta_async()
                 if not metadata or not metadata.get('artist'):
                     await asyncio.sleep(5)
                     continue
@@ -341,13 +347,13 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 imagedata = None
 
                 with contextlib.suppress(KeyError):
-                    imagedata = request.app['imagecache'].random_image_fetch(
+                    imagedata = request.app[IC_KEY].random_image_fetch(
                         artist=metadata['imagecacheartist'], imagetype='artistfanart')
 
                 if imagedata:
                     metadata['artistfanartraw'] = imagedata
-                elif request.app['config'].cparser.value('artistextras/coverfornofanart',
-                                                         type=bool):
+                elif request.app[CONFIG_KEY].cparser.value('artistextras/coverfornofanart',
+                                                           type=bool):
                     metadata['artistfanartraw'] = metadata.get('coverimageraw')
                 else:
                     metadata['artistfanartraw'] = nowplaying.utils.TRANSPARENT_PNG_BIN
@@ -359,7 +365,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 except ConnectionResetError:
                     logging.debug('Lost a client')
                     endloop = True
-                delay = request.app['config'].cparser.value('artistextras/fanartdelay', type=int)
+                delay = request.app[CONFIG_KEY].cparser.value('artistextras/fanartdelay', type=int)
                 await asyncio.sleep(delay)
             if not websocket.closed:
                 await websocket.send_json({'last': True})
@@ -367,12 +373,12 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             logging.error('websocket artistfanart streamer exception: %s', error)
         finally:
             await websocket.close()
-            request.app['websockets'].discard(websocket)
+            request.app[WS_KEY].discard(websocket)
         return websocket
 
     async def websocket_lastjson_handler(self, request, websocket):
         ''' handle singular websocket request '''
-        metadata = await request.app['metadb'].read_last_meta_async()
+        metadata = await request.app[METADB_KEY].read_last_meta_async()
         del metadata['dbid']
         if not websocket.closed:
             await websocket.send_json(self._base64ifier(metadata))
@@ -397,15 +403,15 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
-        request.app['websockets'].add(websocket)
+        request.app[WS_KEY].add(websocket)
 
         try:
-            mytime = await self._wss_do_update(websocket, request.app['metadb'])
+            mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
             while not self.stopevent.is_set() and not websocket.closed:
-                while mytime > request.app['watcher'].updatetime and not self.stopevent.is_set():
+                while mytime > request.app[WATCHER_KEY].updatetime and not self.stopevent.is_set():
                     await asyncio.sleep(1)
 
-                mytime = await self._wss_do_update(websocket, request.app['metadb'])
+                mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
                 await asyncio.sleep(1)
             if not websocket.closed:
                 await websocket.send_json({'last': True})
@@ -413,14 +419,14 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             logging.error('websocket streamer exception: %s', error)
         finally:
             await websocket.close()
-            request.app['websockets'].discard(websocket)
+            request.app[WS_KEY].discard(websocket)
         return websocket
 
     async def websocket_handler(self, request):
         ''' handle inbound websockets '''
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
-        request.app['websockets'].add(websocket)
+        request.app[WS_KEY].add(websocket)
         try:
             async for msg in websocket:
                 if websocket.closed:
@@ -438,15 +444,21 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         except Exception as error:  #pylint: disable=broad-except
             logging.error('Websocket handler error: %s', error)
         finally:
-            request.app['websockets'].discard(websocket)
+            request.app[WS_KEY].discard(websocket)
 
         return websocket
+
+    @staticmethod
+    async def internals(request):
+        ''' internal data debugging '''
+        data = {"dbfile": str(request.app[METADB_KEY].databasefile)}
+        return web.json_response(data)
 
     def create_runner(self):
         ''' setup http routing '''
         threading.current_thread().name = 'WebServer-runner'
         app = web.Application()
-        app['websockets'] = weakref.WeakSet()
+        app[WS_KEY] = weakref.WeakSet()
         app.on_startup.append(self.on_startup)
         app.on_cleanup.append(self.on_cleanup)
         app.on_shutdown.append(self.on_shutdown)
@@ -467,6 +479,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             web.get('/index.html', self.index_htm_handler),
             web.get('/index.txt', self.indextxt_handler),
             web.get('/request.htm', self.requesterlaunch_htm_handler),
+            web.get('/internals', self.internals),
             web.get('/ws', self.websocket_handler),
             web.get('/wsstream', self.websocket_streamer),
             web.get('/wsartistfanartstream', self.websocket_artistfanart_streamer),
@@ -487,8 +500,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
     async def on_startup(self, app):
         ''' setup app connections '''
-        app['config'] = nowplaying.config.ConfigFile(testmode=self.testmode)
-        staticdir = app['config'].basedir.joinpath('httpstatic')
+        app[CONFIG_KEY] = nowplaying.config.ConfigFile(testmode=self.testmode)
+        staticdir = app[CONFIG_KEY].basedir.joinpath('httpstatic')
         logging.debug('Verifying %s', staticdir)
         staticdir.mkdir(parents=True, exist_ok=True)
         logging.debug('Verified %s', staticdir)
@@ -496,11 +509,11 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             '/httpstatic/',
             path=staticdir,
         )
-        app['metadb'] = nowplaying.db.MetadataDB()
+        app[METADB_KEY] = nowplaying.db.MetadataDB()
         if not self.testmode:
-            app['imagecache'] = nowplaying.imagecache.ImageCache()
-        app['watcher'] = app['metadb'].watcher()
-        app['watcher'].start()
+            app[IC_KEY] = nowplaying.imagecache.ImageCache()
+        app[WATCHER_KEY] = app[METADB_KEY].watcher()
+        app[WATCHER_KEY].start()
         app['statedb'] = await aiosqlite.connect(self.databasefile)
         app['statedb'].row_factory = aiosqlite.Row
         cursor = await app['statedb'].cursor()
@@ -513,14 +526,14 @@ class WebHandler():  # pylint: disable=too-many-public-methods
     @staticmethod
     async def on_shutdown(app):
         ''' handle shutdown '''
-        for websocket in set(app['websockets']):
+        for websocket in set(app[WS_KEY]):
             await websocket.close(code=WSCloseCode.GOING_AWAY, message='Server shutdown')
 
     @staticmethod
     async def on_cleanup(app):
         ''' cleanup the app '''
         await app['statedb'].close()
-        app['watcher'].stop()
+        app[WATCHER_KEY].stop()
 
     async def stop_server(self, request):
         ''' stop our server '''

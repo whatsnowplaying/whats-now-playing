@@ -86,7 +86,6 @@ class UpgradeConfig:
     def upgrade(self):
         ''' variable re-mapping '''
         config = self._getconfig()
-        config.sync()
 
         mapping = {
             'acoustidmb/emailaddress': 'musicbrainz/emailaddress',
@@ -99,6 +98,10 @@ class UpgradeConfig:
         if not sourcepath.exists():
             logging.debug('new install!')
             return
+
+        config.setValue('twitchbot/oldscopes', '')
+        config.remove('twitchbot/oldscopes')
+        config.sync()
 
         # these got moved in 3.1.0
         npsqldb = pathlib.Path(QStandardPaths.standardLocations(
@@ -137,9 +140,6 @@ class UpgradeConfig:
 
         if int(oldversstr[0]) < 4 and config.value('settings/input') == 'm3u':
             upgrade_m3u(config=rawconfig, testdir=self.testdir)
-
-        if oldversion < nowplaying.upgradeutils.Version('4.1.1'):
-            config.remove('twitchbot/oldscopes')
 
         if oldversion < nowplaying.upgradeutils.Version('4.1.0'):
             for key in [

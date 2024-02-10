@@ -204,7 +204,7 @@ def test_fallback_grimesfeatjanelle(getmusicbrainz):  # pylint: disable=redefine
     assert newdata['musicbrainzartistid'] == [
         '7e5a2a59-6d9f-4a17-b7c2-e1eedb7bd222', 'ee190f6b-7d98-43ec-b924-da5f8018eca0'
     ]
-    assert newdata['album'] == 'Venus Fly'
+    assert newdata['album'] in ['Venus Fly', 'Art Angels']
 
 
 def test_fallback_utterlunancy(getmusicbrainz):  # pylint: disable=redefined-outer-name

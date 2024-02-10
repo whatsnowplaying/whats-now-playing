@@ -9,6 +9,7 @@ import sys
 import sqlite3
 import time
 import traceback
+import typing as t
 
 import aiosqlite
 
@@ -87,6 +88,7 @@ class DBWatcher:
         self.event_handler = None
         self.updatetime = time.time()
         self.databasefile = databasefile
+        self.callback = None
 
     def start(self, customhandler=None):
         ''' fire up the watcher '''
@@ -112,6 +114,9 @@ class DBWatcher:
         ''' just need to update the time '''
         self.updatetime = time.time()
 
+    def _set_callback(self, discardcallable):
+        self.callback = discardcallable
+
     def stop(self):
         ''' stop the watcher '''
         logging.debug('watcher asked to stop')
@@ -121,6 +126,8 @@ class DBWatcher:
             logging.debug('calling join')
             self.observer.join()
             self.observer = None
+        if self.callback:
+            self.callback(self)
 
     def __del__(self):
         self.stop()
@@ -129,22 +136,38 @@ class DBWatcher:
 class MetadataDB:
     """ Metadata DB module"""
 
-    def __init__(self, databasefile=None, initialize=False):
+    def __init__(self, databasefile: t.Optional[str] = None, initialize=False):
+        self.watchers = set()
 
-        if databasefile:
-            self.databasefile = pathlib.Path(databasefile)
-        else:  # pragma: no cover
-            self.databasefile = pathlib.Path(
-                QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]).joinpath(
-                    'metadb', 'npsql.db')
-
+        self.databasefile = self.init_db_var(databasefile=databasefile)
+        logging.debug("Metadata DB at %s", self.databasefile)
         if not self.databasefile.exists() or initialize:
             logging.debug('Setting up a new DB')
             self.setupsql()
 
+    @staticmethod
+    def init_db_var(databasefile) -> pathlib.Path:
+        """ split this out to make testing easier """
+        if os.environ.get("WNP_METADB_TEST_FILE"):
+            return pathlib.Path(os.environ["WNP_METADB_TEST_FILE"])
+        if databasefile:
+            return pathlib.Path(databasefile)
+        return pathlib.Path(QStandardPaths.standardLocations(
+            QStandardPaths.CacheLocation)[0]).joinpath('metadb', 'npsql.db')
+
     def watcher(self):
         ''' get access to a watch on the database file '''
-        return DBWatcher(self.databasefile)
+        watcher = DBWatcher(self.databasefile)
+        self.watchers.add(watcher)
+        watcher._set_callback(self.watchers.discard)  # pylint: disable=protected-access
+        return watcher
+
+    def __del__(self):
+        for watcher in self.watchers:
+            logging.error("Clearing leftover watcher")
+            for line in traceback.format_exc().splitlines():
+                logging.error(line)
+            watcher.stop()
 
     async def write_to_metadb(self, metadata=None):
         ''' update metadb '''
@@ -231,6 +254,7 @@ class MetadataDB:
                 return None
 
             records = await cursor.fetchall()
+            await connection.commit()
 
         previouslist = []
         if records:
@@ -274,6 +298,8 @@ class MetadataDB:
 
             row = await cursor.fetchone()
             await cursor.close()
+            await connection.commit()
+
             if not row:
                 return None
 

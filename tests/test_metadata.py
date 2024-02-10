@@ -468,12 +468,16 @@ async def test_youtube(bootstrap):
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config
                                                                ).getmoremetadata(metadata=metadatain
                                                                                  )
-    assert metadataout['album'] == 'Very Relentless'
+
+    # might get either album or single
+    assert metadataout['album'] in ['Very Relentless', 'Can You Forgive Her?']
     assert metadataout['artist'] == 'Pet Shop Boys'
     assert metadataout['imagecacheartist'] == 'pet shop boys'
-    assert metadataout['label'] == 'EMI'
+    assert metadataout['label'] in ['EMI', 'Parlophone']
     assert metadataout['musicbrainzartistid'] == ['be540c02-7898-4b79-9acc-c8122c7d9e83']
-    assert metadataout['musicbrainzrecordingid'] == '0e0bc5b5-28d0-4f42-8bf8-1cf4187ee738'
+    assert metadataout['musicbrainzrecordingid'] in [
+        '0e0bc5b5-28d0-4f42-8bf8-1cf4187ee738', '2c0bb21b-805b-4e13-b2da-6a52d398f4f6'
+    ]
     assert metadataout['title'] == 'Can You Forgive Her?'
 
 

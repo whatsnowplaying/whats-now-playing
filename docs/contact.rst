@@ -6,7 +6,7 @@ Discord
 -------
 
 If you'd like to chat with people who use the software or get inspiration, there is now a
-`Discord <https://discord.gg/rgEvcdUHUV>`_ server available!
+`Discord <https://discord.gg/bGdgm64Erb>`_ server available!
 
 Github
 ------

@@ -7,7 +7,6 @@ import os
 import sys
 
 import logging
-import tempfile
 
 import pytest
 import watchdog.observers.polling  # pylint: disable=import-error
@@ -19,11 +18,12 @@ import nowplaying.utils  # pylint: disable=import-error
 @pytest.fixture
 def m3u_bootstrap(bootstrap):  # pylint: disable=redefined-outer-name
     ''' bootstrap test '''
-    with tempfile.TemporaryDirectory() as newpath:
-        config = bootstrap
-        config.cparser.setValue('m3u/directory', newpath)
-        config.cparser.sync()
-        yield config
+    config = bootstrap
+    m3udir = config.testdir.joinpath('m3u')
+    m3udir.mkdir()
+    config.cparser.setValue('m3u/directory', str(m3udir))
+    config.cparser.sync()
+    yield config
 
 
 def results(expected, metadata):

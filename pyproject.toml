@@ -77,7 +77,7 @@ version = { attr = "nowplaying.version.__VERSION__" }
 [tool.pyright]
 exclude =["build"]
 ignore = ["**/nowplaying/vendor/**",]
-pythonVersion = "3.10"
+pythonVersion = "3.11"
 pythonPlatform = "All"
 include = [
   "nowplaying",

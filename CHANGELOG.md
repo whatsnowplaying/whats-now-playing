@@ -1,6 +1,32 @@
 
 # Changelog
 
+## Version 4.2.0 - In Progress
+
+* Better handling of when the program is already running.
+  It should help prevent some weird crashes.
+* Error logging for when wikimedia attempts to continue
+  but the program doesn't handle it.
+* A few minor template changes.
+* Twitch scope has changed and may request new permissions.
+* Twitch scope is no longer saved in the configuration to allow
+  for a future update to the Twitch code.
+* Better error handling for when the Twitch token check fails.
+* New discord link
+
+* Internal changes:
+  * Upgrade to Python 3.11
+  * Many, many dependency updates which fix various bugs and
+    security problems.
+  * Support attempting to build on older macOS releases
+  * Switch from coveralls to codecov
+  * Rework unit tests to use some mocks and env vars
+  * DB now keeps tracks of watchers and will kill
+    watchers if it gets unallocated
+  * Switch to use aiohttp AppKey
+  * Add internals to webserver to help debugging
+  * Simplify some requirements
+
 ## Version 4.1.0 - 2023-08-20
 
 * IMPORTANT! SOME SETTINGS WILL BE CHANGED:

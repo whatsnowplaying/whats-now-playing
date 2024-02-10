@@ -12,7 +12,7 @@ Development Requirements
 
 To locally build and install **What's Now Playing**\ , you will need the following:
 
-#. Python for your operating system (3.10 is required.  3.11 has issues)
+#. Python for your operating system (3.10 or 3.11 is required.  3.12 has issues)
 #. Access to a development shell (e.g., /Applications/Utility/Terminal on OS X)
 #. ``git`` installed and working
 

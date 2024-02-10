@@ -1,32 +1,10 @@
 #!/usr/bin/env python3
 ''' test metadata DB '''
 
-import os
-import tempfile
-
 import pytest
 
 import nowplaying.db  # pylint: disable=import-error
 import nowplaying.utils  # pylint: disable=import-error
-
-
-@pytest.fixture
-def getmetadb(bootstrap):
-    ''' create a temporary directory '''
-    config = bootstrap  # pylint: disable=unused-variable
-    with tempfile.TemporaryDirectory() as newpath:
-        yield nowplaying.db.MetadataDB(databasefile=os.path.join(newpath, 'test.db'),
-                                       initialize=True)
-
-
-@pytest.fixture
-def config_and_getmetadb(bootstrap):
-    ''' create a temporary directory '''
-    config = bootstrap  # pylint: disable=unused-variable
-    with tempfile.TemporaryDirectory() as newpath:
-        config.setlistdir = os.path.join(newpath, 'sl')
-        yield config, nowplaying.db.MetadataDB(databasefile=os.path.join(newpath, 'test.db'),
-                                               initialize=True)
 
 
 def results(expected, metadata):
@@ -40,9 +18,9 @@ def results(expected, metadata):
 
 
 @pytest.mark.asyncio
-async def test_empty_db(getmetadb):  # pylint: disable=redefined-outer-name
+async def test_empty_db(bootstrap):  # pylint: disable=unused-argument
     ''' test writing false data '''
-    metadb = getmetadb
+    metadb = nowplaying.db.MetadataDB(initialize=True)
     await metadb.write_to_metadb(metadata=None)
     readdata = metadb.read_last_meta()
 
@@ -55,9 +33,9 @@ async def test_empty_db(getmetadb):  # pylint: disable=redefined-outer-name
 
 
 @pytest.mark.asyncio
-async def test_empty_db_async(getmetadb):  # pylint: disable=redefined-outer-name
+async def test_empty_db_async(bootstrap):  # pylint: disable=unused-argument
     ''' test writing false data '''
-    metadb = getmetadb
+    metadb = nowplaying.db.MetadataDB(initialize=True)
     await metadb.write_to_metadb(metadata=None)
     readdata = await metadb.read_last_meta_async()
 
@@ -70,9 +48,9 @@ async def test_empty_db_async(getmetadb):  # pylint: disable=redefined-outer-nam
 
 
 @pytest.mark.asyncio
-async def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
+async def test_data_db1(bootstrap):  # pylint: disable=unused-argument
     ''' simple data test '''
-    metadb = getmetadb
+    metadb = nowplaying.db.MetadataDB(initialize=True)
 
     expected = {
         'acoustidid': None,
@@ -130,9 +108,9 @@ async def test_data_db1(getmetadb):  # pylint: disable=redefined-outer-name
 
 
 @pytest.mark.asyncio
-async def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
+async def test_data_db2(bootstrap):  # pylint: disable=unused-argument
     ''' more complex data test '''
-    metadb = getmetadb
+    metadb = nowplaying.db.MetadataDB(initialize=True)
 
     expected = {
         'album': 'Secret Samadhi',
@@ -210,9 +188,9 @@ async def test_data_db2(getmetadb):  # pylint: disable=redefined-outer-name
 
 
 @pytest.mark.asyncio
-async def test_data_dbid(getmetadb):  # pylint: disable=redefined-outer-name
+async def test_data_dbid(bootstrap):  # pylint: disable=unused-argument
     ''' make sure dbid increments '''
-    metadb = getmetadb
+    metadb = nowplaying.db.MetadataDB(initialize=True)
 
     expected = {
         'artist': 'Nine Inch Nails',
@@ -234,9 +212,9 @@ async def test_data_dbid(getmetadb):  # pylint: disable=redefined-outer-name
 
 
 @pytest.mark.asyncio
-async def test_data_previoustrack(getmetadb):  # pylint: disable=redefined-outer-name
+async def test_data_previoustrack(bootstrap):  # pylint: disable=unused-argument
     ''' test the previoustrack functionality '''
-    metadb = getmetadb
+    metadb = nowplaying.db.MetadataDB(initialize=True)
 
     for counter in range(4):
         await metadb.write_to_metadb(metadata={'artist': f'a{counter}', 'title': f't{counter}'})
@@ -251,7 +229,7 @@ async def test_data_previoustrack(getmetadb):  # pylint: disable=redefined-outer
 ## there are no crashes
 
 
-def test_empty_setlist(bootstrap):
+def test_empty_setlist(bootstrap):  # pylint: disable=unused-argument
     ''' test a simple empty db '''
     config = bootstrap
     config.cparser.setValue('setlist/enabled', True)
@@ -259,10 +237,11 @@ def test_empty_setlist(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_simple_setlist(config_and_getmetadb):  # pylint: disable=redefined-outer-name
+async def test_simple_setlist(bootstrap):  # pylint: disable=unused-argument
     ''' test a single entry db '''
-    config, metadb = config_and_getmetadb
+    config = bootstrap
     config.cparser.setValue('setlist/enabled', True)
+    metadb = nowplaying.db.MetadataDB(initialize=True)
 
     expected = {
         'artist': 'Great Artist Here',
@@ -274,10 +253,11 @@ async def test_simple_setlist(config_and_getmetadb):  # pylint: disable=redefine
 
 
 @pytest.mark.asyncio
-async def test_missingartist_setlist(config_and_getmetadb):  # pylint: disable=redefined-outer-name
+async def test_missingartist_setlist(bootstrap):  # pylint: disable=unused-argument
     ''' test a single entry db '''
-    config, metadb = config_and_getmetadb
+    config = bootstrap
     config.cparser.setValue('setlist/enabled', True)
+    metadb = nowplaying.db.MetadataDB(initialize=True)
 
     expected = {
         'artist': None,
