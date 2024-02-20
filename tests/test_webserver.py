@@ -3,11 +3,13 @@
 
 import logging
 import socket
+import sys
 import time
 
 import pytest
 import requests
 
+import nowplaying.db
 import nowplaying.subprocesses  # pylint: disable=import-error
 import nowplaying.processes.webserver  # pylint: disable=import-error
 
@@ -214,7 +216,7 @@ def test_webserver_banner_test(getwebserver):  # pylint: disable=redefined-outer
     req = requests.get('http://localhost:8899/artistbanner.png', timeout=5)
     assert req.status_code == 200
 
-
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 def test_webserver_logo_test(getwebserver):  # pylint: disable=redefined-outer-name
     ''' make sure banner works '''
     config, metadb = getwebserver  # pylint: disable=unused-variable

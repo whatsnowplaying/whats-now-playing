@@ -74,7 +74,7 @@ def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
             logging.debug('Found it at %s', cachekey)
 
 
-@pytest.mark.xfail(sys.platform == "win32", reason="Windows cannot close fast enough")
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.asyncio
 async def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
     ''' get a 'random' image' '''
@@ -100,7 +100,7 @@ async def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-n
     cachedimage = imagecache.cache[data_random['cachekey']]
     assert image == cachedimage
 
-@pytest.mark.xfail(sys.platform == "win32", reason="Windows cannot close fast enough")
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.asyncio
 async def test_randomfailure(get_imagecache):  # pylint: disable=redefined-outer-name
     ''' test db del 1 '''
