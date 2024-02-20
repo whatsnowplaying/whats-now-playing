@@ -86,6 +86,8 @@ class UpgradeConfig:
     def upgrade(self):
         ''' variable re-mapping '''
         config = self._getconfig()
+        config.setValue('twitchbot/oldscopes','')
+        config.remove('twitchbot/oldscopes')
         config.sync()
 
         mapping = {
@@ -137,9 +139,6 @@ class UpgradeConfig:
 
         if int(oldversstr[0]) < 4 and config.value('settings/input') == 'm3u':
             upgrade_m3u(config=rawconfig, testdir=self.testdir)
-
-        if oldversion < nowplaying.upgradeutils.Version('4.1.1'):
-            config.remove('twitchbot/oldscopes')
 
         if oldversion < nowplaying.upgradeutils.Version('4.1.0'):
             for key in [
