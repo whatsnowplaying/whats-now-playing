@@ -57,6 +57,7 @@ jobs:
           fi
           source /tmp/venv/bin/activate
           pytest --durations=10 -s tests
+          coverage xml
       - name: artifact mac test
         uses: actions/upload-artifact@v4
         if: always()
@@ -70,7 +71,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true  # optional (default = false)
-          files: ./coverage,./coverage.*  # optional
+          files: ./coverage.xml  # optional
           flags: unittests  # optional
           name: codecov-mac11  # optional
           token: ${{ secrets.CODECOV_TOKEN }}  # required
@@ -115,6 +116,7 @@ jobs:
             popd
           fi
           pytest --durations=10 -s tests
+          coverage xml
       - name: artifact windows test
         uses: actions/upload-artifact@v4
         if: always()
@@ -128,7 +130,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true  # optional (default = false)
-          files: ./coverage,./coverage.*  # optional
+          files: ./coverage.xml  # optional
           flags: unittests  # optional
           name: codecov-windows  # optional
           token: ${{ secrets.CODECOV_TOKEN }}  # required
@@ -209,6 +211,7 @@ jobs:
           fi
           source /tmp/venv/bin/activate
           pytest --durations=10 -s
+          coverage xml
       - name: artifact linux test
         uses: actions/upload-artifact@v4
         if: always()
@@ -222,7 +225,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true  # optional (default = false)
-          files: ./coverage,./coverage.*  # optional
+          files: ./coverage.xml  # optional
           flags: unittests  # optional
           name: codecov-linux  # optional
           token: ${{ secrets.CODECOV_TOKEN }}  # required
@@ -263,6 +266,7 @@ jobs:
           source /tmp/venv/bin/activate
           coverage combine artifacts/*/.coverage artifacts/*/.coverage.*
           coverage html
+          coverage xml
       - name: artifact full tests
         uses: actions/upload-artifact@v4
         if: always()
@@ -275,7 +279,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true  # optional (default = false)
-          files: ./coverage,./coverage.*  # optional
+          files: ./coverage.xml
           flags: unittests  # optional
           name: codecov-umbrella  # optional
           token: ${{ secrets.CODECOV_TOKEN }}  # required
