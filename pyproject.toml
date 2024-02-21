@@ -96,7 +96,7 @@ markers = [
   "templatesettings: custom settings for templates",
 ]
 qt_api = "pyside6"
-log_cli = true
+#log_cli = true
 addopts = [
   "--cov=nowplaying",
   "--cov-report=html",
