@@ -11,7 +11,6 @@ import signal
 import socket
 import threading
 import time
-import traceback
 import sys
 
 import nowplaying.config
@@ -55,7 +54,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self.plugins = nowplaying.pluginimporter.import_plugins(nowplaying.inputs)
         self.previoustxttemplate = None
         self.txttemplatehandler = None
-        self.imagecache = None
+        self.imagecache: nowplaying.imagecache.ImageCache = None
         self.icprocess = None
         self.trackrequests = None
         if not self.config.cparser.value('control/beam', type=bool):
@@ -272,9 +271,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             if duration := metadata.get('duration'):
                 metadata['duration_hhmmss'] = nowplaying.utils.humanize_time(duration)
         except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
-            logging.error('Ignoring metadataprocessor failure.')
+            logging.exception('Ignoring metadataprocessor failure.')
 
         for key in COREMETA:
             if key not in metadata:
@@ -295,8 +292,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         try:
             nextmeta = await self.input.getplayingtrack()
         except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
+            logging.exception("Failed during getplayingtrack()")
             await asyncio.sleep(5)
             return
 
@@ -308,10 +304,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         try:
             self.currentmeta = await self._fillinmetadata(nextmeta)
         except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
+            logging.exception('Ignoring the crash and just keep going!')
             await asyncio.sleep(5)
-            logging.error('Ignoring the crash and just keep going!')
             self.currentmeta = nextmeta
 
         logging.info('Potential new track: %s / %s', self.currentmeta['artist'],
@@ -367,7 +361,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 imagetype = imagetype.lower()
                 if imagetype != 'none' and self.currentmeta.get('imagecacheartist'):
                     self.currentmeta['coverimageraw'] = self.imagecache.random_image_fetch(
-                        artist=self.currentmeta['imagecacheartist'], imagetype=f'artist{imagetype}')
+                        identifier=self.currentmeta['imagecacheartist'],
+                        imagetype=f'artist{imagetype}')
 
     def _write_to_text(self):
         if configfile := self.config.cparser.value('textoutput/file'):
@@ -418,9 +413,9 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             dedupe = list(dict.fromkeys(self.currentmeta['artistfanarturls']))
             self.currentmeta['artistfanarturls'] = dedupe
             self.imagecache.fill_queue(config=self.config,
-                                       artist=self.currentmeta['artist'],
+                                       identifier=self.currentmeta['artist'],
                                        imagetype='artistfanart',
-                                       urllist=self.currentmeta['artistfanarturls'])
+                                       srclocationlist=self.currentmeta['artistfanarturls'])
             del self.currentmeta['artistfanarturls']
 
     async def _process_imagecache(self):
@@ -440,8 +435,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 logging.debug('Calling %s', key)
                 rawkey = f'{key}raw'
                 if not self.currentmeta.get(rawkey):
-                    image = self.imagecache.random_image_fetch(artist=self.currentmeta['artist'],
-                                                               imagetype=key)
+                    image = self.imagecache.random_image_fetch(
+                        identifier=self.currentmeta['artist'], imagetype=key)
                     if not image:
                         logging.debug('did not get an image for %s %s %s', key, rawkey,
                                       self.currentmeta['artist'])

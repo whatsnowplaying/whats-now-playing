@@ -2,7 +2,6 @@
 ''' start of support of discogs '''
 
 import logging
-import traceback
 
 from nowplaying.vendor import wptools
 
@@ -46,12 +45,11 @@ class Plugin(ArtistExtrasPlugin):
                     page.get()
                 except Exception:  # pylint: disable=broad-except
                     page = None
-                    for line in traceback.format_exc().splitlines():
-                        logging.error(line)
+                    logging.exception("wikimedia page failure: %s", entity)
 
         return page
 
-    def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches
+    def download(self, metadata=None, imagecache: "nowplaying.imagecache.ImageCache" = None):  # pylint: disable=too-many-branches
         ''' download content '''
 
         def _get_bio():
@@ -104,22 +102,20 @@ class Plugin(ArtistExtrasPlugin):
                             if not gotonefanart and imagecache:
                                 gotonefanart = True
                                 imagecache.fill_queue(config=self.config,
-                                                      artist=metadata['imagecacheartist'],
+                                                      identifier=metadata['imagecacheartist'],
                                                       imagetype='artistfanart',
-                                                      urllist=[image['url']])
+                                                      srclocationlist=[image['url']])
                         elif image['kind'] == 'query-thumbnail':
                             thumbs.append(image['url'])
 
                 if imagecache and thumbs and self.config.cparser.value('wikimedia/thumbnails',
                                                                        type=bool):
                     imagecache.fill_queue(config=self.config,
-                                          artist=metadata['imagecacheartist'],
+                                          identifier=metadata['imagecacheartist'],
                                           imagetype='artistthumbnail',
-                                          urllist=thumbs)
+                                          srclocationlist=thumbs)
         except Exception:  # pylint: disable=broad-except
-            logging.error("Metadata breaks wikimedia: %s", metadata)
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
+            logging.exception("Metadata breaks wikimedia: %s", metadata)
         return mymeta
 
     def providerinfo(self):  # pylint: disable=no-self-use

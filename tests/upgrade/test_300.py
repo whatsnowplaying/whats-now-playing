@@ -12,7 +12,6 @@ from PySide6.QtCore import QCoreApplication, QSettings  # pylint: disable=no-nam
 
 from tests.upgrade.upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
 
-
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.upgrade  # pylint: disable=import-error
 

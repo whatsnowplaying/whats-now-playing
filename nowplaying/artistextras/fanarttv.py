@@ -80,9 +80,9 @@ class Plugin(ArtistExtrasPlugin):
                                                                        type=bool):
                 banner = sorted(artist['musicbanner'], key=lambda x: x['likes'], reverse=True)
                 imagecache.fill_queue(config=self.config,
-                                      artist=metadata['imagecacheartist'],
+                                      identifier=metadata['imagecacheartist'],
                                       imagetype='artistbanner',
-                                      urllist=[x['url'] for x in banner])
+                                      srclocationlist=[x['url'] for x in banner])
 
             if self.config.cparser.value('fanarttv/logos', type=bool):
                 logo = None
@@ -92,17 +92,17 @@ class Plugin(ArtistExtrasPlugin):
                     logo = sorted(artist['musiclogo'], key=lambda x: x['likes'], reverse=True)
                 if logo:
                     imagecache.fill_queue(config=self.config,
-                                          artist=metadata['imagecacheartist'],
+                                          identifier=metadata['imagecacheartist'],
                                           imagetype='artistlogo',
-                                          urllist=[x['url'] for x in logo])
+                                          srclocationlist=[x['url'] for x in logo])
 
             if artist.get('artistthumb') and self.config.cparser.value('fanarttv/thumbnails',
                                                                        type=bool):
                 thumbnail = sorted(artist['artistthumb'], key=lambda x: x['likes'], reverse=True)
                 imagecache.fill_queue(config=self.config,
-                                      artist=metadata['imagecacheartist'],
+                                      identifier=metadata['imagecacheartist'],
                                       imagetype='artistthumbnail',
-                                      urllist=[x['url'] for x in thumbnail])
+                                      srclocationlist=[x['url'] for x in thumbnail])
 
             if self.config.cparser.value('fanarttv/fanart',
                                          type=bool) and artist.get('artistbackground'):
@@ -113,9 +113,9 @@ class Plugin(ArtistExtrasPlugin):
                     if not gotonefanart:
                         gotonefanart = True
                         imagecache.fill_queue(config=self.config,
-                                              artist=metadata['imagecacheartist'],
+                                              identifier=metadata['imagecacheartist'],
                                               imagetype='artistfanart',
-                                              urllist=[image['url']])
+                                              srclocationlist=[image['url']])
                     metadata['artistfanarturls'].append(image['url'])
 
         return metadata

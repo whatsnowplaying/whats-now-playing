@@ -94,25 +94,25 @@ class Plugin(ArtistExtrasPlugin):
                         'strArtistBanner') and self.config.cparser.value('theaudiodb/banners',
                                                                          type=bool):
                     imagecache.fill_queue(config=self.config,
-                                          artist=metadata['imagecacheartist'],
+                                          identifier=metadata['imagecacheartist'],
                                           imagetype='artistbanner',
-                                          urllist=[artdata['strArtistBanner']])
+                                          srclocationlist=[artdata['strArtistBanner']])
 
                 if not metadata.get('artistlogoraw') and artdata.get(
                         'strArtistLogo') and self.config.cparser.value('theaudiodb/logos',
                                                                        type=bool):
                     imagecache.fill_queue(config=self.config,
-                                          artist=metadata['imagecacheartist'],
+                                          identifier=metadata['imagecacheartist'],
                                           imagetype='artistlogo',
-                                          urllist=[artdata['strArtistLogo']])
+                                          srclocationlist=[artdata['strArtistLogo']])
 
                 if not metadata.get('artistthumbnailraw') and artdata.get(
                         'strArtistThumb') and self.config.cparser.value('theaudiodb/thumbnails',
                                                                         type=bool):
                     imagecache.fill_queue(config=self.config,
-                                          artist=metadata['imagecacheartist'],
+                                          identifier=metadata['imagecacheartist'],
                                           imagetype='artistthumbnail',
-                                          urllist=[artdata['strArtistThumb']])
+                                          srclocationlist=[artdata['strArtistThumb']])
 
                 if self.config.cparser.value('theaudiodb/fanart', type=bool):
                     gotonefanart = False
@@ -125,9 +125,9 @@ class Plugin(ArtistExtrasPlugin):
                             if not gotonefanart:
                                 gotonefanart = True
                                 imagecache.fill_queue(config=self.config,
-                                                      artist=metadata['imagecacheartist'],
+                                                      identifier=metadata['imagecacheartist'],
                                                       imagetype='artistfanart',
-                                                      urllist=[artdata[artstring]])
+                                                      srclocationlist=[artdata[artstring]])
 
         if bio:
             metadata['artistlongbio'] = bio

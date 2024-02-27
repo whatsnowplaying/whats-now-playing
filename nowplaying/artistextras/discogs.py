@@ -48,17 +48,17 @@ class Plugin(ArtistExtrasPlugin):
                 if record['type'] == 'primary' and record.get(
                         'uri150') and self.config.cparser.value('discogs/thumbnails', type=bool):
                     imagecache.fill_queue(config=self.config,
-                                          artist=artistname,
+                                          identifier=artistname,
                                           imagetype='artistthumbnail',
-                                          urllist=[record['uri150']])
+                                          srclocationlist=[record['uri150']])
 
                 if record['type'] == 'secondary' and record.get(
                         'uri') and self.config.cparser.value('discogs/fanart', type=bool):
                     if not gotonefanart:
                         imagecache.fill_queue(config=self.config,
-                                              artist=artistname,
+                                              identifier=artistname,
                                               imagetype='artistfanart',
-                                              urllist=[record['uri']])
+                                              srclocationlist=[record['uri']])
                         gotonefanart = True
                     self.addmeta['artistfanarturls'].append(record['uri'])
 

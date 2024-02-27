@@ -57,6 +57,7 @@ METADATALIST = [
     'musicbrainzartistid',
     'musicbrainzrecordingid',
     'imagecacheartist',
+    'imagecachealbum',
     'requestdisplayname',
     'requester',
     'title',
@@ -68,6 +69,7 @@ LISTFIELDS = [
     'artistwebsites',
     'genres',
     'isrc',
+    'musicbrainzalbumid',
     'musicbrainzartistid',
 ]
 
@@ -163,8 +165,8 @@ class MetadataDB:
         return watcher
 
     def __del__(self):
-        for watcher in self.watchers:
-            logging.error("Clearing leftover watcher")
+        for watcher in copy.copy(self.watchers):
+            logging.exception("Clearing leftover watcher")
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             watcher.stop()
