@@ -36,6 +36,7 @@ async def get_imagecache(bootstrap):
     stopevent.set()
     imagecache.stop_process()
     icprocess.join()
+    imagecache.databasefile.unlink()
 
 
 @pytest.mark.asyncio
@@ -690,6 +691,29 @@ async def test_multiimage(get_imagecache, getroot, multifilename):  #pylint: dis
         metadata=metadatain, imagecache=imagecache)
 
     assert metadataout['coverimageraw']
+    with sqlite3.connect(imagecache.databasefile, timeout=30) as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            '''SELECT COUNT(cachekey) FROM identifiersha WHERE imagetype="front_cover"''')
+        row = cursor.fetchone()[0]
+        assert row > 1
+
+@pytest.mark.asyncio
+async def test_preset_image(get_imagecache, getroot):  #pylint: disable=redefined-outer-name
+    ''' automated integration test '''
+    config, imagecache = get_imagecache
+    config.cparser.setValue('acoustidmb/enabled', False)
+    config.cparser.setValue('musicbrainz/enabled', False)
+    metadatain = {'filename': os.path.join(getroot, 'tests', 'audio', "multiimage.m4a")}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+        metadata=metadatain, imagecache=imagecache)
+
+    assert metadataout['coverimageraw']
+    assert metadataout['album']
+    metadatain |= {'coverimageraw': metadataout['coverimageraw'], 'album': metadataout['album']}
+
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+        metadata=metadatain, imagecache=imagecache)
     with sqlite3.connect(imagecache.databasefile, timeout=30) as connection:
         cursor = connection.cursor()
         cursor.execute(
