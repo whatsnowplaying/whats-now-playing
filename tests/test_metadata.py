@@ -36,7 +36,6 @@ async def get_imagecache(bootstrap):
     stopevent.set()
     imagecache.stop_process()
     icprocess.join()
-    imagecache.databasefile.unlink()
 
 
 @pytest.mark.asyncio
