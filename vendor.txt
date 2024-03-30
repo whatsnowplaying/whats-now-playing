@@ -3,4 +3,4 @@ git+https://github.com/whatsnowplaying/discogs_client@nowplaying
 git+https://github.com/whatsnowplaying/pid@main
 git+https://github.com/whatsnowplaying/wptools@nowplaying
 git+https://github.com/whatsnowplaying/python-musicbrainzngs@master
-git+https://github.com/devsnd/tinytag@master
+git+https://github.com/devsnd/tinytag@224acb135ec13bf2a0179af9af737d3dc75cd4f7
