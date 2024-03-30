@@ -14,7 +14,6 @@ import webbrowser
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QDialog, QMessageBox, QDialogButtonBox, QVBoxLayout, QLabel  # pylint: disable=no-name-in-module
 
-import nowplaying.imagecache
 import nowplaying.trackrequests
 import nowplaying.twitch.chat
 import nowplaying.upgradeutils
