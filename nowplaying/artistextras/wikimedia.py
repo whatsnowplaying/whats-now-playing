@@ -43,9 +43,9 @@ class Plugin(ArtistExtrasPlugin):
                 try:
                     page = wptools.page(wikibase=entity, lang='en', silent=True)
                     page.get()
-                except Exception:  # pylint: disable=broad-except
+                except Exception as err:  # pylint: disable=broad-except
                     page = None
-                    logging.exception("wikimedia page failure: %s", entity)
+                    logging.exception("wikimedia page failure (%s): %s", err, entity)
 
         return page
 
@@ -114,8 +114,8 @@ class Plugin(ArtistExtrasPlugin):
                                           identifier=metadata['imagecacheartist'],
                                           imagetype='artistthumbnail',
                                           srclocationlist=thumbs)
-        except Exception:  # pylint: disable=broad-except
-            logging.exception("Metadata breaks wikimedia: %s", metadata)
+        except Exception as err:  # pylint: disable=broad-except
+            logging.exception("Metadata breaks wikimedia (%s): %s", err, metadata)
         return mymeta
 
     def providerinfo(self):  # pylint: disable=no-self-use
