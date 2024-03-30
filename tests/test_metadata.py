@@ -697,6 +697,7 @@ async def test_multiimage(get_imagecache, getroot, multifilename):  #pylint: dis
         row = cursor.fetchone()[0]
         assert row > 1
 
+
 @pytest.mark.asyncio
 async def test_preset_image(get_imagecache, getroot):  #pylint: disable=redefined-outer-name
     ''' automated integration test '''

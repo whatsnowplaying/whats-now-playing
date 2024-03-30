@@ -456,7 +456,6 @@ VALUES (?,?,?);
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("Error: %s", err)
 
-
         startsize = len(cachekeys)
         if not startsize:
             logging.debug('Finished image cache verification: no cache!')
