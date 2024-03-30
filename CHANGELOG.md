@@ -13,13 +13,13 @@
   for a future update to the Twitch code.
 * Better error handling for when the Twitch token check fails.
 * New discord link.
-* Better support fo limiting how long to look for additional
+* Better support for limiting how long to look for additional
   information about tracks.
 * Better crash recovery when parts of the system fail due to
   bad input from external services.
 * Some external services got a speed-up.
 * MusicBrainz lookups should be a tad smarter.
-* Date calculations should more accurately reflect the orignal
+* Date calculations should more accurately reflect the original
   release date.
 * In some cases, metadata wasn't being read from
   certain file types. That should be improved now.
