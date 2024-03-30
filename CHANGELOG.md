@@ -12,20 +12,37 @@
 * Twitch scope is no longer saved in the configuration to allow
   for a future update to the Twitch code.
 * Better error handling for when the Twitch token check fails.
-* New discord link
+* New discord link.
+* Better support fo limiting how long to look for additional
+  information about tracks.
+* Better crash recovery when parts of the system fail due to
+  bad input from external services.
+* Some external services got a speed-up.
+* MusicBrainz lookups should be a tad smarter.
+* Date calculations should more accurately reflect the orignal
+  release date.
+* In some cases, metadata wasn't being read from
+  certain file types. That should be improved now.
 
 * Internal changes:
-  * Upgrade to Python 3.11
+  * Upgrade to Python 3.11.
+  * Ability to read multiple covers and store them in a slightly
+    revamped imagecache.
+  * Imagecache DB is now v2 to reflect the front cover cache.
+  * TinyTag pre-2.0 is now vendored again.
   * Many, many dependency updates which fix various bugs and
     security problems.
-  * Support attempting to build on older macOS releases
-  * Switch from coveralls to codecov
-  * Rework unit tests to use some mocks and env vars
+  * Support attempting to build on older macOS releases.
+  * Switch from coveralls to codecov.
+  * Rework unit tests to use some mocks and env vars.
   * DB now keeps tracks of watchers and will kill
-    watchers if it gets unallocated
-  * Switch to use aiohttp AppKey
-  * Add internals to webserver to help debugging
-  * Simplify some requirements
+    watchers if it gets unallocated.
+  * Switch to use aiohttp AppKey.
+  * Add internals to webserver to help debugging.
+  * Code coverage and testing setup rework.
+  * Simplify some requirements.
+  * Better exception logging for some subsystems.
+  * Some of the metadata DB schemas have changed.
 
 ## Version 4.1.0 - 2023-08-20
 
