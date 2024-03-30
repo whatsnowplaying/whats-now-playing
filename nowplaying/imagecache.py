@@ -9,7 +9,6 @@ import random
 import sqlite3
 import threading
 import time
-import traceback
 import uuid
 import typing as t
 
@@ -454,9 +453,9 @@ VALUES (?,?,?);
                         if srclocation == 'STOPWNP':
                             continue
                         cachekeys[row['cachekey']] = srclocation
-        except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
+        except Exception as err:  # pylint: disable=broad-except
+            logging.exception("Error: %s", err)
+
 
         startsize = len(cachekeys)
         if not startsize:
