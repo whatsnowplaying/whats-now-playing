@@ -88,6 +88,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata['artistfanarturls'] = []
 
         if self.metadata.get('coverimageraw') and self.imagecache and self.metadata.get('album'):
+            logging.debug("Placing provided front cover")
             self.imagecache.put_db_cachekey(identifier=self.metadata['album'],
                                             srclocation=f"{self.metadata['album']}_provided_0",
                                             imagetype="front_cover",
@@ -197,15 +198,21 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata[key] = value
 
     def _process_audio_metadata(self):
-        self.metadata = AudioMetadataRunner(
-            config=self.config, imagecache=self.imagecache).process(metadata=self.metadata)
+        try:
+            self.metadata = AudioMetadataRunner(
+                config=self.config, imagecache=self.imagecache).process(metadata=self.metadata)
+        except Exception as err:  # pylint: disable=broad-except
+            logging.exception("AudioMetadata crashed: %s", err)
 
     def _process_tinytag(self):
-        tempdata = TinyTagRunner(imagecache=self.imagecache).process(
-            metadata=copy.copy(self.metadata))
-        self.metadata = recognition_replacement(config=self.config,
-                                                metadata=self.metadata,
-                                                addmeta=tempdata)
+        try:
+            tempdata = TinyTagRunner(imagecache=self.imagecache).process(
+                metadata=copy.copy(self.metadata))
+            self.metadata = recognition_replacement(config=self.config,
+                                                    metadata=self.metadata,
+                                                    addmeta=tempdata)
+        except Exception as err:  # pylint: disable=broad-except
+            logging.exception("TinyTag crashed: %s", err)
 
     def _process_image2png(self):
         # always convert to png
@@ -486,6 +493,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
 
         if images.front_cover and self.metadata.get("album") and self.imagecache:
             for index, cover in enumerate(images.front_cover):
+                logging.debug("Placing audiofile_tt%s front cover", index)
                 self.imagecache.put_db_cachekey(
                     identifier=self.metadata['album'],
                     srclocation=f"{self.metadata['album']}_audiofile_tt{index}",
@@ -527,11 +535,21 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
                         pic,
                         nowplaying.vendor.audio_metadata.formats.mp4_tags.MP4Cover) and isinstance(
                             pic.format, nowplaying.vendor.audio_metadata.formats.MP4CoverFormat):
+                    logging.debug("Placing audiofile_am%s MP4 front cover", index)
                     self.imagecache.put_db_cachekey(
                         identifier=self.metadata['album'],
                         srclocation=f"{self.metadata['album']}_audiofile_am{index}",
                         imagetype="front_cover",
                         content=pic.data)
+                elif getattr(pic, "type") and pic.type == 3:
+                    logging.debug("Placing audiofile_am%s %s front cover", index, type(pic))
+                    self.imagecache.put_db_cachekey(
+                        identifier=self.metadata['album'],
+                        srclocation=f"{self.metadata['album']}_audiofile_am{index}",
+                        imagetype="front_cover",
+                        content=pic.data)
+                else:
+                    logging.debug("Ignoring audiofile_am%s %s %s", index, type(pic), pic.type)
 
     def _process_audio_metadata_mp4_freeform(self, freeformparentlist):
 

@@ -348,7 +348,7 @@ VALUES (?,?,?);
                 ))
             except sqlite3.IntegrityError as error:
                 if 'UNIQUE' in str(error):
-                    logging.debug('Duplicate srclocation, ignoring')
+                    logging.debug('Duplicate srclocation (%s), ignoring', srclocation)
                 else:
                     logging.error(error)
             except sqlite3.OperationalError as error:
