@@ -8,7 +8,6 @@ import pathlib
 import sys
 import sqlite3
 import time
-import traceback
 import typing as t
 
 import aiosqlite
@@ -57,6 +56,7 @@ METADATALIST = [
     'musicbrainzartistid',
     'musicbrainzrecordingid',
     'imagecacheartist',
+    'imagecachealbum',
     'requestdisplayname',
     'requester',
     'title',
@@ -68,6 +68,7 @@ LISTFIELDS = [
     'artistwebsites',
     'genres',
     'isrc',
+    'musicbrainzalbumid',
     'musicbrainzartistid',
 ]
 
@@ -163,10 +164,8 @@ class MetadataDB:
         return watcher
 
     def __del__(self):
-        for watcher in self.watchers:
-            logging.error("Clearing leftover watcher")
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
+        for watcher in copy.copy(self.watchers):
+            logging.exception("Clearing leftover watcher")
             watcher.stop()
 
     async def write_to_metadb(self, metadata=None):
@@ -291,9 +290,8 @@ class MetadataDB:
             cursor = await connection.cursor()
             try:
                 await cursor.execute('''SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1''')
-            except sqlite3.OperationalError:
-                for line in traceback.format_exc().splitlines():
-                    logging.error(line)
+            except sqlite3.OperationalError as err:
+                logging.exception("SQLite3 error: %s", err)
                 return None
 
             row = await cursor.fetchone()
@@ -319,9 +317,8 @@ class MetadataDB:
             cursor = connection.cursor()
             try:
                 cursor.execute('''SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1''')
-            except sqlite3.OperationalError:
-                for line in traceback.format_exc().splitlines():
-                    logging.error(line)
+            except sqlite3.OperationalError as err:
+                logging.exception("SQLite3 error: %s", err)
                 return None
 
             row = cursor.fetchone()

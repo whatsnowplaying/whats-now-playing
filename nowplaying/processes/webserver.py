@@ -348,7 +348,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
                 with contextlib.suppress(KeyError):
                     imagedata = request.app[IC_KEY].random_image_fetch(
-                        artist=metadata['imagecacheartist'], imagetype='artistfanart')
+                        identifier=metadata['imagecacheartist'], imagetype='artistfanart')
 
                 if imagedata:
                     metadata['artistfanartraw'] = imagedata

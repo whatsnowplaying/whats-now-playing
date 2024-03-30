@@ -11,6 +11,7 @@ import tempfile
 import unittest.mock
 
 import pytest
+
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.bootstrap

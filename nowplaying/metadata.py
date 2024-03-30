@@ -11,16 +11,17 @@ import os
 import string
 import sys
 import textwrap
-import traceback
+import typing as t
 
 import nltk
-import tinytag
 import url_normalize
 
 import nowplaying.config
 import nowplaying.hostmeta
 import nowplaying.musicbrainz
 import nowplaying.utils
+from nowplaying.vendor import tinytag
+
 import nowplaying.vendor.audio_metadata
 from nowplaying.vendor.audio_metadata.formats.mp4_tags import MP4FreeformDecoders
 
@@ -28,11 +29,35 @@ NOTE_RE = re.compile('N(?i:ote):')
 YOUTUBE_MATCH_RE = re.compile('^https?://[www.]*youtube.com/watch.v=')
 
 
+def _date_calc(datedata: dict) -> t.Optional[str]:
+    if datedata.get('originalyear') and datedata.get(
+            'date') and datedata['originalyear'] in datedata['date']:
+        del datedata['originalyear']
+
+    if datedata.get('originalyear') and datedata.get(
+            'year') and datedata['originalyear'] in datedata['year']:
+        del datedata['originalyear']
+
+    datelist = list(datedata.values())
+    gooddate = None
+    datelist = sorted(datelist)
+    if len(datelist) > 2:
+        if datelist[0] in datelist[1]:
+            gooddate = datelist[1]
+    elif datelist:
+        gooddate = datelist[0]
+
+    if gooddate:
+        #logging.debug("realdate: %s rest: %s", gooddate, gooddate)
+        return gooddate
+    return None
+
+
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
     ''' Run through a bunch of different metadata processors '''
 
     def __init__(self, config: 'nowplaying.config.ConfigFile' = None):
-        self.metadata = {}
+        self.metadata: dict[str, t.Any] = {}
         self.imagecache = None
         if config:
             self.config = config
@@ -40,8 +65,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.config = nowplaying.config.ConfigFile()
 
         self.extraslist = self._sortextras()
+        #logging.debug("%s %s", type(self.extraslist), self.extraslist)
 
-    def _sortextras(self):
+    def _sortextras(self) -> dict[int, list[str]]:
         extras = {}
         for plugin in self.config.plugins['artistextras']:
             priority = self.config.pluginobjs['artistextras'][plugin].priority
@@ -61,15 +87,20 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if 'artistfanarturls' not in self.metadata:
             self.metadata['artistfanarturls'] = []
 
+        if self.metadata.get('coverimageraw') and self.imagecache and self.metadata.get('album'):
+            logging.debug("Placing provided front cover")
+            self.imagecache.put_db_cachekey(identifier=self.metadata['album'],
+                                            srclocation=f"{self.metadata['album']}_provided_0",
+                                            imagetype="front_cover",
+                                            content=self.metadata['coverimageraw'])
+
         try:
             for processor in 'hostmeta', 'audio_metadata', 'tinytag', 'image2png':
                 logging.debug('running %s', processor)
                 func = getattr(self, f'_process_{processor}')
                 func()
         except Exception:  #pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
-            logging.error('Ignoring sub-metaproc failure.')
+            logging.exception('Ignoring sub-metaproc failure.')
 
         await self._process_plugins(skipplugins)
 
@@ -167,46 +198,21 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata[key] = value
 
     def _process_audio_metadata(self):
-        self.metadata = AudioMetadataRunner(config=self.config).process(metadata=self.metadata)
-
-    def _process_tinytag(self):  # pylint: disable=too-many-branches
-        ''' given a chunk of metadata, try to fill in more '''
-        if not self.metadata or not self.metadata.get('filename'):
-            return
-
         try:
-            tag = tinytag.TinyTag.get(self.metadata['filename'], image=True)
-        except tinytag.tinytag.TinyTagException as error:
-            logging.error('tinytag could not process %s: %s', self.metadata['filename'], error)
-            return
+            self.metadata = AudioMetadataRunner(
+                config=self.config, imagecache=self.imagecache).process(metadata=self.metadata)
+        except Exception as err:  # pylint: disable=broad-except
+            logging.exception("AudioMetadata crashed: %s", err)
 
-        if tag:
-            if not self.metadata.get('date'):
-                for datetype in ['originalyear', 'originalyear', 'date', 'year']:
-                    if hasattr(tag, datetype) and getattr(tag, datetype):
-                        self.metadata['date'] = getattr(tag, datetype)
-                        break
-
-            for key in [
-                    'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'comment', 'comments',
-                    'composer', 'disc', 'disc_total', 'duration', 'genre', 'key', 'lang',
-                    'publisher', 'title', 'track', 'track_total', 'year'
-            ]:
-                if key not in self.metadata and hasattr(tag, key) and getattr(tag, key):
-                    self.metadata[key] = getattr(tag, key)
-
-            if self.metadata.get('comment') and not self.metadata.get('comments'):
-                self.metadata['comments'] = self.metadata['comment']
-                del self.metadata['comment']
-
-            if getattr(tag, 'extra'):
-                extra = getattr(tag, 'extra')
-                for key in ['isrc']:
-                    if extra.get(key):
-                        self.metadata[key] = extra[key].split('/')
-
-            if 'coverimageraw' not in self.metadata:
-                self.metadata['coverimageraw'] = tag.get_image()
+    def _process_tinytag(self):
+        try:
+            tempdata = TinyTagRunner(imagecache=self.imagecache).process(
+                metadata=copy.copy(self.metadata))
+            self.metadata = recognition_replacement(config=self.config,
+                                                    metadata=self.metadata,
+                                                    addmeta=tempdata)
+        except Exception as err:  # pylint: disable=broad-except
+            logging.exception("TinyTag crashed: %s", err)
 
     def _process_image2png(self):
         # always convert to png
@@ -219,18 +225,17 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self.metadata['coverimagetype'] = 'png'
         self.metadata['coverurl'] = 'cover.png'
 
-    def _musicbrainz(self):
+    async def _musicbrainz(self):
         if not self.metadata:
             return None
 
         musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
-        addmeta = musicbrainz.recognize(self.metadata)
+        addmeta = musicbrainz.recognize(copy.copy(self.metadata))
         self.metadata = recognition_replacement(config=self.config,
                                                 metadata=self.metadata,
                                                 addmeta=addmeta)
-        return addmeta
 
-    def _mb_fallback(self):
+    async def _mb_fallback(self):
         ''' at least see if album can be found '''
 
         addmeta = {}
@@ -246,17 +251,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         logging.debug('Attempting musicbrainz fallback')
 
-        try:
-            musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
-            addmeta = musicbrainz.lastditcheffort(self.metadata)
-            self.metadata = recognition_replacement(config=self.config,
-                                                    metadata=self.metadata,
-                                                    addmeta=addmeta)
-        except Exception:  #pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
-            logging.error('Ignoring fallback failure.')
-            return
+        musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
+        addmeta = musicbrainz.lastditcheffort(copy.copy(self.metadata))
+        self.metadata = recognition_replacement(config=self.config,
+                                                metadata=self.metadata,
+                                                addmeta=addmeta)
 
         # handle the youtube download case special
         if (not addmeta or not addmeta.get('album')) and ' - ' in self.metadata['title']:
@@ -282,12 +281,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                                                         metadata=self.metadata,
                                                         addmeta=addmeta)
         except Exception:  #pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
-            logging.error('Ignoring fallback failure.')
+            logging.exception('Ignoring fallback failure.')
 
     async def _process_plugins(self, skipplugins):
-        addmeta = self._musicbrainz()
+        await self._musicbrainz()
 
         for plugin in self.config.plugins['recognition']:
             metalist = self.config.pluginobjs['recognition'][plugin].providerinfo()
@@ -302,7 +299,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 except Exception as error:  # pylint: disable=broad-except
                     logging.error('%s threw exception %s', plugin, error, exc_info=True)
 
-        self._mb_fallback()
+        await self._mb_fallback()
 
         if self.metadata and self.metadata.get('artist'):
             self.metadata['imagecacheartist'] = nowplaying.utils.normalize_text(
@@ -314,27 +311,37 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if self.config.cparser.value(
                 'artistextras/enabled',
                 type=bool) and not self.config.cparser.value('control/beam', type=bool):
-            tasks = []
-            with concurrent.futures.ThreadPoolExecutor(max_workers=3,
-                                                       thread_name_prefix='artistextras') as pool:
-                for priority in self.extraslist:
-                    for plugin in self.extraslist[priority]:
-                        try:
-                            metalist = self.config.pluginobjs['artistextras'][plugin].providerinfo()
-                            loop = asyncio.get_running_loop()
-                            tasks.append(
-                                loop.run_in_executor(
-                                    pool, self.config.pluginobjs['artistextras'][plugin].download,
-                                    self.metadata, self.imagecache))
+            await self._artist_extras()
 
-                        except Exception as error:  # pylint: disable=broad-except
-                            logging.error('%s threw exception %s', plugin, error, exc_info=True)
+    async def _artist_extras(self):
+        tasks: list[tuple[str, asyncio.Future]] = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3,
+                                                   thread_name_prefix='artistextras') as pool:
+            for _, plugins in self.extraslist.items():
+                for plugin in plugins:
+                    try:
+                        loop = asyncio.get_running_loop()
+                        tasks.append([
+                            plugin,
+                            loop.run_in_executor(
+                                pool, self.config.pluginobjs['artistextras'][plugin].download,
+                                self.metadata, self.imagecache)
+                        ])
 
-                for task in tasks:
-                    if addmeta := await task:
-                        self.metadata = recognition_replacement(config=self.config,
-                                                                metadata=self.metadata,
-                                                                addmeta=addmeta)
+                    except Exception as error:  # pylint: disable=broad-except
+                        logging.error('%s threw exception %s', plugin, error, exc_info=True)
+
+            await asyncio.sleep(5)
+            for taskinfo in tasks:
+                with contextlib.suppress(Exception):
+                    if not taskinfo[1].cancel():
+                        addmeta = await taskinfo[1].result()
+                        if addmeta:
+                            self.metadata = recognition_replacement(config=self.config,
+                                                                    metadata=self.metadata,
+                                                                    addmeta=addmeta)
+                    else:
+                        logging.debug("cancelling, timeout: %s", taskinfo[0])
 
     def _generate_short_bio(self):
         if not self.metadata:
@@ -356,13 +363,152 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata['artistshortbio'] = ' '.join(tokens[:-1])
 
 
+class TinyTagRunner:  # pylint: disable=too-few-public-methods
+    ''' tinytag manager '''
+
+    def __init__(self, imagecache: "nowplaying.imagecache.ImageCache" = None):
+        self.imagecache = imagecache
+        self.metadata = {}
+        self.datedata = {}
+
+    @staticmethod
+    def tt_date_calc(tag) -> t.Optional[str]:
+        ''' deal with tinytag dates '''
+        datedata = {}
+        extra = getattr(tag, "extra")
+        for datetype in ['originaldate', 'tdor', 'originalyear', 'tory', 'date', 'year']:
+            if hasattr(tag, datetype) and getattr(tag, datetype):
+                datedata[datetype] = getattr(tag, datetype)
+            elif extra.get(datetype):
+                datedata[datetype] = extra[datetype]
+        return _date_calc(datedata)
+
+    def process(self, metadata) -> dict:  # pylint: disable=too-many-branches
+        ''' given a chunk of metadata, try to fill in more '''
+        self.metadata = metadata
+
+        if not metadata or not metadata.get('filename'):
+            return metadata
+
+        try:
+            tag = tinytag.TinyTag.get(self.metadata['filename'], image=True)
+        except tinytag.tinytag.TinyTagException as error:
+            logging.error('tinytag could not process %s: %s', self.metadata['filename'], error)
+            return metadata
+
+        if tag:
+            self._got_tag(tag)
+
+        return self.metadata
+
+    def _ufid(self, extra):
+        if ufid := extra.get('ufid'):
+            if isinstance(ufid, str):
+                key, value = ufid.split('\x00')
+                if key == "http://musicbrainz.org":
+                    self.metadata['musicbrainzrecordingid'] = value
+
+    def _process_extra(self, extra):
+
+        extra_mapping = {
+            "acoustid id": "acoustidid",
+            "bpm": "bpm",
+            "isrc": "isrc",
+            "key": "key",
+            "composer": "composer",
+            "musicbrainz album id": "musicbrainzalbumid",
+            "musicbrainz artist id": "musicbrainzartistid",
+            "musicbrainz_trackid": "musicbrainzrecordingid",
+            "musicbrainz track id": "musicbrainzrecordingid",
+            "musicbrainz_albumid": "musicbrainzalbumid",
+            "musicbrainz_artistid": "musicbrainzartistid",
+            "publisher": "publisher",
+            "label": "label",
+            "website": "artistwebsites",
+        }
+
+        for key, newkey in extra_mapping.items():
+            if extra.get(key) and not self.metadata.get(newkey):
+                #logging.debug("found {%s} -> {%s}: %s | %s", key, newkey, extra.get(key),
+                #              type(extra.get(key)))
+                if self.metadata.get(newkey):
+                    continue
+
+                if key in ["isrc", "musicbrainz_artistid", "musicbrainz artist id"] and isinstance(
+                        extra[key], str):
+                    if '/' in extra.get(key):
+                        self.metadata[newkey] = extra[key].split('/')
+                    elif ';' in extra.get(key):
+                        self.metadata[newkey] = extra[key].split(';')
+                    elif isinstance(extra[key], list):
+                        self.metadata[newkey] = extra[key]
+                    else:
+                        self.metadata[newkey] = [extra[key]]
+                        #logging.debug("%s %s", self.metadata[newkey], type(self.metadata[newkey]))
+                else:
+                    self.metadata[newkey] = extra[key]
+
+    def _got_tag(self, tag):
+        if not self.metadata.get('date'):
+            if calcdate := self.tt_date_calc(tag):
+                self.metadata['date'] = calcdate
+
+        for key in [
+                'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'comment', 'comments', 'disc',
+                'disc_total', 'duration', 'genre', 'key', 'lang', 'publisher', 'title', 'track',
+                'track_total', 'label'
+        ]:
+            if key not in self.metadata and hasattr(tag, key) and getattr(tag, key):
+                self.metadata[key] = str(getattr(tag, key))
+
+        if self.metadata.get('comment') and not self.metadata.get('comments'):
+            self.metadata['comments'] = self.metadata['comment']
+            del self.metadata['comment']
+
+        if getattr(tag, 'extra'):
+            extra = getattr(tag, 'extra')
+
+            self._ufid(extra)
+            self._process_extra(extra)
+
+        if tag.extra.get("url") and not self.metadata.get("artistwebsites"):
+            urls = tag.extra["url"]
+            if isinstance(urls, str) and urls.lower().count("http") == 1:
+                self.metadata["artistwebsites"] = [urls]
+            else:
+                self.metadata["artistwebsites"] = urls
+
+        if isinstance(self.metadata.get("artistwebsites"), str):
+            self.metadata["artistwebsites"] = [self.metadata["artistwebsites"]]
+
+        #logging.debug(tag)
+        #logging.debug(tag.extra)
+
+        self._images(tag.images)
+
+    def _images(self, images):
+
+        if 'coverimageraw' not in self.metadata and images.front_cover:
+            self.metadata['coverimageraw'] = images.front_cover[0].data
+
+        if images.front_cover and self.metadata.get("album") and self.imagecache:
+            for index, cover in enumerate(images.front_cover):
+                logging.debug("Placing audiofile_tt%s front cover", index)
+                self.imagecache.put_db_cachekey(
+                    identifier=self.metadata['album'],
+                    srclocation=f"{self.metadata['album']}_audiofile_tt{index}",
+                    imagetype="front_cover",
+                    content=cover.data)
+
+
 class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
     ''' run through audio_metadata '''
 
-    def __init__(self, config: 'nowplaying.config.ConfigFile' = None):
+    def __init__(self, config: 'nowplaying.config.ConfigFile' = None, imagecache=None):
+        self.imagecache = imagecache
         self.metadata = {}
         self.config = config
-        self.originaldate = False
+        self.datedata = {}
 
     def process(self, metadata):
         ''' process it '''
@@ -377,14 +523,45 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
         self._process_audio_metadata()
         return self.metadata
 
+    def _images(self, images: list[nowplaying.vendor.audio_metadata.Picture]):
+
+        if 'coverimageraw' not in self.metadata:
+            self.metadata['coverimageraw'] = images[0].data
+
+        if self.metadata.get("album") and self.imagecache:
+            for index, pic in enumerate(images):
+                logging.debug("%s", type(pic))
+                if isinstance(
+                        pic,
+                        nowplaying.vendor.audio_metadata.formats.mp4_tags.MP4Cover) and isinstance(
+                            pic.format, nowplaying.vendor.audio_metadata.formats.MP4CoverFormat):
+                    logging.debug("Placing audiofile_am%s MP4 front cover", index)
+                    self.imagecache.put_db_cachekey(
+                        identifier=self.metadata['album'],
+                        srclocation=f"{self.metadata['album']}_audiofile_am{index}",
+                        imagetype="front_cover",
+                        content=pic.data)
+                elif getattr(pic, "type") and pic.type == 3:
+                    logging.debug("Placing audiofile_am%s %s front cover", index, type(pic))
+                    self.imagecache.put_db_cachekey(
+                        identifier=self.metadata['album'],
+                        srclocation=f"{self.metadata['album']}_audiofile_am{index}",
+                        imagetype="front_cover",
+                        content=pic.data)
+                else:
+                    logging.debug("Ignoring audiofile_am%s %s %s", index, type(pic), pic.type)
+
     def _process_audio_metadata_mp4_freeform(self, freeformparentlist):
 
         def _itunes(tempdata, freeform):
+
+            for src in ['originaldate', 'originalyear']:
+                if freeform['name'] == src and not self.datedata.get(src):
+                    self.datedata[src] = MP4FreeformDecoders[freeform.data_type](freeform.value)
+
             convdict = {
                 'comment': 'comments',
                 'LABEL': 'label',
-                'originalyear': 'date',
-                'originaldate': 'date',
                 'DISCSUBTITLE': 'discsubtitle',
                 'Acoustid Id': 'acoustidid',
                 'MusicBrainz Album Id': 'musicbrainzalbumid',
@@ -392,11 +569,7 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
             }
 
             for src, dest in convdict.items():
-                if src == 'originaldate' and not self.originaldate:
-                    tempdata[dest] = MP4FreeformDecoders[freeform.data_type](freeform.value)
-                if src in ['originaldate', 'originalyear']:
-                    self.originaldate = True
-                if (src == 'originaldate') or (freeform['name'] == src and not tempdata.get(dest)):
+                if freeform['name'] == src and not tempdata.get(dest):
                     tempdata[dest] = MP4FreeformDecoders[freeform.data_type](freeform.value)
 
             convdict = {
@@ -438,15 +611,13 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
             elif usertext.description == 'DISCSUBTITLE':
                 self.metadata['discsubtitle'] = usertext.text[0]
             elif usertext.description == 'MusicBrainz Album Id':
-                self.metadata['musicbrainzalbumid'] = usertext.text[0]
+                self.metadata['musicbrainzalbumid'] = usertext.text[0].split('/')
             elif usertext.description == 'MusicBrainz Artist Id':
-                self.metadata['musicbrainzartistid'] = usertext.text
-            elif usertext.description == 'originalyear' and not self.originaldate:
-                self.metadata['date'] = usertext.text[0]
-                self.originaldate = True
+                self.metadata['musicbrainzartistid'] = usertext.text[0].split('/')
+            elif usertext.description == 'originalyear':
+                self.datedata['originalyear'] = usertext.text[0]
             elif usertext.description == 'originaldate':
-                self.metadata['date'] = usertext.text[0]
-                self.originaldate = True
+                self.datedata['date'] = usertext.text[0]
 
     def _process_audio_metadata_othertags(self, tags):  # pylint: disable=too-many-branches
         if not self.metadata:
@@ -483,36 +654,46 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
         # single:
 
         convdict = {
-            'acoustid id': 'acoustidid',
             'date': 'date',
+            'originaldate': 'date',
+        }
+
+        for src in ['date', 'originaldate']:
+            if not self.datedata.get(src) and src in tags:
+                self.datedata[src] = str(tags[src][0])
+
+        convdict = {
+            'acoustid id': 'acoustidid',
             'musicbrainz album id': 'musicbrainzalbumid',
-            'musicbrainz_trackid': 'musicbrainzrecordingid',
             'publisher': 'label',
             'comment': 'comments',
-            'originaldate': 'date',
+            'musicbrainz_trackid': 'musicbrainzrecordingid'
         }
 
         for src, dest in convdict.items():
             if not self.metadata.get(dest) and src in tags:
                 self.metadata[dest] = str(tags[src][0])
-                if src == 'originaldate':
-                    self.originaldate = True
 
         # lists
         convdict = {
             'musicbrainz artist id': 'musicbrainzartistid',
             'tsrc': 'isrc',
+            'isrc': 'isrc',
+            'musicbrainz_artistid': 'musicbrainzartistid',
         }
 
         for src, dest in convdict.items():
             if dest not in self.metadata and src in tags:
-                if isinstance(tags[src], list):
+                #logging.debug("%s %s %s", src, type(tags[src]), tags[src])
+                if '/' in tags[src][0]:
+                    self.metadata[dest] = str(tags[src][0]).split('/')
+                elif ';' in tags[src][0]:
+                    self.metadata[dest] = str(tags[src][0]).split(';')
+                else:
                     if not self.metadata.get(dest):
                         self.metadata[dest] = []
                     for tag in tags[src]:
                         self.metadata[dest].append(str(tag))
-                else:
-                    self.metadata[dest] = [str(tags[src])]
 
     def _process_audio_metadata(self):  # pylint: disable=too-many-branches
         if not self.metadata or not self.metadata.get('filename'):
@@ -525,6 +706,7 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
                           error)
             return
 
+        #logging.debug("%s", base.tags)
         for key in [
                 'album',
                 'albumartist',
@@ -558,12 +740,14 @@ class AudioMetadataRunner:  # pylint: disable=too-few-public-methods
             self.metadata['bitrate'] = base.streaminfo['bitrate']
 
         if getattr(base, 'pictures') and 'coverimageraw' not in self.metadata:
-            self.metadata['coverimageraw'] = base.pictures[0].data
+            self._images(base.pictures)
+
+        self.metadata['date'] = _date_calc(self.datedata)
 
 
 def recognition_replacement(config: 'nowplaying.config.ConfigFile' = None,
                             metadata=None,
-                            addmeta=None):
+                            addmeta=None) -> dict:
     ''' handle any replacements '''
     # if there is nothing in addmeta, then just bail early
     if not addmeta:

@@ -3,6 +3,7 @@
 
 import logging
 import os
+import typing as t
 
 import pytest
 
@@ -24,11 +25,16 @@ class FakeImageCache:  # pylint: disable=too-few-public-methods
     def __init__(self):
         self.urls = {}
 
-    def fill_queue(self, urllist, config=None, artist=None, imagetype=None):  # pylint: disable=unused-argument
+    def fill_queue(
+            self,
+            config=None,  # pylint: disable=unused-argument
+            identifier: str = None,
+            imagetype: str = None,
+            srclocationlist: t.List[str] = None):
         ''' just keep track of what was picked '''
-        if not self.urls.get(artist):
-            self.urls[artist] = {}
-        self.urls[artist][imagetype] = urllist
+        if not self.urls.get(identifier):
+            self.urls[identifier] = {}
+        self.urls[identifier][imagetype] = srclocationlist
 
 
 def configureplugins(config):

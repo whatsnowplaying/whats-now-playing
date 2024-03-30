@@ -19,7 +19,7 @@ from nowplaying.utils import normalize_text, normalize, artist_name_variations
 
 REMIX_RE = re.compile(r'^\s*(.*)\s+[\(\[].*[\)\]]$')
 
-musicbrainzngs.musicbrainz._max_retries = 3  # pylint: disable=protected-access
+musicbrainzngs.musicbrainz._max_retries = 1  # pylint: disable=protected-access
 musicbrainzngs.musicbrainz._timeout = 30  # pylint: disable=protected-access
 # WNP (typically) has large lulls between 2-3 calls that need to happen
 # quickly. so double the rate of calls to speed things up but still
@@ -153,6 +153,23 @@ class MusicBrainzHelper():
         return riddata
 
     def _lastditchrid(self, metadata):
+
+        def havealbum():
+            for artist in artist_name_variations(addmeta['artist']):
+                try:
+                    mydict = musicbrainzngs.search_recordings(artist=artist,
+                                                              recording=addmeta['title'],
+                                                              release=addmeta['album'])
+                except Exception:  # pylint: disable=broad-exception-caught
+                    logging.exception("musicbrainzngs.search_recordings- ar:%s, t:%s, al:%s",
+                                      artist, addmeta['title'], addmeta['album'])
+                    continue
+
+                if riddata := self._pickarecording(addmeta, mydict) or self._pickarecording(
+                        addmeta, mydict, allowothers=True):
+                    return riddata
+            return {}
+
         mydict = {}
         riddata = {}
         addmeta = {
@@ -167,41 +184,48 @@ class MusicBrainzHelper():
 
         logging.debug('Starting data: %s', addmeta)
         if addmeta['album']:
-            for artist in artist_name_variations(addmeta['artist']):
-                mydict = musicbrainzngs.search_recordings(artist=artist,
-                                                          recording=addmeta['title'],
-                                                          release=addmeta['album'])
-                riddata = self._pickarecording(addmeta, mydict) or self._pickarecording(
-                    addmeta, mydict, allowothers=True)
-                if riddata:
-                    break
+            if riddata := havealbum():
+                return riddata
 
-        if not riddata:
-            for artist in artist_name_variations(addmeta['artist']):
-                logging.debug('Trying %s', artist)
+        for artist in artist_name_variations(addmeta['artist']):
+            logging.debug('Trying %s', artist)
+            try:
                 mydict = musicbrainzngs.search_recordings(artist=artist,
                                                           recording=addmeta['title'],
                                                           strict=True)
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("musicbrainzngs.search_recordings- ar:%s, t:%s (strict)", artist,
+                                  addmeta['title'])
+                continue
 
-                if mydict['recording-count'] == 0:
-                    logging.debug('strict is too strict')
+            logging.debug('got here')
+
+            if mydict['recording-count'] == 0:
+                logging.debug('strict is too strict')
+                try:
                     mydict = musicbrainzngs.search_recordings(artist=artist,
                                                               recording=addmeta['title'])
-                if mydict['recording-count'] > 100:
-                    logging.debug('too many, going stricter')
-                    query = (
-                        f"artist:{artist} AND recording:\"{addmeta['title']}\" AND "
-                        "-(secondarytype:compilation OR secondarytype:live) AND status:official")
-                    logging.debug(query)
-                    mydict = musicbrainzngs.search_recordings(query=query, limit=100)
-                riddata = self._pickarecording(addmeta, mydict)
-                if riddata:
-                    break
+                except Exception:  # pylint: disable=broad-exception-caught
+                    logging.exception("musicbrainzngs.search_recordings- ar:%s, t:%s", artist,
+                                      addmeta['title'])
+                    continue
 
-        if not riddata:
-            riddata = self._pickarecording(addmeta, mydict, allowothers=True)
-        if not riddata:
-            logging.debug('Last ditch MB lookup failed. Sorry.')
+            if mydict['recording-count'] > 100:
+                logging.debug('too many, going stricter')
+                query = (f"artist:{artist} AND recording:\"{addmeta['title']}\" AND "
+                         "-(secondarytype:compilation OR secondarytype:live) AND status:official")
+                logging.debug(query)
+                try:
+                    mydict = musicbrainzngs.search_recordings(query=query, limit=100)
+                except Exception:  # pylint: disable=broad-exception-caught
+                    logging.exception("musicbrainzngs.search_recordings- q:%s", query)
+                continue
+            if riddata := self._pickarecording(addmeta, mydict):
+                return riddata
+
+        if riddata := self._pickarecording(addmeta, mydict, allowothers=True):
+            return riddata
+        logging.debug('Last ditch MB lookup failed. Sorry.')
         return riddata
 
     def lastditcheffort(self, metadata):

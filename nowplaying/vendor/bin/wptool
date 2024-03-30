@@ -1,4 +1,4 @@
-#!/Users/aw/venv/wnp/bin/python3.10
+#!/Users/aw/venv/wnp/bin/python3.11
 # -*- coding: utf-8 -*-
 import re
 import sys
