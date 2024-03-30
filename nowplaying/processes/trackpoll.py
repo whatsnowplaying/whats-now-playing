@@ -270,8 +270,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                                                                      imagecache=self.imagecache)
             if duration := metadata.get('duration'):
                 metadata['duration_hhmmss'] = nowplaying.utils.humanize_time(duration)
-        except Exception:  # pylint: disable=broad-except
-            logging.exception('Ignoring metadataprocessor failure.')
+        except Exception as err:  # pylint: disable=broad-except
+            logging.exception('Ignoring metadataprocessor failure (%s).', err)
 
         for key in COREMETA:
             if key not in metadata:
@@ -291,8 +291,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         try:
             nextmeta = await self.input.getplayingtrack()
-        except Exception:  # pylint: disable=broad-except
-            logging.exception("Failed during getplayingtrack()")
+        except Exception as err:  # pylint: disable=broad-except
+            logging.exception("Failed during getplayingtrack() (%s)", err)
             await asyncio.sleep(5)
             return
 
@@ -303,8 +303,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         oldmeta = self.currentmeta
         try:
             self.currentmeta = await self._fillinmetadata(nextmeta)
-        except Exception:  # pylint: disable=broad-except
-            logging.exception('Ignoring the crash and just keep going!')
+        except Exception as err:  # pylint: disable=broad-except
+            logging.exception('Ignoring the %s crash and just keep going!', err)
             await asyncio.sleep(5)
             self.currentmeta = nextmeta
 
