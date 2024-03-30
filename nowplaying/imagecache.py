@@ -82,7 +82,7 @@ class ImageCache:
             failed = False
             try:
                 cursor.execute('ALTER TABLE artistsha RENAME COLUMN url TO srclocation;')
-                cursor.execute('ALTER TABLE artistsha RENAME COLUMN artist TO identifer;')
+                cursor.execute('ALTER TABLE artistsha RENAME COLUMN artist TO identifier;')
                 cursor.execute('ALTER TABLE artistsha RENAME TO identifiersha;')
             except sqlite3.OperationalError as err:
                 self._log_sqlite_error(err)

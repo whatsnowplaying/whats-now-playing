@@ -75,7 +75,6 @@ async def test_ic_upgrade(bootstrap):
     assert not dbdir.joinpath("imagecachev1.db").exists()
 
 
-
 def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
     ''' testing queue filling '''
     config, imagecache = get_imagecache
