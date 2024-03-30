@@ -21,7 +21,7 @@ TEST_URLS = [
     'https://www.theaudiodb.com/images/media/artist/fanart/numan-gary-5098b899f3268.jpg'
 ]
 
-
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest_asyncio.fixture
 async def get_imagecache(bootstrap):
     ''' setup the image cache for testing '''
