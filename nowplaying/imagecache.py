@@ -66,11 +66,38 @@ class ImageCache:
         self.logpath = None
         self.stopevent: asyncio.Event = stopevent
 
+    def attempt_v1tov2_upgrade(self):
+        ''' dbv1 to dbv2 '''
+        v1path = self.databasefile.parent.joinpath('imagecachev1.db')
+        if not v1path.exists() or self.databasefile.exists():
+            return
+
+        logging.info("Upgrading ImageCache DB from v1 to v2")
+
+        v1path.rename(self.databasefile)
+
+        with sqlite3.connect(self.databasefile, timeout=30) as connection:
+
+            cursor = connection.cursor()
+            failed = False
+            try:
+                cursor.execute('ALTER TABLE artistsha RENAME COLUMN url TO srclocation;')
+                cursor.execute('ALTER TABLE artistsha RENAME COLUMN artist TO identifer;')
+                cursor.execute('ALTER TABLE artistsha RENAME TO identifiersha;')
+            except sqlite3.OperationalError as err:
+                self._log_sqlite_error(err)
+                failed = True
+
+        if failed:
+            self.databasefile.unlink()
+
     def setup_sql(self, initialize=False):
         ''' create the database '''
 
         if initialize and self.databasefile.exists():
             self.databasefile.unlink()
+
+        self.attempt_v1tov2_upgrade()
 
         if self.databasefile.exists():
             return

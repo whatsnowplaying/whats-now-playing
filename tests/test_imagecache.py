@@ -4,6 +4,7 @@
 #import asyncio
 import logging
 import multiprocessing
+import sqlite3
 import sys
 import time
 
@@ -42,6 +43,37 @@ async def get_imagecache(bootstrap):
     stopevent.set()
     imagecache.stop_process()
     icprocess.join()
+
+
+@pytest.mark.asyncio
+async def test_ic_upgrade(bootstrap):
+    ''' setup the image cache for testing '''
+
+    config = bootstrap
+    dbdir = config.testdir.joinpath('imagecache')
+    dbdir.mkdir()
+
+    with sqlite3.connect(dbdir.joinpath("imagecachev1.db"), timeout=30) as connection:
+
+        cursor = connection.cursor()
+
+        v1tabledef = '''
+        CREATE TABLE artistsha
+        (url TEXT PRIMARY KEY,
+         cachekey TEXT DEFAULT NULL,
+         artist TEXT NOT NULL,
+         imagetype TEXT NOT NULL,
+         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+         );
+        '''
+
+        cursor.execute(v1tabledef)
+
+    stopevent = multiprocessing.Event()
+    imagecache = nowplaying.imagecache.ImageCache(cachedir=dbdir, stopevent=stopevent)  #pylint: disable=unused-variable
+    assert dbdir.joinpath("imagecachev2.db").exists()
+    assert not dbdir.joinpath("imagecachev1.db").exists()
+
 
 
 def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
