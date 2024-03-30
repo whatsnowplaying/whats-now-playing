@@ -73,6 +73,8 @@ async def test_ic_upgrade(bootstrap):
     imagecache = nowplaying.imagecache.ImageCache(cachedir=dbdir, stopevent=stopevent)  #pylint: disable=unused-variable
     assert dbdir.joinpath("imagecachev2.db").exists()
     assert not dbdir.joinpath("imagecachev1.db").exists()
+    stopevent.set()
+    imagecache.stop_process()
 
 
 def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
