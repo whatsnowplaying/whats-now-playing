@@ -4,7 +4,6 @@ set -e
 
 SYSTEM=$1
 VERSION=$(git describe --tags)
-DISTDIR=NowPlaying-"${VERSION}-${SYSTEM}"
 UNAMESYS=$(uname -s)
 
 if [[ -z "${SYSTEM}" ]]; then
@@ -31,6 +30,8 @@ case "${SYSTEM}" in
     PYTHON=python
     ;;
 esac
+
+DISTDIR=NowPlaying-"${VERSION}-${SYSTEM}"
 
 PYTHONBIN=$(command -v "${PYTHON}")
 echo "*****"
@@ -128,5 +129,5 @@ if [[ "${SYSTEM}" == "macosx" ]]; then
 fi
 
 if [[ ${SYSTEM} != "windows" ]]; then
-  zip -r "${DISTDIR}".zip "${DISTDIR}"
+  zip --symlinks -r "${DISTDIR}".zip "${DISTDIR}"
 fi
