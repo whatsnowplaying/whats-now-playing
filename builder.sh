@@ -128,6 +128,5 @@ if [[ "${SYSTEM}" == "macosx" ]]; then
   rm -rf "${DISTDIR}"/NowPlayingBeam || true
 fi
 
-if [[ ${SYSTEM} != "windows" ]]; then
-  zip -r "${DISTDIR}".zip "${DISTDIR}"
-fi
+zip --symlinks -r "${DISTDIR}".zip "${DISTDIR}"
+
