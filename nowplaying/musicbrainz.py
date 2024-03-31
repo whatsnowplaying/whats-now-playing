@@ -198,8 +198,6 @@ class MusicBrainzHelper():
                                   addmeta['title'])
                 continue
 
-            logging.debug('got here')
-
             if mydict['recording-count'] == 0:
                 logging.debug('strict is too strict')
                 try:
