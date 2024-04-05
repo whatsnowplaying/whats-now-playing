@@ -5,6 +5,10 @@ OBS WebSocket Plug-in
 directly to OBS Studio.  OBS WebSocket v5 protocol was added as a standard feature
 in OBS Studio v28.  It will not work with older versions.
 
+      NOTE: The vast majority of OBS users use the `Webserver <webserver.html>`_ output
+      to take advantage of cover art and more.  This version **only** provides text and
+      only to an OBS Text source.
+
 Installation
 ------------
 
