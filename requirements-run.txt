@@ -14,7 +14,7 @@ pillow_avif_plugin==1.4.3
 pyacoustid==1.2.2
 pypresence==4.3.0
 # 6.5.x's rcc is broken on macos
-pyside6<6.7.0,!=6.5.*
+pyside6!=6.5.0.a,<6.8.0
 requests-cache==1.2.0
 requests==2.31.0
 simpleobsws==1.4.0
