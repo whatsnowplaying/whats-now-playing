@@ -23,7 +23,7 @@ twitchAPI==3.11.0
 url_normalize==1.4.3
 urllib3==2.2.1
 vendoring==1.2.0
-watchdog==4.0.0
+watchdog==4.0.1
 
 #
 # audio-metadata
