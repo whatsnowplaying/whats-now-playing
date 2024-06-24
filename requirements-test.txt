@@ -1,7 +1,7 @@
 #
 # tests
 #
-psutil==5.9.8
+psutil==6.0.0
 pytest==8.2.1
 pytest-asyncio==0.23.7
 pytest-cov==5.0.0
