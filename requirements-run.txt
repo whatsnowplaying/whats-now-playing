@@ -6,7 +6,7 @@ diskcache==5.6.3
 jinja2==3.1.4
 lxml==5.2.2
 netifaces==0.11.0
-nltk==3.8.1
+nltk==3.9
 normality==2.5.0
 pid==3.0.4
 pillow==10.3.0
