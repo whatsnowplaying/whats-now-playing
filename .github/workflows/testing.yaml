@@ -69,6 +69,7 @@ jobs:
           path: |
             .coverage
             .coverage.*
+            coverage.xml
       #       htmlcov
       # - name: codecov
       #   uses: codecov/codecov-action@v4
@@ -127,6 +128,7 @@ jobs:
             .coverage
             .coverage.*
             htmlcov
+            coverage.xml
       # - name: codecov
       #   uses: codecov/codecov-action@v4
       #   with:
@@ -220,6 +222,7 @@ jobs:
             .coverage
             .coverage.*
             htmlcov
+            coverage.xml
       # - name: codecov
       #   uses: codecov/codecov-action@v4
       #   with:
@@ -274,6 +277,7 @@ jobs:
           path: |
             .coverage
             htmlcov
+            coverage.xml
       - name: codecov
         uses: codecov/codecov-action@v4
         env:
