@@ -111,8 +111,11 @@ class MusicBrainzHelper():
         if not mbdata.get('recording-list'):
             return riddata
 
+        newlist = sorted(mbdata['recording-list'],
+                         key=lambda d: d.get('first-release-date', '9999-99-99'))
         variousartistrid = None
-        for recording in mbdata['recording-list']:
+        #logging.debug(newlist)
+        for recording in newlist:
             rid = recording['id']
             logging.debug('recording id = %s', rid)
             if not recording.get('release-list'):
