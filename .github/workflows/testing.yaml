@@ -20,7 +20,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}    # pragma: allowlist secret
 
 jobs:
-  testing-mac-12:
+  testing-macos-12:
     runs-on: macos-12
     steps:
       - name: checkout
@@ -65,7 +65,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mac-12-coverage
+          name: macos-12-coverage
           path: |
             .coverage
             .coverage.*
@@ -234,7 +234,7 @@ jobs:
   merge:
     if: always()
     needs:
-      - testing-mac-12
+      - testing-macos-12
       - testing-win
       - testing-linux
     runs-on: ubuntu-latest
