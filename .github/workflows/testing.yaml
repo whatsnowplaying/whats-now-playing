@@ -60,6 +60,7 @@ jobs:
           fi
           source /tmp/venv/bin/activate
           pytest --durations=10 -s tests
+          ls
           coverage xml
       - name: artifact mac test
         uses: actions/upload-artifact@v4
