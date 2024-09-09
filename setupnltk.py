@@ -12,3 +12,4 @@ else:
     ssl._create_default_https_context = _create_unverified_https_context  # pylint: disable=protected-access
 
 nltk.download('punkt')
+nltk.download('punkt_tab')
