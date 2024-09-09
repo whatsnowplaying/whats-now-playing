@@ -66,6 +66,7 @@ jobs:
       - name: artifact mac test
         uses: actions/upload-artifact@v4
         if: always()
+        include-hidden-files: true
         with:
           name: macos-12-coverage
           path: |
@@ -125,6 +126,7 @@ jobs:
       - name: artifact windows test
         uses: actions/upload-artifact@v4
         if: always()
+        include-hidden-files: true
         with:
           name: win-coverage
           path: |
@@ -219,6 +221,7 @@ jobs:
       - name: artifact linux test
         uses: actions/upload-artifact@v4
         if: always()
+        include-hidden-files: true
         with:
           name: linux-coverage-${{ matrix.python }}
           path: |
