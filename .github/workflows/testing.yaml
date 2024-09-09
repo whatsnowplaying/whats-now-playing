@@ -39,13 +39,14 @@ jobs:
         run: |
           export PATH="/usr/local/opt/icu4c/bin:/usr/local/opt/icu4c/sbin:${PATH}"
           export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/opt/icu4c/lib/pkgconfig"
-          python3 -m venv /tmp/venv
+          python3 --version
+          python3.11 -m venv /tmp/venv
           source /tmp/venv/bin/activate
-          python3 -m pip install --upgrade pip
+          python3.11 -m pip install --upgrade pip
           pip install ".[test,osspecials]"
           pip uninstall -y nowplaying
           versioningit --write
-          python setupnltk.py
+          python3.11 setupnltk.py
       - name: tests
         shell: bash
         run: |
@@ -60,15 +61,19 @@ jobs:
           fi
           source /tmp/venv/bin/activate
           pytest --durations=10 -s tests
+          ls -al .coverage*
           coverage xml
       - name: artifact mac test
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: macos-12-coverage
+          include-hidden-files: true
           path: |
             .coverage
             .coverage.*
+            .coverage*
+            coverage.xml
       #       htmlcov
       # - name: codecov
       #   uses: codecov/codecov-action@v4
@@ -123,10 +128,12 @@ jobs:
         if: always()
         with:
           name: win-coverage
+          include-hidden-files: true
           path: |
             .coverage
             .coverage.*
             htmlcov
+            coverage.xml
       # - name: codecov
       #   uses: codecov/codecov-action@v4
       #   with:
@@ -216,10 +223,12 @@ jobs:
         if: always()
         with:
           name: linux-coverage-${{ matrix.python }}
+          include-hidden-files: true
           path: |
             .coverage
             .coverage.*
             htmlcov
+            coverage.xml
       # - name: codecov
       #   uses: codecov/codecov-action@v4
       #   with:
@@ -274,6 +283,7 @@ jobs:
           path: |
             .coverage
             htmlcov
+            coverage.xml
       - name: codecov
         uses: codecov/codecov-action@v4
         env:

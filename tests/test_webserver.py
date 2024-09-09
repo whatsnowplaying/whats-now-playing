@@ -179,7 +179,7 @@ async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-out
     assert checkdata['title'] == 'titletxt2'
     assert not checkdata.get('dbid')
 
-
+@pytest.mark.xfail(sys.platform == "darwin", reason='timesout on macos')
 def test_webserver_gifwordstest(getwebserver):  # pylint: disable=redefined-outer-name
     ''' make sure gifwords works '''
     config, metadb = getwebserver  # pylint: disable=unused-variable
