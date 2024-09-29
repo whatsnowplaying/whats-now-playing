@@ -45,9 +45,9 @@ def trynetifaces():
     global HOSTIP  #pylint: disable=global-statement
     socket.setdefaulttimeout(5)
     try:
-        gws = netifaces.gateways()
-        defnic = gws['default'][netifaces.AF_INET][1]
-        defnicipinfo = netifaces.ifaddresses(defnic).setdefault(netifaces.AF_INET, [{'addr': None}])
+        gws = netifaces.gateways()  # pylint: disable=no-member
+        defnic = gws['default'][netifaces.AF_INET][1]  # pylint: disable=no-member
+        defnicipinfo = netifaces.ifaddresses(defnic).setdefault(netifaces.AF_INET, [{'addr': None}])  # pylint: disable=no-member
         HOSTIP = defnicipinfo[0]['addr']
     except Exception as error:  # pylint: disable = broad-except
         logging.error('Getting IP information via netifaces failed: %s', error)
