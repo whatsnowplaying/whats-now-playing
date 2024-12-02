@@ -21,7 +21,7 @@ import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
 
 class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
-    ''' Qt Dialog for asking the user to ugprade '''
+    ''' Qt Dialog for asking the user to upgrade '''
 
     def __init__(self, parent=None):
         super().__init__(parent)

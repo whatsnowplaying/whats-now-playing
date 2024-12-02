@@ -81,7 +81,7 @@ See also `Artist Extras <../extras/index.html>`_ for other URLs when that set of
 REST API
 --------
 
-Currently, only a very rudimentary REST API is implememnted.  ``/v1/last`` will return
+Currently, only a very rudimentary REST API is implemented.  ``/v1/last`` will return
 a JSON-formatted string of the currently playing track.
 
 
