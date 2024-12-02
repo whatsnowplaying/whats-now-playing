@@ -234,7 +234,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 return True
         return False
 
-    async def _fillinmetadata(self, metadata):  # pylint: disable=too-many-branches
+    async def _fill_inmetadata(self, metadata):  # pylint: disable=too-many-branches
         ''' keep a copy of our fetched data '''
 
         # Fill in as much metadata as possible. everything
@@ -302,7 +302,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         # fill in the blanks and make it live
         oldmeta = self.currentmeta
         try:
-            self.currentmeta = await self._fillinmetadata(nextmeta)
+            self.currentmeta = await self._fill_inmetadata(nextmeta)
         except Exception as err:  # pylint: disable=broad-except
             logging.exception('Ignoring the %s crash and just keep going!', err)
             await asyncio.sleep(5)
@@ -424,7 +424,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 type=bool) or not self.config.cparser.value('artistextras/enabled', type=bool):
             return
 
-        def fillin(self):
+        def fill_in(self):
             tryagain = False
 
             if not self.imagecache:
@@ -445,8 +445,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             return tryagain
 
         # try to give it a bit more time if it doesn't complete the first time
-        if not fillin(self):
-            fillin(self)
+        if not fill_in(self):
+            fill_in(self)
 
 
 def stop(pid):
