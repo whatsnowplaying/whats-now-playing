@@ -12,8 +12,8 @@ name: pyinstaller
 on: [push]  # yamllint disable-line rule:truthy
 
 jobs:
-  pyinstaller-macos-12:
-    runs-on: macos-12
+  pyinstaller-macos:
+    runs-on: macos-latest
     steps:
       - name: icu
         run: |
@@ -37,7 +37,7 @@ jobs:
       - name: artifact dist
         uses: actions/upload-artifact@v4
         with:
-          name: macos-12-dist
+          name: macos-latest-dist
           path: "*.zip"
 
 
