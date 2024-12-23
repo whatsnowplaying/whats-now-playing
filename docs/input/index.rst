@@ -12,7 +12,7 @@ Each has its own screen to configure them.
    djuced
    icecast
    m3u
-   mpris2
+   .. mpris2
    serato
    traktor
    virtualdj
