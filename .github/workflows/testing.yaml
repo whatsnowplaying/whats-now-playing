@@ -20,8 +20,8 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}    # pragma: allowlist secret
 
 jobs:
-  testing-macos-12:
-    runs-on: macos-12
+  testing-macos:
+    runs-on: macos-latest
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -37,8 +37,8 @@ jobs:
           brew install pkg-config icu4c
       - name: install python dependencies
         run: |
-          export PATH="/usr/local/opt/icu4c/bin:/usr/local/opt/icu4c/sbin:${PATH}"
-          export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/opt/icu4c/lib/pkgconfig"
+          export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
+          export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
           python3 --version
           python3.11 -m venv /tmp/venv
           source /tmp/venv/bin/activate
@@ -67,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: macos-12-coverage
+          name: macos-coverage
           include-hidden-files: true
           path: |
             .coverage
@@ -243,7 +243,7 @@ jobs:
   merge:
     if: always()
     needs:
-      - testing-macos-12
+      - testing-macos
       - testing-win
       - testing-linux
     runs-on: ubuntu-latest

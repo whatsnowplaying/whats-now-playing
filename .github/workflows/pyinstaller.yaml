@@ -12,8 +12,8 @@ name: pyinstaller
 on: [push]  # yamllint disable-line rule:truthy
 
 jobs:
-  pyinstaller-macos-12:
-    runs-on: macos-12
+  pyinstaller-macos:
+    runs-on: macos-latest
     steps:
       - name: icu
         run: |
@@ -31,13 +31,13 @@ jobs:
           python-version: '3.11'
       - name: run builder
         run: |
-          export PATH="/usr/local/opt/icu4c/bin:/usr/local/opt/icu4c/sbin:${PATH}"
-          export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/opt/icu4c/lib/pkgconfig"
+          export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
+          export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
           ./builder.sh
       - name: artifact dist
         uses: actions/upload-artifact@v4
         with:
-          name: macos-12-dist
+          name: macos-latest-dist
           path: "*.zip"
 
 
