@@ -19,8 +19,8 @@ from nowplaying.utils import normalize_text, normalize, artist_name_variations
 
 REMIX_RE = re.compile(r'^\s*(.*)\s+[\(\[].*[\)\]]$')
 
-musicbrainzngs.musicbrainz._max_retries = 1  # pylint: disable=protected-access
-musicbrainzngs.musicbrainz._timeout = 30  # pylint: disable=protected-access
+musicbrainzngs.musicbrainz._max_retries = 2  # pylint: disable=protected-access
+musicbrainzngs.musicbrainz._timeout = 15  # pylint: disable=protected-access
 # WNP (typically) has large lulls between 2-3 calls that need to happen
 # quickly. so double the rate of calls to speed things up but still
 # keep a rate limiter in case the DJ is doing something stupid
@@ -45,7 +45,7 @@ class MusicBrainzHelper():
     ''' handler for NowPlaying '''
 
     def __init__(self, config=None):
-        logging.getLogger('musicbrainzngs').setLevel(logging.CRITICAL + 1)
+        logging.getLogger('musicbrainzngs').setLevel(logging.INFO)
         if config:
             self.config = config
         else:

@@ -34,14 +34,14 @@ class Plugin(ArtistExtrasPlugin):
     def _get_page(self, entity, lang):
         logging.debug("Processing %s", entity)
         try:
-            page = wptools.page(wikibase=entity, lang=lang, silent=True)
+            page = wptools.page(wikibase=entity, lang=lang, silent=True, timeout=5)
             page.get()
         except Exception:  # pylint: disable=broad-except
             page = None
             if self.config.cparser.value('wikimedia/bio_iso_en_fallback',
                                          type=bool) and lang != 'en':
                 try:
-                    page = wptools.page(wikibase=entity, lang='en', silent=True)
+                    page = wptools.page(wikibase=entity, lang='en', silent=True, timeout=5)
                     page.get()
                 except Exception as err:  # pylint: disable=broad-except
                     page = None
