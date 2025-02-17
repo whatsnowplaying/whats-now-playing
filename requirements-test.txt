@@ -5,5 +5,5 @@ psutil==6.1.1
 pytest==8.3.4
 pytest-asyncio==0.25.3
 pytest-cov==6.0.0
-pytest-httpserver==1.1.0
+pytest-httpserver==1.1.1
 pytest-qt==4.4.0
