@@ -122,6 +122,9 @@ class APIResponseCache:
             
         Returns:
             JSON-serializable representation
+            
+        Raises:
+            TypeError: For objects that shouldn't be cached (functions, etc.)
         """
         if isinstance(obj, bytes):
             # Encode bytes as base64 for proper round-trip serialization
@@ -130,8 +133,12 @@ class APIResponseCache:
                 '__type__': 'bytes',
                 '__data__': base64.b64encode(obj).decode('ascii')
             }
+        elif callable(obj):
+            # Don't cache functions, methods, lambdas, etc.
+            raise TypeError(f"Cannot cache callable object: {type(obj)}")
         else:
             # For other types, convert to string representation
+            # This handles things like custom objects that might have useful string representations
             return str(obj)
 
     def _deserialize_handler(self, obj):

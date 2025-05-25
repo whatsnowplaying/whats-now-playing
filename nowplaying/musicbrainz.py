@@ -244,6 +244,18 @@ class MusicBrainzHelper():
         if riddata:
             if normalize(riddata['title']) != normalize(metadata.get('title')):
                 logging.debug('No title match, so just using artist data')
+                
+                # Check if strict album matching is enabled
+                strict_album_matching = self.config.cparser.value('musicbrainz/strict_album_matching', 
+                                                                 True, type=bool)
+                
+                # If original request had an album and we're in strict mode, return nothing
+                # rather than partial data to avoid wrong album information
+                if strict_album_matching and metadata.get('album'):
+                    logging.debug('Strict album matching enabled: rejecting partial match for album request')
+                    return None
+                
+                # Otherwise, return artist data without album/recording info
                 for delitem in [
                         'album',
                         'coverimageraw',

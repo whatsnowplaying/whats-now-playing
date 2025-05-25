@@ -114,6 +114,7 @@ This application handles time-sensitive data retrieval and display that must be 
 - Proper SSL context handling and configurable timeouts
 - Reduces dependency footprint by eliminating large vendored library
 - Uses aiohttp for non-blocking API calls with 6-20% performance improvement
+- Configurable strict album matching (`musicbrainz/strict_album_matching`) to control precision vs recall tradeoffs
 
 **MusicBrainz Client (`musicbrainzclient.py`):**
 - Streamlined async client replacing vendored `musicbrainzngs` library 
