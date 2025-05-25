@@ -5,11 +5,9 @@ import asyncio
 import logging
 import logging.config
 import logging.handlers
-import socket
+import urllib.parse
 
 import aiohttp
-import urllib.parse
-import urllib3.exceptions
 
 import nowplaying.bootstrap
 import nowplaying.config

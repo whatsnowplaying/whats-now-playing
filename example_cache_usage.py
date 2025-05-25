@@ -171,8 +171,8 @@ async def main():
         print("   • Better performance during live DJ sets")
         print("   • Automatic cleanup of expired entries")
 
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        print(f"\n❌ Demo failed: {e}")
+    except Exception as error:  # pylint: disable=broad-exception-caught
+        print(f"\n❌ Demo failed: {error}")
         traceback.print_exc()
 
 

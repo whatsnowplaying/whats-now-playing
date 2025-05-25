@@ -5,10 +5,8 @@ import asyncio
 import logging
 import logging.config
 import logging.handlers
-import socket
 
 import aiohttp
-import urllib3.exceptions
 
 #import nowplaying.config
 from nowplaying.artistextras import ArtistExtrasPlugin

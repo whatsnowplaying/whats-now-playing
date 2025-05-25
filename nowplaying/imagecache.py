@@ -420,7 +420,7 @@ VALUES (?,?,?);
 
     def vacuum_database(self):
         """Vacuum the image cache database to reclaim space from deleted entries.
-        
+
         This should be called on application shutdown to optimize disk usage.
         """
         if not self.databasefile.exists():

@@ -20,7 +20,7 @@ class CacheManager:
 
     def __init__(self, config: t.Optional['nowplaying.config.ConfigFile'] = None):
         """Initialize cache manager.
-        
+
         Args:
             config: Optional config file instance
         """
@@ -30,7 +30,7 @@ class CacheManager:
 
     async def start_background_cleanup(self, interval_hours: float = 6.0):
         """Start background cache cleanup task.
-        
+
         Args:
             interval_hours: Hours between cleanup runs
         """
@@ -67,7 +67,7 @@ class CacheManager:
 
     async def get_detailed_stats(self) -> dict:
         """Get detailed cache statistics.
-        
+
         Returns:
             Dictionary with comprehensive cache statistics
         """
@@ -100,10 +100,10 @@ class CacheManager:
     async def warm_cache_for_artists(artist_names: t.List[str],
                                      providers: t.Optional[t.List[str]] = None):
         """Pre-warm cache for a list of artists.
-        
+
         This is useful for warming the cache with upcoming playlist artists
         to ensure fast lookups during live performance.
-        
+
         Args:
             artist_names: List of artist names to warm cache for
             providers: List of providers to warm cache for. If None, uses all enabled providers.
@@ -125,7 +125,7 @@ class CacheManager:
     @staticmethod
     async def clear_artist_cache(artist_name: str, provider: t.Optional[str] = None):
         """Clear cached data for a specific artist.
-        
+
         Args:
             artist_name: Artist name to clear cache for
             provider: If specified, only clear for this provider
@@ -136,7 +136,7 @@ class CacheManager:
 
     async def optimize_cache(self) -> dict:
         """Optimize cache by removing old unused entries and compacting database.
-        
+
         Returns:
             Dictionary with optimization results
         """
@@ -163,7 +163,7 @@ class CacheManager:
 
     async def export_cache_report(self) -> str:
         """Generate a detailed cache performance report.
-        
+
         Returns:
             Formatted report string
         """
@@ -204,10 +204,10 @@ class CacheManager:
 async def setup_cache_management(
         config: t.Optional['nowplaying.config.ConfigFile'] = None) -> CacheManager:
     """Set up cache management with default settings.
-    
+
     Args:
         config: Optional config file instance
-        
+
     Returns:
         Configured CacheManager instance
     """

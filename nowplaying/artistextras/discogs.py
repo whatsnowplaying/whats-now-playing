@@ -3,9 +3,7 @@
 
 import asyncio
 import logging
-import socket
 
-import urllib3.exceptions
 import nowplaying.discogsclient
 from nowplaying.discogsclient import models
 

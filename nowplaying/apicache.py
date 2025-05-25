@@ -78,11 +78,11 @@ class APIResponseCache:
 
     async def _initialize_db(self):
         """Initialize the database schema."""
-        async with aiosqlite.connect(self.db_file) as db:
-            await db.execute(self.CREATE_TABLE_SQL)
+        async with aiosqlite.connect(self.db_file) as connection:
+            await connection.execute(self.CREATE_TABLE_SQL)
             for index_sql in self.CREATE_INDICES_SQL:
-                await db.execute(index_sql)
-            await db.commit()
+                await connection.execute(index_sql)
+            await connection.commit()
             logging.debug("API cache database initialized at %s", self.db_file)
 
     @staticmethod
@@ -161,21 +161,29 @@ class APIResponseCache:
         return obj
 
     @staticmethod
-    async def _process_cache_hit(data: str, provider: str, artist_name: str, endpoint: str,  # pylint: disable=too-many-arguments,too-many-positional-arguments
-                                expires_at: int, current_time: int) -> t.Optional[dict]:
+    async def _process_cache_hit(
+            data: str,
+            provider: str,
+            artist_name: str,
+            endpoint: str,  # pylint: disable=too-many-arguments
+            expires_at: int,
+            current_time: int) -> t.Optional[dict]:
         """Process a cache hit and return the deserialized data."""
         try:
             cached_data = json.loads(data)
             restored_data = APIResponseCache._deserialize_handler(cached_data)
-            logging.debug("Cache HIT for %s:%s:%s (expires in %ds)", provider,
-                          artist_name, endpoint, expires_at - current_time)
+            logging.debug("Cache HIT for %s:%s:%s (expires in %ds)", provider, artist_name,
+                          endpoint, expires_at - current_time)
             return restored_data
         except json.JSONDecodeError:
             logging.warning("Invalid JSON in cache for key %s",
                             APIResponseCache._make_cache_key(provider, artist_name, endpoint))
             return None
 
-    async def get(self, provider: str, artist_name: str, endpoint: str,
+    async def get(self,
+                  provider: str,
+                  artist_name: str,
+                  endpoint: str,
                   params: t.Optional[dict] = None) -> t.Optional[dict]:
         """Retrieve cached API response if available and not expired.
 
@@ -211,16 +219,22 @@ class APIResponseCache:
                         "WHERE cache_key = ?", (access_count + 1, current_time, cache_key))
                     await connection.commit()
 
-                    return await APIResponseCache._process_cache_hit(
-                        data, provider, artist_name, endpoint, expires_at, current_time)
+                    return await APIResponseCache._process_cache_hit(data, provider, artist_name,
+                                                                     endpoint, expires_at,
+                                                                     current_time)
 
             except sqlite3.Error as error:
                 logging.error("Database error retrieving cache: %s", error)
                 return None
 
-    async def put(self, provider: str, artist_name: str, endpoint: str,  # pylint: disable=too-many-arguments,too-many-positional-arguments
-                  response_data: dict, ttl_seconds: t.Optional[int] = None,
-                  params: t.Optional[dict] = None):
+    async def put(
+            self,
+            provider: str,
+            artist_name: str,
+            endpoint: str,  # pylint: disable=too-many-arguments
+            response_data: dict,
+            ttl_seconds: t.Optional[int] = None,
+            params: t.Optional[dict] = None):
         """Store API response in cache.
 
         Args:
@@ -268,10 +282,14 @@ class APIResponseCache:
                 logging.error("Database error storing cache: %s", error)
 
     @asynccontextmanager
-    async def get_or_fetch(self, provider: str, artist_name: str, endpoint: str,  # pylint: disable=too-many-arguments,too-many-positional-arguments
-                           fetch_func: t.Callable[[], t.Awaitable[dict]],
-                           ttl_seconds: t.Optional[int] = None,
-                           params: t.Optional[dict] = None):
+    async def get_or_fetch(
+            self,
+            provider: str,
+            artist_name: str,
+            endpoint: str,  # pylint: disable=too-many-arguments
+            fetch_func: t.Callable[[], t.Awaitable[dict]],
+            ttl_seconds: t.Optional[int] = None,
+            params: t.Optional[dict] = None):
         """Get from cache or fetch and cache the result.
 
         This is a convenience method that handles the common pattern of
@@ -392,7 +410,7 @@ class APIResponseCache:
                 async with aiosqlite.connect(self.db_file) as connection:
                     if provider:
                         await connection.execute("DELETE FROM api_responses WHERE provider = ?",
-                                         (provider.lower(), ))
+                                                 (provider.lower(), ))
                         logging.info("Cleared cache for provider: %s", provider)
                     else:
                         await connection.execute("DELETE FROM api_responses")
@@ -404,7 +422,7 @@ class APIResponseCache:
 
     def vacuum_database(self):
         """Vacuum the database to reclaim space from deleted entries.
-        
+
         This should be called on application shutdown to optimize disk usage.
         """
         try:
