@@ -99,7 +99,6 @@ class Plugin(ArtistExtrasPlugin):
 
         return page
 
-
     async def download_async(self,
                              metadata=None,
                              imagecache: "nowplaying.imagecache.ImageCache" = None):  # pylint: disable=too-many-branches

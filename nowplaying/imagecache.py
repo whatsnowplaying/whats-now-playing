@@ -425,7 +425,7 @@ VALUES (?,?,?);
         """
         if not self.databasefile.exists():
             return
-            
+
         try:
             with sqlite3.connect(self.databasefile, timeout=30) as connection:
                 logging.debug("Vacuuming image cache database...")

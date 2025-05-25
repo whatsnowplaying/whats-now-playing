@@ -263,16 +263,12 @@ class CompatibilityDiscogsClient:
             return await client.artist(artist_id, limit_images=5)
 
     async def search_async(self,
-                          query: str,
-                          artist: Optional[str] = None,
-                          type: str = 'release') -> DiscogsSearchResult:
+                           query: str,
+                           artist: Optional[str] = None,
+                           type: str = 'release') -> DiscogsSearchResult:
         """Search for releases (async version)."""
         async with AsyncDiscogsClient(self.user_agent, self.user_token, self.timeout) as client:
-            return await client.search(query,
-                                      artist,
-                                      type,
-                                      max_results=10,
-                                      load_full_artists=True)
+            return await client.search(query, artist, type, max_results=10, load_full_artists=True)
 
 
 class SearchResultPage:

@@ -216,7 +216,8 @@ async def test_missingallartistdata(getconfiguredplugin):  # pylint: disable=red
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
 
-        data = await plugins[pluginname].download_async({'title': 'title'}, imagecache=imagecaches[pluginname])
+        data = await plugins[pluginname].download_async({'title': 'title'},
+                                                        imagecache=imagecaches[pluginname])
         assert not data
         assert not imagecaches[pluginname].urls
 
@@ -369,7 +370,8 @@ async def test_all(getconfiguredplugin):  # pylint: disable=redefined-outer-name
         }
         if pluginname == 'wikimedia':
             metadata['artistwebsites'] = ['https://www.wikidata.org/wiki/Q11647']
-        data = await plugins[pluginname].download_async(metadata, imagecache=imagecaches[pluginname])
+        data = await plugins[pluginname].download_async(metadata,
+                                                        imagecache=imagecaches[pluginname])
         if pluginname in ['discogs', 'theaudiodb']:
             assert data['artistlongbio']
             assert data['artistwebsites']
@@ -395,7 +397,8 @@ async def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-n
         }
         if pluginname == 'wikimedia':
             metadata['artistwebsites'] = ['https://www.wikidata.org/wiki/Q11647']
-        data = await plugins[pluginname].download_async(metadata, imagecache=imagecaches[pluginname])
+        data = await plugins[pluginname].download_async(metadata,
+                                                        imagecache=imagecaches[pluginname])
         if pluginname in ['discogs', 'theaudiodb']:
             assert data['artistlongbio']
             assert data['artistwebsites']

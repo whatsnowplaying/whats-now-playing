@@ -429,11 +429,11 @@ def _get_page_sync(wikibase: str,
 
 
 async def get_page_async(entity: str,
-                        lang: str = 'en',
-                        timeout: int = 5,
-                        need_bio: bool = True,
-                        need_images: bool = True,
-                        max_images: int = 5) -> WikiPage:
+                         lang: str = 'en',
+                         timeout: int = 5,
+                         need_bio: bool = True,
+                         need_images: bool = True,
+                         max_images: int = 5) -> WikiPage:
     """
     Async function for nowplaying wikimedia plugin.
     

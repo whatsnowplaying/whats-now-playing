@@ -33,7 +33,6 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         htmlfilter.feed(text)
         return htmlfilter.text
 
-
     async def _fetch_async(self, apikey, api):
         delay = self.calculate_delay()
         try:
@@ -148,7 +147,6 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             metadata['artistlongbio'] = bio
 
         return metadata
-
 
     async def artistdatafrommbid_async(self, apikey, mbartistid, artist_name):
         ''' async cached version of artistdatafrommbid '''

@@ -25,7 +25,6 @@ class Plugin(ArtistExtrasPlugin):
         self.displayname = "fanart.tv"
         self.priority = 50
 
-
     async def _fetch_async(self, apikey, artistid):
         delay = self.calculate_delay()
 

@@ -358,7 +358,7 @@ class MetadataDB:
         """
         if not self.databasefile or not self.databasefile.exists():
             return
-            
+
         try:
             with sqlite3.connect(self.databasefile, timeout=10) as connection:
                 logging.debug("Vacuuming metadata database...")

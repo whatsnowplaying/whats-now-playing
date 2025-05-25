@@ -250,6 +250,11 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Error vacuuming metadata database: %s", error)
 
+        try:
+            self.requestswindow.vacuum_database()
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.error("Error vacuuming requests database: %s", error)
+
     def fresh_start_quit(self):
         ''' wipe the current config '''
         self.exit_everything()

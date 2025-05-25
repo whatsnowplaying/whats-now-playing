@@ -77,8 +77,6 @@ class Plugin(ArtistExtrasPlugin):
         if self.config.cparser.value('discogs/websites', type=bool):
             self.addmeta['artistwebsites'] = artist.urls
 
-
-
     async def _find_discogs_website_async(self, metadata, imagecache):
         ''' async use websites listing to find discogs entries '''
         if not self.client and not self._setup_client():
