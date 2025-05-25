@@ -160,10 +160,22 @@ class APIResponseCache:
         # Return as-is for other types
         return obj
 
-    async def get(self,
-                  provider: str,
-                  artist_name: str,
-                  endpoint: str,
+    @staticmethod
+    async def _process_cache_hit(data: str, provider: str, artist_name: str, endpoint: str,  # pylint: disable=too-many-arguments,too-many-positional-arguments
+                                expires_at: int, current_time: int) -> t.Optional[dict]:
+        """Process a cache hit and return the deserialized data."""
+        try:
+            cached_data = json.loads(data)
+            restored_data = APIResponseCache._deserialize_handler(cached_data)
+            logging.debug("Cache HIT for %s:%s:%s (expires in %ds)", provider,
+                          artist_name, endpoint, expires_at - current_time)
+            return restored_data
+        except json.JSONDecodeError:
+            logging.warning("Invalid JSON in cache for key %s",
+                            APIResponseCache._make_cache_key(provider, artist_name, endpoint))
+            return None
+
+    async def get(self, provider: str, artist_name: str, endpoint: str,
                   params: t.Optional[dict] = None) -> t.Optional[dict]:
         """Retrieve cached API response if available and not expired.
 
@@ -181,43 +193,33 @@ class APIResponseCache:
 
         async with self._lock:
             try:
-                async with aiosqlite.connect(self.db_file) as db:
-                    cursor = await db.execute(
+                async with aiosqlite.connect(self.db_file) as connection:
+                    cursor = await connection.execute(
                         "SELECT response_data, expires_at, access_count FROM api_responses "
                         "WHERE cache_key = ? AND expires_at > ?", (cache_key, current_time))
                     row = await cursor.fetchone()
 
-                    if row:
-                        response_data, expires_at, access_count = row
+                    if not row:
+                        logging.debug("Cache MISS for %s:%s:%s", provider, artist_name, endpoint)
+                        return None
 
-                        # Update access statistics
-                        await db.execute(
-                            "UPDATE api_responses SET access_count = ?, last_accessed = ? "
-                            "WHERE cache_key = ?", (access_count + 1, current_time, cache_key))
-                        await db.commit()
+                    data, expires_at, access_count = row
 
-                        try:
-                            cached_data = json.loads(response_data)
-                            # Restore any bytes data that was base64 encoded
-                            restored_data = APIResponseCache._deserialize_handler(cached_data)
-                            logging.debug("Cache HIT for %s:%s:%s (expires in %ds)", provider,
-                                          artist_name, endpoint, expires_at - current_time)
-                            return restored_data
-                        except json.JSONDecodeError:
-                            logging.warning("Invalid JSON in cache for key %s", cache_key)
+                    # Update access statistics
+                    await connection.execute(
+                        "UPDATE api_responses SET access_count = ?, last_accessed = ? "
+                        "WHERE cache_key = ?", (access_count + 1, current_time, cache_key))
+                    await connection.commit()
 
-            except sqlite3.Error as e:
-                logging.error("Database error retrieving cache: %s", e)
+                    return await APIResponseCache._process_cache_hit(
+                        data, provider, artist_name, endpoint, expires_at, current_time)
 
-        logging.debug("Cache MISS for %s:%s:%s", provider, artist_name, endpoint)
-        return None
+            except sqlite3.Error as error:
+                logging.error("Database error retrieving cache: %s", error)
+                return None
 
-    async def put(self,
-                  provider: str,
-                  artist_name: str,
-                  endpoint: str,
-                  response_data: dict,
-                  ttl_seconds: t.Optional[int] = None,
+    async def put(self, provider: str, artist_name: str, endpoint: str,  # pylint: disable=too-many-arguments,too-many-positional-arguments
+                  response_data: dict, ttl_seconds: t.Optional[int] = None,
                   params: t.Optional[dict] = None):
         """Store API response in cache.
 
@@ -244,32 +246,29 @@ class APIResponseCache:
             response_json = json.dumps(response_data,
                                        ensure_ascii=False,
                                        default=APIResponseCache._serialize_handler)
-        except (TypeError, ValueError) as e:
-            logging.warning("Cannot serialize response data for caching: %s", e)
+        except (TypeError, ValueError) as error:
+            logging.warning("Cannot serialize response data for caching: %s", error)
             return
 
         async with self._lock:
             try:
-                async with aiosqlite.connect(self.db_file) as db:
-                    await db.execute(
+                async with aiosqlite.connect(self.db_file) as connection:
+                    await connection.execute(
                         "INSERT OR REPLACE INTO api_responses "
                         "(cache_key, provider, artist_name, endpoint, response_data, "
                         "created_at, expires_at, last_accessed) "
                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                         (cache_key, provider.lower(), artist_name.lower().strip(), endpoint,
                          response_json, current_time, expires_at, current_time))
-                    await db.commit()
+                    await connection.commit()
                     logging.debug("Cached %s:%s:%s (TTL: %ds)", provider, artist_name, endpoint,
                                   ttl_seconds)
 
-            except sqlite3.Error as e:
-                logging.error("Database error storing cache: %s", e)
+            except sqlite3.Error as error:
+                logging.error("Database error storing cache: %s", error)
 
     @asynccontextmanager
-    async def get_or_fetch(self,
-                           provider: str,
-                           artist_name: str,
-                           endpoint: str,
+    async def get_or_fetch(self, provider: str, artist_name: str, endpoint: str,  # pylint: disable=too-many-arguments,too-many-positional-arguments
                            fetch_func: t.Callable[[], t.Awaitable[dict]],
                            ttl_seconds: t.Optional[int] = None,
                            params: t.Optional[dict] = None):
@@ -303,9 +302,9 @@ class APIResponseCache:
                 # Cache the result
                 await self.put(provider, artist_name, endpoint, fresh_data, ttl_seconds, params)
             yield fresh_data
-        except Exception as e:
+        except (sqlite3.Error, ValueError, TypeError) as error:
             logging.error("Error fetching data for %s:%s:%s - %s", provider, artist_name, endpoint,
-                          e)
+                          error)
             yield None
 
     async def cleanup_expired(self) -> int:
@@ -318,19 +317,19 @@ class APIResponseCache:
 
         async with self._lock:
             try:
-                async with aiosqlite.connect(self.db_file) as db:
-                    cursor = await db.execute("DELETE FROM api_responses WHERE expires_at < ?",
-                                              (current_time, ))
+                async with aiosqlite.connect(self.db_file) as connection:
+                    cursor = await connection.execute(
+                        "DELETE FROM api_responses WHERE expires_at < ?", (current_time, ))
                     removed_count = cursor.rowcount
-                    await db.commit()
+                    await connection.commit()
 
                     if removed_count > 0:
                         logging.info("Cleaned up %d expired cache entries", removed_count)
 
                     return removed_count
 
-            except sqlite3.Error as e:
-                logging.error("Database error during cleanup: %s", e)
+            except sqlite3.Error as error:
+                logging.error("Database error during cleanup: %s", error)
                 return 0
 
     async def get_cache_stats(self) -> dict:
@@ -342,27 +341,27 @@ class APIResponseCache:
         current_time = int(time.time())
 
         try:
-            async with aiosqlite.connect(self.db_file) as db:
+            async with aiosqlite.connect(self.db_file) as connection:
                 # Total entries
-                cursor = await db.execute("SELECT COUNT(*) FROM api_responses")
+                cursor = await connection.execute("SELECT COUNT(*) FROM api_responses")
                 result = await cursor.fetchone()
                 total_entries = result[0] if result else 0
 
                 # Valid (non-expired) entries
-                cursor = await db.execute("SELECT COUNT(*) FROM api_responses WHERE expires_at > ?",
-                                          (current_time, ))
+                cursor = await connection.execute(
+                    "SELECT COUNT(*) FROM api_responses WHERE expires_at > ?", (current_time, ))
                 result = await cursor.fetchone()
                 valid_entries = result[0] if result else 0
 
                 # Entries by provider
-                cursor = await db.execute(
+                cursor = await connection.execute(
                     "SELECT provider, COUNT(*) FROM api_responses "
                     "WHERE expires_at > ? GROUP BY provider", (current_time, ))
                 provider_rows = await cursor.fetchall()
                 by_provider = dict(provider_rows)
 
                 # Most accessed artists
-                cursor = await db.execute(
+                cursor = await connection.execute(
                     "SELECT artist_name, SUM(access_count) as total_accesses "
                     "FROM api_responses WHERE expires_at > ? "
                     "GROUP BY artist_name ORDER BY total_accesses DESC LIMIT 10", (current_time, ))
@@ -377,8 +376,8 @@ class APIResponseCache:
                     'cache_hit_potential': f"{(valid_entries / max(total_entries, 1)) * 100:.1f}%"
                 }
 
-        except sqlite3.Error as e:
-            logging.error("Database error getting stats: %s", e)
+        except sqlite3.Error as error:
+            logging.error("Database error getting stats: %s", error)
             return {}
 
     async def clear_cache(self, provider: t.Optional[str] = None):
@@ -390,18 +389,18 @@ class APIResponseCache:
         """
         async with self._lock:
             try:
-                async with aiosqlite.connect(self.db_file) as db:
+                async with aiosqlite.connect(self.db_file) as connection:
                     if provider:
-                        await db.execute("DELETE FROM api_responses WHERE provider = ?",
+                        await connection.execute("DELETE FROM api_responses WHERE provider = ?",
                                          (provider.lower(), ))
                         logging.info("Cleared cache for provider: %s", provider)
                     else:
-                        await db.execute("DELETE FROM api_responses")
+                        await connection.execute("DELETE FROM api_responses")
                         logging.info("Cleared entire API response cache")
-                    await db.commit()
+                    await connection.commit()
 
-            except sqlite3.Error as e:
-                logging.error("Database error clearing cache: %s", e)
+            except sqlite3.Error as error:
+                logging.error("Database error clearing cache: %s", error)
 
     def vacuum_database(self):
         """Vacuum the database to reclaim space from deleted entries.
@@ -409,13 +408,13 @@ class APIResponseCache:
         This should be called on application shutdown to optimize disk usage.
         """
         try:
-            with sqlite3.connect(self.db_file) as db:
+            with sqlite3.connect(self.db_file) as connection:
                 logging.debug("Vacuuming API cache database...")
-                db.execute("VACUUM")
-                db.commit()
+                connection.execute("VACUUM")
+                connection.commit()
                 logging.info("API cache database vacuumed successfully")
-        except sqlite3.Error as e:
-            logging.error("Database error during vacuum: %s", e)
+        except sqlite3.Error as error:
+            logging.error("Database error during vacuum: %s", error)
 
 
 # Global cache instance for use across the application
@@ -424,7 +423,7 @@ _global_cache_instance: t.Optional[APIResponseCache] = None
 
 def get_cache() -> APIResponseCache:
     """Get the global cache instance, creating it if needed."""
-    global _global_cache_instance
+    global _global_cache_instance  # pylint: disable=global-statement
     if _global_cache_instance is None:
         _global_cache_instance = APIResponseCache()
     return _global_cache_instance
@@ -432,5 +431,5 @@ def get_cache() -> APIResponseCache:
 
 def set_cache_instance(cache: APIResponseCache):
     """Set a custom global cache instance (useful for testing)."""
-    global _global_cache_instance
+    global _global_cache_instance  # pylint: disable=global-statement
     _global_cache_instance = cache
