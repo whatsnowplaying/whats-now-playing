@@ -229,9 +229,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return None
 
         # Check if we already have key MusicBrainz data to avoid unnecessary lookups
-        if (self.metadata.get('musicbrainzartistid') and 
-            self.metadata.get('musicbrainzrecordingid') and
-            self.metadata.get('isrc')):
+        if (self.metadata.get('musicbrainzartistid') and self.metadata.get('musicbrainzrecordingid')
+                and self.metadata.get('isrc')):
             logging.debug('Skipping MusicBrainz lookup - already have key identifiers')
             return
 
@@ -322,11 +321,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
     async def _artist_extras(self):
         """Efficiently process artist extras plugins using native async calls"""
         tasks: list[tuple[str, asyncio.Task]] = []
-        
+
         # Calculate dynamic timeout based on delay setting
         base_delay = self.config.cparser.value('settings/delay', type=float, defaultValue=10.0)
         timeout = min(max(base_delay * 0.8, 3.0), 10.0)  # 3-10 second range
-        
+
         # Start all plugin tasks concurrently using native async methods
         for _, plugins in self.extraslist.items():
             for plugin in plugins:
@@ -334,12 +333,14 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     plugin_obj = self.config.pluginobjs['artistextras'][plugin]
                     # All artist extras plugins now have async support
                     task = asyncio.create_task(
-                        plugin_obj.download_async(self.metadata, self.imagecache)
-                    )
+                        plugin_obj.download_async(self.metadata, self.imagecache))
                     tasks.append((plugin, task))
                     logging.debug('Started %s plugin task', plugin)
                 except Exception as error:  # pylint: disable=broad-except
-                    logging.error('%s threw exception during setup: %s', plugin, error, exc_info=True)
+                    logging.error('%s threw exception during setup: %s',
+                                  plugin,
+                                  error,
+                                  exc_info=True)
 
         if not tasks:
             return
@@ -350,9 +351,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             done, pending = await asyncio.wait(
                 [task for _, task in tasks],
                 timeout=timeout,
-                return_when=asyncio.FIRST_COMPLETED if len(tasks) > 1 else asyncio.ALL_COMPLETED
-            )
-            
+                return_when=asyncio.FIRST_COMPLETED if len(tasks) > 1 else asyncio.ALL_COMPLETED)
+
             # Process completed tasks immediately
             for i, (plugin, task) in enumerate(tasks):
                 if task in done:
@@ -367,15 +367,15 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                             logging.debug('%s plugin returned no data', plugin)
                     except Exception as error:  # pylint: disable=broad-except
                         logging.error('%s plugin failed: %s', plugin, error, exc_info=True)
-                
+
                 elif task in pending:
                     logging.debug('%s plugin timed out after %ss', plugin, timeout)
                     task.cancel()
-                    
+
             # Wait briefly for any remaining tasks to clean up
             if pending:
                 await asyncio.wait(pending, timeout=0.5)
-                
+
         except Exception as error:  # pylint: disable=broad-except
             logging.error('Artist extras processing failed: %s', error, exc_info=True)
             # Cancel any remaining tasks

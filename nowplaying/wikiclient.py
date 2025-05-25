@@ -426,3 +426,27 @@ def _get_page_sync(wikibase: str,
 
     wiki_page.get = get_method
     return wiki_page
+
+
+async def get_page_async(entity: str,
+                        lang: str = 'en',
+                        timeout: int = 5,
+                        need_bio: bool = True,
+                        need_images: bool = True,
+                        max_images: int = 5) -> WikiPage:
+    """
+    Async function for nowplaying wikimedia plugin.
+    
+    Args:
+        entity: Wikidata entity ID (e.g., 'Q11647')
+        lang: Language code for Wikipedia content
+        timeout: Request timeout in seconds (reduced default for live performance)
+        need_bio: Whether to fetch biography/extract
+        need_images: Whether to fetch images  
+        max_images: Maximum number of images to fetch for performance
+        
+    Returns:
+        WikiPage with optimized data fetching based on actual needs
+    """
+    async with AsyncWikiClient(timeout=timeout) as client:
+        return await client.get_page(entity, lang, need_bio, need_images, max_images)

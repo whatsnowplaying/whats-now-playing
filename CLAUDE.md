@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Testing
 - `pytest` - Run all tests (both tests-qt and tests directories)
 - `pytest tests/` - Run only non-Qt tests
-- `pytest tests-qt/` - Run only Qt-based tests  
+- `pytest tests-qt/` - Run only Qt-based tests
 - `pytest tests/test_specific.py` - Run a single test file
 - `pytest -k "test_name"` - Run tests matching pattern
 
@@ -98,7 +98,7 @@ This application handles time-sensitive data retrieval and display that must be 
 **Wikipedia/Wikidata Client (`wikiclient.py`):**
 - Async client replacing wptools with performance optimizations for live use
 - Configuration-aware selective fetching (only fetches bio/images if enabled)
-- Combined API requests to reduce call count by 40-60% 
+- Combined API requests to reduce call count by 40-60%
 - Reduced timeouts (5s) and image limits (5 max) for live performance
 - Uses existing `apicache.py` system (24-hour TTL) for response caching
 - Provides both async interface and sync compatibility wrapper
@@ -117,7 +117,7 @@ This application handles time-sensitive data retrieval and display that must be 
 - Configurable strict album matching (`musicbrainz/strict_album_matching`) to control precision vs recall tradeoffs
 
 **MusicBrainz Client (`musicbrainzclient.py`):**
-- Streamlined async client replacing vendored `musicbrainzngs` library 
+- Streamlined async client replacing vendored `musicbrainzngs` library
 - Implements only the 9 methods actually used by nowplaying for minimal footprint
 - Optimized for live performance with 15-second timeouts and reduced complexity
 - Full async/await support with aiohttp for non-blocking API calls
@@ -135,6 +135,7 @@ This application handles time-sensitive data retrieval and display that must be 
 - Configuration-aware selective fetching across all plugins to minimize API calls
 - Unified async interface with `download_async()` method across all plugins
 - Multiple dedicated aiohttp sessions per service for maximum parallel performance
+- **Pure async-only architecture**: All legacy sync methods removed from artistextras plugins
 
 **SSL Certificate Handling:**
 - All async clients use proper SSL certificate verification (no workarounds needed)
@@ -158,3 +159,4 @@ This application handles time-sensitive data retrieval and display that must be 
 - Thread-safe with asyncio.Lock for concurrent access
 - Global instance available via `get_cache_instance()` for application-wide use
 - Cache files stored in Qt standard cache location, not in project directory
+- Binary data serialization support with base64 encoding for MusicBrainz cover art data

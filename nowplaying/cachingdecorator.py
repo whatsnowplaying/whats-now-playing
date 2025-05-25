@@ -13,8 +13,11 @@ import typing as t
 from nowplaying.apicache import get_cache
 
 
-def cache_api_response(provider: str, endpoint: str, ttl_seconds: t.Optional[int] = None,
-                      artist_key: str = 'artist', cache_empty: bool = False):
+def cache_api_response(provider: str,
+                       endpoint: str,
+                       ttl_seconds: t.Optional[int] = None,
+                       artist_key: str = 'artist',
+                       cache_empty: bool = False):
     """Decorator to add caching to API response functions.
     
     Args:
@@ -36,12 +39,14 @@ def cache_api_response(provider: str, endpoint: str, ttl_seconds: t.Optional[int
             # Your API call here  
             return api_response
     """
+
     def decorator(func):
+
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs):
             # Extract artist name from parameters
             artist_name = None
-            
+
             # Try to get artist from kwargs first
             if artist_key in kwargs:
                 artist_name = kwargs[artist_key]
@@ -54,7 +59,7 @@ def cache_api_response(provider: str, endpoint: str, ttl_seconds: t.Optional[int
                     artist_name = args[0]['artist']
                 elif len(args) > 1 and isinstance(args[1], str):
                     artist_name = args[1]
-                    
+
             if not artist_name:
                 logging.warning("Could not extract artist name for caching in %s", func.__name__)
                 # Fall back to calling original function
@@ -62,35 +67,36 @@ def cache_api_response(provider: str, endpoint: str, ttl_seconds: t.Optional[int
                     return await func(*args, **kwargs)
                 else:
                     return func(*args, **kwargs)
-            
+
             cache = get_cache()
-            
+
             # Try to get from cache first
             cached_result = await cache.get(provider, artist_name, endpoint)
             if cached_result is not None:
                 return cached_result
-                
+
             # Cache miss - call original function
             try:
                 if asyncio.iscoroutinefunction(func):
                     result = await func(*args, **kwargs)
                 else:
                     result = func(*args, **kwargs)
-                    
+
                 # Cache the result if it's not empty or if we're caching empty results
                 if result is not None or cache_empty:
                     await cache.put(provider, artist_name, endpoint, result, ttl_seconds)
-                    
+
                 return result
-                
+
             except Exception as e:
                 logging.error("Error in cached function %s: %s", func.__name__, e)
                 raise
-                
+
         # For sync functions, we need to handle them specially
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         else:
+
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
                 # For sync functions, we need to run in an event loop
@@ -105,9 +111,9 @@ def cache_api_response(provider: str, endpoint: str, ttl_seconds: t.Optional[int
                 except RuntimeError:
                     # No event loop, create one
                     return asyncio.run(async_wrapper(*args, **kwargs))
-                    
+
             return sync_wrapper
-            
+
     return decorator
 
 
@@ -129,9 +135,11 @@ def cache_artist_data(provider: str, ttl_seconds: t.Optional[int] = None):
     return cache_api_response(provider, 'artist_data', ttl_seconds, artist_key='artist_name')
 
 
-async def cached_fetch(provider: str, artist_name: str, endpoint: str,
-                      fetch_func: t.Callable[[], t.Awaitable[dict]],
-                      ttl_seconds: t.Optional[int] = None) -> t.Optional[dict]:
+async def cached_fetch(provider: str,
+                       artist_name: str,
+                       endpoint: str,
+                       fetch_func: t.Callable[[], t.Awaitable[dict]],
+                       ttl_seconds: t.Optional[int] = None) -> t.Optional[dict]:
     """Utility function for manual cache-or-fetch operations.
     
     Args:
@@ -151,12 +159,12 @@ async def cached_fetch(provider: str, artist_name: str, endpoint: str,
         data = await cached_fetch('discogs', 'Artist Name', 'bio', fetch_data)
     """
     cache = get_cache()
-    
+
     # Try cache first
     cached_data = await cache.get(provider, artist_name, endpoint)
     if cached_data is not None:
         return cached_data
-        
+
     # Cache miss - fetch fresh data
     try:
         fresh_data = await fetch_func()
@@ -193,6 +201,6 @@ async def invalidate_artist_cache(artist_name: str, provider: t.Optional[str] = 
     cache = get_cache()
     # This would require extending the APIResponseCache class to support
     # artist-specific invalidation. For now, log the request.
-    logging.info("Cache invalidation requested for artist: %s, provider: %s", 
-                artist_name, provider or "all")
+    logging.info("Cache invalidation requested for artist: %s, provider: %s", artist_name, provider
+                 or "all")
     # TODO: Implement artist-specific cache invalidation

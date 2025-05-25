@@ -8,9 +8,7 @@ import logging.handlers
 import socket
 
 import aiohttp
-import requests
-import requests.exceptions
-import requests.utils
+import urllib.parse
 import urllib3.exceptions
 
 import nowplaying.bootstrap
@@ -35,29 +33,14 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         htmlfilter.feed(text)
         return htmlfilter.text
 
-    def _fetch(self, apikey, api):
-        delay = self.calculate_delay()
-        try:
-            logging.debug('Fetching %s', api)
-            page = requests.get(f'https://theaudiodb.com/api/v1/json/{apikey}/{api}', timeout=delay)
-        except (
-                requests.exceptions.ReadTimeout,  # pragma: no cover
-                urllib3.exceptions.ReadTimeoutError,
-                socket.timeout):
-            logging.error('TheAudioDB _fetch hit socket timeout on %s', api)
-            return None
-        except Exception as error:  # pragma: no cover pylint: disable=broad-except
-            logging.error('TheAudioDB hit %s', error)
-            return None
-        return page.json()
 
     async def _fetch_async(self, apikey, api):
         delay = self.calculate_delay()
         try:
             logging.debug('Fetching async %s', api)
             async with aiohttp.ClientSession() as session:
-                async with session.get(f'https://theaudiodb.com/api/v1/json/{apikey}/{api}', 
-                                     timeout=aiohttp.ClientTimeout(total=delay)) as response:
+                async with session.get(f'https://theaudiodb.com/api/v1/json/{apikey}/{api}',
+                                       timeout=aiohttp.ClientTimeout(total=delay)) as response:
                     return await response.json()
         except asyncio.TimeoutError:
             logging.error('TheAudioDB _fetch_async hit timeout on %s', api)
@@ -68,9 +51,10 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
     async def _fetch_cached(self, apikey, api, artist_name):
         """Cached version of _fetch for better performance."""
+
         async def fetch_func():
             return await self._fetch_async(apikey, api)
-        
+
         return await nowplaying.cachingdecorator.cached_fetch(
             provider='theaudiodb',
             artist_name=artist_name,
@@ -165,62 +149,6 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
         return metadata
 
-    def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches
-        ''' do data lookup '''
-
-        if not self.config.cparser.value('theaudiodb/enabled', type=bool):
-            return None
-
-        if not metadata or not metadata.get('artist'):
-            logging.debug('No artist; skipping')
-            return None
-
-        apikey = self.config.cparser.value('theaudiodb/apikey')
-        if not apikey:
-            logging.debug('No API key.')
-            return None
-
-        extradata = []
-        self.fnstr = nowplaying.utils.normalize(metadata['artist'], sizecheck=4, nospaces=True)
-
-        # if musicbrainz lookup fails, then there likely isn't
-        # data in theaudiodb that matches.
-        if metadata.get('musicbrainzartistid'):
-            logging.debug('got musicbrainzartistid: %s', metadata['musicbrainzartistid'])
-            for mbid in metadata['musicbrainzartistid']:
-                if newdata := self.artistdatafrommbid(apikey, mbid):
-                    extradata.extend(artist for artist in newdata['artists']
-                                     if self._check_artist(artist))
-
-        elif metadata.get('artist'):
-            logging.debug('got artist')
-            for variation in nowplaying.utils.artist_name_variations(metadata['artist']):
-                if artistdata := self.artistdatafromname(apikey, variation):
-                    extradata.extend(artist for artist in artistdata.get('artists')
-                                     if self._check_artist(artist))
-                    break
-
-        if not extradata:
-            return None
-
-        return self._handle_extradata(extradata, metadata, imagecache)
-
-    def artistdatafrommbid(self, apikey, mbartistid, artist_name=None):
-        ''' get artist data from mbid '''
-        data = self._fetch(apikey, f'artist-mb.php?i={mbartistid}')
-        if not data or not data.get('artists'):
-            return None
-        return data
-
-    def artistdatafromname(self, apikey, artist):
-        ''' get artist data from name '''
-        if not artist:
-            return None
-        urlart = requests.utils.requote_uri(artist)
-        data = self._fetch(apikey, f'search.php?s={urlart}')
-        if not data or not data.get('artists'):
-            return None
-        return data
 
     async def artistdatafrommbid_async(self, apikey, mbartistid, artist_name):
         ''' async cached version of artistdatafrommbid '''
@@ -233,7 +161,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         ''' async cached version of artistdatafromname '''
         if not artist:
             return None
-        urlart = requests.utils.requote_uri(artist)
+        urlart = urllib.parse.quote(artist)
         data = await self._fetch_cached(apikey, f'search.php?s={urlart}', artist)
         if not data or not data.get('artists'):
             return None

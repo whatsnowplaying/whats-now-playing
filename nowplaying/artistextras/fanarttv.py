@@ -8,8 +8,6 @@ import logging.handlers
 import socket
 
 import aiohttp
-import requests
-import requests.exceptions
 import urllib3.exceptions
 
 #import nowplaying.config
@@ -27,23 +25,6 @@ class Plugin(ArtistExtrasPlugin):
         self.displayname = "fanart.tv"
         self.priority = 50
 
-    def _fetch(self, apikey, artistid):
-        artistrequest = None
-        delay = self.calculate_delay()
-
-        try:
-            baseurl = f'http://webservice.fanart.tv/v3/music/{artistid}'
-            logging.debug('fanarttv: calling %s', baseurl)
-            artistrequest = requests.get(f'{baseurl}?api_key={apikey}', timeout=delay)
-        except (
-                requests.exceptions.ReadTimeout,  # pragma: no cover
-                urllib3.exceptions.ReadTimeoutError,
-                socket.timeout):
-            logging.error('fantart.tv timeout getting artistid %s', artistid)
-        except Exception as error:  # pragma: no cover pylint: disable=broad-except
-            logging.error('fanart.tv: %s', error)
-
-        return artistrequest
 
     async def _fetch_async(self, apikey, artistid):
         delay = self.calculate_delay()
@@ -52,8 +33,8 @@ class Plugin(ArtistExtrasPlugin):
             baseurl = f'http://webservice.fanart.tv/v3/music/{artistid}'
             logging.debug('fanarttv async: calling %s', baseurl)
             async with aiohttp.ClientSession() as session:
-                async with session.get(f'{baseurl}?api_key={apikey}', 
-                                     timeout=aiohttp.ClientTimeout(total=delay)) as response:
+                async with session.get(f'{baseurl}?api_key={apikey}',
+                                       timeout=aiohttp.ClientTimeout(total=delay)) as response:
                     return await response.json()
         except asyncio.TimeoutError:
             logging.error('fantart.tv async timeout getting artistid %s', artistid)
@@ -61,83 +42,6 @@ class Plugin(ArtistExtrasPlugin):
         except Exception as error:  # pragma: no cover pylint: disable=broad-except
             logging.error('fanart.tv async: %s', error)
             return None
-
-    def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches
-        ''' download the extra data '''
-
-        apikey = self.config.cparser.value('fanarttv/apikey')
-        if not apikey or not self.config.cparser.value('fanarttv/enabled', type=bool):
-            return None
-
-        if not metadata or not metadata.get('artist'):
-            logging.debug('skipping: no artist')
-            return None
-
-        if not imagecache:
-            logging.debug('imagecache is dead?')
-            return None
-
-        if not metadata.get('musicbrainzartistid'):
-            return None
-
-        #fnstr = nowplaying.utils.normalize(metadata['artist'])
-        logging.debug('got musicbrainzartistid: %s', metadata['musicbrainzartistid'])
-        for artistid in metadata['musicbrainzartistid']:
-            artistrequest = self._fetch(apikey, artistid)
-            if not artistrequest:
-                return None
-
-            artist = artistrequest.json()
-
-            # if artist.get('name') and nowplaying.utils.normalize(artist['name']) in fnstr:
-            #     logging.debug("fanarttv Trusting : %s", artist['name'])
-            # else:
-            #     logging.debug("fanarttv Not trusting: %s vs %s", artist.get('name'), fnstr)
-            #     continue
-
-            if artist.get('musicbanner') and self.config.cparser.value('fanarttv/banners',
-                                                                       type=bool):
-                banner = sorted(artist['musicbanner'], key=lambda x: x['likes'], reverse=True)
-                imagecache.fill_queue(config=self.config,
-                                      identifier=metadata['imagecacheartist'],
-                                      imagetype='artistbanner',
-                                      srclocationlist=[x['url'] for x in banner])
-
-            if self.config.cparser.value('fanarttv/logos', type=bool):
-                logo = None
-                if artist.get('hdmusiclogo'):
-                    logo = sorted(artist['hdmusiclogo'], key=lambda x: x['likes'], reverse=True)
-                elif artist.get('musiclogo'):
-                    logo = sorted(artist['musiclogo'], key=lambda x: x['likes'], reverse=True)
-                if logo:
-                    imagecache.fill_queue(config=self.config,
-                                          identifier=metadata['imagecacheartist'],
-                                          imagetype='artistlogo',
-                                          srclocationlist=[x['url'] for x in logo])
-
-            if artist.get('artistthumb') and self.config.cparser.value('fanarttv/thumbnails',
-                                                                       type=bool):
-                thumbnail = sorted(artist['artistthumb'], key=lambda x: x['likes'], reverse=True)
-                imagecache.fill_queue(config=self.config,
-                                      identifier=metadata['imagecacheartist'],
-                                      imagetype='artistthumbnail',
-                                      srclocationlist=[x['url'] for x in thumbnail])
-
-            if self.config.cparser.value('fanarttv/fanart',
-                                         type=bool) and artist.get('artistbackground'):
-                gotonefanart = False
-                for image in artist['artistbackground']:
-                    if not metadata.get('artistfanarturls'):
-                        metadata['artistfanarturls'] = []
-                    if not gotonefanart:
-                        gotonefanart = True
-                        imagecache.fill_queue(config=self.config,
-                                              identifier=metadata['imagecacheartist'],
-                                              imagetype='artistfanart',
-                                              srclocationlist=[image['url']])
-                    metadata['artistfanarturls'].append(image['url'])
-
-        return metadata
 
     async def download_async(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches
         ''' async download the extra data '''

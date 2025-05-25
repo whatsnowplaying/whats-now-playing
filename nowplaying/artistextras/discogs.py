@@ -5,7 +5,6 @@ import asyncio
 import logging
 import socket
 
-import requests.exceptions
 import urllib3.exceptions
 import nowplaying.discogsclient
 from nowplaying.discogsclient import models
@@ -33,19 +32,18 @@ class Plugin(ArtistExtrasPlugin):
         ''' setup the discogs client '''
         if apikey := self._get_apikey():
             delay = self.calculate_delay()
-            
+
             # Use optimized client based on what features are enabled
             need_bio = self.config.cparser.value('discogs/bio', type=bool)
-            need_images = (self.config.cparser.value('discogs/fanart', type=bool) or 
-                          self.config.cparser.value('discogs/thumbnails', type=bool))
-            
+            need_images = (self.config.cparser.value('discogs/fanart', type=bool)
+                           or self.config.cparser.value('discogs/thumbnails', type=bool))
+
             self.client = nowplaying.discogsclient.get_optimized_client_for_nowplaying(
-                f'whatsnowplaying/{self.config.version}', 
+                f'whatsnowplaying/{self.config.version}',
                 user_token=apikey,
                 need_bio=need_bio,
                 need_images=need_images,
-                timeout=delay
-            )
+                timeout=delay)
             return True
         logging.error('Discogs API key is either wrong or missing.')
         return False
@@ -79,112 +77,7 @@ class Plugin(ArtistExtrasPlugin):
         if self.config.cparser.value('discogs/websites', type=bool):
             self.addmeta['artistwebsites'] = artist.urls
 
-    def _find_discogs_website(self, metadata, imagecache):
-        ''' use websites listing to find discogs entries '''
-        if not self.client and not self._setup_client():
-            return False
 
-        if not self.client or not metadata.get('artistwebsites'):
-            return False
-
-        artistnum = 0
-        artist = None
-        discogs_websites = [url for url in metadata['artistwebsites'] if 'discogs' in url]
-        if len(discogs_websites) == 1:
-            artistnum = discogs_websites[0].split('/')[-1]
-            artist = self.client.artist(artistnum)
-            artistname = str(artist.name)
-            logging.debug('Found a singular discogs artist URL using %s instead of %s', artistname,
-                          metadata['artist'])
-        elif len(discogs_websites) > 1:
-            for website in discogs_websites:
-                artistnum = website.split('/')[-1]
-                artist = self.client.artist(artistnum)
-                webartistname = str(artist.name)
-                if nowplaying.utils.normalize(webartistname) == nowplaying.utils.normalize(
-                        metadata['artist']):
-                    logging.debug(
-                        'Found near exact match discogs artist URL %s using %s instead of %s',
-                        website, webartistname, metadata['artist'])
-                    artistname = webartistname
-                    break
-                artist = None
-        if artist:
-            self._process_metadata(metadata['imagecacheartist'], artist, imagecache)
-            return True
-
-        return False
-
-    def _find_discogs_artist_releaselist(self, metadata):
-        ''' given metadata, find the releases for an artist '''
-        if not self.client and not self._setup_client():
-            return None
-
-        if not self.client:
-            return None
-
-        artistname = metadata['artist']
-        try:
-            logging.debug('Fetching %s - %s', artistname, metadata['album'])
-            resultlist = self.client.search(metadata['album'], artist=artistname,
-                                            type='title').page(1)
-        except (
-                requests.exceptions.ReadTimeout,  # pragma: no cover
-                urllib3.exceptions.ReadTimeoutError,
-                socket.timeout,
-                TimeoutError):
-            logging.error('discogs releaselist timeout error')
-            return None
-        except Exception as error:  # pragma: no cover pylint: disable=broad-except
-            logging.error('discogs hit %s', error)
-            return None
-
-        return next(
-            (result.artists[0] for result in resultlist if isinstance(result, models.Release)),
-            None,
-        )
-
-    def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches, too-many-return-statements
-        ''' download content '''
-
-        if not self.config.cparser.value('discogs/enabled', type=bool):
-            return None
-
-        # discogs basically works by search for a combination of
-        # artist and album so we need both
-        if not metadata or not metadata.get('artist') or not metadata.get('album'):
-            logging.debug('artist or album is empty, skipping')
-            return None
-
-        if not self.client and not self._setup_client():
-            logging.error('No discogs apikey or client setup failed.')
-            return None
-
-        if not self.client:
-            return None
-
-        self.addmeta = {}
-
-        if self._find_discogs_website(metadata, imagecache):
-            logging.debug('used discogs website')
-            return self.addmeta
-
-        oldartist = metadata['artist']
-        artistresultlist = None
-        for variation in nowplaying.utils.artist_name_variations(metadata['artist']):
-            metadata['artist'] = variation
-            artistresultlist = self._find_discogs_artist_releaselist(metadata)
-            if artistresultlist:
-                break
-
-        metadata['artist'] = oldartist
-
-        if not artistresultlist:
-            logging.debug('discogs did not find it')
-            return None
-
-        self._process_metadata(metadata['imagecacheartist'], artistresultlist, imagecache)
-        return self.addmeta
 
     async def _find_discogs_website_async(self, metadata, imagecache):
         ''' async use websites listing to find discogs entries '''
@@ -233,7 +126,9 @@ class Plugin(ArtistExtrasPlugin):
         artistname = metadata['artist']
         try:
             logging.debug('Fetching async %s - %s', artistname, metadata['album'])
-            resultlist = await self.client.search_async(metadata['album'], artist=artistname, type='title')
+            resultlist = await self.client.search_async(metadata['album'],
+                                                        artist=artistname,
+                                                        type='title')
             # Get first page if paginated results
             if hasattr(resultlist, 'page'):
                 resultlist = resultlist.page(1)
