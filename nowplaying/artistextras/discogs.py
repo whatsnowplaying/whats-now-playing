@@ -6,8 +6,8 @@ import socket
 
 import requests.exceptions
 import urllib3.exceptions
-import nowplaying.vendor.discogs_client
-from nowplaying.vendor.discogs_client import models
+import nowplaying.discogsclient
+from nowplaying.discogsclient import models
 
 from nowplaying.artistextras import ArtistExtrasPlugin
 import nowplaying.utils
@@ -32,9 +32,19 @@ class Plugin(ArtistExtrasPlugin):
         ''' setup the discogs client '''
         if apikey := self._get_apikey():
             delay = self.calculate_delay()
-            self.client = nowplaying.vendor.discogs_client.Client(
-                f'whatsnowplaying/{self.config.version}', user_token=apikey)
-            self.client.set_timeout(connect=delay, read=delay)
+            
+            # Use optimized client based on what features are enabled
+            need_bio = self.config.cparser.value('discogs/bio', type=bool)
+            need_images = (self.config.cparser.value('discogs/fanart', type=bool) or 
+                          self.config.cparser.value('discogs/thumbnails', type=bool))
+            
+            self.client = nowplaying.discogsclient.get_optimized_client_for_nowplaying(
+                f'whatsnowplaying/{self.config.version}', 
+                user_token=apikey,
+                need_bio=need_bio,
+                need_images=need_images,
+                timeout=delay
+            )
             return True
         logging.error('Discogs API key is either wrong or missing.')
         return False
