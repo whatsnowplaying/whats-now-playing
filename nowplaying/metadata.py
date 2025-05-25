@@ -3,7 +3,6 @@
 
 import asyncio
 import copy
-import concurrent.futures
 import contextlib
 import logging
 import re
@@ -229,8 +228,14 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if not self.metadata:
             return None
 
+        # Check if we already have key MusicBrainz data to avoid unnecessary lookups
+        if (self.metadata.get('musicbrainzartistid') and self.metadata.get('musicbrainzrecordingid')
+                and self.metadata.get('isrc')):
+            logging.debug('Skipping MusicBrainz lookup - already have key identifiers')
+            return
+
         musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
-        addmeta = musicbrainz.recognize(copy.copy(self.metadata))
+        addmeta = await musicbrainz.recognize(copy.copy(self.metadata))
         self.metadata = recognition_replacement(config=self.config,
                                                 metadata=self.metadata,
                                                 addmeta=addmeta)
@@ -252,7 +257,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         logging.debug('Attempting musicbrainz fallback')
 
         musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
-        addmeta = musicbrainz.lastditcheffort(copy.copy(self.metadata))
+        addmeta = await musicbrainz.lastditcheffort(copy.copy(self.metadata))
         self.metadata = recognition_replacement(config=self.config,
                                                 metadata=self.metadata,
                                                 addmeta=addmeta)
@@ -261,9 +266,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if (not addmeta or not addmeta.get('album')) and ' - ' in self.metadata['title']:
             if comments := self.metadata.get('comments'):
                 if YOUTUBE_MATCH_RE.match(comments):
-                    self._mb_youtube_fallback(musicbrainz)
+                    await self._mb_youtube_fallback(musicbrainz)
 
-    def _mb_youtube_fallback(self, musicbrainz):
+    async def _mb_youtube_fallback(self, musicbrainz):
         if not self.metadata:
             return
         addmeta2 = copy.deepcopy(self.metadata)
@@ -274,7 +279,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         logging.debug('Youtube video fallback with %s and %s', artist, title)
 
         try:
-            if addmeta := musicbrainz.lastditcheffort(addmeta2):
+            if addmeta := await musicbrainz.lastditcheffort(addmeta2):
                 self.metadata['artist'] = artist
                 self.metadata['title'] = title
                 self.metadata = recognition_replacement(config=self.config,
@@ -291,7 +296,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             provider = any(meta not in self.metadata for meta in metalist)
             if provider:
                 try:
-                    if addmeta := self.config.pluginobjs['recognition'][plugin].recognize(
+                    if addmeta := await self.config.pluginobjs['recognition'][plugin].recognize(
                             metadata=self.metadata):
                         self.metadata = recognition_replacement(config=self.config,
                                                                 metadata=self.metadata,
@@ -313,35 +318,71 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 type=bool) and not self.config.cparser.value('control/beam', type=bool):
             await self._artist_extras()
 
-    async def _artist_extras(self):
-        tasks: list[tuple[str, asyncio.Future]] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3,
-                                                   thread_name_prefix='artistextras') as pool:
-            for _, plugins in self.extraslist.items():
-                for plugin in plugins:
+    async def _artist_extras(self):  # pylint: disable=too-many-branches
+        """Efficiently process artist extras plugins using native async calls"""
+        tasks: list[tuple[str, asyncio.Task]] = []
+
+        # Calculate dynamic timeout based on delay setting
+        # With apicache integration, we need more time for cache misses but still be responsive
+        base_delay = self.config.cparser.value('settings/delay', type=float, defaultValue=10.0)
+        timeout = min(max(base_delay * 1.2, 5.0), 15.0)  # 5-15 second range
+
+        # Start all plugin tasks concurrently using native async methods
+        for _, plugins in self.extraslist.items():
+            for plugin in plugins:
+                try:
+                    plugin_obj = self.config.pluginobjs['artistextras'][plugin]
+                    # All artist extras plugins now have async support
+                    task = asyncio.create_task(
+                        plugin_obj.download_async(self.metadata, self.imagecache))
+                    tasks.append((plugin, task))
+                    logging.debug('Started %s plugin task', plugin)
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.error('%s threw exception during setup: %s',
+                                  plugin,
+                                  error,
+                                  exc_info=True)
+
+        if not tasks:
+            return
+
+        # Wait for tasks with dynamic timeout and early completion detection
+        try:
+            # Use asyncio.wait with timeout instead of sleep + cancel
+            done, pending = await asyncio.wait(
+                [task for _, task in tasks],
+                timeout=timeout,
+                return_when=asyncio.ALL_COMPLETED)
+
+            # Process completed tasks immediately
+            for plugin, task in tasks:
+                if task in done:
                     try:
-                        loop = asyncio.get_running_loop()
-                        tasks.append([
-                            plugin,
-                            loop.run_in_executor(
-                                pool, self.config.pluginobjs['artistextras'][plugin].download,
-                                self.metadata, self.imagecache)
-                        ])
-
-                    except Exception as error:  # pylint: disable=broad-except
-                        logging.error('%s threw exception %s', plugin, error, exc_info=True)
-
-            await asyncio.sleep(5)
-            for taskinfo in tasks:
-                with contextlib.suppress(Exception):
-                    if not taskinfo[1].cancel():
-                        addmeta = await taskinfo[1].result()
+                        addmeta = await task
                         if addmeta:
                             self.metadata = recognition_replacement(config=self.config,
                                                                     metadata=self.metadata,
                                                                     addmeta=addmeta)
-                    else:
-                        logging.debug("cancelling, timeout: %s", taskinfo[0])
+                            logging.debug('%s plugin completed successfully', plugin)
+                        else:
+                            logging.debug('%s plugin returned no data', plugin)
+                    except Exception as error:  # pylint: disable=broad-except
+                        logging.error('%s plugin failed: %s', plugin, error, exc_info=True)
+
+                elif task in pending:
+                    logging.debug('%s plugin timed out after %ss', plugin, timeout)
+                    task.cancel()
+
+            # Wait briefly for any remaining tasks to clean up
+            if pending:
+                await asyncio.wait(pending, timeout=0.5)
+
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error('Artist extras processing failed: %s', error, exc_info=True)
+            # Cancel any remaining tasks
+            for _, task in tasks:
+                if not task.done():
+                    task.cancel()
 
     def _generate_short_bio(self):
         if not self.metadata:

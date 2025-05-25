@@ -4,10 +4,9 @@
 import asyncio
 import logging
 import signal
-import traceback
 
 import nowplaying.twitch.chat
-import nowplaying.twitch.redemptions
+#import nowplaying.twitch.redemptions
 import nowplaying.twitch.utils
 
 
@@ -22,7 +21,7 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
             self.stopevent = asyncio.Event()
         self.widgets = None
         self.chat = None
-        self.redemptions = None
+        #self.redemptions = None
         self.loop = None
         self.twitchlogin = nowplaying.twitch.utils.TwitchLogin(self.config)
         self.tasks = set()
@@ -44,11 +43,11 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
             self.tasks.add(task)
             task.add_done_callback(self.tasks.discard)
             await asyncio.sleep(5)
-        if self.redemptions:
-            task = self.loop.create_task(
-                self.redemptions.run_redemptions(self.twitchlogin, self.chat))
-            self.tasks.add(task)
-            task.add_done_callback(self.tasks.discard)
+        #if self.redemptions:
+        #    task = self.loop.create_task(
+        #        self.redemptions.run_redemptions(self.twitchlogin, self.chat))
+        #    self.tasks.add(task)
+        #    task.add_done_callback(self.tasks.discard)
 
     async def _watch_for_exit(self):
         while not self.stopevent.is_set():
@@ -60,8 +59,8 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
         try:
             self.chat = nowplaying.twitch.chat.TwitchChat(config=self.config,
                                                           stopevent=self.stopevent)
-            self.redemptions = nowplaying.twitch.redemptions.TwitchRedemptions(
-                config=self.config, stopevent=self.stopevent)
+            #self.redemptions = nowplaying.twitch.redemptions.TwitchRedemptions(
+            #    config=self.config, stopevent=self.stopevent)
             if not self.loop:
                 try:
                     self.loop = asyncio.get_running_loop()
@@ -75,9 +74,9 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
             task.add_done_callback(self.tasks.discard)
             self.loop.run_forever()
         except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
-            logging.error('Twitch support crashed')
+            #for line in traceback.format_exc().splitlines():
+            #    logging.error(line)
+            logging.exception('Twitch support crashed')
 
     def forced_stop(self, signum, frame):  # pylint: disable=unused-argument
         ''' caught an int signal so tell the world to stop '''
@@ -85,8 +84,8 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
 
     async def stop(self):
         ''' stop the twitch support '''
-        if self.redemptions:
-            await self.redemptions.stop()
+        #if self.redemptions:
+        #    await self.redemptions.stop()
         if self.chat:
             await self.chat.stop()
         await asyncio.sleep(1)

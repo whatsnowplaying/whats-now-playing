@@ -11,20 +11,14 @@ import os
 import re
 import sys
 
-from nowplaying.vendor import musicbrainzngs
-
+import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
 from nowplaying.utils import normalize_text, normalize, artist_name_variations
 
-REMIX_RE = re.compile(r'^\s*(.*)\s+[\(\[].*[\)\]]$')
+from . import client
 
-musicbrainzngs.musicbrainz._max_retries = 2  # pylint: disable=protected-access
-musicbrainzngs.musicbrainz._timeout = 15  # pylint: disable=protected-access
-# WNP (typically) has large lulls between 2-3 calls that need to happen
-# quickly. so double the rate of calls to speed things up but still
-# keep a rate limiter in case the DJ is doing something stupid
-musicbrainzngs.set_rate_limit(limit_or_interval=.5)
+REMIX_RE = re.compile(r'^\s*(.*)\s+[\(\[].*[\)\]]$')
 
 
 @functools.lru_cache(maxsize=128, typed=False)
@@ -52,6 +46,10 @@ class MusicBrainzHelper():
             self.config = nowplaying.config.ConfigFile()
 
         self.emailaddressset = False
+        # Create our own MusicBrainz client instance
+        self.mb_client = client.MusicBrainzClient(
+            rate_limit_interval=0.5
+        )
 
     def _setemail(self):
         ''' make sure the musicbrainz fetch has an email address set
@@ -60,10 +58,10 @@ class MusicBrainzHelper():
             emailaddress = self.config.cparser.value(
                 'musicbrainz/emailaddress') or 'aw+wnp@effectivemachines.com'
 
-            musicbrainzngs.set_useragent('whats-now-playing', self.config.version, emailaddress)
+            self.mb_client.set_useragent('whats-now-playing', self.config.version, emailaddress)
             self.emailaddressset = True
 
-    def _pickarecording(self, testdata, mbdata, allowothers=False):  #pylint: disable=too-many-statements, too-many-branches
+    async def _pickarecording(self, testdata, mbdata, allowothers=False):  #pylint: disable=too-many-statements, too-many-branches
         ''' core routine for last ditch '''
 
         def _check_build_artid():
@@ -145,31 +143,32 @@ class MusicBrainzHelper():
                 if not allowothers and not _check_not_allow_others():
                     continue
                 logging.debug('checking %s', recording['id'])
-                if riddata := self.recordingid(recording['id']):
+                if riddata := await self.recordingid(recording['id']):
                     return riddata
         if not riddata and variousartistrid:
             logging.debug('Using a previous analyzed various artist release')
-            if riddata := self.recordingid(variousartistrid):
+            if riddata := await self.recordingid(variousartistrid):
                 riddata['musicbrainzartistid'] = mbartid
                 return riddata
         logging.debug('Exitting pick a recording')
         return riddata
 
-    def _lastditchrid(self, metadata):
+    async def _lastditchrid(self, metadata):
 
-        def havealbum():
+        async def havealbum():
             for artist in artist_name_variations(addmeta['artist']):
                 try:
-                    mydict = musicbrainzngs.search_recordings(artist=artist,
-                                                              recording=addmeta['title'],
-                                                              release=addmeta['album'])
+                    mydict = await self.mb_client.search_recordings(artist=artist,
+                                                                         recording=addmeta['title'],
+                                                                         release=addmeta['album'])
                 except Exception:  # pylint: disable=broad-exception-caught
-                    logging.exception("musicbrainzngs.search_recordings- ar:%s, t:%s, al:%s",
+                    logging.exception("mb_client.search_recordings- ar:%s, t:%s, al:%s",
                                       artist, addmeta['title'], addmeta['album'])
                     continue
 
-                if riddata := self._pickarecording(addmeta, mydict) or self._pickarecording(
-                        addmeta, mydict, allowothers=True):
+                if riddata := await self._pickarecording(addmeta,
+                                                         mydict) or await self._pickarecording(
+                                                             addmeta, mydict, allowothers=True):
                     return riddata
             return {}
 
@@ -187,49 +186,42 @@ class MusicBrainzHelper():
 
         logging.debug('Starting data: %s', addmeta)
         if addmeta['album']:
-            if riddata := havealbum():
+            if riddata := await havealbum():
                 return riddata
 
         for artist in artist_name_variations(addmeta['artist']):
             logging.debug('Trying %s', artist)
             try:
-                mydict = musicbrainzngs.search_recordings(artist=artist,
-                                                          recording=addmeta['title'],
-                                                          strict=True)
+                mydict = await self.mb_client.search_recordings(artist=artist,
+                                                                     recording=addmeta['title'])
             except Exception:  # pylint: disable=broad-exception-caught
-                logging.exception("musicbrainzngs.search_recordings- ar:%s, t:%s (strict)", artist,
+                logging.exception("mb_client.search_recordings- ar:%s, t:%s (strict)", artist,
                                   addmeta['title'])
                 continue
 
-            if mydict['recording-count'] == 0:
-                logging.debug('strict is too strict')
-                try:
-                    mydict = musicbrainzngs.search_recordings(artist=artist,
-                                                              recording=addmeta['title'])
-                except Exception:  # pylint: disable=broad-exception-caught
-                    logging.exception("musicbrainzngs.search_recordings- ar:%s, t:%s", artist,
-                                      addmeta['title'])
-                    continue
+            if mydict.get('recording-count', 0) == 0:
+                logging.debug('no recordings found for this artist/title combination')
+                continue
 
-            if mydict['recording-count'] > 100:
+            if mydict.get('recording-count', 0) > 100:
                 logging.debug('too many, going stricter')
                 query = (f"artist:{artist} AND recording:\"{addmeta['title']}\" AND "
                          "-(secondarytype:compilation OR secondarytype:live) AND status:official")
                 logging.debug(query)
                 try:
-                    mydict = musicbrainzngs.search_recordings(query=query, limit=100)
+                    mydict = await self.mb_client.search_recordings(query=query, limit=100)
                 except Exception:  # pylint: disable=broad-exception-caught
-                    logging.exception("musicbrainzngs.search_recordings- q:%s", query)
+                    logging.exception("mb_client.search_recordings- q:%s", query)
                 continue
-            if riddata := self._pickarecording(addmeta, mydict):
+            if riddata := await self._pickarecording(addmeta, mydict):
                 return riddata
 
-        if riddata := self._pickarecording(addmeta, mydict, allowothers=True):
+        if riddata := await self._pickarecording(addmeta, mydict, allowothers=True):
             return riddata
         logging.debug('Last ditch MB lookup failed. Sorry.')
         return riddata
 
-    def lastditcheffort(self, metadata):
+    async def lastditcheffort(self, metadata):
         ''' there is like no data, so... '''
 
         if not self.config.cparser.value('musicbrainz/enabled',
@@ -245,14 +237,27 @@ class MusicBrainzHelper():
             'album': metadata.get('album')
         }
 
-        riddata = self._lastditchrid(addmeta)
+        riddata = await self._lastditchrid(addmeta)
         if not riddata and REMIX_RE.match(addmeta['title']):
             addmeta['title'] = REMIX_RE.match(addmeta['title']).group(1)
-            riddata = self._lastditchrid(addmeta)
+            riddata = await self._lastditchrid(addmeta)
 
         if riddata:
             if normalize(riddata['title']) != normalize(metadata.get('title')):
                 logging.debug('No title match, so just using artist data')
+
+                # Check if strict album matching is enabled
+                strict_album_matching = self.config.cparser.value(
+                    'musicbrainz/strict_album_matching', True, type=bool)
+
+                # If original request had an album and we're in strict mode, return nothing
+                # rather than partial data to avoid wrong album information
+                if strict_album_matching and metadata.get('album'):
+                    logging.debug(
+                        'Strict album matching enabled: rejecting partial match for album request')
+                    return None
+
+                # Otherwise, return artist data without album/recording info
                 for delitem in [
                         'album',
                         'coverimageraw',
@@ -267,7 +272,7 @@ class MusicBrainzHelper():
                           riddata.get('musicbrainzartistid'), riddata.get('musicbrainzrecordingid'))
         return riddata
 
-    def recognize(self, metadata):
+    async def recognize(self, metadata):
         ''' fill in any blanks from musicbrainz '''
 
         if not self.config.cparser.value('musicbrainz/enabled',
@@ -279,16 +284,16 @@ class MusicBrainzHelper():
 
         if metadata.get('musicbrainzrecordingid'):
             logging.debug('Preprocessing with musicbrainz recordingid')
-            addmeta = self.recordingid(metadata['musicbrainzrecordingid'])
+            addmeta = await self.recordingid(metadata['musicbrainzrecordingid'])
         elif metadata.get('isrc'):
             logging.debug('Preprocessing with musicbrainz isrc')
-            addmeta = self.isrc(metadata['isrc'])
+            addmeta = await self.isrc(metadata['isrc'])
         elif metadata.get('musicbrainzartistid'):
             logging.debug('Preprocessing with musicbrainz artistid')
-            addmeta = self.artistids(metadata['musicbrainzartistid'])
+            addmeta = await self.artistids(metadata['musicbrainzartistid'])
         return addmeta
 
-    def isrc(self, isrclist):
+    async def isrc(self, isrclist):
         ''' lookup musicbrainz information based upon isrc '''
         if not self.config.cparser.value('musicbrainz/enabled',
                                          type=bool) or self.config.cparser.value('control/beam',
@@ -300,13 +305,13 @@ class MusicBrainzHelper():
 
         for isrc in isrclist:
             with contextlib.suppress(Exception):
-                mbdata = musicbrainzngs.get_recordings_by_isrc(isrc,
-                                                               includes=['releases'],
-                                                               release_status=['official'])
+                mbdata = await self.mb_client.get_recordings_by_isrc(
+                    isrc, includes=['releases'], release_status=['official'])
         if not mbdata:
             for isrc in isrclist:
                 try:
-                    mbdata = musicbrainzngs.get_recordings_by_isrc(isrc, includes=['releases'])
+                    mbdata = await self.mb_client.get_recordings_by_isrc(
+                        isrc, includes=['releases'])
                 except Exception as error:  # pylint: disable=broad-except
                     logging.info('musicbrainz cannot find ISRC %s: %s', isrc, error)
 
@@ -316,16 +321,29 @@ class MusicBrainzHelper():
         recordinglist = sorted(mbdata['isrc']['recording-list'],
                                key=lambda k: k['release-count'],
                                reverse=True)
-        return self.recordingid(recordinglist[0]['id'])
+        return await self.recordingid(recordinglist[0]['id'])
 
-    @functools.lru_cache(maxsize=128, typed=False)
-    def recordingid(self, recordingid):  # pylint: disable=too-many-branches, too-many-return-statements, too-many-statements
+    async def recordingid(self, recordingid):  # pylint: disable=too-many-branches, too-many-return-statements, too-many-statements
         ''' lookup the musicbrainz information based upon recording id '''
         if not self.config.cparser.value('musicbrainz/enabled',
                                          type=bool) or self.config.cparser.value('control/beam',
                                                                                  type=bool):
             return None
 
+        # Use cached version for better performance
+        async def fetch_func():
+            return await self._recordingid_uncached(recordingid)
+
+        return await nowplaying.apicache.cached_fetch(
+            provider='musicbrainz',
+            artist_name='recording',  # Use a generic key for recording lookups
+            endpoint=f'recording/{recordingid}',
+            fetch_func=fetch_func,
+            ttl_seconds=7 * 24 * 60 * 60  # 7 days for MusicBrainz data
+        )
+
+    async def _recordingid_uncached(self, recordingid):  # pylint: disable=too-many-branches,too-many-statements
+        ''' uncached version of recordingid lookup '''
         self._setemail()
 
         def read_label(releasedata):
@@ -344,13 +362,13 @@ class MusicBrainzHelper():
 
             return None
 
-        def releaselookup_noartist(recordingid):
+        async def releaselookup_noartist(recordingid):
             mbdata = None
 
             self._setemail()
 
             try:
-                mbdata = musicbrainzngs.browse_releases(
+                mbdata = await self.mb_client.browse_releases(
                     recording=recordingid,
                     includes=['artist-credits', 'labels', 'release-groups', 'release-group-rels'],
                     release_status=['official'])
@@ -360,12 +378,10 @@ class MusicBrainzHelper():
 
             if 'release-count' not in mbdata or mbdata['release-count'] == 0:
                 try:
-                    mbdata = musicbrainzngs.browse_releases(recording=recordingid,
-                                                            includes=[
-                                                                'artist-credits', 'labels',
-                                                                'release-groups',
-                                                                'release-group-rels'
-                                                            ])
+                    mbdata = await self.mb_client.browse_releases(
+                        recording=recordingid,
+                        includes=['artist-credits', 'labels', 'release-groups',
+                                  'release-group-rels'])
                 except Exception as error:  # pylint: disable=broad-except
                     logging.error('MusicBrainz threw an error: %s', error)
                     return None
@@ -392,7 +408,7 @@ class MusicBrainzHelper():
         newdata = {'musicbrainzrecordingid': recordingid}
         try:
             logging.debug('looking up recording id %s', recordingid)
-            mbdata = musicbrainzngs.get_recording_by_id(
+            mbdata = await self.mb_client.get_recording_by_id(
                 recordingid, includes=['artists', 'genres', 'release-group-rels'])
         except Exception as error:  # pylint: disable=broad-except
             logging.error('MusicBrainz does not know recording id %s: %s', recordingid, error)
@@ -419,7 +435,7 @@ class MusicBrainzHelper():
                     newdata['genres'].append(genre['name'])
                 newdata['genre'] = '/'.join(newdata['genres'])
 
-        mbdata = releaselookup_noartist(recordingid)
+        mbdata = await releaselookup_noartist(recordingid)
 
         if not mbdata or 'release-count' not in mbdata or mbdata['release-count'] == 0:
             return newdata
@@ -441,22 +457,22 @@ class MusicBrainzHelper():
         if 'cover-art-archive' in release and 'artwork' in release['cover-art-archive'] and release[
                 'cover-art-archive']['artwork'] == 'true':
             try:
-                newdata['coverimageraw'] = musicbrainzngs.get_image_front(release['id'])
+                newdata['coverimageraw'] = await self.mb_client.get_image_front(release['id'])
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('Failed to get release cover art: %s', error)
 
         if not newdata.get('coverimageraw'):
             try:
-                newdata['coverimageraw'] = musicbrainzngs.get_release_group_image_front(
-                    release['release-group']['id'])
+                newdata['coverimageraw'] = await self.mb_client.get_image_front(
+                    release['release-group']['id'], 'release-group')
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('Failed to get release group cover art: %s', error)
 
-        newdata['artistwebsites'] = self._websites(newdata['musicbrainzartistid'])
+        newdata['artistwebsites'] = await self._websites(newdata['musicbrainzartistid'])
         #self.recordingid_tempcache[recordingid] = newdata
         return newdata
 
-    def artistids(self, idlist):
+    async def artistids(self, idlist):
         ''' add data available via musicbrainz artist ids '''
 
         self._setemail()
@@ -466,9 +482,9 @@ class MusicBrainzHelper():
                                                                                  type=bool):
             return None
 
-        return {'artistwebsites': self._websites(idlist)}
+        return {'artistwebsites': await self._websites(idlist)}
 
-    def _websites(self, idlist):
+    async def _websites(self, idlist):
 
         if not idlist:
             return None
@@ -478,7 +494,7 @@ class MusicBrainzHelper():
             if self.config.cparser.value('acoustidmb/musicbrainz', type=bool):
                 sitelist.append(f'https://musicbrainz.org/artist/{artistid}')
             try:
-                webdata = musicbrainzngs.get_artist_by_id(artistid, includes=['url-rels'])
+                webdata = await self.mb_client.get_artist_by_id(artistid, includes=['url-rels'])
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('MusicBrainz does not know artistid id %s: %s', artistid, error)
                 return None

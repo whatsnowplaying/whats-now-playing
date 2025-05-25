@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 ''' start of support of fanarttv '''
 
+import asyncio
 import logging
 import logging.config
 import logging.handlers
-import socket
 
-import requests
-import requests.exceptions
-import urllib3.exceptions
+import aiohttp
 
-#import nowplaying.config
+import nowplaying.apicache
 from nowplaying.artistextras import ArtistExtrasPlugin
-#import nowplaying.utils
 
 
 class Plugin(ArtistExtrasPlugin):
@@ -25,26 +22,39 @@ class Plugin(ArtistExtrasPlugin):
         self.displayname = "fanart.tv"
         self.priority = 50
 
-    def _fetch(self, apikey, artistid):
-        artistrequest = None
+    async def _fetch_async(self, apikey, artistid):
         delay = self.calculate_delay()
 
         try:
             baseurl = f'http://webservice.fanart.tv/v3/music/{artistid}'
-            logging.debug('fanarttv: calling %s', baseurl)
-            artistrequest = requests.get(f'{baseurl}?api_key={apikey}', timeout=delay)
-        except (
-                requests.exceptions.ReadTimeout,  # pragma: no cover
-                urllib3.exceptions.ReadTimeoutError,
-                socket.timeout):
-            logging.error('fantart.tv timeout getting artistid %s', artistid)
+            logging.debug('fanarttv async: calling %s', baseurl)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f'{baseurl}?api_key={apikey}',
+                                       timeout=aiohttp.ClientTimeout(total=delay)) as response:
+                    return await response.json()
+        except asyncio.TimeoutError:
+            logging.error('fantart.tv async timeout getting artistid %s', artistid)
+            return None
         except Exception as error:  # pragma: no cover pylint: disable=broad-except
-            logging.error('fanart.tv: %s', error)
+            logging.error('fanart.tv async: %s', error)
+            return None
 
-        return artistrequest
+    async def _fetch_cached(self, apikey, artistid, artist_name):
+        """Cached version of _fetch for better performance."""
 
-    def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches
-        ''' download the extra data '''
+        async def fetch_func():
+            return await self._fetch_async(apikey, artistid)
+
+        return await nowplaying.apicache.cached_fetch(
+            provider='fanarttv',
+            artist_name=artist_name,
+            endpoint=f'music/{artistid}',  # Use the API endpoint path
+            fetch_func=fetch_func,
+            ttl_seconds=7 * 24 * 60 * 60  # 7 days for FanartTV data per CLAUDE.md
+        )
+
+    async def download_async(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches
+        ''' async download the extra data '''
 
         apikey = self.config.cparser.value('fanarttv/apikey')
         if not apikey or not self.config.cparser.value('fanarttv/enabled', type=bool):
@@ -64,11 +74,9 @@ class Plugin(ArtistExtrasPlugin):
         #fnstr = nowplaying.utils.normalize(metadata['artist'])
         logging.debug('got musicbrainzartistid: %s', metadata['musicbrainzartistid'])
         for artistid in metadata['musicbrainzartistid']:
-            artistrequest = self._fetch(apikey, artistid)
-            if not artistrequest:
+            artist = await self._fetch_cached(apikey, artistid, metadata['artist'])
+            if not artist or artist.get('status') == 'error':
                 return None
-
-            artist = artistrequest.json()
 
             # if artist.get('name') and nowplaying.utils.normalize(artist['name']) in fnstr:
             #     logging.debug("fanarttv Trusting : %s", artist['name'])

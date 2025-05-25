@@ -7,16 +7,16 @@ import traceback
 
 from twitchAPI.pubsub import PubSub
 from twitchAPI.helper import first
-from twitchAPI.types import AuthScope
+#from twitchAPI.types import AuthScope
 
-import nowplaying.bootstrap
-import nowplaying.config
-import nowplaying.db
-import nowplaying.metadata
+# import nowplaying.bootstrap
+# import nowplaying.config
+# import nowplaying.db
+# import nowplaying.metadata
 import nowplaying.trackrequests
 import nowplaying.twitch.utils
 
-USER_SCOPE = [AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
+#USER_SCOPE = [AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 
 
 class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes

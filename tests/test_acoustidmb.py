@@ -22,10 +22,11 @@ def getacoustidmbplugin(bootstrap):
     yield nowplaying.recognition.acoustidmb.Plugin(config=config)
 
 
-def test_15ghosts2_orig(getacoustidmbplugin, getroot):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_15ghosts2_orig(getacoustidmbplugin, getroot):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getacoustidmbplugin
-    metadata = plugin.recognize(
+    metadata = await plugin.recognize(
         {'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.mp3')})
     assert metadata['album'] == 'Ghosts I–IV'
     assert metadata['artist'] == 'Nine Inch Nails'
@@ -36,10 +37,11 @@ def test_15ghosts2_orig(getacoustidmbplugin, getroot):  # pylint: disable=redefi
     assert metadata['title'] == '15 Ghosts II'
 
 
-def test_15ghosts2_fullytagged(getacoustidmbplugin, getroot):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_15ghosts2_fullytagged(getacoustidmbplugin, getroot):  # pylint: disable=redefined-outer-name
     ''' automated integration test '''
     plugin = getacoustidmbplugin
-    metadata = plugin.recognize(
+    metadata = await plugin.recognize(
         {'filename': os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_füllytâgged.mp3')})
     assert metadata['album'] == 'Ghosts I–IV'
     assert metadata['artist'] == 'Nine Inch Nails'

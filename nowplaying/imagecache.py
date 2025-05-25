@@ -418,6 +418,23 @@ VALUES (?,?,?);
                                 srclocation=data['srclocation'])
         return
 
+    def vacuum_database(self):
+        """Vacuum the image cache database to reclaim space from deleted entries.
+
+        This should be called on application shutdown to optimize disk usage.
+        """
+        if not self.databasefile.exists():
+            return
+
+        try:
+            with sqlite3.connect(self.databasefile, timeout=30) as connection:
+                logging.debug("Vacuuming image cache database...")
+                connection.execute("VACUUM")
+                connection.commit()
+                logging.info("Image cache database vacuumed successfully")
+        except sqlite3.Error as error:
+            logging.error("Database error during vacuum: %s", error)
+
     def image_dl(self, imagedict):
         ''' fetch an image and store it '''
         nowplaying.bootstrap.setuplogging(logdir=self.logpath, rotate=False)
