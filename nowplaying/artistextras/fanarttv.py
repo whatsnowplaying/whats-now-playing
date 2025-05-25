@@ -62,7 +62,7 @@ class Plugin(ArtistExtrasPlugin):
         logging.debug('got musicbrainzartistid: %s', metadata['musicbrainzartistid'])
         for artistid in metadata['musicbrainzartistid']:
             artist = await self._fetch_async(apikey, artistid)
-            if not artist:
+            if not artist or artist.get('status') == 'error':
                 return None
 
             # if artist.get('name') and nowplaying.utils.normalize(artist['name']) in fnstr:
