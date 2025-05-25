@@ -7,6 +7,7 @@ lookup times for frequently requested artists during live DJ performances.
 """
 
 import asyncio
+import base64
 import hashlib
 import json
 import logging
@@ -84,8 +85,8 @@ class APIResponseCache:
             await db.commit()
             logging.debug("API cache database initialized at %s", self.db_file)
 
-    def _make_cache_key(self,
-                        provider: str,
+    @staticmethod
+    def _make_cache_key(provider: str,
                         artist_name: str,
                         endpoint: str,
                         params: t.Optional[dict] = None) -> str:
@@ -114,7 +115,8 @@ class APIResponseCache:
         cache_string = json.dumps(cache_data, sort_keys=True)
         return hashlib.sha256(cache_string.encode('utf-8')).hexdigest()
 
-    def _serialize_handler(self, obj):
+    @staticmethod
+    def _serialize_handler(obj):
         """Handle non-JSON serializable objects during caching.
         
         Args:
@@ -128,20 +130,16 @@ class APIResponseCache:
         """
         if isinstance(obj, bytes):
             # Encode bytes as base64 for proper round-trip serialization
-            import base64
-            return {
-                '__type__': 'bytes',
-                '__data__': base64.b64encode(obj).decode('ascii')
-            }
-        elif callable(obj):
+            return {'__type__': 'bytes', '__data__': base64.b64encode(obj).decode('ascii')}
+        if callable(obj):
             # Don't cache functions, methods, lambdas, etc.
             raise TypeError(f"Cannot cache callable object: {type(obj)}")
-        else:
-            # For other types, convert to string representation
-            # This handles things like custom objects that might have useful string representations
-            return str(obj)
+        # For other types, convert to string representation
+        # This handles things like custom objects that might have useful string representations
+        return str(obj)
 
-    def _deserialize_handler(self, obj):
+    @staticmethod
+    def _deserialize_handler(obj):
         """Restore objects that were specially serialized during caching.
         
         Args:
@@ -153,17 +151,14 @@ class APIResponseCache:
         if isinstance(obj, dict):
             # Check if this is a specially encoded bytes object
             if obj.get('__type__') == 'bytes' and '__data__' in obj:
-                import base64
                 return base64.b64decode(obj['__data__'])
-            else:
-                # Recursively process dictionary values
-                return {key: self._deserialize_handler(value) for key, value in obj.items()}
-        elif isinstance(obj, list):
+            # Recursively process dictionary values
+            return {key: APIResponseCache._deserialize_handler(value) for key, value in obj.items()}
+        if isinstance(obj, list):
             # Recursively process list items
-            return [self._deserialize_handler(item) for item in obj]
-        else:
-            # Return as-is for other types
-            return obj
+            return [APIResponseCache._deserialize_handler(item) for item in obj]
+        # Return as-is for other types
+        return obj
 
     async def get(self,
                   provider: str,
@@ -181,7 +176,7 @@ class APIResponseCache:
         Returns:
             Cached response data or None if not found/expired
         """
-        cache_key = self._make_cache_key(provider, artist_name, endpoint, params)
+        cache_key = APIResponseCache._make_cache_key(provider, artist_name, endpoint, params)
         current_time = int(time.time())
 
         async with self._lock:
@@ -204,7 +199,7 @@ class APIResponseCache:
                         try:
                             cached_data = json.loads(response_data)
                             # Restore any bytes data that was base64 encoded
-                            restored_data = self._deserialize_handler(cached_data)
+                            restored_data = APIResponseCache._deserialize_handler(cached_data)
                             logging.debug("Cache HIT for %s:%s:%s (expires in %ds)", provider,
                                           artist_name, endpoint, expires_at - current_time)
                             return restored_data
@@ -237,7 +232,7 @@ class APIResponseCache:
         if not response_data:
             return
 
-        cache_key = self._make_cache_key(provider, artist_name, endpoint, params)
+        cache_key = APIResponseCache._make_cache_key(provider, artist_name, endpoint, params)
         current_time = int(time.time())
 
         if ttl_seconds is None:
@@ -246,7 +241,9 @@ class APIResponseCache:
         expires_at = current_time + ttl_seconds
 
         try:
-            response_json = json.dumps(response_data, ensure_ascii=False, default=self._serialize_handler)
+            response_json = json.dumps(response_data,
+                                       ensure_ascii=False,
+                                       default=APIResponseCache._serialize_handler)
         except (TypeError, ValueError) as e:
             logging.warning("Cannot serialize response data for caching: %s", e)
             return
@@ -362,7 +359,7 @@ class APIResponseCache:
                     "SELECT provider, COUNT(*) FROM api_responses "
                     "WHERE expires_at > ? GROUP BY provider", (current_time, ))
                 provider_rows = await cursor.fetchall()
-                by_provider = {provider: count for provider, count in provider_rows}
+                by_provider = dict(provider_rows)
 
                 # Most accessed artists
                 cursor = await db.execute(
