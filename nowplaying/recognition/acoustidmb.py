@@ -2,6 +2,7 @@
 # pylint: disable=invalid-name
 ''' Use acoustid w/help from musicbrainz to recognize the file '''
 
+import asyncio
 import copy
 import json
 import os
@@ -270,7 +271,7 @@ class Plugin(RecognitionPlugin):
         self.fpcalcexe = fpcalcexe
         return True
 
-    def recognize(self, metadata=None):  #pylint: disable=too-many-statements, too-many-return-statements, too-many-branches
+    async def recognize(self, metadata=None):  #pylint: disable=too-many-statements, too-many-return-statements, too-many-branches
         # we need to make sure we don't modify the passed
         # structure so do a deep copy here
         self.acoustidmd = copy.deepcopy(metadata)
@@ -327,7 +328,7 @@ class Plugin(RecognitionPlugin):
                          metadata['filename'])
             return self.acoustidmd
 
-        if musicbrainzlookup := self.musicbrainz.recordingid(
+        if musicbrainzlookup := await self.musicbrainz.recordingid(
                 self.acoustidmd['musicbrainzrecordingid']):
             if self.acoustidmd.get('musicbrainzartistid') and musicbrainzlookup.get(
                     'musicbrainzartistid'):
@@ -443,7 +444,7 @@ class Plugin(RecognitionPlugin):
         qsettings.setValue('acoustidmb/discogs', True)
 
 
-def main():
+async def main():
     ''' integration test '''
     filename = sys.argv[1]
 
@@ -453,7 +454,7 @@ def main():
     # need to make sure config is initialized with something
     nowplaying.config.ConfigFile(bundledir=bundledir)
     plugin = Plugin()
-    metadata = plugin.recognize({'filename': filename})
+    metadata = await plugin.recognize({'filename': filename})
     if not metadata:
         print('No information')
         sys.exit(1)
@@ -465,4 +466,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

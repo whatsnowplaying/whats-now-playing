@@ -296,7 +296,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             provider = any(meta not in self.metadata for meta in metalist)
             if provider:
                 try:
-                    if addmeta := self.config.pluginobjs['recognition'][plugin].recognize(
+                    if addmeta := await self.config.pluginobjs['recognition'][plugin].recognize(
                             metadata=self.metadata):
                         self.metadata = recognition_replacement(config=self.config,
                                                                 metadata=self.metadata,
