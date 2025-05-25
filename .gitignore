@@ -220,3 +220,20 @@ fixed_wheel
 # Qt resource cache files
 *.qrc.py
 
+# API cache (should not be in project root)
+api_cache/
+*.db
+*.db-journal
+
+# Type checking cache
+.pyright/
+pyrightconfig.json.bak
+
+# Development notes and temporary files
+.claude
+*-ideas.txt
+
+# Additional test artifacts
+.pytest_tmp/
+test-reports/
+

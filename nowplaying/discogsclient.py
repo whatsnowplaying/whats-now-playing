@@ -115,10 +115,8 @@ class AsyncDiscogsClient:
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.session: Optional[aiohttp.ClientSession] = None
         
-        # Create SSL context for reliability
+        # Create SSL context with proper certificate verification
         self.ssl_context = ssl.create_default_context()
-        self.ssl_context.check_hostname = False
-        self.ssl_context.verify_mode = ssl.CERT_NONE
     
     async def __aenter__(self):
         headers = {

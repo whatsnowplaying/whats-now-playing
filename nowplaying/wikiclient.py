@@ -37,11 +37,8 @@ class AsyncWikiClient:
     def __init__(self, timeout: int = 30):
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.session: Optional[aiohttp.ClientSession] = None
-        # Create SSL context that bypasses certificate verification issues
-        # This matches the behavior of the original wptools implementation
+        # Create SSL context with proper certificate verification
         self.ssl_context = ssl.create_default_context()
-        self.ssl_context.check_hostname = False
-        self.ssl_context.verify_mode = ssl.CERT_NONE
 
     async def __aenter__(self):
         connector = aiohttp.TCPConnector(ssl=self.ssl_context)

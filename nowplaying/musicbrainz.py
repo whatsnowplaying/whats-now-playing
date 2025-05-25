@@ -22,11 +22,6 @@ from nowplaying.utils import normalize_text, normalize, artist_name_variations
 REMIX_RE = re.compile(r'^\s*(.*)\s+[\(\[].*[\)\]]$')
 
 # Configure the async client with nowplaying-optimized settings
-musicbrainzngs.musicbrainz._max_retries = 2  # pylint: disable=protected-access
-musicbrainzngs.musicbrainz._timeout = 15  # pylint: disable=protected-access
-# WNP (typically) has large lulls between 2-3 calls that need to happen
-# quickly. so double the rate of calls to speed things up but still
-# keep a rate limiter in case the DJ is doing something stupid
 musicbrainzngs.set_rate_limit(limit_or_interval=.5)
 
 
@@ -66,7 +61,7 @@ class MusicBrainzHelper():
             musicbrainzngs.set_useragent('whats-now-playing', self.config.version, emailaddress)
             self.emailaddressset = True
 
-    def _pickarecording(self, testdata, mbdata, allowothers=False):  #pylint: disable=too-many-statements, too-many-branches
+    async def _pickarecording(self, testdata, mbdata, allowothers=False):  #pylint: disable=too-many-statements, too-many-branches
         ''' core routine for last ditch '''
 
         def _check_build_artid():
@@ -148,11 +143,11 @@ class MusicBrainzHelper():
                 if not allowothers and not _check_not_allow_others():
                     continue
                 logging.debug('checking %s', recording['id'])
-                if riddata := self.recordingid(recording['id']):
+                if riddata := await self.recordingid(recording['id']):
                     return riddata
         if not riddata and variousartistrid:
             logging.debug('Using a previous analyzed various artist release')
-            if riddata := self.recordingid(variousartistrid):
+            if riddata := await self.recordingid(variousartistrid):
                 riddata['musicbrainzartistid'] = mbartid
                 return riddata
         logging.debug('Exitting pick a recording')
@@ -171,7 +166,7 @@ class MusicBrainzHelper():
                                       artist, addmeta['title'], addmeta['album'])
                     continue
 
-                if riddata := self._pickarecording(addmeta, mydict) or self._pickarecording(
+                if riddata := await self._pickarecording(addmeta, mydict) or await self._pickarecording(
                         addmeta, mydict, allowothers=True):
                     return riddata
             return {}
@@ -217,10 +212,10 @@ class MusicBrainzHelper():
                 except Exception:  # pylint: disable=broad-exception-caught
                     logging.exception("musicbrainzngs.search_recordings- q:%s", query)
                 continue
-            if riddata := self._pickarecording(addmeta, mydict):
+            if riddata := await self._pickarecording(addmeta, mydict):
                 return riddata
 
-        if riddata := self._pickarecording(addmeta, mydict, allowothers=True):
+        if riddata := await self._pickarecording(addmeta, mydict, allowothers=True):
             return riddata
         logging.debug('Last ditch MB lookup failed. Sorry.')
         return riddata

@@ -3,7 +3,6 @@
 
 import asyncio
 import copy
-import concurrent.futures
 import contextlib
 import logging
 import re
@@ -333,17 +332,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             for plugin in plugins:
                 try:
                     plugin_obj = self.config.pluginobjs['artistextras'][plugin]
-                    # Use async method if available, otherwise fall back to sync in executor
-                    if hasattr(plugin_obj, 'download_async'):
-                        task = asyncio.create_task(
-                            plugin_obj.download_async(self.metadata, self.imagecache)
-                        )
-                    else:
-                        # Fallback for plugins without async support
-                        loop = asyncio.get_running_loop()
-                        task = loop.run_in_executor(
-                            None, plugin_obj.download, self.metadata, self.imagecache
-                        )
+                    # All artist extras plugins now have async support
+                    task = asyncio.create_task(
+                        plugin_obj.download_async(self.metadata, self.imagecache)
+                    )
                     tasks.append((plugin, task))
                     logging.debug('Started %s plugin task', plugin)
                 except Exception as error:  # pylint: disable=broad-except

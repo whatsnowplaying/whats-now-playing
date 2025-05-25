@@ -57,8 +57,10 @@ The test suite uses pytest with Qt support and includes fixtures for:
 
 Key testing patterns:
 - Tests are split into `tests/` (non-Qt) and `tests-qt/` (Qt-dependent)
+- Async tests use `@pytest.mark.asyncio` with `asyncio_mode = "strict"`
 - Custom markers for specialized test configurations
 - Coverage reporting configured to exclude vendor code and generated files
+- `asyncio_default_fixture_loop_scope = "function"` for proper async test isolation
 
 ### Development Notes
 
@@ -116,19 +118,27 @@ This application handles time-sensitive data retrieval and display that must be 
 **MusicBrainz Client (`musicbrainzclient.py`):**
 - Streamlined async client replacing vendored `musicbrainzngs` library 
 - Implements only the 9 methods actually used by nowplaying for minimal footprint
-- Optimized for live performance with 5-second timeouts and reduced complexity
+- Optimized for live performance with 15-second timeouts and reduced complexity
 - Full async/await support with aiohttp for non-blocking API calls
-- Proper SSL context handling with fallback for certificate verification issues
+- Proper SSL certificate verification with Python 3.11.12 + aiohttp 3.12.0
 - XML response parsing with error handling for API reliability
 - Integrates with existing `apicache.py` system for response caching via `musicbrainz.py`
 - Eliminates large vendored dependency while maintaining full functionality
 
-**Artist Extras System:**
+**Async Performance Architecture:**
+- **ZERO THREADS**: Complete elimination of ThreadPoolExecutor and concurrent.futures
 - All artist plugins (`discogs.py`, `theaudiodb.py`, `fanarttv.py`, `wikimedia.py`) converted to async
-- Native async execution in `metadata.py` replaces ThreadPoolExecutor for better performance
+- Native async execution in `metadata.py` with pure `asyncio.create_task()` concurrency
+- **Performance gains**: 20-60 seconds (sequential blocking) → 5-15 seconds (concurrent async)
 - Dynamic timeout calculation and early completion detection for optimized processing
 - Configuration-aware selective fetching across all plugins to minimize API calls
 - Unified async interface with `download_async()` method across all plugins
+- Multiple dedicated aiohttp sessions per service for maximum parallel performance
+
+**SSL Certificate Handling:**
+- All async clients use proper SSL certificate verification (no workarounds needed)
+- Resolved with Python 3.11.12 + aiohttp 3.12.0 + updated CA certificates
+- Eliminated permissive SSL fallbacks that were needed in older environment
 
 **Usage Patterns:**
 - Use `get_page_for_nowplaying()` for optimized Wikipedia data fetching
@@ -137,3 +147,13 @@ This application handles time-sensitive data retrieval and display that must be 
 - Clients maintain backward compatibility with existing sync interfaces where needed
 - All leverage existing `apicache.py` system for response caching
 - Performance optimizations are automatic - no manual configuration required
+
+**API Response Caching (`apicache.py`):**
+- Fast SQLite-based cache for external API responses with TTL support
+- Provides `get()`, `put()`, and `get_or_fetch()` methods for cache management
+- Provider-specific TTL settings: Discogs (24h), TheAudioDB/FanartTV (7d), Wikimedia (24h)
+- Artist name normalization for consistent cache lookups (handles case variations like "sELF" vs "Self")
+- Cache statistics and cleanup capabilities for maintenance
+- Thread-safe with asyncio.Lock for concurrent access
+- Global instance available via `get_cache_instance()` for application-wide use
+- Cache files stored in Qt standard cache location, not in project directory
