@@ -314,34 +314,75 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             await self._artist_extras()
 
     async def _artist_extras(self):
-        tasks: list[tuple[str, asyncio.Future]] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3,
-                                                   thread_name_prefix='artistextras') as pool:
-            for _, plugins in self.extraslist.items():
-                for plugin in plugins:
-                    try:
+        """Efficiently process artist extras plugins using native async calls"""
+        tasks: list[tuple[str, asyncio.Task]] = []
+        
+        # Calculate dynamic timeout based on delay setting
+        base_delay = self.config.cparser.value('settings/delay', type=float, defaultValue=10.0)
+        timeout = min(max(base_delay * 0.8, 3.0), 10.0)  # 3-10 second range
+        
+        # Start all plugin tasks concurrently using native async methods
+        for _, plugins in self.extraslist.items():
+            for plugin in plugins:
+                try:
+                    plugin_obj = self.config.pluginobjs['artistextras'][plugin]
+                    # Use async method if available, otherwise fall back to sync in executor
+                    if hasattr(plugin_obj, 'download_async'):
+                        task = asyncio.create_task(
+                            plugin_obj.download_async(self.metadata, self.imagecache)
+                        )
+                    else:
+                        # Fallback for plugins without async support
                         loop = asyncio.get_running_loop()
-                        tasks.append([
-                            plugin,
-                            loop.run_in_executor(
-                                pool, self.config.pluginobjs['artistextras'][plugin].download,
-                                self.metadata, self.imagecache)
-                        ])
+                        task = loop.run_in_executor(
+                            None, plugin_obj.download, self.metadata, self.imagecache
+                        )
+                    tasks.append((plugin, task))
+                    logging.debug('Started %s plugin task', plugin)
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.error('%s threw exception during setup: %s', plugin, error, exc_info=True)
 
-                    except Exception as error:  # pylint: disable=broad-except
-                        logging.error('%s threw exception %s', plugin, error, exc_info=True)
+        if not tasks:
+            return
 
-            await asyncio.sleep(5)
-            for taskinfo in tasks:
-                with contextlib.suppress(Exception):
-                    if not taskinfo[1].cancel():
-                        addmeta = await taskinfo[1].result()
+        # Wait for tasks with dynamic timeout and early completion detection
+        try:
+            # Use asyncio.wait with timeout instead of sleep + cancel
+            done, pending = await asyncio.wait(
+                [task for _, task in tasks],
+                timeout=timeout,
+                return_when=asyncio.FIRST_COMPLETED if len(tasks) > 1 else asyncio.ALL_COMPLETED
+            )
+            
+            # Process completed tasks immediately
+            for i, (plugin, task) in enumerate(tasks):
+                if task in done:
+                    try:
+                        addmeta = await task
                         if addmeta:
                             self.metadata = recognition_replacement(config=self.config,
                                                                     metadata=self.metadata,
                                                                     addmeta=addmeta)
-                    else:
-                        logging.debug("cancelling, timeout: %s", taskinfo[0])
+                            logging.debug('%s plugin completed successfully', plugin)
+                        else:
+                            logging.debug('%s plugin returned no data', plugin)
+                    except Exception as error:  # pylint: disable=broad-except
+                        logging.error('%s plugin failed: %s', plugin, error, exc_info=True)
+                
+                elif task in pending:
+                    logging.debug('%s plugin timed out after %ss', plugin, timeout)
+                    task.cancel()
+                    
+            # Wait briefly for any remaining tasks to clean up
+            if pending:
+                await asyncio.wait(pending, timeout=0.5)
+                
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error('Artist extras processing failed: %s', error, exc_info=True)
+            # Cancel any remaining tasks
+            for _, task in tasks:
+                if not task.done():
+                    task.cancel()
 
     def _generate_short_bio(self):
         if not self.metadata:

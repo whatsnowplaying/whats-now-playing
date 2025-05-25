@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' start of support of discogs '''
 
+import asyncio
 import logging
 import socket
 
@@ -173,6 +174,111 @@ class Plugin(ArtistExtrasPlugin):
         for variation in nowplaying.utils.artist_name_variations(metadata['artist']):
             metadata['artist'] = variation
             artistresultlist = self._find_discogs_artist_releaselist(metadata)
+            if artistresultlist:
+                break
+
+        metadata['artist'] = oldartist
+
+        if not artistresultlist:
+            logging.debug('discogs did not find it')
+            return None
+
+        self._process_metadata(metadata['imagecacheartist'], artistresultlist, imagecache)
+        return self.addmeta
+
+    async def _find_discogs_website_async(self, metadata, imagecache):
+        ''' async use websites listing to find discogs entries '''
+        if not self.client and not self._setup_client():
+            return False
+
+        if not self.client or not metadata.get('artistwebsites'):
+            return False
+
+        artistnum = 0
+        artist = None
+        discogs_websites = [url for url in metadata['artistwebsites'] if 'discogs' in url]
+        if len(discogs_websites) == 1:
+            artistnum = discogs_websites[0].split('/')[-1]
+            artist = await self.client.artist_async(artistnum)
+            artistname = str(artist.name)
+            logging.debug('Found a singular discogs artist URL using %s instead of %s', artistname,
+                          metadata['artist'])
+        elif len(discogs_websites) > 1:
+            for website in discogs_websites:
+                artistnum = website.split('/')[-1]
+                artist = await self.client.artist_async(artistnum)
+                webartistname = str(artist.name)
+                if nowplaying.utils.normalize(webartistname) == nowplaying.utils.normalize(
+                        metadata['artist']):
+                    logging.debug(
+                        'Found near exact match discogs artist URL %s using %s instead of %s',
+                        website, webartistname, metadata['artist'])
+                    artistname = webartistname
+                    break
+                artist = None
+        if artist:
+            self._process_metadata(metadata['imagecacheartist'], artist, imagecache)
+            return True
+
+        return False
+
+    async def _find_discogs_artist_releaselist_async(self, metadata):
+        ''' async given metadata, find the releases for an artist '''
+        if not self.client and not self._setup_client():
+            return None
+
+        if not self.client:
+            return None
+
+        artistname = metadata['artist']
+        try:
+            logging.debug('Fetching async %s - %s', artistname, metadata['album'])
+            resultlist = await self.client.search_async(metadata['album'], artist=artistname, type='title')
+            # Get first page if paginated results
+            if hasattr(resultlist, 'page'):
+                resultlist = resultlist.page(1)
+        except asyncio.TimeoutError:
+            logging.error('discogs async releaselist timeout error')
+            return None
+        except Exception as error:  # pragma: no cover pylint: disable=broad-except
+            logging.error('discogs async hit %s', error)
+            return None
+
+        return next(
+            (result.artists[0] for result in resultlist if isinstance(result, models.Release)),
+            None,
+        )
+
+    async def download_async(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches, too-many-return-statements
+        ''' async download content '''
+
+        if not self.config.cparser.value('discogs/enabled', type=bool):
+            return None
+
+        # discogs basically works by search for a combination of
+        # artist and album so we need both
+        if not metadata or not metadata.get('artist') or not metadata.get('album'):
+            logging.debug('artist or album is empty, skipping')
+            return None
+
+        if not self.client and not self._setup_client():
+            logging.error('No discogs apikey or client setup failed.')
+            return None
+
+        if not self.client:
+            return None
+
+        self.addmeta = {}
+
+        if await self._find_discogs_website_async(metadata, imagecache):
+            logging.debug('used discogs website')
+            return self.addmeta
+
+        oldartist = metadata['artist']
+        artistresultlist = None
+        for variation in nowplaying.utils.artist_name_variations(metadata['artist']):
+            metadata['artist'] = variation
+            artistresultlist = await self._find_discogs_artist_releaselist_async(metadata)
             if artistresultlist:
                 break
 

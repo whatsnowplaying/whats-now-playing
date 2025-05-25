@@ -51,10 +51,25 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             return None
         return page.json()
 
+    async def _fetch_async(self, apikey, api):
+        delay = self.calculate_delay()
+        try:
+            logging.debug('Fetching async %s', api)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f'https://theaudiodb.com/api/v1/json/{apikey}/{api}', 
+                                     timeout=aiohttp.ClientTimeout(total=delay)) as response:
+                    return await response.json()
+        except asyncio.TimeoutError:
+            logging.error('TheAudioDB _fetch_async hit timeout on %s', api)
+            return None
+        except Exception as error:  # pragma: no cover pylint: disable=broad-except
+            logging.error('TheAudioDB async hit %s', error)
+            return None
+
     async def _fetch_cached(self, apikey, api, artist_name):
         """Cached version of _fetch for better performance."""
         async def fetch_func():
-            return self._fetch(apikey, api)
+            return await self._fetch_async(apikey, api)
         
         return await nowplaying.cachingdecorator.cached_fetch(
             provider='theaudiodb',
@@ -192,19 +207,6 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
     def artistdatafrommbid(self, apikey, mbartistid, artist_name=None):
         ''' get artist data from mbid '''
-        # Try to use cached version if we have an event loop
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running() and artist_name:
-                # We're in an async context, use cached version
-                task = asyncio.create_task(
-                    self._fetch_cached(apikey, f'artist-mb.php?i={mbartistid}', artist_name)
-                )
-                # For now, fall back to sync version to maintain compatibility
-                pass
-        except RuntimeError:
-            pass
-            
         data = self._fetch(apikey, f'artist-mb.php?i={mbartistid}')
         if not data or not data.get('artists'):
             return None
@@ -215,20 +217,6 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         if not artist:
             return None
         urlart = requests.utils.requote_uri(artist)
-        
-        # Try to use cached version if we have an event loop
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # We're in an async context, use cached version
-                task = asyncio.create_task(
-                    self._fetch_cached(apikey, f'search.php?s={urlart}', artist)
-                )
-                # For now, fall back to sync version to maintain compatibility
-                pass
-        except RuntimeError:
-            pass
-            
         data = self._fetch(apikey, f'search.php?s={urlart}')
         if not data or not data.get('artists'):
             return None
@@ -250,6 +238,46 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         if not data or not data.get('artists'):
             return None
         return data
+
+    async def download_async(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches
+        ''' async do data lookup '''
+
+        if not self.config.cparser.value('theaudiodb/enabled', type=bool):
+            return None
+
+        if not metadata or not metadata.get('artist'):
+            logging.debug('No artist; skipping')
+            return None
+
+        apikey = self.config.cparser.value('theaudiodb/apikey')
+        if not apikey:
+            logging.debug('No API key.')
+            return None
+
+        extradata = []
+        self.fnstr = nowplaying.utils.normalize(metadata['artist'], sizecheck=4, nospaces=True)
+
+        # if musicbrainz lookup fails, then there likely isn't
+        # data in theaudiodb that matches.
+        if metadata.get('musicbrainzartistid'):
+            logging.debug('got musicbrainzartistid: %s', metadata['musicbrainzartistid'])
+            for mbid in metadata['musicbrainzartistid']:
+                if newdata := await self.artistdatafrommbid_async(apikey, mbid, metadata['artist']):
+                    extradata.extend(artist for artist in newdata['artists']
+                                     if self._check_artist(artist))
+
+        elif metadata.get('artist'):
+            logging.debug('got artist')
+            for variation in nowplaying.utils.artist_name_variations(metadata['artist']):
+                if artistdata := await self.artistdatafromname_async(apikey, variation):
+                    extradata.extend(artist for artist in artistdata.get('artists')
+                                     if self._check_artist(artist))
+                    break
+
+        if not extradata:
+            return None
+
+        return self._handle_extradata(extradata, metadata, imagecache)
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this plug-in '''
