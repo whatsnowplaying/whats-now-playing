@@ -6,12 +6,12 @@ Async Wikipedia/Wikidata client
 A minimal asyncio-based Wikipedia/Wikidata client that replaces wptools
 with just the functionality needed by the nowplaying application.
 """
+# pylint: disable=not-async-context-manager
 
 import asyncio
 import logging
 import ssl
-import time
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 import aiohttp
 
 
@@ -219,7 +219,7 @@ class AsyncWikiClient:
                         return page_data['imageinfo'][0].get('url')
 
                 return None
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             return None
 
     async def _get_wikipedia_images(self,
@@ -320,7 +320,7 @@ class AsyncWikiClient:
                         return page_data['imageinfo'][0].get('url')
 
                 return None
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             return None
 
     async def get_page(self,
@@ -355,8 +355,8 @@ class AsyncWikiClient:
                 all_images = wikidata_images + wikipedia_images
                 wiki_page._images = all_images[:max_images]  # pylint: disable=protected-access
 
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logging.debug("Error fetching page data for %s: %s", entity, e)
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.debug("Error fetching page data for %s: %s", entity, error)
 
         return wiki_page
 
@@ -364,7 +364,7 @@ class AsyncWikiClient:
 def page(wikibase: str, lang: str = 'en', silent: bool = True, timeout: int = 30) -> WikiPage:  # pylint: disable=unused-argument
     """
     Synchronous wrapper that mimics wptools.page() interface.
-    
+
     This function provides backward compatibility with the existing wptools usage.
     """
     return _get_page_sync(wikibase, lang, timeout, fetch_bio=True, fetch_images=True)
@@ -378,15 +378,15 @@ def get_page_for_nowplaying(entity: str,
                             max_images: int = 5) -> WikiPage:
     """
     Optimized synchronous method specifically for nowplaying wikimedia plugin.
-    
+
     Args:
         entity: Wikidata entity ID (e.g., 'Q11647')
         lang: Language code for Wikipedia content
         timeout: Request timeout in seconds (reduced default for live performance)
         need_bio: Whether to fetch biography/extract
-        need_images: Whether to fetch images  
+        need_images: Whether to fetch images
         max_images: Maximum number of images to fetch for performance
-        
+
     Returns:
         WikiPage with optimized data fetching based on actual needs
     """
@@ -436,15 +436,15 @@ async def get_page_async(entity: str,
                          max_images: int = 5) -> WikiPage:
     """
     Async function for nowplaying wikimedia plugin.
-    
+
     Args:
         entity: Wikidata entity ID (e.g., 'Q11647')
         lang: Language code for Wikipedia content
         timeout: Request timeout in seconds (reduced default for live performance)
         need_bio: Whether to fetch biography/extract
-        need_images: Whether to fetch images  
+        need_images: Whether to fetch images
         max_images: Maximum number of images to fetch for performance
-        
+
     Returns:
         WikiPage with optimized data fetching based on actual needs
     """

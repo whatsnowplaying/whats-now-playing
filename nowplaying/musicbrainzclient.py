@@ -20,13 +20,13 @@ from nowplaying.vendor.musicbrainzngs import mbxml
 logger = logging.getLogger(__name__)
 
 # MusicBrainz API configuration
-_base_url = "https://musicbrainz.org/ws/2"
-_caa_base_url = "https://coverartarchive.org"
-_user_agent = "whats-now-playing/1.0"
-_max_retries = 2
-_timeout = 15
-_rate_limit_interval = 0.5  # seconds between requests
-_last_request_time = 0
+_BASE_URL = "https://musicbrainz.org/ws/2"
+_CAA_BASE_URL = "https://coverartarchive.org"
+_USER_AGENT = "whats-now-playing/1.0"
+_MAX_RETRIES = 2
+_TIMEOUT = 15
+_RATE_LIMIT_INTERVAL = 0.5  # seconds between requests
+_LAST_REQUEST_TIME = 0
 _rate_limit_lock = asyncio.Lock()
 
 
@@ -44,25 +44,25 @@ class ResponseError(MusicBrainzError):
 
 def set_rate_limit(limit_or_interval: float = 0.5):
     """Set the rate limit interval between requests"""
-    global _rate_limit_interval
-    _rate_limit_interval = limit_or_interval
+    global _RATE_LIMIT_INTERVAL
+    _RATE_LIMIT_INTERVAL = limit_or_interval
 
 
 def set_useragent(app_name: str, app_version: str, contact: str):
     """Set the user agent string"""
-    global _user_agent
-    _user_agent = f"{app_name}/{app_version} ({contact})"
+    global _USER_AGENT
+    _USER_AGENT = f"{app_name}/{app_version} ({contact})"
 
 
 async def _rate_limit():
     """Enforce rate limiting between requests"""
-    global _last_request_time
+    global _LAST_REQUEST_TIME
     async with _rate_limit_lock:
         now = time.time()
-        time_since_last = now - _last_request_time
-        if time_since_last < _rate_limit_interval:
-            await asyncio.sleep(_rate_limit_interval - time_since_last)
-        _last_request_time = time.time()
+        time_since_last = now - _LAST_REQUEST_TIME
+        if time_since_last < _RATE_LIMIT_INTERVAL:
+            await asyncio.sleep(_RATE_LIMIT_INTERVAL - time_since_last)
+        _LAST_REQUEST_TIME = time.time()
 
 
 async def _make_request(url: str,
@@ -72,16 +72,16 @@ async def _make_request(url: str,
     await _rate_limit()
 
     if timeout is None:
-        timeout = _timeout
+        timeout = _TIMEOUT
 
     # Create SSL context with proper certificate verification
     ssl_context = ssl.create_default_context()
 
-    headers = {'User-Agent': _user_agent, 'Accept': 'application/xml'}
+    headers = {'User-Agent': _USER_AGENT, 'Accept': 'application/xml'}
 
     timeout_config = aiohttp.ClientTimeout(total=timeout)
 
-    for attempt in range(_max_retries + 1):
+    for attempt in range(_MAX_RETRIES + 1):
         try:
             connector = aiohttp.TCPConnector(ssl=ssl_context)
             async with aiohttp.ClientSession(connector=connector,
@@ -94,12 +94,13 @@ async def _make_request(url: str,
                             # Parse XML response using the existing mbxml parser
                             # mbxml.parse_message expects a file-like object
                             return mbxml.parse_message(io.StringIO(content))
-                        except etree.ParseError as e:
-                            raise ResponseError(f"Invalid XML response: {e}") from e
+                        except etree.ParseError as parse_error:
+                            raise ResponseError(
+                                f"Invalid XML response: {parse_error}") from parse_error
                     elif response.status == 404:
                         return {}  # Not found - return empty dict
                     elif response.status == 503:
-                        if attempt < _max_retries:
+                        if attempt < _MAX_RETRIES:
                             # Service unavailable - wait and retry
                             wait_time = 2**attempt
                             logger.debug("MusicBrainz 503 error, retrying in %ss", wait_time)
@@ -110,19 +111,19 @@ async def _make_request(url: str,
                         raise ResponseError(f"HTTP {response.status}: {await response.text()}")
 
         except asyncio.TimeoutError:
-            if attempt < _max_retries:
+            if attempt < _MAX_RETRIES:
                 logger.debug("Request timeout, retrying (attempt %d)", attempt + 1)
                 continue
-            raise NetworkError(f"Request timeout after {_max_retries} retries") from None
-        except aiohttp.ClientConnectorCertificateError as e:
-            raise NetworkError(f"SSL certificate verification failed: {e}") from e
-        except aiohttp.ClientError as e:
-            if attempt < _max_retries:
-                logger.debug("Client error: %s, retrying (attempt %d)", e, attempt + 1)
+            raise NetworkError(f"Request timeout after {_MAX_RETRIES} retries") from None
+        except aiohttp.ClientConnectorCertificateError as cert_error:
+            raise NetworkError(f"SSL certificate verification failed: {cert_error}") from cert_error  # pylint: disable=bad-exception-cause
+        except aiohttp.ClientError as client_error:
+            if attempt < _MAX_RETRIES:
+                logger.debug("Client error: %s, retrying (attempt %d)", client_error, attempt + 1)
                 continue
-            raise NetworkError(f"Request failed: {e}") from e
+            raise NetworkError(f"Request failed: {client_error}") from client_error
 
-    raise NetworkError(f"Failed after {_max_retries} retries")
+    raise NetworkError(f"Failed after {_MAX_RETRIES} retries")
 
 
 async def _make_image_request(url: str, timeout: Optional[int] = None) -> bytes:
@@ -130,7 +131,7 @@ async def _make_image_request(url: str, timeout: Optional[int] = None) -> bytes:
     await _rate_limit()
 
     if timeout is None:
-        timeout = _timeout
+        timeout = _TIMEOUT
 
     ssl_context = ssl.create_default_context()
     timeout_config = aiohttp.ClientTimeout(total=timeout)
@@ -166,7 +167,7 @@ async def search_recordings(**kwargs) -> Dict[str, Any]:
     if 'offset' in kwargs:
         params['offset'] = kwargs['offset']
 
-    url = f"{_base_url}/recording"
+    url = f"{_BASE_URL}/recording"
     return await _make_request(url, params)
 
 
@@ -177,7 +178,7 @@ async def get_recording_by_id(recording_id: str,
     if includes:
         params['inc'] = '+'.join(includes)
 
-    url = f"{_base_url}/recording/{recording_id}"
+    url = f"{_BASE_URL}/recording/{recording_id}"
     return await _make_request(url, params)
 
 
@@ -191,7 +192,7 @@ async def get_recordings_by_isrc(isrc: str,
     if release_status:
         params['status'] = '|'.join(release_status)
 
-    url = f"{_base_url}/isrc/{isrc}"
+    url = f"{_BASE_URL}/isrc/{isrc}"
     return await _make_request(url, params)
 
 
@@ -211,7 +212,7 @@ async def browse_releases(recording: str,
     if release_status:
         params['status'] = '|'.join(release_status)
 
-    url = f"{_base_url}/release"
+    url = f"{_BASE_URL}/release"
     return await _make_request(url, params)
 
 
@@ -221,7 +222,7 @@ async def get_artist_by_id(artist_id: str, includes: Optional[List[str]] = None)
     if includes:
         params['inc'] = '+'.join(includes)
 
-    url = f"{_base_url}/artist/{artist_id}"
+    url = f"{_BASE_URL}/artist/{artist_id}"
     return await _make_request(url, params)
 
 
@@ -243,7 +244,7 @@ async def search_releases(**kwargs) -> Dict[str, Any]:
     if 'offset' in kwargs:
         params['offset'] = kwargs['offset']
 
-    url = f"{_base_url}/release"
+    url = f"{_BASE_URL}/release"
     return await _make_request(url, params)
 
 
@@ -254,7 +255,7 @@ async def get_release_by_id(release_id: str,
     if includes:
         params['inc'] = '+'.join(includes)
 
-    url = f"{_base_url}/release/{release_id}"
+    url = f"{_BASE_URL}/release/{release_id}"
     return await _make_request(url, params)
 
 
@@ -276,7 +277,7 @@ async def search_release_groups(**kwargs) -> Dict[str, Any]:
     if 'offset' in kwargs:
         params['offset'] = kwargs['offset']
 
-    url = f"{_base_url}/release-group"
+    url = f"{_BASE_URL}/release-group"
     return await _make_request(url, params)
 
 
@@ -287,7 +288,7 @@ async def get_release_group_by_id(rg_id: str,
     if includes:
         params['inc'] = '+'.join(includes)
 
-    url = f"{_base_url}/release-group/{rg_id}"
+    url = f"{_BASE_URL}/release-group/{rg_id}"
     return await _make_request(url, params)
 
 
@@ -296,22 +297,22 @@ async def get_release_group_by_id(rg_id: str,
 
 async def get_image_list(mbid: str, entity_type: str = 'release') -> Dict[str, Any]:
     """Get cover art image list for a release or release group"""
-    url = f"{_caa_base_url}/{entity_type}/{mbid}"
+    url = f"{_CAA_BASE_URL}/{entity_type}/{mbid}"
     try:
         return await _make_request(url)
-    except ResponseError as e:
-        if "404" in str(e):
+    except ResponseError as response_error:
+        if "404" in str(response_error):
             return {}  # No cover art available
         raise
 
 
 async def get_image_front(mbid: str, entity_type: str = 'release', size: str = '500') -> bytes:
     """Get front cover art image"""
-    url = f"{_caa_base_url}/{entity_type}/{mbid}/front-{size}"
+    url = f"{_CAA_BASE_URL}/{entity_type}/{mbid}/front-{size}"
     return await _make_image_request(url)
 
 
 async def get_image_back(mbid: str, entity_type: str = 'release', size: str = '500') -> bytes:
     """Get back cover art image"""
-    url = f"{_caa_base_url}/{entity_type}/{mbid}/back-{size}"
+    url = f"{_CAA_BASE_URL}/{entity_type}/{mbid}/back-{size}"
     return await _make_image_request(url)

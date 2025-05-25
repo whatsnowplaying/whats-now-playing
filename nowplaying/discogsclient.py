@@ -267,14 +267,14 @@ def get_optimized_client_for_nowplaying(user_agent: str,
                                         timeout: int = 5) -> AsyncDiscogsClientWrapper:
     """
     Get an optimized Discogs client specifically for nowplaying usage.
-    
+
     Args:
         user_agent: User agent string for API requests
         user_token: Discogs API token
         need_bio: Whether biography data is needed (affects artist data fetching)
         need_images: Whether image data is needed (affects image limiting)
         timeout: Request timeout in seconds (reduced default for live performance)
-        
+
     Returns:
         Optimized AsyncDiscogsClientWrapper with performance settings for live use
     """

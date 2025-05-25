@@ -21,7 +21,11 @@ async def temp_cache():
         cache = nowplaying.apicache.APIResponseCache(cache_dir=cache_dir)
         # Wait for initialization to complete
         await cache._initialize_db()
-        yield cache
+        try:
+            yield cache
+        finally:
+            # Properly close the cache to prevent event loop warnings
+            await cache.close()
 
 
 @pytest.mark.asyncio

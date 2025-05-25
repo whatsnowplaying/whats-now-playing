@@ -5,7 +5,7 @@ import asyncio
 import logging
 
 import nowplaying.discogsclient
-from nowplaying.discogsclient import models
+from nowplaying.discogsclient import Models as models
 
 from nowplaying.artistextras import ArtistExtrasPlugin
 import nowplaying.utils
@@ -124,7 +124,7 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug('Fetching async %s - %s', artistname, metadata['album'])
             resultlist = await self.client.search_async(metadata['album'],
                                                         artist=artistname,
-                                                        type='title')
+                                                        search_type='title')
             # Get first page if paginated results
             if hasattr(resultlist, 'page'):
                 resultlist = resultlist.page(1)

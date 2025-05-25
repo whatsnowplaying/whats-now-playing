@@ -74,7 +74,7 @@ class APIResponseCache:
         self._lock = asyncio.Lock()
 
         # Initialize database if needed
-        asyncio.create_task(self._initialize_db())
+        self._init_task = asyncio.create_task(self._initialize_db())
 
     async def _initialize_db(self):
         """Initialize the database schema."""
@@ -419,6 +419,26 @@ class APIResponseCache:
 
             except sqlite3.Error as error:
                 logging.error("Database error clearing cache: %s", error)
+
+    async def close(self):
+        """Close the cache and clean up any pending operations.
+
+        This should be called before shutting down to prevent RuntimeError
+        warnings about closed event loops.
+        """
+        # Cancel the initialization task if it's still running
+        if hasattr(self, '_init_task') and not self._init_task.done():
+            self._init_task.cancel()
+            try:
+                await self._init_task
+            except asyncio.CancelledError:
+                pass
+
+        # Wait for any pending lock operations to complete
+        async with self._lock:
+            # This ensures all pending database operations complete
+            # before we shut down the event loop
+            pass
 
     def vacuum_database(self):
         """Vacuum the database to reclaim space from deleted entries.
