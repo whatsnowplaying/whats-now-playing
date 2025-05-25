@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' start of support of theaudiodb '''
 
+import asyncio
 import logging
 import logging.config
 import logging.handlers
@@ -13,11 +14,12 @@ import urllib3.exceptions
 
 import nowplaying.bootstrap
 import nowplaying.config
-from nowplaying.artistextras import ArtistExtrasPlugin
+import nowplaying.artistextras
+import nowplaying.cachingdecorator
 import nowplaying.utils
 
 
-class Plugin(ArtistExtrasPlugin):
+class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
     ''' handler for TheAudioDB '''
 
     def __init__(self, config=None, qsettings=None):
@@ -47,6 +49,19 @@ class Plugin(ArtistExtrasPlugin):
             logging.error('TheAudioDB hit %s', error)
             return None
         return page.json()
+
+    async def _fetch_cached(self, apikey, api, artist_name):
+        """Cached version of _fetch for better performance."""
+        async def fetch_func():
+            return self._fetch(apikey, api)
+        
+        return await nowplaying.cachingdecorator.cached_fetch(
+            provider='theaudiodb',
+            artist_name=artist_name,
+            endpoint=api.split('.')[0],  # Use the first part of API call as endpoint
+            fetch_func=fetch_func,
+            ttl_seconds=7 * 24 * 60 * 60  # 7 days for TheAudioDB data
+        )
 
     def _check_artist(self, artdata):
         ''' is this actually the artist we are looking for? '''
@@ -174,8 +189,21 @@ class Plugin(ArtistExtrasPlugin):
 
         return self._handle_extradata(extradata, metadata, imagecache)
 
-    def artistdatafrommbid(self, apikey, mbartistid):
+    def artistdatafrommbid(self, apikey, mbartistid, artist_name=None):
         ''' get artist data from mbid '''
+        # Try to use cached version if we have an event loop
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running() and artist_name:
+                # We're in an async context, use cached version
+                task = asyncio.create_task(
+                    self._fetch_cached(apikey, f'artist-mb.php?i={mbartistid}', artist_name)
+                )
+                # For now, fall back to sync version to maintain compatibility
+                pass
+        except RuntimeError:
+            pass
+            
         data = self._fetch(apikey, f'artist-mb.php?i={mbartistid}')
         if not data or not data.get('artists'):
             return None
@@ -186,7 +214,38 @@ class Plugin(ArtistExtrasPlugin):
         if not artist:
             return None
         urlart = requests.utils.requote_uri(artist)
+        
+        # Try to use cached version if we have an event loop
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # We're in an async context, use cached version
+                task = asyncio.create_task(
+                    self._fetch_cached(apikey, f'search.php?s={urlart}', artist)
+                )
+                # For now, fall back to sync version to maintain compatibility
+                pass
+        except RuntimeError:
+            pass
+            
         data = self._fetch(apikey, f'search.php?s={urlart}')
+        if not data or not data.get('artists'):
+            return None
+        return data
+
+    async def artistdatafrommbid_async(self, apikey, mbartistid, artist_name):
+        ''' async cached version of artistdatafrommbid '''
+        data = await self._fetch_cached(apikey, f'artist-mb.php?i={mbartistid}', artist_name)
+        if not data or not data.get('artists'):
+            return None
+        return data
+
+    async def artistdatafromname_async(self, apikey, artist):
+        ''' async cached version of artistdatafromname '''
+        if not artist:
+            return None
+        urlart = requests.utils.requote_uri(artist)
+        data = await self._fetch_cached(apikey, f'search.php?s={urlart}', artist)
         if not data or not data.get('artists'):
             return None
         return data
