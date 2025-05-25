@@ -42,9 +42,11 @@ This is a Python/Qt6 desktop application for streaming DJs to display "now playi
 
 **Key Subsystems:**
 - Template system for customizable output formatting
-- SQLite database for metadata caching
+- SQLite database for metadata caching (`db.py`)
+- API response caching system (`apicache.py`) with TTL support for external services
 - WebSocket server for real-time data streaming
 - Track request system for audience interaction
+- Async Wikipedia/Wikidata client (`wikiclient.py`) optimized for live performance
 
 ### Testing Setup
 
@@ -66,6 +68,11 @@ Key testing patterns:
 - The application uses multiprocessing for background tasks
 - Vendor dependencies are managed in `nowplaying/vendor/` to avoid conflicts
 
+**Import Style Guidelines:**
+- For non-vendored code, prefer explicit module imports over `from` imports
+- Example: Use `import nowplaying.wikiclient` instead of `from nowplaying import wikiclient`
+- This improves code clarity and reduces namespace pollution
+
 ### Performance Requirements
 
 This application handles time-sensitive data retrieval and display that must be available as soon as possible to sync with live music performance. When developing:
@@ -81,4 +88,21 @@ This application handles time-sensitive data retrieval and display that must be 
 - Track polling system (`processes/trackpoll.py`) for continuous DJ software monitoring
 - WebSocket streaming for immediate data delivery to OBS and other outputs
 - Direct file format parsing to avoid API dependencies during live performance
-- Caching systems (metadata DB, image cache) to prevent repeated lookups during shows
+- Caching systems (metadata DB, image cache, API cache) to prevent repeated lookups during shows
+- Optimized Wikipedia/Wikidata client with configuration-based selective fetching to minimize API calls
+
+### External API Integration
+
+**Wikipedia/Wikidata Client (`wikiclient.py`):**
+- Async client replacing wptools with performance optimizations for live use
+- Configuration-aware selective fetching (only fetches bio/images if enabled)
+- Combined API requests to reduce call count by 40-60% 
+- Reduced timeouts (5s) and image limits (5 max) for live performance
+- Uses existing `apicache.py` system (24-hour TTL) for response caching
+- Provides both async interface and sync compatibility wrapper
+- SSL certificate handling for reliability across environments
+
+**Usage Patterns:**
+- Use `get_page_for_nowplaying()` for optimized Wikipedia data fetching
+- Client automatically adapts behavior based on wikimedia plugin configuration
+- Maintains backward compatibility with existing wptools `page()` interface

@@ -7,6 +7,7 @@ import logging.config
 import logging.handlers
 import socket
 
+import aiohttp
 import requests
 import requests.exceptions
 import requests.utils

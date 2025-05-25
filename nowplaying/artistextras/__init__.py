@@ -19,8 +19,13 @@ class ArtistExtrasPlugin(WNPBasePlugin):
 #### Plug-in methods
 
     def download(self, metadata=None, imagecache=None) -> t.Optional[dict]:  #  pylint: disable=no-self-use,unused-argument
-        ''' return metadata '''
+        ''' return metadata (sync version) '''
         return None
+        
+    async def download_async(self, metadata=None, imagecache=None) -> t.Optional[dict]:  #  pylint: disable=no-self-use,unused-argument
+        ''' return metadata (async version) - override this in async plugins '''
+        # Default implementation calls sync version for backward compatibility
+        return self.download(metadata, imagecache)
 
     def providerinfo(self) -> t.Optional[list]:  # pylint: disable=no-self-use, unused-argument
         ''' return list of what is provided by this recognition system '''
