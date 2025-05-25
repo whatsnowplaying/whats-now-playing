@@ -58,7 +58,7 @@ class APIResponseCache:
 
     def __init__(self, cache_dir: t.Optional[pathlib.Path] = None):
         """Initialize the API cache.
-        
+
         Args:
             cache_dir: Optional custom cache directory. If None, uses Qt standard cache location.
         """
@@ -91,13 +91,13 @@ class APIResponseCache:
                         endpoint: str,
                         params: t.Optional[dict] = None) -> str:
         """Generate a cache key for the request.
-        
+
         Args:
             provider: API provider name (e.g., 'discogs', 'theaudiodb')
             artist_name: Artist name being queried
             endpoint: API endpoint or operation type
             params: Optional additional parameters that affect the response
-            
+
         Returns:
             SHA256 hash to use as cache key
         """
@@ -118,13 +118,13 @@ class APIResponseCache:
     @staticmethod
     def _serialize_handler(obj):
         """Handle non-JSON serializable objects during caching.
-        
+
         Args:
             obj: Object that failed standard JSON serialization
-            
+
         Returns:
             JSON-serializable representation
-            
+
         Raises:
             TypeError: For objects that shouldn't be cached (functions, etc.)
         """
@@ -141,10 +141,10 @@ class APIResponseCache:
     @staticmethod
     def _deserialize_handler(obj):
         """Restore objects that were specially serialized during caching.
-        
+
         Args:
             obj: Cached object to process
-            
+
         Returns:
             Object with restored types (e.g., base64 -> bytes)
         """
@@ -166,13 +166,13 @@ class APIResponseCache:
                   endpoint: str,
                   params: t.Optional[dict] = None) -> t.Optional[dict]:
         """Retrieve cached API response if available and not expired.
-        
+
         Args:
             provider: API provider name
-            artist_name: Artist name being queried  
+            artist_name: Artist name being queried
             endpoint: API endpoint or operation type
             params: Optional additional parameters
-            
+
         Returns:
             Cached response data or None if not found/expired
         """
@@ -220,11 +220,11 @@ class APIResponseCache:
                   ttl_seconds: t.Optional[int] = None,
                   params: t.Optional[dict] = None):
         """Store API response in cache.
-        
+
         Args:
             provider: API provider name
             artist_name: Artist name being queried
-            endpoint: API endpoint or operation type  
+            endpoint: API endpoint or operation type
             response_data: Response data to cache
             ttl_seconds: Time to live in seconds. If None, uses provider default.
             params: Optional additional parameters
@@ -274,11 +274,11 @@ class APIResponseCache:
                            ttl_seconds: t.Optional[int] = None,
                            params: t.Optional[dict] = None):
         """Get from cache or fetch and cache the result.
-        
-        This is a convenience method that handles the common pattern of 
+
+        This is a convenience method that handles the common pattern of
         checking cache first, and if not found, calling the fetch function
         and caching the result.
-        
+
         Args:
             provider: API provider name
             artist_name: Artist name being queried
@@ -286,7 +286,7 @@ class APIResponseCache:
             fetch_func: Async function to call if cache miss
             ttl_seconds: Time to live in seconds
             params: Optional additional parameters
-            
+
         Yields:
             The cached or fetched response data
         """
@@ -310,7 +310,7 @@ class APIResponseCache:
 
     async def cleanup_expired(self) -> int:
         """Remove expired cache entries.
-        
+
         Returns:
             Number of entries removed
         """
@@ -335,7 +335,7 @@ class APIResponseCache:
 
     async def get_cache_stats(self) -> dict:
         """Get cache usage statistics.
-        
+
         Returns:
             Dictionary with cache statistics
         """
@@ -383,7 +383,7 @@ class APIResponseCache:
 
     async def clear_cache(self, provider: t.Optional[str] = None):
         """Clear cache entries.
-        
+
         Args:
             provider: If specified, only clear entries for this provider.
                      If None, clear all entries.
@@ -402,6 +402,20 @@ class APIResponseCache:
 
             except sqlite3.Error as e:
                 logging.error("Database error clearing cache: %s", e)
+
+    def vacuum_database(self):
+        """Vacuum the database to reclaim space from deleted entries.
+        
+        This should be called on application shutdown to optimize disk usage.
+        """
+        try:
+            with sqlite3.connect(self.db_file) as db:
+                logging.debug("Vacuuming API cache database...")
+                db.execute("VACUUM")
+                db.commit()
+                logging.info("API cache database vacuumed successfully")
+        except sqlite3.Error as e:
+            logging.error("Database error during vacuum: %s", e)
 
 
 # Global cache instance for use across the application

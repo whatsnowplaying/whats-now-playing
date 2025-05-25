@@ -61,8 +61,8 @@ class CacheManager:
                     logging.info("Background cleanup removed %d expired cache entries", cleaned)
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logging.error("Error in background cache cleanup: %s", e)
+            except Exception as error:  # pylint: disable=broad-exception-caught
+                logging.error("Error in background cache cleanup: %s", error)
                 await asyncio.sleep(60)  # Wait before retrying
 
     async def get_detailed_stats(self) -> dict:
@@ -96,8 +96,8 @@ class CacheManager:
         estimated_bytes = total_entries * 2048
         return estimated_bytes / (1024 * 1024)
 
-    async def warm_cache_for_artists(self,
-                                     artist_names: t.List[str],
+    @staticmethod
+    async def warm_cache_for_artists(artist_names: t.List[str],
                                      providers: t.Optional[t.List[str]] = None):
         """Pre-warm cache for a list of artists.
         
@@ -122,7 +122,8 @@ class CacheManager:
 
         # TODO: Implement actual cache warming by calling plugin methods
 
-    async def clear_artist_cache(self, artist_name: str, provider: t.Optional[str] = None):
+    @staticmethod
+    async def clear_artist_cache(artist_name: str, provider: t.Optional[str] = None):
         """Clear cached data for a specific artist.
         
         Args:
@@ -213,7 +214,8 @@ async def setup_cache_management(
     manager = CacheManager(config)
 
     # Start background cleanup if configured
-    cleanup_enabled = True  # TODO: Read from config
+    # Default to enabled until config reading is implemented
+    cleanup_enabled = True
     if cleanup_enabled:
         await manager.start_background_cleanup(interval_hours=6.0)
 

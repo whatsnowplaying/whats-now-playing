@@ -351,6 +351,23 @@ class MetadataDB:
             cursor.execute(sql)
             logging.debug('Cache db file created')
 
+    def vacuum_database(self):
+        """Vacuum the metadata database to reclaim space from deleted entries.
+        
+        This should be called on application shutdown to optimize disk usage.
+        """
+        if not self.databasefile or not self.databasefile.exists():
+            return
+            
+        try:
+            with sqlite3.connect(self.databasefile, timeout=10) as connection:
+                logging.debug("Vacuuming metadata database...")
+                connection.execute("VACUUM")
+                connection.commit()
+                logging.info("Metadata database vacuumed successfully")
+        except sqlite3.Error as e:
+            logging.error("Database error during vacuum: %s", e)
+
 
 def create_setlist(config=None, databasefile=None):
     ''' create the setlist '''

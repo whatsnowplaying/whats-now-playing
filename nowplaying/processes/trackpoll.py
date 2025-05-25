@@ -150,6 +150,11 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         if self.imagecache:
             logging.debug('stopping imagecache')
             self.imagecache.stop_process()
+            # Vacuum the imagecache database on shutdown to reclaim space
+            try:
+                self.imagecache.vacuum_database()
+            except Exception as error:  # pylint: disable=broad-exception-caught
+                logging.error("Error vacuuming image cache database: %s", error)
         if self.icprocess:
             logging.debug('joining imagecache')
             self.icprocess.join()

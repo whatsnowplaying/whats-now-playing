@@ -8,8 +8,10 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module
 from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=no-name-in-module
 
+import nowplaying.apicache
 import nowplaying.config
 import nowplaying.db
+import nowplaying.imagecache
 import nowplaying.settingsui
 import nowplaying.subprocesses
 import nowplaying.twitch.chat
@@ -234,6 +236,19 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.settings_action.setEnabled(False)
 
         self.subprocesses.stop_all_processes()
+
+        # Vacuum databases on shutdown to reclaim space
+        try:
+            cache = nowplaying.apicache.get_cache()
+            cache.vacuum_database()
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.error("Error vacuuming API cache: %s", error)
+
+        try:
+            metadb = nowplaying.db.MetadataDB()
+            metadb.vacuum_database()
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.error("Error vacuuming metadata database: %s", error)
 
     def fresh_start_quit(self):
         ''' wipe the current config '''
