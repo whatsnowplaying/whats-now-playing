@@ -229,8 +229,15 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if not self.metadata:
             return None
 
+        # Check if we already have key MusicBrainz data to avoid unnecessary lookups
+        if (self.metadata.get('musicbrainzartistid') and 
+            self.metadata.get('musicbrainzrecordingid') and
+            self.metadata.get('isrc')):
+            logging.debug('Skipping MusicBrainz lookup - already have key identifiers')
+            return
+
         musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
-        addmeta = musicbrainz.recognize(copy.copy(self.metadata))
+        addmeta = await musicbrainz.recognize(copy.copy(self.metadata))
         self.metadata = recognition_replacement(config=self.config,
                                                 metadata=self.metadata,
                                                 addmeta=addmeta)
@@ -252,7 +259,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         logging.debug('Attempting musicbrainz fallback')
 
         musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
-        addmeta = musicbrainz.lastditcheffort(copy.copy(self.metadata))
+        addmeta = await musicbrainz.lastditcheffort(copy.copy(self.metadata))
         self.metadata = recognition_replacement(config=self.config,
                                                 metadata=self.metadata,
                                                 addmeta=addmeta)
@@ -261,9 +268,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if (not addmeta or not addmeta.get('album')) and ' - ' in self.metadata['title']:
             if comments := self.metadata.get('comments'):
                 if YOUTUBE_MATCH_RE.match(comments):
-                    self._mb_youtube_fallback(musicbrainz)
+                    await self._mb_youtube_fallback(musicbrainz)
 
-    def _mb_youtube_fallback(self, musicbrainz):
+    async def _mb_youtube_fallback(self, musicbrainz):
         if not self.metadata:
             return
         addmeta2 = copy.deepcopy(self.metadata)
@@ -274,7 +281,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         logging.debug('Youtube video fallback with %s and %s', artist, title)
 
         try:
-            if addmeta := musicbrainz.lastditcheffort(addmeta2):
+            if addmeta := await musicbrainz.lastditcheffort(addmeta2):
                 self.metadata['artist'] = artist
                 self.metadata['title'] = title
                 self.metadata = recognition_replacement(config=self.config,

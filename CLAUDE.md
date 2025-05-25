@@ -113,11 +113,27 @@ This application handles time-sensitive data retrieval and display that must be 
 - Reduces dependency footprint by eliminating large vendored library
 - Uses aiohttp for non-blocking API calls with 6-20% performance improvement
 
+**MusicBrainz Client (`musicbrainzclient.py`):**
+- Streamlined async client replacing vendored `musicbrainzngs` library 
+- Implements only the 9 methods actually used by nowplaying for minimal footprint
+- Optimized for live performance with 5-second timeouts and reduced complexity
+- Full async/await support with aiohttp for non-blocking API calls
+- Proper SSL context handling with fallback for certificate verification issues
+- XML response parsing with error handling for API reliability
+- Integrates with existing `apicache.py` system for response caching via `musicbrainz.py`
+- Eliminates large vendored dependency while maintaining full functionality
+
+**Artist Extras System:**
+- All artist plugins (`discogs.py`, `theaudiodb.py`, `fanarttv.py`, `wikimedia.py`) converted to async
+- Native async execution in `metadata.py` replaces ThreadPoolExecutor for better performance
+- Dynamic timeout calculation and early completion detection for optimized processing
+- Configuration-aware selective fetching across all plugins to minimize API calls
+- Unified async interface with `download_async()` method across all plugins
+
 **Usage Patterns:**
 - Use `get_page_for_nowplaying()` for optimized Wikipedia data fetching
 - Use `get_optimized_client_for_nowplaying()` for performance-tuned Discogs access
-- Both clients automatically adapt behavior based on plugin configuration settings
-- Discogs client is a transparent replacement - existing plugin code unchanged
-- Both clients maintain backward compatibility with existing sync interfaces
-- Both leverage existing `apicache.py` system for response caching
+- All async clients automatically adapt behavior based on plugin configuration settings
+- Clients maintain backward compatibility with existing sync interfaces where needed
+- All leverage existing `apicache.py` system for response caching
 - Performance optimizations are automatic - no manual configuration required
