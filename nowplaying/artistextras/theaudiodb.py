@@ -75,7 +75,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                 nowplaying.utils.normalize(artdata.get(fieldname), sizecheck=4, nospaces=True))
         return False
 
-    def _handle_extradata(self, extradata, metadata, imagecache):  # pylint: disable=too-many-branches
+    def _handle_extradata(self, extradata, metadata, imagecache, used_musicbrainz=False):  # pylint: disable=too-many-branches
         ''' deal with the various bits of data '''
         lang1 = self.config.cparser.value('theaudiodb/bio_iso')
 
@@ -144,6 +144,17 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         if bio:
             metadata['artistlongbio'] = bio
 
+        # For name-based searches (not MusicBrainz), extract corrected artist name from API response
+        if not used_musicbrainz and extradata:
+            for artdata in extradata:
+                if self._check_artist(artdata) and artdata.get('strArtist'):
+                    corrected_artist = artdata['strArtist']
+                    if corrected_artist != metadata['artist']:
+                        logging.debug('TheAudioDB corrected artist name: %s -> %s',
+                                    metadata['artist'], corrected_artist)
+                        metadata['artist'] = corrected_artist
+                    break
+
         return metadata
 
     async def artistdatafrommbid_async(self, apikey, mbartistid, artist_name):
@@ -179,18 +190,20 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             return None
 
         extradata = []
+        used_musicbrainz = False
         self.fnstr = nowplaying.utils.normalize(metadata['artist'], sizecheck=4, nospaces=True)
 
-        # if musicbrainz lookup fails, then there likely isn't
-        # data in theaudiodb that matches.
+        # Try MusicBrainz ID first if available
         if metadata.get('musicbrainzartistid'):
             logging.debug('got musicbrainzartistid: %s', metadata['musicbrainzartistid'])
             for mbid in metadata['musicbrainzartistid']:
                 if newdata := await self.artistdatafrommbid_async(apikey, mbid, metadata['artist']):
                     extradata.extend(artist for artist in newdata['artists']
                                      if self._check_artist(artist))
+                    used_musicbrainz = True
 
-        elif metadata.get('artist'):
+        # Fall back to name-based search if no MusicBrainz data found
+        if not extradata and metadata.get('artist'):
             logging.debug('got artist')
             for variation in nowplaying.utils.artist_name_variations(metadata['artist']):
                 if artistdata := await self.artistdatafromname_async(apikey, variation):
@@ -201,7 +214,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         if not extradata:
             return None
 
-        return self._handle_extradata(extradata, metadata, imagecache)
+        return self._handle_extradata(extradata, metadata, imagecache, used_musicbrainz)
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this plug-in '''

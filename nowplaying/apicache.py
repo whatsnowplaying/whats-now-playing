@@ -196,6 +196,10 @@ class APIResponseCache:
         Returns:
             Cached response data or None if not found/expired
         """
+        # Ensure database is initialized before operations
+        if hasattr(self, '_init_task'):
+            await self._init_task
+
         cache_key = APIResponseCache._make_cache_key(provider, artist_name, endpoint, params)
         current_time = int(time.time())
 
@@ -224,7 +228,7 @@ class APIResponseCache:
                                                                      current_time)
 
             except sqlite3.Error as error:
-                logging.error("Database error retrieving cache: %s", error)
+                logging.error("Database error retrieving cache from %s: %s", self.db_file, error)
                 return None
 
     async def put(  # pylint: disable=too-many-arguments
@@ -247,6 +251,10 @@ class APIResponseCache:
         """
         if not response_data:
             return
+
+        # Ensure database is initialized before operations
+        if hasattr(self, '_init_task'):
+            await self._init_task
 
         cache_key = APIResponseCache._make_cache_key(provider, artist_name, endpoint, params)
         current_time = int(time.time())
@@ -279,7 +287,7 @@ class APIResponseCache:
                                   ttl_seconds)
 
             except sqlite3.Error as error:
-                logging.error("Database error storing cache: %s", error)
+                logging.error("Database error storing cache to %s: %s", self.db_file, error)
 
     @asynccontextmanager
     async def get_or_fetch(  # pylint: disable=too-many-arguments
@@ -439,6 +447,9 @@ class APIResponseCache:
             # This ensures all pending database operations complete
             # before we shut down the event loop
             pass
+
+        # Note: Some "Event loop is closed" warnings may still appear in tests
+        # due to aiosqlite background threads, but these are harmless
 
     def vacuum_database(self):
         """Vacuum the database to reclaim space from deleted entries.

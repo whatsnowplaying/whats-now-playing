@@ -14,7 +14,7 @@ import pytest
 import pytest_asyncio
 
 import nowplaying.apicache  # pylint: disable=import-error
-from nowplaying.apicache import cached_fetch
+from nowplaying.apicache import cached_fetch  # pylint: disable=import-error,no-name-in-module
 
 
 @pytest_asyncio.fixture
@@ -809,67 +809,72 @@ async def test_cache_theaudiodb_response_format(temp_cache):  # pylint: disable=
 
 
 @pytest.mark.asyncio
-async def test_cached_fetch_preserves_artist_names():
+async def test_cached_fetch_preserves_artist_names(temp_cache):  # pylint: disable=redefined-outer-name
     """Test that cached_fetch (used by theaudiodb) preserves original artist names."""
 
-    # Mock API response that includes artist name (like TheAudioDB returns)
-    original_artist = 'Nine Inch Nails'
-    api_response = {
-        'artists': [
-            {
-                'strArtist': original_artist,
-                'strBiographyEN': 'Industrial rock band from Cleveland...',
-                'strGenre': 'Industrial Rock'
-            }
-        ]
-    }
+    # Use the temporary cache for this test to ensure isolation
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(temp_cache)
+    try:
+        # Mock API response that includes artist name (like TheAudioDB returns)
+        original_artist = 'Nine Inch Nails'
+        api_response = {
+            'artists': [
+                {
+                    'strArtist': original_artist,
+                    'strBiographyEN': 'Industrial rock band from Cleveland...',
+                    'strGenre': 'Industrial Rock'
+                }
+            ]
+        }
 
-    async def mock_theaudiodb_fetch():
-        """Mock TheAudioDB API call that returns artist data."""
-        return api_response
+        async def mock_theaudiodb_fetch():
+            """Mock TheAudioDB API call that returns artist data."""
+            return api_response
 
-    # First call should fetch from API and cache
-    result1 = await cached_fetch(
-        provider='theaudiodb',
-        artist_name=original_artist,
-        endpoint='artist_info',
-        fetch_func=mock_theaudiodb_fetch,
-        ttl_seconds=300
-    )
+        # First call should fetch from API and cache
+        result1 = await cached_fetch(
+            provider='theaudiodb',
+            artist_name=original_artist,
+            endpoint='artist_info',
+            fetch_func=mock_theaudiodb_fetch,
+            ttl_seconds=300
+        )
 
-    # Verify first call result preserves artist name
-    assert result1 is not None
-    assert result1['artists'][0]['strArtist'] == original_artist
+        # Verify first call result preserves artist name
+        assert result1 is not None
+        assert result1['artists'][0]['strArtist'] == original_artist
 
-    # Second call should come from cache
-    async def should_not_be_called():
-        """This shouldn't be called if cache is working."""
-        raise AssertionError("Fetch function called when data should be cached")
+        # Second call should come from cache
+        async def should_not_be_called():
+            """This shouldn't be called if cache is working."""
+            raise AssertionError("Fetch function called when data should be cached")
 
-    result2 = await cached_fetch(
-        provider='theaudiodb',
-        artist_name=original_artist,
-        endpoint='artist_info',
-        fetch_func=should_not_be_called,
-        ttl_seconds=300
-    )
+        result2 = await cached_fetch(
+            provider='theaudiodb',
+            artist_name=original_artist,
+            endpoint='artist_info',
+            fetch_func=should_not_be_called,
+            ttl_seconds=300
+        )
 
-    # Critical test: cached result should preserve original artist name
-    assert result2 is not None
-    assert result2['artists'][0]['strArtist'] == original_artist, \
-        f"Cached result changed artist name to: {result2['artists'][0]['strArtist']}"
+        # Critical test: cached result should preserve original artist name
+        assert result2 is not None
+        assert result2['artists'][0]['strArtist'] == original_artist, \
+            f"Cached result changed artist name to: {result2['artists'][0]['strArtist']}"
 
-    # Test that normalized lookup also works and preserves original name
-    result3 = await cached_fetch(
-        provider='theaudiodb',
-        artist_name='NINE INCH NAILS',  # Different casing
-        endpoint='artist_info',
-        fetch_func=should_not_be_called,
-        ttl_seconds=300
-    )
+        # Test that normalized lookup also works and preserves original name
+        result3 = await cached_fetch(
+            provider='theaudiodb',
+            artist_name='NINE INCH NAILS',  # Different casing
+            endpoint='artist_info',
+            fetch_func=should_not_be_called,
+            ttl_seconds=300
+        )
 
-    assert result3 is not None
-    assert result3['artists'][0]['strArtist'] == original_artist, \
-        f"Normalized lookup changed artist name to: {result3['artists'][0]['strArtist']}"
-
-
+        assert result3 is not None
+        assert result3['artists'][0]['strArtist'] == original_artist, \
+            f"Normalized lookup changed artist name to: {result3['artists'][0]['strArtist']}"
+    finally:
+        # Restore original cache instance
+        nowplaying.apicache.set_cache_instance(original_cache)

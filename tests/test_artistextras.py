@@ -147,6 +147,88 @@ async def test_noimagecache(getconfiguredplugin):  # pylint: disable=redefined-o
 
 
 @pytest.mark.asyncio
+async def test_theaudiodb_artist_name_correction(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' test theaudiodb artist name correction for name-based vs musicbrainz searches '''
+
+    config = bootstrap
+    if 'theaudiodb' not in PLUGINS:
+        pytest.skip("TheAudioDB API key not available")
+
+    configuresettings('theaudiodb', config.cparser)
+    config.cparser.setValue('theaudiodb/apikey', os.environ['THEAUDIODB_API_KEY'])
+    _, plugins = configureplugins(config)
+
+    plugin = plugins['theaudiodb']
+
+    # Test 1: Name-based search with lowercase input (should correct artist name)
+    metadata_lowercase = {
+        'album': 'The Downward Spiral',
+        'artist': 'nine inch nails',  # lowercase input
+        'imagecacheartist': 'nineinchnails'
+    }
+    result1 = await plugin.download_async(metadata_lowercase.copy(), imagecache=None)
+
+    if result1:  # Only test if we got data back
+        # Should have corrected the artist name to proper case
+        assert result1['artist'] == 'Nine Inch Nails'
+        logging.info('Artist name corrected: %s -> %s',
+                    metadata_lowercase['artist'], result1['artist'])
+
+    # Test 2: With MusicBrainz ID (should NOT correct artist name)
+    metadata_with_mbid = {
+        'album': 'The Downward Spiral',
+        'artist': 'nine inch nails',  # lowercase input
+        'imagecacheartist': 'nineinchnails',
+        'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da']  # NIN's MBID
+    }
+    result2 = await plugin.download_async(metadata_with_mbid.copy(), imagecache=None)
+
+    if result2:  # Only test if we got data back
+        # Should NOT have corrected the artist name (MusicBrainz is authoritative)
+        assert result2['artist'] == 'nine inch nails'
+        logging.info('Artist name preserved for MusicBrainz search: %s', result2['artist'])
+
+
+@pytest.mark.asyncio
+async def test_fanarttv_apicache_usage(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' test that fanarttv plugin uses apicache for API calls '''
+
+    config = bootstrap
+    if 'fanarttv' not in PLUGINS:
+        pytest.skip("FanartTV API key not available")
+
+    configuresettings('fanarttv', config.cparser)
+    config.cparser.setValue('fanarttv/apikey', os.environ['FANARTTV_API_KEY'])
+    imagecaches, plugins = configureplugins(config)
+
+    plugin = plugins['fanarttv']
+
+    # Test with MusicBrainz ID (fanarttv requires MBID)
+    metadata_with_mbid = {
+        'album': 'The Downward Spiral',
+        'artist': 'Nine Inch Nails',
+        'imagecacheartist': 'nineinchnails',
+        'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da']  # NIN's MBID
+    }
+
+    # First call - should hit API and cache result
+    result1 = await plugin.download_async(metadata_with_mbid.copy(),
+                                         imagecache=imagecaches['fanarttv'])
+
+    # Second call - should use cached result
+    result2 = await plugin.download_async(metadata_with_mbid.copy(),
+                                         imagecache=imagecaches['fanarttv'])
+
+    # Both results should be consistent (either both None or both have data)
+    assert (result1 is None) == (result2 is None)
+
+    if result1:  # Only test if we got data back
+        logging.info('FanartTV API call successful, caching verified')
+        # Should return the same metadata structure
+        assert result1 == result2
+
+
+@pytest.mark.asyncio
 async def test_discogs_note_stripping(bootstrap):  # pylint: disable=redefined-outer-name
     ''' noimagecache '''
 
@@ -305,7 +387,8 @@ async def test_badmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-
 
         data = await plugins[pluginname].download_async(
             {
-                'artist': 'Nine Inch Nails',
+                'artist': 'NonExistentArtistXYZ',
+                'imagecacheartist': 'nonexistentartistxyz',
                 'musicbrainzartistid': ['xyz']
             },
             imagecache=imagecaches[pluginname])

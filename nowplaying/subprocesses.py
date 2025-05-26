@@ -4,7 +4,7 @@
 import importlib
 import logging
 import multiprocessing
-import time
+
 
 class SubprocessManager:
     ''' manage all of the subprocesses '''
@@ -42,13 +42,11 @@ class SubprocessManager:
             if module.get('process'):
                 logging.debug('Early notifying %s', key)
                 module['stopevent'].set()
-                time.sleep(5)
 
         for key in self.processes:
-            logging.debug('calling stop %s', key)
             func = getattr(self, f'stop_{key}')
             func()
-            time.sleep(5)
+
         if not self.config.cparser.value('control/beam', type=bool):
             self.stop_obsws()
 

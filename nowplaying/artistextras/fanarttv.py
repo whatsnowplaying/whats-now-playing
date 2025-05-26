@@ -8,9 +8,8 @@ import logging.handlers
 
 import aiohttp
 
-#import nowplaying.config
+import nowplaying.apicache
 from nowplaying.artistextras import ArtistExtrasPlugin
-#import nowplaying.utils
 
 
 class Plugin(ArtistExtrasPlugin):
@@ -40,6 +39,20 @@ class Plugin(ArtistExtrasPlugin):
             logging.error('fanart.tv async: %s', error)
             return None
 
+    async def _fetch_cached(self, apikey, artistid, artist_name):
+        """Cached version of _fetch for better performance."""
+
+        async def fetch_func():
+            return await self._fetch_async(apikey, artistid)
+
+        return await nowplaying.apicache.cached_fetch(
+            provider='fanarttv',
+            artist_name=artist_name,
+            endpoint=f'music/{artistid}',  # Use the API endpoint path
+            fetch_func=fetch_func,
+            ttl_seconds=7 * 24 * 60 * 60  # 7 days for FanartTV data per CLAUDE.md
+        )
+
     async def download_async(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches
         ''' async download the extra data '''
 
@@ -61,7 +74,7 @@ class Plugin(ArtistExtrasPlugin):
         #fnstr = nowplaying.utils.normalize(metadata['artist'])
         logging.debug('got musicbrainzartistid: %s', metadata['musicbrainzartistid'])
         for artistid in metadata['musicbrainzartistid']:
-            artist = await self._fetch_async(apikey, artistid)
+            artist = await self._fetch_cached(apikey, artistid, metadata['artist'])
             if not artist or artist.get('status') == 'error':
                 return None
 
