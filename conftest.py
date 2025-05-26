@@ -11,12 +11,14 @@ import tempfile
 import unittest.mock
 
 import pytest
+import pytest_asyncio
 
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
+import nowplaying.apicache
 
 # if sys.platform == 'darwin':
 #     import psutil
@@ -135,3 +137,19 @@ def clear_old_testsuite():
     if filename.exists():
         filename.unlink()
     reboot_macosx_prefs()
+
+
+@pytest_asyncio.fixture
+async def temp_api_cache():
+    """Create a temporary API cache for testing."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        cache_dir = pathlib.Path(temp_dir)
+        cache = nowplaying.apicache.APIResponseCache(cache_dir=cache_dir)
+        # Wait for initialization to complete
+        await cache._initialize_db()  # pylint: disable=protected-access
+        try:
+            yield cache
+        finally:
+            # Properly close the cache to prevent event loop warnings
+            if hasattr(cache, 'close'):
+                await cache.close()

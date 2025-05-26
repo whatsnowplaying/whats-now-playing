@@ -8,6 +8,7 @@ import typing as t
 import pytest
 
 import nowplaying.metadata  # pylint: disable=import-error
+import nowplaying.apicache  # pylint: disable=import-error
 
 PLUGINS = ['wikimedia']
 
@@ -190,80 +191,372 @@ async def test_theaudiodb_artist_name_correction(bootstrap):  # pylint: disable=
 
 
 @pytest.mark.asyncio
-async def test_fanarttv_apicache_usage(bootstrap):  # pylint: disable=redefined-outer-name
+async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' test theaudiodb plugin falls back to name-based search when MusicBrainz ID is invalid '''
+
+    config = bootstrap
+    if 'theaudiodb' not in PLUGINS:
+        pytest.skip("TheAudioDB API key not available")
+
+    configuresettings('theaudiodb', config.cparser)
+    config.cparser.setValue('theaudiodb/apikey', os.environ['THEAUDIODB_API_KEY'])
+    _, plugins = configureplugins(config)
+
+    plugin = plugins['theaudiodb']
+
+    # Mock the MBID and name-based fetch methods to track calls
+    original_mbid_fetch = plugin.artistdatafrommbid_async
+    original_name_fetch = plugin.artistdatafromname_async
+
+    mbid_call_count = 0
+    name_call_count = 0
+
+    async def mock_mbid_fetch(apikey, mbartistid, artist_name):
+        nonlocal mbid_call_count
+        mbid_call_count += 1
+        logging.debug(f'MBID fetch call #{mbid_call_count} for MBID: {mbartistid}')
+
+        if mbartistid == 'invalid-mbid-12345':
+            # Simulate invalid MBID - API returns no results
+            logging.debug('Simulating invalid MBID response')
+            return None
+        else:
+            # Call original method for valid MBIDs
+            return await original_mbid_fetch(apikey, mbartistid, artist_name)
+
+    async def mock_name_fetch(apikey, artist):
+        nonlocal name_call_count
+        name_call_count += 1
+        logging.debug(f'Name fetch call #{name_call_count} for artist: {artist}')
+
+        # Call original method but simulate finding data for Nine Inch Nails
+        if 'nine inch nails' in artist.lower():
+            # Return minimal mock data to simulate successful name-based search
+            return {
+                'artists': [{
+                    'idArtist': '111239',
+                    'strArtist': 'Nine Inch Nails',  # Corrected capitalization
+                    'strBiographyEN': 'Mock biography for Nine Inch Nails',
+                    'strArtistLogo': None,
+                    'strArtistThumb': None,
+                    'strArtistFanart': None,
+                    'strArtistBanner': None
+                }]
+            }
+        else:
+            return await original_name_fetch(apikey, artist)
+
+    # Replace methods with mocks
+    plugin.artistdatafrommbid_async = mock_mbid_fetch
+    plugin.artistdatafromname_async = mock_name_fetch
+
+    try:
+        # Test with invalid MusicBrainz ID - should fallback to name-based search
+        metadata_invalid_mbid = {
+            'album': 'The Downward Spiral',
+            'artist': 'nine inch nails',  # lowercase to test name correction
+            'imagecacheartist': 'nineinchnails',
+            'musicbrainzartistid': ['invalid-mbid-12345']  # Invalid MBID
+        }
+
+        result = await plugin.download_async(metadata_invalid_mbid.copy(), imagecache=None)
+
+        # Verify the call pattern: MBID tried first, then fallback to name-based
+        assert mbid_call_count == 1, f'Expected 1 MBID call, got {mbid_call_count}'
+        assert name_call_count >= 1, f'Expected at least 1 name call (fallback), got {name_call_count}'
+
+        # Should get a result from name-based fallback with corrected artist name
+        assert result is not None, 'Expected result from name-based fallback'
+
+        # If name correction feature is enabled, verify corrected artist name
+        if result and result.get('artist'):
+            assert result['artist'] == 'Nine Inch Nails', f'Expected corrected artist name, got {result.get("artist")}'
+            logging.info('TheAudioDB invalid MBID fallback verified: MBID failed, name-based succeeded with correction')
+        else:
+            logging.info('TheAudioDB invalid MBID fallback verified: MBID failed, name-based search attempted')
+
+        # Test without any MusicBrainz ID to ensure same name-based behavior
+        mbid_call_count = 0
+        name_call_count = 0
+
+        metadata_no_mbid = {
+            'album': 'The Downward Spiral',
+            'artist': 'nine inch nails',
+            'imagecacheartist': 'nineinchnails'
+            # No musicbrainzartistid provided
+        }
+
+        result_no_mbid = await plugin.download_async(metadata_no_mbid.copy(), imagecache=None)
+
+        # Should skip MBID and go straight to name-based search
+        assert mbid_call_count == 0, f'Expected 0 MBID calls when no MBID provided, got {mbid_call_count}'
+        assert name_call_count >= 1, f'Expected at least 1 name call when no MBID, got {name_call_count}'
+
+        logging.info('TheAudioDB MBID fallback behavior test completed successfully')
+
+    finally:
+        # Restore original methods
+        plugin.artistdatafrommbid_async = original_mbid_fetch
+        plugin.artistdatafromname_async = original_name_fetch
+
+
+@pytest.mark.asyncio
+async def test_fanarttv_apicache_usage(bootstrap, temp_api_cache):  # pylint: disable=redefined-outer-name
     ''' test that fanarttv plugin uses apicache for API calls '''
 
     config = bootstrap
     if 'fanarttv' not in PLUGINS:
         pytest.skip("FanartTV API key not available")
 
-    configuresettings('fanarttv', config.cparser)
-    config.cparser.setValue('fanarttv/apikey', os.environ['FANARTTV_API_KEY'])
-    imagecaches, plugins = configureplugins(config)
+    # Use the properly initialized temporary cache
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(temp_api_cache)
 
-    plugin = plugins['fanarttv']
+    try:
+        configuresettings('fanarttv', config.cparser)
+        config.cparser.setValue('fanarttv/apikey', os.environ['FANARTTV_API_KEY'])
+        imagecaches, plugins = configureplugins(config)
 
-    # Test with MusicBrainz ID (fanarttv requires MBID)
-    metadata_with_mbid = {
-        'album': 'The Downward Spiral',
-        'artist': 'Nine Inch Nails',
-        'imagecacheartist': 'nineinchnails',
-        'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da']  # NIN's MBID
-    }
+        plugin = plugins['fanarttv']
 
-    # First call - should hit API and cache result
-    result1 = await plugin.download_async(metadata_with_mbid.copy(),
-                                         imagecache=imagecaches['fanarttv'])
+        # Test with MusicBrainz ID (fanarttv requires MBID)
+        metadata_with_mbid = {
+            'album': 'The Downward Spiral',
+            'artist': 'Nine Inch Nails',
+            'imagecacheartist': 'nineinchnails',
+            'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da']  # NIN's MBID
+        }
 
-    # Second call - should use cached result
-    result2 = await plugin.download_async(metadata_with_mbid.copy(),
-                                         imagecache=imagecaches['fanarttv'])
+        # First call - should hit API and cache result
+        result1 = await plugin.download_async(metadata_with_mbid.copy(),
+                                             imagecache=imagecaches['fanarttv'])
 
-    # Both results should be consistent (either both None or both have data)
-    assert (result1 is None) == (result2 is None)
+        # Second call - should use cached result
+        result2 = await plugin.download_async(metadata_with_mbid.copy(),
+                                             imagecache=imagecaches['fanarttv'])
 
-    if result1:  # Only test if we got data back
-        logging.info('FanartTV API call successful, caching verified')
-        # Should return the same metadata structure
-        assert result1 == result2
+        # Both results should be consistent (either both None or both have data)
+        assert (result1 is None) == (result2 is None)
+
+        if result1:  # Only test if we got data back
+            logging.info('FanartTV API call successful, caching verified')
+            # Should return the same metadata structure
+            assert result1 == result2
+
+    finally:
+        # Restore original cache
+        nowplaying.apicache.set_cache_instance(original_cache)
 
 
 @pytest.mark.asyncio
-async def test_discogs_apicache_usage(bootstrap):  # pylint: disable=redefined-outer-name
+async def test_fanarttv_apicache_api_call_count(bootstrap, temp_api_cache):  # pylint: disable=redefined-outer-name
+    ''' test that fanarttv plugin makes only one API call when cache is used '''
+
+    config = bootstrap
+    if 'fanarttv' not in PLUGINS:
+        pytest.skip("FanartTV API key not available")
+
+    # Use the properly initialized temporary cache
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(temp_api_cache)
+
+    try:
+        configuresettings('fanarttv', config.cparser)
+        config.cparser.setValue('fanarttv/apikey', os.environ['FANARTTV_API_KEY'])
+        imagecaches, plugins = configureplugins(config)
+
+        plugin = plugins['fanarttv']
+
+        # Test with MusicBrainz ID (fanarttv requires MBID)
+        metadata_with_mbid = {
+            'album': 'The Downward Spiral',
+            'artist': 'Nine Inch Nails',
+            'imagecacheartist': 'nineinchnails',
+            'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da']  # NIN's MBID
+        }
+
+        # Mock the internal _fetch_async method to count API calls
+        original_fetch_async = plugin._fetch_async
+        api_call_count = 0
+
+        async def mock_fetch_async(apikey, artistid):
+            nonlocal api_call_count
+            api_call_count += 1
+            logging.debug(f'Mock API call #{api_call_count} for artistid: {artistid}')
+            # Call the original method to get real data
+            return await original_fetch_async(apikey, artistid)
+
+        # Replace the method with our mock
+        plugin._fetch_async = mock_fetch_async
+
+        try:
+            # First call - should hit API and cache result
+            result1 = await plugin.download_async(metadata_with_mbid.copy(),
+                                                 imagecache=imagecaches['fanarttv'])
+
+            # Verify one API call was made
+            assert api_call_count == 1, f'Expected 1 API call after first download, got {api_call_count}'
+
+            # Second call - should use cached result, no additional API call
+            result2 = await plugin.download_async(metadata_with_mbid.copy(),
+                                                 imagecache=imagecaches['fanarttv'])
+
+            # Verify still only one API call was made (cache hit)
+            assert api_call_count == 1, f'Expected 1 API call after second download (cache hit), got {api_call_count}'
+
+            # Both results should be consistent
+            assert (result1 is None) == (result2 is None)
+
+            if result1:  # Only test if we got data back
+                logging.info('FanartTV API cache verified: 1 API call for 2 downloads')
+                assert result1 == result2
+            else:
+                logging.info('FanartTV API cache test completed - cache working regardless of data found')
+
+        finally:
+            # Restore the original method
+            plugin._fetch_async = original_fetch_async
+
+    finally:
+        # Restore original cache
+        nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+async def test_fanarttv_apicache_api_failure_behavior(bootstrap, temp_api_cache):  # pylint: disable=redefined-outer-name
+    ''' test that fanarttv plugin doesn't cache failed API calls '''
+
+    config = bootstrap
+    if 'fanarttv' not in PLUGINS:
+        pytest.skip("FanartTV API key not available")
+
+    # Use the properly initialized temporary cache
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(temp_api_cache)
+
+    try:
+        configuresettings('fanarttv', config.cparser)
+        config.cparser.setValue('fanarttv/apikey', os.environ['FANARTTV_API_KEY'])
+        imagecaches, plugins = configureplugins(config)
+
+        plugin = plugins['fanarttv']
+
+        # Test with MusicBrainz ID (fanarttv requires MBID)
+        metadata_with_mbid = {
+            'album': 'Test Album',
+            'artist': 'Test Artist',
+            'imagecacheartist': 'testartist',
+            'musicbrainzartistid': ['invalid-mbid-that-will-fail']  # Invalid MBID to trigger failure
+        }
+
+        # Mock the internal _fetch_async method to simulate failures then success
+        original_fetch_async = plugin._fetch_async
+        api_call_count = 0
+
+        async def mock_fetch_async_with_failure(apikey, artistid):
+            nonlocal api_call_count
+            api_call_count += 1
+            logging.debug(f'Mock API call #{api_call_count} for artistid: {artistid}')
+
+            if api_call_count == 1:
+                # First call: simulate API failure (network error, timeout, etc.)
+                logging.debug('Simulating API failure on first call')
+                return None
+            elif api_call_count == 2:
+                # Second call: simulate API returning valid empty response (artist not found)
+                logging.debug('Simulating successful but empty API response on second call')
+                return {'name': 'Test Artist', 'mbid_id': artistid}
+            else:
+                # Subsequent calls: should not happen if caching works correctly
+                logging.debug('Unexpected additional API call')
+                return {'name': 'Test Artist', 'mbid_id': artistid}
+
+        # Replace the method with our mock
+        plugin._fetch_async = mock_fetch_async_with_failure
+
+        try:
+            # First call - API fails, should return None and NOT cache the failure
+            result1 = await plugin.download_async(metadata_with_mbid.copy(),
+                                                 imagecache=imagecaches['fanarttv'])
+
+            # Verify one API call was made and result is None (failure)
+            assert api_call_count == 1, f'Expected 1 API call after first download, got {api_call_count}'
+            assert result1 is None, 'Expected None result from failed API call'
+
+            # Second call - should retry API (not use cached failure), API succeeds this time
+            result2 = await plugin.download_async(metadata_with_mbid.copy(),
+                                                 imagecache=imagecaches['fanarttv'])
+
+            # Verify second API call was made (failure wasn't cached)
+            assert api_call_count == 2, f'Expected 2 API calls after second download (failure not cached), got {api_call_count}'
+
+            # Third call - should use cached success result, no additional API call
+            result3 = await plugin.download_async(metadata_with_mbid.copy(),
+                                                 imagecache=imagecaches['fanarttv'])
+
+            # Verify still only two API calls (success result was cached)
+            assert api_call_count == 2, f'Expected 2 API calls after third download (success cached), got {api_call_count}'
+
+            # Results should show the pattern: None (failure), data (success), data (cached success)
+            assert result1 is None, 'First result should be None (API failure)'
+            assert result2 == result3, 'Second and third results should be identical (cached success)'
+
+            logging.info('FanartTV API failure cache behavior verified: failures not cached, successes cached')
+
+        finally:
+            # Restore the original method
+            plugin._fetch_async = original_fetch_async
+
+    finally:
+        # Restore original cache
+        nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+async def test_discogs_apicache_usage(bootstrap, temp_api_cache):  # pylint: disable=redefined-outer-name
     ''' test that discogs plugin uses apicache for API calls '''
 
     config = bootstrap
     if 'discogs' not in PLUGINS:
         pytest.skip("Discogs API key not available")
 
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
-    imagecaches, plugins = configureplugins(config)
+    # Use the properly initialized temporary cache
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(temp_api_cache)
 
-    plugin = plugins['discogs']
+    try:
+        configuresettings('discogs', config.cparser)
+        config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+        imagecaches, plugins = configureplugins(config)
 
-    # Test with album search (discogs searches by album+artist)
-    metadata_with_album = {
-        'album': 'The Downward Spiral',
-        'artist': 'Nine Inch Nails',
-        'imagecacheartist': 'nineinchnails'
-    }
+        plugin = plugins['discogs']
 
-    # First call - should hit API and cache result
-    result1 = await plugin.download_async(metadata_with_album.copy(),
-                                         imagecache=imagecaches['discogs'])
+        # Test with album search (discogs searches by album+artist)
+        metadata_with_album = {
+            'album': 'The Downward Spiral',
+            'artist': 'Nine Inch Nails',
+            'imagecacheartist': 'nineinchnails'
+        }
 
-    # Second call - should use cached result
-    result2 = await plugin.download_async(metadata_with_album.copy(),
-                                         imagecache=imagecaches['discogs'])
+        # First call - should hit API and cache result
+        result1 = await plugin.download_async(metadata_with_album.copy(),
+                                             imagecache=imagecaches['discogs'])
 
-    # Both results should be consistent (either both None or both have data)
-    assert (result1 is None) == (result2 is None)
+        # Second call - should use cached result
+        result2 = await plugin.download_async(metadata_with_album.copy(),
+                                             imagecache=imagecaches['discogs'])
 
-    if result1:  # Only test if we got data back
-        logging.info('Discogs API call successful, caching verified')
-        # Should return the same metadata structure
-        assert result1 == result2
+        # Both results should be consistent (either both None or both have data)
+        assert (result1 is None) == (result2 is None)
+
+        if result1:  # Only test if we got data back
+            logging.info('Discogs API call successful, caching verified')
+            # Should return the same metadata structure
+            assert result1 == result2
+
+    finally:
+        # Restore original cache
+        nowplaying.apicache.set_cache_instance(original_cache)
 
 
 @pytest.mark.asyncio
@@ -383,107 +676,126 @@ async def test_discogs_artist_duplicates(bootstrap):  # pylint: disable=redefine
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_apicache_duplicate_artists(bootstrap):  # pylint: disable=redefined-outer-name
+async def test_theaudiodb_apicache_duplicate_artists(bootstrap, temp_api_cache):  # pylint: disable=redefined-outer-name
     ''' test TheAudioDB two-level caching with duplicate artist names '''
 
     config = bootstrap
     if 'theaudiodb' not in PLUGINS:
         pytest.skip("TheAudioDB API key not available")
 
-    configuresettings('theaudiodb', config.cparser)
-    config.cparser.setValue('theaudiodb/apikey', os.environ['THEAUDIODB_API_KEY'])
-    imagecaches, plugins = configureplugins(config)
+    # Use the properly initialized temporary cache
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(temp_api_cache)
 
-    plugin = plugins['theaudiodb']
+    try:
+        configuresettings('theaudiodb', config.cparser)
+        config.cparser.setValue('theaudiodb/apikey', os.environ['THEAUDIODB_API_KEY'])
+        imagecaches, plugins = configureplugins(config)
 
-    # Test two different searches that might return different artists with similar names
-    # First search - likely to match main "Madonna"
-    metadata_madonna1 = {
-        'artist': 'Madonna',
-        'imagecacheartist': 'madonna1'
-    }
+        plugin = plugins['theaudiodb']
 
-    # Second search - variation that might match different artist
-    metadata_madonna2 = {
-        'artist': 'madonna',  # lowercase variation
-        'imagecacheartist': 'madonna2'
-    }
+        # Test two different searches that might return different artists with similar names
+        # First search - likely to match main "Madonna"
+        metadata_madonna1 = {
+            'artist': 'Madonna',
+            'imagecacheartist': 'madonna1'
+        }
 
-    # Test both variations - first calls hit API, second calls use cache
-    result1a = await plugin.download_async(metadata_madonna1.copy(),
-                                          imagecache=imagecaches['theaudiodb'])
-    result2a = await plugin.download_async(metadata_madonna2.copy(),
-                                          imagecache=imagecaches['theaudiodb'])
+        # Second search - variation that might match different artist
+        metadata_madonna2 = {
+            'artist': 'madonna',  # lowercase variation
+            'imagecacheartist': 'madonna2'
+        }
 
-    # Second calls - should use cached data
-    result1b = await plugin.download_async(metadata_madonna1.copy(),
-                                          imagecache=imagecaches['theaudiodb'])
-    result2b = await plugin.download_async(metadata_madonna2.copy(),
-                                          imagecache=imagecaches['theaudiodb'])
+        # Test both variations - first calls hit API, second calls use cache
+        result1a = await plugin.download_async(metadata_madonna1.copy(),
+                                              imagecache=imagecaches['theaudiodb'])
+        result2a = await plugin.download_async(metadata_madonna2.copy(),
+                                              imagecache=imagecaches['theaudiodb'])
 
-    # Verify caching works for both variations
-    assert (result1a is None) == (result1b is None)
-    assert (result2a is None) == (result2b is None)
+        # Second calls - should use cached data
+        result1b = await plugin.download_async(metadata_madonna1.copy(),
+                                              imagecache=imagecaches['theaudiodb'])
+        result2b = await plugin.download_async(metadata_madonna2.copy(),
+                                              imagecache=imagecaches['theaudiodb'])
 
-    if result1a:
-        assert result1a == result1b
-        logging.info('TheAudioDB cache verified for Madonna (capitalized)')
+        # Verify caching works for both variations
+        assert (result1a is None) == (result1b is None)
+        assert (result2a is None) == (result2b is None)
 
-    if result2a:
-        assert result2a == result2b
-        logging.info('TheAudioDB cache verified for madonna (lowercase)')
+        if result1a:
+            assert result1a == result1b
+            logging.info('TheAudioDB cache verified for Madonna (capitalized)')
 
-    # Check if different normalizations potentially return different results
-    if result1a and result2a:
-        artist1 = result1a.get('artist', '')
-        artist2 = result2a.get('artist', '')
+        if result2a:
+            assert result2a == result2b
+            logging.info('TheAudioDB cache verified for madonna (lowercase)')
 
-        if artist1 and artist2 and artist1 != artist2:
-            logging.info('TheAudioDB distinguished between different artists: %s vs %s',
-                     artist1, artist2)
+        # Check if different normalizations potentially return different results
+        if result1a and result2a:
+            artist1 = result1a.get('artist', '')
+            artist2 = result2a.get('artist', '')
+
+            if artist1 and artist2 and artist1 != artist2:
+                logging.info('TheAudioDB distinguished between different artists: %s vs %s',
+                         artist1, artist2)
+            else:
+                logging.info('TheAudioDB returned same artist for both variations')
         else:
-            logging.info('TheAudioDB returned same artist for both variations')
-    else:
-        logging.info('TheAudioDB duplicate artist test completed - two-level caching working')
+            logging.info('TheAudioDB duplicate artist test completed - two-level caching working')
 
-    # Test passes if two-level caching works correctly (search + individual artist ID)
+        # Test passes if two-level caching works correctly (search + individual artist ID)
+
+    finally:
+        # Restore original cache
+        nowplaying.apicache.set_cache_instance(original_cache)
 
 
 @pytest.mark.asyncio
-async def test_wikimedia_apicache_usage(bootstrap):  # pylint: disable=redefined-outer-name
+async def test_wikimedia_apicache_usage(bootstrap, temp_api_cache):  # pylint: disable=redefined-outer-name
     ''' test that wikimedia plugin uses apicache for API calls '''
 
     config = bootstrap
-    configuresettings('wikimedia', config.cparser)
-    imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['wikimedia']
+    # Use the properly initialized temporary cache
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(temp_api_cache)
 
-    # Test with Wikidata entity ID (wikimedia uses unique entity IDs for differentiation)
-    metadata_with_wikidata = {
-        'artist': 'Nine Inch Nails',
-        'imagecacheartist': 'nineinchnails',
-        'artistwebsites': ['https://www.wikidata.org/wiki/Q11647']  # NIN's Wikidata page
-    }
+    try:
+        configuresettings('wikimedia', config.cparser)
+        imagecaches, plugins = configureplugins(config)
 
-    # First call - should hit API and cache result
-    result1 = await plugin.download_async(metadata_with_wikidata.copy(),
-                                         imagecache=imagecaches['wikimedia'])
+        plugin = plugins['wikimedia']
 
-    # Second call - should use cached result
-    result2 = await plugin.download_async(metadata_with_wikidata.copy(),
-                                         imagecache=imagecaches['wikimedia'])
+        # Test with Wikidata entity ID (wikimedia uses unique entity IDs for differentiation)
+        metadata_with_wikidata = {
+            'artist': 'Nine Inch Nails',
+            'imagecacheartist': 'nineinchnails',
+            'artistwebsites': ['https://www.wikidata.org/wiki/Q11647']  # NIN's Wikidata page
+        }
 
-    # Both results should be consistent (either both None or both have data)
-    assert (result1 is None) == (result2 is None)
+        # First call - should hit API and cache result
+        result1 = await plugin.download_async(metadata_with_wikidata.copy(),
+                                             imagecache=imagecaches['wikimedia'])
 
-    if result1:  # Only test if we got data back
-        logging.info('Wikimedia API call successful, caching verified')
-        # Should return the same metadata structure
-        assert result1 == result2
-    else:
-        logging.info('Wikimedia caching test completed - '
-                     'no data found but cache working')
+        # Second call - should use cached result
+        result2 = await plugin.download_async(metadata_with_wikidata.copy(),
+                                             imagecache=imagecaches['wikimedia'])
+
+        # Both results should be consistent (either both None or both have data)
+        assert (result1 is None) == (result2 is None)
+
+        if result1:  # Only test if we got data back
+            logging.info('Wikimedia API call successful, caching verified')
+            # Should return the same metadata structure
+            assert result1 == result2
+        else:
+            logging.info('Wikimedia caching test completed - '
+                         'no data found but cache working')
+
+    finally:
+        # Restore original cache
+        nowplaying.apicache.set_cache_instance(original_cache)
 
 
 @pytest.mark.asyncio
@@ -598,7 +910,7 @@ async def test_featuring1(getconfiguredplugin):  # pylint: disable=redefined-out
             {
                 'artist': 'Grimes feat Janelle Monáe',
                 'title': 'Venus Fly',
-                'album': 'Art Angel',
+                'album': 'Art Angels',
                 'imagecacheartist': 'grimesfeatjanellemonae'
             },
             imagecache=imagecaches[pluginname])

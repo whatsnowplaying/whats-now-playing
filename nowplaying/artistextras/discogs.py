@@ -173,6 +173,8 @@ class Plugin(ArtistExtrasPlugin):
         if len(discogs_websites) == 1:
             artistnum = discogs_websites[0].split('/')[-1]
             artist = await self._artist_async_cached(artistnum, metadata['artist'])
+            if not artist:
+                return False
             artistname = str(artist.name)
             logging.debug('Found a singular discogs artist URL using %s instead of %s', artistname,
                           metadata['artist'])
@@ -180,6 +182,8 @@ class Plugin(ArtistExtrasPlugin):
             for website in discogs_websites:
                 artistnum = website.split('/')[-1]
                 artist = await self._artist_async_cached(artistnum, metadata['artist'])
+                if not artist:
+                    continue
                 webartistname = str(artist.name)
                 if nowplaying.utils.normalize(webartistname) == nowplaying.utils.normalize(
                         metadata['artist']):

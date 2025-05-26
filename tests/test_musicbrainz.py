@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 ''' test musicbrainz '''
 
+import logging
 import pytest
 
+import nowplaying.apicache  # pylint: disable=import-error
 import nowplaying.musicbrainz  # pylint: disable=import-error
 
 # either one of these is valid for Computer Blue
@@ -291,3 +293,79 @@ async def test_fallback_complex_and_with_feature(getmusicbrainz):  # pylint: dis
         'c3c82bdc-d9e7-4836-9746-c24ead47ca19'
     ]
     assert not newdata.get('musicbrainzrecordingid')
+
+
+@pytest.mark.asyncio
+async def test_recordingid_api_cache_call_count(getmusicbrainz, temp_api_cache):  # pylint: disable=redefined-outer-name
+    ''' test that MusicBrainz recordingid makes only one API call when cache is used '''
+
+    # Use the properly initialized temporary cache
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(temp_api_cache)
+
+    try:
+        mbhelper = getmusicbrainz
+
+        # Mock the private _recordingid_uncached method to count API calls
+        original_recordingid_uncached = mbhelper._recordingid_uncached
+        api_call_count = 0
+
+        async def mock_recordingid_uncached(recordingid):
+            nonlocal api_call_count
+            api_call_count += 1
+            logging.debug(f'MusicBrainz API call #{api_call_count} for recording ID: {recordingid}')
+            # Call the original method to get real data
+            return await original_recordingid_uncached(recordingid)
+
+        # Replace the method with our mock
+        mbhelper._recordingid_uncached = mock_recordingid_uncached
+
+        try:
+            # Use Nine Inch Nails "15 Ghosts II" recording ID for testing
+            test_recording_id = '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
+
+            # First call - should hit API and cache result
+            result1 = await mbhelper.recordingid(test_recording_id)
+
+            # Verify one API call was made
+            assert api_call_count == 1, (
+                f'Expected 1 API call after first recordingid lookup, got {api_call_count}'
+            )
+            assert result1 is not None, 'Expected valid result from first MusicBrainz lookup'
+
+            # Second call - should use cached result, no additional API call
+            result2 = await mbhelper.recordingid(test_recording_id)
+
+            # Verify still only one API call was made (cache hit)
+            assert api_call_count == 1, (
+                f'Expected 1 API call after second recordingid lookup (cache hit), '
+                f'got {api_call_count}'
+            )
+
+            # Both results should be identical
+            assert result1 == result2, 'Results should be identical when using cache'
+
+            # Verify expected metadata from the known recording
+            assert result1['title'] == '15 Ghosts II'
+            assert result1['artist'] == 'Nine Inch Nails'
+            assert result1['musicbrainzrecordingid'] == test_recording_id
+
+            # Third call to further confirm caching
+            result3 = await mbhelper.recordingid(test_recording_id)
+
+            # Verify still only one API call total
+            assert api_call_count == 1, (
+                f'Expected 1 API call after third recordingid lookup (cache hit), '
+                f'got {api_call_count}'
+            )
+            assert result1 == result3, 'Third result should also be identical (cached)'
+
+            logging.info('MusicBrainz recordingid API cache verified: 1 API call for 3 lookups')
+
+        finally:
+            # Restore the original method
+            mbhelper._recordingid_uncached = original_recordingid_uncached
+
+    finally:
+        # Restore original cache
+        nowplaying.apicache.set_cache_instance(original_cache)

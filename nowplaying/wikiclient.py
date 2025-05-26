@@ -154,11 +154,10 @@ class AsyncWikiClient:
                 return None
 
             pages = data['query']['pages']
-            for page_data in pages.values():
-                if 'extract' in page_data:
-                    return page_data['extract']
-
-            return None
+            return next(
+                (page_data['extract'] for page_data in pages.values() if 'extract' in page_data),
+                None
+            )
 
     async def _get_wikidata_images(self, entity: str) -> list[dict[str, str]]:
         """Get images directly from Wikidata entity."""
@@ -213,11 +212,12 @@ class AsyncWikiClient:
                     return None
 
                 pages = data['query']['pages']
-                for page_data in pages.values():
-                    if 'imageinfo' in page_data and page_data['imageinfo']:
-                        return page_data['imageinfo'][0].get('url')
-
-                return None
+                return next(
+                    (page_data['imageinfo'][0].get('url')
+                     for page_data in pages.values()
+                     if 'imageinfo' in page_data and page_data['imageinfo']),
+                    None
+                )
         except Exception:  # pylint: disable=broad-exception-caught
             return None
 
@@ -314,11 +314,12 @@ class AsyncWikiClient:
                     return None
 
                 pages = data['query']['pages']
-                for page_data in pages.values():
-                    if 'imageinfo' in page_data and page_data['imageinfo']:
-                        return page_data['imageinfo'][0].get('url')
-
-                return None
+                return next(
+                    (page_data['imageinfo'][0].get('url')
+                     for page_data in pages.values()
+                     if 'imageinfo' in page_data and page_data['imageinfo']),
+                    None
+                )
         except Exception:  # pylint: disable=broad-exception-caught
             return None
 

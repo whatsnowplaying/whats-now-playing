@@ -138,7 +138,7 @@ class Plugin(ArtistExtrasPlugin):
                 mymeta['artistlongbio'] = page.data['extext']
             elif lang != 'en' and self.config.cparser.value('wikimedia/bio_iso_en_fallback',
                                                             type=bool):
-                temppage = await self._get_page_cached(entity, 'en', metadata['artist'])
+                temppage = await self._get_page_cached(entity, 'en', artist_name)
                 if temppage and temppage.data.get('extext'):
                     mymeta['artistlongbio'] = temppage.data['extext']
 
@@ -158,7 +158,8 @@ class Plugin(ArtistExtrasPlugin):
             lang = self.config.cparser.value('wikimedia/bio_iso', type=str) or 'en'
             for website in wikidata_websites:
                 entity = website.split('/')[-1]
-                page = await self._get_page_cached(entity, lang, metadata['artist'])
+                artist_name = metadata.get('artist', entity)  # Use entity as fallback for cache key
+                page = await self._get_page_cached(entity, lang, artist_name)
                 if not page or not page.data:
                     continue
 

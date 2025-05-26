@@ -32,14 +32,17 @@ class DiscogsRelease:  # pylint: disable=too-few-public-methods
             title = data.get('title', '')
             if ' - ' in title:
                 artist_name = title.split(' - ')[0]
-                artist_data = {
-                    'name': artist_name,
-                    'id': None,
-                    'profile': '',
-                    'urls': [],
-                    'images': []
-                }
-                self.artists = [DiscogsArtist(artist_data)]
+            else:
+                # Fallback: use the entire title as artist name if no dash
+                artist_name = title
+            artist_data = {
+                'name': artist_name,
+                'id': None,
+                'profile': '',
+                'urls': [],
+                'images': []
+            }
+            self.artists = [DiscogsArtist(artist_data)]
 
     async def load_full_data(self):
         """Load full release data including artist details."""
@@ -93,15 +96,15 @@ class DiscogsSearchResult:
             await release.load_full_data()
             # Load full artist data for first artist only (typically what nowplaying needs)
             for i, release_artist in enumerate(release.artists[:1]):  # Only first artist
-                if release_artist.discogs_id:
-                    if release._client:  # pylint: disable=protected-access
-                        # Use optimized artist loading with limited images
-                        full_artist = await release._client.artist(release_artist.discogs_id,  # pylint: disable=protected-access
-                                                                   limit_images=5)
-                        if full_artist:
-                            release.artists[i] = full_artist
-                            loaded_count += 1
-                            break
+                if release_artist.discogs_id and release._client:  # pylint: disable=protected-access
+                    # Use optimized artist loading with limited images
+                    full_artist = await release._client.artist(release_artist.discogs_id,  # pylint: disable=protected-access
+                                                               limit_images=5,
+                                                               include_bio=True)
+                    if full_artist:
+                        release.artists[i] = full_artist
+                        loaded_count += 1
+                        break
 
 
 class AsyncDiscogsClient:
@@ -119,10 +122,10 @@ class AsyncDiscogsClient:
         self.ssl_context = ssl.create_default_context()
 
     async def __aenter__(self):
-        headers = {
-            'User-Agent': self.user_agent,
-            'Authorization': f'Discogs token={self.user_token}'
-        }
+        headers = {'User-Agent': self.user_agent}
+        # Only add Authorization header if user_token is not None
+        if self.user_token is not None:
+            headers['Authorization'] = f'Discogs token={self.user_token}'
         connector = aiohttp.TCPConnector(ssl=self.ssl_context)
         self.session = aiohttp.ClientSession(timeout=self.timeout,
                                              headers=headers,
@@ -180,8 +183,9 @@ class AsyncDiscogsClient:
 
     async def artist(self,
                      artist_id: int | str,
-                     limit_images: int | None = None) -> DiscogsArtist | None:
-        """Get artist by ID with optional image limiting for performance."""
+                     limit_images: int | None = None,
+                     include_bio: bool = True) -> DiscogsArtist | None:
+        """Get artist by ID with optional image limiting and bio control for performance."""
         if not self.session:
             raise RuntimeError("Client not initialized - use async context manager")
 
@@ -193,15 +197,22 @@ class AsyncDiscogsClient:
                     data = await response.json()
 
                     # Limit images for performance if specified
-                    if limit_images and 'images' in data:
-                        # Keep primary images first, then limit total
-                        primary_images = [
-                            img for img in data['images'] if img.get('type') == 'primary'
-                        ]
-                        other_images = [
-                            img for img in data['images'] if img.get('type') != 'primary'
-                        ]
-                        data['images'] = (primary_images + other_images)[:limit_images]
+                    if limit_images is not None and 'images' in data:
+                        if limit_images == 0:
+                            data['images'] = []
+                        else:
+                            # Keep primary images first, then limit total
+                            primary_images = [
+                                img for img in data['images'] if img.get('type') == 'primary'
+                            ]
+                            other_images = [
+                                img for img in data['images'] if img.get('type') != 'primary'
+                            ]
+                            data['images'] = (primary_images + other_images)[:limit_images]
+
+                    # Remove bio data if not needed for performance
+                    if not include_bio and 'profile' in data:
+                        data['profile'] = ''
 
                     return DiscogsArtist(data)
 
@@ -228,8 +239,12 @@ class AsyncDiscogsClientWrapper:
 
     async def artist_async(self, artist_id: int | str) -> DiscogsArtist | None:
         """Get artist by ID (async version)."""
+        # Use optimization flags to control data fetching
+        limit_images = 5 if self._need_images else 0
+        include_bio = self._need_bio
         async with AsyncDiscogsClient(self.user_agent, self.user_token, self.timeout) as client:
-            return await client.artist(artist_id, limit_images=5)
+            return await client.artist(artist_id, limit_images=limit_images,
+                                       include_bio=include_bio)
 
     async def search_async(self,
                            query: str,

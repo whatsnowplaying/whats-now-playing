@@ -53,80 +53,92 @@ class Plugin(ArtistExtrasPlugin):
             ttl_seconds=7 * 24 * 60 * 60  # 7 days for FanartTV data per CLAUDE.md
         )
 
-    async def download_async(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches
+    async def download_async(self, metadata=None, imagecache=None):
         ''' async download the extra data '''
 
+        # Validate inputs
+        if not self._validate_inputs(metadata, imagecache):
+            return None
+
+        apikey = self.config.cparser.value('fanarttv/apikey')
+        # Process each MusicBrainz artist ID
+        for artistid in metadata['musicbrainzartistid']:
+            artist_data = await self._fetch_cached(apikey, artistid, metadata['artist'])
+            if not artist_data or artist_data.get('status') == 'error':
+                return None  # Match original behavior - fail on first error
+            self._process_artist_images(artist_data, metadata, imagecache)
+            break  # Success with first valid artist, no need to continue
+
+        return metadata
+
+    def _validate_inputs(self, metadata, imagecache):
+        """Validate required inputs for fanart download."""
         apikey = self.config.cparser.value('fanarttv/apikey')
         if not apikey or not self.config.cparser.value('fanarttv/enabled', type=bool):
-            return None
+            return False
 
         if not metadata or not metadata.get('artist'):
             logging.debug('skipping: no artist')
-            return None
+            return False
 
         if not imagecache:
             logging.debug('imagecache is dead?')
-            return None
+            return False
 
         if not metadata.get('musicbrainzartistid'):
-            return None
+            return False
 
-        #fnstr = nowplaying.utils.normalize(metadata['artist'])
         logging.debug('got musicbrainzartistid: %s', metadata['musicbrainzartistid'])
-        for artistid in metadata['musicbrainzartistid']:
-            artist = await self._fetch_cached(apikey, artistid, metadata['artist'])
-            if not artist or artist.get('status') == 'error':
-                return None
+        return True
 
-            # if artist.get('name') and nowplaying.utils.normalize(artist['name']) in fnstr:
-            #     logging.debug("fanarttv Trusting : %s", artist['name'])
-            # else:
-            #     logging.debug("fanarttv Not trusting: %s vs %s", artist.get('name'), fnstr)
-            #     continue
+    def _process_artist_images(self, artist_data, metadata, imagecache):
+        """Process and queue artist images from FanartTV data."""
+        identifier = metadata['imagecacheartist']
+        # Process banners
+        if (artist_data.get('musicbanner') and
+            self.config.cparser.value('fanarttv/banners', type=bool)):
+            self._queue_images(artist_data['musicbanner'], identifier, 'artistbanner', imagecache)
 
-            if artist.get('musicbanner') and self.config.cparser.value('fanarttv/banners',
-                                                                       type=bool):
-                banner = sorted(artist['musicbanner'], key=lambda x: x['likes'], reverse=True)
-                imagecache.fill_queue(config=self.config,
-                                      identifier=metadata['imagecacheartist'],
-                                      imagetype='artistbanner',
-                                      srclocationlist=[x['url'] for x in banner])
+        # Process logos (prefer HD, fallback to regular)
+        if self.config.cparser.value('fanarttv/logos', type=bool):
+            logo_data = artist_data.get('hdmusiclogo') or artist_data.get('musiclogo')
+            if logo_data:
+                self._queue_images(logo_data, identifier, 'artistlogo', imagecache)
 
-            if self.config.cparser.value('fanarttv/logos', type=bool):
-                logo = None
-                if artist.get('hdmusiclogo'):
-                    logo = sorted(artist['hdmusiclogo'], key=lambda x: x['likes'], reverse=True)
-                elif artist.get('musiclogo'):
-                    logo = sorted(artist['musiclogo'], key=lambda x: x['likes'], reverse=True)
-                if logo:
-                    imagecache.fill_queue(config=self.config,
-                                          identifier=metadata['imagecacheartist'],
-                                          imagetype='artistlogo',
-                                          srclocationlist=[x['url'] for x in logo])
+        # Process thumbnails
+        if (artist_data.get('artistthumb') and
+            self.config.cparser.value('fanarttv/thumbnails', type=bool)):
+            self._queue_images(artist_data['artistthumb'], identifier, 'artistthumbnail',
+                               imagecache)
 
-            if artist.get('artistthumb') and self.config.cparser.value('fanarttv/thumbnails',
-                                                                       type=bool):
-                thumbnail = sorted(artist['artistthumb'], key=lambda x: x['likes'], reverse=True)
-                imagecache.fill_queue(config=self.config,
-                                      identifier=metadata['imagecacheartist'],
-                                      imagetype='artistthumbnail',
-                                      srclocationlist=[x['url'] for x in thumbnail])
+        # Process fanart backgrounds
+        if (self.config.cparser.value('fanarttv/fanart', type=bool) and
+            artist_data.get('artistbackground')):
+            self._process_fanart_backgrounds(artist_data['artistbackground'], metadata,
+                                              identifier, imagecache)
 
-            if self.config.cparser.value('fanarttv/fanart',
-                                         type=bool) and artist.get('artistbackground'):
-                gotonefanart = False
-                for image in artist['artistbackground']:
-                    if not metadata.get('artistfanarturls'):
-                        metadata['artistfanarturls'] = []
-                    if not gotonefanart:
-                        gotonefanart = True
-                        imagecache.fill_queue(config=self.config,
-                                              identifier=metadata['imagecacheartist'],
-                                              imagetype='artistfanart',
-                                              srclocationlist=[image['url']])
-                    metadata['artistfanarturls'].append(image['url'])
+    def _queue_images(self, image_list, identifier, image_type, imagecache):
+        """Queue images sorted by popularity (likes)."""
+        sorted_images = sorted(image_list, key=lambda x: x.get('likes', 0), reverse=True)
+        urls = [img['url'] for img in sorted_images]
+        imagecache.fill_queue(config=self.config,
+                              identifier=identifier,
+                              imagetype=image_type,
+                              srclocationlist=urls)
 
-        return metadata
+    def _process_fanart_backgrounds(self, backgrounds, metadata, identifier, imagecache):
+        """Process fanart backgrounds and collect URLs."""
+        if not metadata.get('artistfanarturls'):
+            metadata['artistfanarturls'] = []
+        # Queue first image for display
+        if backgrounds:
+            imagecache.fill_queue(config=self.config,
+                                  identifier=identifier,
+                                  imagetype='artistfanart',
+                                  srclocationlist=[backgrounds[0]['url']])
+            # Collect all URLs for reference
+            for background in backgrounds:
+                metadata['artistfanarturls'].append(background['url'])
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this plug-in '''

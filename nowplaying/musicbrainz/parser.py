@@ -115,11 +115,13 @@ def parse_recording(element: ET.Element) -> dict[str, Any]:
         elif tag == "length" and child.text:
             recording["length"] = int(child.text)
         elif tag == "artist-credit":
-            recording["artist-credit"] = parse_artist_credit(child)
-            recording["artist-credit-phrase"] = get_artist_credit_phrase(recording["artist-credit"])
+            artist_credit = parse_artist_credit(child)
+            recording["artist-credit"] = artist_credit
+            recording["artist-credit-phrase"] = get_artist_credit_phrase(artist_credit)
         elif tag == "release-list":
-            recording["release-list"] = parse_release_list(child)
-            recording["release-count"] = len(recording["release-list"])
+            release_list = parse_release_list(child)
+            recording["release-list"] = release_list
+            recording["release-count"] = len(release_list)
         elif tag == "first-release-date" and child.text:
             recording["first-release-date"] = child.text
         elif tag == "genre-list":
@@ -152,8 +154,9 @@ def parse_release(element: ET.Element) -> dict[str, Any]:
         elif tag == "status" and child.text:
             release["status"] = child.text
         elif tag == "artist-credit":
-            release["artist-credit"] = parse_artist_credit(child)
-            release["artist-credit-phrase"] = get_artist_credit_phrase(release["artist-credit"])
+            artist_credit = parse_artist_credit(child)
+            release["artist-credit"] = artist_credit
+            release["artist-credit-phrase"] = get_artist_credit_phrase(artist_credit)
         elif tag == "release-group":
             release["release-group"] = parse_release_group(child)
         elif tag == "label-info-list":
@@ -190,9 +193,9 @@ def parse_release_group(element: ET.Element) -> dict[str, Any]:
         elif tag == "first-release-date" and child.text:
             release_group["first-release-date"] = child.text
         elif tag == "artist-credit":
-            release_group["artist-credit"] = parse_artist_credit(child)
-            release_group["artist-credit-phrase"] = get_artist_credit_phrase(
-                release_group["artist-credit"])
+            artist_credit = parse_artist_credit(child)
+            release_group["artist-credit"] = artist_credit
+            release_group["artist-credit-phrase"] = get_artist_credit_phrase(artist_credit)
     return release_group
 
 
@@ -200,8 +203,8 @@ def parse_isrc(element: ET.Element) -> dict[str, Any]:
     """Parse isrc element"""
     isrc = {}
     # Parse attributes (id)
-    if element.get("id"):
-        isrc["id"] = element.get("id")
+    if element_id := element.get("id"):
+        isrc["id"] = element_id
     # Parse child elements
     for child in element:
         tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
@@ -225,13 +228,11 @@ def parse_artist_credit(element: ET.Element) -> list[dict[str, Any] | str]:
                     name_credit["artist"] = parse_artist(nc_child)
             credit.append(name_credit)
             # Check for joinphrase attribute on the name-credit element
-            joinphrase = child.get("joinphrase")
-            if joinphrase:
+            if joinphrase := child.get("joinphrase"):
                 credit.append(joinphrase)
-        else:
+        elif child.text:
             # Join phrase as text element (fallback)
-            if child.text:
-                credit.append(child.text)
+            credit.append(child.text)
     return credit
 
 
@@ -255,8 +256,8 @@ def parse_lifespan(element: ET.Element) -> dict[str, Any]:
     lifespan = {}
     for child in element:
         tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
-        if child.text:
-            lifespan[tag] = child.text
+        if text := child.text:
+            lifespan[tag] = text
     return lifespan
 
 
@@ -311,8 +312,8 @@ def parse_cover_art_archive(element: ET.Element) -> dict[str, Any]:
     caa = {}
     for child in element:
         tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
-        if child.text:
-            caa[tag] = child.text
+        if text := child.text:
+            caa[tag] = text
     return caa
 
 

@@ -75,87 +75,115 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                 nowplaying.utils.normalize(artdata.get(fieldname), sizecheck=4, nospaces=True))
         return False
 
-    def _handle_extradata(self, extradata, metadata, imagecache, used_musicbrainz=False):  # pylint: disable=too-many-branches
+    def _handle_extradata(self, extradata, metadata, imagecache, used_musicbrainz=False):
         ''' deal with the various bits of data '''
-        lang1 = self.config.cparser.value('theaudiodb/bio_iso')
-
-        bio = ''
-
-        for artdata in extradata:  # pylint: disable=too-many-nested-blocks
-
-            if not self._check_artist(artdata):
-                continue
-
-            if not metadata.get('artistlongbio') and self.config.cparser.value('theaudiodb/bio',
-                                                                               type=bool):
-                if f'strBiography{lang1}' in artdata:
-                    bio += self._filter(artdata[f'strBiography{lang1}'])
-                elif self.config.cparser.value('theaudiodb/bio_iso_en_fallback',
-                                               type=bool) and 'strBiographyEN' in artdata:
-                    bio += self._filter(artdata['strBiographyEN'])
-
-            if self.config.cparser.value('theaudiodb/websites',
-                                         type=bool) and artdata.get('strWebsite'):
-                webstr = 'https://' + artdata['strWebsite']
-                if not metadata.get('artistwebsites'):
-                    metadata['artistwebsites'] = []
-                metadata['artistwebsites'].append(webstr)
-
-            if imagecache:
-                if not metadata.get('artistbannerraw') and artdata.get(
-                        'strArtistBanner') and self.config.cparser.value('theaudiodb/banners',
-                                                                         type=bool):
-                    imagecache.fill_queue(config=self.config,
-                                          identifier=metadata['imagecacheartist'],
-                                          imagetype='artistbanner',
-                                          srclocationlist=[artdata['strArtistBanner']])
-
-                if not metadata.get('artistlogoraw') and artdata.get(
-                        'strArtistLogo') and self.config.cparser.value('theaudiodb/logos',
-                                                                       type=bool):
-                    imagecache.fill_queue(config=self.config,
-                                          identifier=metadata['imagecacheartist'],
-                                          imagetype='artistlogo',
-                                          srclocationlist=[artdata['strArtistLogo']])
-
-                if not metadata.get('artistthumbnailraw') and artdata.get(
-                        'strArtistThumb') and self.config.cparser.value('theaudiodb/thumbnails',
-                                                                        type=bool):
-                    imagecache.fill_queue(config=self.config,
-                                          identifier=metadata['imagecacheartist'],
-                                          imagetype='artistthumbnail',
-                                          srclocationlist=[artdata['strArtistThumb']])
-
-                if self.config.cparser.value('theaudiodb/fanart', type=bool):
-                    gotonefanart = False
-                    for num in ['', '2', '3', '4']:
-                        artstring = f'strArtistFanart{num}'
-                        if artdata.get(artstring):
-                            if not metadata.get('artistfanarturls'):
-                                metadata['artistfanarturls'] = []
-                            metadata['artistfanarturls'].append(artdata[artstring])
-                            if not gotonefanart:
-                                gotonefanart = True
-                                imagecache.fill_queue(config=self.config,
-                                                      identifier=metadata['imagecacheartist'],
-                                                      imagetype='artistfanart',
-                                                      srclocationlist=[artdata[artstring]])
-
+        bio = self._extract_bio_data(extradata, metadata)
         if bio:
             metadata['artistlongbio'] = bio
 
-        # For name-based searches (not MusicBrainz), extract corrected artist name from API response
-        if not used_musicbrainz and extradata:
-            for artdata in extradata:
-                if self._check_artist(artdata) and artdata.get('strArtist'):
-                    corrected_artist = artdata['strArtist']
-                    if corrected_artist != metadata['artist']:
-                        logging.debug('TheAudioDB corrected artist name: %s -> %s',
-                                    metadata['artist'], corrected_artist)
-                        metadata['artist'] = corrected_artist
-                    break
+        for artdata in extradata:
+            if not self._check_artist(artdata):
+                continue
 
+            self._handle_website_data(artdata, metadata)
+            if imagecache:
+                self._handle_image_data(artdata, metadata, imagecache)
+
+        self._correct_artist_name(extradata, metadata, used_musicbrainz)
         return metadata
+
+    def _extract_bio_data(self, extradata, metadata):
+        ''' Extract biography data from TheAudioDB response '''
+        if (metadata.get('artistlongbio') or
+            not self.config.cparser.value('theaudiodb/bio', type=bool)):
+            return ''
+
+        lang1 = self.config.cparser.value('theaudiodb/bio_iso')
+        bio = ''
+
+        for artdata in extradata:
+            if not self._check_artist(artdata):
+                continue
+
+            if f'strBiography{lang1}' in artdata:
+                bio += self._filter(artdata[f'strBiography{lang1}'])
+            elif (self.config.cparser.value('theaudiodb/bio_iso_en_fallback', type=bool)
+                  and 'strBiographyEN' in artdata):
+                bio += self._filter(artdata['strBiographyEN'])
+
+        return bio
+
+    def _handle_website_data(self, artdata, metadata):
+        ''' Handle website data from TheAudioDB response '''
+        if not (self.config.cparser.value('theaudiodb/websites', type=bool)
+                and artdata.get('strWebsite')):
+            return
+
+        webstr = 'https://' + artdata['strWebsite']
+        if not metadata.get('artistwebsites'):
+            metadata['artistwebsites'] = []
+        metadata['artistwebsites'].append(webstr)
+
+    def _handle_image_data(self, artdata, metadata, imagecache):
+        ''' Handle image data from TheAudioDB response '''
+        self._queue_single_image(artdata, metadata, imagecache, 'strArtistBanner',
+                                 'artistbannerraw', 'artistbanner', 'banners')
+        self._queue_single_image(artdata, metadata, imagecache, 'strArtistLogo',
+                                 'artistlogoraw', 'artistlogo', 'logos')
+        self._queue_single_image(artdata, metadata, imagecache, 'strArtistThumb',
+                                 'artistthumbnailraw', 'artistthumbnail', 'thumbnails')
+        self._handle_fanart_data(artdata, metadata, imagecache)
+
+    def _queue_single_image(self, artdata, metadata, imagecache, source_key, # pylint: disable=too-many-arguments
+                           metadata_key, image_type, config_key):
+        ''' Queue a single image type from TheAudioDB data '''
+        if (metadata.get(metadata_key)
+            or not artdata.get(source_key)
+            or not self.config.cparser.value(f'theaudiodb/{config_key}', type=bool)):
+            return
+
+        imagecache.fill_queue(config=self.config,
+                              identifier=metadata['imagecacheartist'],
+                              imagetype=image_type,
+                              srclocationlist=[artdata[source_key]])
+
+    def _handle_fanart_data(self, artdata, metadata, imagecache):
+        ''' Handle fanart data from TheAudioDB response '''
+        if not self.config.cparser.value('theaudiodb/fanart', type=bool):
+            return
+
+        fanart_queued = False
+        for num in ['', '2', '3', '4']:
+            artstring = f'strArtistFanart{num}'
+            if not artdata.get(artstring):
+                continue
+
+            if not metadata.get('artistfanarturls'):
+                metadata['artistfanarturls'] = []
+            metadata['artistfanarturls'].append(artdata[artstring])
+
+            if not fanart_queued:
+                fanart_queued = True
+                imagecache.fill_queue(config=self.config,
+                                      identifier=metadata['imagecacheartist'],
+                                      imagetype='artistfanart',
+                                      srclocationlist=[artdata[artstring]])
+
+    def _correct_artist_name(self, extradata, metadata, used_musicbrainz):
+        ''' Correct artist name from API response for name-based searches '''
+        if used_musicbrainz or not extradata:
+            return
+
+        for artdata in extradata:
+            if not (self._check_artist(artdata) and artdata.get('strArtist')):
+                continue
+
+            corrected_artist = artdata['strArtist']
+            if corrected_artist != metadata['artist']:
+                logging.debug('TheAudioDB corrected artist name: %s -> %s',
+                              metadata['artist'], corrected_artist)
+                metadata['artist'] = corrected_artist
+            break
 
     async def artistdatafrommbid_async(self, apikey, mbartistid, artist_name):
         ''' async cached version of artistdatafrommbid '''
