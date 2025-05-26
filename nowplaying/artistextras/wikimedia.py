@@ -3,6 +3,7 @@
 
 import logging
 
+import nowplaying.apicache
 import nowplaying.wikiclient
 
 from nowplaying.artistextras import ArtistExtrasPlugin
@@ -31,6 +32,65 @@ class Plugin(ArtistExtrasPlugin):
             return True
         return False
 
+    async def _get_page_cached(self, entity, lang, artist_name):
+        """Cached version of _get_page_async for better performance."""
+        
+        # Check what features are enabled to optimize API calls
+        need_bio = self.config.cparser.value('wikimedia/bio', type=bool)
+        need_images = (self.config.cparser.value('wikimedia/fanart', type=bool)
+                       or self.config.cparser.value('wikimedia/thumbnails', type=bool))
+
+        async def fetch_func():
+            page = await nowplaying.wikiclient.get_page_async(
+                entity=entity,
+                lang=lang,
+                timeout=5,
+                need_bio=need_bio,
+                need_images=need_images,
+                max_images=5  # Limit for performance during live shows
+            )
+            # Convert to JSON-serializable format for caching
+            if page:
+                return {
+                    'entity': page.entity,
+                    'lang': page.lang,
+                    'data': page.data,
+                    'images': page._images,
+                    'type': 'wikipage'
+                }
+            return None
+
+        cached_result = await nowplaying.apicache.cached_fetch(
+            provider='wikimedia',
+            artist_name=artist_name,
+            endpoint=f'{entity}_{lang}',  # Unique per entity + language combination
+            fetch_func=fetch_func,
+            ttl_seconds=24 * 60 * 60  # 24 hours for Wikimedia data per CLAUDE.md
+        )
+
+        # Reconstruct WikiPage object from cached JSON data if needed
+        if isinstance(cached_result, dict) and cached_result.get('type') == 'wikipage':
+            # Create a mock WikiPage with the cached data
+            class MockWikiPage:
+                def __init__(self, entity, lang, data, images):
+                    self.entity = entity
+                    self.lang = lang
+                    self.data = data
+                    self._images = images
+
+                def images(self, fields=None):
+                    if fields is None:
+                        return self._images
+                    return [{k: img.get(k) for k in fields if k in img} for img in self._images]
+
+            return MockWikiPage(
+                cached_result['entity'],
+                cached_result['lang'], 
+                cached_result['data'],
+                cached_result['images']
+            )
+
+        return cached_result
 
     async def _get_page_async(self, entity, lang):
         logging.debug("Processing async %s", entity)
@@ -76,7 +136,7 @@ class Plugin(ArtistExtrasPlugin):
                 mymeta['artistlongbio'] = page.data['extext']
             elif lang != 'en' and self.config.cparser.value('wikimedia/bio_iso_en_fallback',
                                                             type=bool):
-                temppage = await self._get_page_async(entity, 'en')
+                temppage = await self._get_page_cached(entity, 'en', metadata['artist'])
                 if temppage and temppage.data.get('extext'):
                     mymeta['artistlongbio'] = temppage.data['extext']
 
@@ -96,7 +156,7 @@ class Plugin(ArtistExtrasPlugin):
             lang = self.config.cparser.value('wikimedia/bio_iso', type=str) or 'en'
             for website in wikidata_websites:
                 entity = website.split('/')[-1]
-                page = await self._get_page_async(entity, lang)
+                page = await self._get_page_cached(entity, lang, metadata['artist'])
                 if not page or not page.data:
                     continue
 
