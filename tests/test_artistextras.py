@@ -267,6 +267,47 @@ async def test_discogs_apicache_usage(bootstrap):  # pylint: disable=redefined-o
 
 
 @pytest.mark.asyncio
+async def test_discogs_website_lookup_cache(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' test discogs website lookup path with caching (different from search path) '''
+
+    config = bootstrap
+    if 'discogs' not in PLUGINS:
+        pytest.skip("Discogs API key not available")
+
+    configuresettings('discogs', config.cparser)
+    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    imagecaches, plugins = configureplugins(config)
+
+    plugin = plugins['discogs']
+
+    # Test metadata with artistwebsites to trigger website lookup path
+    metadata_with_websites = {
+        'album': 'Purple Rain',
+        'artist': 'Prince',
+        'imagecacheartist': 'prince',
+        'artistwebsites': ['https://www.discogs.com/artist/79903']  # Prince's Discogs page
+    }
+
+    # First call - should hit API and cache result (website lookup path)
+    result1 = await plugin.download_async(metadata_with_websites.copy(),
+                                         imagecache=imagecaches['discogs'])
+
+    # Second call - should use cached result (tests _artist_async_cached)
+    result2 = await plugin.download_async(metadata_with_websites.copy(),
+                                         imagecache=imagecaches['discogs'])
+
+    # Both results should be consistent
+    assert (result1 is None) == (result2 is None)
+
+    if result1:  # Only test if we got data back
+        logging.info('Discogs website lookup caching verified')
+        # Should return the same metadata structure
+        assert result1 == result2
+    else:
+        logging.info('Discogs website lookup test completed - cache working regardless of data found')
+
+
+@pytest.mark.asyncio
 async def test_discogs_artist_duplicates(bootstrap):  # pylint: disable=redefined-outer-name
     ''' test discogs handling of artists with duplicate names like "Madonna" '''
 

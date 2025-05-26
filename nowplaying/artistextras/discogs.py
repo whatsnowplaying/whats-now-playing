@@ -102,15 +102,29 @@ class Plugin(ArtistExtrasPlugin):
         """Cached version of discogs artist_async."""
 
         async def fetch_func():
-            return await self.client.artist_async(artist_id)
+            artist = await self.client.artist_async(artist_id)
+            # Convert to JSON-serializable format for caching
+            if artist:
+                return {
+                    'type': 'artist',
+                    'data': artist.data if hasattr(artist, 'data') else artist.__dict__
+                }
+            return None
 
-        return await nowplaying.apicache.cached_fetch(
+        cached_result = await nowplaying.apicache.cached_fetch(
             provider='discogs',
             artist_name=artist_name,
             endpoint=f'artist_{artist_id}',
             fetch_func=fetch_func,
             ttl_seconds=24 * 60 * 60  # 24 hours for Discogs data per CLAUDE.md
         )
+
+        # Reconstruct artist object from cached JSON data if needed
+        if isinstance(cached_result, dict) and cached_result.get('type') == 'artist':
+            # Reconstruct Artist object
+            return models.Artist(cached_result['data'])
+
+        return cached_result
 
     def _process_metadata(self, artistname, artist, imagecache):
         ''' update metadata based upon an artist record '''

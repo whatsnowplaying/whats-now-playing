@@ -617,7 +617,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         cachedbfile = self.config.cparser.value('artistextras/cachedbfile')
         if cachedbfile:
             cachedbfilepath = pathlib.Path(cachedbfile)
-            if cachedbfilepath.exists() and 'imagecache' in cachedbfile:
+            if cachedbfilepath.exists() and 'imagecache' in str(cachedbfile):
                 logging.debug('Deleting image cache: %s', cachedbfilepath)
                 cachedbfilepath.unlink()
 

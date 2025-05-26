@@ -323,8 +323,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         tasks: list[tuple[str, asyncio.Task]] = []
 
         # Calculate dynamic timeout based on delay setting
+        # With apicache integration, we need more time for cache misses but still be responsive
         base_delay = self.config.cparser.value('settings/delay', type=float, defaultValue=10.0)
-        timeout = min(max(base_delay * 0.8, 3.0), 10.0)  # 3-10 second range
+        timeout = min(max(base_delay * 1.2, 5.0), 15.0)  # 5-15 second range
 
         # Start all plugin tasks concurrently using native async methods
         for _, plugins in self.extraslist.items():
@@ -351,7 +352,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             done, pending = await asyncio.wait(
                 [task for _, task in tasks],
                 timeout=timeout,
-                return_when=asyncio.FIRST_COMPLETED if len(tasks) > 1 else asyncio.ALL_COMPLETED)
+                return_when=asyncio.ALL_COMPLETED)
 
             # Process completed tasks immediately
             for plugin, task in tasks:
