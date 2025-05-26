@@ -15,7 +15,7 @@ from typing import Any
 import aiohttp
 
 
-class WikiPage:
+class WikiPage:  # pylint: disable=too-few-public-methods
     """Represents a Wikipedia page with its data."""
 
     def __init__(self, entity: str, lang: str = 'en'):
@@ -101,7 +101,7 @@ class AsyncWikiClient:
 
             return result
 
-    async def _get_wikipedia_extract(self,
+    async def _get_wikipedia_extract(self,  # pylint: disable=too-many-return-statements
                                      entity: str,
                                      lang: str,
                                      sitelinks: dict | None = None) -> str | None:
@@ -222,7 +222,7 @@ class AsyncWikiClient:
         except Exception:  # pylint: disable=broad-exception-caught
             return None
 
-    async def _get_wikipedia_images(self,
+    async def _get_wikipedia_images(self,  # pylint: disable=too-many-locals
                                     entity: str,
                                     lang: str,
                                     sitelinks: dict | None = None) -> list[dict[str, str]]:
@@ -323,7 +323,7 @@ class AsyncWikiClient:
         except Exception:  # pylint: disable=broad-exception-caught
             return None
 
-    async def get_page(self,
+    async def get_page(self,  # pylint: disable=too-many-arguments
                        entity: str,
                        lang: str = 'en',
                        fetch_bio: bool = True,
@@ -370,7 +370,7 @@ def page(wikibase: str, lang: str = 'en', silent: bool = True, timeout: int = 30
     return _get_page_sync(wikibase, lang, timeout, fetch_bio=True, fetch_images=True)
 
 
-def get_page_for_nowplaying(entity: str,
+def get_page_for_nowplaying(entity: str,  # pylint: disable=too-many-arguments
                             lang: str = 'en',
                             timeout: int = 5,
                             need_bio: bool = True,
@@ -393,7 +393,7 @@ def get_page_for_nowplaying(entity: str,
     return _get_page_sync(entity, lang, timeout, need_bio, need_images, max_images)
 
 
-def _get_page_sync(wikibase: str,
+def _get_page_sync(wikibase: str,  # pylint: disable=too-many-arguments
                    lang: str,
                    timeout: int,
                    fetch_bio: bool = True,
@@ -410,7 +410,7 @@ def _get_page_sync(wikibase: str,
         loop = asyncio.get_event_loop()
         if loop.is_running():
             # If we're already in an async context, we need to run in a thread
-            import concurrent.futures
+            import concurrent.futures  # pylint: disable=import-outside-toplevel
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(asyncio.run, _get_page())
                 wiki_page = future.result()
@@ -423,7 +423,7 @@ def _get_page_sync(wikibase: str,
     return wiki_page
 
 
-async def get_page_async(entity: str,
+async def get_page_async(entity: str,  # pylint: disable=too-many-arguments
                          lang: str = 'en',
                          timeout: int = 5,
                          need_bio: bool = True,
