@@ -13,7 +13,7 @@ import aiosqlite
 import pytest
 import pytest_asyncio
 
-import nowplaying.apicache
+import nowplaying.apicache  # pylint: disable=import-error
 
 
 @pytest_asyncio.fixture
