@@ -8,7 +8,6 @@ with just the functionality needed by the nowplaying application.
 """
 # pylint: disable=not-async-context-manager
 
-import asyncio
 import logging
 import ssl
 from typing import Any
@@ -359,68 +358,6 @@ class AsyncWikiClient:
             logging.debug("Error fetching page data for %s: %s", entity, error)
 
         return wiki_page
-
-
-def page(wikibase: str, lang: str = 'en', silent: bool = True, timeout: int = 30) -> WikiPage:  # pylint: disable=unused-argument
-    """
-    Synchronous wrapper that mimics wptools.page() interface.
-
-    This function provides backward compatibility with the existing wptools usage.
-    """
-    return _get_page_sync(wikibase, lang, timeout, fetch_bio=True, fetch_images=True)
-
-
-def get_page_for_nowplaying(entity: str,  # pylint: disable=too-many-arguments
-                            lang: str = 'en',
-                            timeout: int = 5,
-                            need_bio: bool = True,
-                            need_images: bool = True,
-                            max_images: int = 5) -> WikiPage:
-    """
-    Optimized synchronous method specifically for nowplaying wikimedia plugin.
-
-    Args:
-        entity: Wikidata entity ID (e.g., 'Q11647')
-        lang: Language code for Wikipedia content
-        timeout: Request timeout in seconds (reduced default for live performance)
-        need_bio: Whether to fetch biography/extract
-        need_images: Whether to fetch images
-        max_images: Maximum number of images to fetch for performance
-
-    Returns:
-        WikiPage with optimized data fetching based on actual needs
-    """
-    return _get_page_sync(entity, lang, timeout, need_bio, need_images, max_images)
-
-
-def _get_page_sync(wikibase: str,  # pylint: disable=too-many-arguments
-                   lang: str,
-                   timeout: int,
-                   fetch_bio: bool = True,
-                   fetch_images: bool = True,
-                   max_images: int = 10) -> WikiPage:
-    """Internal sync wrapper with optimization parameters."""
-
-    async def _get_page():
-        async with AsyncWikiClient(timeout=timeout) as client:
-            return await client.get_page(wikibase, lang, fetch_bio, fetch_images, max_images)
-
-    # Run the async function in the current event loop or create one
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # If we're already in an async context, we need to run in a thread
-            import concurrent.futures  # pylint: disable=import-outside-toplevel
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, _get_page())
-                wiki_page = future.result()
-        else:
-            wiki_page = loop.run_until_complete(_get_page())
-    except RuntimeError:
-        # No event loop, create one
-        wiki_page = asyncio.run(_get_page())
-
-    return wiki_page
 
 
 async def get_page_async(entity: str,  # pylint: disable=too-many-arguments

@@ -31,39 +31,6 @@ class Plugin(ArtistExtrasPlugin):
             return True
         return False
 
-    def _get_page(self, entity, lang):
-        logging.debug("Processing %s", entity)
-
-        # Check what features are enabled to optimize API calls
-        need_bio = self.config.cparser.value('wikimedia/bio', type=bool)
-        need_images = (self.config.cparser.value('wikimedia/fanart', type=bool)
-                       or self.config.cparser.value('wikimedia/thumbnails', type=bool))
-
-        try:
-            page = nowplaying.wikiclient.get_page_for_nowplaying(
-                entity=entity,
-                lang=lang,
-                timeout=5,
-                need_bio=need_bio,
-                need_images=need_images,
-                max_images=5  # Limit for performance during live shows
-            )
-        except Exception:  # pylint: disable=broad-except
-            page = None
-            if self.config.cparser.value('wikimedia/bio_iso_en_fallback',
-                                         type=bool) and lang != 'en':
-                try:
-                    page = nowplaying.wikiclient.get_page_for_nowplaying(entity=entity,
-                                                                         lang='en',
-                                                                         timeout=5,
-                                                                         need_bio=need_bio,
-                                                                         need_images=need_images,
-                                                                         max_images=5)
-                except Exception as err:  # pylint: disable=broad-except
-                    page = None
-                    logging.exception("wikimedia page failure (%s): %s", err, entity)
-
-        return page
 
     async def _get_page_async(self, entity, lang):
         logging.debug("Processing async %s", entity)

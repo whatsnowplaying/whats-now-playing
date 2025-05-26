@@ -4,9 +4,12 @@ Unit tests for the API response caching system
 """
 
 import asyncio
+import base64
+import json
 import pathlib
 import tempfile
 
+import aiosqlite
 import pytest
 import pytest_asyncio
 
@@ -20,16 +23,17 @@ async def temp_cache():
         cache_dir = pathlib.Path(temp_dir)
         cache = nowplaying.apicache.APIResponseCache(cache_dir=cache_dir)
         # Wait for initialization to complete
-        await cache._initialize_db()
+        await cache._initialize_db()  # pylint: disable=protected-access
         try:
             yield cache
         finally:
             # Properly close the cache to prevent event loop warnings
-            await cache.close()
+            if hasattr(cache, 'close'):
+                await cache.close()
 
 
 @pytest.mark.asyncio
-async def test_cache_initialization(temp_cache):
+async def test_cache_initialization(temp_cache):  # pylint: disable=redefined-outer-name
     """Test that the cache initializes properly."""
     cache = temp_cache
 
@@ -37,26 +41,27 @@ async def test_cache_initialization(temp_cache):
     assert cache.db_file.exists()
 
     # Check that tables are created
-    async with cache._lock:
-        async with nowplaying.apicache.aiosqlite.connect(cache.db_file) as db:
-            cursor = await db.execute(
+    async with cache._lock:  # pylint: disable=protected-access
+        async with aiosqlite.connect(cache.db_file) as database_conn:
+            cursor = await database_conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='api_responses'")
             tables = await cursor.fetchall()
             assert len(tables) == 1
 
             # Check that indices are created
-            cursor = await db.execute(
+            cursor = await database_conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")
             indices = await cursor.fetchall()
             assert len(indices) == 3  # We create 3 indices
 
 
 @pytest.mark.asyncio
-async def test_cache_key_generation(temp_cache):
+async def test_cache_key_generation(temp_cache):  # pylint: disable=redefined-outer-name
     """Test cache key generation."""
     cache = temp_cache
 
     # Test basic key generation
+    # pylint: disable=protected-access
     key1 = cache._make_cache_key('discogs', 'Nine Inch Nails', 'artist_search')
     key2 = cache._make_cache_key('discogs', 'Nine Inch Nails', 'artist_search')
     assert key1 == key2  # Same input should produce same key
@@ -88,7 +93,7 @@ async def test_cache_key_generation(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_miss(temp_cache):
+async def test_cache_miss(temp_cache):  # pylint: disable=redefined-outer-name
     """Test cache miss behavior."""
     cache = temp_cache
 
@@ -97,7 +102,7 @@ async def test_cache_miss(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_put_and_get(temp_cache):
+async def test_cache_put_and_get(temp_cache):  # pylint: disable=redefined-outer-name
     """Test storing and retrieving data from cache."""
     cache = temp_cache
 
@@ -117,7 +122,7 @@ async def test_cache_put_and_get(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_ttl_default(temp_cache):
+async def test_cache_ttl_default(temp_cache):  # pylint: disable=redefined-outer-name
     """Test that TTL defaults work correctly."""
     cache = temp_cache
 
@@ -127,10 +132,11 @@ async def test_cache_ttl_default(temp_cache):
     await cache.put('discogs', 'Test Artist', 'search', test_data)
 
     # Check that correct TTL was applied
+    # pylint: disable=protected-access
     cache_key = cache._make_cache_key('discogs', 'Test Artist', 'search')
     async with cache._lock:
-        async with nowplaying.apicache.aiosqlite.connect(cache.db_file) as db:
-            cursor = await db.execute(
+        async with aiosqlite.connect(cache.db_file) as database_conn:
+            cursor = await database_conn.execute(
                 "SELECT created_at, expires_at FROM api_responses WHERE cache_key = ?",
                 (cache_key, ))
             row = await cursor.fetchone()
@@ -143,7 +149,7 @@ async def test_cache_ttl_default(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_ttl_custom(temp_cache):
+async def test_cache_ttl_custom(temp_cache):  # pylint: disable=redefined-outer-name
     """Test custom TTL values."""
     cache = temp_cache
 
@@ -152,10 +158,11 @@ async def test_cache_ttl_custom(temp_cache):
 
     await cache.put('test_provider', 'Test Artist', 'search', test_data, ttl_seconds=custom_ttl)
 
+    # pylint: disable=protected-access
     cache_key = cache._make_cache_key('test_provider', 'Test Artist', 'search')
     async with cache._lock:
-        async with nowplaying.apicache.aiosqlite.connect(cache.db_file) as db:
-            cursor = await db.execute(
+        async with aiosqlite.connect(cache.db_file) as database_conn:
+            cursor = await database_conn.execute(
                 "SELECT created_at, expires_at FROM api_responses WHERE cache_key = ?",
                 (cache_key, ))
             row = await cursor.fetchone()
@@ -166,7 +173,7 @@ async def test_cache_ttl_custom(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_expiration(temp_cache):
+async def test_cache_expiration(temp_cache):  # pylint: disable=redefined-outer-name
     """Test that expired cache entries are not returned."""
     cache = temp_cache
 
@@ -188,7 +195,7 @@ async def test_cache_expiration(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_access_tracking(temp_cache):
+async def test_cache_access_tracking(temp_cache):  # pylint: disable=redefined-outer-name
     """Test that access count and last accessed are tracked."""
     cache = temp_cache
 
@@ -202,10 +209,11 @@ async def test_cache_access_tracking(temp_cache):
     await cache.get('discogs', 'Test Artist', 'search')
 
     # Check access count
+    # pylint: disable=protected-access
     cache_key = cache._make_cache_key('discogs', 'Test Artist', 'search')
     async with cache._lock:
-        async with nowplaying.apicache.aiosqlite.connect(cache.db_file) as db:
-            cursor = await db.execute(
+        async with aiosqlite.connect(cache.db_file) as database_conn:
+            cursor = await database_conn.execute(
                 "SELECT access_count, last_accessed FROM api_responses WHERE cache_key = ?",
                 (cache_key, ))
             row = await cursor.fetchone()
@@ -217,7 +225,7 @@ async def test_cache_access_tracking(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_replacement(temp_cache):
+async def test_cache_replacement(temp_cache):  # pylint: disable=redefined-outer-name
     """Test that storing with same key replaces existing data."""
     cache = temp_cache
 
@@ -235,17 +243,19 @@ async def test_cache_replacement(temp_cache):
     assert result == updated_data
 
     # Should only be one entry in database
+    # pylint: disable=protected-access
     cache_key = cache._make_cache_key('discogs', 'Test Artist', 'search')
     async with cache._lock:
-        async with nowplaying.apicache.aiosqlite.connect(cache.db_file) as db:
-            cursor = await db.execute("SELECT COUNT(*) FROM api_responses WHERE cache_key = ?",
-                                      (cache_key, ))
+        async with aiosqlite.connect(cache.db_file) as database_conn:
+            cursor = await database_conn.execute(
+                "SELECT COUNT(*) FROM api_responses WHERE cache_key = ?",
+                (cache_key, ))
             count = await cursor.fetchone()
             assert count[0] == 1
 
 
 @pytest.mark.asyncio
-async def test_cache_with_params(temp_cache):
+async def test_cache_with_params(temp_cache):  # pylint: disable=redefined-outer-name
     """Test caching with additional parameters."""
     cache = temp_cache
 
@@ -265,7 +275,7 @@ async def test_cache_with_params(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_empty_data(temp_cache):
+async def test_cache_empty_data(temp_cache):  # pylint: disable=redefined-outer-name
     """Test that empty data is not cached."""
     cache = temp_cache
 
@@ -279,7 +289,7 @@ async def test_cache_empty_data(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_invalid_json(temp_cache):
+async def test_cache_invalid_json(temp_cache):  # pylint: disable=redefined-outer-name
     """Test handling of data that can't be serialized to JSON."""
     cache = temp_cache
 
@@ -294,7 +304,7 @@ async def test_cache_invalid_json(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_concurrent_access(temp_cache):
+async def test_cache_concurrent_access(temp_cache):  # pylint: disable=redefined-outer-name
     """Test concurrent access to cache."""
     cache = temp_cache
 
@@ -314,12 +324,22 @@ async def test_cache_concurrent_access(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_database_error_handling(temp_cache):
+async def test_cache_database_error_handling(temp_cache):  # pylint: disable=redefined-outer-name
     """Test handling of database errors."""
     cache = temp_cache
 
-    # Close the database file to simulate an error
-    cache.db_file.unlink()
+    # Store some data first to ensure the database exists
+    test_data = {'test': 'data'}
+    await cache.put('discogs', 'Test Artist', 'search', test_data)
+
+    # Simulate database error by corrupting the database file
+    # This is more Windows-friendly than trying to delete a potentially locked file
+    try:
+        with open(cache.db_file, 'wb') as file_handle:
+            file_handle.write(b'corrupted data that is not a valid sqlite database')
+    except (PermissionError, OSError):
+        # If we can't write to the file (Windows file locking), skip this test
+        pytest.skip("Cannot corrupt database file due to file locking")
 
     # Get should return None on database error
     result = await cache.get('discogs', 'Test Artist', 'search')
@@ -327,7 +347,7 @@ async def test_cache_database_error_handling(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_stats_collection(temp_cache):
+async def test_cache_stats_collection(temp_cache):  # pylint: disable=redefined-outer-name
     """Test that cache statistics are collected properly."""
     cache = temp_cache
 
@@ -342,15 +362,16 @@ async def test_cache_stats_collection(temp_cache):
     await cache.get('discogs', 'Artist 1', 'search')
 
     # Check database contains expected data
+    # pylint: disable=protected-access
     async with cache._lock:
-        async with nowplaying.apicache.aiosqlite.connect(cache.db_file) as db:
+        async with aiosqlite.connect(cache.db_file) as database_conn:
             # Check total entries
-            cursor = await db.execute("SELECT COUNT(*) FROM api_responses")
+            cursor = await database_conn.execute("SELECT COUNT(*) FROM api_responses")
             count = await cursor.fetchone()
             assert count[0] == 5
 
             # Check access counts
-            cursor = await db.execute(
+            cursor = await database_conn.execute(
                 "SELECT artist_name, access_count FROM api_responses ORDER BY artist_name")
             rows = await cursor.fetchall()
 
@@ -374,7 +395,7 @@ async def test_cache_with_real_data_structure():
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = pathlib.Path(temp_dir)
         cache = nowplaying.apicache.APIResponseCache(cache_dir=cache_dir)
-        await cache._initialize_db()
+        await cache._initialize_db()  # pylint: disable=protected-access
 
         # Realistic Discogs API response structure
         discogs_data = {
@@ -420,7 +441,7 @@ async def test_cache_provider_ttl_settings():
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = pathlib.Path(temp_dir)
         cache = nowplaying.apicache.APIResponseCache(cache_dir=cache_dir)
-        await cache._initialize_db()
+        await cache._initialize_db()  # pylint: disable=protected-access
 
         test_data = {'test': 'data'}
 
@@ -436,10 +457,11 @@ async def test_cache_provider_ttl_settings():
         for provider, expected_ttl in providers_and_ttls:
             await cache.put(provider, 'Test Artist', 'search', test_data)
 
+            # pylint: disable=protected-access
             cache_key = cache._make_cache_key(provider, 'Test Artist', 'search')
             async with cache._lock:
-                async with nowplaying.apicache.aiosqlite.connect(cache.db_file) as db:
-                    cursor = await db.execute(
+                async with aiosqlite.connect(cache.db_file) as database_conn:
+                    cursor = await database_conn.execute(
                         "SELECT created_at, expires_at FROM api_responses WHERE cache_key = ?",
                         (cache_key, ))
                     row = await cursor.fetchone()
@@ -451,7 +473,7 @@ async def test_cache_provider_ttl_settings():
 
 
 @pytest.mark.asyncio
-async def test_cache_binary_data_round_trip(temp_cache):
+async def test_cache_binary_data_round_trip(temp_cache):  # pylint: disable=redefined-outer-name
     """Test that binary data is properly cached and restored."""
     cache = temp_cache
 
@@ -505,7 +527,7 @@ async def test_cache_binary_data_round_trip(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_large_binary_data(temp_cache):
+async def test_cache_large_binary_data(temp_cache):  # pylint: disable=redefined-outer-name
     """Test caching of realistically sized binary data (cover art)."""
     cache = temp_cache
 
@@ -532,7 +554,7 @@ async def test_cache_large_binary_data(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_mixed_serializable_data(temp_cache):
+async def test_cache_mixed_serializable_data(temp_cache):  # pylint: disable=redefined-outer-name
     """Test caching of complex data with mix of serializable and binary content."""
     cache = temp_cache
 
@@ -588,7 +610,7 @@ async def test_cache_mixed_serializable_data(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_binary_data_base64_encoding(temp_cache):
+async def test_cache_binary_data_base64_encoding(temp_cache):  # pylint: disable=redefined-outer-name
     """Test that binary data is properly base64 encoded in storage."""
     cache = temp_cache
 
@@ -599,9 +621,8 @@ async def test_cache_binary_data_base64_encoding(temp_cache):
     await cache.put('test', 'TestArtist', 'recording', test_data)
 
     # Manually check the database storage format
-    import aiosqlite
-    async with aiosqlite.connect(cache.db_file) as db:
-        cursor = await db.execute(
+    async with aiosqlite.connect(cache.db_file) as database_conn:
+        cursor = await database_conn.execute(
             "SELECT response_data FROM api_responses WHERE artist_name = ?",
             ('testartist', )  # Remember: stored as lowercase and stripped
         )
@@ -611,7 +632,6 @@ async def test_cache_binary_data_base64_encoding(temp_cache):
         stored_json = row[0]
 
         # Verify the JSON contains base64 encoded binary data
-        import json
         stored_data = json.loads(stored_json)
 
         # The binary data should be stored as a special object
@@ -621,13 +641,12 @@ async def test_cache_binary_data_base64_encoding(temp_cache):
         assert '__data__' in cover_data
 
         # Verify we can decode it back
-        import base64
         decoded = base64.b64decode(cover_data['__data__'])
         assert decoded == binary_data
 
 
 @pytest.mark.asyncio
-async def test_cache_empty_binary_data(temp_cache):
+async def test_cache_empty_binary_data(temp_cache):  # pylint: disable=redefined-outer-name
     """Test handling of empty binary data."""
     cache = temp_cache
 
@@ -647,7 +666,7 @@ async def test_cache_empty_binary_data(temp_cache):
 
 
 @pytest.mark.asyncio
-async def test_cache_musicbrainz_realistic_data(temp_cache):
+async def test_cache_musicbrainz_realistic_data(temp_cache):  # pylint: disable=redefined-outer-name
     """Test caching of realistic MusicBrainz data with cover art."""
     cache = temp_cache
 
