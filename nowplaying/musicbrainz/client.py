@@ -13,7 +13,7 @@ import xml.etree.ElementTree as etree
 
 import aiohttp
 
-from . import parser as mbxml
+from nowplaying.vendor.musicbrainzngs import mbxml
 
 logger = logging.getLogger(__name__)
 
