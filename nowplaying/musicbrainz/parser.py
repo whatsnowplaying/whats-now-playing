@@ -224,7 +224,6 @@ def parse_artist_credit(element: ET.Element) -> list[dict[str, Any] | str]:
                 elif nc_tag == "artist":
                     name_credit["artist"] = parse_artist(nc_child)
             credit.append(name_credit)
-            
             # Check for joinphrase attribute on the name-credit element
             joinphrase = child.get("joinphrase")
             if joinphrase:
@@ -283,7 +282,7 @@ def parse_url_relation_list(element: ET.Element) -> list[dict[str, Any]]:
 def parse_label_info_list(element: ET.Element) -> list[dict[str, Any]]:  # pylint: disable=too-many-nested-blocks
     """Parse label-info-list element"""
     labels = []
-    for child in element:
+    for child in element:  # pylint: disable=too-many-nested-blocks
         if child.tag.endswith('label-info'):
             label_info = {}
             for li_child in child:
@@ -299,7 +298,8 @@ def parse_label_info_list(element: ET.Element) -> list[dict[str, Any]]:  # pylin
                     for label_child in li_child:
                         label_tag = (label_child.tag.split('}')[-1]
                                      if '}' in label_child.tag else label_child.tag)
-                        if label_tag in ["name", "sort-name", "disambiguation"] and label_child.text:
+                        if (label_tag in ["name", "sort-name", "disambiguation"]
+                            and label_child.text):
                             label[label_tag] = label_child.text
                     label_info["label"] = label
             labels.append(label_info)

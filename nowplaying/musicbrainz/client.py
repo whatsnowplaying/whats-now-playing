@@ -9,7 +9,6 @@ import logging
 import ssl
 import time
 from typing import Any
-import xml.etree.ElementTree as etree
 
 import aiohttp
 

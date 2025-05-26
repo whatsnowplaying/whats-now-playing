@@ -11,12 +11,12 @@ import os
 import re
 import sys
 
-from . import client
-import nowplaying.cachingdecorator
-
 import nowplaying.bootstrap
+import nowplaying.cachingdecorator
 import nowplaying.config
 from nowplaying.utils import normalize_text, normalize, artist_name_variations
+
+from . import client
 
 REMIX_RE = re.compile(r'^\s*(.*)\s+[\(\[].*[\)\]]$')
 
