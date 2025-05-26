@@ -13,7 +13,7 @@ from typing import Any
 import aiohttp
 
 
-class DiscogsRelease:
+class DiscogsRelease:  # pylint: disable=too-few-public-methods
     """Represents a Discogs release with its artists."""
 
     def __init__(self, data: dict[str, Any], client: 'AsyncDiscogsClient | None' = None):
@@ -43,7 +43,7 @@ class DiscogsRelease:
 
     async def load_full_data(self):
         """Load full release data including artist details."""
-        if self._artists_loaded or not self.discogs_id or not self._client or not self._client.session:
+        if self._artists_loaded or not self.discogs_id or not self._client or not self._client.session:  # pylint: disable=line-too-long
             return
 
         # Get full release data
@@ -56,11 +56,11 @@ class DiscogsRelease:
                         # Create artist objects with IDs for further lookup
                         self.artists = [DiscogsArtist(artist) for artist in data['artists']]
                         self._artists_loaded = True
-        except Exception as error:
+        except Exception as error:  # pylint: disable=broad-exception-caught
             logging.debug("Error loading full release data: %s", error)
 
 
-class DiscogsArtist:
+class DiscogsArtist:  # pylint: disable=too-few-public-methods
     """Represents a Discogs artist with metadata."""
 
     def __init__(self, data: dict[str, Any]):
@@ -94,9 +94,9 @@ class DiscogsSearchResult:
             # Load full artist data for first artist only (typically what nowplaying needs)
             for i, release_artist in enumerate(release.artists[:1]):  # Only first artist
                 if release_artist.discogs_id:
-                    if release._client:
+                    if release._client:  # pylint: disable=protected-access
                         # Use optimized artist loading with limited images
-                        full_artist = await release._client.artist(release_artist.discogs_id,
+                        full_artist = await release._client.artist(release_artist.discogs_id,  # pylint: disable=protected-access
                                                                    limit_images=5)
                         if full_artist:
                             release.artists[i] = full_artist
@@ -133,7 +133,7 @@ class AsyncDiscogsClient:
         if self.session:
             await self.session.close()
 
-    async def search(self,
+    async def search(self,  # pylint: disable=too-many-arguments
                      query: str,
                      artist: str | None = None,
                      search_type: str = 'release',
@@ -155,7 +155,7 @@ class AsyncDiscogsClient:
         try:
             if not self.session:
                 return DiscogsSearchResult([], self)
-            async with self.session.get(url, params=params) as response:
+            async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
                 if response.status == 200:
                     data = await response.json()
                     results = data.get('results', [])
@@ -174,7 +174,7 @@ class AsyncDiscogsClient:
 
                 logging.warning("Discogs search failed with status %d", response.status)
                 return DiscogsSearchResult([], self)
-        except Exception as error:
+        except Exception as error:  # pylint: disable=broad-exception-caught
             logging.debug("Discogs search error: %s", error)
             return DiscogsSearchResult([], self)
 
@@ -188,7 +188,7 @@ class AsyncDiscogsClient:
         url = f"{self.BASE_URL}/artists/{artist_id}"
 
         try:
-            async with self.session.get(url) as response:
+            async with self.session.get(url) as response:  # pylint: disable=not-async-context-manager
                 if response.status == 200:
                     data = await response.json()
 
@@ -207,7 +207,7 @@ class AsyncDiscogsClient:
 
                 logging.warning("Discogs artist lookup failed with status %d", response.status)
                 return None
-        except Exception as error:
+        except Exception as error:  # pylint: disable=broad-exception-caught
             logging.debug("Discogs artist lookup error: %s", error)
             return None
 
@@ -245,7 +245,7 @@ class AsyncDiscogsClientWrapper:
 
 
 # Data models module
-class Models:
+class Models:  # pylint: disable=too-few-public-methods
     """Data models module for discogs objects."""
     Release = DiscogsRelease
     Artist = DiscogsArtist
@@ -278,7 +278,7 @@ def get_optimized_client_for_nowplaying(user_agent: str,
     client.timeout = timeout
 
     # Store optimization flags for use in search/artist methods
-    client._need_bio = need_bio
-    client._need_images = need_images
+    client._need_bio = need_bio  # pylint: disable=protected-access
+    client._need_images = need_images  # pylint: disable=protected-access
 
     return client

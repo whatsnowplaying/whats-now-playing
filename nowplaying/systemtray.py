@@ -239,7 +239,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         # Vacuum databases on shutdown to reclaim space
         try:
-            cache = nowplaying.apicache.get_cache()
+            cache = nowplaying.apicache.APIResponseCache()
             cache.vacuum_database()
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Error vacuuming API cache: %s", error)

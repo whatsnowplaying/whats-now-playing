@@ -206,4 +206,3 @@ async def invalidate_artist_cache(artist_name: str, provider: t.Optional[str] = 
     # artist-specific invalidation. For now, log the request.
     logging.info("Cache invalidation requested for artist: %s, provider: %s", artist_name, provider
                  or "all")
-    # TODO: Implement artist-specific cache invalidation

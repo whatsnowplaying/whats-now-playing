@@ -318,7 +318,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 type=bool) and not self.config.cparser.value('control/beam', type=bool):
             await self._artist_extras()
 
-    async def _artist_extras(self):
+    async def _artist_extras(self):  # pylint: disable=too-many-branches
         """Efficiently process artist extras plugins using native async calls"""
         tasks: list[tuple[str, asyncio.Task]] = []
 
@@ -354,7 +354,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 return_when=asyncio.FIRST_COMPLETED if len(tasks) > 1 else asyncio.ALL_COMPLETED)
 
             # Process completed tasks immediately
-            for i, (plugin, task) in enumerate(tasks):
+            for plugin, task in tasks:
                 if task in done:
                     try:
                         addmeta = await task

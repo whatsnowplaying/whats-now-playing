@@ -44,13 +44,13 @@ class ResponseError(MusicBrainzError):
 
 def set_rate_limit(limit_or_interval: float = 0.5):
     """Set the rate limit interval between requests"""
-    global _RATE_LIMIT_INTERVAL
+    global _RATE_LIMIT_INTERVAL  # pylint: disable=global-statement
     _RATE_LIMIT_INTERVAL = limit_or_interval
 
 
 def set_useragent(app_name: str, app_version: str, contact: str):
     """Set the user agent string"""
-    global _USER_AGENT
+    global _USER_AGENT  # pylint: disable=global-statement
     _USER_AGENT = f"{app_name}/{app_version} ({contact})"
 
 

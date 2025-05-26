@@ -161,11 +161,11 @@ class APIResponseCache:
         return obj
 
     @staticmethod
-    async def _process_cache_hit(
+    async def _process_cache_hit(  # pylint: disable=too-many-arguments
             data: str,
             provider: str,
             artist_name: str,
-            endpoint: str,  # pylint: disable=too-many-arguments
+            endpoint: str,
             expires_at: int,
             current_time: int) -> t.Optional[dict]:
         """Process a cache hit and return the deserialized data."""
@@ -227,11 +227,11 @@ class APIResponseCache:
                 logging.error("Database error retrieving cache: %s", error)
                 return None
 
-    async def put(
+    async def put(  # pylint: disable=too-many-arguments
             self,
             provider: str,
             artist_name: str,
-            endpoint: str,  # pylint: disable=too-many-arguments
+            endpoint: str,
             response_data: dict,
             ttl_seconds: t.Optional[int] = None,
             params: t.Optional[dict] = None):
@@ -282,11 +282,11 @@ class APIResponseCache:
                 logging.error("Database error storing cache: %s", error)
 
     @asynccontextmanager
-    async def get_or_fetch(
+    async def get_or_fetch(  # pylint: disable=too-many-arguments
             self,
             provider: str,
             artist_name: str,
-            endpoint: str,  # pylint: disable=too-many-arguments
+            endpoint: str,
             fetch_func: t.Callable[[], t.Awaitable[dict]],
             ttl_seconds: t.Optional[int] = None,
             params: t.Optional[dict] = None):
@@ -444,14 +444,18 @@ class APIResponseCache:
         """Vacuum the database to reclaim space from deleted entries.
 
         This should be called on application shutdown to optimize disk usage.
+        Works directly with the database file without requiring async initialization.
         """
         try:
-            with sqlite3.connect(self.db_file) as connection:
-                logging.debug("Vacuuming API cache database...")
-                connection.execute("VACUUM")
-                connection.commit()
-                logging.info("API cache database vacuumed successfully")
-        except sqlite3.Error as error:
+            if self.db_file.exists():
+                with sqlite3.connect(self.db_file) as connection:
+                    logging.debug("Vacuuming API cache database...")
+                    connection.execute("VACUUM")
+                    connection.commit()
+                    logging.info("API cache database vacuumed successfully")
+            else:
+                logging.debug("API cache database does not exist, skipping vacuum")
+        except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Database error during vacuum: %s", error)
 
 

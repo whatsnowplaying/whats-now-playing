@@ -99,9 +99,9 @@ class Plugin(ArtistExtrasPlugin):
 
         return page
 
-    async def download_async(self,
+    async def download_async(self,  # pylint: disable=too-many-branches
                              metadata=None,
-                             imagecache: "nowplaying.imagecache.ImageCache" = None):  # pylint: disable=too-many-branches
+                             imagecache: "nowplaying.imagecache.ImageCache" = None):
         ''' async download content '''
 
         async def _get_bio_async():
