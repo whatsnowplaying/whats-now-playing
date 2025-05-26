@@ -16,7 +16,7 @@ import nowplaying.metadata
 import nowplaying.trackrequests
 import nowplaying.twitch.utils
 
-USER_SCOPE = [AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
+#USER_SCOPE = [AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 
 
 class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes

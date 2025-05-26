@@ -446,9 +446,24 @@ class APIResponseCache:
         This should be called on application shutdown to optimize disk usage.
         Works directly with the database file without requiring async initialization.
         """
+        APIResponseCache.vacuum_database_file(self.db_file)
+
+    @staticmethod
+    def vacuum_database_file(db_file: t.Optional[pathlib.Path] = None):
+        """Vacuum the database file to reclaim space from deleted entries.
+
+        This static method can be called during shutdown without instantiating the class.
+
+        Args:
+            db_file: Path to database file. If None, uses default cache location.
+        """
+        if db_file is None:
+            cache_dir = pathlib.Path(QStandardPaths.writableLocation(QStandardPaths.CacheLocation))
+            db_file = cache_dir / "api_responses.db"
+
         try:
-            if self.db_file.exists():
-                with sqlite3.connect(self.db_file) as connection:
+            if db_file.exists():
+                with sqlite3.connect(db_file) as connection:
                     logging.debug("Vacuuming API cache database...")
                     connection.execute("VACUUM")
                     connection.commit()
@@ -475,3 +490,45 @@ def set_cache_instance(cache: APIResponseCache):
     """Set a custom global cache instance (useful for testing)."""
     global _global_cache_instance  # pylint: disable=global-statement
     _global_cache_instance = cache
+
+
+async def cached_fetch(provider: str,
+                       artist_name: str,
+                       endpoint: str,
+                       fetch_func: t.Callable[[], t.Awaitable[dict]],
+                       ttl_seconds: t.Optional[int] = None) -> t.Optional[dict]:
+    """Utility function for manual cache-or-fetch operations.
+
+    Args:
+        provider: API provider name
+        artist_name: Artist name being queried
+        endpoint: API endpoint identifier
+        fetch_func: Async function to call on cache miss
+        ttl_seconds: Cache TTL in seconds
+
+    Returns:
+        Cached or fresh data
+
+    Usage:
+        async def fetch_data():
+            return await some_api_call()
+
+        data = await cached_fetch('discogs', 'Artist Name', 'bio', fetch_data)
+    """
+    cache = get_cache()
+
+    # Try cache first
+    cached_data = await cache.get(provider, artist_name, endpoint)
+    if cached_data is not None:
+        return cached_data
+
+    # Cache miss - fetch fresh data
+    try:
+        fresh_data = await fetch_func()
+        if fresh_data is not None:
+            await cache.put(provider, artist_name, endpoint, fresh_data, ttl_seconds)
+        return fresh_data
+    except Exception as error:  # pylint: disable=broad-exception-caught
+        logging.error("Error fetching data for %s:%s:%s - %s", provider, artist_name, endpoint,
+                      error)
+        return None

@@ -11,8 +11,8 @@ import os
 import re
 import sys
 
+import nowplaying.apicache
 import nowplaying.bootstrap
-import nowplaying.cachingdecorator
 import nowplaying.config
 from nowplaying.utils import normalize_text, normalize, artist_name_variations
 
@@ -334,7 +334,7 @@ class MusicBrainzHelper():
         async def fetch_func():
             return await self._recordingid_uncached(recordingid)
 
-        return await nowplaying.cachingdecorator.cached_fetch(
+        return await nowplaying.apicache.cached_fetch(
             provider='musicbrainz',
             artist_name='recording',  # Use a generic key for recording lookups
             endpoint=f'recording/{recordingid}',

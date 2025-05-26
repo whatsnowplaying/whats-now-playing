@@ -12,7 +12,7 @@ import aiohttp
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.artistextras
-import nowplaying.cachingdecorator
+import nowplaying.apicache
 import nowplaying.utils
 
 
@@ -52,7 +52,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         async def fetch_func():
             return await self._fetch_async(apikey, api)
 
-        return await nowplaying.cachingdecorator.cached_fetch(
+        return await nowplaying.apicache.cached_fetch(
             provider='theaudiodb',
             artist_name=artist_name,
             endpoint=api.split('.')[0],  # Use the first part of API call as endpoint

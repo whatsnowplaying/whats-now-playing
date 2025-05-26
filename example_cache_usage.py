@@ -2,8 +2,8 @@
 """
 Example: Using the API Response Caching System
 
-This example demonstrates how to use the new API response caching
-system to speed up artist metadata lookups.
+This example demonstrates how to use nowplaying's API response caching
+system to speed up artist metadata lookups during live DJ performances.
 """
 
 import asyncio
@@ -12,8 +12,6 @@ import time
 import traceback
 
 import nowplaying.apicache
-import nowplaying.cachemanager
-import nowplaying.cachingdecorator
 
 # Configure logging to see cache hits/misses
 logging.basicConfig(level=logging.DEBUG)
@@ -57,36 +55,46 @@ async def demo_basic_caching():
     print(f"   📄 Data: {data}")
 
 
-async def demo_decorator_caching():
-    """Demonstrate using the caching decorator."""
-    print("\n\n=== Decorator Caching Demo ===")
+async def demo_cached_fetch():
+    """Demonstrate using the cached_fetch function (used by plugins)."""
+    print("\n\n=== Cached Fetch Demo ===")
 
-    @nowplaying.cachingdecorator.cache_api_response('demo', 'artist_bio', ttl_seconds=300)
     async def fetch_artist_bio(artist_name: str) -> dict:
         return await simulate_api_call(artist_name, delay=1.5)
 
     # First call - cache miss
-    print("\n1. First decorated call (cache miss):")
+    print("\n1. First cached_fetch call (cache miss):")
     start_time = time.time()
-    _ = await fetch_artist_bio('Deadmau5')
+    data = await nowplaying.apicache.cached_fetch(
+        provider='demo',
+        artist_name='Deadmau5',
+        endpoint='artist_bio',
+        fetch_func=lambda: fetch_artist_bio('Deadmau5'),
+        ttl_seconds=300
+    )
     elapsed = time.time() - start_time
     print(f"   ⏱️  Time: {elapsed:.2f}s")
+    print(f"   📄 Data: {data}")
 
     # Second call - cache hit
-    print("\n2. Second decorated call (cache hit):")
+    print("\n2. Second cached_fetch call (cache hit):")
     start_time = time.time()
-    _ = await fetch_artist_bio('Deadmau5')
+    data = await nowplaying.apicache.cached_fetch(
+        provider='demo',
+        artist_name='Deadmau5',
+        endpoint='artist_bio',
+        fetch_func=lambda: fetch_artist_bio('Deadmau5'),
+        ttl_seconds=300
+    )
     elapsed = time.time() - start_time
     print(f"   ⏱️  Time: {elapsed:.2f}s")
+    print(f"   📄 Data: {data}")
 
 
-async def demo_cache_management():
-    """Demonstrate cache management features."""
-    print("\n\n=== Cache Management Demo ===")
+async def demo_cache_stats():
+    """Demonstrate cache statistics and cleanup."""
+    print("\n\n=== Cache Statistics Demo ===")
 
-    manager = await nowplaying.cachemanager.setup_cache_management()
-
-    # Add some test data
     cache = nowplaying.apicache.get_cache()
     test_artists = ['Calvin Harris', 'Swedish House Mafia', 'Avicii']
 
@@ -97,18 +105,30 @@ async def demo_cache_management():
 
     # Get statistics
     print("\n2. Cache statistics:")
-    stats = await manager.get_detailed_stats()
+    stats = await cache.get_cache_stats()
     print(f"   📊 Total entries: {stats.get('total_entries', 0)}")
     print(f"   ✅ Valid entries: {stats.get('valid_entries', 0)}")
     print(f"   🗑️  Expired entries: {stats.get('expired_entries', 0)}")
+    print(f"   🎯 Cache hit potential: {stats.get('cache_hit_potential', 'N/A')}")
 
-    # Generate report
-    print("\n3. Cache report:")
-    report = await manager.export_cache_report()
-    print(report)
+    # Show by provider
+    by_provider = stats.get('by_provider', {})
+    if by_provider:
+        print("\n3. Entries by provider:")
+        for provider, count in sorted(by_provider.items()):
+            print(f"   {provider}: {count}")
 
-    # Cleanup
-    await manager.stop_background_cleanup()
+    # Show top artists
+    top_artists = stats.get('top_artists', [])
+    if top_artists:
+        print("\n4. Most accessed artists:")
+        for artist, access_count in top_artists[:5]:
+            print(f"   {artist}: {access_count} accesses")
+
+    # Cleanup expired entries
+    print("\n5. Cleanup expired entries:")
+    cleaned = await cache.cleanup_expired()
+    print(f"   🧹 Cleaned up {cleaned} expired entries")
 
 
 async def demo_performance_comparison():
@@ -160,8 +180,8 @@ async def main():
 
     try:
         await demo_basic_caching()
-        await demo_decorator_caching()
-        await demo_cache_management()
+        await demo_cached_fetch()
+        await demo_cache_stats()
         await demo_performance_comparison()
 
         print("\n\n✅ Demo completed successfully!")
@@ -170,6 +190,7 @@ async def main():
         print("   • Reduces API rate limiting issues")
         print("   • Better performance during live DJ sets")
         print("   • Automatic cleanup of expired entries")
+        print("   • Used by all artist metadata plugins")
 
     except Exception as error:  # pylint: disable=broad-exception-caught
         print(f"\n❌ Demo failed: {error}")
