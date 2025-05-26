@@ -4,6 +4,7 @@
 import asyncio
 import logging
 
+import nowplaying.apicache
 import nowplaying.discogsclient
 from nowplaying.discogsclient import Models as models
 
@@ -45,6 +46,71 @@ class Plugin(ArtistExtrasPlugin):
             return True
         logging.error('Discogs API key is either wrong or missing.')
         return False
+
+    async def _search_async_cached(self, album_title, artist_name, search_type='title'):
+        """Cached version of discogs search_async."""
+
+        async def fetch_func():
+            result = await self.client.search_async(album_title, artist=artist_name,
+                                                   search_type=search_type)
+            # Convert to JSON-serializable format for caching
+            if hasattr(result, 'results'):
+                return {
+                    'results': [
+                        {
+                            'type': 'release' if isinstance(r, models.Release) else 'unknown',
+                            'data': r.data if hasattr(r, 'data') else r,
+                            'artists': [a.data if hasattr(a, 'data') else a for a in getattr(r, 'artists', [])]
+                        } for r in result.results
+                    ]
+                }
+            return result
+
+        cached_result = await nowplaying.apicache.cached_fetch(
+            provider='discogs',
+            artist_name=artist_name,
+            endpoint=f'search_{search_type}_{album_title}',
+            fetch_func=fetch_func,
+            ttl_seconds=24 * 60 * 60  # 24 hours for Discogs data per CLAUDE.md
+        )
+
+        # Reconstruct objects from cached JSON data if needed
+        if isinstance(cached_result, dict) and 'results' in cached_result:
+            # Create a mock search result with reconstructed Release objects
+            class MockSearchResult:
+                def __init__(self, results):
+                    self.results = []
+                    for item in results:
+                        if item['type'] == 'release':
+                            # Reconstruct Release object
+                            release = models.Release(item['data'])
+                            # Reconstruct artist objects
+                            release.artists = [models.Artist(artist_data) for artist_data in item['artists']]
+                            self.results.append(release)
+
+                def page(self, page_num):
+                    return self
+
+                def __iter__(self):
+                    return iter(self.results)
+
+            return MockSearchResult(cached_result['results'])
+
+        return cached_result
+
+    async def _artist_async_cached(self, artist_id, artist_name):
+        """Cached version of discogs artist_async."""
+
+        async def fetch_func():
+            return await self.client.artist_async(artist_id)
+
+        return await nowplaying.apicache.cached_fetch(
+            provider='discogs',
+            artist_name=artist_name,
+            endpoint=f'artist_{artist_id}',
+            fetch_func=fetch_func,
+            ttl_seconds=24 * 60 * 60  # 24 hours for Discogs data per CLAUDE.md
+        )
 
     def _process_metadata(self, artistname, artist, imagecache):
         ''' update metadata based upon an artist record '''
@@ -88,14 +154,14 @@ class Plugin(ArtistExtrasPlugin):
         discogs_websites = [url for url in metadata['artistwebsites'] if 'discogs' in url]
         if len(discogs_websites) == 1:
             artistnum = discogs_websites[0].split('/')[-1]
-            artist = await self.client.artist_async(artistnum)
+            artist = await self._artist_async_cached(artistnum, metadata['artist'])
             artistname = str(artist.name)
             logging.debug('Found a singular discogs artist URL using %s instead of %s', artistname,
                           metadata['artist'])
         elif len(discogs_websites) > 1:
             for website in discogs_websites:
                 artistnum = website.split('/')[-1]
-                artist = await self.client.artist_async(artistnum)
+                artist = await self._artist_async_cached(artistnum, metadata['artist'])
                 webartistname = str(artist.name)
                 if nowplaying.utils.normalize(webartistname) == nowplaying.utils.normalize(
                         metadata['artist']):
@@ -122,9 +188,7 @@ class Plugin(ArtistExtrasPlugin):
         artistname = metadata['artist']
         try:
             logging.debug('Fetching async %s - %s', artistname, metadata['album'])
-            resultlist = await self.client.search_async(metadata['album'],
-                                                        artist=artistname,
-                                                        search_type='title')
+            resultlist = await self._search_async_cached(metadata['album'], artistname, 'title')
             # Get first page if paginated results
             if hasattr(resultlist, 'page'):
                 resultlist = resultlist.page(1)

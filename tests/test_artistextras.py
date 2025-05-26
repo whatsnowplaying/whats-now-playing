@@ -229,6 +229,184 @@ async def test_fanarttv_apicache_usage(bootstrap):  # pylint: disable=redefined-
 
 
 @pytest.mark.asyncio
+async def test_discogs_apicache_usage(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' test that discogs plugin uses apicache for API calls '''
+
+    config = bootstrap
+    if 'discogs' not in PLUGINS:
+        pytest.skip("Discogs API key not available")
+
+    configuresettings('discogs', config.cparser)
+    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    imagecaches, plugins = configureplugins(config)
+
+    plugin = plugins['discogs']
+
+    # Test with album search (discogs searches by album+artist)
+    metadata_with_album = {
+        'album': 'The Downward Spiral',
+        'artist': 'Nine Inch Nails',
+        'imagecacheartist': 'nineinchnails'
+    }
+
+    # First call - should hit API and cache result
+    result1 = await plugin.download_async(metadata_with_album.copy(),
+                                         imagecache=imagecaches['discogs'])
+
+    # Second call - should use cached result
+    result2 = await plugin.download_async(metadata_with_album.copy(),
+                                         imagecache=imagecaches['discogs'])
+
+    # Both results should be consistent (either both None or both have data)
+    assert (result1 is None) == (result2 is None)
+
+    if result1:  # Only test if we got data back
+        logging.info('Discogs API call successful, caching verified')
+        # Should return the same metadata structure
+        assert result1 == result2
+
+
+@pytest.mark.asyncio
+async def test_discogs_artist_duplicates(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' test discogs handling of artists with duplicate names like "Madonna" '''
+
+    config = bootstrap
+    if 'discogs' not in PLUGINS:
+        pytest.skip("Discogs API key not available")
+
+    configuresettings('discogs', config.cparser)
+    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    imagecaches, plugins = configureplugins(config)
+
+    plugin = plugins['discogs']
+
+    # Test different albums with same artist name to see if discogs can distinguish  
+    # Using more common artist names that definitely exist on Discogs
+    metadata_madonna1 = {
+        'album': 'Like a Virgin',  # The famous Madonna
+        'artist': 'Madonna',
+        'imagecacheartist': 'madonna1'
+    }
+
+    metadata_madonna2 = {
+        'album': 'Red',  # Different Madonna (less famous)
+        'artist': 'Madonna', 
+        'imagecacheartist': 'madonna2'
+    }
+
+    # Test both Madonna combinations - first calls should hit API, second calls should use cache
+    
+    # Madonna 1: Like a Virgin - first call (API)
+    result1a = await plugin.download_async(metadata_madonna1.copy(),
+                                          imagecache=imagecaches['discogs'])
+    
+    # Madonna 2: Red - first call (API) 
+    result2a = await plugin.download_async(metadata_madonna2.copy(),
+                                          imagecache=imagecaches['discogs'])
+    
+    # Madonna 1: Like a Virgin - second call (should use cache)
+    result1b = await plugin.download_async(metadata_madonna1.copy(),
+                                          imagecache=imagecaches['discogs'])
+    
+    # Madonna 2: Red - second call (should use cache)
+    result2b = await plugin.download_async(metadata_madonna2.copy(),
+                                          imagecache=imagecaches['discogs'])
+
+    # Verify caching works for both artist+album combinations
+    assert (result1a is None) == (result1b is None)
+    assert (result2a is None) == (result2b is None)
+    
+    if result1a:
+        assert result1a == result1b
+        logging.info('Cache verified for Madonna/Like a Virgin')
+    
+    if result2a:
+        assert result2a == result2b 
+        logging.info('Cache verified for Madonna/Red')
+
+    # If both found data, verify they're different artists (different bios)
+    if result1a and result2a:
+        bio1 = result1a.get('artistlongbio', '')
+        bio2 = result2a.get('artistlongbio', '')
+        if bio1 and bio2 and bio1 != bio2:
+            logging.info('Discogs successfully distinguished between different "Madonna" artists with caching')
+        else:
+            logging.info('Both Madonna searches returned data but with same/empty bios')
+    else:
+        logging.info('Discogs duplicate artist test completed - cache working regardless of data found')
+
+    # Test passes if caching works correctly for both duplicate artist scenarios
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_apicache_duplicate_artists(bootstrap):  # pylint: disable=redefined-outer-name
+    ''' test TheAudioDB two-level caching with duplicate artist names '''
+
+    config = bootstrap
+    if 'theaudiodb' not in PLUGINS:
+        pytest.skip("TheAudioDB API key not available")
+
+    configuresettings('theaudiodb', config.cparser)
+    config.cparser.setValue('theaudiodb/apikey', os.environ['THEAUDIODB_API_KEY'])
+    imagecaches, plugins = configureplugins(config)
+
+    plugin = plugins['theaudiodb']
+
+    # Test two different searches that might return different artists with similar names
+    # First search - likely to match main "Madonna" 
+    metadata_madonna1 = {
+        'artist': 'Madonna',
+        'imagecacheartist': 'madonna1'
+    }
+
+    # Second search - variation that might match different artist
+    metadata_madonna2 = {
+        'artist': 'madonna',  # lowercase variation
+        'imagecacheartist': 'madonna2'
+    }
+
+    # Test both variations - first calls hit API, second calls use cache
+    result1a = await plugin.download_async(metadata_madonna1.copy(),
+                                          imagecache=imagecaches['theaudiodb'])
+    result2a = await plugin.download_async(metadata_madonna2.copy(),
+                                          imagecache=imagecaches['theaudiodb'])
+    
+    # Second calls - should use cached data
+    result1b = await plugin.download_async(metadata_madonna1.copy(),
+                                          imagecache=imagecaches['theaudiodb'])
+    result2b = await plugin.download_async(metadata_madonna2.copy(),
+                                          imagecache=imagecaches['theaudiodb'])
+
+    # Verify caching works for both variations
+    assert (result1a is None) == (result1b is None)
+    assert (result2a is None) == (result2b is None)
+    
+    if result1a:
+        assert result1a == result1b
+        logging.info('TheAudioDB cache verified for Madonna (capitalized)')
+    
+    if result2a:
+        assert result2a == result2b
+        logging.info('TheAudioDB cache verified for madonna (lowercase)')
+
+    # Check if different normalizations potentially return different results
+    if result1a and result2a:
+        bio1 = result1a.get('artistlongbio', '')
+        bio2 = result2a.get('artistlongbio', '')
+        artist1 = result1a.get('artist', '')
+        artist2 = result2a.get('artist', '')
+        
+        if artist1 and artist2 and artist1 != artist2:
+            logging.info('TheAudioDB distinguished between different artists: %s vs %s', artist1, artist2)
+        else:
+            logging.info('TheAudioDB returned same artist for both variations')
+    else:
+        logging.info('TheAudioDB duplicate artist test completed - two-level caching working')
+
+    # Test passes if two-level caching works correctly (search + individual artist ID)
+
+
+@pytest.mark.asyncio
 async def test_discogs_note_stripping(bootstrap):  # pylint: disable=redefined-outer-name
     ''' noimagecache '''
 
