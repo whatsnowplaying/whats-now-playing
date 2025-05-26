@@ -60,7 +60,8 @@ class Plugin(ArtistExtrasPlugin):
                         {
                             'type': 'release' if isinstance(r, models.Release) else 'unknown',
                             'data': r.data if hasattr(r, 'data') else r,
-                            'artists': [a.data if hasattr(a, 'data') else a for a in getattr(r, 'artists', [])]
+                            'artists': [a.data if hasattr(a, 'data') else a
+                                       for a in getattr(r, 'artists', [])]
                         } for r in result.results
                     ]
                 }
@@ -77,7 +78,8 @@ class Plugin(ArtistExtrasPlugin):
         # Reconstruct objects from cached JSON data if needed
         if isinstance(cached_result, dict) and 'results' in cached_result:
             # Create a mock search result with reconstructed Release objects
-            class MockSearchResult:
+            class MockSearchResult:  # pylint: disable=too-few-public-methods
+                """Mock search result with reconstructed Release objects."""
                 def __init__(self, results):
                     self.results = []
                     for item in results:
@@ -85,10 +87,12 @@ class Plugin(ArtistExtrasPlugin):
                             # Reconstruct Release object
                             release = models.Release(item['data'])
                             # Reconstruct artist objects
-                            release.artists = [models.Artist(artist_data) for artist_data in item['artists']]
+                            release.artists = [models.Artist(artist_data)
+                                              for artist_data in item['artists']]
                             self.results.append(release)
 
-                def page(self, page_num):
+                def page(self, page_num):  # pylint: disable=unused-argument
+                    """Return self for pagination compatibility."""
                     return self
 
                 def __iter__(self):

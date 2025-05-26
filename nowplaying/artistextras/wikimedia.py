@@ -34,7 +34,6 @@ class Plugin(ArtistExtrasPlugin):
 
     async def _get_page_cached(self, entity, lang, artist_name):
         """Cached version of _get_page_async for better performance."""
-        
         # Check what features are enabled to optimize API calls
         need_bio = self.config.cparser.value('wikimedia/bio', type=bool)
         need_images = (self.config.cparser.value('wikimedia/fanart', type=bool)
@@ -55,7 +54,7 @@ class Plugin(ArtistExtrasPlugin):
                     'entity': page.entity,
                     'lang': page.lang,
                     'data': page.data,
-                    'images': page._images,
+                    'images': page._images,  # pylint: disable=protected-access
                     'type': 'wikipage'
                 }
             return None
@@ -71,7 +70,8 @@ class Plugin(ArtistExtrasPlugin):
         # Reconstruct WikiPage object from cached JSON data if needed
         if isinstance(cached_result, dict) and cached_result.get('type') == 'wikipage':
             # Create a mock WikiPage with the cached data
-            class MockWikiPage:
+            class MockWikiPage:  # pylint: disable=too-few-public-methods
+                """Mock WikiPage with cached data."""
                 def __init__(self, entity, lang, data, images):
                     self.entity = entity
                     self.lang = lang
@@ -79,13 +79,15 @@ class Plugin(ArtistExtrasPlugin):
                     self._images = images
 
                 def images(self, fields=None):
+                    """Return images with specified fields."""
                     if fields is None:
                         return self._images
-                    return [{k: img.get(k) for k in fields if k in img} for img in self._images]
+                    return [{k: img.get(k) for k in fields if k in img}
+                            for img in self._images]
 
             return MockWikiPage(
                 cached_result['entity'],
-                cached_result['lang'], 
+                cached_result['lang'],
                 cached_result['data'],
                 cached_result['images']
             )

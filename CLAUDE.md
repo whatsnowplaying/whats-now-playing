@@ -213,34 +213,55 @@ developing:
 
 **API Response Caching (`apicache.py`):**
 
-- Fast SQLite-based cache for external API responses with TTL support using aiosqlite
+- Fast SQLite-based cache for external API responses with TTL support using
+  aiosqlite
 - Comprehensive caching integration across all artistextras plugins
 - Provides `cached_fetch()` unified interface for consistent caching patterns
-- Provider-specific TTL settings: Discogs (24h), TheAudioDB/FanartTV (7d), Wikimedia (24h)
+- Provider-specific TTL settings: Discogs (24h), TheAudioDB/FanartTV (7d),
+  Wikimedia (24h)
 - Advanced duplicate artist handling with unique cache key strategies:
-  - **Discogs**: Artist+album combination caching with object reconstruction for search results
-  - **TheAudioDB**: Two-level caching (search results + individual artist IDs) to prevent collisions
-  - **FanartTV**: MusicBrainz ID-based caching (optimal - globally unique identifiers)
-  - **Wikimedia**: Wikidata entity+language caching with WikiPage object reconstruction
-- Artist name normalization for consistent cache lookups (handles case variations like "sELF" vs "Self")
-- JSON serialization with custom object reconstruction to preserve API client object behavior
+
+  - **Discogs**: Artist+album combination caching with object reconstruction
+    for search results
+  - **TheAudioDB**: Two-level caching (search results + individual artist IDs)
+    to prevent collisions
+  - **FanartTV**: MusicBrainz ID-based caching (optimal - globally unique
+    identifiers)
+  - **Wikimedia**: Wikidata entity+language caching with WikiPage object
+    reconstruction
+
+- Artist name normalization for consistent cache lookups (handles case
+  variations like "sELF" vs "Self")
+- JSON serialization with custom object reconstruction to preserve API client
+  object behavior
 - Race condition prevention with proper async database initialization
 - Cache statistics and cleanup capabilities for maintenance
 - Thread-safe with asyncio.Lock for concurrent access
-- Global instance available via `get_cache_instance()` for application-wide use
+- Global instance available via `get_cache_instance()` for application-wide
+  use
 - Cache files stored in Qt standard cache location, not in project directory
-- Binary data serialization support with base64 encoding for MusicBrainz cover art data
+- Binary data serialization support with base64 encoding for MusicBrainz
+  cover art data
 - SQLite VACUUM operations on application shutdown to reclaim disk space
-- GUI "Clear Cache" button in Artist Extras settings clears both API cache and image cache files
+- GUI "Clear Cache" button in Artist Extras settings clears both API cache and
+  image cache files
 
 **Duplicate Artist Resolution:**
 
-Critical for DJ applications where artist names often collide (e.g., multiple "Madonna" artists):
-- **Discogs**: Uses album title in cache key (`search_title_{album}`) to distinguish between artists
+Critical for DJ applications where artist names often collide (e.g., multiple
+"Madonna" artists):
+
+- **Discogs**: Uses album title in cache key (`search_title_{album}`) to
+  distinguish between artists
 - **TheAudioDB**: Implements two-level caching strategy:
   - Level 1: `search_{artist_name}` caches raw search API responses
-  - Level 2: `artist_{theaudiodb_id}` caches filtered individual artist data by unique ID
-- **FanartTV**: Inherently handles duplicates via MusicBrainz ID requirements (`music/{mbid}`)
-- **Wikimedia**: Uses Wikidata entity IDs (`{entity_id}_{lang}`) for perfect disambiguation
-- Comprehensive unit tests validate caching behavior with duplicate artist scenarios
-- Object reconstruction ensures cached data maintains same interface as live API responses
+  - Level 2: `artist_{theaudiodb_id}` caches filtered individual artist data by
+    unique ID
+- **FanartTV**: Inherently handles duplicates via MusicBrainz ID requirements
+  (`music/{mbid}`)
+- **Wikimedia**: Uses Wikidata entity IDs (`{entity_id}_{lang}`) for perfect
+  disambiguation
+- Comprehensive unit tests validate caching behavior with duplicate artist
+  scenarios
+- Object reconstruction ensures cached data maintains same interface as live
+  API responses

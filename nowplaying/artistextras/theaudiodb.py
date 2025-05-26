@@ -174,15 +174,14 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             return None
         return data
 
-    async def _cache_individual_artist(self, artist_data, artist_name):
+    @staticmethod
+    async def _cache_individual_artist(artist_data, artist_name):
         ''' Cache individual artist data by TheAudioDB ID to handle duplicates '''
         if not artist_data.get('idArtist'):
             return artist_data
-            
         # Cache individual artist by their unique TheAudioDB ID
         async def fetch_func():
             return artist_data  # Already have the data, just cache it
-            
         return await nowplaying.apicache.cached_fetch(
             provider='theaudiodb',
             artist_name=artist_name,
@@ -228,7 +227,8 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                     for artist in artistdata.get('artists', []):
                         if self._check_artist(artist):
                             # Cache this specific artist by their unique ID
-                            cached_artist = await self._cache_individual_artist(artist, metadata['artist'])
+                            cached_artist = await self._cache_individual_artist(
+                                artist, metadata['artist'])
                             extradata.append(cached_artist)
                     if extradata:
                         break

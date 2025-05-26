@@ -304,7 +304,8 @@ async def test_discogs_website_lookup_cache(bootstrap):  # pylint: disable=redef
         # Should return the same metadata structure
         assert result1 == result2
     else:
-        logging.info('Discogs website lookup test completed - cache working regardless of data found')
+        logging.info('Discogs website lookup test completed - '
+                     'cache working regardless of data found')
 
 
 @pytest.mark.asyncio
@@ -321,7 +322,7 @@ async def test_discogs_artist_duplicates(bootstrap):  # pylint: disable=redefine
 
     plugin = plugins['discogs']
 
-    # Test different albums with same artist name to see if discogs can distinguish  
+    # Test different albums with same artist name to see if discogs can distinguish
     # Using more common artist names that definitely exist on Discogs
     metadata_madonna1 = {
         'album': 'Like a Virgin',  # The famous Madonna
@@ -331,24 +332,24 @@ async def test_discogs_artist_duplicates(bootstrap):  # pylint: disable=redefine
 
     metadata_madonna2 = {
         'album': 'Red',  # Different Madonna (less famous)
-        'artist': 'Madonna', 
+        'artist': 'Madonna',
         'imagecacheartist': 'madonna2'
     }
 
     # Test both Madonna combinations - first calls should hit API, second calls should use cache
-    
+
     # Madonna 1: Like a Virgin - first call (API)
     result1a = await plugin.download_async(metadata_madonna1.copy(),
                                           imagecache=imagecaches['discogs'])
-    
-    # Madonna 2: Red - first call (API) 
+
+    # Madonna 2: Red - first call (API)
     result2a = await plugin.download_async(metadata_madonna2.copy(),
                                           imagecache=imagecaches['discogs'])
-    
+
     # Madonna 1: Like a Virgin - second call (should use cache)
     result1b = await plugin.download_async(metadata_madonna1.copy(),
                                           imagecache=imagecaches['discogs'])
-    
+
     # Madonna 2: Red - second call (should use cache)
     result2b = await plugin.download_async(metadata_madonna2.copy(),
                                           imagecache=imagecaches['discogs'])
@@ -356,13 +357,13 @@ async def test_discogs_artist_duplicates(bootstrap):  # pylint: disable=redefine
     # Verify caching works for both artist+album combinations
     assert (result1a is None) == (result1b is None)
     assert (result2a is None) == (result2b is None)
-    
+
     if result1a:
         assert result1a == result1b
         logging.info('Cache verified for Madonna/Like a Virgin')
-    
+
     if result2a:
-        assert result2a == result2b 
+        assert result2a == result2b
         logging.info('Cache verified for Madonna/Red')
 
     # If both found data, verify they're different artists (different bios)
@@ -370,11 +371,13 @@ async def test_discogs_artist_duplicates(bootstrap):  # pylint: disable=redefine
         bio1 = result1a.get('artistlongbio', '')
         bio2 = result2a.get('artistlongbio', '')
         if bio1 and bio2 and bio1 != bio2:
-            logging.info('Discogs successfully distinguished between different "Madonna" artists with caching')
+            logging.info('Discogs successfully distinguished between different '
+                         '"Madonna" artists with caching')
         else:
             logging.info('Both Madonna searches returned data but with same/empty bios')
     else:
-        logging.info('Discogs duplicate artist test completed - cache working regardless of data found')
+        logging.info('Discogs duplicate artist test completed - '
+                     'cache working regardless of data found')
 
     # Test passes if caching works correctly for both duplicate artist scenarios
 
@@ -394,7 +397,7 @@ async def test_theaudiodb_apicache_duplicate_artists(bootstrap):  # pylint: disa
     plugin = plugins['theaudiodb']
 
     # Test two different searches that might return different artists with similar names
-    # First search - likely to match main "Madonna" 
+    # First search - likely to match main "Madonna"
     metadata_madonna1 = {
         'artist': 'Madonna',
         'imagecacheartist': 'madonna1'
@@ -411,7 +414,7 @@ async def test_theaudiodb_apicache_duplicate_artists(bootstrap):  # pylint: disa
                                           imagecache=imagecaches['theaudiodb'])
     result2a = await plugin.download_async(metadata_madonna2.copy(),
                                           imagecache=imagecaches['theaudiodb'])
-    
+
     # Second calls - should use cached data
     result1b = await plugin.download_async(metadata_madonna1.copy(),
                                           imagecache=imagecaches['theaudiodb'])
@@ -421,24 +424,23 @@ async def test_theaudiodb_apicache_duplicate_artists(bootstrap):  # pylint: disa
     # Verify caching works for both variations
     assert (result1a is None) == (result1b is None)
     assert (result2a is None) == (result2b is None)
-    
+
     if result1a:
         assert result1a == result1b
         logging.info('TheAudioDB cache verified for Madonna (capitalized)')
-    
+
     if result2a:
         assert result2a == result2b
         logging.info('TheAudioDB cache verified for madonna (lowercase)')
 
     # Check if different normalizations potentially return different results
     if result1a and result2a:
-        bio1 = result1a.get('artistlongbio', '')
-        bio2 = result2a.get('artistlongbio', '')
         artist1 = result1a.get('artist', '')
         artist2 = result2a.get('artist', '')
-        
+
         if artist1 and artist2 and artist1 != artist2:
-            logging.info('TheAudioDB distinguished between different artists: %s vs %s', artist1, artist2)
+            logging.info('TheAudioDB distinguished between different artists: %s vs %s',
+                     artist1, artist2)
         else:
             logging.info('TheAudioDB returned same artist for both variations')
     else:
@@ -480,7 +482,8 @@ async def test_wikimedia_apicache_usage(bootstrap):  # pylint: disable=redefined
         # Should return the same metadata structure
         assert result1 == result2
     else:
-        logging.info('Wikimedia caching test completed - no data found but cache working')
+        logging.info('Wikimedia caching test completed - '
+                     'no data found but cache working')
 
 
 @pytest.mark.asyncio
