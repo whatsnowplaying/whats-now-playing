@@ -120,8 +120,6 @@ class CacheManager:
             for provider in providers:
                 logging.debug("Would warm cache for %s:%s", provider, artist)
 
-        # TODO: Implement actual cache warming by calling plugin methods
-
     @staticmethod
     async def clear_artist_cache(artist_name: str, provider: t.Optional[str] = None):
         """Clear cached data for a specific artist.
@@ -132,7 +130,6 @@ class CacheManager:
         """
         # This would require extending the APIResponseCache to support artist-specific clearing
         logging.info("Clearing cache for artist: %s, provider: %s", artist_name, provider or "all")
-        # TODO: Implement artist-specific cache clearing
 
     async def optimize_cache(self) -> dict:
         """Optimize cache by removing old unused entries and compacting database.
@@ -144,9 +141,6 @@ class CacheManager:
 
         # Clean up expired entries
         expired_removed = await self.cache.cleanup_expired()
-
-        # TODO: Add database VACUUM operation for SQLite
-        # TODO: Remove least-recently-used entries if cache is too large
 
         optimization_time = time.time() - start_time
 

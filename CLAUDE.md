@@ -27,7 +27,7 @@ code in this repository.
 
 ## Architecture Overview
 
-This is a Python/Qt6 desktop application for streaming DJs to display "now
+This is a Python 3.10/Qt6 desktop application for streaming DJs to display "now
 playing" information from various DJ software.
 
 ### Core Components
@@ -87,6 +87,13 @@ Key testing patterns:
 - Plugins are dynamically loaded and follow a common interface pattern
 - The application uses multiprocessing for background tasks
 - Vendor dependencies are managed in `nowplaying/vendor/` to avoid conflicts
+
+**Python Version and Type Annotations:**
+
+- Target Python 3.10 as the base version
+- Use Python 3.10+ union syntax (`X | Y`) instead of `Union[X, Y]`
+- Use Python 3.10+ optional syntax (`X | None`) instead of `Optional[X]`
+- Use built-in generics (`dict`, `list`) instead of `typing.Dict`, `typing.List`
 
 **Import Style Guidelines:**
 
@@ -219,3 +226,6 @@ developing:
 - Cache files stored in Qt standard cache location, not in project directory
 - Binary data serialization support with base64 encoding for MusicBrainz
   cover art data
+- SQLite VACUUM operations on application shutdown to reclaim disk space
+- GUI "Clear Cache" button in Artist Extras settings clears both API cache and
+  image cache files

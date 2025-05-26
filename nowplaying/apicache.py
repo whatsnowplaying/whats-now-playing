@@ -376,7 +376,7 @@ class APIResponseCache:
                     "SELECT provider, COUNT(*) FROM api_responses "
                     "WHERE expires_at > ? GROUP BY provider", (current_time, ))
                 provider_rows = await cursor.fetchall()
-                by_provider = dict(provider_rows)
+                by_provider = dict((row[0], row[1]) for row in provider_rows)
 
                 # Most accessed artists
                 cursor = await connection.execute(

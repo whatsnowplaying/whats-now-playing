@@ -11,7 +11,7 @@ with just the functionality needed by the nowplaying application.
 import asyncio
 import logging
 import ssl
-from typing import Dict, List, Optional, Any
+from typing import Any
 import aiohttp
 
 
@@ -21,10 +21,10 @@ class WikiPage:
     def __init__(self, entity: str, lang: str = 'en'):
         self.entity = entity
         self.lang = lang
-        self.data: Dict[str, Any] = {}
-        self._images: List[Dict[str, str]] = []
+        self.data: dict[str, Any] = {}
+        self._images: list[dict[str, str]] = []
 
-    def images(self, fields: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    def images(self, fields: list[str] | None = None) -> list[dict[str, Any]]:
         """Return images with specified fields, mimicking wptools behavior."""
         if fields is None:
             return self._images
@@ -36,7 +36,7 @@ class AsyncWikiClient:
 
     def __init__(self, timeout: int = 30):
         self.timeout = aiohttp.ClientTimeout(total=timeout)
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.session: aiohttp.ClientSession | None = None
         # Create SSL context with proper certificate verification
         self.ssl_context = ssl.create_default_context()
 
@@ -52,7 +52,7 @@ class AsyncWikiClient:
     async def _get_wikidata_info(self,
                                  entity: str,
                                  lang: str,
-                                 include_sitelinks: bool = False) -> Dict[str, Any]:
+                                 include_sitelinks: bool = False) -> dict[str, Any]:
         """Get Wikidata entity information with optional sitelinks."""
         url = "https://www.wikidata.org/w/api.php"
         props = 'claims|descriptions'
@@ -104,7 +104,7 @@ class AsyncWikiClient:
     async def _get_wikipedia_extract(self,
                                      entity: str,
                                      lang: str,
-                                     sitelinks: Optional[Dict] = None) -> Optional[str]:
+                                     sitelinks: dict | None = None) -> str | None:
         """Get Wikipedia page extract using sitelinks (fetched separately if not provided)."""
         if sitelinks is None:
             # Fallback: fetch sitelinks separately if not provided
@@ -129,7 +129,7 @@ class AsyncWikiClient:
 
         # Look for the Wikipedia page in the specified language
         wiki_key = f"{lang}wiki"
-        if wiki_key not in sitelinks:
+        if not sitelinks or wiki_key not in sitelinks:
             return None
 
         page_title = sitelinks[wiki_key]['title']
@@ -161,7 +161,7 @@ class AsyncWikiClient:
 
             return None
 
-    async def _get_wikidata_images(self, entity: str) -> List[Dict[str, str]]:
+    async def _get_wikidata_images(self, entity: str) -> list[dict[str, str]]:
         """Get images directly from Wikidata entity."""
         images = []
 
@@ -192,7 +192,7 @@ class AsyncWikiClient:
 
         return images
 
-    async def _get_commons_image_url(self, filename: str) -> Optional[str]:
+    async def _get_commons_image_url(self, filename: str) -> str | None:
         """Get Commons image URL from filename."""
         # Query Commons for the image URL
         commons_url = "https://commons.wikimedia.org/w/api.php"
@@ -225,7 +225,7 @@ class AsyncWikiClient:
     async def _get_wikipedia_images(self,
                                     entity: str,
                                     lang: str,
-                                    sitelinks: Optional[Dict] = None) -> List[Dict[str, str]]:
+                                    sitelinks: dict | None = None) -> list[dict[str, str]]:
         """Get images from Wikipedia page using sitelinks (fetched separately if not provided)."""
         if sitelinks is None:
             # Fallback: fetch sitelinks separately if not provided
@@ -249,7 +249,7 @@ class AsyncWikiClient:
                 sitelinks = entity_data.get('sitelinks', {})
 
         wiki_key = f"{lang}wiki"
-        if wiki_key not in sitelinks:
+        if not sitelinks or wiki_key not in sitelinks:
             return []
 
         page_title = sitelinks[wiki_key]['title']
@@ -294,7 +294,7 @@ class AsyncWikiClient:
 
         return images
 
-    async def _get_image_url(self, filename: str, lang: str) -> Optional[str]:
+    async def _get_image_url(self, filename: str, lang: str) -> str | None:
         """Get the actual URL for an image file."""
         wiki_url = f"https://{lang}.wikipedia.org/w/api.php"
         params = {
@@ -420,11 +420,6 @@ def _get_page_sync(wikibase: str,
         # No event loop, create one
         wiki_page = asyncio.run(_get_page())
 
-    # Add get() method to match wptools interface
-    def get_method():
-        pass  # Data is already loaded
-
-    wiki_page.get = get_method
     return wiki_page
 
 

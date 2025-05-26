@@ -9,14 +9,14 @@ with just the functionality needed by the nowplaying application.
 
 import logging
 import ssl
-from typing import Dict, List, Optional, Any, Union
+from typing import Any
 import aiohttp
 
 
 class DiscogsRelease:
     """Represents a Discogs release with its artists."""
 
-    def __init__(self, data: Dict[str, Any], client: Optional['AsyncDiscogsClient'] = None):
+    def __init__(self, data: dict[str, Any], client: 'AsyncDiscogsClient | None' = None):
         self.data = data
         self.discogs_id = data.get('id')
         self._client = client
@@ -43,7 +43,7 @@ class DiscogsRelease:
 
     async def load_full_data(self):
         """Load full release data including artist details."""
-        if self._artists_loaded or not self.discogs_id or not self._client:
+        if self._artists_loaded or not self.discogs_id or not self._client or not self._client.session:
             return
 
         # Get full release data
@@ -63,7 +63,7 @@ class DiscogsRelease:
 class DiscogsArtist:
     """Represents a Discogs artist with metadata."""
 
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, data: dict[str, Any]):
         self.data = data
         self.discogs_id = data.get('id')
         self.name = data.get('name', '')
@@ -75,9 +75,7 @@ class DiscogsArtist:
 class DiscogsSearchResult:
     """Represents a page of search results."""
 
-    def __init__(self,
-                 results: List[Dict[str, Any]],
-                 client: Optional['AsyncDiscogsClient'] = None):
+    def __init__(self, results: list[dict[str, Any]], client: 'AsyncDiscogsClient | None' = None):
         self.results = []
         for result in results:
             if result.get('type') == 'release':
@@ -111,11 +109,11 @@ class AsyncDiscogsClient:
 
     BASE_URL = 'https://api.discogs.com'
 
-    def __init__(self, user_agent: str, user_token: str, timeout: int = 10):
+    def __init__(self, user_agent: str, user_token: str | None, timeout: int = 10):
         self.user_agent = user_agent
         self.user_token = user_token
         self.timeout = aiohttp.ClientTimeout(total=timeout)
-        self.session: aiohttp.ClientSession = None
+        self.session: aiohttp.ClientSession | None = None
 
         # Create SSL context with proper certificate verification
         self.ssl_context = ssl.create_default_context()
@@ -137,12 +135,12 @@ class AsyncDiscogsClient:
 
     async def search(self,
                      query: str,
-                     artist: Optional[str] = None,
+                     artist: str | None = None,
                      search_type: str = 'release',
                      page: int = 1,
                      per_page: int = 50,
                      load_full_artists: bool = True,
-                     max_results: int = None) -> DiscogsSearchResult:
+                     max_results: int | None = None) -> DiscogsSearchResult:
         """Search for releases, artists, etc."""
         if not self.session:
             raise RuntimeError("Client not initialized - use async context manager")
@@ -181,8 +179,8 @@ class AsyncDiscogsClient:
             return DiscogsSearchResult([], self)
 
     async def artist(self,
-                     artist_id: Union[int, str],
-                     limit_images: int = None) -> Optional[DiscogsArtist]:
+                     artist_id: int | str,
+                     limit_images: int | None = None) -> DiscogsArtist | None:
         """Get artist by ID with optional image limiting for performance."""
         if not self.session:
             raise RuntimeError("Client not initialized - use async context manager")
@@ -190,8 +188,6 @@ class AsyncDiscogsClient:
         url = f"{self.BASE_URL}/artists/{artist_id}"
 
         try:
-            if not self.session:
-                return None
             async with self.session.get(url) as response:
                 if response.status == 200:
                     data = await response.json()
@@ -219,7 +215,7 @@ class AsyncDiscogsClient:
 class AsyncDiscogsClientWrapper:
     """Async-only Discogs client wrapper for nowplaying compatibility."""
 
-    def __init__(self, user_agent: str, user_token: str = None):
+    def __init__(self, user_agent: str, user_token: str | None = None):
         self.user_agent = user_agent
         self.user_token = user_token
         self.timeout = 10
@@ -230,14 +226,14 @@ class AsyncDiscogsClientWrapper:
         """Set timeout (compatibility method)."""
         self.timeout = max(connect, read)
 
-    async def artist_async(self, artist_id: Union[int, str]) -> Optional[DiscogsArtist]:
+    async def artist_async(self, artist_id: int | str) -> DiscogsArtist | None:
         """Get artist by ID (async version)."""
         async with AsyncDiscogsClient(self.user_agent, self.user_token, self.timeout) as client:
             return await client.artist(artist_id, limit_images=5)
 
     async def search_async(self,
                            query: str,
-                           artist: Optional[str] = None,
+                           artist: str | None = None,
                            search_type: str = 'release') -> DiscogsSearchResult:
         """Search for releases (async version)."""
         async with AsyncDiscogsClient(self.user_agent, self.user_token, self.timeout) as client:
@@ -255,13 +251,13 @@ class Models:
     Artist = DiscogsArtist
 
 
-def create_client(user_agent: str, user_token: str = None) -> AsyncDiscogsClientWrapper:
+def create_client(user_agent: str, user_token: str | None = None) -> AsyncDiscogsClientWrapper:
     """Factory function for creating discogs clients."""
     return AsyncDiscogsClientWrapper(user_agent, user_token)
 
 
 def get_optimized_client_for_nowplaying(user_agent: str,
-                                        user_token: str,
+                                        user_token: str | None,
                                         need_bio: bool = True,
                                         need_images: bool = True,
                                         timeout: int = 5) -> AsyncDiscogsClientWrapper:

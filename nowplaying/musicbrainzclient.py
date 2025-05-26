@@ -9,7 +9,7 @@ import io
 import logging
 import ssl
 import time
-from typing import Optional, Dict, Any, List
+from typing import Any
 import xml.etree.ElementTree as etree
 
 import aiohttp
@@ -66,8 +66,8 @@ async def _rate_limit():
 
 
 async def _make_request(url: str,
-                        params: Optional[Dict] = None,
-                        timeout: Optional[int] = None) -> Dict[str, Any]:
+                        params: dict | None = None,
+                        timeout: int | None = None) -> dict[str, Any]:
     """Make an async HTTP request to MusicBrainz API with rate limiting"""
     await _rate_limit()
 
@@ -126,7 +126,7 @@ async def _make_request(url: str,
     raise NetworkError(f"Failed after {_MAX_RETRIES} retries")
 
 
-async def _make_image_request(url: str, timeout: Optional[int] = None) -> bytes:
+async def _make_image_request(url: str, timeout: int | None = None) -> bytes:
     """Make a request for binary image data"""
     await _rate_limit()
 
@@ -147,7 +147,7 @@ async def _make_image_request(url: str, timeout: Optional[int] = None) -> bytes:
 # MusicBrainz API Methods (only the ones actually used by nowplaying)
 
 
-async def search_recordings(**kwargs) -> Dict[str, Any]:
+async def search_recordings(**kwargs) -> dict[str, Any]:
     """Search for recordings"""
     params = {}
     if 'query' in kwargs:
@@ -172,7 +172,7 @@ async def search_recordings(**kwargs) -> Dict[str, Any]:
 
 
 async def get_recording_by_id(recording_id: str,
-                              includes: Optional[List[str]] = None) -> Dict[str, Any]:
+                              includes: list[str] | None = None) -> dict[str, Any]:
     """Get recording by MBID"""
     params = {}
     if includes:
@@ -183,8 +183,8 @@ async def get_recording_by_id(recording_id: str,
 
 
 async def get_recordings_by_isrc(isrc: str,
-                                 includes: Optional[List[str]] = None,
-                                 release_status: Optional[List[str]] = None) -> Dict[str, Any]:
+                                 includes: list[str] | None = None,
+                                 release_status: list[str] | None = None) -> dict[str, Any]:
     """Get recordings by ISRC"""
     params = {'query': f'isrc:{isrc}'}
     if includes:
@@ -197,18 +197,18 @@ async def get_recordings_by_isrc(isrc: str,
 
 
 async def browse_releases(recording: str,
-                          includes: Optional[List[str]] = None,
-                          limit: Optional[int] = None,
-                          offset: Optional[int] = None,
-                          release_status: Optional[List[str]] = None) -> Dict[str, Any]:
+                          includes: list[str] | None = None,
+                          limit: int | None = None,
+                          offset: int | None = None,
+                          release_status: list[str] | None = None) -> dict[str, Any]:
     """Browse releases by recording"""
     params = {'recording': recording}
     if includes:
         params['inc'] = '+'.join(includes)
     if limit:
-        params['limit'] = limit
+        params['limit'] = str(limit)
     if offset:
-        params['offset'] = offset
+        params['offset'] = str(offset)
     if release_status:
         params['status'] = '|'.join(release_status)
 
@@ -216,7 +216,7 @@ async def browse_releases(recording: str,
     return await _make_request(url, params)
 
 
-async def get_artist_by_id(artist_id: str, includes: Optional[List[str]] = None) -> Dict[str, Any]:
+async def get_artist_by_id(artist_id: str, includes: list[str] | None = None) -> dict[str, Any]:
     """Get artist by MBID"""
     params = {}
     if includes:
@@ -226,7 +226,7 @@ async def get_artist_by_id(artist_id: str, includes: Optional[List[str]] = None)
     return await _make_request(url, params)
 
 
-async def search_releases(**kwargs) -> Dict[str, Any]:
+async def search_releases(**kwargs) -> dict[str, Any]:
     """Search for releases"""
     params = {}
     if 'query' in kwargs:
@@ -248,8 +248,7 @@ async def search_releases(**kwargs) -> Dict[str, Any]:
     return await _make_request(url, params)
 
 
-async def get_release_by_id(release_id: str,
-                            includes: Optional[List[str]] = None) -> Dict[str, Any]:
+async def get_release_by_id(release_id: str, includes: list[str] | None = None) -> dict[str, Any]:
     """Get release by MBID"""
     params = {}
     if includes:
@@ -259,7 +258,7 @@ async def get_release_by_id(release_id: str,
     return await _make_request(url, params)
 
 
-async def search_release_groups(**kwargs) -> Dict[str, Any]:
+async def search_release_groups(**kwargs) -> dict[str, Any]:
     """Search for release groups"""
     params = {}
     if 'query' in kwargs:
@@ -281,8 +280,7 @@ async def search_release_groups(**kwargs) -> Dict[str, Any]:
     return await _make_request(url, params)
 
 
-async def get_release_group_by_id(rg_id: str,
-                                  includes: Optional[List[str]] = None) -> Dict[str, Any]:
+async def get_release_group_by_id(rg_id: str, includes: list[str] | None = None) -> dict[str, Any]:
     """Get release group by MBID"""
     params = {}
     if includes:
@@ -295,7 +293,7 @@ async def get_release_group_by_id(rg_id: str,
 # Cover Art Archive functions
 
 
-async def get_image_list(mbid: str, entity_type: str = 'release') -> Dict[str, Any]:
+async def get_image_list(mbid: str, entity_type: str = 'release') -> dict[str, Any]:
     """Get cover art image list for a release or release group"""
     url = f"{_CAA_BASE_URL}/{entity_type}/{mbid}"
     try:
