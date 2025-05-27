@@ -8,7 +8,7 @@ import pathlib
 import re
 
 # pylint: disable=no-name-in-module
-from PySide6.QtCore import Slot, QFile, Qt
+from PySide6.QtCore import Slot, QFile, Qt, QStandardPaths
 from PySide6.QtWidgets import (QErrorMessage, QFileDialog, QWidget, QListWidgetItem)
 from PySide6.QtGui import QIcon
 from PySide6.QtUiTools import QUiLoader
@@ -613,14 +613,22 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     @Slot()
     def on_artistextras_clearcache_button(self):
         ''' clear the cache button was pushed '''
+        # Clear image cache
         cachedbfile = self.config.cparser.value('artistextras/cachedbfile')
-        if not cachedbfile:
-            return
+        if cachedbfile:
+            cachedbfilepath = pathlib.Path(cachedbfile)
+            if cachedbfilepath.exists() and 'imagecache' in str(cachedbfile):
+                logging.debug('Deleting image cache: %s', cachedbfilepath)
+                cachedbfilepath.unlink()
 
-        cachedbfilepath = pathlib.Path(cachedbfile)
-        if cachedbfilepath.exists() and 'imagecache' in cachedbfile:
-            logging.debug('Deleting %s', cachedbfilepath)
-            cachedbfilepath.unlink()
+        # Clear API cache
+        api_cache_dir = pathlib.Path(
+            QStandardPaths.standardLocations(
+                QStandardPaths.StandardLocation.CacheLocation)[0]).joinpath('api_cache')
+        api_cache_file = api_cache_dir / 'api_responses.db'
+        if api_cache_file.exists():
+            logging.debug('Deleting API cache: %s', api_cache_file)
+            api_cache_file.unlink()
 
     @Slot()
     def on_beamstatus_refresh_button(self):

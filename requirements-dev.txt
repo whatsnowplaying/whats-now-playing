@@ -4,7 +4,7 @@
 pip-upgrader
 pyinstaller==6.12.0
 pyinstaller_versionfile==3.0.0
-pylint
+pylint==2.17.5
 pyright
 sourcery
 yapf

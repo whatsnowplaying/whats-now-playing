@@ -123,6 +123,19 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
             except sqlite3.OperationalError as error:
                 logging.error(error)
 
+    def vacuum_database(self):
+        """Vacuum the requests database to reclaim space from deleted entries."""
+        if not self.databasefile.exists():
+            return
+        try:
+            with sqlite3.connect(self.databasefile, timeout=30) as connection:
+                logging.debug("Vacuuming requests database...")
+                connection.execute("VACUUM")
+                connection.commit()
+                logging.info("Requests database vacuumed successfully")
+        except sqlite3.Error as error:
+            logging.error("Database error during vacuum: %s", error)
+
     def clear_roulette_artist_dupes(self):
         ''' clear out artists from the roulette table '''
         with sqlite3.connect(self.databasefile, timeout=30) as connection:

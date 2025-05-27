@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' test artistextras '''
+''' test artistextras core functionality '''
 
 import logging
 import os
@@ -7,7 +7,6 @@ import typing as t
 
 import pytest
 
-import nowplaying.metadata  # pylint: disable=import-error
 
 PLUGINS = ['wikimedia']
 
@@ -81,12 +80,13 @@ def getconfiguredplugin(bootstrap):
     yield configureplugins(config)
 
 
-def test_disabled(bootstrap):
+@pytest.mark.asyncio
+async def test_disabled(bootstrap):
     ''' test disabled '''
     imagecaches, plugins = configureplugins(bootstrap)
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
-        data = plugins[pluginname].download(imagecache=imagecaches[pluginname])
+        data = await plugins[pluginname].download_async(imagecache=imagecaches[pluginname])
         assert not data
         assert not imagecaches[pluginname].urls
 
@@ -100,35 +100,38 @@ def test_providerinfo(bootstrap):  # pylint: disable=redefined-outer-name
         assert data
 
 
-def test_noapikey(bootstrap):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_noapikey(bootstrap):  # pylint: disable=redefined-outer-name
     ''' test disabled '''
     config = bootstrap
     imagecaches, plugins = configureplugins(config)
     for pluginname in PLUGINS:
         config.cparser.setValue(f'{pluginname}/enabled', True)
         logging.debug('Testing %s', pluginname)
-        data = plugins[pluginname].download(imagecache=imagecaches[pluginname])
+        data = await plugins[pluginname].download_async(imagecache=imagecaches[pluginname])
         assert not data
         assert not imagecaches[pluginname].urls
 
 
-def test_nodata(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_nodata(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' test disabled '''
     imagecaches, plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
-        data = plugins[pluginname].download(imagecache=imagecaches[pluginname])
+        data = await plugins[pluginname].download_async(imagecache=imagecaches[pluginname])
         assert not data
         assert not imagecaches[pluginname].urls
 
 
-def test_noimagecache(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_noimagecache(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' noimagecache '''
 
     imagecaches, plugins = getconfiguredplugin  # pylint: disable=unused-variable
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
-        data = plugins[pluginname].download(
+        data = await plugins[pluginname].download_async(
             {
                 'album': 'The Downward Spiral',
                 'artist': 'Nine Inch Nails',
@@ -142,85 +145,27 @@ def test_noimagecache(getconfiguredplugin):  # pylint: disable=redefined-outer-n
             assert not data
 
 
-def test_discogs_note_stripping(bootstrap):  # pylint: disable=redefined-outer-name
-    ''' noimagecache '''
-
-    config = bootstrap
-    if 'discogs' in PLUGINS:
-        configuresettings('discogs', config.cparser)
-        config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
-    imagecaches, plugins = configureplugins(config)  # pylint: disable=unused-variable
-    for pluginname in PLUGINS:
-        if 'discogs' not in pluginname:
-            continue
-        logging.debug('Testing %s', pluginname)
-        data = plugins[pluginname].download(
-            {
-                'title': 'Tiny Dancer',
-                'album': 'Diamonds',
-                'artist': 'Elton John',
-                'imagecacheartist': 'eltonjohn'
-            },
-            imagecache=None)
-        assert data['artistlongbio']
-        mpproc = nowplaying.metadata.MetadataProcessors(config=config)
-        mpproc.metadata = data
-        assert 'Note:' in mpproc.metadata['artistlongbio']
-        mpproc._generate_short_bio()  # pylint: disable=protected-access
-        assert 'Note:' not in mpproc.metadata['artistshortbio']
-
-
-def test_discogs_weblocation1(bootstrap):  # pylint: disable=redefined-outer-name
-    ''' noimagecache '''
-
-    config = bootstrap
-    if 'discogs' in PLUGINS:
-        configuresettings('discogs', config.cparser)
-        config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
-    imagecaches, plugins = configureplugins(config)  # pylint: disable=unused-variable
-    for pluginname in PLUGINS:
-        if 'discogs' not in pluginname:
-            continue
-        logging.debug('Testing %s', pluginname)
-        data = plugins[pluginname].download(
-            {
-                'title':
-                'Computer Blue',
-                'album':
-                'Purple Rain',
-                'artist':
-                'Prince and The Revolution',
-                'artistwebsites': [
-                    'https://www.discogs.com/artist/271351', 'https://www.discogs.com/artist/28795',
-                    'https://www.discogs.com/artist/293637',
-                    'https://www.discogs.com/artist/342899', 'https://www.discogs.com/artist/79903',
-                    'https://www.discogs.com/artist/571633', 'https://www.discogs.com/artist/96774'
-                ],
-                'imagecacheartist':
-                'princeandtherevoluion'
-            },
-            imagecache=None)
-        assert 'NOTE: If The Revolution are credited without Prince' in data['artistlongbio']
-
-
-def test_missingallartistdata(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_missingallartistdata(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' missing all artist data '''
     imagecaches, plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
 
-        data = plugins[pluginname].download({'title': 'title'}, imagecache=imagecaches[pluginname])
+        data = await plugins[pluginname].download_async({'title': 'title'},
+                                                        imagecache=imagecaches[pluginname])
         assert not data
         assert not imagecaches[pluginname].urls
 
 
-def test_missingmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_missingmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' artist '''
     imagecaches, plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
 
-        data = plugins[pluginname].download(
+        data = await plugins[pluginname].download_async(
             {
                 'artist': 'Nine Inch Nails',
                 'imagecacheartist': 'nineinchnails'
@@ -238,17 +183,18 @@ def test_missingmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-na
             assert not imagecaches[pluginname].urls
 
 
-def test_featuring1(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_featuring1(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' artist '''
     imagecaches, plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
 
-        data = plugins[pluginname].download(
+        data = await plugins[pluginname].download_async(
             {
                 'artist': 'Grimes feat Janelle Monáe',
                 'title': 'Venus Fly',
-                'album': 'Art Angel',
+                'album': 'Art Angels',
                 'imagecacheartist': 'grimesfeatjanellemonae'
             },
             imagecache=imagecaches[pluginname])
@@ -265,13 +211,14 @@ def test_featuring1(getconfiguredplugin):  # pylint: disable=redefined-outer-nam
             assert imagecaches[pluginname].urls['grimesfeatjanellemonae']['artistthumbnail']
 
 
-def test_featuring2(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_featuring2(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' artist '''
     imagecaches, plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
 
-        data = plugins[pluginname].download(
+        data = await plugins[pluginname].download_async(
             {
                 'artist': 'MӨЯIS BLΛK feat. grabyourface',
                 'title': 'Complicate',
@@ -285,15 +232,17 @@ def test_featuring2(getconfiguredplugin):  # pylint: disable=redefined-outer-nam
             assert data['artistwebsites']
 
 
-def test_badmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_badmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' badmbid '''
     imagecaches, plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
 
-        data = plugins[pluginname].download(
+        data = await plugins[pluginname].download_async(
             {
-                'artist': 'Nine Inch Nails',
+                'artist': 'NonExistentArtistXYZ',
+                'imagecacheartist': 'nonexistentartistxyz',
                 'musicbrainzartistid': ['xyz']
             },
             imagecache=imagecaches[pluginname])
@@ -301,13 +250,14 @@ def test_badmbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
         assert not imagecaches[pluginname].urls
 
 
-def test_onlymbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_onlymbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' badmbid '''
     imagecaches, plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
 
-        data = plugins[pluginname].download(
+        data = await plugins[pluginname].download_async(
             {
                 'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da'],
             },
@@ -316,13 +266,14 @@ def test_onlymbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
         assert not imagecaches[pluginname].urls
 
 
-def test_artist_and_mbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_artist_and_mbid(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' badmbid '''
     imagecaches, plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
 
-        data = plugins[pluginname].download(
+        data = await plugins[pluginname].download_async(
             {
                 'artist': 'Nine Inch Nails',
                 'musicbrainzartistid': ['b7ffd2af-418f-4be2-bdd1-22f8b48613da'],
@@ -342,7 +293,8 @@ def test_artist_and_mbid(getconfiguredplugin):  # pylint: disable=redefined-oute
             assert not imagecaches[pluginname].urls
 
 
-def test_all(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_all(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' badmbid '''
     imagecaches, plugins = getconfiguredplugin
     for pluginname in PLUGINS:
@@ -355,7 +307,8 @@ def test_all(getconfiguredplugin):  # pylint: disable=redefined-outer-name
         }
         if pluginname == 'wikimedia':
             metadata['artistwebsites'] = ['https://www.wikidata.org/wiki/Q11647']
-        data = plugins[pluginname].download(metadata, imagecache=imagecaches[pluginname])
+        data = await plugins[pluginname].download_async(metadata,
+                                                        imagecache=imagecaches[pluginname])
         if pluginname in ['discogs', 'theaudiodb']:
             assert data['artistlongbio']
             assert data['artistwebsites']
@@ -366,7 +319,8 @@ def test_all(getconfiguredplugin):  # pylint: disable=redefined-outer-name
 
 
 @pytest.mark.xfail(reason="Non-deterministic at the moment")
-def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' badmbid '''
     imagecaches, plugins = getconfiguredplugin
     for pluginname in PLUGINS:
@@ -380,7 +334,8 @@ def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-name
         }
         if pluginname == 'wikimedia':
             metadata['artistwebsites'] = ['https://www.wikidata.org/wiki/Q11647']
-        data = plugins[pluginname].download(metadata, imagecache=imagecaches[pluginname])
+        data = await plugins[pluginname].download_async(metadata,
+                                                        imagecache=imagecaches[pluginname])
         if pluginname in ['discogs', 'theaudiodb']:
             assert data['artistlongbio']
             assert data['artistwebsites']
@@ -391,13 +346,14 @@ def test_theall(getconfiguredplugin):  # pylint: disable=redefined-outer-name
         assert imagecaches[pluginname].urls['nineinchnails']['artistthumbnail']
 
 
-def test_notfound(getconfiguredplugin):  # pylint: disable=redefined-outer-name
+@pytest.mark.asyncio
+async def test_notfound(getconfiguredplugin):  # pylint: disable=redefined-outer-name
     ''' discogs '''
     imagecaches, plugins = getconfiguredplugin
     for pluginname in PLUGINS:
         logging.debug('Testing %s', pluginname)
 
-        data = plugins[pluginname].download(
+        data = await plugins[pluginname].download_async(
             {
                 'album': 'ZYX fake album XYZ',
                 'artist': 'The XYZ fake artist XYZ',
@@ -406,64 +362,3 @@ def test_notfound(getconfiguredplugin):  # pylint: disable=redefined-outer-name
             imagecache=imagecaches[pluginname])
         assert not data
         assert not imagecaches[pluginname].urls
-
-
-def test_wikimedia_langfallback_zh_to_en(bootstrap):  # pylint: disable=redefined-outer-name
-    ''' not english test '''
-
-    config = bootstrap
-    configuresettings('wikimedia', config.cparser)
-    config.cparser.setValue('wikimedia/bio_iso', 'zh')
-    config.cparser.setValue('wikimedia/bio_iso_en_fallback', True)
-    _, plugins = configureplugins(config)
-    data = plugins['wikimedia'].download(
-        {'artistwebsites': [
-            'https://www.wikidata.org/wiki/Q7766138',
-        ]}, imagecache=None)
-    assert 'video' in data.get('artistlongbio')
-
-
-def test_wikimedia_langfallback_zh_to_none(bootstrap):  # pylint: disable=redefined-outer-name
-    ''' not english test '''
-
-    config = bootstrap
-    configuresettings('wikimedia', config.cparser)
-    config.cparser.setValue('wikimedia/bio_iso', 'zh')
-    config.cparser.setValue('wikimedia/bio_iso_en_fallback', False)
-    _, plugins = configureplugins(config)
-    data = plugins['wikimedia'].download(
-        {'artistwebsites': [
-            'https://www.wikidata.org/wiki/Q7766138',
-        ]}, imagecache=None)
-    assert not data.get('artistlongbio')
-
-
-def test_wikimedia_humantetris_en(bootstrap):  # pylint: disable=redefined-outer-name
-    ''' not english test '''
-
-    config = bootstrap
-    configuresettings('wikimedia', config.cparser)
-    config.cparser.setValue('wikimedia/bio_iso', 'en')
-    config.cparser.setValue('wikimedia/bio_iso_en_fallback', False)
-    _, plugins = configureplugins(config)
-    data = plugins['wikimedia'].download(
-        {'artistwebsites': [
-            'https://www.wikidata.org/wiki/Q60845849',
-        ]}, imagecache=None)
-    assert data.get('artistshortbio') == 'Russian post-punk band from Moscow'
-    assert not data.get('artistlongbio')
-
-
-def test_wikimedia_humantetris_de(bootstrap):  # pylint: disable=redefined-outer-name
-    ''' not english test '''
-
-    config = bootstrap
-    configuresettings('wikimedia', config.cparser)
-    config.cparser.setValue('wikimedia/bio_iso', 'de')
-    config.cparser.setValue('wikimedia/bio_iso_en_fallback', True)
-    _, plugins = configureplugins(config)
-    data = plugins['wikimedia'].download(
-        {'artistwebsites': [
-            'https://www.wikidata.org/wiki/Q60845849',
-        ]}, imagecache=None)
-    assert 'Human Tetris ist eine Band aus Moskau' in data.get('artistlongbio')

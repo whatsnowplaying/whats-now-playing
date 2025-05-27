@@ -3,7 +3,8 @@
 
 import logging
 
-from nowplaying.vendor import wptools
+import nowplaying.apicache
+import nowplaying.wikiclient
 
 from nowplaying.artistextras import ArtistExtrasPlugin
 
@@ -31,34 +32,114 @@ class Plugin(ArtistExtrasPlugin):
             return True
         return False
 
-    def _get_page(self, entity, lang):
-        logging.debug("Processing %s", entity)
+    async def _get_page_cached(self, entity, lang, artist_name):
+        """Cached version of _get_page_async for better performance."""
+        # Check what features are enabled to optimize API calls
+        need_bio = self.config.cparser.value('wikimedia/bio', type=bool)
+        need_images = (self.config.cparser.value('wikimedia/fanart', type=bool)
+                       or self.config.cparser.value('wikimedia/thumbnails', type=bool))
+
+        async def fetch_func():
+            page = await nowplaying.wikiclient.get_page_async(
+                entity=entity,
+                lang=lang,
+                timeout=5,
+                need_bio=need_bio,
+                need_images=need_images,
+                max_images=5  # Limit for performance during live shows
+            )
+            # Convert to JSON-serializable format for caching
+            if page:
+                return {
+                    'entity': page.entity,
+                    'lang': page.lang,
+                    'data': page.data,
+                    'images': page._images,  # pylint: disable=protected-access
+                    'type': 'wikipage'
+                }
+            return None
+
+        cached_result = await nowplaying.apicache.cached_fetch(
+            provider='wikimedia',
+            artist_name=artist_name,
+            endpoint=f'{entity}_{lang}',  # Unique per entity + language combination
+            fetch_func=fetch_func,
+            ttl_seconds=24 * 60 * 60  # 24 hours for Wikimedia data per CLAUDE.md
+        )
+
+        # Reconstruct WikiPage object from cached JSON data if needed
+        if isinstance(cached_result, dict) and cached_result.get('type') == 'wikipage':
+            # Create a mock WikiPage with the cached data
+            class MockWikiPage:  # pylint: disable=too-few-public-methods
+                """Mock WikiPage with cached data."""
+                def __init__(self, entity, lang, data, images):
+                    self.entity = entity
+                    self.lang = lang
+                    self.data = data
+                    self._images = images
+
+                def images(self, fields=None):
+                    """Return images with specified fields."""
+                    if fields is None:
+                        return self._images
+                    return [{k: img.get(k) for k in fields if k in img}
+                            for img in self._images]
+
+            return MockWikiPage(
+                cached_result['entity'],
+                cached_result['lang'],
+                cached_result['data'],
+                cached_result['images']
+            )
+
+        return cached_result
+
+    async def _get_page_async(self, entity, lang):
+        logging.debug("Processing async %s", entity)
+
+        # Check what features are enabled to optimize API calls
+        need_bio = self.config.cparser.value('wikimedia/bio', type=bool)
+        need_images = (self.config.cparser.value('wikimedia/fanart', type=bool)
+                       or self.config.cparser.value('wikimedia/thumbnails', type=bool))
+
         try:
-            page = wptools.page(wikibase=entity, lang=lang, silent=True, timeout=5)
-            page.get()
+            page = await nowplaying.wikiclient.get_page_async(
+                entity=entity,
+                lang=lang,
+                timeout=5,
+                need_bio=need_bio,
+                need_images=need_images,
+                max_images=5  # Limit for performance during live shows
+            )
         except Exception:  # pylint: disable=broad-except
             page = None
             if self.config.cparser.value('wikimedia/bio_iso_en_fallback',
                                          type=bool) and lang != 'en':
                 try:
-                    page = wptools.page(wikibase=entity, lang='en', silent=True, timeout=5)
-                    page.get()
+                    page = await nowplaying.wikiclient.get_page_async(entity=entity,
+                                                                      lang='en',
+                                                                      timeout=5,
+                                                                      need_bio=need_bio,
+                                                                      need_images=need_images,
+                                                                      max_images=5)
                 except Exception as err:  # pylint: disable=broad-except
                     page = None
-                    logging.exception("wikimedia page failure (%s): %s", err, entity)
+                    logging.exception("wikimedia async page failure (%s): %s", err, entity)
 
         return page
 
-    def download(self, metadata=None, imagecache: "nowplaying.imagecache.ImageCache" = None):  # pylint: disable=too-many-branches
-        ''' download content '''
+    async def download_async(self,  # pylint: disable=too-many-branches
+                             metadata=None,
+                             imagecache: "nowplaying.imagecache.ImageCache" = None):
+        ''' async download content '''
 
-        def _get_bio():
+        async def _get_bio_async():
             if page.data.get('extext'):
                 mymeta['artistlongbio'] = page.data['extext']
             elif lang != 'en' and self.config.cparser.value('wikimedia/bio_iso_en_fallback',
                                                             type=bool):
-                temppage = self._get_page(entity, 'en')
-                if temppage.data.get('extext'):
+                temppage = await self._get_page_cached(entity, 'en', artist_name)
+                if temppage and temppage.data.get('extext'):
                     mymeta['artistlongbio'] = temppage.data['extext']
 
             if not mymeta.get('artistlongbio') and page.data.get('description'):
@@ -77,12 +158,13 @@ class Plugin(ArtistExtrasPlugin):
             lang = self.config.cparser.value('wikimedia/bio_iso', type=str) or 'en'
             for website in wikidata_websites:
                 entity = website.split('/')[-1]
-                page = self._get_page(entity, lang)
+                artist_name = metadata.get('artist', entity)  # Use entity as fallback for cache key
+                page = await self._get_page_cached(entity, lang, artist_name)
                 if not page or not page.data:
                     continue
 
                 if self.config.cparser.value('wikimedia/bio', type=bool):
-                    _get_bio()
+                    await _get_bio_async()
 
                 if page.data['claims'].get('P434'):
                     mymeta['musicbrainzartistid'] = page.data['claims'].get('P434')
@@ -115,7 +197,7 @@ class Plugin(ArtistExtrasPlugin):
                                           imagetype='artistthumbnail',
                                           srclocationlist=thumbs)
         except Exception as err:  # pylint: disable=broad-except
-            logging.exception("Metadata breaks wikimedia (%s): %s", err, metadata)
+            logging.exception("Async metadata breaks wikimedia (%s): %s", err, metadata)
         return mymeta
 
     def providerinfo(self):  # pylint: disable=no-self-use

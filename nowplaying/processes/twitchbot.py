@@ -5,9 +5,9 @@ Driver for the Twitch support code
 
 '''
 
+
+import contextlib
 import logging
-import logging.config
-import logging.handlers
 import os
 import signal
 import sys
@@ -23,7 +23,7 @@ import nowplaying.twitch.launch
 #   1. name (this will be the login username for the bot, the name in chat will be the account name)
 #   2. http://localhost
 #   3. Category: Chat bot
-#   4. Create
+#   4. Createx
 #   5. go into manage  clientid is now there
 # username and clientid  comes from https://dev.twitch.tv/console/apps/create
 # token comes from http://twitchapps.com/tmi/
@@ -33,10 +33,8 @@ import nowplaying.twitch.launch
 def stop(pid):
     ''' stop the web server -- called from Tray '''
     logging.info('sending INT to %s', pid)
-    try:
+    with contextlib.suppress(ProcessLookupError):
         os.kill(pid, signal.SIGINT)
-    except ProcessLookupError:
-        pass
 
 
 def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argument

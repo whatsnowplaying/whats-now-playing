@@ -101,9 +101,11 @@ addopts = [
   "--cov=nowplaying",
   "--cov-report=html",
   "-ra",
+  "--durations=10",
 ]
 log_level = "DEBUG"
 asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 qt_qapp_name = "testsuite"
 
 [tool.pylint.main]

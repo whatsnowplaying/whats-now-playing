@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 ''' start of support of discogs '''
 
+import asyncio
 import logging
-import socket
 
-import requests.exceptions
-import urllib3.exceptions
-import nowplaying.vendor.discogs_client
-from nowplaying.vendor.discogs_client import models
+import nowplaying.apicache
+import nowplaying.discogsclient
+from nowplaying.discogsclient import Models as models
 
 from nowplaying.artistextras import ArtistExtrasPlugin
 import nowplaying.utils
@@ -32,12 +31,104 @@ class Plugin(ArtistExtrasPlugin):
         ''' setup the discogs client '''
         if apikey := self._get_apikey():
             delay = self.calculate_delay()
-            self.client = nowplaying.vendor.discogs_client.Client(
-                f'whatsnowplaying/{self.config.version}', user_token=apikey)
-            self.client.set_timeout(connect=delay, read=delay)
+
+            # Use optimized client based on what features are enabled
+            need_bio = self.config.cparser.value('discogs/bio', type=bool)
+            need_images = (self.config.cparser.value('discogs/fanart', type=bool)
+                           or self.config.cparser.value('discogs/thumbnails', type=bool))
+
+            self.client = nowplaying.discogsclient.get_optimized_client_for_nowplaying(
+                f'whatsnowplaying/{self.config.version}',
+                user_token=apikey,
+                need_bio=need_bio,
+                need_images=need_images,
+                timeout=delay)
             return True
         logging.error('Discogs API key is either wrong or missing.')
         return False
+
+    async def _search_async_cached(self, album_title, artist_name, search_type='title'):
+        """Cached version of discogs search_async."""
+
+        async def fetch_func():
+            result = await self.client.search_async(album_title, artist=artist_name,
+                                                   search_type=search_type)
+            # Convert to JSON-serializable format for caching
+            if hasattr(result, 'results'):
+                return {
+                    'results': [
+                        {
+                            'type': 'release' if isinstance(r, models.Release) else 'unknown',
+                            'data': r.data if hasattr(r, 'data') else r,
+                            'artists': [a.data if hasattr(a, 'data') else a
+                                       for a in getattr(r, 'artists', [])]
+                        } for r in result.results
+                    ]
+                }
+            return result
+
+        cached_result = await nowplaying.apicache.cached_fetch(
+            provider='discogs',
+            artist_name=artist_name,
+            endpoint=f'search_{search_type}_{album_title}',
+            fetch_func=fetch_func,
+            ttl_seconds=24 * 60 * 60  # 24 hours for Discogs data per CLAUDE.md
+        )
+
+        # Reconstruct objects from cached JSON data if needed
+        if isinstance(cached_result, dict) and 'results' in cached_result:
+            # Create a mock search result with reconstructed Release objects
+            class MockSearchResult:  # pylint: disable=too-few-public-methods
+                """Mock search result with reconstructed Release objects."""
+                def __init__(self, results):
+                    self.results = []
+                    for item in results:
+                        if item['type'] == 'release':
+                            # Reconstruct Release object
+                            release = models.Release(item['data'])
+                            # Reconstruct artist objects
+                            release.artists = [models.Artist(artist_data)
+                                              for artist_data in item['artists']]
+                            self.results.append(release)
+
+                def page(self, page_num):  # pylint: disable=unused-argument
+                    """Return self for pagination compatibility."""
+                    return self
+
+                def __iter__(self):
+                    return iter(self.results)
+
+            return MockSearchResult(cached_result['results'])
+
+        return cached_result
+
+    async def _artist_async_cached(self, artist_id, artist_name):
+        """Cached version of discogs artist_async."""
+
+        async def fetch_func():
+            artist = await self.client.artist_async(artist_id)
+            # Convert to JSON-serializable format for caching
+            if artist:
+                return {
+                    'type': 'artist',
+                    'data': artist.data if hasattr(artist, 'data') else artist.__dict__
+                }
+            return None
+
+        cached_result = await nowplaying.apicache.cached_fetch(
+            provider='discogs',
+            artist_name=artist_name,
+            endpoint=f'artist_{artist_id}',
+            fetch_func=fetch_func,
+            ttl_seconds=24 * 60 * 60  # 24 hours for Discogs data per CLAUDE.md
+        )
+
+        # Reconstruct artist object from cached JSON data if needed
+        if isinstance(cached_result, dict) and cached_result.get('type') == 'artist':
+            # Reconstruct Artist object
+            return models.Artist(cached_result['data'])
+
+        return cached_result
 
     def _process_metadata(self, artistname, artist, imagecache):
         ''' update metadata based upon an artist record '''
@@ -68,8 +159,8 @@ class Plugin(ArtistExtrasPlugin):
         if self.config.cparser.value('discogs/websites', type=bool):
             self.addmeta['artistwebsites'] = artist.urls
 
-    def _find_discogs_website(self, metadata, imagecache):
-        ''' use websites listing to find discogs entries '''
+    async def _find_discogs_website_async(self, metadata, imagecache):
+        ''' async use websites listing to find discogs entries '''
         if not self.client and not self._setup_client():
             return False
 
@@ -81,14 +172,18 @@ class Plugin(ArtistExtrasPlugin):
         discogs_websites = [url for url in metadata['artistwebsites'] if 'discogs' in url]
         if len(discogs_websites) == 1:
             artistnum = discogs_websites[0].split('/')[-1]
-            artist = self.client.artist(artistnum)
+            artist = await self._artist_async_cached(artistnum, metadata['artist'])
+            if not artist:
+                return False
             artistname = str(artist.name)
             logging.debug('Found a singular discogs artist URL using %s instead of %s', artistname,
                           metadata['artist'])
         elif len(discogs_websites) > 1:
             for website in discogs_websites:
                 artistnum = website.split('/')[-1]
-                artist = self.client.artist(artistnum)
+                artist = await self._artist_async_cached(artistnum, metadata['artist'])
+                if not artist:
+                    continue
                 webartistname = str(artist.name)
                 if nowplaying.utils.normalize(webartistname) == nowplaying.utils.normalize(
                         metadata['artist']):
@@ -104,8 +199,8 @@ class Plugin(ArtistExtrasPlugin):
 
         return False
 
-    def _find_discogs_artist_releaselist(self, metadata):
-        ''' given metadata, find the releases for an artist '''
+    async def _find_discogs_artist_releaselist_async(self, metadata):
+        ''' async given metadata, find the releases for an artist '''
         if not self.client and not self._setup_client():
             return None
 
@@ -114,18 +209,16 @@ class Plugin(ArtistExtrasPlugin):
 
         artistname = metadata['artist']
         try:
-            logging.debug('Fetching %s - %s', artistname, metadata['album'])
-            resultlist = self.client.search(metadata['album'], artist=artistname,
-                                            type='title').page(1)
-        except (
-                requests.exceptions.ReadTimeout,  # pragma: no cover
-                urllib3.exceptions.ReadTimeoutError,
-                socket.timeout,
-                TimeoutError):
-            logging.error('discogs releaselist timeout error')
+            logging.debug('Fetching async %s - %s', artistname, metadata['album'])
+            resultlist = await self._search_async_cached(metadata['album'], artistname, 'title')
+            # Get first page if paginated results
+            if hasattr(resultlist, 'page'):
+                resultlist = resultlist.page(1)
+        except asyncio.TimeoutError:
+            logging.error('discogs async releaselist timeout error')
             return None
         except Exception as error:  # pragma: no cover pylint: disable=broad-except
-            logging.error('discogs hit %s', error)
+            logging.error('discogs async hit %s', error)
             return None
 
         return next(
@@ -133,8 +226,8 @@ class Plugin(ArtistExtrasPlugin):
             None,
         )
 
-    def download(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches, too-many-return-statements
-        ''' download content '''
+    async def download_async(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches, too-many-return-statements
+        ''' async download content '''
 
         if not self.config.cparser.value('discogs/enabled', type=bool):
             return None
@@ -154,7 +247,7 @@ class Plugin(ArtistExtrasPlugin):
 
         self.addmeta = {}
 
-        if self._find_discogs_website(metadata, imagecache):
+        if await self._find_discogs_website_async(metadata, imagecache):
             logging.debug('used discogs website')
             return self.addmeta
 
@@ -162,7 +255,7 @@ class Plugin(ArtistExtrasPlugin):
         artistresultlist = None
         for variation in nowplaying.utils.artist_name_variations(metadata['artist']):
             metadata['artist'] = variation
-            artistresultlist = self._find_discogs_artist_releaselist(metadata)
+            artistresultlist = await self._find_discogs_artist_releaselist_async(metadata)
             if artistresultlist:
                 break
 

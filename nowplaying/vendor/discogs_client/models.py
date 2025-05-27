@@ -482,7 +482,7 @@ class Artist(PrimaryAPIObject):
     #: This attribute is only present when an ``Artist`` object is part of a
     #: ``credits`` list of a ``Release`` object.
     role = SimpleField()
-    
+
     def __init__(self, client, dict_):
         super(Artist, self).__init__(client, dict_)
         self.data['resource_url'] = '{0}/artists/{1}'.format(client._base_url, dict_['id'])

@@ -17,7 +17,7 @@ class RecognitionPlugin(WNPBasePlugin):
 
 #### Recognition methods
 
-    def recognize(self, metadata=None) -> t.Optional[dict]:  #pylint: disable=no-self-use
+    async def recognize(self, metadata=None) -> t.Optional[dict]:  #pylint: disable=no-self-use
         ''' return metadata '''
         raise NotImplementedError
 
