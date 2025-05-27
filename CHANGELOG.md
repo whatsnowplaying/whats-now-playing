@@ -11,6 +11,7 @@
 * Twitch scope has changed and may request new permissions.
 * Twitch scope is no longer saved in the configuration to allow
   for a future update to the Twitch code.
+* Twitch requests has been disabled for the time being.
 * Better error handling for when the Twitch token check fails.
 * New discord link.
 * Better support for limiting how long to look for additional
@@ -43,6 +44,13 @@
   * Simplify some requirements.
   * Better exception logging for some subsystems.
   * Some of the metadata DB schemas have changed.
+  * API cache was added. ew SQLite-based cache system
+    with TTL support for all external API responses, including advanced
+    duplicate artist handling and provider-specific cache strategies.
+  * Overhauled the artist extras to be async clients for FanArtTV, MusicBrainz,
+    Discogs, TheAudioDB, and Wikipedia/Wikidata replacing slower synchronous libraries.
+  * Added comprehensive API cache tests and broke up large test files into focused,
+    maintainable plugin-specific files.
 
 ## Version 4.1.0 - 2023-08-20
 
