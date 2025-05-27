@@ -10,7 +10,7 @@ nltk==3.9.1
 normality==2.6.1
 pid==3.0.4
 pillow==11.2.1
-pillow_avif_plugin==1.4.6
+pillow_avif_plugin==1.5.2
 pyacoustid==1.2.2
 pypresence==4.3.0
 # 6.5.x's rcc is broken on macos
