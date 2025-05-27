@@ -82,30 +82,74 @@ Key testing patterns:
 
 **Test Architecture and Shared Utilities:**
 
-- Shared test utilities in `tests/utils_artistextras.py` for artistextras plugin testing
+- Shared test utilities in `tests/utils_artistextras.py` for artistextras
+  plugin testing
 - Centralized pytest.mark.skipif decorators for API key requirements:
   - `skip_no_discogs_key`, `skip_no_fanarttv_key`, `skip_no_theaudiodb_key`, `skip_no_acoustid_key`
-- Reusable cache testing helpers: `run_cache_consistency_test()`, `run_api_call_count_test()`, `run_failure_cache_test()`
+- Reusable cache testing helpers: `run_cache_consistency_test()`,
+  `run_api_call_count_test()`, `run_failure_cache_test()`
 - Standard plugin configuration helpers: `configureplugins()`, `configuresettings()`
 
 **Reliability Testing for DJ Critical Components:**
 
-Since most DJs rely on Discogs for metadata, comprehensive reliability testing is essential:
+Since most DJs rely on Discogs for metadata, comprehensive reliability
+testing is essential:
 
 - **Error handling tests**: Network timeouts, HTTP errors, malformed responses
 - **Input validation tests**: Special characters, Unicode, long strings, edge cases
 - **Live performance scenarios**: Rapid track changes, timeout recovery, memory stability
-- **DJ-specific genre testing**: Electronic music with symbols (µ-Ziq), featuring artists, international accents
+- **DJ-specific genre testing**: Electronic music with symbols (µ-Ziq),
+  featuring artists, international accents
 - **Configuration validation**: Performance vs visual configs commonly used by DJs
-- **Cache failure scenarios**: Corrupted data handling, TTL expiration, cleanup on errors
+- **Cache failure scenarios**: Corrupted data handling, TTL expiration,
+  cleanup on errors
+
+**Critical DJ Software Requirement - No Exceptions During Live Performance:**
+
+DJ software cannot crash during live performances. All artistextras plugins must
+handle ALL error conditions gracefully (return None/empty data) rather than
+raising exceptions. Tests enforce this with `pytest.fail()` if any exceptions
+occur:
+
+```python
+try:
+    result = await plugin.download_async(metadata, imagecache=imagecache)
+    assert result is None or isinstance(result, dict)
+except Exception as exc:  # pylint: disable=broad-exception-caught
+    pytest.fail(f'Plugin raised exception: {exc}. '
+               f'Plugins must handle all errors gracefully for live performance.')
+```
 
 **Testing Best Practices:**
 
 - Always run `pylint` after adding new tests to maintain code quality
+- Use `pytest.fail()` instead of logging warnings when plugins raise exceptions
+- Test malformed data extensively - DJs encounter inconsistent metadata
+- Focus on edge cases that could occur during live DJ sets
 - Use proper import organization (all imports at top of file, not inline)
 - Mock external API calls to test error conditions reliably
 - Test both happy path and failure scenarios for production reliability
 - Use meaningful test names that clearly indicate what scenario is being tested
+
+**Test Coverage Requirements for Artistextras Plugins:**
+
+Each artistextras plugin should have comprehensive test coverage including:
+
+1. **API Call Count Tests** - Verify caching works (1 API call, 2+ downloads)
+2. **Cache Consistency Tests** - Verify repeated calls return identical data  
+3. **Error Handling Tests** - Malformed responses, timeouts, HTTP errors
+4. **Input Validation Tests** - Invalid metadata, malformed URLs, edge cases
+5. **DJ Performance Tests** - Rapid track changes, memory stability
+6. **Configuration Tests** - Various DJ setups (bio-only, images-only, etc.)
+7. **Fallback Tests** - Invalid MBIDs → name-based search (TheAudioDB)
+8. **Duplicate Artist Tests** - Handle multiple artists with same name (Madonna)
+
+Key files with comprehensive coverage examples:
+
+- `tests/test_artistextras_discogs.py` (~1200 lines, 30+ tests)
+- `tests/test_artistextras_wikimedia.py` (20+ tests covering edge cases)
+- `tests/test_artistextras_theaudiodb.py` (includes critical fallback testing)
+- `tests/test_musicbrainz.py` (25+ tests for complex artist scenarios)
 
 ### Development Notes
 

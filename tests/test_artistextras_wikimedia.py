@@ -286,7 +286,8 @@ async def test_wikimedia_malformed_urls(bootstrap):
             logging.info('Malformed URL case %d handled gracefully', i)
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logging.warning('Malformed URL case %d raised exception: %s', i, exc)
+            pytest.fail(f'Wikimedia plugin raised exception for malformed URL case {i}: {exc}. '
+                       f'Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.asyncio
@@ -330,7 +331,8 @@ async def test_wikimedia_missing_metadata_fields(bootstrap):
             logging.info('Missing metadata case %d handled gracefully', i)
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logging.warning('Missing metadata case %d raised exception: %s', i, exc)
+            pytest.fail(f'Wikimedia plugin raised exception for missing metadata case {i}: {exc}. '
+                       f'Plugins must handle all errors gracefully for live performance.')
 
 
 # Language Handling Edge Cases
@@ -369,7 +371,8 @@ async def test_wikimedia_invalid_language_codes(bootstrap):
             logging.info('Invalid language "%s" handled gracefully', lang)
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logging.warning('Invalid language "%s" raised exception: %s', lang, exc)
+            pytest.fail(f'Wikimedia plugin raised exception for invalid language "{lang}": {exc}. '
+                       f'Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.asyncio
@@ -403,7 +406,8 @@ async def test_wikimedia_language_fallback_chain(bootstrap):
             logging.info('Language fallback handled gracefully - no content available')
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        logging.warning('Language fallback test raised exception: %s', exc)
+        pytest.fail(f'Wikimedia plugin raised exception during language fallback: {exc}. '
+                   f'Plugins must handle all errors gracefully for live performance.')
 
 
 # Content Processing and Sanitization Tests
@@ -521,7 +525,8 @@ async def test_wikimedia_malformed_content_handling(bootstrap):
             logging.info('Malformed response %d handled gracefully', i)
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logging.warning('Malformed response %d raised exception: %s', i, exc)
+            pytest.fail(f'Wikimedia plugin raised exception for malformed response {i}: {exc}. '
+                       f'Plugins must handle all errors gracefully for live performance.')
 
         finally:
             # Restore original function
@@ -657,7 +662,8 @@ async def test_wikimedia_rapid_entity_lookups(bootstrap):
         logging.info('Wikimedia handled %d rapid entity lookups successfully', len(artist_entities))
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        logging.error('Rapid entity lookups test failed: %s', exc)
+        pytest.fail(f'Wikimedia plugin raised exception during rapid entity lookups: {exc}. '
+                   f'Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.asyncio
@@ -743,7 +749,8 @@ async def test_wikimedia_memory_stability_long_session(bootstrap):
                              successful_lookups)
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logging.warning('Entity %d raised exception: %s', i, exc)
+            pytest.fail(f'Wikimedia plugin raised exception for entity {i}: {exc}. '
+                       f'Plugins must handle all errors gracefully for live performance.')
 
     logging.info('Memory stability test completed: %d/%d entities processed successfully',
                  successful_lookups, len(entities))

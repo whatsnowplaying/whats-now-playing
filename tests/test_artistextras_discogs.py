@@ -442,8 +442,8 @@ async def test_discogs_malformed_metadata_input(bootstrap):
             logging.info('Malformed input %d handled gracefully', i)
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            # Log but don't fail test - some edge cases might raise exceptions
-            logging.warning('Malformed input %d raised exception: %s', i, exc)
+            pytest.fail(f'Discogs plugin raised exception for malformed input {i}: {exc}. '
+                       f'Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.asyncio
@@ -490,7 +490,8 @@ async def test_discogs_artist_name_variations(bootstrap):
                 logging.info('Successfully processed artist variation: %s', artist)
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logging.warning('Artist variation "%s" raised exception: %s', artist, exc)
+            pytest.fail(f'Discogs plugin raised exception for artist variation "{artist}": {exc}. '
+                       f'Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.asyncio
@@ -539,7 +540,8 @@ async def test_discogs_website_url_parsing(bootstrap):
             logging.info('URL test case handled gracefully: %s', urls)
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logging.warning('URL test case "%s" raised exception: %s', urls, exc)
+            pytest.fail(f'Discogs plugin raised exception for URL test case "{urls}": {exc}. '
+                       f'Plugins must handle all errors gracefully for live performance.')
 
 
 # Configuration State Validation Tests
@@ -590,7 +592,8 @@ def test_discogs_invalid_api_key_format(bootstrap):
                 setup_result = plugin._setup_client()  # pylint: disable=protected-access
                 logging.info('Invalid API key %d setup result: %s', i, setup_result)
             except Exception as exc:  # pylint: disable=broad-exception-caught
-                logging.info('Invalid API key %d caused setup exception: %s', i, exc)
+                pytest.fail(f'Discogs plugin raised exception for invalid API key {i}: {exc}. '
+                           f'Plugins must handle all errors gracefully for live performance.')
 
         logging.info('Invalid API key %d handled gracefully', i)
 
@@ -885,8 +888,8 @@ async def test_discogs_rapid_track_changes(bootstrap):
         logging.info('Discogs handled %d rapid track changes successfully', len(tracks))
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        logging.error('Rapid track changes test failed: %s', exc)
-        # Don't fail the test - log the issue for investigation
+        pytest.fail(f'Discogs plugin raised exception during rapid track changes: {exc}. '
+                   f'Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.asyncio
@@ -969,7 +972,8 @@ async def test_discogs_common_dj_genres(bootstrap):
                 logging.info('Successfully processed DJ track: %s', track['artist'])
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logging.warning('DJ track "%s" raised exception: %s', track['artist'], exc)
+            pytest.fail(f'Discogs plugin raised exception for DJ track "{track["artist"]}": {exc}. '
+                       f'Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.asyncio
@@ -1088,7 +1092,8 @@ async def test_discogs_memory_usage_stability(bootstrap):
                              successful_lookups)
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logging.warning('Track %d raised exception: %s', i, exc)
+            pytest.fail(f'Discogs plugin raised exception for memory test track {i}: {exc}. '
+                       f'Plugins must handle all errors gracefully for live performance.')
 
     logging.info('Memory stability test completed: %d/%d tracks processed successfully',
                  successful_lookups, len(tracks))
