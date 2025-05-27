@@ -22,6 +22,8 @@ env:
 jobs:
   testing-macos:
     runs-on: macos-latest
+    permissions:
+      contents: read
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -88,6 +90,8 @@ jobs:
 
   testing-win:
     runs-on: windows-2019
+    permissions:
+      contents: read
     steps:
       - run: Set-MpPreference -DisableRealtimeMonitoring $true
         shell: powershell
@@ -147,6 +151,8 @@ jobs:
 
   testing-linux:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         python: ["3.10", "3.11"]
@@ -247,6 +253,9 @@ jobs:
       - testing-win
       - testing-linux
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     steps:
       - name: checkout
         uses: actions/checkout@v4

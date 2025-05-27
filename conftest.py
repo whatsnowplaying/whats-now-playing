@@ -153,3 +153,18 @@ async def temp_api_cache():
             # Properly close the cache to prevent event loop warnings
             if hasattr(cache, 'close'):
                 await cache.close()
+
+
+@pytest.fixture(autouse=True)
+def auto_temp_api_cache_for_artistextras(request, temp_api_cache):  # pylint: disable=redefined-outer-name
+    """Automatically use temp API cache for artistextras tests to prevent random CI failures."""
+    # Only auto-apply to artistextras tests, not apicache tests
+    if 'test_artistextras' in request.module.__name__:
+        original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+        nowplaying.apicache.set_cache_instance(temp_api_cache)
+        try:
+            yield
+        finally:
+            nowplaying.apicache.set_cache_instance(original_cache)
+    else:
+        yield

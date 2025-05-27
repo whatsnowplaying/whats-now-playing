@@ -11,6 +11,8 @@ jobs:
 
   build_docs_job:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     container: debian:stable-slim
 
     steps:

@@ -14,6 +14,8 @@ on: [push]  # yamllint disable-line rule:truthy
 jobs:
   pyinstaller-macos:
     runs-on: macos-latest
+    permissions:
+      contents: read
     steps:
       - name: icu
         run: |
@@ -43,6 +45,8 @@ jobs:
 
   pyinstaller-win:
     runs-on: windows-2019
+    permissions:
+      contents: read
     steps:
       - name: checkout
         uses: actions/checkout@v4

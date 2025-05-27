@@ -3,9 +3,10 @@
 
 import logging
 import os
-import typing as t
 
 import pytest
+
+from utils_artistextras import configureplugins, configuresettings
 
 
 PLUGINS = ['wikimedia']
@@ -16,49 +17,6 @@ if os.environ.get('FANARTTV_API_KEY'):
     PLUGINS.append('fanarttv')
 if os.environ.get('THEAUDIODB_API_KEY'):
     PLUGINS.append('theaudiodb')
-
-
-class FakeImageCache:  # pylint: disable=too-few-public-methods
-    ''' a fake ImageCache that just keeps track of urls '''
-
-    def __init__(self):
-        self.urls = {}
-
-    def fill_queue(
-            self,
-            config=None,  # pylint: disable=unused-argument
-            identifier: str = None,
-            imagetype: str = None,
-            srclocationlist: t.List[str] = None):
-        ''' just keep track of what was picked '''
-        if not self.urls.get(identifier):
-            self.urls[identifier] = {}
-        self.urls[identifier][imagetype] = srclocationlist
-
-
-def configureplugins(config):
-    ''' configure plugins '''
-    imagecaches = {}
-    plugins = {}
-    for pluginname in PLUGINS:
-        imagecaches[pluginname] = FakeImageCache()
-        plugins[pluginname] = config.pluginobjs['artistextras'][
-            f'nowplaying.artistextras.{pluginname}']
-    return imagecaches, plugins
-
-
-def configuresettings(pluginname, cparser):
-    ''' configure each setting '''
-    for key in [
-            'banners',
-            'bio',
-            'enabled',
-            'fanart',
-            'logos',
-            'thumbnails',
-            'websites',
-    ]:
-        cparser.setValue(f'{pluginname}/{key}', True)
 
 
 @pytest.fixture

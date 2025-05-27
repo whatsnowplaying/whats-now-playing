@@ -80,6 +80,33 @@ Key testing patterns:
 - `asyncio_default_fixture_loop_scope = "function"` for proper async test
   isolation
 
+**Test Architecture and Shared Utilities:**
+
+- Shared test utilities in `tests/utils_artistextras.py` for artistextras plugin testing
+- Centralized pytest.mark.skipif decorators for API key requirements:
+  - `skip_no_discogs_key`, `skip_no_fanarttv_key`, `skip_no_theaudiodb_key`, `skip_no_acoustid_key`
+- Reusable cache testing helpers: `run_cache_consistency_test()`, `run_api_call_count_test()`, `run_failure_cache_test()`
+- Standard plugin configuration helpers: `configureplugins()`, `configuresettings()`
+
+**Reliability Testing for DJ Critical Components:**
+
+Since most DJs rely on Discogs for metadata, comprehensive reliability testing is essential:
+
+- **Error handling tests**: Network timeouts, HTTP errors, malformed responses
+- **Input validation tests**: Special characters, Unicode, long strings, edge cases
+- **Live performance scenarios**: Rapid track changes, timeout recovery, memory stability
+- **DJ-specific genre testing**: Electronic music with symbols (µ-Ziq), featuring artists, international accents
+- **Configuration validation**: Performance vs visual configs commonly used by DJs
+- **Cache failure scenarios**: Corrupted data handling, TTL expiration, cleanup on errors
+
+**Testing Best Practices:**
+
+- Always run `pylint` after adding new tests to maintain code quality
+- Use proper import organization (all imports at top of file, not inline)
+- Mock external API calls to test error conditions reliably
+- Test both happy path and failure scenarios for production reliability
+- Use meaningful test names that clearly indicate what scenario is being tested
+
 ### Development Notes
 
 - Qt6/PySide6 is used for the GUI framework

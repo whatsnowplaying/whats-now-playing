@@ -1,0 +1,27 @@
+---
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 5%  # Allow 5% drop in overall coverage
+        base: auto
+    patch:
+      default:
+        target: 70%  # Require 70% coverage on new code
+        threshold: 10%  # Allow 10% variance on patch coverage
+        base: auto
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "tests/"
+  - "nowplaying/vendor/"
+  - "nowplaying/__pyinstaller/"
+  - "venv/"
+  - "build/"
+  - "docs/"
+  - "htmlcov/"
