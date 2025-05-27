@@ -307,18 +307,19 @@ async def test_recordingid_api_cache_call_count(getmusicbrainz, temp_api_cache):
         mbhelper = getmusicbrainz
 
         # Mock the private _recordingid_uncached method to count API calls
-        original_recordingid_uncached = mbhelper._recordingid_uncached
+        original_recordingid_uncached = mbhelper._recordingid_uncached  # pylint: disable=protected-access
         api_call_count = 0
 
         async def mock_recordingid_uncached(recordingid):
             nonlocal api_call_count
             api_call_count += 1
-            logging.debug(f'MusicBrainz API call #{api_call_count} for recording ID: {recordingid}')
+            logging.debug('MusicBrainz API call #%d for recording ID: %s',
+                         api_call_count, recordingid)
             # Call the original method to get real data
             return await original_recordingid_uncached(recordingid)
 
         # Replace the method with our mock
-        mbhelper._recordingid_uncached = mock_recordingid_uncached
+        mbhelper._recordingid_uncached = mock_recordingid_uncached  # pylint: disable=protected-access
 
         try:
             # Use Nine Inch Nails "15 Ghosts II" recording ID for testing
@@ -364,7 +365,7 @@ async def test_recordingid_api_cache_call_count(getmusicbrainz, temp_api_cache):
 
         finally:
             # Restore the original method
-            mbhelper._recordingid_uncached = original_recordingid_uncached
+            mbhelper._recordingid_uncached = original_recordingid_uncached  # pylint: disable=protected-access
 
     finally:
         # Restore original cache
