@@ -390,7 +390,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 try:
                     await asyncio.gather(*remaining_tasks, return_exceptions=True)
                 except Exception as cleanup_error:  # pylint: disable=broad-except
-                    logging.warning('Exception during task cleanup in exception handler: %s', cleanup_error)
+                    logging.warning('Exception during task cleanup in exception handler: %s',
+                                   cleanup_error)
 
     def _generate_short_bio(self):
         if not self.metadata:

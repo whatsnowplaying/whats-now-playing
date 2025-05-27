@@ -11,7 +11,6 @@ import tempfile
 
 import aiosqlite
 import pytest
-import pytest_asyncio
 
 import nowplaying.apicache  # pylint: disable=import-error
 from nowplaying.apicache import cached_fetch  # pylint: disable=import-error,no-name-in-module
