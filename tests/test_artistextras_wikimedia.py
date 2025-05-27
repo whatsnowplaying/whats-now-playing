@@ -425,7 +425,7 @@ async def test_wikimedia_large_content_handling(bootstrap):
     async def mock_large_content(*args, **kwargs):  # pylint: disable=unused-argument
         """Mock a large Wikipedia page response."""
 
-        class MockLargePage:
+        class MockLargePage:  # pylint: disable=too-few-public-methods
             """Mock WikiPage for large content testing."""
 
             def __init__(self):
@@ -439,7 +439,8 @@ async def test_wikimedia_large_content_handling(bootstrap):
                 }
                 self._images = ['http://example.com/image1.jpg'] * 100  # Many images
 
-            def some_method(self):
+            @staticmethod
+            def some_method():
                 """Add method to meet pylint requirement."""
                 return True
 
@@ -843,7 +844,7 @@ async def test_wikimedia_failure_cache(bootstrap):
         # Second call: simulate successful response
         logging.debug('Simulating successful Wikipedia API response on second call')
         # Return a minimal WikiPage-like object
-        class MockWikiPage:
+        class MockWikiPage:  # pylint: disable=too-few-public-methods
             """Mock WikiPage for testing."""
 
             def __init__(self):
@@ -857,7 +858,8 @@ async def test_wikimedia_failure_cache(bootstrap):
                 """Return images for compatibility."""
                 return self._images
 
-            def some_method(self):
+            @staticmethod
+            def some_method():
                 """Add method to meet pylint requirement."""
                 return True
 

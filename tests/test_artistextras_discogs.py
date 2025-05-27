@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 ''' test artistextras discogs plugin '''
+# pylint: disable=too-many-lines
+# Large file justified by comprehensive DJ-critical reliability testing
 
 import asyncio
 import logging
