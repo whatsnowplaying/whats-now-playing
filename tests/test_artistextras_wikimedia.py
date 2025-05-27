@@ -234,8 +234,22 @@ async def test_wikimedia_ssl_error_handling(bootstrap):
 # Input Validation and URL Parsing Tests
 
 
+@pytest.mark.parametrize("malformed_urls,test_id", [
+    (['https://www.wikidata.org/wiki/'], "missing-entity-id"),
+    (['https://www.wikidata.org/wiki/Q'], "incomplete-entity"),
+    (['https://www.wikidata.org/wiki/Qxyz'], "invalid-entity-format"),
+    (['https://www.wikidata.org/wiki/Q-123'], "entity-with-dash"),
+    (['https://www.wikidata.org/wiki/Q12.34'], "entity-with-dot"),
+    (['https://en.wikipedia.org/wiki/Madonna'], "non-wikidata-url"),
+    (['https://www.discogs.com/artist/123'], "discogs-url"),
+    (['https://musicbrainz.org/artist/123'], "musicbrainz-url"),
+    (['not-a-url'], "invalid-url-format"),
+    (['wikidata.org/Q123'], "missing-protocol"),
+    ([''], "empty-string"),
+    (['https://www.wikidata.org/wiki/Q123', 'invalid-url'], "mixed-valid-invalid"),
+])
 @pytest.mark.asyncio
-async def test_wikimedia_malformed_urls(bootstrap):
+async def test_wikimedia_malformed_urls(bootstrap, malformed_urls, test_id):
     ''' test handling of malformed Wikidata URLs '''
 
     config = bootstrap
@@ -244,54 +258,36 @@ async def test_wikimedia_malformed_urls(bootstrap):
 
     plugin = plugins['wikimedia']
 
-    # Test various malformed URL scenarios
-    malformed_url_cases = [
-        # Missing entity IDs
-        ['https://www.wikidata.org/wiki/'],
-        ['https://www.wikidata.org/wiki/Q'],
+    logging.debug('Testing malformed URLs (%s): %s', test_id, malformed_urls)
 
-        # Invalid entity formats
-        ['https://www.wikidata.org/wiki/Qxyz'],
-        ['https://www.wikidata.org/wiki/Q-123'],
-        ['https://www.wikidata.org/wiki/Q12.34'],
+    try:
+        result = await plugin.download_async(
+            {
+                'artist': 'Test Artist',
+                'imagecacheartist': 'testartist',
+                'artistwebsites': malformed_urls
+            },
+            imagecache=imagecaches['wikimedia'])
 
-        # Non-Wikidata URLs (should be ignored)
-        ['https://en.wikipedia.org/wiki/Madonna'],
-        ['https://www.discogs.com/artist/123'],
-        ['https://musicbrainz.org/artist/123'],
+        # Should handle malformed URLs gracefully (return None or valid data)
+        assert result is None or isinstance(result, dict)
+        logging.info('Malformed URL case (%s) handled gracefully', test_id)
 
-        # Invalid URL formats
-        ['not-a-url'],
-        ['wikidata.org/Q123'],  # Missing protocol
-        [''],  # Empty string
-
-        # Mixed valid/invalid
-        ['https://www.wikidata.org/wiki/Q123', 'invalid-url'],
-    ]
-
-    for i, urls in enumerate(malformed_url_cases):
-        logging.debug('Testing malformed URLs %d: %s', i, urls)
-
-        try:
-            result = await plugin.download_async(
-                {
-                    'artist': 'Test Artist',
-                    'imagecacheartist': 'testartist',
-                    'artistwebsites': urls
-                },
-                imagecache=imagecaches['wikimedia'])
-
-            # Should handle malformed URLs gracefully (return None or valid data)
-            assert result is None or isinstance(result, dict)
-            logging.info('Malformed URL case %d handled gracefully', i)
-
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            pytest.fail(f'Wikimedia plugin raised exception for malformed URL case {i}: {exc}. '
-                       f'Plugins must handle all errors gracefully for live performance.')
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        pytest.fail(f'Wikimedia plugin raised exception for malformed URL case ({test_id}): {exc}. '
+                   f'Plugins must handle all errors gracefully for live performance.')
 
 
+@pytest.mark.parametrize("metadata,test_id", [
+    ({}, "empty-metadata"),
+    ({'artist': 'Test Artist'}, "missing-artistwebsites"),
+    ({'artistwebsites': None}, "none-artistwebsites"),
+    ({'artistwebsites': []}, "empty-artistwebsites-list"),
+    ({'artistwebsites': ['']}, "empty-string-in-list"),
+    ({'artistwebsites': [None]}, "none-in-list"),
+])
 @pytest.mark.asyncio
-async def test_wikimedia_missing_metadata_fields(bootstrap):
+async def test_wikimedia_missing_metadata_fields(bootstrap, metadata, test_id):
     ''' test handling of missing or invalid metadata fields '''
 
     config = bootstrap
@@ -300,46 +296,33 @@ async def test_wikimedia_missing_metadata_fields(bootstrap):
 
     plugin = plugins['wikimedia']
 
-    # Test various missing metadata scenarios
-    metadata_cases = [
-        {},  # Empty metadata
-        {
-            'artist': 'Test Artist'
-        },  # Missing artistwebsites
-        {
-            'artistwebsites': None
-        },  # None artistwebsites
-        {
-            'artistwebsites': []
-        },  # Empty artistwebsites list
-        {
-            'artistwebsites': ['']
-        },  # Empty string in list
-        {
-            'artistwebsites': [None]
-        },  # None in list
-    ]
+    logging.debug('Testing missing metadata (%s): %s', test_id, metadata)
 
-    for i, metadata in enumerate(metadata_cases):
-        logging.debug('Testing missing metadata %d: %s', i, metadata)
+    try:
+        result = await plugin.download_async(metadata, imagecache=imagecaches['wikimedia'])
 
-        try:
-            result = await plugin.download_async(metadata, imagecache=imagecaches['wikimedia'])
+        # Should handle missing metadata gracefully (return None)
+        assert result is None
+        logging.info('Missing metadata case (%s) handled gracefully', test_id)
 
-            # Should handle missing metadata gracefully (return None)
-            assert result is None
-            logging.info('Missing metadata case %d handled gracefully', i)
-
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            pytest.fail(f'Wikimedia plugin raised exception for missing metadata case {i}: {exc}. '
-                       f'Plugins must handle all errors gracefully for live performance.')
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        pytest.fail(f'Wikimedia plugin raised exception for missing metadata case ({test_id}): {exc}. '
+                   f'Plugins must handle all errors gracefully for live performance.')
 
 
 # Language Handling Edge Cases
 
 
+@pytest.mark.parametrize("invalid_language,test_id", [
+    ('xx', 'unsupported-code'),
+    ('invalid-lang', 'hyphenated-invalid'),
+    ('', 'empty-string'),
+    ('toolong', 'too-long'),
+    ('123', 'numeric'),
+    ('en-US-invalid', 'complex-invalid')
+])
 @pytest.mark.asyncio
-async def test_wikimedia_invalid_language_codes(bootstrap):
+async def test_wikimedia_invalid_language_codes(bootstrap, invalid_language, test_id):
     ''' test handling of invalid language codes '''
 
     config = bootstrap
@@ -348,31 +331,27 @@ async def test_wikimedia_invalid_language_codes(bootstrap):
 
     plugin = plugins['wikimedia']
 
-    # Test various invalid language codes
-    invalid_languages = ['xx', 'invalid-lang', '', 'toolong', '123', 'en-US-invalid']
+    logging.debug('Testing invalid language: %s', repr(invalid_language))
 
-    for lang in invalid_languages:
-        logging.debug('Testing invalid language: %s', repr(lang))
+    config.cparser.setValue('wikimedia/bio_iso', invalid_language)
+    config.cparser.setValue('wikimedia/bio_iso_en_fallback', True)
 
-        config.cparser.setValue('wikimedia/bio_iso', lang)
-        config.cparser.setValue('wikimedia/bio_iso_en_fallback', True)
+    try:
+        result = await plugin.download_async(
+            {
+                'artist': 'Test Artist',
+                'imagecacheartist': 'testartist',
+                'artistwebsites': ['https://www.wikidata.org/wiki/Q11647']  # Valid entity
+            },
+            imagecache=imagecaches['wikimedia'])
 
-        try:
-            result = await plugin.download_async(
-                {
-                    'artist': 'Test Artist',
-                    'imagecacheartist': 'testartist',
-                    'artistwebsites': ['https://www.wikidata.org/wiki/Q11647']  # Valid entity
-                },
-                imagecache=imagecaches['wikimedia'])
+        # Should handle invalid languages gracefully (fallback or return None)
+        assert result is None or isinstance(result, dict)
+        logging.info('Invalid language "%s" (%s) handled gracefully', invalid_language, test_id)
 
-            # Should handle invalid languages gracefully (fallback or return None)
-            assert result is None or isinstance(result, dict)
-            logging.info('Invalid language "%s" handled gracefully', lang)
-
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            pytest.fail(f'Wikimedia plugin raised exception for invalid language "{lang}": {exc}. '
-                       f'Plugins must handle all errors gracefully for live performance.')
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        pytest.fail(f'Wikimedia plugin raised exception for invalid language "{invalid_language}" ({test_id}): {exc}. '
+                   f'Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.asyncio

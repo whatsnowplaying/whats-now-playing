@@ -385,9 +385,19 @@ async def test_discogs_malformed_json_handling(bootstrap):
 # Input Validation and Edge Case Tests
 
 
+@pytest.mark.parametrize("metadata,test_id", [
+    ({}, "empty-dict"),
+    ({'artist': None, 'album': 'Test'}, "none-values"),
+    ({'artist': '', 'album': ''}, "empty-strings"),
+    ({'artist': 'A' * 1000, 'album': 'B' * 1000}, "very-long-strings"),
+    ({'artist': 'Test\x00Artist', 'album': 'Test\x00Album'}, "null-bytes"),
+    ({'artist': '<script>alert("xss")</script>', 'album': 'Test'}, "xss-attempt"),
+    ({'artist': 'Björk', 'album': 'Homogénic'}, "unicode-characters"),
+    ({'artist': 'AC/DC', 'album': 'Back in Black'}, "special-characters"),
+])
 @pytest.mark.asyncio
 @skip_no_discogs_key
-async def test_discogs_malformed_metadata_input(bootstrap):
+async def test_discogs_malformed_metadata_input(bootstrap, metadata, test_id):
     ''' test handling of malformed input metadata '''
 
     config = bootstrap
@@ -397,58 +407,36 @@ async def test_discogs_malformed_metadata_input(bootstrap):
 
     plugin = plugins['discogs']
 
-    # Test various malformed metadata inputs
-    malformed_inputs = [
-        {},  # Empty dict
-        {
-            'artist': None,
-            'album': 'Test'
-        },  # None values
-        {
-            'artist': '',
-            'album': ''
-        },  # Empty strings
-        {
-            'artist': 'A' * 1000,
-            'album': 'B' * 1000
-        },  # Very long strings
-        {
-            'artist': 'Test\x00Artist',
-            'album': 'Test\x00Album'
-        },  # Null bytes
-        {
-            'artist': '<script>alert("xss")</script>',
-            'album': 'Test'
-        },  # XSS attempt
-        {
-            'artist': 'Björk',
-            'album': 'Homogénic'
-        },  # Unicode characters
-        {
-            'artist': 'AC/DC',
-            'album': 'Back in Black'
-        },  # Special characters
-    ]
+    logging.debug('Testing malformed input (%s): %s', test_id, metadata)
 
-    for i, metadata in enumerate(malformed_inputs):
-        logging.debug('Testing malformed input %d: %s', i, metadata)
+    try:
+        # Should handle malformed input gracefully
+        result = await plugin.download_async(metadata, imagecache=imagecaches['discogs'])
 
-        try:
-            # Should handle malformed input gracefully
-            result = await plugin.download_async(metadata, imagecache=imagecaches['discogs'])
+        # Should return None or valid data, not crash
+        assert result is None or isinstance(result, dict)
+        logging.info('Malformed input (%s) handled gracefully', test_id)
 
-            # Should return None or valid data, not crash
-            assert result is None or isinstance(result, dict)
-            logging.info('Malformed input %d handled gracefully', i)
-
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            pytest.fail(f'Discogs plugin raised exception for malformed input {i}: {exc}. '
-                       f'Plugins must handle all errors gracefully for live performance.')
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        pytest.fail(f'Discogs plugin raised exception for malformed input ({test_id}): {exc}. '
+                   f'Plugins must handle all errors gracefully for live performance.')
 
 
+@pytest.mark.parametrize("artist_name,test_id", [
+    ('Madonna', 'basic-name'),
+    ('Madonna feat. Justin Timberlake', 'featuring-feat'),
+    ('Madonna featuring Justin Timberlake', 'featuring-full'),
+    ('Madonna & Justin Timberlake', 'ampersand'),
+    ('Madonna and Justin Timberlake', 'and-word'),
+    ('Madonna (Artist)', 'parentheses'),
+    ('madonna', 'lowercase'),
+    ('MADONNA', 'uppercase'),
+    ('The Beatles', 'with-article'),
+    ('Beatles, The', 'inverted-article')
+])
 @pytest.mark.asyncio
 @skip_no_discogs_key
-async def test_discogs_artist_name_variations(bootstrap):
+async def test_discogs_artist_name_variations(bootstrap, artist_name, test_id):
     ''' test artist name variation handling '''
 
     config = bootstrap
@@ -458,45 +446,42 @@ async def test_discogs_artist_name_variations(bootstrap):
 
     plugin = plugins['discogs']
 
-    # Test various artist name variations
-    artist_variations = [
-        'Madonna',  # Basic name
-        'Madonna feat. Justin Timberlake',  # Featuring
-        'Madonna featuring Justin Timberlake',  # Full featuring
-        'Madonna & Justin Timberlake',  # Ampersand
-        'Madonna and Justin Timberlake',  # And
-        'Madonna (Artist)',  # Parentheses
-        'madonna',  # Lowercase
-        'MADONNA',  # Uppercase
-        'The Beatles',  # With article
-        'Beatles, The',  # Inverted article
-    ]
+    logging.debug('Testing artist variation: %s', artist_name)
 
-    for artist in artist_variations:
-        logging.debug('Testing artist variation: %s', artist)
+    try:
+        result = await plugin.download_async(
+            {
+                'artist': artist_name,
+                'album': 'Test Album',
+                'imagecacheartist': 'testartist'
+            },
+            imagecache=imagecaches['discogs'])
 
-        try:
-            result = await plugin.download_async(
-                {
-                    'artist': artist,
-                    'album': 'Test Album',
-                    'imagecacheartist': 'testartist'
-                },
-                imagecache=imagecaches['discogs'])
+        # Should handle all variations without crashing
+        assert result is None or isinstance(result, dict)
+        if result:
+            logging.info('Successfully processed artist variation: %s (%s)', artist_name, test_id)
 
-            # Should handle all variations without crashing
-            assert result is None or isinstance(result, dict)
-            if result:
-                logging.info('Successfully processed artist variation: %s', artist)
-
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            pytest.fail(f'Discogs plugin raised exception for artist variation "{artist}": {exc}. '
-                       f'Plugins must handle all errors gracefully for live performance.')
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        pytest.fail(f'Discogs plugin raised exception for artist variation "{artist_name}" ({test_id}): {exc}. '
+                   f'Plugins must handle all errors gracefully for live performance.')
 
 
+@pytest.mark.parametrize("test_urls,test_id", [
+    (['https://www.discogs.com/artist/'], 'missing-id'),
+    (['https://www.discogs.com/artist/abc'], 'non-numeric-id'),
+    (['https://discogs.com/artist/123456'], 'missing-www'),
+    (['http://www.discogs.com/artist/123456'], 'http-not-https'),
+    (['https://www.discogs.com/artist/123456?param=value'], 'with-query-params'),
+    (['https://www.discogs.com/artist/123456#fragment'], 'with-fragment'),
+    (['https://www.spotify.com/artist/123'], 'non-discogs-spotify'),
+    (['https://musicbrainz.org/artist/123'], 'non-discogs-musicbrainz'),
+    (['not-a-url'], 'invalid-url-format'),
+    ([''], 'empty-url')
+])
 @pytest.mark.asyncio
 @skip_no_discogs_key
-async def test_discogs_website_url_parsing(bootstrap):
+async def test_discogs_website_url_parsing(bootstrap, test_urls, test_id):
     ''' test website URL parsing edge cases '''
 
     config = bootstrap
@@ -506,42 +491,25 @@ async def test_discogs_website_url_parsing(bootstrap):
 
     plugin = plugins['discogs']
 
-    # Test various malformed/edge case URLs
-    url_test_cases = [
-        # Malformed Discogs URLs
-        ['https://www.discogs.com/artist/'],  # Missing ID
-        ['https://www.discogs.com/artist/abc'],  # Non-numeric ID
-        ['https://discogs.com/artist/123456'],  # Missing www
-        ['http://www.discogs.com/artist/123456'],  # HTTP instead of HTTPS
-        ['https://www.discogs.com/artist/123456?param=value'],  # With query params
-        ['https://www.discogs.com/artist/123456#fragment'],  # With fragment
-        # Non-Discogs URLs
-        ['https://www.spotify.com/artist/123'],  # Non-Discogs URL
-        ['https://musicbrainz.org/artist/123'],  # MusicBrainz URL
-        ['not-a-url'],  # Invalid URL format
-        [''],  # Empty URL
-    ]
+    logging.debug('Testing URLs: %s', test_urls)
 
-    for urls in url_test_cases:
-        logging.debug('Testing URLs: %s', urls)
+    try:
+        result = await plugin.download_async(
+            {
+                'artist': 'Test Artist',
+                'album': 'Test Album',
+                'imagecacheartist': 'testartist',
+                'artistwebsites': test_urls
+            },
+            imagecache=imagecaches['discogs'])
 
-        try:
-            result = await plugin.download_async(
-                {
-                    'artist': 'Test Artist',
-                    'album': 'Test Album',
-                    'imagecacheartist': 'testartist',
-                    'artistwebsites': urls
-                },
-                imagecache=imagecaches['discogs'])
+        # Should handle malformed URLs gracefully
+        assert result is None or isinstance(result, dict)
+        logging.info('URL test case (%s) handled gracefully: %s', test_id, test_urls)
 
-            # Should handle malformed URLs gracefully
-            assert result is None or isinstance(result, dict)
-            logging.info('URL test case handled gracefully: %s', urls)
-
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            pytest.fail(f'Discogs plugin raised exception for URL test case "{urls}": {exc}. '
-                       f'Plugins must handle all errors gracefully for live performance.')
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        pytest.fail(f'Discogs plugin raised exception for URL test case "{test_urls}" ({test_id}): {exc}. '
+                   f'Plugins must handle all errors gracefully for live performance.')
 
 
 # Configuration State Validation Tests
@@ -598,63 +566,36 @@ def test_discogs_invalid_api_key_format(bootstrap):
         logging.info('Invalid API key %d handled gracefully', i)
 
 
-def test_discogs_selective_feature_disabling(bootstrap):
+@pytest.mark.parametrize("features,test_id", [
+    ({'bio': True, 'fanart': False, 'thumbnails': False}, 'bio-only'),
+    ({'bio': False, 'fanart': True, 'thumbnails': False}, 'fanart-only'),
+    ({'bio': False, 'fanart': False, 'thumbnails': True}, 'thumbnails-only'),
+    ({'bio': True, 'fanart': True, 'thumbnails': False}, 'bio-fanart'),
+    ({'bio': False, 'fanart': False, 'thumbnails': False}, 'nothing-enabled'),
+    ({'bio': True, 'fanart': True, 'thumbnails': True}, 'everything-enabled')
+])
+def test_discogs_selective_feature_disabling(bootstrap, features, test_id):
     ''' test plugin behavior when specific features are disabled '''
 
     config = bootstrap
     configuresettings('discogs', config.cparser)
     config.cparser.setValue('discogs/apikey', 'test-key')
 
-    # Test various feature combination scenarios
-    feature_combinations = [
-        {
-            'bio': True,
-            'fanart': False,
-            'thumbnails': False
-        },  # Bio only
-        {
-            'bio': False,
-            'fanart': True,
-            'thumbnails': False
-        },  # Fanart only
-        {
-            'bio': False,
-            'fanart': False,
-            'thumbnails': True
-        },  # Thumbnails only
-        {
-            'bio': True,
-            'fanart': True,
-            'thumbnails': False
-        },  # Bio + fanart
-        {
-            'bio': False,
-            'fanart': False,
-            'thumbnails': False
-        },  # Nothing enabled
-        {
-            'bio': True,
-            'fanart': True,
-            'thumbnails': True
-        },  # Everything enabled
-    ]
+    logging.debug('Testing feature combination (%s): %s', test_id, features)
 
-    for i, features in enumerate(feature_combinations):
-        logging.debug('Testing feature combination %d: %s', i, features)
+    # Set feature flags
+    config.cparser.setValue('discogs/bio', features['bio'])
+    config.cparser.setValue('discogs/fanart', features['fanart'])
+    config.cparser.setValue('discogs/thumbnails', features['thumbnails'])
 
-        # Set feature flags
-        config.cparser.setValue('discogs/bio', features['bio'])
-        config.cparser.setValue('discogs/fanart', features['fanart'])
-        config.cparser.setValue('discogs/thumbnails', features['thumbnails'])
+    _, plugins = configureplugins(config)
+    plugin = plugins['discogs']
 
-        _, plugins = configureplugins(config)
-        plugin = plugins['discogs']
-
-        # Client setup should still work regardless of feature flags
-        if plugin._get_apikey():  # pylint: disable=protected-access
-            setup_result = plugin._setup_client()  # pylint: disable=protected-access
-            # Setup may fail with invalid test key, but shouldn't crash
-            logging.info('Feature combination %d setup result: %s', i, setup_result)
+    # Client setup should still work regardless of feature flags
+    if plugin._get_apikey():  # pylint: disable=protected-access
+        setup_result = plugin._setup_client()  # pylint: disable=protected-access
+        # Setup may fail with invalid test key, but shouldn't crash
+        logging.info('Feature combination (%s) setup result: %s', test_id, setup_result)
 
 
 # Cache Failure Scenario Tests
