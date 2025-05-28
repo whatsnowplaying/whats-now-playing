@@ -128,7 +128,7 @@ class Plugin(ArtistExtrasPlugin):
 
         return page
 
-    async def download_async(self,  # pylint: disable=too-many-branches
+    async def download_async(self,  # pylint: disable=too-many-branches,too-many-locals
                              metadata=None,
                              imagecache: "nowplaying.imagecache.ImageCache" = None):
         ''' async download content '''
@@ -146,14 +146,18 @@ class Plugin(ArtistExtrasPlugin):
                 mymeta['artistshortbio'] = page.data['description']
 
         if not metadata or self._check_missing(metadata):
-            return {}
+            return None
 
         mymeta = {}
+        processed_any_page = False
         try:  # pylint: disable=too-many-nested-blocks
-            wikidata_websites = [url for url in metadata['artistwebsites'] if 'wikidata' in url]
+            # Safely handle artistwebsites - filter out None/empty values
+            artist_websites = metadata.get('artistwebsites', [])
+            wikidata_websites = [url for url in artist_websites
+                               if url and isinstance(url, str) and 'wikidata' in url]
             if not wikidata_websites:
                 logging.debug('no wikidata entity')
-                return {}
+                return None
 
             lang = self.config.cparser.value('wikimedia/bio_iso', type=str) or 'en'
             for website in wikidata_websites:
@@ -162,6 +166,8 @@ class Plugin(ArtistExtrasPlugin):
                 page = await self._get_page_cached(entity, lang, artist_name)
                 if not page or not page.data:
                     continue
+
+                processed_any_page = True
 
                 if self.config.cparser.value('wikimedia/bio', type=bool):
                     await _get_bio_async()
@@ -198,7 +204,10 @@ class Plugin(ArtistExtrasPlugin):
                                           srclocationlist=thumbs)
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("Async metadata breaks wikimedia (%s): %s", err, metadata)
-        return mymeta
+            return None
+
+        # Return None if no valid pages were processed
+        return mymeta if processed_any_page else None
 
     def providerinfo(self):  # pylint: disable=no-self-use
         ''' return list of what is provided by this plug-in '''

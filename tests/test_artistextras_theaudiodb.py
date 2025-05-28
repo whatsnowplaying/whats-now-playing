@@ -6,24 +6,27 @@ import os
 
 import pytest
 
-from test_artistextras_core import configureplugins, configuresettings
+from utils_artistextras import (
+    configureplugins, configuresettings, skip_no_theaudiodb_key,
+    run_api_call_count_test
+)
 
-import nowplaying.apicache  # pylint: disable=import-error
+
+def _setup_theaudiodb_plugin(bootstrap):
+    """Set up TheAudioDB plugin for testing"""
+    config = bootstrap
+    configuresettings('theaudiodb', config.cparser)
+    config.cparser.setValue('theaudiodb/apikey', os.environ['THEAUDIODB_API_KEY'])
+    imagecaches, plugins = configureplugins(config)
+    return plugins['theaudiodb'], imagecaches['theaudiodb']
 
 
 @pytest.mark.asyncio
+@skip_no_theaudiodb_key
 async def test_theaudiodb_artist_name_correction(bootstrap):
     ''' test theaudiodb artist name correction for name-based vs musicbrainz searches '''
 
-    config = bootstrap
-    if not os.environ.get('THEAUDIODB_API_KEY'):
-        pytest.skip("TheAudioDB API key not available")
-
-    configuresettings('theaudiodb', config.cparser)
-    config.cparser.setValue('theaudiodb/apikey', os.environ['THEAUDIODB_API_KEY'])
-    _, plugins = configureplugins(config)
-
-    plugin = plugins['theaudiodb']
+    plugin, _ = _setup_theaudiodb_plugin(bootstrap)
 
     # Test 1: Name-based search with lowercase input (should correct artist name)
     metadata_lowercase = {
@@ -55,18 +58,71 @@ async def test_theaudiodb_artist_name_correction(bootstrap):
 
 
 @pytest.mark.asyncio
+@skip_no_theaudiodb_key
+async def test_theaudiodb_apicache_duplicate_artists(bootstrap):
+    ''' test TheAudioDB two-level caching with duplicate artist names '''
+
+    plugin, imagecache = _setup_theaudiodb_plugin(bootstrap)
+
+    # Test two different searches that might return different artists with similar names
+    # First search - likely to match main "Madonna"
+    metadata_madonna1 = {
+        'artist': 'Madonna',
+        'imagecacheartist': 'madonna1'
+    }
+
+    # Second search - variation that might match different artist
+    metadata_madonna2 = {
+        'artist': 'madonna',  # lowercase variation
+        'imagecacheartist': 'madonna2'
+    }
+
+    # Test both variations - first calls hit API, second calls use cache
+    result1a = await plugin.download_async(metadata_madonna1.copy(),
+                                          imagecache=imagecache)
+    result2a = await plugin.download_async(metadata_madonna2.copy(),
+                                          imagecache=imagecache)
+
+    # Second calls - should use cached data
+    result1b = await plugin.download_async(metadata_madonna1.copy(),
+                                          imagecache=imagecache)
+    result2b = await plugin.download_async(metadata_madonna2.copy(),
+                                          imagecache=imagecache)
+
+    # Verify caching works for both variations
+    assert (result1a is None) == (result1b is None)
+    assert (result2a is None) == (result2b is None)
+
+    if result1a:
+        assert result1a == result1b
+        logging.info('TheAudioDB cache verified for Madonna (capitalized)')
+
+    if result2a:
+        assert result2a == result2b
+        logging.info('TheAudioDB cache verified for madonna (lowercase)')
+
+    # Check if different normalizations potentially return different results
+    if result1a and result2a:
+        artist1 = result1a.get('artist', '')
+        artist2 = result2a.get('artist', '')
+
+        if artist1 and artist2 and artist1 != artist2:
+            logging.info('TheAudioDB distinguished between different artists: %s vs %s',
+                     artist1, artist2)
+        else:
+            logging.info('TheAudioDB returned same artist for both variations')
+    else:
+        logging.info('TheAudioDB duplicate artist test completed - two-level caching working')
+
+    # Test passes if two-level caching works correctly (search + individual artist ID)
+
+
+@pytest.mark.asyncio
+@skip_no_theaudiodb_key
 async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
     ''' test theaudiodb plugin falls back to name-based search when MusicBrainz ID is invalid '''
 
-    config = bootstrap
-    if not os.environ.get('THEAUDIODB_API_KEY'):
-        pytest.skip("TheAudioDB API key not available")
-
-    configuresettings('theaudiodb', config.cparser)
-    config.cparser.setValue('theaudiodb/apikey', os.environ['THEAUDIODB_API_KEY'])
-    _, plugins = configureplugins(config)
-
-    plugin = plugins['theaudiodb']
+    plugin, _ = _setup_theaudiodb_plugin(bootstrap)
 
     # Mock the MBID and name-based fetch methods to track calls
     original_mbid_fetch = plugin.artistdatafrommbid_async
@@ -175,76 +231,20 @@ async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_apicache_duplicate_artists(bootstrap, temp_api_cache):
-    ''' test TheAudioDB two-level caching with duplicate artist names '''
+@skip_no_theaudiodb_key
+async def test_theaudiodb_api_call_count(bootstrap):
+    ''' test that theaudiodb plugin makes only one API call when cache is used '''
 
-    config = bootstrap
-    if not os.environ.get('THEAUDIODB_API_KEY'):
-        pytest.skip("TheAudioDB API key not available")
+    plugin, imagecache = _setup_theaudiodb_plugin(bootstrap)
 
-    # Use the properly initialized temporary cache
-    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(temp_api_cache)
+    # Test with a known artist
+    metadata = {
+        'artist': 'Madonna',
+        'imagecacheartist': 'madonna'
+    }
 
-    try:
-        configuresettings('theaudiodb', config.cparser)
-        config.cparser.setValue('theaudiodb/apikey', os.environ['THEAUDIODB_API_KEY'])
-        imagecaches, plugins = configureplugins(config)
-
-        plugin = plugins['theaudiodb']
-
-        # Test two different searches that might return different artists with similar names
-        # First search - likely to match main "Madonna"
-        metadata_madonna1 = {
-            'artist': 'Madonna',
-            'imagecacheartist': 'madonna1'
-        }
-
-        # Second search - variation that might match different artist
-        metadata_madonna2 = {
-            'artist': 'madonna',  # lowercase variation
-            'imagecacheartist': 'madonna2'
-        }
-
-        # Test both variations - first calls hit API, second calls use cache
-        result1a = await plugin.download_async(metadata_madonna1.copy(),
-                                              imagecache=imagecaches['theaudiodb'])
-        result2a = await plugin.download_async(metadata_madonna2.copy(),
-                                              imagecache=imagecaches['theaudiodb'])
-
-        # Second calls - should use cached data
-        result1b = await plugin.download_async(metadata_madonna1.copy(),
-                                              imagecache=imagecaches['theaudiodb'])
-        result2b = await plugin.download_async(metadata_madonna2.copy(),
-                                              imagecache=imagecaches['theaudiodb'])
-
-        # Verify caching works for both variations
-        assert (result1a is None) == (result1b is None)
-        assert (result2a is None) == (result2b is None)
-
-        if result1a:
-            assert result1a == result1b
-            logging.info('TheAudioDB cache verified for Madonna (capitalized)')
-
-        if result2a:
-            assert result2a == result2b
-            logging.info('TheAudioDB cache verified for madonna (lowercase)')
-
-        # Check if different normalizations potentially return different results
-        if result1a and result2a:
-            artist1 = result1a.get('artist', '')
-            artist2 = result2a.get('artist', '')
-
-            if artist1 and artist2 and artist1 != artist2:
-                logging.info('TheAudioDB distinguished between different artists: %s vs %s',
-                         artist1, artist2)
-            else:
-                logging.info('TheAudioDB returned same artist for both variations')
-        else:
-            logging.info('TheAudioDB duplicate artist test completed - two-level caching working')
-
-        # Test passes if two-level caching works correctly (search + individual artist ID)
-
-    finally:
-        # Restore original cache
-        nowplaying.apicache.set_cache_instance(original_cache)
+    await run_api_call_count_test(
+        plugin=plugin,
+        test_metadata=metadata,
+        mock_method_name='_fetch_async',
+        imagecache=imagecache)

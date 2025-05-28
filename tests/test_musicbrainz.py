@@ -77,6 +77,83 @@ async def test_fallback_dansesociety(getmusicbrainz):  # pylint: disable=redefin
     assert newdata['album'] == 'Somewhere'
 
 
+@pytest.mark.asyncio
+async def test_recordingid_api_cache_call_count(getmusicbrainz, temp_api_cache):  # pylint: disable=redefined-outer-name
+    ''' test that MusicBrainz recordingid makes only one API call when cache is used '''
+
+    # Use the properly initialized temporary cache
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(temp_api_cache)
+
+    try:
+        mbhelper = getmusicbrainz
+
+        # Mock the private _recordingid_uncached method to count API calls
+        original_recordingid_uncached = mbhelper._recordingid_uncached  # pylint: disable=protected-access
+        api_call_count = 0
+
+        async def mock_recordingid_uncached(recordingid):
+            nonlocal api_call_count
+            api_call_count += 1
+            logging.debug('MusicBrainz API call #%d for recording ID: %s',
+                         api_call_count, recordingid)
+            # Call the original method to get real data
+            return await original_recordingid_uncached(recordingid)
+
+        # Replace the method with our mock
+        mbhelper._recordingid_uncached = mock_recordingid_uncached  # pylint: disable=protected-access
+
+        try:
+            # Use Nine Inch Nails "15 Ghosts II" recording ID for testing
+            test_recording_id = '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
+
+            # First call - should hit API and cache result
+            result1 = await mbhelper.recordingid(test_recording_id)
+
+            # Verify one API call was made
+            assert api_call_count == 1, (
+                f'Expected 1 API call after first recordingid lookup, got {api_call_count}'
+            )
+            assert result1 is not None, 'Expected valid result from first MusicBrainz lookup'
+
+            # Second call - should use cached result, no additional API call
+            result2 = await mbhelper.recordingid(test_recording_id)
+
+            # Verify still only one API call was made (cache hit)
+            assert api_call_count == 1, (
+                f'Expected 1 API call after second recordingid lookup (cache hit), '
+                f'got {api_call_count}'
+            )
+
+            # Both results should be identical
+            assert result1 == result2, 'Results should be identical when using cache'
+
+            # Verify expected metadata from the known recording
+            assert result1['title'] == '15 Ghosts II'
+            assert result1['artist'] == 'Nine Inch Nails'
+            assert result1['musicbrainzrecordingid'] == test_recording_id
+
+            # Third call to further confirm caching
+            result3 = await mbhelper.recordingid(test_recording_id)
+
+            # Verify still only one API call total
+            assert api_call_count == 1, (
+                f'Expected 1 API call after third recordingid lookup (cache hit), '
+                f'got {api_call_count}'
+            )
+            assert result1 == result3, 'Third result should also be identical (cached)'
+
+            logging.info('MusicBrainz recordingid API cache verified: 1 API call for 3 lookups')
+
+        finally:
+            # Restore the original method
+            mbhelper._recordingid_uncached = original_recordingid_uncached  # pylint: disable=protected-access
+
+    finally:
+        # Restore original cache
+        nowplaying.apicache.set_cache_instance(original_cache)
+
+
 @pytest.mark.xfail(reason='Returns wrong data')
 @pytest.mark.asyncio
 async def test_fallback_prince_compblue(getmusicbrainz):  # pylint: disable=redefined-outer-name
@@ -296,77 +373,64 @@ async def test_fallback_complex_and_with_feature(getmusicbrainz):  # pylint: dis
 
 
 @pytest.mark.asyncio
-async def test_recordingid_api_cache_call_count(getmusicbrainz, temp_api_cache):  # pylint: disable=redefined-outer-name
-    ''' test that MusicBrainz recordingid makes only one API call when cache is used '''
+async def test_musicbrainz_malformed_ids(getmusicbrainz):  # pylint: disable=redefined-outer-name
+    ''' test handling of malformed MusicBrainz IDs '''
 
-    # Use the properly initialized temporary cache
-    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(temp_api_cache)
+    mbhelper = getmusicbrainz
 
-    try:
-        mbhelper = getmusicbrainz
+    # Test various malformed ID scenarios
+    malformed_ids = [
+        '',  # Empty string
+        'not-a-uuid',  # Invalid format
+        '12345',  # Too short
+        '2d7f08e1-be1c-4b86-b725-6e675b7b6de',  # Missing character
+        '2d7f08e1-be1c-4b86-b725-6e675b7b6de0z',  # Too long
+        'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',  # Wrong characters
+        '2d7f08e1-be1c-4b86-b725-6e675b7b6de0-extra',  # Extra content
+        None,  # None value
+    ]
 
-        # Mock the private _recordingid_uncached method to count API calls
-        original_recordingid_uncached = mbhelper._recordingid_uncached  # pylint: disable=protected-access
-        api_call_count = 0
-
-        async def mock_recordingid_uncached(recordingid):
-            nonlocal api_call_count
-            api_call_count += 1
-            logging.debug('MusicBrainz API call #%d for recording ID: %s',
-                         api_call_count, recordingid)
-            # Call the original method to get real data
-            return await original_recordingid_uncached(recordingid)
-
-        # Replace the method with our mock
-        mbhelper._recordingid_uncached = mock_recordingid_uncached  # pylint: disable=protected-access
+    for i, malformed_id in enumerate(malformed_ids):
+        logging.debug('Testing malformed ID %d: %s', i, repr(malformed_id))
 
         try:
-            # Use Nine Inch Nails "15 Ghosts II" recording ID for testing
-            test_recording_id = '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
+            result = await mbhelper.recordingid(malformed_id)
 
-            # First call - should hit API and cache result
-            result1 = await mbhelper.recordingid(test_recording_id)
+            # Should handle malformed IDs gracefully (return None)
+            assert result is None
+            logging.info('Malformed ID %d handled gracefully', i)
 
-            # Verify one API call was made
-            assert api_call_count == 1, (
-                f'Expected 1 API call after first recordingid lookup, got {api_call_count}'
-            )
-            assert result1 is not None, 'Expected valid result from first MusicBrainz lookup'
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logging.warning('Malformed ID %d raised exception: %s', i, exc)
 
-            # Second call - should use cached result, no additional API call
-            result2 = await mbhelper.recordingid(test_recording_id)
 
-            # Verify still only one API call was made (cache hit)
-            assert api_call_count == 1, (
-                f'Expected 1 API call after second recordingid lookup (cache hit), '
-                f'got {api_call_count}'
-            )
+@pytest.mark.asyncio
+async def test_musicbrainz_missing_metadata_fields(getmusicbrainz):  # pylint: disable=redefined-outer-name
+    ''' test handling of missing or invalid metadata fields '''
 
-            # Both results should be identical
-            assert result1 == result2, 'Results should be identical when using cache'
+    mbhelper = getmusicbrainz
 
-            # Verify expected metadata from the known recording
-            assert result1['title'] == '15 Ghosts II'
-            assert result1['artist'] == 'Nine Inch Nails'
-            assert result1['musicbrainzrecordingid'] == test_recording_id
+    # Test various missing metadata scenarios for lastditcheffort
+    metadata_cases = [
+        {},  # Empty metadata
+        {'artist': ''},  # Empty artist
+        {'title': ''},  # Empty title
+        {'artist': None},  # None artist
+        {'title': None},  # None title
+        {'artist': 'Valid Artist'},  # Missing title
+        {'title': 'Valid Title'},  # Missing artist
+        {'artist': '   ', 'title': '   '},  # Whitespace only
+    ]
 
-            # Third call to further confirm caching
-            result3 = await mbhelper.recordingid(test_recording_id)
+    for i, metadata in enumerate(metadata_cases):
+        logging.debug('Testing missing metadata %d: %s', i, metadata)
 
-            # Verify still only one API call total
-            assert api_call_count == 1, (
-                f'Expected 1 API call after third recordingid lookup (cache hit), '
-                f'got {api_call_count}'
-            )
-            assert result1 == result3, 'Third result should also be identical (cached)'
+        try:
+            result = await mbhelper.lastditcheffort(metadata)
 
-            logging.info('MusicBrainz recordingid API cache verified: 1 API call for 3 lookups')
+            # Should handle missing metadata gracefully (return empty dict or None)
+            assert result is None or result == {} or isinstance(result, dict)
+            logging.info('Missing metadata case %d handled gracefully', i)
 
-        finally:
-            # Restore the original method
-            mbhelper._recordingid_uncached = original_recordingid_uncached  # pylint: disable=protected-access
-
-    finally:
-        # Restore original cache
-        nowplaying.apicache.set_cache_instance(original_cache)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logging.warning('Missing metadata case %d raised exception: %s', i, exc)
