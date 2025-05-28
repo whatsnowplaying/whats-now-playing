@@ -238,6 +238,11 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug('artist or album is empty, skipping')
             return None
 
+        # imagecacheartist is required for processing metadata/images
+        if not metadata.get('imagecacheartist'):
+            logging.debug('imagecacheartist is missing, skipping')
+            return None
+
         if not self.client and not self._setup_client():
             logging.error('No discogs apikey or client setup failed.')
             return None

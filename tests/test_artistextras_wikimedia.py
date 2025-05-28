@@ -837,7 +837,10 @@ async def test_wikimedia_failure_cache(bootstrap):
                 """Initialize mock WikiPage."""
                 self.entity = 'Q11647'
                 self.lang = 'en'
-                self.data = {'extract': 'Nine Inch Nails is an American industrial rock band.'}
+                self.data = {
+                    'extract': 'Nine Inch Nails is an American industrial rock band.',
+                    'claims': {}  # Add claims field expected by the plugin
+                }
                 self._images = []
 
             def images(self, fields=None):  # pylint: disable=unused-argument
@@ -862,7 +865,7 @@ async def test_wikimedia_failure_cache(bootstrap):
         assert api_call_count == 1, (
             f'Expected 1 API call after first download, got {api_call_count}'
         )
-        assert result1 == {}, 'Expected empty dict result from failed Wikipedia API call'
+        assert result1 is None, 'Expected None result from failed Wikipedia API call'
 
         # Second call - should retry (not use cached failure) and succeed
         result2 = await plugin.download_async(metadata.copy(), imagecache=imagecaches['wikimedia'])
