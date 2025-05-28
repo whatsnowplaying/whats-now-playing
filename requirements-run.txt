@@ -5,7 +5,7 @@ discord.py==2.5.2
 diskcache==5.6.3
 jinja2==3.1.6
 lxml==5.4.0
-netifaces==0.11.0
+netifaces-plus==0.12.4
 nltk==3.9.1
 normality==2.6.1
 pid==3.0.4

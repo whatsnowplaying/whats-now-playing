@@ -8,7 +8,7 @@ import socket
 import logging
 
 try:
-    import netifaces
+    import netifaces  # pylint: disable=import-error
     IFACES = True
 except ImportError:
     IFACES = False
@@ -30,12 +30,23 @@ def trysocket():
         logging.error('Getting hostname via socket failed: %s', error)
     try:
         HOSTFQDN = socket.getfqdn()
+        # Check if getfqdn returned a bogus reverse DNS result
+        if HOSTFQDN and ('in-addr.arpa' in HOSTFQDN or 'ip6.arpa' in HOSTFQDN):
+            logging.debug('getfqdn returned reverse DNS result, using hostname instead: %s',
+                          HOSTFQDN)
+            HOSTFQDN = HOSTNAME  # Use the hostname instead
     except Exception as error:  # pylint: disable = broad-except
         logging.error('Getting hostfqdn via socket failed: %s', error)
 
     if HOSTFQDN:
         try:
-            HOSTIP = socket.gethostbyname(HOSTFQDN)
+            resolved_ip = socket.gethostbyname(HOSTFQDN)
+            # Don't use localhost/loopback IPs - let netifaces find the real network IP
+            if resolved_ip and not resolved_ip.startswith(('127.', '::1')):
+                HOSTIP = resolved_ip
+            else:
+                logging.debug('Socket resolved to localhost (%s), skipping to try netifaces',
+                              resolved_ip)
         except Exception as error:  # pylint: disable = broad-except
             logging.error('Getting IP information via socket failed: %s', error)
 
@@ -45,9 +56,9 @@ def trynetifaces():
     global HOSTIP  #pylint: disable=global-statement
     socket.setdefaulttimeout(5)
     try:
-        gws = netifaces.gateways()
-        defnic = gws['default'][netifaces.AF_INET][1]
-        defnicipinfo = netifaces.ifaddresses(defnic).setdefault(netifaces.AF_INET, [{'addr': None}])
+        gws = netifaces.gateways()  # pylint: disable=no-member
+        defnic = gws['default'][netifaces.AF_INET][1]  # pylint: disable=no-member
+        defnicipinfo = netifaces.ifaddresses(defnic).setdefault(netifaces.AF_INET, [{'addr': None}])  # pylint: disable=no-member
         HOSTIP = defnicipinfo[0]['addr']
     except Exception as error:  # pylint: disable = broad-except
         logging.error('Getting IP information via netifaces failed: %s', error)

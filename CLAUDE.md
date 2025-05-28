@@ -25,6 +25,14 @@ code in this repository.
 - `python -m nowplaying` - Run the application from source
 - `pyinstaller nowplaying.pyproject` - Build standalone executable
 
+### Git and Pull Requests
+
+**CRITICAL**: This repository is a fork of `e1miran/Now-Playing-Serato`.
+
+- **NEVER** create pull requests against the upstream `e1miran/Now-Playing-Serato` repository
+- **ALWAYS** create pull requests within this fork using: `gh pr create --repo whatsnowplaying/whats-now-playing`
+- All development and PRs should stay within the `whatsnowplaying` organization
+
 ## Architecture Overview
 
 This is a Python 3.10/Qt6 desktop application for streaming DJs to display "now
