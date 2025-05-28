@@ -5,7 +5,7 @@ nowplaying/vendor/
 nowplaying/qtrc.py
 bincomponents/
 NowPlaying.spec
-tests/seratolive/2021_08_25_pong.html
+tests/seratolive/2025_05_27_dj_marcus_mcbride.html 
 tests/upgrade/releasedata.json
 docs/_static/basic.css
 tests/playlists/traktor/collection.nml

@@ -523,6 +523,54 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                 'title'), self.playingadat.get('filename')
         return None, None, None
 
+    @staticmethod
+    def _remote_extract_by_js_id(page_text, tree):
+        ''' Extract track using JavaScript track ID (most robust) '''
+        if not (track_id_match := re.search(r'end_track_id:\s*(\d+)', page_text)):
+            return None
+        current_track_id = track_id_match[1]
+        track_xpath = f'//div[@id="track_{current_track_id}"]//div[@class="playlist-trackname"]/text()'  # pylint: disable=line-too-long
+        result = tree.xpath(track_xpath)
+        if result:
+            logging.debug("Method 1 success: JavaScript+XPath (track_%s)", current_track_id)
+            return result[0]
+        return None
+
+    @staticmethod
+    def _remote_extract_by_position(tree):
+        ''' Extract track using positional XPath (fallback) '''
+        result = tree.xpath('(//div[@class="playlist-trackname"]/text())[1]')
+        if result:
+            logging.debug("Method 2 success: Positional XPath")
+            return result[0]
+        return None
+
+    @staticmethod
+    def _remote_extract_by_pattern(tree):
+        ''' Extract track using text pattern matching (regex fallback) '''
+        track_divs = tree.xpath('//div[contains(@class, "playlist-track")]')
+        for track_div in track_divs[:3]:  # Check first 3 tracks
+            text_content = track_div.text_content()
+            # Look for "Artist - Title" pattern
+            if ((match := re.search(r'([^-\n]+)\s*-\s*([^-\n]+)', text_content)) and
+                    len(match[0].strip()) > 10):  # Reasonable length
+                result = match[0].strip()
+                logging.debug("Method 3 success: Text pattern matching")
+                return result
+        return None
+
+    @staticmethod
+    def _remote_extract_by_text_search(tree):
+        ''' Extract track using fallback text search (last resort) '''
+        all_text = tree.xpath('//text()[contains(., " - ")]')
+        for text in all_text:
+            cleaned = text.strip()
+            if (len(cleaned) > 10 and
+                not any(skip in cleaned.lower() for skip in ['copyright', 'serato', 'playlist'])):
+                logging.debug("Method 4 success: Text fallback search")
+                return cleaned
+        return None
+
     def getremoteplayingtrack(self):  # pylint: disable=too-many-return-statements, too-many-branches
         ''' get the currently playing title from Live Playlists '''
 
@@ -545,8 +593,29 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
         try:
             tree = lxml.html.fromstring(page.text)
-            # [\n(spaces)artist - title (tabs)]
-            item = tree.xpath('(//div[@class="playlist-trackname"]/text())[last()]')
+            track_text = None
+
+            # Try methods in order of reliability
+            extraction_methods = [
+                ('JavaScript+XPath',
+                 lambda: SeratoHandler._remote_extract_by_js_id(page.text, tree)),
+                ('Positional XPath', lambda: SeratoHandler._remote_extract_by_position(tree)),
+                ('Pattern matching', lambda: SeratoHandler._remote_extract_by_pattern(tree)),
+                ('Text search', lambda: SeratoHandler._remote_extract_by_text_search(tree))
+            ]
+
+            for method_name, method_func in extraction_methods:
+                try:
+                    if track_text := method_func():
+                        logging.debug("Successfully extracted track using: %s", method_name)
+                        break
+                except Exception as method_error:  # pylint: disable=broad-except
+                    logging.debug("Method %s failed: %s", method_name, method_error)
+                    continue
+
+            # Convert to expected list format for compatibility with existing code
+            item = [track_text] if track_text else None
+
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Cannot process %s: %s", self.url, error)
             return
@@ -596,7 +665,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
     def _get_tidal_cover(self, filename):
         ''' try to get the cover from tidal '''
         if tmatch := TIDAL_FORMAT.search(str(filename)):
-            imgfile = f'{tmatch.group(1)}.jpg'
+            imgfile = f'{tmatch[1]}.jpg'
             tidalimgpath = self.seratodir.joinpath('Metadata', 'Tidal', imgfile)
             logging.debug('using tidal image path: %s', tidalimgpath)
             if tidalimgpath.exists():
