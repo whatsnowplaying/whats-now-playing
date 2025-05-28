@@ -136,7 +136,7 @@ except Exception as exc:  # pylint: disable=broad-exception-caught
 Each artistextras plugin should have comprehensive test coverage including:
 
 1. **API Call Count Tests** - Verify caching works (1 API call, 2+ downloads)
-2. **Cache Consistency Tests** - Verify repeated calls return identical data  
+2. **Cache Consistency Tests** - Verify repeated calls return identical data
 3. **Error Handling Tests** - Malformed responses, timeouts, HTTP errors
 4. **Input Validation Tests** - Invalid metadata, malformed URLs, edge cases
 5. **DJ Performance Tests** - Rapid track changes, memory stability

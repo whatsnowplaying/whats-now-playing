@@ -463,8 +463,10 @@ async def test_discogs_artist_name_variations(bootstrap, artist_name, test_id):
             logging.info('Successfully processed artist variation: %s (%s)', artist_name, test_id)
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        pytest.fail(f'Discogs plugin raised exception for artist variation "{artist_name}" ({test_id}): {exc}. '
-                   f'Plugins must handle all errors gracefully for live performance.')
+        pytest.fail(
+            f'Discogs plugin raised exception for artist variation "{artist_name}" '
+            f'({test_id}): {exc}. Plugins must handle all errors gracefully for live performance.'
+        )
 
 
 @pytest.mark.parametrize("test_urls,test_id", [
@@ -508,8 +510,10 @@ async def test_discogs_website_url_parsing(bootstrap, test_urls, test_id):
         logging.info('URL test case (%s) handled gracefully: %s', test_id, test_urls)
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        pytest.fail(f'Discogs plugin raised exception for URL test case "{test_urls}" ({test_id}): {exc}. '
-                   f'Plugins must handle all errors gracefully for live performance.')
+        pytest.fail(
+            f'Discogs plugin raised exception for URL test case "{test_urls}" ({test_id}): {exc}. '
+            f'Plugins must handle all errors gracefully for live performance.'
+        )
 
 
 # Configuration State Validation Tests

@@ -306,8 +306,10 @@ async def test_wikimedia_missing_metadata_fields(bootstrap, metadata, test_id):
         logging.info('Missing metadata case (%s) handled gracefully', test_id)
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        pytest.fail(f'Wikimedia plugin raised exception for missing metadata case ({test_id}): {exc}. '
-                   f'Plugins must handle all errors gracefully for live performance.')
+        pytest.fail(
+            f'Wikimedia plugin raised exception for missing metadata case ({test_id}): {exc}. '
+            f'Plugins must handle all errors gracefully for live performance.'
+        )
 
 
 # Language Handling Edge Cases
@@ -350,8 +352,10 @@ async def test_wikimedia_invalid_language_codes(bootstrap, invalid_language, tes
         logging.info('Invalid language "%s" (%s) handled gracefully', invalid_language, test_id)
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        pytest.fail(f'Wikimedia plugin raised exception for invalid language "{invalid_language}" ({test_id}): {exc}. '
-                   f'Plugins must handle all errors gracefully for live performance.')
+        pytest.fail(
+            f'Wikimedia plugin raised exception for invalid language "{invalid_language}" '
+            f'({test_id}): {exc}. Plugins must handle all errors gracefully for live performance.'
+        )
 
 
 @pytest.mark.asyncio
