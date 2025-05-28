@@ -101,6 +101,9 @@ Key testing patterns:
 - Example: Use `import nowplaying.wikiclient` instead of
   `from nowplaying import wikiclient`
 - This improves code clarity and reduces namespace pollution
+- **CRITICAL**: NEVER import modules in the middle of functions! Always add
+  imports at the top of the file. Check existing imports before adding new ones
+  to avoid duplicates.
 
 ### Performance Requirements
 
