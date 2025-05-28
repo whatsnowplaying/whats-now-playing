@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 ''' test serato '''
+# pylint: disable=protected-access
 
 from datetime import datetime
 import logging
@@ -243,76 +244,105 @@ async def test_serato_remote1(getseratoplugin):  # pylint: disable=redefined-out
 
 
 # Unit tests for remote extraction methods
-def test_remote_extract_by_js_id(getroot):  # pylint: disable=redefined-outer-name
+def test_remote_extract_by_js_id(getroot):  # pylint: disable=redefined-outer-name,protected-access
     ''' Test JavaScript track ID extraction method '''
-    # Create plugin directly for unit testing  
-    plugin = nowplaying.inputs.serato.Plugin(config=None)
-    
     with open(os.path.join(getroot, 'tests', 'seratolive', '2025_05_27_dj_marcus_mcbride.html'),
               encoding='utf8') as inputfh:
         page_text = inputfh.read()
-    
+
     tree = lxml.html.fromstring(page_text)
-    
+
     result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_js_id(page_text, tree)
     assert result is not None
     assert 'Barrett Strong' in result
     assert 'Money Thats What I Want' in result
 
 
-def test_remote_extract_by_position(getroot):  # pylint: disable=redefined-outer-name
+def test_remote_extract_by_position(getroot):  # pylint: disable=redefined-outer-name,protected-access
     ''' Test positional XPath extraction method '''
-    plugin = nowplaying.inputs.serato.Plugin(config=None)
-    
     with open(os.path.join(getroot, 'tests', 'seratolive', '2025_05_27_dj_marcus_mcbride.html'),
               encoding='utf8') as inputfh:
         page_text = inputfh.read()
-    
+
     tree = lxml.html.fromstring(page_text)
-    
+
     result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_position(tree)
     assert result is not None
     assert 'Barrett Strong' in result
     assert 'Money Thats What I Want' in result
 
 
-def test_remote_extract_by_pattern(getroot):  # pylint: disable=redefined-outer-name
+def test_remote_extract_by_pattern(getroot):  # pylint: disable=redefined-outer-name,protected-access
     ''' Test pattern matching extraction method '''
-    plugin = nowplaying.inputs.serato.Plugin(config=None)
-    
     with open(os.path.join(getroot, 'tests', 'seratolive', '2025_05_27_dj_marcus_mcbride.html'),
               encoding='utf8') as inputfh:
         page_text = inputfh.read()
-    
+
     tree = lxml.html.fromstring(page_text)
-    
+
     result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_pattern(tree)
     assert result is not None
     assert 'Barrett Strong' in result
     assert 'Money Thats What I Want' in result
 
 
-def test_remote_extract_fallback_order(getroot):  # pylint: disable=redefined-outer-name
-    ''' Test that extraction methods work in fallback order '''
-    plugin = nowplaying.inputs.serato.Plugin(config=None)
-    
+def test_remote_extract_by_text_search(getroot):  # pylint: disable=redefined-outer-name,protected-access
+    ''' Test text search extraction method '''
     with open(os.path.join(getroot, 'tests', 'seratolive', '2025_05_27_dj_marcus_mcbride.html'),
               encoding='utf8') as inputfh:
         page_text = inputfh.read()
-    
+
     tree = lxml.html.fromstring(page_text)
-    
+
+    result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_text_search(tree)
+    assert result is not None
+    assert 'Barrett Strong' in result
+    assert 'Money Thats What I Want' in result
+
+
+def test_remote_extract_fallback_order(getroot):  # pylint: disable=redefined-outer-name,protected-access
+    ''' Test that extraction methods work in fallback order '''
+    with open(os.path.join(getroot, 'tests', 'seratolive', '2025_05_27_dj_marcus_mcbride.html'),
+              encoding='utf8') as inputfh:
+        page_text = inputfh.read()
+
+    tree = lxml.html.fromstring(page_text)
+
     # All methods should work with this test data
     js_result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_js_id(page_text, tree)
     pos_result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_position(tree)
     pattern_result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_pattern(tree)
-    
+    text_result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_text_search(tree)
+
     # All should find the same track
     assert js_result is not None
     assert pos_result is not None
     assert pattern_result is not None
-    
+    assert text_result is not None
+
     # They should all contain the expected content
-    for result in [js_result, pos_result, pattern_result]:
+    for result in [js_result, pos_result, pattern_result, text_result]:
         assert 'Barrett Strong' in result
         assert 'Money Thats What I Want' in result
+
+
+def test_remote_extract_edge_cases():  # pylint: disable=protected-access
+    ''' Test edge cases for remote extraction methods '''
+    # Test with empty/malformed data
+    empty_tree = lxml.html.fromstring('<html></html>')
+
+    # All methods should return None for empty content
+    handler = nowplaying.inputs.serato.SeratoHandler
+    assert handler._remote_extract_by_js_id('no js data', empty_tree) is None
+    assert handler._remote_extract_by_position(empty_tree) is None
+    assert handler._remote_extract_by_pattern(empty_tree) is None
+    assert handler._remote_extract_by_text_search(empty_tree) is None
+
+    # Test with content that has tracks but malformed
+    malformed_html = '''<html><div class="playlist-track">
+        <div class="playlist-trackname">Short</div>
+    </div></html>'''
+    malformed_tree = lxml.html.fromstring(malformed_html)
+
+    # Pattern matching should fail on short content
+    assert handler._remote_extract_by_pattern(malformed_tree) is None
