@@ -20,7 +20,7 @@ requests==2.32.3
 simpleobsws==1.4.2
 tinytag==1.10.1
 twitchAPI==3.11.0
-url_normalize==1.4.3
+url_normalize==2.2.1
 urllib3==2.3.0
 vendoring==1.2.0
 watchdog==6.0.0
