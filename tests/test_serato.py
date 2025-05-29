@@ -14,6 +14,8 @@ import lxml.html
 import nowplaying.inputs.serato  # pylint: disable=import-error
 
 
+moneystring = 'Money Thats What I Want' # codespell:ignore
+
 @pytest.fixture
 def serato_bootstrap(bootstrap):
     ''' bootstrap test '''
@@ -89,7 +91,7 @@ async def test_serato_remote2(getseratoplugin, getroot, httpserver):  # pylint: 
     metadata = await plugin.getplayingtrack()
 
     assert metadata['artist'] == 'Barrett Strong'
-    assert metadata['title'] == 'Money Thats What I Want (CLEAN) (MM Edit)'
+    assert metadata['title'] == f'{moneystring} (CLEAN) (MM Edit)'
     assert 'filename' not in metadata
 
 
@@ -255,7 +257,7 @@ def test_remote_extract_by_js_id(getroot):  # pylint: disable=redefined-outer-na
     result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_js_id(page_text, tree)
     assert result is not None
     assert 'Barrett Strong' in result
-    assert 'Money Thats What I Want' in result
+    assert moneystring in result
 
 
 def test_remote_extract_by_position(getroot):  # pylint: disable=redefined-outer-name,protected-access
@@ -269,7 +271,7 @@ def test_remote_extract_by_position(getroot):  # pylint: disable=redefined-outer
     result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_position(tree)
     assert result is not None
     assert 'Barrett Strong' in result
-    assert 'Money Thats What I Want' in result
+    assert moneystring in result
 
 
 def test_remote_extract_by_pattern(getroot):  # pylint: disable=redefined-outer-name,protected-access
@@ -283,7 +285,7 @@ def test_remote_extract_by_pattern(getroot):  # pylint: disable=redefined-outer-
     result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_pattern(tree)
     assert result is not None
     assert 'Barrett Strong' in result
-    assert 'Money Thats What I Want' in result
+    assert moneystring in result
 
 
 def test_remote_extract_by_text_search(getroot):  # pylint: disable=redefined-outer-name,protected-access
@@ -297,7 +299,7 @@ def test_remote_extract_by_text_search(getroot):  # pylint: disable=redefined-ou
     result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_text_search(tree)
     assert result is not None
     assert 'Barrett Strong' in result
-    assert 'Money Thats What I Want' in result
+    assert moneystring in result
 
 
 def test_remote_extract_fallback_order(getroot):  # pylint: disable=redefined-outer-name,protected-access
@@ -323,7 +325,7 @@ def test_remote_extract_fallback_order(getroot):  # pylint: disable=redefined-ou
     # They should all contain the expected content
     for result in [js_result, pos_result, pattern_result, text_result]:
         assert 'Barrett Strong' in result
-        assert 'Money Thats What I Want' in result
+        assert moneystring in result
 
 
 def test_remote_extract_edge_cases():  # pylint: disable=protected-access
