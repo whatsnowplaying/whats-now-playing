@@ -29,8 +29,9 @@ code in this repository.
 
 **CRITICAL**: This repository is a fork of `e1miran/Now-Playing-Serato`.
 
-- **NEVER** create pull requests against the upstream `e1miran/Now-Playing-Serato` repository
-- **ALWAYS** create pull requests within this fork using: 
+- **NEVER** create pull requests against the upstream
+  `e1miran/Now-Playing-Serato` repository
+- **ALWAYS** create pull requests within this fork using:
   `gh pr create --repo whatsnowplaying/whats-now-playing`
 - All development and PRs should stay within the `whatsnowplaying` organization
 
