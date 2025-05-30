@@ -24,6 +24,16 @@
   release date.
 * In some cases, metadata wasn't being read from
   certain file types. That should be improved now.
+* Upgraded pyacoustid for improved
+  multi-artist track recognition using join phrases.
+* Better support for multi-artist collaborations with proper
+  formatting (e.g., "Artist feat. Other Artist" instead of
+  manual "&" joining).
+* Fixed Serato Live Playlist support to use new format.
+* Fixed hostname display bug showing reverse DNS results instead
+  of proper machine names.
+* Fixed excluded files not getting properly excluded during processing.
+* MPRIS2 support has been disabled due to stability issues.
 
 * Internal changes:
   * Upgrade to Python 3.11.
@@ -44,13 +54,27 @@
   * Simplify some requirements.
   * Better exception logging for some subsystems.
   * Some of the metadata DB schemas have changed.
-  * API cache was added. ew SQLite-based cache system
+  * API cache was added. New SQLite-based cache system
     with TTL support for all external API responses, including advanced
     duplicate artist handling and provider-specific cache strategies.
   * Overhauled the artist extras to be async clients for FanArtTV, MusicBrainz,
     Discogs, TheAudioDB, and Wikipedia/Wikidata replacing slower synchronous libraries.
   * Added comprehensive API cache tests and broke up large test files into focused,
     maintainable plugin-specific files.
+  * Migrated from deprecated netifaces to netifaces-plus.
+  * Major dependency updates including:
+
+    * aiohttp 3.8.5 → 3.12.2
+    * lxml 4.9.3 → 5.4.0
+    * pillow 10.3.0 → 11.2.1
+    * discord.py 2.3.2 → 2.5.2
+    * psutil 5.9.8 → 7.0.0
+    * pyinstaller 5.13.2 → 6.12.0
+    * And many others for security and performance improvements.
+  * Removed vendored directories:
+
+    * discogs_client
+    * wptools
 
 ## Version 4.1.0 - 2023-08-20
 
