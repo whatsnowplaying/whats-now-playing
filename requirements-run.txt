@@ -18,7 +18,7 @@ pyside6!=6.5.*,<6.9.0
 requests-cache==1.2.1
 requests==2.32.3
 simpleobsws==1.4.2
-tinytag==1.10.1
+tinytag==2.1.1
 twitchAPI==3.11.0
 url_normalize==2.2.1
 urllib3==2.3.0
