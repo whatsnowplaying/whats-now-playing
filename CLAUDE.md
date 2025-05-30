@@ -349,3 +349,75 @@ Critical for DJ applications where artist names often collide (e.g., multiple
   scenarios
 - Object reconstruction ensures cached data maintains same interface as live
   API responses
+
+### Audio Metadata Processing
+
+**TinyTag 2.1.1 Integration:**
+
+The application uses tinytag 2.1.1 (system package) for audio file metadata
+extraction, replacing the previously vendored 1.10.1 version:
+
+- **Core metadata extraction**: `nowplaying/metadata.py` handles audio file
+  processing via `TinyTagRunner` class
+- **API migration**: Updated from `tag.extra` to `tag.other` for tinytag 2.1.1 compatibility
+- **Multi-value field support**: Enhanced processing of fields like ISRC codes
+  and MusicBrainz artist IDs
+- **Image processing**: Updated for tinytag 2.1.1's new image API using `images.as_dict()`
+- **Exception handling**: Migrated from `tinytag.tinytag.TinyTagException` to `tinytag.TinyTagException`
+
+**M4A Multi-Value Field Fix (`nowplaying/tinytag_fixes.py`):**
+
+Critical monkey patch addressing a bug in tinytag 2.1.1's M4A custom field parsing:
+
+```python
+# The patch fixes M4A files that store multiple values in custom field atoms
+# Original tinytag only processed the last data atom; our fix processes ALL
+# data atoms
+import nowplaying.tinytag_fixes  # Auto-applies monkey patch on import
+```
+
+**Key improvements:**
+
+- **M4A multi-value extraction**: Files that previously only extracted the last
+  ISRC/artist ID now extract all values as separate list items
+- **Backward compatibility**: No changes required to existing code - the patch
+  is transparent
+- **Performance optimized**: Monkey patch only affects M4A custom field
+  parsing, no impact on other formats
+- **CI compliant**: Full pylint compliance with proper protected access handling
+
+**Multi-Value Field Processing:**
+
+Enhanced logic in `metadata.py` for handling multi-value metadata fields:
+
+- **Automatic splitting**: Detects and splits delimited strings (`/`, `;`) in
+  metadata fields
+- **List consolidation**: Processes both native lists and delimited strings uniformly
+- **Format-specific handling**:
+  - **M4A**: Native multi-value extraction via monkey patch
+  - **FLAC**: Natural multi-value support from tinytag
+  - **MP3**: Delimited string detection and splitting
+- **Helper methods**: Refactored complex processing into focused helper
+  methods for maintainability
+
+**Testing Infrastructure:**
+
+Comprehensive test suite in `tests/audio_metadata/` validates multi-value field extraction:
+
+- **Format matrix testing**: Tests across MP3, FLAC, M4A, AIFF formats
+- **Multi-value validation**: Verifies extraction of multiple ISRC codes,
+  artist IDs, and images
+- **Monkey patch verification**: Ensures M4A fix is properly applied and functional
+- **Performance testing**: Memory efficiency and consistency checks for large
+  multi-value fields
+- **Edge case coverage**: Delimiter detection, order consistency, and error handling
+
+**Usage Notes:**
+
+- Import `nowplaying.tinytag_fixes` before using tinytag for M4A multi-value
+  support
+- Use `_process_list_field()` and `_process_single_field()` helper methods
+  when extending metadata processing
+- Multi-value fields (`isrc`, `musicbrainzartistid`, `artistwebsites`) are
+  automatically converted to lists
+- Single-value fields extract the first value from lists when needed

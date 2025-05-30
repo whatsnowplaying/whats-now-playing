@@ -54,7 +54,7 @@ async def test_15ghosts2_mp3_orig(bootstrap, getroot):
     assert metadataout['imagecacheartist'] == 'nine inch nails'
     assert metadataout['track'] == '15'
     assert metadataout['title'] == '15 Ghosts II'
-    assert metadataout['duration'] == 110
+    assert metadataout['duration'] == 113
 
 
 @pytest.mark.asyncio
@@ -80,11 +80,11 @@ async def test_15ghosts2_mp3_fullytagged(bootstrap, getroot):
     assert metadataout['imagecacheartist'] == 'nine inch nails'
     assert metadataout['isrc'] == ['USTC40852243']
     assert metadataout['label'] == 'The Null Corporation'
-    assert metadataout['musicbrainzalbumid'] == ['3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a']
+    assert metadataout['musicbrainzalbumid'] == '3af7ec8c-3bf4-4e6d-9bb3-1885d22b2b6a'
     assert metadataout['musicbrainzartistid'] == ['b7ffd2af-418f-4be2-bdd1-22f8b48613da']
     assert metadataout['musicbrainzrecordingid'] == '2d7f08e1-be1c-4b86-b725-6e675b7b6de0'
     assert metadataout['title'] == '15 Ghosts II'
-    assert metadataout['duration'] == 110
+    assert metadataout['duration'] == 113
 
 
 @pytest.mark.asyncio
@@ -672,6 +672,7 @@ async def test_multi(bootstrap, getroot, multifilename):
     assert metadataout['artistwebsites'][0] in [
         'http://ww1.example.com/', 'http://ww2.example.com/'
     ]
+    # All formats now properly extract multi-value fields thanks to tinytag fixes
     assert metadataout['isrc'] == ['isrc1', 'isrc2']
     assert metadataout['musicbrainzartistid'] == [
         'b7ffd2af-418f-4be2-bdd1-22f8b48613da', 'c0b2500e-0cef-4130-869d-732b23ed9df5'

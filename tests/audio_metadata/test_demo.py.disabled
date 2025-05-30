@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+"""Demo test showing comprehensive audio metadata testing framework capabilities."""
+
+import os
+import sys
+import time
+
+import tinytag
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+
+def _get_library_versions():
+    """Get current library versions."""
+    try:
+        tinytag_version = getattr(tinytag, '__version__', 'unknown')
+    except Exception:  # pylint: disable=broad-exception-caught
+        tinytag_version = 'unknown'
+
+    try:
+        am_version = getattr(audio_metadata, '__version__', 'unknown')
+    except Exception:  # pylint: disable=broad-exception-caught
+        am_version = 'unknown'
+
+    return tinytag_version, am_version
+
+
+def _test_format_support(getroot):
+    """Test format support for both libraries."""
+    test_files = {
+        'MP3': f'{getroot}/tests/audio/15_Ghosts_II_64kb_orig.mp3',
+        'FLAC': f'{getroot}/tests/audio/15_Ghosts_II_64kb_orig.flac',
+        'M4A': f'{getroot}/tests/audio/15_Ghosts_II_64kb_orig.m4a',
+        'AIFF': f'{getroot}/tests/audio/15_Ghosts_II_64kb_orig.aiff'
+    }
+
+    support_matrix = {}
+    for format_name, file_path in test_files.items():
+        if not os.path.exists(file_path):
+            continue
+
+        # Test TinyTag
+        try:
+            tt_tag = tinytag.TinyTag.get(file_path)
+            tt_success = tt_tag.artist is not None
+        except Exception:  # pylint: disable=broad-exception-caught
+            tt_success = False
+
+        # Test Audio_metadata
+        try:
+            am_data = audio_metadata.load(file_path)
+            am_success = hasattr(am_data, 'tags') and len(am_data.tags) > 0
+        except Exception:  # pylint: disable=broad-exception-caught
+            am_success = False
+
+        support_matrix[format_name] = {'tinytag': tt_success, 'audio_metadata': am_success}
+
+    return support_matrix
+
+
+def _test_multivalue_fields(getroot):
+    """Test multi-value field detection."""
+    multi_file = f'{getroot}/tests/audio/multi.flac'
+    if not os.path.exists(multi_file):
+        return None, None
+
+    # TinyTag ISRC extraction (tinytag 2.1.1+ API)
+    tt_tag = tinytag.TinyTag.get(multi_file)
+    tt_isrc = tt_tag.other.get('isrc') if hasattr(tt_tag, 'other') and tt_tag.other else None
+
+    # Audio_metadata ISRC extraction
+    try:
+        am_data = audio_metadata.load(multi_file)
+        am_isrc = am_data.tags.get('isrc') if hasattr(am_data, 'tags') else None
+    except Exception:  # pylint: disable=broad-exception-caught
+        am_isrc = None
+
+    return tt_isrc, am_isrc
+
+
+def _test_field_coverage(getroot):
+    """Test metadata field coverage."""
+    complex_file = f'{getroot}/tests/audio/15_Ghosts_II_64kb_füllytâgged.mp3'
+    if not os.path.exists(complex_file):
+        return set(), set()
+
+    # TinyTag fields
+    tt_tag = tinytag.TinyTag.get(complex_file)
+    tt_fields = set()
+
+    # Basic attributes
+    for attr in ['album', 'artist', 'title', 'bitrate', 'duration']:
+        if hasattr(tt_tag, attr) and getattr(tt_tag, attr) is not None:
+            tt_fields.add(attr)
+
+    # Extra fields
+    if hasattr(tt_tag, 'other') and tt_tag.other:
+        tt_fields.update(f'other_{k}' for k in tt_tag.other.keys())
+
+    # Audio_metadata fields
+    try:
+        am_data = audio_metadata.load(complex_file)
+        am_fields = set()
+
+        if hasattr(am_data, 'tags'):
+            am_fields.update(f'tag_{k}' for k in am_data.tags.keys())
+
+        if hasattr(am_data, 'streaminfo'):
+            am_fields.update(f'stream_{k}' for k in am_data.streaminfo.keys()
+                             if not k.startswith('_'))
+    except Exception:  # pylint: disable=broad-exception-caught
+        am_fields = set()
+
+    return tt_fields, am_fields
+
+
+def _test_performance(getroot):
+    """Test performance comparison."""
+    test_file = f'{getroot}/tests/audio/15_Ghosts_II_64kb_orig.mp3'
+    if not os.path.exists(test_file):
+        return 0, 0
+
+    # Time TinyTag
+    start = time.time()
+    for _ in range(5):
+        tinytag.TinyTag.get(test_file)
+    tt_time = (time.time() - start) / 5
+
+    # Time Audio_metadata
+    start = time.time()
+    for _ in range(5):
+        try:
+            audio_metadata.load(test_file)
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+    am_time = (time.time() - start) / 5
+
+    return tt_time, am_time
+
+
+def _print_demo_results(support_matrix, tt_isrc, am_isrc, tt_fields, am_fields, tt_time, am_time):  # pylint: disable=too-many-arguments
+    """Print all demo results."""
+    # Format support results
+    print("   Format   | TinyTag | Audio_metadata")
+    print("   ---------|---------|---------------")
+    for fmt, support in support_matrix.items():
+        tt_mark = "✓" if support['tinytag'] else "✗"
+        am_mark = "✓" if support['audio_metadata'] else "✗"
+        print(f"   {fmt:8} |    {tt_mark}    |       {am_mark}")
+
+    # Multi-value field results
+    if tt_isrc is not None or am_isrc is not None:
+        print("   ISRC codes in multi.flac:")
+        print(f"   TinyTag: {tt_isrc} (type: {type(tt_isrc).__name__})")
+        print(f"   Audio_metadata: {am_isrc} (type: {type(am_isrc).__name__})")
+
+        # Analysis
+        if isinstance(am_isrc, list) and len(am_isrc) > 1:
+            print("   ✓ Audio_metadata correctly extracted multiple ISRC codes")
+        if isinstance(tt_isrc, str) and ('/' in tt_isrc or ';' in tt_isrc):
+            print("   ✓ TinyTag detected multiple ISRC codes as delimited string")
+
+    # Field coverage results
+    if tt_fields or am_fields:
+        print(f"   TinyTag extracted {len(tt_fields)} metadata fields")
+        print(f"   Audio_metadata extracted {len(am_fields)} metadata fields")
+
+        # Find common fields (accounting for different naming)
+        tt_basic = {f for f in tt_fields if not f.startswith('other_')}
+        am_basic = {f.replace('tag_', '') for f in am_fields if f.startswith('tag_')}
+        common_basic = tt_basic & am_basic
+        print(f"   Common basic fields: {len(common_basic)} ({sorted(list(common_basic))})")
+
+    # Performance results
+    if tt_time > 0:
+        print(f"   TinyTag average: {tt_time:.4f}s")
+        print(f"   Audio_metadata average: {am_time:.4f}s")
+        ratio_text = f"{am_time/tt_time:.2f}x" if tt_time > 0 else "N/A"
+        print(f"   Performance ratio: {ratio_text}")
+
+
+def test_framework_capabilities_demo(getroot):
+    """Demonstrate the key capabilities of the testing framework."""
+    print("\n" + "=" * 60)
+    print("AUDIO METADATA TESTING FRAMEWORK DEMONSTRATION")
+    print("=" * 60)
+
+    # 1. Library Version Detection
+    print("\n1. LIBRARY VERSION DETECTION:")
+    tinytag_version, am_version = _get_library_versions()
+    print(f"   TinyTag version: {tinytag_version}")
+    print(f"   Audio_metadata version: {am_version}")
+
+    # 2. Format Support Detection
+    print("\n2. FORMAT SUPPORT DETECTION:")
+    support_matrix = _test_format_support(getroot)
+
+    # 3. Multi-Value Field Detection
+    print("\n3. MULTI-VALUE FIELD DETECTION:")
+    tt_isrc, am_isrc = _test_multivalue_fields(getroot)
+
+    # 4. Metadata Field Coverage
+    print("\n4. METADATA FIELD COVERAGE ANALYSIS:")
+    tt_fields, am_fields = _test_field_coverage(getroot)
+
+    # 5. Performance Comparison
+    print("\n5. PERFORMANCE COMPARISON:")
+    tt_time, am_time = _test_performance(getroot)
+
+    # Print all results
+    _print_demo_results(support_matrix, tt_isrc, am_isrc, tt_fields, am_fields, tt_time, am_time)
+
+    print("\n" + "=" * 60)
+    print("FRAMEWORK BENEFITS DEMONSTRATED:")
+    print("✓ Automatic library version tracking")
+    print("✓ Comprehensive format support matrix")
+    print("✓ Multi-value field handling analysis")
+    print("✓ Detailed metadata field coverage")
+    print("✓ Performance benchmarking")
+    print("✓ No mocking required - uses real audio files")
+    print("✓ Ready for upgrade regression detection")
+    print("=" * 60)
+
+    # Verify at least basic functionality works
+    assert len(support_matrix) > 0, "Should test at least one audio format"
