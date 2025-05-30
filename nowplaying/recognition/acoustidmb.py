@@ -179,12 +179,19 @@ class Plugin(RecognitionPlugin):
                         score = score + .10
                     artistlist = []
                     artistidlist = []
+                    artist_parts = []
                     for trackartist in release['mediums'][0]['tracks'][0]['artists']:
                         if 'name' in trackartist:
-                            artistlist.append(trackartist['name'])
+                            artist_name = trackartist['name']
+                            artistlist.append(artist_name)
                             artistidlist.append(trackartist['id'])
+                            # Build artist string with join phrases (pyacoustid 1.3.0)
+                            # Join phrases include proper formatting like "feat.", "&", "and", etc.
+                            join_phrase = trackartist.get('joinphrase', '')
+                            artist_parts.append(artist_name + join_phrase)
                         elif isinstance(trackartist, str):
                             artistlist.append(trackartist)
+                            artist_parts.append(trackartist)
                         if trackartist and artistnstr:
                             if nowplaying.utils.normalize(trackartist, sizecheck=4,
                                                           nospaces=True) == artistnstr:
@@ -195,7 +202,8 @@ class Plugin(RecognitionPlugin):
                                 trackartist, sizecheck=4, nospaces=True) in completenstr:
                             score = score + .10
 
-                    artist = ' & '.join(artistlist)
+                    # Use join phrases from pyacoustid 1.3.0
+                    artist = ''.join(artist_parts).rstrip()
 
                     logging.debug(
                         'weighted score = %s, rid = %s, title = %s, artist = %s album = %s', score,
@@ -203,8 +211,8 @@ class Plugin(RecognitionPlugin):
 
                     if score > lastscore:
                         newdata = {'acoustidid': acoustidid}
-                        if artistlist:
-                            newdata['artist'] = ' & '.join(artistlist)
+                        if artist:
+                            newdata['artist'] = artist
                         if title:
                             newdata['title'] = title
                         if album:

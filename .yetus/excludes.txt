@@ -5,6 +5,7 @@ nowplaying/vendor/
 nowplaying/qtrc.py
 bincomponents/
 NowPlaying.spec
+tests/audio/
 tests/seratolive/
 tests/upgrade/releasedata.json
 docs/_static/basic.css
