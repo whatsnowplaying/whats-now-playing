@@ -40,7 +40,9 @@ class AsyncWikiClient:
         self.ssl_context = ssl.create_default_context()
 
     async def __aenter__(self):
-        connector = aiohttp.TCPConnector(ssl=self.ssl_context)
+        connector = aiohttp.TCPConnector(ssl=self.ssl_context,
+                                         keepalive_timeout=1,
+                                         enable_cleanup_closed=True)
         self.session = aiohttp.ClientSession(timeout=self.timeout, connector=connector)
         return self
 

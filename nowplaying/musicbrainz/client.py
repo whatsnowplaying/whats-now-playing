@@ -78,7 +78,11 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
 
         for attempt in range(self.max_retries + 1):
             try:
-                connector = aiohttp.TCPConnector(ssl=ssl_context)
+                connector = aiohttp.TCPConnector(ssl=ssl_context,
+                                                 keepalive_timeout=0.5,
+                                                 enable_cleanup_closed=True,
+                                                 limit=1,
+                                                 limit_per_host=1)
                 async with aiohttp.ClientSession(
                         connector=connector, timeout=timeout_config) as session:
                     async with session.get(url, params=params, headers=headers) as response:
@@ -128,7 +132,11 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
         ssl_context = ssl.create_default_context()
         timeout_config = aiohttp.ClientTimeout(total=timeout)
 
-        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        connector = aiohttp.TCPConnector(ssl=ssl_context,
+                                         keepalive_timeout=0.5,
+                                         enable_cleanup_closed=True,
+                                         limit=1,
+                                         limit_per_host=1)
         async with aiohttp.ClientSession(connector=connector, timeout=timeout_config) as session:
             async with session.get(url) as response:
                 if response.status == 200:

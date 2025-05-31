@@ -226,11 +226,14 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             logging.debug('Skipping MusicBrainz lookup - already have key identifiers')
             return
 
-        musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
-        addmeta = await musicbrainz.recognize(copy.copy(self.metadata))
-        self.metadata = recognition_replacement(config=self.config,
-                                                metadata=self.metadata,
-                                                addmeta=addmeta)
+        try:
+            musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
+            addmeta = await musicbrainz.recognize(copy.copy(self.metadata))
+            self.metadata = recognition_replacement(config=self.config,
+                                                    metadata=self.metadata,
+                                                    addmeta=addmeta)
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error('MusicBrainz recognition failed: %s', error)
 
     async def _mb_fallback(self):
         ''' at least see if album can be found '''
@@ -278,7 +281,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                                                         metadata=self.metadata,
                                                         addmeta=addmeta)
         except Exception:  #pylint: disable=broad-except
-            logging.exception('Ignoring fallback failure.')
+            logging.error('Ignoring fallback failure.')
 
     async def _process_plugins(self, skipplugins):
         await self._musicbrainz()
@@ -369,10 +372,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 try:
                     await asyncio.gather(*pending, return_exceptions=True)
                 except Exception as cleanup_error:  # pylint: disable=broad-except
-                    logging.warning('Exception during task cleanup: %s', cleanup_error)
+                    logging.error('Exception during task cleanup: %s', cleanup_error)
 
         except Exception as error:  # pylint: disable=broad-except
-            logging.error('Artist extras processing failed: %s', error, exc_info=True)
+            logging.error('Artist extras processing failed: %s', error)
             # Cancel any remaining tasks and wait for cleanup
             remaining_tasks = [task for _, task in tasks if not task.done()]
             for task in remaining_tasks:
@@ -381,8 +384,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 try:
                     await asyncio.gather(*remaining_tasks, return_exceptions=True)
                 except Exception as cleanup_error:  # pylint: disable=broad-except
-                    logging.warning('Exception during task cleanup in exception handler: %s',
-                                    cleanup_error)
+                    logging.error('Exception during task cleanup in exception handler: %s',
+                                      cleanup_error)
 
     def _generate_short_bio(self):
         if not self.metadata:

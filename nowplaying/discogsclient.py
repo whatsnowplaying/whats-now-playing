@@ -126,7 +126,9 @@ class AsyncDiscogsClient:
         # Only add Authorization header if user_token is not None
         if self.user_token is not None:
             headers['Authorization'] = f'Discogs token={self.user_token}'
-        connector = aiohttp.TCPConnector(ssl=self.ssl_context)
+        connector = aiohttp.TCPConnector(ssl=self.ssl_context,
+                                         keepalive_timeout=1,
+                                         enable_cleanup_closed=True)
         self.session = aiohttp.ClientSession(timeout=self.timeout,
                                              headers=headers,
                                              connector=connector)

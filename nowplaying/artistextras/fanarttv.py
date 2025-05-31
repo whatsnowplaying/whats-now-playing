@@ -28,7 +28,10 @@ class Plugin(ArtistExtrasPlugin):
         try:
             baseurl = f'http://webservice.fanart.tv/v3/music/{artistid}'
             logging.debug('fanarttv async: calling %s', baseurl)
-            async with aiohttp.ClientSession() as session:
+            # Use connector with shorter keepalive to reduce SSL shutdown delays
+            connector = aiohttp.TCPConnector(keepalive_timeout=1,
+                                             enable_cleanup_closed=True)
+            async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(f'{baseurl}?api_key={apikey}',
                                        timeout=aiohttp.ClientTimeout(total=delay)) as response:
                     return await response.json()
