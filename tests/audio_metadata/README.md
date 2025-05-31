@@ -45,7 +45,7 @@ pytest tests/audio_metadata/ -v
 # Library feature matrix tests
 pytest tests/audio_metadata/test_library_feature_matrix.py -v
 
-# Golden master regression tests  
+# Golden master regression tests
 pytest tests/audio_metadata/test_golden_master.py -v
 
 # Format-specific tests
@@ -254,7 +254,7 @@ tinytag:
 This framework complements the existing `test_metadata.py` by:
 
 - **Focusing on library-specific testing** vs. application integration testing
-- **Providing upgrade safety** vs. functional correctness testing  
+- **Providing upgrade safety** vs. functional correctness testing
 - **Documenting capabilities** vs. validating business logic
 - **Performance tracking** vs. feature validation
 

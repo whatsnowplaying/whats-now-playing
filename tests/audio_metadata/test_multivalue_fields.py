@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 import tinytag
-import nowplaying.tinytag_fixes
+import nowplaying.tinytag_fixes  # pylint: disable=import-error
 
 # Apply tinytag patches for testing
 nowplaying.tinytag_fixes.apply_tinytag_patches()
@@ -313,6 +313,6 @@ def test_tinytag_monkey_patch_functionality():
     # Verify the monkey patch was applied by checking the method signature
     import tinytag.tinytag as tt  # pylint: disable=import-outside-toplevel
     # pylint: disable=protected-access
-    assert hasattr(tt._MP4, '_parse_custom_field'), "Monkey patch should be applied"
+    assert hasattr(tt._MP4, '_parse_custom_field'), "Monkey patch should be applied"  # pylint: disable=protected-access
 
     print("✓ TinyTag monkey patch successfully applied")

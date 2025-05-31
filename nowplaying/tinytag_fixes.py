@@ -66,7 +66,7 @@ def _create_patched_methods():
                 field_name = atom_value.decode('utf-8', 'replace')
                 # pylint: disable=protected-access
                 field_name = cls._CUSTOM_FIELD_NAME_MAPPING.get(  # pylint: disable=no-member
-                    field_name, tinytag.tinytag.TinyTag._OTHER_PREFIX + field_name)
+                    field_name, tinytag.tinytag.TinyTag._OTHER_PREFIX + field_name)  # pylint: disable=protected-access
             elif atom_type == b'data':
                 data_atom = file_handle.read(atom_size)
                 data_atoms.append(data_atom)
