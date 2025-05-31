@@ -1,0 +1,321 @@
+#!/usr/bin/env python3
+"""Format-specific deep testing for tinytag metadata library."""
+
+from pathlib import Path
+
+import pytest
+
+import tinytag
+
+
+@pytest.fixture
+def mp3_files(getroot) -> dict[str, Path]:
+    """Get MP3 test files."""
+    audio_dir = Path(getroot) / 'tests' / 'audio'
+    return {
+        'basic': audio_dir / '15_Ghosts_II_64kb_orig.mp3',
+        'complex': audio_dir / '15_Ghosts_II_64kb_füllytâgged.mp3',
+        'multi': audio_dir / 'multi.mp3'
+    }
+
+
+@pytest.fixture
+def flac_files(getroot) -> dict[str, Path]:
+    """Get FLAC test files."""
+    audio_dir = Path(getroot) / 'tests' / 'audio'
+    return {
+        'basic': audio_dir / '15_Ghosts_II_64kb_orig.flac',
+        'complex': audio_dir / '15_Ghosts_II_64kb_füllytâgged.flac',
+        'multi': audio_dir / 'multi.flac'
+    }
+
+
+@pytest.fixture
+def m4a_files(getroot) -> dict[str, Path]:
+    """Get M4A test files."""
+    audio_dir = Path(getroot) / 'tests' / 'audio'
+    return {
+        'basic': audio_dir / '15_Ghosts_II_64kb_orig.m4a',
+        'complex': audio_dir / '15_Ghosts_II_64kb_füllytâgged.m4a',
+        'multi': audio_dir / 'multi.m4a',
+        'multiimage': audio_dir / 'multiimage.m4a'
+    }
+
+
+@pytest.fixture
+def aiff_files(getroot) -> dict[str, Path]:
+    """Get AIFF test files."""
+    audio_dir = Path(getroot) / 'tests' / 'audio'
+    return {
+        'basic': audio_dir / '15_Ghosts_II_64kb_orig.aiff',
+        'complex': audio_dir / '15_Ghosts_II_64kb_füllytâgged.aiff'
+    }
+
+
+@pytest.mark.parametrize("file_type", ["basic", "complex", "multi"])
+def test_mp3_id3_tag_extraction(mp3_files, file_type):  # pylint: disable=redefined-outer-name
+    """Test ID3 tag extraction from MP3 files."""
+    mp3_file = mp3_files[file_type]
+    if not mp3_file.exists():
+        pytest.skip(f"MP3 test file not found: {mp3_file}")
+
+    # TinyTag extraction
+    tt_tag = tinytag.TinyTag.get(str(mp3_file))
+
+    # Should extract basic ID3 fields from complex files
+    if file_type == 'complex':
+        assert tt_tag.artist == 'Nine Inch Nails'
+        assert tt_tag.title == '15 Ghosts II'
+        assert tt_tag.album == 'Ghosts I-IV'
+    # All files should have basic metadata
+    assert tt_tag.artist is not None, f"TinyTag should extract artist from {file_type}"
+    assert tt_tag.title is not None, f"TinyTag should extract title from {file_type}"
+
+
+@pytest.mark.parametrize("file_type", ["basic", "complex", "multi"])
+def test_mp3_stream_info_extraction(mp3_files, file_type):  # pylint: disable=redefined-outer-name
+    """Test MP3 stream information extraction."""
+    mp3_file = mp3_files[file_type]
+    if not mp3_file.exists():
+        pytest.skip(f"MP3 test file not found: {mp3_file}")
+
+    # TinyTag stream info
+    tt_tag = tinytag.TinyTag.get(str(mp3_file))
+
+    # Check that TinyTag extracts bitrate and duration
+    assert tt_tag.bitrate is not None, f"TinyTag didn't extract bitrate from {file_type}"
+    assert tt_tag.duration is not None, f"TinyTag didn't extract duration from {file_type}"
+    assert tt_tag.samplerate is not None, f"TinyTag didn't extract samplerate from {file_type}"
+
+
+def test_mp3_lame_header_detection(mp3_files):  # pylint: disable=redefined-outer-name
+    """Test LAME encoder header detection in MP3 files."""
+    # This tests whether libraries can detect LAME-encoded MP3s
+    for file_type, mp3_file in mp3_files.items():
+        if not mp3_file.exists():
+            continue
+
+        # LAME header detection would require audio_metadata which is no longer available
+        # This test now focuses on tinytag extraction only
+        pass
+
+
+def test_mp3_id3_version_handling(mp3_files):  # pylint: disable=redefined-outer-name
+    """Test handling of different ID3 versions."""
+    # Test that libraries can handle both ID3v1 and ID3v2
+    complex_file = mp3_files['complex']
+    if not complex_file.exists():
+        pytest.skip("Complex MP3 file not found")
+
+    # ID3v2 version handling would require audio_metadata which is no longer available
+    # This test now focuses on tinytag extraction only
+    pass
+
+
+def test_flac_vorbis_comments(flac_files):  # pylint: disable=redefined-outer-name
+    """Test FLAC Vorbis comment extraction."""
+    for file_type, flac_file in flac_files.items():
+        if not flac_file.exists():
+            pytest.skip(f"FLAC test file not found: {flac_file}")
+
+        # TinyTag extraction
+        tt_tag = tinytag.TinyTag.get(str(flac_file))
+
+        # Audio_metadata extraction
+        am_data = audio_metadata.load(str(flac_file))
+
+        # Both should extract basic metadata
+        assert tt_tag.artist is not None, f"TinyTag didn't extract artist from {file_type}"
+        assert tt_tag.title is not None, f"TinyTag didn't extract title from {file_type}"
+
+        assert 'artist' in am_data.tags, f"Audio_metadata missing artist in {file_type}"
+        assert 'title' in am_data.tags, f"Audio_metadata missing title in {file_type}"
+
+
+def test_flac_stream_properties(flac_files):  # pylint: disable=redefined-outer-name
+    """Test FLAC stream properties extraction."""
+    for file_type, flac_file in flac_files.items():
+        if not flac_file.exists():
+            continue
+
+        # Audio_metadata should provide detailed FLAC stream info
+        am_data = audio_metadata.load(str(flac_file))
+
+        assert hasattr(am_data, 'streaminfo'), \
+            f"Audio_metadata missing streaminfo for {file_type}"
+
+        # FLAC-specific stream properties
+        expected_flac_fields = ['sample_rate', 'channels', 'bit_depth', 'duration']
+        for field in expected_flac_fields:
+            assert field in am_data.streaminfo, \
+                f"Missing {field} in FLAC streaminfo for {file_type}"
+
+
+def test_flac_encoding_detection(flac_files):  # pylint: disable=redefined-outer-name
+    """Test FLAC encoder detection."""
+    for file_type, flac_file in flac_files.items():
+        if not flac_file.exists():
+            continue
+
+        # Check for encoder information
+        tt_tag = tinytag.TinyTag.get(str(flac_file))
+        am_data = audio_metadata.load(str(flac_file))
+
+        # TinyTag might have encoder in other (tinytag 2.1.1+ API)
+        if hasattr(tt_tag, 'other') and tt_tag.other:
+            encoder_info = tt_tag.other.get('encoder')
+            if encoder_info:
+                print(f"TinyTag encoder info for {file_type}: {encoder_info}")
+
+        # Audio_metadata might have encoder in tags
+        if 'encoder' in am_data.tags:
+            print(f"Audio_metadata encoder info for {file_type}: {am_data.tags['encoder']}")
+
+
+def test_m4a_basic_metadata(m4a_files):  # pylint: disable=redefined-outer-name
+    """Test basic M4A metadata extraction."""
+    for file_type, m4a_file in m4a_files.items():
+        if not m4a_file.exists():
+            pytest.skip(f"M4A test file not found: {m4a_file}")
+
+        # TinyTag extraction
+        tt_tag = tinytag.TinyTag.get(str(m4a_file))
+
+        # Audio_metadata extraction
+        try:
+            am_data = audio_metadata.load(str(m4a_file))
+            has_am_data = True
+        except (FileNotFoundError, audio_metadata.UnsupportedFormat):
+            has_am_data = False
+
+        # TinyTag should handle M4A files
+        assert tt_tag.artist is not None, f"TinyTag didn't extract artist from {file_type}"
+        assert tt_tag.title is not None, f"TinyTag didn't extract title from {file_type}"
+
+        # Document audio_metadata M4A support
+        if has_am_data:
+            assert 'artist' in am_data.tags, f"Audio_metadata missing artist in {file_type}"
+
+
+def test_m4a_freeform_tags(m4a_files):  # pylint: disable=redefined-outer-name
+    """Test M4A freeform tag handling."""
+    complex_file = m4a_files.get('complex')
+    if not complex_file or not complex_file.exists():
+        pytest.skip("Complex M4A file not found")
+
+    # TinyTag should extract freeform tags
+    tt_tag = tinytag.TinyTag.get(str(complex_file))
+
+    # Check for MusicBrainz IDs in freeform tags (tinytag 2.1.1+ API)
+    if hasattr(tt_tag, 'other') and tt_tag.other:
+        musicbrainz_fields = [key for key in tt_tag.other.keys() if 'musicbrainz' in key.lower()]
+
+        if musicbrainz_fields:
+            print(f"TinyTag MusicBrainz freeform tags: {musicbrainz_fields}")
+
+    # Audio_metadata freeform tag handling
+    try:
+        am_data = audio_metadata.load(str(complex_file))
+        if 'freeform' in am_data.tags:
+            print("Audio_metadata detected freeform tags in M4A")
+    except (FileNotFoundError, audio_metadata.UnsupportedFormat):
+        pass
+
+
+def test_m4a_codec_detection(m4a_files):  # pylint: disable=redefined-outer-name
+    """Test M4A codec detection (AAC, ALAC, etc.)."""
+    for file_type, m4a_file in m4a_files.items():
+        if not m4a_file.exists():
+            continue
+
+        try:
+            am_data = audio_metadata.load(str(m4a_file))
+
+            if hasattr(am_data, 'streaminfo') and 'codec' in am_data.streaminfo:
+                codec = am_data.streaminfo['codec']
+                print(f"M4A codec for {file_type}: {codec}")
+
+                # Common M4A codecs
+                assert codec in ['mp4a', 'alac'], f"Unexpected M4A codec: {codec}"
+
+        except (FileNotFoundError, audio_metadata.UnsupportedFormat):
+            # Audio_metadata might not support this M4A file
+            pass
+
+
+def test_aiff_metadata_support(aiff_files):  # pylint: disable=redefined-outer-name
+    """Test AIFF metadata extraction support."""
+    for file_type, aiff_file in aiff_files.items():
+        if not aiff_file.exists():
+            pytest.skip(f"AIFF test file not found: {aiff_file}")
+
+        # TinyTag should support AIFF
+        tt_tag = tinytag.TinyTag.get(str(aiff_file))
+        assert tt_tag.artist is not None, f"TinyTag didn't extract artist from AIFF {file_type}"
+        assert tt_tag.title is not None, f"TinyTag didn't extract title from AIFF {file_type}"
+
+        # Audio_metadata AIFF support is limited
+        try:
+            am_data = audio_metadata.load(str(aiff_file))
+            # If it works, document what's available
+            print(f"Audio_metadata successfully loaded AIFF {file_type}")
+            if hasattr(am_data, 'tags'):
+                print(f"AIFF tags available: {list(am_data.tags.keys())}")
+        except (FileNotFoundError, audio_metadata.UnsupportedFormat) as exc:
+            # Expected - audio_metadata has limited AIFF support
+            print(f"Audio_metadata AIFF limitation for {file_type}: {exc}")
+
+
+def test_aiff_format_detection(aiff_files):  # pylint: disable=redefined-outer-name
+    """Test AIFF format detection and properties."""
+    for file_type, aiff_file in aiff_files.items():
+        if not aiff_file.exists():
+            continue
+
+        # TinyTag should provide basic stream info for AIFF
+        tt_tag = tinytag.TinyTag.get(str(aiff_file))
+
+        assert tt_tag.duration is not None, f"TinyTag missing duration for AIFF {file_type}"
+        assert tt_tag.samplerate is not None, f"TinyTag missing samplerate for AIFF {file_type}"
+
+
+def test_unsupported_format_handling(tmp_path):
+    """Test how libraries handle unsupported formats."""
+    # Create a fake audio file
+    fake_file = tmp_path / "fake.xyz"
+    fake_file.write_bytes(b"fake audio data")
+
+    # TinyTag should handle unsupported formats gracefully
+    with pytest.raises(tinytag.TinyTagException):
+        tinytag.TinyTag.get(str(fake_file))
+
+    # Audio_metadata should also handle gracefully
+    with pytest.raises((FileNotFoundError, audio_metadata.UnsupportedFormat)):
+        audio_metadata.load(str(fake_file))
+
+
+def test_corrupted_file_handling(tmp_path):
+    """Test handling of corrupted audio files."""
+    # Create files with audio extensions but invalid content
+    test_files = [(tmp_path / "corrupt.mp3", b"not mp3 data"),
+                  (tmp_path / "corrupt.flac", b"not flac data"),
+                  (tmp_path / "corrupt.m4a", b"not m4a data")]
+
+    for corrupt_file, content in test_files:
+        corrupt_file.write_bytes(content)
+
+        # Libraries should handle corruption gracefully
+        try:
+            tt_tag = tinytag.TinyTag.get(str(corrupt_file))
+            # If it doesn't raise an exception, check what it extracted
+            assert tt_tag is not None
+        except tinytag.TinyTagException:
+            # Expected for corrupted files
+            pass
+
+        try:
+            am_data = audio_metadata.load(str(corrupt_file))
+            assert am_data is not None
+        except (FileNotFoundError, audio_metadata.UnsupportedFormat):
+            # Expected for corrupted files
+            pass

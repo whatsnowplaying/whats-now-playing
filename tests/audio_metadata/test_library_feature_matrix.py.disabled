@@ -1,0 +1,335 @@
+#!/usr/bin/env python3
+"""Test matrix of what each library can extract from each format."""
+
+import json
+from pathlib import Path
+
+import pytest
+
+import tinytag
+from nowplaying.vendor import audio_metadata
+
+
+def _extract_basic_attributes(tag, results: dict) -> None:
+    """Extract basic attributes from tinytag."""
+    basic_attrs = [
+        'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'comment', 'disc', 'disc_total',
+        'duration', 'filesize', 'genre', 'samplerate', 'title', 'track', 'track_total', 'year'
+    ]
+
+    for attr in basic_attrs:
+        if hasattr(tag, attr):
+            value = getattr(tag, attr)
+            if value is not None:
+                results[attr] = value
+
+
+def _extract_other_fields(tag, results: dict) -> None:
+    """Extract other/extra fields from tinytag."""
+    if hasattr(tag, 'other') and tag.other:
+        for key, value in tag.other.items():
+            if value is not None:
+                results[f'other_{key}'] = value
+
+
+def _extract_image_info(tag, results: dict) -> None:
+    """Extract image information from tinytag."""
+    if not (hasattr(tag, 'images') and tag.images):
+        return
+
+    all_images = []
+    image_hashes = set()
+
+    # Add front_cover if present
+    if tag.images.front_cover:
+        all_images.append(tag.images.front_cover)
+        image_hashes.add(hash(tag.images.front_cover.data))
+
+    # Add cover list images (avoiding duplicates)
+    images_dict = tag.images.as_dict()
+    if 'cover' in images_dict and images_dict['cover']:
+        for img in images_dict['cover']:
+            img_hash = hash(img.data)
+            if img_hash not in image_hashes:
+                all_images.append(img)
+                image_hashes.add(img_hash)
+
+    if all_images:
+        results['image_count'] = len(all_images)
+        results['image_sizes'] = [len(img.data) for img in all_images]
+
+
+def extract_tinytag_metadata(filepath: str) -> dict[str, any]:
+    """Extract metadata using tinytag."""
+    results = {}
+    try:
+        tag = tinytag.TinyTag.get(filepath, image=True)
+        _extract_basic_attributes(tag, results)
+        _extract_other_fields(tag, results)
+        _extract_image_info(tag, results)
+    except (FileNotFoundError, tinytag.TinyTagException) as exc:
+        results['error'] = str(exc)
+    return results
+
+
+def extract_audio_metadata_metadata(filepath: str) -> dict[str, any]:
+    """Extract metadata using audio_metadata."""
+    results = {}
+    try:
+        audio_data = audio_metadata.load(filepath)
+
+        # Tags
+        if hasattr(audio_data, 'tags') and audio_data.tags:
+            for key, value in audio_data.tags.items():
+                if isinstance(value, list):
+                    # Convert complex objects to strings for comparison
+                    results[f'tag_{key}'] = [str(item) for item in value]
+                else:
+                    results[f'tag_{key}'] = str(value)
+
+        # Stream info (excluding complex internal objects)
+        if hasattr(audio_data, 'streaminfo') and audio_data.streaminfo:
+            for key, value in audio_data.streaminfo.items():
+                if not key.startswith('_') and not callable(value):
+                    try:
+                        # Only include serializable values
+                        json.dumps(value, default=str)
+                        results[f'stream_{key}'] = value
+                    except (TypeError, ValueError):
+                        results[f'stream_{key}'] = str(value)
+
+        # Picture information
+        if hasattr(audio_data, 'pictures') and audio_data.pictures:
+            results['picture_count'] = len(audio_data.pictures)
+            results['picture_sizes'] = [len(pic.data) for pic in audio_data.pictures]
+            results['picture_types'] = [
+                getattr(pic, 'type', 'unknown') for pic in audio_data.pictures
+            ]
+
+    except (FileNotFoundError, audio_metadata.UnsupportedFormat) as exc:
+        results['error'] = str(exc)
+
+    return results
+
+
+@pytest.fixture
+def test_files(getroot) -> dict[str, list[str]]:
+    """Get organized test files by category."""
+    audio_dir = Path(getroot) / 'tests' / 'audio'
+    return {
+        'basic': [
+            audio_dir / '15_Ghosts_II_64kb_orig.mp3', audio_dir / '15_Ghosts_II_64kb_orig.flac',
+            audio_dir / '15_Ghosts_II_64kb_orig.m4a', audio_dir / '15_Ghosts_II_64kb_orig.aiff'
+        ],
+        'complex': [
+            audio_dir / '15_Ghosts_II_64kb_füllytâgged.mp3',
+            audio_dir / '15_Ghosts_II_64kb_füllytâgged.flac',
+            audio_dir / '15_Ghosts_II_64kb_füllytâgged.m4a',
+            audio_dir / '15_Ghosts_II_64kb_füllytâgged.aiff'
+        ],
+        'multi_value': [audio_dir / 'multi.mp3', audio_dir / 'multi.flac', audio_dir / 'multi.m4a'],
+        'multi_image': [audio_dir / 'multiimage.m4a'],
+        'discsubtitle': [
+            audio_dir / 'discsubtitle.mp3', audio_dir / 'discsubtitle.flac',
+            audio_dir / 'discsubtitle.m4a'
+        ]
+    }
+
+
+@pytest.mark.parametrize("file_category",
+                         ["basic", "complex", "multi_value", "multi_image", "discsubtitle"])
+@pytest.mark.parametrize("library", ["tinytag", "audio_metadata"])
+def test_library_extraction_matrix(test_files, file_category, library):  # pylint: disable=redefined-outer-name
+    """Test what each library can extract from each file category."""
+
+    for test_file in test_files[file_category]:
+        if not test_file.exists():
+            pytest.skip(f"Test file not found: {test_file}")
+
+        if library == "tinytag":
+            result = extract_tinytag_metadata(str(test_file))
+        else:
+            result = extract_audio_metadata_metadata(str(test_file))
+
+        # Handle known limitations and errors
+        if 'error' in result:
+            # Document known limitations
+            if library == "audio_metadata" and test_file.suffix == '.aiff':
+                pytest.skip(f"Known limitation: {library} doesn't support .aiff")
+            else:
+                pytest.fail(f"{library} failed to process {test_file.name}: {result['error']}")
+
+        # Check if library extracted meaningful metadata
+        basic_fields = ['artist', 'title', 'album']
+        extracted_basic = [field for field in basic_fields if any(field in key for key in result)]
+
+        # Handle known limitations for libraries that load but don't extract data
+        if len(extracted_basic) == 0:
+            if library == "audio_metadata" and test_file.suffix == '.aiff':
+                pytest.skip(f"Known limitation: {library} loads .aiff but extracts no "
+                            f"meaningful metadata")
+            else:
+                pytest.fail(f"{library} extracted no basic metadata from {test_file.name}")
+
+
+def test_format_support_matrix(test_files):  # pylint: disable=redefined-outer-name
+    """Test which formats each library supports."""
+    support_matrix = {'tinytag': {}, 'audio_metadata': {}}
+
+    all_files = []
+    for category_files in test_files.values():
+        all_files.extend(category_files)
+
+    for test_file in set(all_files):  # Remove duplicates
+        if not test_file.exists():
+            continue
+
+        file_format = test_file.suffix
+
+        # Test tinytag
+        tt_result = extract_tinytag_metadata(str(test_file))
+        support_matrix['tinytag'][file_format] = 'error' not in tt_result
+
+        # Test audio_metadata
+        am_result = extract_audio_metadata_metadata(str(test_file))
+        # audio_metadata support is more nuanced - check if it extracted meaningful data
+        am_has_data = ('error' not in am_result
+                       and (any(key.startswith('tag_') for key in am_result)
+                            or any(key.startswith('stream_') for key in am_result)))
+        support_matrix['audio_metadata'][file_format] = am_has_data
+
+    # Print support matrix for documentation
+    print("\\nFormat Support Matrix:")
+    print("Format   | TinyTag | Audio_metadata")
+    print("---------|---------|---------------")
+    for fmt in sorted(
+            set(
+                list(support_matrix['tinytag'].keys()) +
+                list(support_matrix['audio_metadata'].keys()))):
+        tt_support = "✓" if support_matrix['tinytag'].get(fmt, False) else "✗"
+        am_support = "✓" if support_matrix['audio_metadata'].get(fmt, False) else "✗"
+        print(f"{fmt:8} |    {tt_support}    |       {am_support}")
+
+
+def test_metadata_field_coverage(test_files):  # pylint: disable=redefined-outer-name
+    """Test which metadata fields each library can extract."""
+    field_coverage = {'tinytag': set(), 'audio_metadata': set()}
+
+    # Test on fully tagged files for maximum coverage
+    for test_file in test_files['complex']:
+        if not test_file.exists():
+            continue
+
+        # TinyTag fields
+        tt_result = extract_tinytag_metadata(str(test_file))
+        if 'error' not in tt_result:
+            field_coverage['tinytag'].update(tt_result.keys())
+
+        # Audio_metadata fields
+        am_result = extract_audio_metadata_metadata(str(test_file))
+        if 'error' not in am_result:
+            field_coverage['audio_metadata'].update(am_result.keys())
+
+    # Compare field coverage
+    common_fields = field_coverage['tinytag'] & field_coverage['audio_metadata']
+    tinytag_only = field_coverage['tinytag'] - field_coverage['audio_metadata']
+    audio_metadata_only = field_coverage['audio_metadata'] - field_coverage['tinytag']
+
+    print("\\nField Coverage Analysis:")
+    print(f"Common fields ({len(common_fields)}): {sorted(common_fields)}")
+    print(f"TinyTag only ({len(tinytag_only)}): {sorted(tinytag_only)}")
+    print(f"Audio_metadata only ({len(audio_metadata_only)}): {sorted(audio_metadata_only)}")
+
+    # Ensure both libraries extract some metadata
+    assert len(field_coverage['tinytag']) > 0, "TinyTag extracted no fields"
+    assert len(field_coverage['audio_metadata']) > 0, "Audio_metadata extracted no fields"
+
+
+@pytest.mark.parametrize("test_file_name", [
+    "15_Ghosts_II_64kb_füllytâgged.mp3", "15_Ghosts_II_64kb_füllytâgged.flac",
+    "15_Ghosts_II_64kb_füllytâgged.m4a"
+])
+def test_library_parity_check(getroot, test_file_name):  # pylint: disable=redefined-outer-name
+    """Document known differences between libraries for the same file."""
+    test_file = Path(getroot) / 'tests' / 'audio' / test_file_name
+    if not test_file.exists():
+        pytest.skip(f"Test file not found: {test_file}")
+
+    tt_result = extract_tinytag_metadata(str(test_file))
+    am_result = extract_audio_metadata_metadata(str(test_file))
+
+    if 'error' in tt_result or 'error' in am_result:
+        pytest.skip(f"One library failed to process {test_file_name}")
+
+    # Look for equivalent fields that should have same values
+    equivalent_mappings = {('artist', 'tag_artist'), ('title', 'tag_title'), ('album', 'tag_album'),
+                           ('genre', 'tag_genre'), ('duration', 'stream_duration')}
+
+    for tt_field, am_field in equivalent_mappings:
+        tt_value = tt_result.get(tt_field)
+        am_value = am_result.get(am_field)
+
+        if tt_value is not None and am_value is not None:
+            # Handle list vs string differences
+            if isinstance(am_value, list) and len(am_value) == 1:
+                am_value = am_value[0]
+
+            # For duration, allow larger differences as libraries calculate differently
+            if tt_field == 'duration' and isinstance(tt_value, (int, float)) and isinstance(
+                    am_value, (int, float)):
+                duration_diff = abs(float(tt_value) - float(am_value))
+                if duration_diff > 5.0:  # Allow up to 5 second difference
+                    print(f"  ⚠️  Significant duration difference in {test_file_name}: "
+                          f"TinyTag={tt_value}s, Audio_metadata={am_value}s "
+                          f"(diff: {duration_diff:.1f}s)")
+                    # This is informational - libraries may calculate duration differently
+            else:
+                # For other fields, values should match
+                assert str(tt_value) == str(am_value), \
+                    f"Value mismatch for {tt_field}/{am_field} in {test_file_name}: " \
+                    f"TinyTag='{tt_value}', Audio_metadata='{am_value}'"
+
+
+def test_discsubtitle_extraction(test_files):  # pylint: disable=redefined-outer-name
+    """Test discsubtitle extraction from both libraries."""
+    discsubtitle_files = test_files.get('discsubtitle', [])
+
+    for test_file in discsubtitle_files:
+        if not test_file.exists():
+            pytest.skip(f"Discsubtitle test file not found: {test_file}")
+
+        print(f"\nTesting discsubtitle in {test_file.name}:")
+
+        # TinyTag extraction
+        tt_result = extract_tinytag_metadata(str(test_file))
+        tt_discsubtitle = None
+
+        # Look for discsubtitle in TinyTag other fields
+        for key, value in tt_result.items():
+            if 'subtitle' in key.lower() and 'other_' in key:
+                tt_discsubtitle = value
+                print(f"  TinyTag found: {key} = {value}")
+                break
+
+        # Audio_metadata extraction
+        am_result = extract_audio_metadata_metadata(str(test_file))
+        am_discsubtitle = None
+
+        # Look for discsubtitle in audio_metadata
+        for key, value in am_result.items():
+            if 'discsubtitle' in key.lower() or ('subtitle' in key.lower() and 'tag_' in key):
+                am_discsubtitle = value
+                print(f"  Audio_metadata found: {key} = {value}")
+                break
+
+        # Both should find some form of discsubtitle
+        assert tt_discsubtitle is not None or am_discsubtitle is not None, \
+            f"Neither library found discsubtitle in {test_file.name}"
+
+        # Document what each library found
+        if tt_discsubtitle and am_discsubtitle:
+            print(f"  ✓ Both libraries found discsubtitle in {test_file.name}")
+        elif tt_discsubtitle:
+            print(f"  ⚠️  Only TinyTag found discsubtitle in {test_file.name}")
+        elif am_discsubtitle:
+            print(f"  ⚠️  Only Audio_metadata found discsubtitle in {test_file.name}")

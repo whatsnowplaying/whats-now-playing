@@ -1,0 +1,143 @@
+{
+  "15_Ghosts_II_64kb_orig.mp3": {
+    "tinytag": {
+      "success": true,
+      "field_count": 5,
+      "fields": [
+        "album",
+        "artist",
+        "bitrate",
+        "duration",
+        "title"
+      ]
+    },
+    "audio_metadata": {
+      "success": true,
+      "field_count": 13,
+      "fields": [
+        "stream_bitrate",
+        "stream_bitrate_mode",
+        "stream_channel_mode",
+        "stream_channels",
+        "stream_duration",
+        "stream_layer",
+        "stream_protected",
+        "stream_sample_rate",
+        "stream_version",
+        "tag_album",
+        "tag_artist",
+        "tag_title",
+        "tag_tracknumber"
+      ]
+    }
+  },
+  "15_Ghosts_II_64kb_orig.flac": {
+    "tinytag": {
+      "success": true,
+      "field_count": 6,
+      "fields": [
+        "album",
+        "artist",
+        "bitrate",
+        "duration",
+        "other_encoder",
+        "title"
+      ]
+    },
+    "audio_metadata": {
+      "success": true,
+      "field_count": 11,
+      "fields": [
+        "stream_bit_depth",
+        "stream_bitrate",
+        "stream_channels",
+        "stream_duration",
+        "stream_md5",
+        "stream_sample_rate",
+        "tag_album",
+        "tag_artist",
+        "tag_encoder",
+        "tag_title",
+        "tag_tracknumber"
+      ]
+    }
+  },
+  "15_Ghosts_II_64kb_f\u00fcllyt\u00e2gged.mp3": {
+    "tinytag": {
+      "success": true,
+      "field_count": 33,
+      "fields": [
+        "album",
+        "artist",
+        "bitrate",
+        "duration",
+        "other_acoustid id",
+        "other_asin",
+        "other_barcode",
+        "other_bpm",
+        "other_catalog_number",
+        "other_initial_key",
+        "other_isrc",
+        "other_license",
+        "other_media",
+        "other_musicbrainz album artist id",
+        "other_musicbrainz album id",
+        "other_musicbrainz album release country",
+        "other_musicbrainz album status",
+        "other_musicbrainz album type",
+        "other_musicbrainz artist id",
+        "other_musicbrainz release group id",
+        "other_musicbrainz release track id",
+        "other_originalyear",
+        "other_performer",
+        "other_publisher",
+        "other_script",
+        "other_tdor",
+        "other_tipl",
+        "other_tmcl",
+        "other_tso2",
+        "other_tsop",
+        "other_ufid",
+        "other_url",
+        "title"
+      ]
+    },
+    "audio_metadata": {
+      "success": true,
+      "field_count": 31,
+      "fields": [
+        "stream_bitrate",
+        "stream_bitrate_mode",
+        "stream_channel_mode",
+        "stream_channels",
+        "stream_duration",
+        "stream_layer",
+        "stream_protected",
+        "stream_sample_rate",
+        "stream_version",
+        "tag_WOAR",
+        "tag_album",
+        "tag_albumartist",
+        "tag_albumartistsort",
+        "tag_artist",
+        "tag_artistsort",
+        "tag_bpm",
+        "tag_date",
+        "tag_discnumber",
+        "tag_genre",
+        "tag_isrc",
+        "tag_key",
+        "tag_label",
+        "tag_license",
+        "tag_media",
+        "tag_originaldate",
+        "tag_people",
+        "tag_performers",
+        "tag_title",
+        "tag_tracknumber",
+        "tag_ufid",
+        "tag_usertext"
+      ]
+    }
+  }
+}

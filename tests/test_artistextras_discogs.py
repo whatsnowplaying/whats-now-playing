@@ -519,6 +519,7 @@ async def test_discogs_website_url_parsing(bootstrap, test_urls, test_id):
 # Configuration State Validation Tests
 
 
+@skip_no_discogs_key
 def test_discogs_invalid_api_key_format(bootstrap):
     ''' test behavior with invalid API key formats '''
 
@@ -578,6 +579,7 @@ def test_discogs_invalid_api_key_format(bootstrap):
     ({'bio': False, 'fanart': False, 'thumbnails': False}, 'nothing-enabled'),
     ({'bio': True, 'fanart': True, 'thumbnails': True}, 'everything-enabled')
 ])
+@skip_no_discogs_key
 def test_discogs_selective_feature_disabling(bootstrap, features, test_id):
     ''' test plugin behavior when specific features are disabled '''
 
@@ -1044,6 +1046,7 @@ async def test_discogs_memory_usage_stability(bootstrap):
                  successful_lookups, len(tracks))
 
 
+@skip_no_discogs_key
 def test_discogs_configuration_validation_for_djs(bootstrap):
     ''' test configuration scenarios important for DJ reliability '''
 

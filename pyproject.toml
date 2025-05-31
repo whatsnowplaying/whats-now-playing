@@ -46,9 +46,6 @@ packages = [
   "nowplaying.templates",
   "nowplaying.twitch",
   "nowplaying.vendor",
-  "nowplaying.vendor.audio_metadata",
-  "nowplaying.vendor.audio_metadata.formats",
-  "nowplaying.vendor.audio_metadata.tbm_utils",
   "nowplaying.vendor.pid",
 ]
 license-files = ["LICENSE.txt"]

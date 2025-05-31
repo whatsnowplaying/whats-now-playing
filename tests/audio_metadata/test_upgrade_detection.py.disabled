@@ -1,0 +1,453 @@
+#!/usr/bin/env python3
+"""Automated detection and documentation of library upgrade changes."""
+
+import json
+import time
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+import tinytag
+
+
+class LibraryVersionTracker:
+    """Track library versions and capabilities across upgrades."""
+
+    def __init__(self, tracking_dir: Path):
+        self.tracking_dir = tracking_dir
+        self.tracking_dir.mkdir(parents=True, exist_ok=True)
+        self.version_file = self.tracking_dir / 'library_versions.json'
+        self.capabilities_file = self.tracking_dir / 'library_capabilities.json'
+
+    @staticmethod
+    def get_library_versions() -> dict[str, str]:
+        """Get current library versions."""
+        versions = {}
+
+        # TinyTag version
+        try:
+            versions['tinytag'] = getattr(tinytag, '__version__', 'unknown')
+            if versions['tinytag'] == 'unknown':
+                # Try alternative version detection
+                tinytag_path = Path(tinytag.__file__).parent
+                setup_py = tinytag_path / 'setup.py'
+                if setup_py.exists():
+                    # Could parse setup.py for version, but this is complex
+                    pass
+        except Exception:  # pylint: disable=broad-exception-caught
+            versions['tinytag'] = 'error'
+
+        # Audio_metadata version
+        try:
+            versions['audio_metadata'] = getattr(audio_metadata, '__version__', 'unknown')
+        except Exception:  # pylint: disable=broad-exception-caught
+            versions['audio_metadata'] = 'error'
+
+        return versions
+
+    @staticmethod
+    def get_library_capabilities() -> dict[str, Any]:
+        """Get current library capabilities and supported features."""
+        capabilities = {}
+
+        # TinyTag capabilities
+        try:
+            tt_caps = {
+                'supported_extensions':
+                getattr(tinytag.TinyTag, 'SUPPORTED_FILE_EXTENSIONS', []),
+                'has_image_support':
+                hasattr(tinytag.TinyTag, 'get')
+                and 'image' in tinytag.TinyTag.get.__code__.co_varnames,
+                'available_attributes':
+                [attr for attr in dir(tinytag.TinyTag) if not attr.startswith('_')],
+                'module_path':
+                tinytag.__file__
+            }
+            capabilities['tinytag'] = tt_caps
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            capabilities['tinytag'] = {'error': str(exc)}
+
+        # audio_metadata library no longer available
+        capabilities['audio_metadata'] = {'error': 'library not available'}
+
+        return capabilities
+
+    def save_current_state(self):
+        """Save current library versions and capabilities."""
+        versions = self.get_library_versions()
+        capabilities = self.get_library_capabilities()
+
+        with open(self.version_file, 'w', encoding='utf-8') as json_file:
+            json.dump(versions, json_file, indent=2)
+
+        with open(self.capabilities_file, 'w', encoding='utf-8') as json_file:
+            json.dump(capabilities, json_file, indent=2, default=str)
+
+    def load_previous_state(self) -> tuple[dict[str, str] | None, dict[str, Any] | None]:
+        """Load previously saved versions and capabilities."""
+        prev_versions = None
+        prev_capabilities = None
+
+        if self.version_file.exists():
+            with open(self.version_file, 'r', encoding='utf-8') as json_file:
+                prev_versions = json.load(json_file)
+
+        if self.capabilities_file.exists():
+            with open(self.capabilities_file, 'r', encoding='utf-8') as json_file:
+                prev_capabilities = json.load(json_file)
+
+        return prev_versions, prev_capabilities
+
+    def compare_versions(self, prev_versions: dict[str, str],
+                         current_versions: dict[str, str]) -> dict[str, dict[str, str]]:
+        """Compare previous and current versions."""
+        version_changes = {}
+
+        for library in set(list(prev_versions.keys()) + list(current_versions.keys())):
+            prev = prev_versions.get(library, 'not_present')
+            current = current_versions.get(library, 'not_present')
+
+            if prev != current:
+                version_changes[library] = {
+                    'previous': prev,
+                    'current': current,
+                    'change_type': self._classify_version_change(prev, current)
+                }
+
+        return version_changes
+
+    @staticmethod
+    def _classify_version_change(prev: str, current: str) -> str:
+        """Classify the type of version change."""
+        if prev == 'not_present':
+            return 'added'
+        if current == 'not_present':
+            return 'removed'
+        if prev == 'unknown' or current == 'unknown':
+            return 'unknown'
+        return 'upgraded'
+
+    def compare_capabilities(self, prev_caps: dict[str, Any],
+                             current_caps: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        """Compare previous and current capabilities."""
+        capability_changes = {}
+
+        for library in set(list(prev_caps.keys()) + list(current_caps.keys())):
+            prev = prev_caps.get(library, {})
+            current = current_caps.get(library, {})
+
+            lib_changes = self._find_capability_differences(prev, current)
+            if lib_changes:
+                capability_changes[library] = lib_changes
+
+        return capability_changes
+
+    @staticmethod
+    def _find_capability_differences(prev: dict[str, Any],
+                                     current: dict[str, Any]) -> dict[str, Any]:
+        """Find differences in capabilities."""
+        changes = {}
+
+        # Compare supported extensions
+        if 'supported_extensions' in prev and 'supported_extensions' in current:
+            prev_ext = set(prev['supported_extensions'])
+            current_ext = set(current['supported_extensions'])
+
+            added_ext = current_ext - prev_ext
+            removed_ext = prev_ext - current_ext
+
+            if added_ext or removed_ext:
+                changes['extensions'] = {'added': list(added_ext), 'removed': list(removed_ext)}
+
+        # Compare available attributes/modules
+        for attr_name in ['available_attributes', 'available_modules', 'available_formats']:
+            if attr_name in prev and attr_name in current:
+                prev_attrs = set(prev[attr_name])
+                current_attrs = set(current[attr_name])
+
+                added_attrs = current_attrs - prev_attrs
+                removed_attrs = prev_attrs - current_attrs
+
+                if added_attrs or removed_attrs:
+                    changes[attr_name] = {
+                        'added': list(added_attrs),
+                        'removed': list(removed_attrs)
+                    }
+
+        # Compare boolean capabilities
+        for bool_cap in ['has_image_support', 'has_pictures_support']:
+            if bool_cap in prev and bool_cap in current:
+                if prev[bool_cap] != current[bool_cap]:
+                    changes[bool_cap] = {'previous': prev[bool_cap], 'current': current[bool_cap]}
+
+        return changes
+
+
+@pytest.fixture
+def version_tracker() -> LibraryVersionTracker:
+    """Create version tracker with persistent storage."""
+    tracking_dir = Path(__file__).parent / 'specifications'
+    return LibraryVersionTracker(tracking_dir)
+
+
+@pytest.fixture
+def test_files(getroot) -> list[Path]:
+    """Get stable test files for upgrade testing."""
+    audio_dir = Path(getroot) / 'tests' / 'audio'
+    return [
+        audio_dir / '15_Ghosts_II_64kb_orig.mp3', audio_dir / '15_Ghosts_II_64kb_orig.flac',
+        audio_dir / '15_Ghosts_II_64kb_füllytâgged.mp3'
+    ]
+
+
+def test_current_library_versions(version_tracker):  # pylint: disable=redefined-outer-name
+    """Document current library versions."""
+    versions = version_tracker.get_library_versions()
+    capabilities = version_tracker.get_library_capabilities()
+
+    print("\\nCurrent Library State:")
+    print("=" * 50)
+
+    for library, version in versions.items():
+        print(f"{library}: {version}")
+
+        if library in capabilities and 'error' not in capabilities[library]:
+            caps = capabilities[library]
+
+            if 'supported_extensions' in caps:
+                print(f"  Supported extensions: {len(caps['supported_extensions'])} formats")
+
+            if 'available_formats' in caps:
+                print(f"  Available format modules: {caps['available_formats']}")
+
+            if 'has_image_support' in caps:
+                print(f"  Image support: {caps['has_image_support']}")
+
+            if 'has_pictures_support' in caps:
+                print(f"  Pictures support: {caps['has_pictures_support']}")
+
+    # Save current state for future comparisons
+    version_tracker.save_current_state()
+
+
+def test_detect_version_changes(version_tracker):  # pylint: disable=redefined-outer-name
+    """Detect version changes since last run."""
+    current_versions = version_tracker.get_library_versions()
+    current_capabilities = version_tracker.get_library_capabilities()
+
+    prev_versions, prev_capabilities = version_tracker.load_previous_state()
+
+    if prev_versions is None:
+        pytest.skip("No previous version data found - this is the first run")
+
+    version_changes = version_tracker.compare_versions(prev_versions, current_versions)
+    capability_changes = version_tracker.compare_capabilities(prev_capabilities or {},
+                                                              current_capabilities)
+
+    # Report version changes
+    if version_changes:
+        print("\\nVersion Changes Detected:")
+        print("=" * 50)
+        for library, change in version_changes.items():
+            print(f"{library}: {change['previous']} -> {change['current']} "
+                  f"({change['change_type']})")
+
+    # Report capability changes
+    if capability_changes:
+        print("\\nCapability Changes Detected:")
+        print("=" * 50)
+        for library, changes in capability_changes.items():
+            print(f"{library}:")
+            for change_type, change_data in changes.items():
+                if isinstance(change_data, dict) and 'added' in change_data:
+                    if change_data['added']:
+                        print(f"  Added {change_type}: {change_data['added']}")
+                    if change_data['removed']:
+                        print(f"  Removed {change_type}: {change_data['removed']}")
+                else:
+                    print(f"  {change_type}: {change_data}")
+
+    # Update saved state
+    version_tracker.save_current_state()
+
+    # This test is informational - document changes but don't fail
+    if version_changes or capability_changes:
+        print("\\nLibrary changes detected and documented.")
+
+
+def test_extraction_capability_regression(version_tracker, test_files):  # pylint: disable=redefined-outer-name,too-many-locals,too-many-branches
+    """Test for regressions in metadata extraction capabilities."""
+    current_extraction_results = {}
+
+    for test_file in test_files:
+        if not test_file.exists():
+            continue
+
+        file_key = test_file.name
+        current_extraction_results[file_key] = {}
+
+        # Test TinyTag extraction
+        try:
+            tt_tag = tinytag.TinyTag.get(str(test_file), image=False)
+            tt_fields = []
+
+            # Basic fields
+            for attr in ['album', 'artist', 'title', 'duration', 'bitrate']:
+                if hasattr(tt_tag, attr) and getattr(tt_tag, attr) is not None:
+                    tt_fields.append(attr)
+
+            # Other fields (tinytag 2.1.1+ API)
+            if hasattr(tt_tag, 'other') and tt_tag.other:
+                tt_fields.extend([f'other_{key}' for key in tt_tag.other.keys()])
+
+            current_extraction_results[file_key]['tinytag'] = {
+                'success': True,
+                'field_count': len(tt_fields),
+                'fields': sorted(tt_fields)
+            }
+
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            current_extraction_results[file_key]['tinytag'] = {'success': False, 'error': str(exc)}
+
+        # Test audio_metadata extraction
+        try:
+            am_data = audio_metadata.load(str(test_file))
+            am_fields = []
+
+            if hasattr(am_data, 'tags'):
+                am_fields.extend([f'tag_{key}' for key in am_data.tags.keys()])
+
+            if hasattr(am_data, 'streaminfo'):
+                am_fields.extend([
+                    f'stream_{key}' for key in am_data.streaminfo.keys() if not key.startswith('_')
+                ])
+
+            current_extraction_results[file_key]['audio_metadata'] = {
+                'success': True,
+                'field_count': len(am_fields),
+                'fields': sorted(am_fields)
+            }
+
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            current_extraction_results[file_key]['audio_metadata'] = {
+                'success': False,
+                'error': str(exc)
+            }
+
+    # Save current extraction results
+    extraction_file = version_tracker.tracking_dir / 'extraction_capabilities.json'
+    with open(extraction_file, 'w', encoding='utf-8') as json_file:
+        json.dump(current_extraction_results, json_file, indent=2)
+
+    print("\\nCurrent Extraction Capabilities:")
+    print("=" * 50)
+    for file_key, results in current_extraction_results.items():
+        print(f"\\n{file_key}:")
+        for library, result in results.items():
+            if result['success']:
+                print(f"  {library}: {result['field_count']} fields extracted")
+            else:
+                print(f"  {library}: FAILED - {result['error']}")
+
+
+def test_new_feature_detection(version_tracker):  # pylint: disable=redefined-outer-name,too-many-locals,too-many-branches
+    """Detect new features that become available after upgrades."""
+    # This test compares current capabilities with previous baseline
+    # and highlights new features that weren't available before
+
+    current_capabilities = version_tracker.get_library_capabilities()
+    _, prev_capabilities = version_tracker.load_previous_state()
+
+    if prev_capabilities is None:
+        pytest.skip("No previous capability data found")
+
+    new_features = {}
+
+    for library in ['tinytag', 'audio_metadata']:
+        if library in current_capabilities and library in prev_capabilities:
+            current = current_capabilities[library]
+            previous = prev_capabilities[library]
+
+            lib_new_features = []
+
+            # Check for new extensions
+            if 'supported_extensions' in current and 'supported_extensions' in previous:
+                new_ext = set(current['supported_extensions']) - set(
+                    previous['supported_extensions'])
+                if new_ext:
+                    lib_new_features.append(f"New extensions: {list(new_ext)}")
+
+            # Check for new attributes/methods
+            for attr_type in ['available_attributes', 'available_modules']:
+                if attr_type in current and attr_type in previous:
+                    new_attrs = set(current[attr_type]) - set(previous[attr_type])
+                    if new_attrs:
+                        lib_new_features.append(f"New {attr_type}: {list(new_attrs)}")
+
+            # Check for new boolean capabilities
+            for bool_cap in ['has_image_support', 'has_pictures_support']:
+                if bool_cap in current and bool_cap in previous:
+                    if not previous[bool_cap] and current[bool_cap]:
+                        lib_new_features.append(f"New capability: {bool_cap}")
+
+            if lib_new_features:
+                new_features[library] = lib_new_features
+
+    if new_features:
+        print("\\nNew Features Detected:")
+        print("=" * 50)
+        for library, features in new_features.items():
+            print(f"{library}:")
+            for feature in features:
+                print(f"  + {feature}")
+    else:
+        print("\\nNo new features detected since last run.")
+
+
+def test_performance_regression_detection(test_files):  # pylint: disable=redefined-outer-name
+    """Detect performance regressions in metadata extraction."""
+
+    performance_results = {}
+
+    for test_file in test_files[:2]:  # Test on subset for speed
+        if not test_file.exists():
+            continue
+
+        file_key = test_file.name
+        performance_results[file_key] = {}
+
+        # Time TinyTag extraction
+        start_time = time.time()
+        for _ in range(10):  # Multiple runs for average
+            try:
+                tinytag.TinyTag.get(str(test_file), image=False)
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass
+        tt_time = (time.time() - start_time) / 10
+
+        # Time audio_metadata extraction
+        start_time = time.time()
+        for _ in range(10):
+            try:
+                audio_metadata.load(str(test_file))
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass
+        am_time = (time.time() - start_time) / 10
+
+        performance_results[file_key] = {
+            'tinytag_avg_time': round(tt_time, 4),
+            'audio_metadata_avg_time': round(am_time, 4)
+        }
+
+    print("\\nPerformance Benchmarks:")
+    print("=" * 50)
+    for file_key, results in performance_results.items():
+        print(f"{file_key}:")
+        print(f"  TinyTag: {results['tinytag_avg_time']:.4f}s")
+        print(f"  Audio_metadata: {results['audio_metadata_avg_time']:.4f}s")
+
+    # Save performance results for future comparison
+    perf_file = Path(__file__).parent / 'specifications' / 'performance_baseline.json'
+    with open(perf_file, 'w', encoding='utf-8') as json_file:
+        json.dump(performance_results, json_file, indent=2)

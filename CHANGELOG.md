@@ -34,13 +34,20 @@
   of proper machine names.
 * Fixed excluded files not getting properly excluded during processing.
 * MPRIS2 support has been disabled due to stability issues.
+* Upgraded tinytag library from vendored 1.10.1 to system package 2.1.1
+  with enhanced multi-value field support for better metadata extraction.
+* Improved M4A file metadata processing - now properly extracts multiple
+  ISRC codes and artist IDs where previously only the last value was captured.
+* Enhanced multi-value field handling across all audio formats (MP3, FLAC, M4A, AIFF)
+  with automatic detection and splitting of delimited metadata values.
 
 * Internal changes:
   * Upgrade to Python 3.11.
   * Ability to read multiple covers and store them in a slightly
     revamped imagecache.
   * Imagecache DB is now v2 to reflect the front cover cache.
-  * TinyTag pre-2.0 is now vendored again.
+  * Removed vendored TinyTag in favor of system package 2.1.1 with
+    custom M4A multi-value field parsing fix via monkey patch.
   * Many, many dependency updates which fix various bugs and
     security problems.
   * Support attempting to build on older macOS releases.
@@ -73,6 +80,7 @@
     * And many others for security and performance improvements.
   * Removed vendored directories:
 
+    * tinytag
     * discogs_client
     * wptools
 
