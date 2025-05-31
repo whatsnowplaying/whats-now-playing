@@ -35,7 +35,8 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         delay = self.calculate_delay()
         try:
             logging.debug('Fetching async %s', api)
-            async with aiohttp.ClientSession() as session:
+            connector = nowplaying.utils.create_http_connector()
+            async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(f'https://theaudiodb.com/api/v1/json/{apikey}/{api}',
                                        timeout=aiohttp.ClientTimeout(total=delay)) as response:
                     return await response.json()

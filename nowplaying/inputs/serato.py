@@ -315,19 +315,22 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         PARSEDSESSIONS = []
         LASTPROCESSED = 0
         self.lastfetched = 0
+        # Prefer local mode over remote mode when both are configured
         if seratodir:
             self.seratodir = pathlib.Path(seratodir)
             self.watchdeck = None
             PARSEDSESSIONS = []
             self.mode = 'local'
             self.mixmode = mixmode
-
-        if seratourl:
+            self.url = None  # Explicitly clear URL in local mode
+        elif seratourl:
             self.url = seratourl
             self.mode = 'remote'
             self.mixmode = 'newest'  # there is only 1 deck so always newest
+            self.seratodir = None
         else:
             self.url = None
+            self.seratodir = None
 
         if self.mixmode not in ['newest', 'oldest']:
             self.mixmode = 'newest'

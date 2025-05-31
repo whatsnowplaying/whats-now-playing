@@ -12,6 +12,7 @@ from typing import Any
 
 import aiohttp
 
+import nowplaying.utils
 from nowplaying.vendor.musicbrainzngs import mbxml
 
 logger = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
 
         for attempt in range(self.max_retries + 1):
             try:
-                connector = aiohttp.TCPConnector(ssl=ssl_context)
+                connector = nowplaying.utils.create_http_connector(ssl_context, 'musicbrainz')
                 async with aiohttp.ClientSession(
                         connector=connector, timeout=timeout_config) as session:
                     async with session.get(url, params=params, headers=headers) as response:
@@ -128,7 +129,7 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
         ssl_context = ssl.create_default_context()
         timeout_config = aiohttp.ClientTimeout(total=timeout)
 
-        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        connector = nowplaying.utils.create_http_connector(ssl_context, 'musicbrainz')
         async with aiohttp.ClientSession(connector=connector, timeout=timeout_config) as session:
             async with session.get(url) as response:
                 if response.status == 200:

@@ -13,6 +13,8 @@ import ssl
 from typing import Any
 import aiohttp
 
+import nowplaying.utils
+
 
 class WikiPage:  # pylint: disable=too-few-public-methods
     """Represents a Wikipedia page with its data."""
@@ -40,7 +42,7 @@ class AsyncWikiClient:
         self.ssl_context = ssl.create_default_context()
 
     async def __aenter__(self):
-        connector = aiohttp.TCPConnector(ssl=self.ssl_context)
+        connector = nowplaying.utils.create_http_connector(self.ssl_context)
         self.session = aiohttp.ClientSession(timeout=self.timeout, connector=connector)
         return self
 

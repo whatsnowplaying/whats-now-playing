@@ -9,10 +9,12 @@ import io
 import logging
 import os
 import re
+import ssl
 import time
 import traceback
 import typing as t
 
+import aiohttp
 import jinja2
 import normality
 import PIL.Image
@@ -280,3 +282,34 @@ def artist_name_variations(artistname: str) -> list[str]:
                 names.append(normalized)
                 names.append(normalized.translate(CUSTOM_TRANSLATE))
     return list(dict.fromkeys(names))
+
+
+def create_http_connector(ssl_context=None, service_type='default'):
+    """
+    Create a standardized aiohttp TCPConnector with optimized SSL settings.
+
+    Args:
+        ssl_context: Optional SSL context. If None, creates default context.
+        service_type: Type of service ('musicbrainz' for stricter limits, 'default' for others)
+
+    Returns:
+        aiohttp.TCPConnector with optimized settings for the service type
+    """
+
+    if ssl_context is None:
+        ssl_context = ssl.create_default_context()
+
+    base_config = {
+        'ssl': ssl_context,
+        'keepalive_timeout': 0.5 if service_type == 'musicbrainz' else 1,
+        'enable_cleanup_closed': True,
+    }
+
+    # MusicBrainz needs stricter connection limits
+    if service_type == 'musicbrainz':
+        base_config.update({
+            'limit': 1,
+            'limit_per_host': 1,
+        })
+
+    return aiohttp.TCPConnector(**base_config)
