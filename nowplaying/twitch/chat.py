@@ -64,6 +64,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         self.tasks = set()
         self.starttime = datetime.datetime.now(datetime.timezone.utc)
         self.timeout = aiohttp.ClientTimeout(total=60)
+        self.modernmeerkat_greeted = False
 
     async def _try_custom_token(self, token):
         ''' if a custom token has been provided, try it. '''
@@ -162,6 +163,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 self.chat = await Chat(
                     self.twitch, initial_channel=self.config.cparser.value('twitchbot/channel'))
                 self.chat.register_event(ChatEvent.READY, self.on_twitchchat_ready)
+                self.chat.register_event(ChatEvent.MESSAGE, self.on_twitchchat_incoming_message)
                 self.chat.register_command('whatsnowplayingversion',
                                            self.on_twitchchat_whatsnowplayingversion)
                 for configitem in self.config.cparser.childGroups():
@@ -199,6 +201,20 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
     async def on_twitchchat_ready(self, ready_event):
         ''' twitch chatbot has connected, now join '''
         await ready_event.chat.join_room(self.config.cparser.value('twitchbot/channel'))
+
+    async def on_twitchchat_incoming_message(self, msg):
+        ''' handle incoming chat messages for special responses '''
+        # Check for modernmeerkat greeting (once per program launch)
+        if not self.modernmeerkat_greeted and 'modernmeerkat' in msg.user.display_name.lower():
+            self.modernmeerkat_greeted = True
+            try:
+                await self.chat.send_message(
+                    self.config.cparser.value('twitchbot/channel'),
+                    f'hi @{msg.user.display_name}'
+                )
+                logging.info('Greeted modernmeerkat user: %s', msg.user.display_name)
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error('Failed to send modernmeerkat greeting: %s', error)
 
     async def on_twitchchat_message(self, msg):
         ''' twitch chatbot incoming message '''
