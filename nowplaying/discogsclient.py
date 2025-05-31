@@ -12,6 +12,8 @@ import ssl
 from typing import Any
 import aiohttp
 
+import nowplaying.utils
+
 
 class DiscogsRelease:  # pylint: disable=too-few-public-methods
     """Represents a Discogs release with its artists."""
@@ -126,9 +128,7 @@ class AsyncDiscogsClient:
         # Only add Authorization header if user_token is not None
         if self.user_token is not None:
             headers['Authorization'] = f'Discogs token={self.user_token}'
-        connector = aiohttp.TCPConnector(ssl=self.ssl_context,
-                                         keepalive_timeout=1,
-                                         enable_cleanup_closed=True)
+        connector = nowplaying.utils.create_http_connector(self.ssl_context)
         self.session = aiohttp.ClientSession(timeout=self.timeout,
                                              headers=headers,
                                              connector=connector)

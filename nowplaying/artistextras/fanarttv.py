@@ -9,6 +9,7 @@ import logging.handlers
 import aiohttp
 
 import nowplaying.apicache
+import nowplaying.utils
 from nowplaying.artistextras import ArtistExtrasPlugin
 
 
@@ -28,9 +29,7 @@ class Plugin(ArtistExtrasPlugin):
         try:
             baseurl = f'http://webservice.fanart.tv/v3/music/{artistid}'
             logging.debug('fanarttv async: calling %s', baseurl)
-            # Use connector with shorter keepalive to reduce SSL shutdown delays
-            connector = aiohttp.TCPConnector(keepalive_timeout=1,
-                                             enable_cleanup_closed=True)
+            connector = nowplaying.utils.create_http_connector()
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(f'{baseurl}?api_key={apikey}',
                                        timeout=aiohttp.ClientTimeout(total=delay)) as response:
