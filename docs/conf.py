@@ -23,7 +23,7 @@ from nowplaying.upgradeutils import UpgradeBinary
 # -- Project information -----------------------------------------------------
 
 project = 'What\'s Now Playing'
-copyright = '2021-2023, Allen Wittenauer'
+copyright = '2021-2025, Allen Wittenauer'
 author = 'Allen Wittenauer'
 
 
