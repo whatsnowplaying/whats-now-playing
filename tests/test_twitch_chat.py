@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-import nowplaying.twitch.chat
-from nowplaying.exceptions import PluginVerifyError
+import nowplaying.twitch.chat   # pylint: disable=import-error
+from nowplaying.exceptions import PluginVerifyError # pylint: disable=import-error
 
 
 class MockUser:  # pylint: disable=too-few-public-methods
