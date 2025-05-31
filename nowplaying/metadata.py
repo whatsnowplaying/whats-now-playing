@@ -2,7 +2,9 @@
 ''' pull out metadata '''
 
 import asyncio
+import base64
 import copy
+import json
 import logging
 import re
 import os
@@ -497,6 +499,38 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
         else:
             self.metadata[newkey] = value
 
+    @staticmethod
+    def _decode_musical_key(key_value) -> str | None:
+        """Decode musical key field, handling JSON structures from MixedInKey."""
+        if not key_value:
+            return None
+
+        key_str = str(key_value).strip()
+
+        # Check if it looks like base64 encoded JSON
+        try:
+            # Try to decode as base64 first
+            decoded_bytes = base64.b64decode(key_str)
+            decoded_str = decoded_bytes.decode('utf-8')
+
+            # Try to parse as JSON
+            key_data = json.loads(decoded_str)
+            if isinstance(key_data, dict) and 'key' in key_data:
+                return key_data['key']
+        except (ValueError, json.JSONDecodeError, UnicodeDecodeError):
+            pass
+
+        # If not base64/JSON, try direct JSON parsing
+        try:
+            key_data = json.loads(key_str)
+            if isinstance(key_data, dict) and 'key' in key_data:
+                return key_data['key']
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        # If all else fails, return the string as-is
+        return key_str
+
     def _process_extra(self, extra):
         extra_mapping = {
             "acoustid id": "acoustidid",
@@ -524,6 +558,9 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
 
             if key in list_fields:
                 self._process_list_field(extra[key], newkey)
+            elif key == "key":
+                # Special handling for musical key field
+                self.metadata[newkey] = self._decode_musical_key(extra[key])
             else:
                 self._process_single_field(extra[key], newkey)
 
@@ -534,11 +571,15 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
 
         for key in [
                 'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'comment', 'comments', 'disc',
-                'disc_total', 'duration', 'genre', 'key', 'lang', 'publisher', 'title', 'track',
+                'disc_total', 'duration', 'genre', 'lang', 'publisher', 'title', 'track',
                 'track_total', 'label'
         ]:
             if key not in self.metadata and hasattr(tag, key) and getattr(tag, key):
                 self.metadata[key] = str(getattr(tag, key))
+
+        # Handle the 'key' field separately to decode JSON if needed
+        if 'key' not in self.metadata and hasattr(tag, 'key') and getattr(tag, 'key'):
+            self.metadata['key'] = self._decode_musical_key(getattr(tag, 'key'))
 
         if self.metadata.get('comment') and not self.metadata.get('comments'):
             self.metadata['comments'] = self.metadata['comment']

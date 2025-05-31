@@ -721,3 +721,35 @@ async def test_preset_image(get_imagecache, getroot):  #pylint: disable=redefine
             '''SELECT COUNT(cachekey) FROM identifiersha WHERE imagetype="front_cover"''')
         row = cursor.fetchone()[0]
         assert row > 1
+
+
+def test_decode_musical_key():
+    """Test the _decode_musical_key method handles various key formats."""
+    from nowplaying.metadata import TinyTagRunner  # pylint: disable=import-outside-toplevel
+
+    # Test base64 encoded JSON (MixedInKey format)
+    b64_json = 'eyJhbGdvcml0aG0iOjk0LCJrZXkiOiI0QSIsInNvdXJjZSI6Im1peGVkaW5rZXkifQ=='
+    result = TinyTagRunner._decode_musical_key(b64_json)  # pylint: disable=protected-access
+    assert result == '4A'
+
+    # Test direct JSON
+    json_str = '{"algorithm":94,"key":"9B","source":"mixedinkey"}'
+    result = TinyTagRunner._decode_musical_key(json_str)  # pylint: disable=protected-access
+    assert result == '9B'
+
+    # Test simple string key
+    result = TinyTagRunner._decode_musical_key('Am')  # pylint: disable=protected-access
+    assert result == 'Am'
+
+    # Test another simple key
+    result = TinyTagRunner._decode_musical_key('C#m')  # pylint: disable=protected-access
+    assert result == 'C#m'
+
+    # Test None/empty values
+    assert TinyTagRunner._decode_musical_key(None) is None  # pylint: disable=protected-access
+    assert TinyTagRunner._decode_musical_key('') is None  # pylint: disable=protected-access
+    assert TinyTagRunner._decode_musical_key('   ') == ''  # pylint: disable=protected-access
+
+    # Test malformed base64/JSON - should return original string
+    result = TinyTagRunner._decode_musical_key('not-base64-or-json')  # pylint: disable=protected-access
+    assert result == 'not-base64-or-json'
