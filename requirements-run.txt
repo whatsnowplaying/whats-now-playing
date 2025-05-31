@@ -8,7 +8,6 @@ lxml==5.4.0
 netifaces-plus==0.12.4
 nltk==3.9.1
 normality==2.6.1
-pid==3.0.4
 pillow==11.2.1
 pillow_avif_plugin==1.5.2
 pyacoustid==1.3.0
@@ -21,8 +20,6 @@ simpleobsws==1.4.2
 tinytag==2.1.1
 twitchAPI==3.11.0
 url_normalize==2.2.1
-urllib3==2.3.0
-vendoring==1.2.0
 watchdog==6.0.0
 
 #
