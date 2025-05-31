@@ -40,7 +40,7 @@ def _check_tinytag_compatibility():
 def _create_patched_methods():
     """Create the patched methods for tinytag M4A multi-value handling."""
     # Store original methods
-    _original_parse_custom_field = tinytag.tinytag._MP4._parse_custom_field  # pylint: disable=protected-access
+    _original_parse_custom_field = tinytag.tinytag._MP4._parse_custom_field  # pylint: disable=protected-access,no-member
     _original_set_field = tinytag.tinytag.TinyTag._set_field  # pylint: disable=protected-access
 
     @classmethod
@@ -66,7 +66,7 @@ def _create_patched_methods():
                 field_name = atom_value.decode('utf-8', 'replace')
                 # pylint: disable=protected-access
                 field_name = cls._CUSTOM_FIELD_NAME_MAPPING.get(  # pylint: disable=no-member
-                    field_name, tinytag.tinytag.TinyTag._OTHER_PREFIX + field_name)  # pylint: disable=protected-access
+                    field_name, tinytag.tinytag.TinyTag._OTHER_PREFIX + field_name)  # pylint: disable=protected-access,no-member
             elif atom_type == b'data':
                 data_atom = file_handle.read(atom_size)
                 data_atoms.append(data_atom)
@@ -102,8 +102,8 @@ def _create_patched_methods():
         """
         Fixed version of _set_field that properly handles list values for other.* fields.
         """
-        if fieldname.startswith(self._OTHER_PREFIX):  # pylint: disable=protected-access
-            fieldname = fieldname[len(self._OTHER_PREFIX):]  # pylint: disable=protected-access
+        if fieldname.startswith(self._OTHER_PREFIX):  # pylint: disable=protected-access,no-member
+            fieldname = fieldname[len(self._OTHER_PREFIX):]  # pylint: disable=protected-access,no-member
             if check_conflict and fieldname in self.__dict__:
                 fieldname = '_' + fieldname
 
@@ -146,7 +146,7 @@ def apply_tinytag_patches():
         parse_custom_field_fixed, set_field_fixed = _create_patched_methods()
 
         # Apply the patches to the protected APIs
-        tinytag.tinytag._MP4._parse_custom_field = parse_custom_field_fixed  # pylint: disable=protected-access
+        tinytag.tinytag._MP4._parse_custom_field = parse_custom_field_fixed  # pylint: disable=protected-access,no-member
         tinytag.tinytag.TinyTag._set_field = set_field_fixed  # pylint: disable=protected-access
 
         logging.debug("Successfully applied tinytag M4A multi-value custom field patches")
