@@ -73,7 +73,7 @@ def test_multiple_isrc_extraction(multivalue_files, file_key):  # pylint: disabl
 
     # For multi-value test files, we expect multiple ISRC codes
     if 'multi_' in file_key:
-        status = "✓" if tt_has_multiple else "⚠️"
+        status = "[OK]" if tt_has_multiple else "[WARN]"
         detected = "detected" if tt_has_multiple else "did not detect"
         print(f"  {status}  TinyTag {detected} multiple ISRC codes in {file_key}")
 
@@ -110,7 +110,7 @@ def test_multiple_artists_extraction(multivalue_files, file_key):  # pylint: dis
     if 'multi_' in file_key:
         tt_has_multiple_artists = _has_multiple_values(tt_artists) if tt_artists else False
 
-        status = "✓" if tt_has_multiple_artists else "⚠️"
+        status = "[OK]" if tt_has_multiple_artists else "[WARN]"
         detected = "detected" if tt_has_multiple_artists else "did not detect"
         print(f"  {status}  TinyTag {detected} multiple artist IDs in {file_key}")
 
@@ -315,4 +315,4 @@ def test_tinytag_monkey_patch_functionality():
     # pylint: disable=protected-access
     assert hasattr(tt._MP4, '_parse_custom_field'), "Monkey patch should be applied"  # pylint: disable=protected-access,no-member
 
-    print("✓ TinyTag monkey patch successfully applied")
+    print("[OK] TinyTag monkey patch successfully applied")

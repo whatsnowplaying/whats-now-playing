@@ -165,7 +165,7 @@ def test_format_support_matrix(test_files):  # pylint: disable=redefined-outer-n
     print("Format   | TinyTag")
     print("---------|--------")
     for fmt in sorted(support_matrix):
-        tt_support = "✓" if support_matrix[fmt] else "✗"
+        tt_support = "[OK]" if support_matrix[fmt] else "[FAIL]"
         print(f"{fmt:8} |    {tt_support}")
 
 
