@@ -3,6 +3,7 @@
 
 import asyncio
 import base64
+import binascii
 import copy
 import json
 import logging
@@ -515,15 +516,15 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
 
             # Try to parse as JSON
             key_data = json.loads(decoded_str)
-            if isinstance(key_data, dict) and 'key' in key_data:
+            if isinstance(key_data, dict) and 'key' in key_data and key_data['key'] is not None:
                 return key_data['key']
-        except (ValueError, json.JSONDecodeError, UnicodeDecodeError):
+        except (binascii.Error, json.JSONDecodeError, UnicodeDecodeError):
             pass
 
         # If not base64/JSON, try direct JSON parsing
         try:
             key_data = json.loads(key_str)
-            if isinstance(key_data, dict) and 'key' in key_data:
+            if isinstance(key_data, dict) and 'key' in key_data and key_data['key'] is not None:
                 return key_data['key']
         except (json.JSONDecodeError, TypeError):
             pass

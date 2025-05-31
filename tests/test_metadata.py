@@ -723,33 +723,42 @@ async def test_preset_image(get_imagecache, getroot):  #pylint: disable=redefine
         assert row > 1
 
 
-def test_decode_musical_key():
+@pytest.mark.parametrize("input_value,expected_output", [
+    # Base64 encoded JSON (MixedInKey format)
+    ('eyJhbGdvcml0aG0iOjk0LCJrZXkiOiI0QSIsInNvdXJjZSI6Im1peGVkaW5rZXkifQ==', '4A'),
+    # Direct JSON
+    ('{"algorithm":94,"key":"9B","source":"mixedinkey"}', '9B'),
+    # Simple string keys
+    ('Am', 'Am'),
+    ('C#m', 'C#m'),
+    ('12A', '12A'),
+    # Empty/None values
+    (None, None),
+    ('', None),
+    ('   ', ''),
+    # Malformed input
+    ('not-base64-or-json', 'not-base64-or-json'),
+    ('invalid-json{"key":"test"}', 'invalid-json{"key":"test"}'),
+    # Valid base64 that decodes to non-JSON text
+    ('SGVsbG8gV29ybGQ=', 'SGVsbG8gV29ybGQ='),  # "Hello World"
+    # Valid base64 that decodes to non-object JSON (array)
+    ('WyJ0ZXN0IiwiYXJyYXkiXQ==', 'WyJ0ZXN0IiwiYXJyYXkiXQ=='),  # ["test","array"]
+    # Valid base64 that decodes to non-object JSON (string)
+    ('InRlc3Qgc3RyaW5nIg==', 'InRlc3Qgc3RyaW5nIg=='),  # "test string"
+    # Valid base64 that decodes to JSON object missing 'key' field
+    ('eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0=', 'eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0='),
+    # Direct JSON without 'key' field
+    ('{"algorithm":94,"source":"mixedinkey"}', '{"algorithm":94,"source":"mixedinkey"}'),
+    # Direct JSON array
+    ('["test","array"]', '["test","array"]'),
+    # Direct JSON string
+    ('"test string"', '"test string"'),
+    # JSON with null key value
+    ('{"algorithm":94,"key":null,"source":"mixedinkey"}', '{"algorithm":94,"key":null,"source":"mixedinkey"}'),
+])
+def test_decode_musical_key(input_value, expected_output):
     """Test the _decode_musical_key method handles various key formats."""
     from nowplaying.metadata import TinyTagRunner  # pylint: disable=import-outside-toplevel
 
-    # Test base64 encoded JSON (MixedInKey format)
-    b64_json = 'eyJhbGdvcml0aG0iOjk0LCJrZXkiOiI0QSIsInNvdXJjZSI6Im1peGVkaW5rZXkifQ=='
-    result = TinyTagRunner._decode_musical_key(b64_json)  # pylint: disable=protected-access
-    assert result == '4A'
-
-    # Test direct JSON
-    json_str = '{"algorithm":94,"key":"9B","source":"mixedinkey"}'
-    result = TinyTagRunner._decode_musical_key(json_str)  # pylint: disable=protected-access
-    assert result == '9B'
-
-    # Test simple string key
-    result = TinyTagRunner._decode_musical_key('Am')  # pylint: disable=protected-access
-    assert result == 'Am'
-
-    # Test another simple key
-    result = TinyTagRunner._decode_musical_key('C#m')  # pylint: disable=protected-access
-    assert result == 'C#m'
-
-    # Test None/empty values
-    assert TinyTagRunner._decode_musical_key(None) is None  # pylint: disable=protected-access
-    assert TinyTagRunner._decode_musical_key('') is None  # pylint: disable=protected-access
-    assert TinyTagRunner._decode_musical_key('   ') == ''  # pylint: disable=protected-access
-
-    # Test malformed base64/JSON - should return original string
-    result = TinyTagRunner._decode_musical_key('not-base64-or-json')  # pylint: disable=protected-access
-    assert result == 'not-base64-or-json'
+    result = TinyTagRunner._decode_musical_key(input_value)  # pylint: disable=protected-access
+    assert result == expected_output
