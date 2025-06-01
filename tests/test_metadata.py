@@ -725,7 +725,8 @@ async def test_preset_image(get_imagecache, getroot):  #pylint: disable=redefine
 
 @pytest.mark.parametrize("input_value,expected_output", [
     # Base64 encoded JSON (MixedInKey format)
-    ('eyJhbGdvcml0aG0iOjk0LCJrZXkiOiI0QSIsInNvdXJjZSI6Im1peGVkaW5rZXkifQ==', '4A'),  # pragma: allowlist secret
+    ('eyJhbGdvcml0aG0iOjk0LCJrZXkiOiI0QSIsInNvdXJjZSI6Im1peGVkaW5rZXkifQ==',  # pragma: allowlist secret
+     '4A'),
     # Direct JSON
     ('{"algorithm":94,"key":"9B","source":"mixedinkey"}', '9B'),
     # Simple string keys
@@ -747,7 +748,7 @@ async def test_preset_image(get_imagecache, getroot):  #pylint: disable=redefine
     ('InRlc3Qgc3RyaW5nIg==', 'InRlc3Qgc3RyaW5nIg=='),  # "test string"
     # Valid base64 that decodes to JSON object missing 'key' field
     ('eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0=',  # pragma: allowlist secret
-     'eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0='),
+     'eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0='),  # pragma: allowlist secret
     # Direct JSON without 'key' field
     ('{"algorithm":94,"source":"mixedinkey"}', '{"algorithm":94,"source":"mixedinkey"}'),
     # Direct JSON array
