@@ -725,7 +725,7 @@ async def test_preset_image(get_imagecache, getroot):  #pylint: disable=redefine
 
 @pytest.mark.parametrize("input_value,expected_output", [
     # Base64 encoded JSON (MixedInKey format)
-    ('eyJhbGdvcml0aG0iOjk0LCJrZXkiOiI0QSIsInNvdXJjZSI6Im1peGVkaW5rZXkifQ==', '4A'),
+    ('eyJhbGdvcml0aG0iOjk0LCJrZXkiOiI0QSIsInNvdXJjZSI6Im1peGVkaW5rZXkifQ==', '4A'),  # pragma: allowlist secret
     # Direct JSON
     ('{"algorithm":94,"key":"9B","source":"mixedinkey"}', '9B'),
     # Simple string keys
@@ -746,7 +746,8 @@ async def test_preset_image(get_imagecache, getroot):  #pylint: disable=redefine
     # Valid base64 that decodes to non-object JSON (string)
     ('InRlc3Qgc3RyaW5nIg==', 'InRlc3Qgc3RyaW5nIg=='),  # "test string"
     # Valid base64 that decodes to JSON object missing 'key' field
-    ('eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0=', 'eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0='),
+    ('eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0=',  # pragma: allowlist secret
+     'eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0='),
     # Direct JSON without 'key' field
     ('{"algorithm":94,"source":"mixedinkey"}', '{"algorithm":94,"source":"mixedinkey"}'),
     # Direct JSON array
@@ -754,11 +755,10 @@ async def test_preset_image(get_imagecache, getroot):  #pylint: disable=redefine
     # Direct JSON string
     ('"test string"', '"test string"'),
     # JSON with null key value
-    ('{"algorithm":94,"key":null,"source":"mixedinkey"}', '{"algorithm":94,"key":null,"source":"mixedinkey"}'),
+    ('{"algorithm":94,"key":null,"source":"mixedinkey"}',
+     '{"algorithm":94,"key":null,"source":"mixedinkey"}'),
 ])
 def test_decode_musical_key(input_value, expected_output):
     """Test the _decode_musical_key method handles various key formats."""
-    from nowplaying.metadata import TinyTagRunner  # pylint: disable=import-outside-toplevel
-
-    result = TinyTagRunner._decode_musical_key(input_value)  # pylint: disable=protected-access
+    result = nowplaying.metadata.TinyTagRunner._decode_musical_key(input_value)  # pylint: disable=protected-access
     assert result == expected_output
