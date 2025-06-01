@@ -40,6 +40,8 @@
   ISRC codes and artist IDs where previously only the last value was captured.
 * Enhanced multi-value field handling across all audio formats (MP3, FLAC, M4A, AIFF)
   with automatic detection and splitting of delimited metadata values.
+* Various HTTP timeout fixes.
+* Added support for MixedInKey's oddball JSON key format.
 
 * Internal changes:
   * Upgrade to Python 3.11.
