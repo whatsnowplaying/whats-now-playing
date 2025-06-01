@@ -24,6 +24,8 @@ try:
 except ImportError:
     DBUS_STATUS = False
 
+from multidict import CIMultiDict
+
 from PySide6.QtCore import Qt  # pylint: disable=no-name-in-module
 from nowplaying.inputs import InputPlugin
 
@@ -97,7 +99,8 @@ class MPRIS2Handler:
             # Get all Player properties
             result = await properties.call_get_all(f'{MPRIS2_BASE}.Player')
             unpacked_result = unpack_variants(result)
-            self.meta = unpacked_result.get('Metadata', {})
+            # Convert to case-insensitive dict for robust field lookups
+            self.meta = CIMultiDict(unpacked_result.get('Metadata', {}))
         except Exception as error:  # pylint: disable=broad-exception-caught
             # likely had a service and but now it is gone
             logging.error('D-Bus error: %s', error)
