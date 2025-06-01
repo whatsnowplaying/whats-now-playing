@@ -725,7 +725,7 @@ async def test_preset_image(get_imagecache, getroot):  #pylint: disable=redefine
 
 @pytest.mark.parametrize("input_value,expected_output", [
     # Base64 encoded JSON (MixedInKey format)
-    ('eyJhbGdvcml0aG0iOjk0LCJrZXkiOiI0QSIsInNvdXJjZSI6Im1peGVkaW5rZXkifQ==',  # pragma: allowlist secret
+    ('eyJhbGdvcml0aG0iOjk0LCJrZXkiOiI0QSIsInNvdXJjZSI6Im1peGVkaW5rZXkifQ==',  # pragma: allowlist secret  # pylint: disable=line-too-long
      '4A'),
     # Direct JSON
     ('{"algorithm":94,"key":"9B","source":"mixedinkey"}', '9B'),
