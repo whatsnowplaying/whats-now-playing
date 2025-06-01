@@ -33,8 +33,7 @@
 * Fixed hostname display bug showing reverse DNS results instead
   of proper machine names.
 * Fixed excluded files not getting properly excluded during processing.
-* MPRIS2 support has been disabled due to stability issues.
-* Upgraded tinytag library from vendored 1.10.1 to system package 2.1.1
+* Upgraded tinytag library from vendored 1.10.1 to 2.1.1
   with enhanced multi-value field support for better metadata extraction.
 * Improved M4A file metadata processing - now properly extracts multiple
   ISRC codes and artist IDs where previously only the last value was captured.

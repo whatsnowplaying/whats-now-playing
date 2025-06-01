@@ -7,7 +7,9 @@
 
  '''
 
+import asyncio
 import collections
+import contextlib
 import logging
 import pathlib
 import sys
@@ -15,7 +17,9 @@ import urllib
 import urllib.request
 
 try:
-    import dbus
+    from dbus_fast.aio import MessageBus
+    from dbus_fast import BusType
+    from dbus_fast.unpack import unpack_variants
     DBUS_STATUS = True
 except ImportError:
     DBUS_STATUS = False
@@ -26,15 +30,15 @@ from nowplaying.inputs import InputPlugin
 MPRIS2_BASE = 'org.mpris.MediaPlayer2'
 
 
-class MPRIS2Handler():
+class MPRIS2Handler:
     ''' Read metadata from MPRIS2 '''
 
     def __init__(self, service=None):
         self.service = None
         self.bus = None
-        self.proxy = None
+        self.introspection = None
         self.meta = None
-        self.metadata = None
+        self.metadata = {}
 
         if not DBUS_STATUS:
             self.dbus_status = False
@@ -43,57 +47,65 @@ class MPRIS2Handler():
         self.dbus_status = True
 
         if service:
-            self.resetservice(service)
+            self.service = service
 
-    def resetservice(self, service=None):
+    async def resetservice(self, service=None):
         ''' reset the service name '''
         self.service = service
 
-        if '.' not in service and not self.find_service():
+        if '.' not in service and not await self.find_service():
             logging.error('%s is not a known MPRIS2 service.', service)
             return
 
-        self.bus = dbus.SessionBus()
         try:
-            self.proxy = self.bus.get_object(f'{MPRIS2_BASE}.{self.service}',
-                                             '/org/mpris/MediaPlayer2')
-        except dbus.exceptions.DBusException as error:
-            logging.error(error)
+            if not self.bus:
+                self.bus = await MessageBus(bus_type=BusType.SESSION).connect()
+
+            self.introspection = await self.bus.introspect(f'{MPRIS2_BASE}.{self.service}',
+                                                           '/org/mpris/MediaPlayer2')
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.error('D-Bus connection error: %s', error)
+            self.introspection = None
 
         self.meta = None
         self.metadata = {}
 
-    def getplayingtrack(self):  # pylint: disable=too-many-branches
+    async def getplayingtrack(self):  # pylint: disable=too-many-branches
         ''' get the currently playing song '''
 
         # start with a blank slate to prevent
         # data bleeding
         builddata = {'artist': None, 'title': None, 'filename': None}
-        if not DBUS_STATUS:
+        if not DBUS_STATUS or not self.bus:
             return builddata
 
         artist = None
 
         # if NowPlaying is launched before our service...
-        if not self.proxy:
-            self.resetservice(self.service)
-        if not self.proxy:
-            logging.error('Unknown service: %s', self.service)
-            return builddata
-
-        properties = dbus.Interface(self.proxy, dbus_interface='org.freedesktop.DBus.Properties')
-        if not properties:
+        if not self.introspection:
+            await self.resetservice(self.service)
+        if not self.introspection:
             logging.error('Unknown service: %s', self.service)
             return builddata
 
         try:
-            self.meta = properties.GetAll(f'{MPRIS2_BASE}.Player')['Metadata']
-        except dbus.exceptions.DBusException as error:
+            # Get the Properties interface
+            props_obj = self.bus.get_proxy_object(f'{MPRIS2_BASE}.{self.service}',
+                                                  '/org/mpris/MediaPlayer2', self.introspection)
+            properties = props_obj.get_interface('org.freedesktop.DBus.Properties')
+
+            # Get all Player properties
+            result = await properties.call_get_all(f'{MPRIS2_BASE}.Player')
+            unpacked_result = unpack_variants(result)
+            self.meta = unpacked_result.get('Metadata', {})
+        except Exception as error:  # pylint: disable=broad-exception-caught
             # likely had a service and but now it is gone
-            logging.error(error)
+            logging.error('D-Bus error: %s', error)
             self.metadata = {}
-            self.proxy = None
-            self.bus = None
+            self.introspection = None
+            if self.bus:
+                self.bus.disconnect()
+                self.bus = None
             return builddata
 
         if artists := self.meta.get('xesam:artist'):
@@ -113,11 +125,12 @@ class MPRIS2Handler():
             builddata['album'] = str(self.meta.get('xesam:album'))
 
         if length := self.meta.get('mpris:length'):
-            builddata['duration'] = int(length)
-
-        if tracknumber := self.meta.get('xesam:tracknumber'):
-            builddata['track'] = int(tracknumber)
-
+            with contextlib.suppress(ValueError, TypeError):
+                # Convert from microseconds to seconds
+                builddata['duration'] = int(length) // 1000000
+        if tracknumber := self.meta.get('xesam:trackNumber'):
+            with contextlib.suppress(ValueError, TypeError):
+                builddata['track'] = int(tracknumber)
         filename = self.meta.get('xesam:url')
         if filename and 'file://' in filename:
             filename = urllib.parse.unquote(filename)
@@ -139,27 +152,42 @@ class MPRIS2Handler():
         self.metadata = builddata
         return self.metadata
 
-    def get_mpris2_services(self):
+    async def get_mpris2_services(self):
         ''' list of all MPRIS2 services '''
 
         if not self.dbus_status:
             return []
 
-        services = []
-        bus = dbus.SessionBus()
-        for reglist in bus.list_names():
-            if reglist.startswith(MPRIS2_BASE):
-                stripped = reglist.replace(f'{MPRIS2_BASE}.', '')
-                services.append(stripped)
-        return services
+        try:
+            if not self.bus:
+                self.bus = await MessageBus(bus_type=BusType.SESSION).connect()
 
-    def find_service(self):
+            # Get the DBus interface to list names
+            introspection = await self.bus.introspect('org.freedesktop.DBus',
+                                                      '/org/freedesktop/DBus')
+            dbus_obj = self.bus.get_proxy_object('org.freedesktop.DBus', '/org/freedesktop/DBus',
+                                                 introspection)
+            dbus_interface = dbus_obj.get_interface('org.freedesktop.DBus')
+
+            names = await dbus_interface.call_list_names()
+
+            services = []
+            for name in names:
+                if name.startswith(MPRIS2_BASE):
+                    stripped = name.replace(f'{MPRIS2_BASE}.', '')
+                    services.append(stripped)
+            return services
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.error('Error listing MPRIS2 services: %s', error)
+            return []
+
+    async def find_service(self):
         ''' try to find our service '''
 
         if not self.dbus_status:
             return False
 
-        services = self.get_mpris2_services()
+        services = await self.get_mpris2_services()
         for reglist in services:
             if self.service in reglist:
                 self.service = reglist
@@ -189,7 +217,7 @@ class Plugin(InputPlugin):
         ''' Auto-install for MPRIS2 '''
         return False
 
-    def gethandler(self):
+    async def gethandler(self):
         ''' setup the MPRIS2Handler for this session '''
 
         if not self.mpris2 or not self.dbus_status:
@@ -207,19 +235,19 @@ class Plugin(InputPlugin):
 
         logging.debug('new service = %s', sameservice)
         self.service = sameservice
-        self.mpris2.resetservice(service=sameservice)
-        return
+        await self.mpris2.resetservice(service=sameservice)
 
     async def start(self):
         ''' configure MPRIS2 client '''
-        self.gethandler()
+        await self.gethandler()
 
     async def getplayingtrack(self):
         ''' wrapper to call getplayingtrack '''
-        self.gethandler()
+        await self.gethandler()
 
         if self.mpris2:
-            return self.mpris2.getplayingtrack()
+            await asyncio.sleep(.5)
+            return await self.mpris2.getplayingtrack()
         return {}
 
     async def getrandomtrack(self, playlist):
@@ -230,10 +258,11 @@ class Plugin(InputPlugin):
         ''' populate the combobox '''
         if not self.dbus_status or not self.mpris2:
             return
+
+        services = asyncio.run(MPRIS2Handler().get_mpris2_services())
         currentservice = self.config.cparser.value('mpris2/service')
-        servicelist = self.mpris2.get_mpris2_services()
         qwidget.list_widget.clear()
-        qwidget.list_widget.addItems(servicelist)
+        qwidget.list_widget.addItems(services)
         if curbutton := qwidget.list_widget.findItems(currentservice, Qt.MatchContains):
             curbutton[0].setSelected(True)
 
@@ -248,34 +277,50 @@ class Plugin(InputPlugin):
     def desc_settingsui(self, qwidget):
         ''' description '''
         if not self.dbus_status:
-            qwidget.setText('Not available.')
+            qwidget.setText('Not available - dbus-fast package required.')
             return
 
         qwidget.setText('This plugin provides support for MPRIS2 '
-                        'compatible software on Linux and other DBus systems.')
+                        'compatible software on Linux and other DBus systems. '
+                        'Now using dbus-fast for better performance.')
+
+    async def cleanup(self):
+        ''' Clean up resources '''
+        if self.mpris2 and self.mpris2.bus:
+            self.mpris2.bus.disconnect()
 
 
-def main():
+async def main():
     ''' entry point as a standalone app'''
     logging.basicConfig(level=logging.DEBUG)
     if not DBUS_STATUS:
-        print('No dbus')
+        print('No dbus-fast - install with: pip install dbus-fast')
         sys.exit(1)
+
     mpris2 = MPRIS2Handler()
 
     if len(sys.argv) == 2:
-        mpris2.resetservice(sys.argv[1])
-        (artist, title, filename) = mpris2.getplayingtrack()
-        print(f'Artist: {artist} | Title: {title} | Filename: {filename}')
-        data = mpris2.getplayingtrack()
+        await mpris2.resetservice(sys.argv[1])
+        data = await mpris2.getplayingtrack()
+
+        if data.get('artist') or data.get('title'):
+            print(f'Artist: {data.get("artist")} | Title: {data.get("title")} | '
+                  f'Filename: {data.get("filename")}')
+
         if 'coverimageraw' in data:
             print('Got coverart')
             del data['coverimageraw']
         print(data)
     else:
+        services = await mpris2.get_mpris2_services()
+        print('Available MPRIS2 services:')
+        for service in services:
+            print(f'  {service}')
 
-        print(mpris2.get_mpris2_services())
+    # Clean up
+    if mpris2.bus:
+        mpris2.bus.disconnect()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
