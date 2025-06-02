@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 ''' test jriver input plugin '''
 
-import aiohttp
 from unittest.mock import MagicMock, patch
+
+import aiohttp
 import pytest
 import pytest_asyncio
 from aioresponses import aioresponses
 
-import nowplaying.inputs.jriver  # pylint: disable=import-error
+import nowplaying.inputs.jriver  # pylint: disable=import-error,no-name-in-module
 
 
 @pytest_asyncio.fixture
@@ -203,16 +204,15 @@ async def test_test_connection_success():
     plugin.access_key = 'testkey'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/Alive',
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Alive',
               body='''<Response Status="OK">
                         <Item Name="AccessKey">testkey</Item>
                       </Response>''')
 
-        result = await plugin._test_connection()
+        result = await plugin._test_connection()  # pylint: disable=protected-access
         assert result is True
 
     await plugin.session.close()
@@ -226,16 +226,15 @@ async def test_test_connection_wrong_access_key():
     plugin.access_key = 'wrongkey'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/Alive',
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Alive',
               body='''<Response Status="OK">
                         <Item Name="AccessKey">correctkey</Item>
                       </Response>''')
 
-        result = await plugin._test_connection()
+        result = await plugin._test_connection()  # pylint: disable=protected-access
         assert result is False
 
     await plugin.session.close()
@@ -248,13 +247,12 @@ async def test_test_connection_http_error():
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/Alive', status=404)
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Alive', status=404)
 
-        result = await plugin._test_connection()
+        result = await plugin._test_connection()  # pylint: disable=protected-access
         assert result is False
 
     await plugin.session.close()
@@ -267,13 +265,13 @@ async def test_test_connection_network_error():
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/Alive', exception=Exception('Connection failed'))
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Alive',
+                      exception=Exception('Connection failed'))
 
-        result = await plugin._test_connection()
+        result = await plugin._test_connection()  # pylint: disable=protected-access
         assert result is False
 
     await plugin.session.close()
@@ -288,18 +286,18 @@ async def test_authenticate_success():
     plugin.password = 'testpass'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass',
+    with aioresponses() as mock_resp:
+        url = 'http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass'
+        mock_resp.get(url,
               body='''
               <Response Status="OK">
                   <Item Name="Token">abc123token</Item>
               </Response>
               ''')
 
-        result = await plugin._authenticate()
+        result = await plugin._authenticate()  # pylint: disable=protected-access
         assert result is True
         assert plugin.token == 'abc123token'
 
@@ -313,7 +311,7 @@ async def test_authenticate_no_credentials():
     plugin.username = None
     plugin.password = None
 
-    result = await plugin._authenticate()
+    result = await plugin._authenticate()  # pylint: disable=protected-access
     assert result is True  # Should succeed when no auth is needed
 
 
@@ -326,17 +324,17 @@ async def test_authenticate_no_token():
     plugin.password = 'testpass'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass',
+    with aioresponses() as mock_resp:
+        url = 'http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass'
+        mock_resp.get(url,
               body='''
               <Response Status="OK">
               </Response>
               ''')
 
-        result = await plugin._authenticate()
+        result = await plugin._authenticate()  # pylint: disable=protected-access
         assert result is False
 
     await plugin.session.close()
@@ -351,14 +349,13 @@ async def test_authenticate_http_error():
     plugin.password = 'testpass'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass',
-              status=401)
+    with aioresponses() as mock_resp:
+        url = 'http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass'
+        mock_resp.get(url, status=401)
 
-        result = await plugin._authenticate()
+        result = await plugin._authenticate()  # pylint: disable=protected-access
         assert result is False
 
     await plugin.session.close()
@@ -381,9 +378,9 @@ async def test_getplayingtrack_success(jriver_plugin_with_session):  # pylint: d
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
     plugin.token = 'testtoken'
 
-    with aioresponses() as m:
+    with aioresponses() as mock_resp:
         # aioresponses matches the URL pattern, including query parameters
-        m.get('http://localhost:52199/MCWS/v1/Playback/Info?Token=testtoken',
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info?Token=testtoken',
               body='''<Response Status="OK">
                         <Item Name="State">Playing</Item>
                         <Item Name="Artist">The Beatles</Item>
@@ -407,11 +404,10 @@ async def test_getplayingtrack_minimal_data():
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/Playback/Info',
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info',
               body='''
               <Response Status="OK">
                   <Item Name="Name">Unknown Track</Item>
@@ -435,11 +431,10 @@ async def test_getplayingtrack_http_error():
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/Playback/Info', status=500)
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info', status=500)
 
         result = await plugin.getplayingtrack()
         assert result is None
@@ -454,11 +449,11 @@ async def test_getplayingtrack_network_error():
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/Playback/Info', exception=Exception('Network error'))
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info',
+                      exception=Exception('Network error'))
 
         result = await plugin.getplayingtrack()
         assert result is None
@@ -473,11 +468,10 @@ async def test_getplayingtrack_parse_error():
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/Playback/Info', body='invalid xml content')
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info', body='invalid xml content')
 
         result = await plugin.getplayingtrack()
         assert result is None
@@ -493,12 +487,11 @@ async def test_getplayingtrack_with_token():
     plugin.token = 'mytoken123'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
+    with aioresponses() as mock_resp:
         # aioresponses matches the exact URL including query parameters
-        m.get('http://localhost:52199/MCWS/v1/Playback/Info?Token=mytoken123',
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info?Token=mytoken123',
               body='<Response Status="OK"></Response>')
 
         await plugin.getplayingtrack()
@@ -514,12 +507,11 @@ async def test_getplayingtrack_without_token():
     plugin.token = None
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
+    with aioresponses() as mock_resp:
         # aioresponses matches the exact URL without query parameters
-        m.get('http://localhost:52199/MCWS/v1/Playback/Info',
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info',
               body='<Response Status="OK"></Response>')
 
         await plugin.getplayingtrack()
@@ -552,16 +544,16 @@ def test_is_local_connection_localhost():
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
 
     plugin.host = 'localhost'
-    assert plugin._is_local_connection() is True
+    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
     plugin.host = '127.0.0.1'
-    assert plugin._is_local_connection() is True
+    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
     plugin.host = '::1'
-    assert plugin._is_local_connection() is True
+    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
     # Test that IPv6 localhost works with URL formatting
-    formatted_host = plugin._format_host_for_url('::1')
+    formatted_host = plugin._format_host_for_url('::1')  # pylint: disable=protected-access
     assert formatted_host == '[::1]'
 
 
@@ -571,20 +563,20 @@ def test_is_local_connection_private_networks():
 
     # Private IPv4 ranges
     plugin.host = '192.168.1.100'
-    assert plugin._is_local_connection() is True
+    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
     plugin.host = '10.0.0.5'
-    assert plugin._is_local_connection() is True
+    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
     plugin.host = '172.16.1.10'
-    assert plugin._is_local_connection() is True
+    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
     # Private IPv6 ranges (link-local and unique local)
     plugin.host = 'fe80::1'  # Link-local
-    assert plugin._is_local_connection() is True
+    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
     plugin.host = 'fd00::1'  # Unique local
-    assert plugin._is_local_connection() is True
+    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
 
 def test_is_local_connection_public_ip():
@@ -593,17 +585,17 @@ def test_is_local_connection_public_ip():
 
     # Public IPv4 addresses
     plugin.host = '8.8.8.8'
-    assert plugin._is_local_connection() is False
+    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
 
     plugin.host = '1.1.1.1'
-    assert plugin._is_local_connection() is False
+    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
 
     # Public IPv6 addresses
     plugin.host = '2001:4860:4860::8888'  # Google DNS
-    assert plugin._is_local_connection() is False
+    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
 
     plugin.host = '2606:4700:4700::1111'  # Cloudflare DNS
-    assert plugin._is_local_connection() is False
+    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
 
 
 def test_is_local_connection_hostname():
@@ -612,23 +604,23 @@ def test_is_local_connection_hostname():
 
     # Generic hostnames should NOT be considered local (security risk)
     plugin.host = 'jriver-server'
-    assert plugin._is_local_connection() is False
+    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
 
     plugin.host = 'remote.example.com'
-    assert plugin._is_local_connection() is False
+    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
 
     # Only explicit local domain patterns should be considered local
     plugin.host = 'media-pc.local'
-    assert plugin._is_local_connection() is True
+    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
     plugin.host = 'jriver.lan'
-    assert plugin._is_local_connection() is True
+    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
     plugin.host = 'server.home'
-    assert plugin._is_local_connection() is True
+    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
     plugin.host = 'media.internal'
-    assert plugin._is_local_connection() is True
+    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
 
 def test_is_local_connection_no_host():
@@ -636,7 +628,7 @@ def test_is_local_connection_no_host():
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
 
     plugin.host = None
-    assert plugin._is_local_connection() is False
+    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
 
 
 def test_is_local_connection_security():
@@ -655,7 +647,7 @@ def test_is_local_connection_security():
 
     for host in remote_hosts:
         plugin.host = host
-        assert plugin._is_local_connection() is False, f"Host '{host}' should be considered remote"
+        assert plugin._is_local_connection() is False, f"Host '{host}' should be considered remote"  # pylint: disable=protected-access
 
 
 def test_format_host_for_url_ipv4():
@@ -663,9 +655,9 @@ def test_format_host_for_url_ipv4():
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
 
     # IPv4 addresses should not be wrapped
-    assert plugin._format_host_for_url('192.168.1.100') == '192.168.1.100'
-    assert plugin._format_host_for_url('127.0.0.1') == '127.0.0.1'
-    assert plugin._format_host_for_url('10.0.0.1') == '10.0.0.1'
+    assert plugin._format_host_for_url('192.168.1.100') == '192.168.1.100'  # pylint: disable=protected-access
+    assert plugin._format_host_for_url('127.0.0.1') == '127.0.0.1'  # pylint: disable=protected-access
+    assert plugin._format_host_for_url('10.0.0.1') == '10.0.0.1'  # pylint: disable=protected-access
 
 
 def test_format_host_for_url_ipv6():
@@ -673,10 +665,10 @@ def test_format_host_for_url_ipv6():
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
 
     # IPv6 addresses should be wrapped in brackets
-    assert plugin._format_host_for_url('2001:db8::1') == '[2001:db8::1]'
-    assert plugin._format_host_for_url('::1') == '[::1]'
-    assert plugin._format_host_for_url('fe80::1%lo0') == '[fe80::1%lo0]'
-    assert plugin._format_host_for_url(
+    assert plugin._format_host_for_url('2001:db8::1') == '[2001:db8::1]'  # pylint: disable=protected-access
+    assert plugin._format_host_for_url('::1') == '[::1]'  # pylint: disable=protected-access
+    assert plugin._format_host_for_url('fe80::1%lo0') == '[fe80::1%lo0]'  # pylint: disable=protected-access
+    assert plugin._format_host_for_url(  # pylint: disable=protected-access
         '2001:0db8:85a3:0000:0000:8a2e:0370:7334') == '[2001:0db8:85a3:0000:0000:8a2e:0370:7334]'
 
 
@@ -685,8 +677,8 @@ def test_format_host_for_url_already_bracketed():
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
 
     # Already bracketed IPv6 should remain unchanged
-    assert plugin._format_host_for_url('[2001:db8::1]') == '[2001:db8::1]'
-    assert plugin._format_host_for_url('[::1]') == '[::1]'
+    assert plugin._format_host_for_url('[2001:db8::1]') == '[2001:db8::1]'  # pylint: disable=protected-access
+    assert plugin._format_host_for_url('[::1]') == '[::1]'  # pylint: disable=protected-access
 
 
 def test_format_host_for_url_hostname():
@@ -694,9 +686,9 @@ def test_format_host_for_url_hostname():
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
 
     # Hostnames should not be wrapped
-    assert plugin._format_host_for_url('localhost') == 'localhost'
-    assert plugin._format_host_for_url('jriver.local') == 'jriver.local'
-    assert plugin._format_host_for_url('media-server.lan') == 'media-server.lan'
+    assert plugin._format_host_for_url('localhost') == 'localhost'  # pylint: disable=protected-access
+    assert plugin._format_host_for_url('jriver.local') == 'jriver.local'  # pylint: disable=protected-access
+    assert plugin._format_host_for_url('media-server.lan') == 'media-server.lan'  # pylint: disable=protected-access
 
 
 def test_format_host_for_url_edge_cases():
@@ -704,9 +696,9 @@ def test_format_host_for_url_edge_cases():
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
 
     # Edge cases
-    assert plugin._format_host_for_url(None) is None
-    assert plugin._format_host_for_url('') == ''
-    assert plugin._format_host_for_url('invalid-ip') == 'invalid-ip'
+    assert plugin._format_host_for_url(None) is None  # pylint: disable=protected-access
+    assert plugin._format_host_for_url('') == ''  # pylint: disable=protected-access
+    assert plugin._format_host_for_url('invalid-ip') == 'invalid-ip'  # pylint: disable=protected-access
 
 
 def test_ipv6_url_construction():
@@ -714,7 +706,6 @@ def test_ipv6_url_construction():
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
 
     # Mock config to avoid actual initialization
-    from unittest.mock import MagicMock
     mock_config = MagicMock()
     mock_config.cparser.value.side_effect = lambda key, default=None: {
         'jriver/host': '2001:db8::1',
@@ -725,7 +716,7 @@ def test_ipv6_url_construction():
     # Test IPv6 URL construction
     plugin.host = '2001:db8::1'
     plugin.port = '52199'
-    formatted_host = plugin._format_host_for_url(plugin.host)
+    formatted_host = plugin._format_host_for_url(plugin.host)  # pylint: disable=protected-access
     expected_url = f"http://{formatted_host}:{plugin.port}/MCWS/v1"
 
     assert formatted_host == '[2001:db8::1]'
@@ -739,8 +730,8 @@ async def test_get_filename_success(jriver_plugin_with_session):  # pylint: disa
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
     plugin.token = 'testtoken'
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345&Token=testtoken',
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345&Token=testtoken',
               body='''<Response Status="OK">
                         <Item Name="FileKey">12345</Item>
                         <Item Name="Name">Come Together</Item>
@@ -748,7 +739,7 @@ async def test_get_filename_success(jriver_plugin_with_session):  # pylint: disa
                         <Item Name="Filename">C:\\Music\\The Beatles\\Abbey Road\\Come Together.mp3</Item>
                       </Response>''')
 
-        result = await plugin._get_filename('12345')
+        result = await plugin._get_filename('12345')  # pylint: disable=protected-access
         assert result == 'C:\\Music\\The Beatles\\Abbey Road\\Come Together.mp3'
 
 
@@ -759,11 +750,10 @@ async def test_get_filename_not_found():
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345',
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345',
               body='''
               <Response Status="OK">
                   <Item Name="FileKey">12345</Item>
@@ -771,7 +761,7 @@ async def test_get_filename_not_found():
               </Response>
               ''')
 
-        result = await plugin._get_filename('12345')
+        result = await plugin._get_filename('12345')  # pylint: disable=protected-access
         assert result is None
 
     await plugin.session.close()
@@ -784,13 +774,12 @@ async def test_get_filename_http_error():
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
 
     # Create real aiohttp session for testing
-    import aiohttp
     plugin.session = aiohttp.ClientSession()
 
-    with aioresponses() as m:
-        m.get('http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345', status=404)
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345', status=404)
 
-        result = await plugin._get_filename('12345')
+        result = await plugin._get_filename('12345')  # pylint: disable=protected-access
         assert result is None
 
     await plugin.session.close()
