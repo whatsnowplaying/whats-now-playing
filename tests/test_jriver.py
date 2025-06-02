@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 ''' test jriver input plugin '''
 
-import asyncio
-from unittest.mock import MagicMock, patch, AsyncMock
+import aiohttp
+from unittest.mock import MagicMock, patch
 import pytest
 import pytest_asyncio
 from aioresponses import aioresponses
@@ -10,18 +10,9 @@ from aioresponses import aioresponses
 import nowplaying.inputs.jriver  # pylint: disable=import-error
 
 
-def create_mock_response(status, text):
-    """Helper to create mock aiohttp response"""
-    mock_response = AsyncMock()
-    mock_response.status = status
-    mock_response.text = AsyncMock(return_value=text)
-    return mock_response
-
-
 @pytest_asyncio.fixture
 async def jriver_plugin_with_session():
     """Create JRiver plugin with real aiohttp session for testing"""
-    import aiohttp
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.session = aiohttp.ClientSession()
     yield plugin
@@ -72,7 +63,7 @@ def test_plugin_mixmodes():
     assert plugin.getmixmode() == 'newest'
 
 
-def test_settings_ui_load(jriver_bootstrap):
+def test_settings_ui_load(jriver_bootstrap):  # pylint: disable=redefined-outer-name
     """Test loading settings into UI"""
     plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
     mock_qwidget = MagicMock()
@@ -86,7 +77,7 @@ def test_settings_ui_load(jriver_bootstrap):
     mock_qwidget.access_key_lineedit.setText.assert_called_once_with('testkey')
 
 
-def test_settings_ui_save(jriver_bootstrap):
+def test_settings_ui_save(jriver_bootstrap):  # pylint: disable=redefined-outer-name
     """Test saving settings from UI"""
     plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
     mock_qwidget = MagicMock()
@@ -115,8 +106,8 @@ def test_settings_ui_description():
     expected_text = ('This plugin provides support for JRiver Media Center via MCWS API. '
                      'Configure the host/IP and port of your JRiver server. '
                      'Username/password are optional if authentication is not required. '
-                     'For local connections, the plugin will automatically retrieve '
-                     'file paths for enhanced metadata support.')
+                     'File paths are automatically retrieved for local connections only '
+                     '(localhost, private IPs, and .local/.lan/.home/.internal domains).')
     mock_qwidget.setText.assert_called_once_with(expected_text)
 
 
@@ -133,7 +124,7 @@ async def test_start_no_host():
 
 
 @pytest.mark.asyncio
-async def test_start_success(jriver_bootstrap):
+async def test_start_success(jriver_bootstrap):  # pylint: disable=redefined-outer-name
     """Test successful start() with connection and authentication"""
     plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
 
@@ -149,12 +140,16 @@ async def test_start_success(jriver_bootstrap):
         assert plugin.password == 'testpass'
         assert plugin.access_key == 'testkey'
         assert plugin.base_url == 'http://192.168.1.100:52199/MCWS/v1'
+        assert plugin.session is not None  # Session should remain open on success
         mock_test.assert_called_once()
         mock_auth.assert_called_once()
 
+        # Clean up session manually since this is a test
+        await plugin.session.close()
+
 
 @pytest.mark.asyncio
-async def test_start_connection_failure(jriver_bootstrap):
+async def test_start_connection_failure(jriver_bootstrap):  # pylint: disable=redefined-outer-name
     """Test start() with connection failure"""
     plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
 
@@ -164,7 +159,7 @@ async def test_start_connection_failure(jriver_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_start_auth_failure(jriver_bootstrap):
+async def test_start_auth_failure(jriver_bootstrap):  # pylint: disable=redefined-outer-name
     """Test start() with authentication failure"""
     plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
 
@@ -173,6 +168,31 @@ async def test_start_auth_failure(jriver_bootstrap):
 
         result = await plugin.start()
         assert result is False
+        assert plugin.session is None  # Session should be closed and set to None
+
+
+@pytest.mark.asyncio
+async def test_start_session_cleanup_on_connection_failure(jriver_bootstrap):  # pylint: disable=redefined-outer-name
+    """Test that session is properly closed when connection fails"""
+    plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
+
+    with patch.object(plugin, '_test_connection', return_value=False):
+        result = await plugin.start()
+        assert result is False
+        assert plugin.session is None  # Session should be closed and set to None
+
+
+@pytest.mark.asyncio
+async def test_start_session_cleanup_on_auth_failure(jriver_bootstrap):  # pylint: disable=redefined-outer-name
+    """Test that session is properly closed when authentication fails"""
+    plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
+
+    with patch.object(plugin, '_test_connection', return_value=True), \
+         patch.object(plugin, '_authenticate', return_value=False):
+
+        result = await plugin.start()
+        assert result is False
+        assert plugin.session is None  # Session should be closed and set to None
 
 
 @pytest.mark.asyncio
@@ -355,7 +375,7 @@ async def test_getplayingtrack_no_base_url():
 
 
 @pytest.mark.asyncio
-async def test_getplayingtrack_success(jriver_plugin_with_session):
+async def test_getplayingtrack_success(jriver_plugin_with_session):  # pylint: disable=redefined-outer-name
     """Test successful getplayingtrack"""
     plugin = jriver_plugin_with_session
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
@@ -540,12 +560,16 @@ def test_is_local_connection_localhost():
     plugin.host = '::1'
     assert plugin._is_local_connection() is True
 
+    # Test that IPv6 localhost works with URL formatting
+    formatted_host = plugin._format_host_for_url('::1')
+    assert formatted_host == '[::1]'
+
 
 def test_is_local_connection_private_networks():
     """Test local connection detection for private networks"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
 
-    # Private IP ranges
+    # Private IPv4 ranges
     plugin.host = '192.168.1.100'
     assert plugin._is_local_connection() is True
 
@@ -555,15 +579,30 @@ def test_is_local_connection_private_networks():
     plugin.host = '172.16.1.10'
     assert plugin._is_local_connection() is True
 
+    # Private IPv6 ranges (link-local and unique local)
+    plugin.host = 'fe80::1'  # Link-local
+    assert plugin._is_local_connection() is True
+
+    plugin.host = 'fd00::1'  # Unique local
+    assert plugin._is_local_connection() is True
+
 
 def test_is_local_connection_public_ip():
     """Test local connection detection for public IPs"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
 
+    # Public IPv4 addresses
     plugin.host = '8.8.8.8'
     assert plugin._is_local_connection() is False
 
     plugin.host = '1.1.1.1'
+    assert plugin._is_local_connection() is False
+
+    # Public IPv6 addresses
+    plugin.host = '2001:4860:4860::8888'  # Google DNS
+    assert plugin._is_local_connection() is False
+
+    plugin.host = '2606:4700:4700::1111'  # Cloudflare DNS
     assert plugin._is_local_connection() is False
 
 
@@ -571,11 +610,24 @@ def test_is_local_connection_hostname():
     """Test local connection detection for hostnames"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
 
-    # Assume hostnames are local (common case for local network)
+    # Generic hostnames should NOT be considered local (security risk)
     plugin.host = 'jriver-server'
+    assert plugin._is_local_connection() is False
+
+    plugin.host = 'remote.example.com'
+    assert plugin._is_local_connection() is False
+
+    # Only explicit local domain patterns should be considered local
+    plugin.host = 'media-pc.local'
     assert plugin._is_local_connection() is True
 
-    plugin.host = 'media-pc.local'
+    plugin.host = 'jriver.lan'
+    assert plugin._is_local_connection() is True
+
+    plugin.host = 'server.home'
+    assert plugin._is_local_connection() is True
+
+    plugin.host = 'media.internal'
     assert plugin._is_local_connection() is True
 
 
@@ -587,8 +639,101 @@ def test_is_local_connection_no_host():
     assert plugin._is_local_connection() is False
 
 
+def test_is_local_connection_security():
+    """Test that remote hostnames are properly rejected for security"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+
+    # These should all be considered remote/unsafe
+    remote_hosts = [
+        'jriver.example.com',
+        'music-server.net',
+        'remote-jriver.org',
+        'malicious-server.co.uk',
+        'untrusted-host',
+        'random-hostname',
+    ]
+
+    for host in remote_hosts:
+        plugin.host = host
+        assert plugin._is_local_connection() is False, f"Host '{host}' should be considered remote"
+
+
+def test_format_host_for_url_ipv4():
+    """Test IPv4 address formatting (should remain unchanged)"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+
+    # IPv4 addresses should not be wrapped
+    assert plugin._format_host_for_url('192.168.1.100') == '192.168.1.100'
+    assert plugin._format_host_for_url('127.0.0.1') == '127.0.0.1'
+    assert plugin._format_host_for_url('10.0.0.1') == '10.0.0.1'
+
+
+def test_format_host_for_url_ipv6():
+    """Test IPv6 address formatting (should be wrapped in brackets)"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+
+    # IPv6 addresses should be wrapped in brackets
+    assert plugin._format_host_for_url('2001:db8::1') == '[2001:db8::1]'
+    assert plugin._format_host_for_url('::1') == '[::1]'
+    assert plugin._format_host_for_url('fe80::1%lo0') == '[fe80::1%lo0]'
+    assert plugin._format_host_for_url(
+        '2001:0db8:85a3:0000:0000:8a2e:0370:7334') == '[2001:0db8:85a3:0000:0000:8a2e:0370:7334]'
+
+
+def test_format_host_for_url_already_bracketed():
+    """Test that already bracketed IPv6 addresses are not double-wrapped"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+
+    # Already bracketed IPv6 should remain unchanged
+    assert plugin._format_host_for_url('[2001:db8::1]') == '[2001:db8::1]'
+    assert plugin._format_host_for_url('[::1]') == '[::1]'
+
+
+def test_format_host_for_url_hostname():
+    """Test hostname formatting (should remain unchanged)"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+
+    # Hostnames should not be wrapped
+    assert plugin._format_host_for_url('localhost') == 'localhost'
+    assert plugin._format_host_for_url('jriver.local') == 'jriver.local'
+    assert plugin._format_host_for_url('media-server.lan') == 'media-server.lan'
+
+
+def test_format_host_for_url_edge_cases():
+    """Test edge cases for host formatting"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+
+    # Edge cases
+    assert plugin._format_host_for_url(None) is None
+    assert plugin._format_host_for_url('') == ''
+    assert plugin._format_host_for_url('invalid-ip') == 'invalid-ip'
+
+
+def test_ipv6_url_construction():
+    """Test that IPv6 addresses result in proper URLs"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+
+    # Mock config to avoid actual initialization
+    from unittest.mock import MagicMock
+    mock_config = MagicMock()
+    mock_config.cparser.value.side_effect = lambda key, default=None: {
+        'jriver/host': '2001:db8::1',
+        'jriver/port': '52199'
+    }.get(key, default)
+    plugin.config = mock_config
+
+    # Test IPv6 URL construction
+    plugin.host = '2001:db8::1'
+    plugin.port = '52199'
+    formatted_host = plugin._format_host_for_url(plugin.host)
+    expected_url = f"http://{formatted_host}:{plugin.port}/MCWS/v1"
+
+    assert formatted_host == '[2001:db8::1]'
+    assert expected_url == 'http://[2001:db8::1]:52199/MCWS/v1'
+
+
 @pytest.mark.asyncio
-async def test_get_filename_success(jriver_plugin_with_session):
+async def test_get_filename_success(jriver_plugin_with_session):  # pylint: disable=redefined-outer-name
     """Test successful filename retrieval"""
     plugin = jriver_plugin_with_session
     plugin.base_url = 'http://localhost:52199/MCWS/v1'

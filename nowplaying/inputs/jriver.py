@@ -10,6 +10,7 @@ import lxml.etree
 
 from nowplaying.inputs import InputPlugin
 
+
 class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
     ''' handler for JRiver Media Center via MCWS API '''
 
@@ -25,7 +26,6 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         self.base_url = None
         self.session = None
         self.mixmode = "newest"
-        self.testmode = False
 
     async def start(self):
         ''' Initialize the plugin and authenticate '''
@@ -39,7 +39,9 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             logging.error("JRiver host not configured")
             return False
 
-        self.base_url = f"http://{self.host}:{self.port}/MCWS/v1"
+        # Format host for URL (wrap IPv6 addresses in brackets)
+        formatted_host = self._format_host_for_url(self.host)
+        self.base_url = f"http://{formatted_host}:{self.port}/MCWS/v1"
 
         # Create aiohttp session
         self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5))
@@ -47,22 +49,24 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         # Test connection and authenticate
         if await self._test_connection() and await self._authenticate():
             return True
+
+        # Close session if initialization failed
+        await self.session.close()
+        self.session = None
         return False
 
     async def _test_connection(self):
         ''' Test connection to JRiver server '''
         try:
             url = f"{self.base_url}/Alive"
-            async with self.session.get(url) as response:
+            async with self.session.get(url) as response:  # pylint: disable=not-async-context-manager
                 if response.status == 200:
                     response_text = await response.text()
                     # Parse response to check access key if provided
                     if self.access_key:
-                        tree = lxml.etree.fromstring(response_text)
-                        access_key_items = tree.xpath('//Item[@Name="AccessKey"]')
-                        if access_key_items:
-                            server_access_key = access_key_items[0].text
-                            if server_access_key != self.access_key:
+                        tree = lxml.etree.fromstring(response_text)  # pylint: disable=c-extension-no-member
+                        if access_key_items := tree.xpath('//Item[@Name="AccessKey"]'):
+                            if access_key_items[0].text != self.access_key:
                                 logging.error("Access key mismatch")
                                 return False
                     logging.debug("JRiver server connection successful")
@@ -81,16 +85,12 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
         try:
             url = f"{self.base_url}/Authenticate"
-            params = {
-                'Username': self.username,
-                'Password': self.password
-            }
-            async with self.session.get(url, params=params) as response:
+            params = {'Username': self.username, 'Password': self.password}
+            async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
                 if response.status == 200:
                     response_text = await response.text()
-                    tree = lxml.etree.fromstring(response_text)
-                    token_items = tree.xpath('//Item[@Name="Token"]')
-                    if token_items:
+                    tree = lxml.etree.fromstring(response_text)  # pylint: disable=c-extension-no-member
+                    if token_items := tree.xpath('//Item[@Name="Token"]'):
                         self.token = token_items[0].text
                         logging.debug("JRiver authentication successful")
                         return True
@@ -114,7 +114,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             if self.token:
                 params['Token'] = self.token
 
-            async with self.session.get(url, params=params) as response:
+            async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
                 if response.status != 200:
                     logging.error("JRiver API returned status %d", response.status)
                     return None
@@ -126,7 +126,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             return None
 
         try:
-            tree = lxml.etree.fromstring(response_text)
+            tree = lxml.etree.fromstring(response_text)  # pylint: disable=c-extension-no-member
         except Exception as error:
             logging.error("Cannot parse JRiver response: %s", error)
             return None
@@ -145,36 +145,68 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
                 metadata['album'] = value
             elif name == 'Name':  # JRiver uses 'Name' for track title
                 metadata['title'] = value
-            elif name == 'DurationMS':
+            elif name == 'DurationMS' and value and value.isdigit():
                 # Convert milliseconds to seconds
-                if value and value.isdigit():
-                    metadata['duration'] = int(value) // 1000
+                metadata['duration'] = int(value) // 1000
             elif name == 'FileKey':
                 filekey = value
 
         # Get filename if we have a FileKey and this appears to be a local connection
-        if filekey and self._is_local_connection():
-            filename = await self._get_filename(filekey)
-            if filename:
-                metadata['filename'] = filename
+        if filekey and self._is_local_connection() and (filename := await
+                                                        self._get_filename(filekey)):
+            metadata['filename'] = filename
 
         return metadata
 
+    @staticmethod
+    def _format_host_for_url(host):
+        ''' Format host for URL construction, wrapping IPv6 addresses in brackets '''
+        if not host:
+            return host
+
+        # Check if host is already wrapped in brackets (user might have done this)
+        if host.startswith('[') and host.endswith(']'):
+            return host
+
+        # Try to detect if this is an IPv6 address
+        try:
+            ip_addr = ipaddress.ip_address(host)
+            # If it's IPv6, wrap in brackets
+            if isinstance(ip_addr, ipaddress.IPv6Address):
+                return f"[{host}]"
+        except ValueError:
+            # Not a valid IP address, probably a hostname
+            pass
+
+        # Return as-is for IPv4 addresses and hostnames
+        return host
+
     def _is_local_connection(self):
-        ''' Check if this appears to be a local connection '''
+        ''' Check if this is a local connection where file paths would be meaningful '''
         if not self.host:
             return False
-        # Consider localhost, 127.0.0.1, and local network ranges as local
+
+        # Only consider explicit localhost references as truly local
         local_hosts = ['localhost', '127.0.0.1', '::1']
         if self.host.lower() in local_hosts:
             return True
-        # Check for local network ranges (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+
+        # Check for private IP ranges (same-network connections)
         try:
             ip_addr = ipaddress.ip_address(self.host)
             return ip_addr.is_private
         except ValueError:
-            # Not a valid IP address, assume it's a hostname on local network
-            return True
+            # For hostnames, only consider explicit local domain patterns
+            # Remote hostnames like 'jriver.example.com' should NOT be treated as local
+            host_lower = self.host.lower()
+            local_domain_patterns = [
+                '.local',  # mDNS/Bonjour local domains (e.g., jriver.local)
+                '.lan',  # Common local network domain
+                '.home',  # Common home network domain  
+                '.internal',  # Common internal network domain
+            ]
+            # Only return True for explicit local domain patterns
+            return any(host_lower.endswith(pattern) for pattern in local_domain_patterns)
 
     async def _get_filename(self, filekey):
         ''' Get filename from FileKey using GetInfo API '''
@@ -184,18 +216,18 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             if self.token:
                 params['Token'] = self.token
 
-            async with self.session.get(url, params=params) as response:
+            async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
                 if response.status != 200:
-                    logging.debug("GetInfo API returned status %d for FileKey %s",
-                                response.status, filekey)
+                    logging.debug("GetInfo API returned status %d for FileKey %s", response.status,
+                                  filekey)
                     return None
 
                 response_text = await response.text()
 
-            tree = lxml.etree.fromstring(response_text)
+            tree = lxml.etree.fromstring(response_text)  # pylint: disable=c-extension-no-member
             for item in tree.xpath('//Item'):
-                if item.get('Name') == 'Filename':
-                    return item.text
+                if item.get('Name') == 'Filename' and (filename := item.text):
+                    return filename
 
             logging.debug("No Filename found in GetInfo response for FileKey %s", filekey)
             return None
@@ -257,7 +289,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
     def desc_settingsui(self, qwidget):
         ''' description '''
         qwidget.setText('This plugin provides support for JRiver Media Center via MCWS API. '
-                       'Configure the host/IP and port of your JRiver server. '
-                       'Username/password are optional if authentication is not required. '
-                       'For local connections, the plugin will automatically retrieve '
-                       'file paths for enhanced metadata support.')
+                        'Configure the host/IP and port of your JRiver server. '
+                        'Username/password are optional if authentication is not required. '
+                        'File paths are automatically retrieved for local connections only '
+                        '(localhost, private IPs, and .local/.lan/.home/.internal domains).')
