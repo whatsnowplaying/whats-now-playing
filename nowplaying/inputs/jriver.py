@@ -2,6 +2,7 @@
 ''' JRiver Media Center MCWS API plugin '''
 
 import asyncio
+import ipaddress
 import logging
 
 import aiohttp
@@ -39,7 +40,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             return False
 
         self.base_url = f"http://{self.host}:{self.port}/MCWS/v1"
-        
+
         # Create aiohttp session
         self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5))
 
@@ -117,7 +118,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
                 if response.status != 200:
                     logging.error("JRiver API returned status %d", response.status)
                     return None
-                
+
                 response_text = await response.text()
 
         except Exception as error:  # pylint: disable=broad-except
@@ -132,6 +133,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
         # Extract metadata from JRiver XML response
         metadata = {}
+        filekey = None
 
         # Parse the XML items
         for item in tree.xpath('//Item'):
@@ -147,8 +149,60 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
                 # Convert milliseconds to seconds
                 if value and value.isdigit():
                     metadata['duration'] = int(value) // 1000
+            elif name == 'FileKey':
+                filekey = value
+
+        # Get filename if we have a FileKey and this appears to be a local connection
+        if filekey and self._is_local_connection():
+            filename = await self._get_filename(filekey)
+            if filename:
+                metadata['filename'] = filename
 
         return metadata
+
+    def _is_local_connection(self):
+        ''' Check if this appears to be a local connection '''
+        if not self.host:
+            return False
+        # Consider localhost, 127.0.0.1, and local network ranges as local
+        local_hosts = ['localhost', '127.0.0.1', '::1']
+        if self.host.lower() in local_hosts:
+            return True
+        # Check for local network ranges (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+        try:
+            ip_addr = ipaddress.ip_address(self.host)
+            return ip_addr.is_private
+        except ValueError:
+            # Not a valid IP address, assume it's a hostname on local network
+            return True
+
+    async def _get_filename(self, filekey):
+        ''' Get filename from FileKey using GetInfo API '''
+        try:
+            url = f"{self.base_url}/File/GetInfo"
+            params = {'FileKey': filekey}
+            if self.token:
+                params['Token'] = self.token
+
+            async with self.session.get(url, params=params) as response:
+                if response.status != 200:
+                    logging.debug("GetInfo API returned status %d for FileKey %s",
+                                response.status, filekey)
+                    return None
+
+                response_text = await response.text()
+
+            tree = lxml.etree.fromstring(response_text)
+            for item in tree.xpath('//Item'):
+                if item.get('Name') == 'Filename':
+                    return item.text
+
+            logging.debug("No Filename found in GetInfo response for FileKey %s", filekey)
+            return None
+
+        except Exception as error:  # pylint: disable=broad-except
+            logging.debug("Cannot get filename for FileKey %s: %s", filekey, error)
+            return None
 
     async def getrandomtrack(self, playlist):
         ''' Not implemented for JRiver MCWS '''
@@ -204,4 +258,6 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         ''' description '''
         qwidget.setText('This plugin provides support for JRiver Media Center via MCWS API. '
                        'Configure the host/IP and port of your JRiver server. '
-                       'Username/password are optional if authentication is not required.')
+                       'Username/password are optional if authentication is not required. '
+                       'For local connections, the plugin will automatically retrieve '
+                       'file paths for enhanced metadata support.')

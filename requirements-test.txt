@@ -1,6 +1,7 @@
 #
 # tests
 #
+aioresponses==0.7.7
 psutil==7.0.0
 pytest==8.3.5
 pytest-asyncio==0.26.0
