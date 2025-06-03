@@ -97,6 +97,44 @@ def test_settings_ui_save(jriver_bootstrap):  # pylint: disable=redefined-outer-
     assert plugin.config.cparser.value('jriver/access_key') == 'newkey'
 
 
+def test_settings_ui_save_strips_whitespace(jriver_bootstrap):  # pylint: disable=redefined-outer-name
+    """Test saving settings from UI strips whitespace"""
+    plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
+    mock_qwidget = MagicMock()
+    mock_qwidget.host_lineedit.text.return_value = '  localhost  '
+    mock_qwidget.port_lineedit.text.return_value = '  12345  '
+    mock_qwidget.username_lineedit.text.return_value = '  newuser  '
+    mock_qwidget.password_lineedit.text.return_value = '  newpass  '
+    mock_qwidget.access_key_lineedit.text.return_value = '  newkey  '
+
+    plugin.save_settingsui(mock_qwidget)
+
+    assert plugin.config.cparser.value('jriver/host') == 'localhost'
+    assert plugin.config.cparser.value('jriver/port') == '12345'
+    assert plugin.config.cparser.value('jriver/username') == 'newuser'
+    assert plugin.config.cparser.value('jriver/password') == 'newpass'
+    assert plugin.config.cparser.value('jriver/access_key') == 'newkey'
+
+
+def test_settings_ui_save_handles_empty_strings(jriver_bootstrap):  # pylint: disable=redefined-outer-name
+    """Test saving settings from UI handles empty strings and whitespace-only strings"""
+    plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
+    mock_qwidget = MagicMock()
+    mock_qwidget.host_lineedit.text.return_value = 'localhost'
+    mock_qwidget.port_lineedit.text.return_value = '52199'
+    mock_qwidget.username_lineedit.text.return_value = '   '  # whitespace-only
+    mock_qwidget.password_lineedit.text.return_value = ''     # empty string
+    mock_qwidget.access_key_lineedit.text.return_value = '  '  # whitespace-only
+
+    plugin.save_settingsui(mock_qwidget)
+
+    assert plugin.config.cparser.value('jriver/host') == 'localhost'
+    assert plugin.config.cparser.value('jriver/port') == '52199'
+    assert plugin.config.cparser.value('jriver/username') == ''  # stripped to empty
+    assert plugin.config.cparser.value('jriver/password') == ''  # remains empty
+    assert plugin.config.cparser.value('jriver/access_key') == ''  # stripped to empty
+
+
 def test_settings_ui_description():
     """Test settings UI description"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
@@ -515,6 +553,97 @@ async def test_getplayingtrack_without_token():
               body='<Response Status="OK"></Response>')
 
         await plugin.getplayingtrack()
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_getplayingtrack_with_access_key():
+    """Test getplayingtrack includes access_key in request"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+    plugin.access_key = 'myaccesskey123'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        # aioresponses matches the exact URL including query parameters
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info?AccessKey=myaccesskey123',
+              body='<Response Status="OK"></Response>')
+
+        await plugin.getplayingtrack()
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_getplayingtrack_with_token_and_access_key():
+    """Test getplayingtrack includes both token and access_key in request"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+    plugin.token = 'mytoken123'
+    plugin.access_key = 'myaccesskey123'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        # aioresponses matches the exact URL including query parameters
+        # Note: order of parameters in URL may vary, so we test the call was made correctly
+        url = ('http://localhost:52199/MCWS/v1/Playback/Info?Token=mytoken123&'
+               'AccessKey=myaccesskey123')
+        mock_resp.get(url, body='<Response Status="OK"></Response>')
+
+        await plugin.getplayingtrack()
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_get_filename_with_access_key():
+    """Test _get_filename includes access_key in request"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+    plugin.access_key = 'myaccesskey123'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        url = 'http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345&AccessKey=myaccesskey123'
+        mock_resp.get(url,
+              body='''<Response Status="OK">
+                        <Item Name="Filename">test.mp3</Item>
+                      </Response>''')
+
+        result = await plugin._get_filename('12345')  # pylint: disable=protected-access
+        assert result == 'test.mp3'
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_get_filename_with_token_and_access_key():
+    """Test _get_filename includes both token and access_key in request"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+    plugin.token = 'mytoken123'
+    plugin.access_key = 'myaccesskey123'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        url = ('http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345&'
+               'Token=mytoken123&AccessKey=myaccesskey123')
+        mock_resp.get(url,
+              body='''<Response Status="OK">
+                        <Item Name="Filename">test.mp3</Item>
+                      </Response>''')
+
+        result = await plugin._get_filename('12345')  # pylint: disable=protected-access
+        assert result == 'test.mp3'
 
     await plugin.session.close()
 

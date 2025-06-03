@@ -102,7 +102,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             logging.error("Cannot authenticate with JRiver server: %s", error)
             return False
 
-    async def getplayingtrack(self):
+    async def getplayingtrack(self):  # pylint: disable=too-many-branches
         ''' Get currently playing track from JRiver '''
         if not self.base_url:
             return None
@@ -113,6 +113,8 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             params = {}
             if self.token:
                 params['Token'] = self.token
+            if self.access_key:
+                params['AccessKey'] = self.access_key
 
             async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
                 if response.status != 200:
@@ -127,7 +129,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
         try:
             tree = lxml.etree.fromstring(response_text)  # pylint: disable=c-extension-no-member
-        except Exception as error:
+        except Exception as error:  # pylint: disable=broad-except
             logging.error("Cannot parse JRiver response: %s", error)
             return None
 
@@ -202,7 +204,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             local_domain_patterns = [
                 '.local',  # mDNS/Bonjour local domains (e.g., jriver.local)
                 '.lan',  # Common local network domain
-                '.home',  # Common home network domain  
+                '.home',  # Common home network domain
                 '.internal',  # Common internal network domain
             ]
             # Only return True for explicit local domain patterns
@@ -215,6 +217,8 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             params = {'FileKey': filekey}
             if self.token:
                 params['Token'] = self.token
+            if self.access_key:
+                params['AccessKey'] = self.access_key
 
             async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
                 if response.status != 200:
@@ -280,11 +284,12 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
     def save_settingsui(self, qwidget):
         ''' take the settings page and save it '''
-        self.config.cparser.setValue('jriver/host', qwidget.host_lineedit.text())
-        self.config.cparser.setValue('jriver/port', qwidget.port_lineedit.text())
-        self.config.cparser.setValue('jriver/username', qwidget.username_lineedit.text())
-        self.config.cparser.setValue('jriver/password', qwidget.password_lineedit.text())
-        self.config.cparser.setValue('jriver/access_key', qwidget.access_key_lineedit.text())
+        self.config.cparser.setValue('jriver/host', qwidget.host_lineedit.text().strip())
+        self.config.cparser.setValue('jriver/port', qwidget.port_lineedit.text().strip())
+        self.config.cparser.setValue('jriver/username', qwidget.username_lineedit.text().strip())
+        self.config.cparser.setValue('jriver/password', qwidget.password_lineedit.text().strip())
+        self.config.cparser.setValue('jriver/access_key',
+                                      qwidget.access_key_lineedit.text().strip())
 
     def desc_settingsui(self, qwidget):
         ''' description '''
