@@ -176,7 +176,7 @@ async def test_start_success(jriver_bootstrap):  # pylint: disable=redefined-out
         assert plugin.host == '192.168.1.100'
         assert plugin.port == '52199'
         assert plugin.username == 'testuser'
-        assert plugin.password == 'testpass'
+        assert plugin.password == 'testpass'  # pragma: allowlist secret
         assert plugin.access_key == 'testkey'
         assert plugin.base_url == 'http://192.168.1.100:52199/MCWS/v1'
         assert plugin.session is not None  # Session should remain open on success
@@ -321,7 +321,7 @@ async def test_authenticate_success():
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
     plugin.username = 'testuser'
-    plugin.password = 'testpass'
+    plugin.password = 'testpass'  # pragma: allowlist secret
 
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
@@ -359,7 +359,7 @@ async def test_authenticate_no_token():
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
     plugin.username = 'testuser'
-    plugin.password = 'testpass'
+    plugin.password = 'testpass'  # pragma: allowlist secret
 
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
@@ -384,7 +384,7 @@ async def test_authenticate_http_error():
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     plugin.base_url = 'http://localhost:52199/MCWS/v1'
     plugin.username = 'testuser'
-    plugin.password = 'testpass'
+    plugin.password = 'testpass'  # pragma: allowlist secret
 
     # Create real aiohttp session for testing
     plugin.session = aiohttp.ClientSession()
