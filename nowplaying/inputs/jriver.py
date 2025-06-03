@@ -16,7 +16,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
-        self.displayname = "JRiver Media Center"
+        self.displayname = "JRiver"
         self.host = None
         self.port = None
         self.username = None
@@ -64,7 +64,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
                     response_text = await response.text()
                     # Parse response to check access key if provided
                     if self.access_key:
-                        tree = lxml.etree.fromstring(response_text)  # pylint: disable=c-extension-no-member
+                        tree = lxml.etree.fromstring(response_text.encode('utf-8'))  # pylint: disable=c-extension-no-member
                         if access_key_items := tree.xpath('//Item[@Name="AccessKey"]'):
                             if access_key_items[0].text != self.access_key:
                                 logging.error("Access key mismatch")
@@ -89,7 +89,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
                 if response.status == 200:
                     response_text = await response.text()
-                    tree = lxml.etree.fromstring(response_text)  # pylint: disable=c-extension-no-member
+                    tree = lxml.etree.fromstring(response_text.encode('utf-8'))  # pylint: disable=c-extension-no-member
                     if token_items := tree.xpath('//Item[@Name="Token"]'):
                         self.token = token_items[0].text
                         logging.debug("JRiver authentication successful")
@@ -128,7 +128,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             return None
 
         try:
-            tree = lxml.etree.fromstring(response_text)  # pylint: disable=c-extension-no-member
+            tree = lxml.etree.fromstring(response_text.encode('utf-8'))  # pylint: disable=c-extension-no-member
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Cannot parse JRiver response: %s", error)
             return None
@@ -214,7 +214,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         ''' Get filename from FileKey using GetInfo API '''
         try:
             url = f"{self.base_url}/File/GetInfo"
-            params = {'FileKey': filekey}
+            params = {'File': filekey}
             if self.token:
                 params['Token'] = self.token
             if self.access_key:
@@ -228,10 +228,18 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
                 response_text = await response.text()
 
-            tree = lxml.etree.fromstring(response_text)  # pylint: disable=c-extension-no-member
-            for item in tree.xpath('//Item'):
-                if item.get('Name') == 'Filename' and (filename := item.text):
-                    return filename
+            tree = lxml.etree.fromstring(response_text.encode('utf-8'))  # pylint: disable=c-extension-no-member
+
+            # Handle both Response format (simple) and MPL format (detailed)
+            # MPL format: <MPL><Item><Field Name="Filename">...</Field></Item></MPL>
+            filename_fields = tree.xpath('//Field[@Name="Filename"]')
+            if filename_fields and (filename := filename_fields[0].text):
+                return filename
+
+            # Fallback to old Response format: <Response><Item Name="Filename">...</Item></Response>
+            filename_items = tree.xpath('//Item[@Name="Filename"]')
+            if filename_items and (filename := filename_items[0].text):
+                return filename
 
             logging.debug("No Filename found in GetInfo response for FileKey %s", filekey)
             return None

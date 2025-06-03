@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>JRiver Media Center</string>
+   <string>JRiver</string>
   </property>
   <widget class="QLabel" name="header_label">
    <property name="geometry">
@@ -23,7 +23,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>**JRiver Media Center Configuration**</string>
+    <string>**JRiver Configuration**</string>
    </property>
    <property name="textFormat">
     <enum>Qt::MarkdownText</enum>

@@ -36,7 +36,7 @@ def jriver_bootstrap(bootstrap):
 def test_plugin_init():
     """Test plugin initialization"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
-    assert plugin.displayname == "JRiver Media Center"
+    assert plugin.displayname == "JRiver"
     assert plugin.host is None
     assert plugin.port is None
     assert plugin.token is None
@@ -518,6 +518,41 @@ async def test_getplayingtrack_parse_error():
 
 
 @pytest.mark.asyncio
+async def test_getplayingtrack_with_xml_declaration():
+    """Test getplayingtrack with XML encoding declaration (real JRiver format)"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        # This simulates the actual JRiver response format with XML declaration
+        jriver_response = '''<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<Response Status="OK">
+<Item Name="ZoneID">0</Item>
+<Item Name="State">2</Item>
+<Item Name="FileKey">477</Item>
+<Item Name="DurationMS">341342</Item>
+<Item Name="Artist">Information Society</Item>
+<Item Name="Album">Don't Be Afraid</Item>
+<Item Name="Name">Are 'Friends' Electric? 2.0</Item>
+<Item Name="Status">Playing</Item>
+</Response>'''
+
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info', body=jriver_response)
+
+        result = await plugin.getplayingtrack()
+        assert result is not None
+        assert result['artist'] == 'Information Society'
+        assert result['album'] == "Don't Be Afraid"
+        assert result['title'] == "Are 'Friends' Electric? 2.0"
+        assert result['duration'] == 341  # 341342ms / 1000
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
 async def test_getplayingtrack_with_token():
     """Test getplayingtrack includes token in request"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
@@ -611,7 +646,7 @@ async def test_get_filename_with_access_key():
     plugin.session = aiohttp.ClientSession()
 
     with aioresponses() as mock_resp:
-        url = 'http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345&AccessKey=myaccesskey123'
+        url = 'http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&AccessKey=myaccesskey123'
         mock_resp.get(url,
               body='''<Response Status="OK">
                         <Item Name="Filename">test.mp3</Item>
@@ -635,7 +670,7 @@ async def test_get_filename_with_token_and_access_key():
     plugin.session = aiohttp.ClientSession()
 
     with aioresponses() as mock_resp:
-        url = ('http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345&'
+        url = ('http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&'
                'Token=mytoken123&AccessKey=myaccesskey123')
         mock_resp.get(url,
               body='''<Response Status="OK">
@@ -668,166 +703,82 @@ def test_connect_settingsui():
     assert plugin.uihelp == mock_uihelp
 
 
-def test_is_local_connection_localhost():
-    """Test local connection detection for localhost"""
+@pytest.mark.parametrize("host,expected", [
+    # Localhost variants
+    ('localhost', True),
+    ('127.0.0.1', True),
+    ('::1', True),
+    # Private IPv4 ranges
+    ('192.168.1.100', True),
+    ('10.0.0.5', True),
+    ('172.16.1.10', True),
+    # Private IPv6 ranges
+    ('fe80::1', True),  # Link-local
+    ('fd00::1', True),  # Unique local
+    # Public IPv4 addresses
+    ('8.8.8.8', False),
+    ('1.1.1.1', False),
+    # Public IPv6 addresses
+    ('2001:4860:4860::8888', False),  # Google DNS
+    ('2606:4700:4700::1111', False),  # Cloudflare DNS
+    # Generic hostnames (should NOT be considered local - security risk)
+    ('jriver-server', False),
+    ('remote.example.com', False),
+    # Explicit local domain patterns
+    ('media-pc.local', True),
+    ('jriver.lan', True),
+    ('server.home', True),
+    ('media.internal', True),
+    # Remote hostnames (security test)
+    ('jriver.example.com', False),
+    ('music-server.net', False),
+    ('remote-jriver.org', False),
+    ('malicious-server.co.uk', False),
+    ('untrusted-host', False),
+    ('random-hostname', False),
+    # Edge case
+    (None, False),
+])
+def test_is_local_connection(host, expected):
+    """Test local connection detection for various hosts"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.host = host
+    assert plugin._is_local_connection() is expected  # pylint: disable=protected-access
 
-    plugin.host = 'localhost'
-    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
 
-    plugin.host = '127.0.0.1'
-    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
-
-    plugin.host = '::1'
-    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
-
-    # Test that IPv6 localhost works with URL formatting
+def test_is_local_connection_ipv6_url_formatting():
+    """Test that IPv6 localhost works with URL formatting"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
     formatted_host = plugin._format_host_for_url('::1')  # pylint: disable=protected-access
     assert formatted_host == '[::1]'
 
 
-def test_is_local_connection_private_networks():
-    """Test local connection detection for private networks"""
-    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
-
-    # Private IPv4 ranges
-    plugin.host = '192.168.1.100'
-    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
-
-    plugin.host = '10.0.0.5'
-    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
-
-    plugin.host = '172.16.1.10'
-    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
-
-    # Private IPv6 ranges (link-local and unique local)
-    plugin.host = 'fe80::1'  # Link-local
-    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
-
-    plugin.host = 'fd00::1'  # Unique local
-    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
-
-
-def test_is_local_connection_public_ip():
-    """Test local connection detection for public IPs"""
-    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
-
-    # Public IPv4 addresses
-    plugin.host = '8.8.8.8'
-    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
-
-    plugin.host = '1.1.1.1'
-    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
-
-    # Public IPv6 addresses
-    plugin.host = '2001:4860:4860::8888'  # Google DNS
-    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
-
-    plugin.host = '2606:4700:4700::1111'  # Cloudflare DNS
-    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
-
-
-def test_is_local_connection_hostname():
-    """Test local connection detection for hostnames"""
-    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
-
-    # Generic hostnames should NOT be considered local (security risk)
-    plugin.host = 'jriver-server'
-    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
-
-    plugin.host = 'remote.example.com'
-    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
-
-    # Only explicit local domain patterns should be considered local
-    plugin.host = 'media-pc.local'
-    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
-
-    plugin.host = 'jriver.lan'
-    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
-
-    plugin.host = 'server.home'
-    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
-
-    plugin.host = 'media.internal'
-    assert plugin._is_local_connection() is True  # pylint: disable=protected-access
-
-
-def test_is_local_connection_no_host():
-    """Test local connection detection with no host"""
-    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
-
-    plugin.host = None
-    assert plugin._is_local_connection() is False  # pylint: disable=protected-access
-
-
-def test_is_local_connection_security():
-    """Test that remote hostnames are properly rejected for security"""
-    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
-
-    # These should all be considered remote/unsafe
-    remote_hosts = [
-        'jriver.example.com',
-        'music-server.net',
-        'remote-jriver.org',
-        'malicious-server.co.uk',
-        'untrusted-host',
-        'random-hostname',
-    ]
-
-    for host in remote_hosts:
-        plugin.host = host
-        assert plugin._is_local_connection() is False, f"Host '{host}' should be considered remote"  # pylint: disable=protected-access
-
-
-def test_format_host_for_url_ipv4():
-    """Test IPv4 address formatting (should remain unchanged)"""
-    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
-
-    # IPv4 addresses should not be wrapped
-    assert plugin._format_host_for_url('192.168.1.100') == '192.168.1.100'  # pylint: disable=protected-access
-    assert plugin._format_host_for_url('127.0.0.1') == '127.0.0.1'  # pylint: disable=protected-access
-    assert plugin._format_host_for_url('10.0.0.1') == '10.0.0.1'  # pylint: disable=protected-access
-
-
-def test_format_host_for_url_ipv6():
-    """Test IPv6 address formatting (should be wrapped in brackets)"""
-    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
-
-    # IPv6 addresses should be wrapped in brackets
-    assert plugin._format_host_for_url('2001:db8::1') == '[2001:db8::1]'  # pylint: disable=protected-access
-    assert plugin._format_host_for_url('::1') == '[::1]'  # pylint: disable=protected-access
-    assert plugin._format_host_for_url('fe80::1%lo0') == '[fe80::1%lo0]'  # pylint: disable=protected-access
-    assert plugin._format_host_for_url(  # pylint: disable=protected-access
-        '2001:0db8:85a3:0000:0000:8a2e:0370:7334') == '[2001:0db8:85a3:0000:0000:8a2e:0370:7334]'
-
-
-def test_format_host_for_url_already_bracketed():
-    """Test that already bracketed IPv6 addresses are not double-wrapped"""
-    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
-
-    # Already bracketed IPv6 should remain unchanged
-    assert plugin._format_host_for_url('[2001:db8::1]') == '[2001:db8::1]'  # pylint: disable=protected-access
-    assert plugin._format_host_for_url('[::1]') == '[::1]'  # pylint: disable=protected-access
-
-
-def test_format_host_for_url_hostname():
-    """Test hostname formatting (should remain unchanged)"""
-    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
-
-    # Hostnames should not be wrapped
-    assert plugin._format_host_for_url('localhost') == 'localhost'  # pylint: disable=protected-access
-    assert plugin._format_host_for_url('jriver.local') == 'jriver.local'  # pylint: disable=protected-access
-    assert plugin._format_host_for_url('media-server.lan') == 'media-server.lan'  # pylint: disable=protected-access
-
-
-def test_format_host_for_url_edge_cases():
-    """Test edge cases for host formatting"""
-    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
-
+@pytest.mark.parametrize("input_host,expected", [
+    # IPv4 addresses (should remain unchanged)
+    ('192.168.1.100', '192.168.1.100'),
+    ('127.0.0.1', '127.0.0.1'),
+    ('10.0.0.1', '10.0.0.1'),
+    # IPv6 addresses (should be wrapped in brackets)
+    ('2001:db8::1', '[2001:db8::1]'),
+    ('::1', '[::1]'),
+    ('fe80::1%lo0', '[fe80::1%lo0]'),
+    ('2001:0db8:85a3:0000:0000:8a2e:0370:7334', '[2001:0db8:85a3:0000:0000:8a2e:0370:7334]'),
+    # Already bracketed IPv6 (should remain unchanged)
+    ('[2001:db8::1]', '[2001:db8::1]'),
+    ('[::1]', '[::1]'),
+    # Hostnames (should remain unchanged)
+    ('localhost', 'localhost'),
+    ('jriver.local', 'jriver.local'),
+    ('media-server.lan', 'media-server.lan'),
     # Edge cases
-    assert plugin._format_host_for_url(None) is None  # pylint: disable=protected-access
-    assert plugin._format_host_for_url('') == ''  # pylint: disable=protected-access
-    assert plugin._format_host_for_url('invalid-ip') == 'invalid-ip'  # pylint: disable=protected-access
+    (None, None),
+    ('', ''),
+    ('invalid-ip', 'invalid-ip'),
+])
+def test_format_host_for_url(input_host, expected):
+    """Test host formatting for URL construction"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    assert plugin._format_host_for_url(input_host) == expected  # pylint: disable=protected-access
 
 
 def test_ipv6_url_construction():
@@ -860,7 +811,7 @@ async def test_get_filename_success(jriver_plugin_with_session):  # pylint: disa
     plugin.token = 'testtoken'
 
     with aioresponses() as mock_resp:
-        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345&Token=testtoken',
+        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&Token=testtoken',
               body='''<Response Status="OK">
                         <Item Name="FileKey">12345</Item>
                         <Item Name="Name">Come Together</Item>
@@ -882,7 +833,7 @@ async def test_get_filename_not_found():
     plugin.session = aiohttp.ClientSession()
 
     with aioresponses() as mock_resp:
-        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345',
+        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?File=12345',
               body='''
               <Response Status="OK">
                   <Item Name="FileKey">12345</Item>
@@ -906,9 +857,65 @@ async def test_get_filename_http_error():
     plugin.session = aiohttp.ClientSession()
 
     with aioresponses() as mock_resp:
-        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?FileKey=12345', status=404)
+        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?File=12345', status=404)
 
         result = await plugin._get_filename('12345')  # pylint: disable=protected-access
         assert result is None
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_get_filename_mpl_format():
+    """Test _get_filename with MPL format response (real JRiver format)"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        # This simulates the actual JRiver MPL response format
+        mpl_response = '''<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<MPL Version="2.0" Title="MCWS - Files - 6096105472" PathSeparator="/">
+<Item>
+<Field Name="Key">477</Field>
+<Field Name="Filename">/Users/aw/Music/Artist/Album/Song.mp3</Field>
+<Field Name="Name">Song Title</Field>
+<Field Name="Artist">Artist Name</Field>
+<Field Name="Album">Album Name</Field>
+</Item>
+</MPL>'''
+
+        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?File=477', body=mpl_response)
+
+        result = await plugin._get_filename('477')  # pylint: disable=protected-access
+        assert result == '/Users/aw/Music/Artist/Album/Song.mp3'
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_get_filename_response_format():
+    """Test _get_filename with Response format (compatibility)"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        # Test the old Response format for backwards compatibility
+        response_format = '''<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<Response Status="OK">
+<Item Name="FileKey">477</Item>
+<Item Name="Filename">/Users/aw/Music/Artist/Album/Song.mp3</Item>
+<Item Name="Name">Song Title</Item>
+</Response>'''
+
+        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?File=477', body=response_format)
+
+        result = await plugin._get_filename('477')  # pylint: disable=protected-access
+        assert result == '/Users/aw/Music/Artist/Album/Song.mp3'
 
     await plugin.session.close()
