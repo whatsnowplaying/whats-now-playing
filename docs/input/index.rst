@@ -11,6 +11,7 @@ Each has its own screen to configure them.
 
    djuced
    icecast
+   jriver
    m3u
    mpris2
    serato

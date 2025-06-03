@@ -3,6 +3,7 @@
 
 ## Version 4.2.0 - In Progress
 
+* New input plugin for JRiver Media Center via MCWS API support.
 * Better handling of when the program is already running.
   It should help prevent some weird crashes.
 * Error logging for when wikimedia attempts to continue
