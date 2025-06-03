@@ -27,7 +27,7 @@ JRiver Configuration
 #. Check **Use Media Network to share this library**
 #. Note the **Access Key** if one is displayed (optional but recommended for security)
 #. Configure authentication if desired:
-   
+
    * Check **Require authentication for requests**
    * Set a **Username** and **Password**
 
@@ -47,7 +47,7 @@ Configuration Options
 
 Host/IP Address
   The hostname or IP address of the machine running JRiver Media Center.
-  
+
   * Use ``localhost`` or ``127.0.0.1`` if JRiver is on the same machine
   * Use the IP address (e.g., ``192.168.1.100``) for remote connections
   * IPv6 addresses are supported and will be automatically formatted correctly
@@ -133,7 +133,7 @@ Supported Track Information
 The JRiver input source provides the following track metadata:
 
 * **Artist** - Track artist name
-* **Album** - Album name  
+* **Album** - Album name
 * **Title** - Track title
 * **Duration** - Track length in seconds
 * **Filename** - Full file path (local connections only)
