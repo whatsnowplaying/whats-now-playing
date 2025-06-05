@@ -297,7 +297,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         self.config.cparser.setValue('jriver/username', qwidget.username_lineedit.text().strip())
         self.config.cparser.setValue('jriver/password', qwidget.password_lineedit.text().strip())
         self.config.cparser.setValue('jriver/access_key',
-                                      qwidget.access_key_lineedit.text().strip())
+                                     qwidget.access_key_lineedit.text().strip())
 
     def desc_settingsui(self, qwidget):
         ''' description '''

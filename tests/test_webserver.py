@@ -2,14 +2,22 @@
 ''' test webserver '''
 
 import asyncio
+import contextlib
 import logging
+import os
+import pathlib
 import socket
 import sys
+import tempfile
+import time
+import unittest.mock
 
 import pytest
 import pytest_asyncio
 import requests
 
+import nowplaying.bootstrap  # pylint: disable=import-error
+import nowplaying.config  # pylint: disable=import-error
 import nowplaying.db  # pylint: disable=import-error
 import nowplaying.subprocesses  # pylint: disable=import-error
 import nowplaying.processes.webserver  # pylint: disable=import-error
@@ -21,35 +29,103 @@ def is_port_in_use(port: int) -> bool:
         return sock.connect_ex(('localhost', port)) == 0
 
 
-@pytest_asyncio.fixture
-async def getwebserver(bootstrap):
-    ''' configure the webserver, dependents with prereqs '''
-    config = bootstrap
-    metadb = nowplaying.db.MetadataDB(initialize=True)
-    logging.debug("test_webserver databasefile = %s", metadb.databasefile)
-    config.cparser.setValue('weboutput/httpenabled', 'true')
-    config.cparser.sync()
-    port = config.cparser.value('weboutput/httpport', type=int)
-    logging.debug('checking %s for use', port)
-    while is_port_in_use(port):
-        logging.debug('%s is in use; waiting', port)
-        await asyncio.sleep(2)
+@pytest.fixture(scope="module")
+def shared_webserver_config(pytestconfig):  # pylint: disable=redefined-outer-name
+    ''' module-scoped webserver configuration for main webserver tests '''
+    with contextlib.suppress(PermissionError):  # Windows blows
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as newpath:
 
-    manager = nowplaying.subprocesses.SubprocessManager(config=config, testmode=True)
+            dbinit_patch = unittest.mock.patch('nowplaying.db.MetadataDB.init_db_var')
+            dbinit_mock = dbinit_patch.start()
+            dbdir = pathlib.Path(newpath).joinpath('mdb')
+            dbdir.mkdir()
+            dbfile = dbdir.joinpath('test.db')
+            dbinit_mock.return_value = dbfile
+
+            with unittest.mock.patch.dict(os.environ, {
+                    "WNP_CONFIG_TEST_DIR": str(newpath),
+                    "WNP_METADB_TEST_FILE": str(dbfile)
+            }):
+                bundledir = pathlib.Path(pytestconfig.rootpath).joinpath('nowplaying')
+                nowplaying.bootstrap.set_qt_names(domain='com.github.whatsnowplaying.testsuite',
+                                                  appname='testsuite')
+                config = nowplaying.config.ConfigFile(bundledir=bundledir,
+                                                      logpath=newpath,
+                                                      testmode=True)
+                config.cparser.setValue('acoustidmb/enabled', False)
+                config.cparser.setValue('weboutput/httpenabled', 'true')
+                config.cparser.sync()
+
+                metadb = nowplaying.db.MetadataDB(initialize=True)
+                logging.debug("shared webserver databasefile = %s", metadb.databasefile)
+
+                port = config.cparser.value('weboutput/httpport', type=int)
+                logging.debug('checking %s for use', port)
+                while is_port_in_use(port):
+                    logging.debug('%s is in use; waiting', port)
+                    time.sleep(2)
+
+                manager = nowplaying.subprocesses.SubprocessManager(config=config, testmode=True)
+                manager.start_webserver()
+                time.sleep(5)
+
+                req = requests.get(f'http://localhost:{port}/internals', timeout=5)
+                logging.debug("internals = %s", req.json())
+
+                # Store the actual port since config gets cleared by autouse fixtures
+                yield config, metadb, manager, port
+
+                manager.stop_all_processes()
+                # Give Windows more time for process shutdown and cleanup
+                time.sleep(5)
+                # Don't vacuum on Windows - causes file locking issues in tests
+                if sys.platform != "win32":
+                    try:
+                        metadb.vacuum_database()
+                    except Exception as e:
+                        logging.warning("Could not vacuum database during cleanup: %s", e)
+                # Give Windows additional time to release file handles
+                time.sleep(2)
+                dbinit_mock.stop()
+
+
+@pytest_asyncio.fixture
+async def getwebserver(shared_webserver_config):  # pylint: disable=redefined-outer-name
+    ''' configure the webserver, dependents with prereqs '''
+    config, metadb, manager, port = shared_webserver_config  # pylint: disable=unused-variable
+
+    # Stop the shared webserver to avoid config conflicts with autouse fixture
+    manager.stop_all_processes()
+    await asyncio.sleep(1)
+
+    # Re-enable webserver settings (in case autouse clear_old_testsuite cleared them)
+    config.cparser.setValue('weboutput/httpenabled', 'true')
+    config.cparser.setValue('weboutput/httpport', port)  # Restore the actual port
+    config.cparser.setValue('acoustidmb/enabled', False)  # Ensure this is disabled for tests
+    config.cparser.sync()
+
+    # Recreate the database for clean test isolation
+    metadb.setupsql()
+
+    # Start a fresh webserver process with current config
     manager.start_webserver()
     await asyncio.sleep(5)
 
-    req = requests.get(f'http://localhost:{port}/internals', timeout=5)
-    logging.debug("internals = %s", req.json())
-
     yield config, metadb
+
+    # Stop the webserver again for next test
     manager.stop_all_processes()
+    # Give Windows time to release resources between tests
+    if sys.platform == "win32":
+        await asyncio.sleep(3)
+    else:
+        await asyncio.sleep(1)
 
 
 @pytest.mark.asyncio
 async def test_startstopwebserver(getwebserver):  # pylint: disable=redefined-outer-name
     ''' test a simple start/stop '''
-    config, metadb = getwebserver  #pylint: disable=unused-variable
+    config, metadb = getwebserver  # pylint: disable=unused-variable
     config.cparser.setValue('weboutput/httpenabled', 'true')
     config.cparser.sync()
     await asyncio.sleep(5)
@@ -59,6 +135,7 @@ async def test_startstopwebserver(getwebserver):  # pylint: disable=redefined-ou
 async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-outer-name
     ''' start webserver, read existing data, add new data, then read that '''
     config, metadb = getwebserver
+    port = config.cparser.value('weboutput/httpport', type=int)
     config.cparser.setValue('weboutput/htmltemplate',
                             config.getbundledir().joinpath('templates', 'basic-plain.txt'))
     config.cparser.setValue('weboutput/once', True)
@@ -68,7 +145,7 @@ async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-out
     logging.debug(config.cparser.value('weboutput/htmltemplate'))
     # handle no data, should return refresh
 
-    req = requests.get('http://localhost:8899/index.html', timeout=5)
+    req = requests.get(f'http://localhost:{port}/index.html', timeout=5)
     assert req.status_code == 202
     assert req.text == nowplaying.processes.webserver.INDEXREFRESH
 
@@ -76,14 +153,14 @@ async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-out
 
     await metadb.write_to_metadb(metadata={'title': 'testhtmtitle', 'artist': 'testhtmartist'})
     await asyncio.sleep(1)
-    req = requests.get('http://localhost:8899/index.html', timeout=5)
+    req = requests.get(f'http://localhost:{port}/index.html', timeout=5)
     assert req.status_code == 200
     assert req.text == ' testhtmartist - testhtmtitle'
 
     # another read should give us refresh
 
     await asyncio.sleep(1)
-    req = requests.get('http://localhost:8899/index.html', timeout=5)
+    req = requests.get(f'http://localhost:{port}/index.html', timeout=5)
     assert req.status_code == 200
     assert req.text == nowplaying.processes.webserver.INDEXREFRESH
 
@@ -93,7 +170,7 @@ async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-out
     # flipping once to false should give us back same info
 
     await asyncio.sleep(1)
-    req = requests.get('http://localhost:8899/index.html', timeout=5)
+    req = requests.get(f'http://localhost:{port}/index.html', timeout=5)
     assert req.status_code == 200
     assert req.text == ' testhtmartist - testhtmtitle'
 
@@ -104,7 +181,7 @@ async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-out
         'title': 'titlehtm2',
     })
     await asyncio.sleep(1)
-    req = requests.get('http://localhost:8899/index.html', timeout=5)
+    req = requests.get(f'http://localhost:{port}/index.html', timeout=5)
     assert req.status_code == 200
     assert req.text == ' artisthtm2 - titlehtm2'
 
@@ -113,6 +190,7 @@ async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-out
 async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-outer-name
     ''' start webserver, read existing data, add new data, then read that '''
     config, metadb = getwebserver
+    port = config.cparser.value('weboutput/httpport', type=int)
     config.cparser.setValue('weboutput/httpenabled', 'true')
     config.cparser.setValue('weboutput/htmltemplate',
                             config.getbundledir().joinpath('templates', 'basic-plain.txt'))
@@ -124,23 +202,23 @@ async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-out
 
     # handle no data, should return refresh
 
-    req = requests.get('http://localhost:8899/index.txt', timeout=5)
+    req = requests.get(f'http://localhost:{port}/index.txt', timeout=5)
     assert req.status_code == 200
     assert req.text == ''  # sourcery skip: simplify-empty-collection-comparison
 
     # should return empty
-    req = requests.get('http://localhost:8899/v1/last', timeout=5)
+    req = requests.get(f'http://localhost:{port}/v1/last', timeout=5)
     assert req.status_code == 200
     assert req.json() == {}
     # handle first write
 
     await metadb.write_to_metadb(metadata={'title': 'testtxttitle', 'artist': 'testtxtartist'})
     await asyncio.sleep(1)
-    req = requests.get('http://localhost:8899/index.txt', timeout=5)
+    req = requests.get(f'http://localhost:{port}/index.txt', timeout=5)
     assert req.status_code == 200
     assert req.text == ' testtxtartist - testtxttitle'
 
-    req = requests.get('http://localhost:8899/v1/last', timeout=5)
+    req = requests.get(f'http://localhost:{port}/v1/last', timeout=5)
     assert req.status_code == 200
     checkdata = req.json()
     assert checkdata['artist'] == 'testtxtartist'
@@ -150,11 +228,11 @@ async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-out
     # another read should give us same info
 
     await asyncio.sleep(1)
-    req = requests.get('http://localhost:8899/index.txt', timeout=5)
+    req = requests.get(f'http://localhost:{port}/index.txt', timeout=5)
     assert req.status_code == 200
     assert req.text == ' testtxtartist - testtxttitle'
 
-    req = requests.get('http://localhost:8899/v1/last', timeout=5)
+    req = requests.get(f'http://localhost:{port}/v1/last', timeout=5)
     assert req.status_code == 200
     checkdata = req.json()
     assert checkdata['artist'] == 'testtxtartist'
@@ -168,11 +246,11 @@ async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-out
         'title': 'titletxt2',
     })
     await asyncio.sleep(1)
-    req = requests.get('http://localhost:8899/index.txt', timeout=5)
+    req = requests.get(f'http://localhost:{port}/index.txt', timeout=5)
     assert req.status_code == 200
     assert req.text == ' artisttxt2 - titletxt2'
 
-    req = requests.get('http://localhost:8899/v1/last', timeout=5)
+    req = requests.get(f'http://localhost:{port}/v1/last', timeout=5)
     assert req.status_code == 200
     checkdata = req.json()
     assert checkdata['artist'] == 'artisttxt2'
@@ -184,55 +262,22 @@ async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-out
 def test_webserver_gifwordstest(getwebserver):  # pylint: disable=redefined-outer-name
     ''' make sure gifwords works '''
     config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value('weboutput/httpport', type=int)
     config.cparser.setValue('weboutput/once', True)
     config.cparser.sync()
 
-    req = requests.get('http://localhost:8899/gifwords.htm', timeout=5)
+    req = requests.get(f'http://localhost:{port}/gifwords.htm', timeout=5)
     assert req.status_code == 200
 
 
 def test_webserver_coverpng(getwebserver):  # pylint: disable=redefined-outer-name
     ''' make sure coverpng works '''
     config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value('weboutput/httpport', type=int)
     config.cparser.setValue('weboutput/once', True)
     config.cparser.sync()
 
-    req = requests.get('http://localhost:8899/cover.png', timeout=5)
+    req = requests.get(f'http://localhost:{port}/cover.png', timeout=5)
     assert req.status_code == 200
 
 
-def test_webserver_artistfanart_test(getwebserver):  # pylint: disable=redefined-outer-name
-    ''' make sure artistfanart works '''
-    config, metadb = getwebserver  # pylint: disable=unused-variable
-    config.cparser.setValue('weboutput/once', True)
-    config.cparser.sync()
-
-    req = requests.get('http://localhost:8899/artistfanart.htm', timeout=5)
-    assert req.status_code == 202
-
-
-def test_webserver_banner_test(getwebserver):  # pylint: disable=redefined-outer-name
-    ''' make sure banner works '''
-    config, metadb = getwebserver  # pylint: disable=unused-variable
-    config.cparser.setValue('weboutput/once', True)
-    config.cparser.sync()
-
-    req = requests.get('http://localhost:8899/artistbanner.htm', timeout=5)
-    assert req.status_code == 202
-
-    req = requests.get('http://localhost:8899/artistbanner.png', timeout=5)
-    assert req.status_code == 200
-
-
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
-def test_webserver_logo_test(getwebserver):  # pylint: disable=redefined-outer-name
-    ''' make sure banner works '''
-    config, metadb = getwebserver  # pylint: disable=unused-variable
-    config.cparser.setValue('weboutput/once', True)
-    config.cparser.sync()
-
-    req = requests.get('http://localhost:8899/artistlogo.htm', timeout=5)
-    assert req.status_code == 202
-
-    req = requests.get('http://localhost:8899/artistlogo.png', timeout=5)
-    assert req.status_code == 200

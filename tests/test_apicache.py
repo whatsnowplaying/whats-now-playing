@@ -170,8 +170,8 @@ async def test_cache_expiration(temp_api_cache):  # pylint: disable=redefined-ou
     result = await cache.get('test_provider', 'Test Artist', 'search')
     assert result == test_data
 
-    # Wait for expiration
-    await asyncio.sleep(2)
+    # Wait for expiration with extra buffer for timing issues
+    await asyncio.sleep(2.5)
 
     # Should now be expired
     result = await cache.get('test_provider', 'Test Artist', 'search')
@@ -232,8 +232,7 @@ async def test_cache_replacement(temp_api_cache):  # pylint: disable=redefined-o
     async with cache._lock:
         async with aiosqlite.connect(cache.db_file) as database_conn:
             cursor = await database_conn.execute(
-                "SELECT COUNT(*) FROM api_responses WHERE cache_key = ?",
-                (cache_key, ))
+                "SELECT COUNT(*) FROM api_responses WHERE cache_key = ?", (cache_key, ))
             count = await cursor.fetchone()
             assert count[0] == 1
 
@@ -762,15 +761,13 @@ async def test_cache_theaudiodb_response_format(temp_api_cache):  # pylint: disa
 
     # Simulate realistic TheAudioDB response (their API returns artist data in 'artists' array)
     theaudiodb_response = {
-        'artists': [
-            {
-                'strArtist': 'Nine Inch Nails',  # Original casing
-                'strBiographyEN': 'Nine Inch Nails is an American industrial rock band...',
-                'strGenre': 'Industrial Rock',
-                'strWebsite': 'nin.com',
-                'strFacebook': 'facebook.com/ninofficial'
-            }
-        ]
+        'artists': [{
+            'strArtist': 'Nine Inch Nails',  # Original casing
+            'strBiographyEN': 'Nine Inch Nails is an American industrial rock band...',
+            'strGenre': 'Industrial Rock',
+            'strWebsite': 'nin.com',
+            'strFacebook': 'facebook.com/ninofficial'
+        }]
     }
 
     # Store using original artist name
@@ -802,13 +799,11 @@ async def test_cached_fetch_preserves_artist_names(temp_api_cache):  # pylint: d
         # Mock API response that includes artist name (like TheAudioDB returns)
         original_artist = 'Nine Inch Nails'
         api_response = {
-            'artists': [
-                {
-                    'strArtist': original_artist,
-                    'strBiographyEN': 'Industrial rock band from Cleveland...',
-                    'strGenre': 'Industrial Rock'
-                }
-            ]
+            'artists': [{
+                'strArtist': original_artist,
+                'strBiographyEN': 'Industrial rock band from Cleveland...',
+                'strGenre': 'Industrial Rock'
+            }]
         }
 
         async def mock_theaudiodb_fetch():
@@ -816,13 +811,11 @@ async def test_cached_fetch_preserves_artist_names(temp_api_cache):  # pylint: d
             return api_response
 
         # First call should fetch from API and cache
-        result1 = await cached_fetch(
-            provider='theaudiodb',
-            artist_name=original_artist,
-            endpoint='artist_info',
-            fetch_func=mock_theaudiodb_fetch,
-            ttl_seconds=300
-        )
+        result1 = await cached_fetch(provider='theaudiodb',
+                                     artist_name=original_artist,
+                                     endpoint='artist_info',
+                                     fetch_func=mock_theaudiodb_fetch,
+                                     ttl_seconds=300)
 
         # Verify first call result preserves artist name
         assert result1 is not None
@@ -833,13 +826,11 @@ async def test_cached_fetch_preserves_artist_names(temp_api_cache):  # pylint: d
             """This shouldn't be called if cache is working."""
             raise AssertionError("Fetch function called when data should be cached")
 
-        result2 = await cached_fetch(
-            provider='theaudiodb',
-            artist_name=original_artist,
-            endpoint='artist_info',
-            fetch_func=should_not_be_called,
-            ttl_seconds=300
-        )
+        result2 = await cached_fetch(provider='theaudiodb',
+                                     artist_name=original_artist,
+                                     endpoint='artist_info',
+                                     fetch_func=should_not_be_called,
+                                     ttl_seconds=300)
 
         # Critical test: cached result should preserve original artist name
         assert result2 is not None
@@ -852,8 +843,7 @@ async def test_cached_fetch_preserves_artist_names(temp_api_cache):  # pylint: d
             artist_name='NINE INCH NAILS',  # Different casing
             endpoint='artist_info',
             fetch_func=should_not_be_called,
-            ttl_seconds=300
-        )
+            ttl_seconds=300)
 
         assert result3 is not None
         assert result3['artists'][0]['strArtist'] == original_artist, \

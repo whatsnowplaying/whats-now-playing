@@ -42,7 +42,7 @@ def test_version_1():
     ver2 = nowplaying.upgradeutils.Version('3.1.3-rc1')
 
     assert ver1 > ver2
-    assert not ver1 < ver2
+    assert ver1 >= ver2
 
 
 def test_version_2():
@@ -51,7 +51,7 @@ def test_version_2():
     ver2 = nowplaying.upgradeutils.Version('4.0.0')
 
     assert ver1 < ver2
-    assert not ver1 > ver2
+    assert ver1 <= ver2
 
 
 def test_version_3():
@@ -60,7 +60,7 @@ def test_version_3():
     ver2 = nowplaying.upgradeutils.Version('4.0.0-rc1')
 
     assert ver1 < ver2
-    assert not ver1 > ver2
+    assert ver1 <= ver2
 
 
 def test_version_4():
@@ -69,7 +69,105 @@ def test_version_4():
     ver2 = nowplaying.upgradeutils.Version('4.0.0-rc2')
 
     assert ver1 < ver2
-    assert not ver1 > ver2
+    assert ver1 <= ver2
+
+
+def test_version_equality():
+    ''' test equality operators '''
+    ver1 = nowplaying.upgradeutils.Version('3.1.3')
+    ver2 = nowplaying.upgradeutils.Version('3.1.3')
+    ver3 = nowplaying.upgradeutils.Version('3.1.4')
+
+    # Test equality
+    assert ver1 == ver2
+    assert ver1 != ver3
+
+    # Test inequality
+    assert ver1 != ver3
+    assert ver1 == ver2
+
+
+def test_version_greater_than_equal():
+    ''' test greater than or equal operators '''
+    ver1 = nowplaying.upgradeutils.Version('3.1.3')
+    ver2 = nowplaying.upgradeutils.Version('3.1.3')
+    ver3 = nowplaying.upgradeutils.Version('3.1.2')
+    ver4 = nowplaying.upgradeutils.Version('3.1.4')
+
+    # Test greater than or equal (equal case)
+    assert ver1 >= ver2
+    assert ver2 >= ver1
+
+    # Test greater than or equal (greater case)
+    assert ver1 >= ver3
+    assert ver3 < ver1
+
+    # Test greater than or equal (less case)
+    assert ver1 < ver4
+    assert ver4 >= ver1
+
+
+def test_version_less_than_equal():
+    ''' test less than or equal operators '''
+    ver1 = nowplaying.upgradeutils.Version('3.1.3')
+    ver2 = nowplaying.upgradeutils.Version('3.1.3')
+    ver3 = nowplaying.upgradeutils.Version('3.1.2')
+    ver4 = nowplaying.upgradeutils.Version('3.1.4')
+
+    # Test less than or equal (equal case)
+    assert ver1 <= ver2
+    assert ver2 <= ver1
+
+    # Test less than or equal (less case)
+    assert ver3 <= ver1
+    assert ver1 > ver3
+
+    # Test less than or equal (greater case)
+    assert ver1 <= ver4
+    assert ver4 > ver1
+
+
+def test_version_greater_than():
+    ''' test greater than operator '''
+    ver1 = nowplaying.upgradeutils.Version('3.1.3')
+    ver2 = nowplaying.upgradeutils.Version('3.1.2')
+    ver3 = nowplaying.upgradeutils.Version('3.1.3')
+    ver4 = nowplaying.upgradeutils.Version('3.1.4')
+
+    # Test greater than
+    assert ver1 > ver2
+    assert ver2 <= ver1
+
+    # Test not greater than (equal)
+    assert ver1 <= ver3
+    assert ver3 <= ver1
+
+    # Test not greater than (less)
+    assert ver1 <= ver4
+    assert ver4 > ver1
+
+
+def test_version_equality_with_rc():
+    ''' test equality with release candidates '''
+    ver1 = nowplaying.upgradeutils.Version('3.1.3-rc1')
+    ver2 = nowplaying.upgradeutils.Version('3.1.3-rc1')
+    ver3 = nowplaying.upgradeutils.Version('3.1.3-rc2')
+    ver4 = nowplaying.upgradeutils.Version('3.1.3')
+
+    # Test equality with rc
+    assert ver1 == ver2
+    assert ver1 != ver3
+    assert ver1 != ver4
+
+
+def test_version_equality_with_non_version():
+    ''' test equality with non-Version objects '''
+    ver1 = nowplaying.upgradeutils.Version('3.1.3')
+
+    # Test equality with non-Version objects
+    assert ver1 != "3.1.3"
+    assert ver1 != 3.13
+    assert ver1 is not None
 
 
 @pytest.mark.xfail(reason="API limit exceeded may happen")

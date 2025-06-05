@@ -23,6 +23,7 @@ except ModuleNotFoundError:
     pass
 import nowplaying.twitch.settings
 import nowplaying.twitch.chat
+import nowplaying.kick.settings
 import nowplaying.trackrequests
 import nowplaying.uihelp
 import nowplaying.utils
@@ -49,6 +50,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.settingsclasses = {
             'twitch': nowplaying.twitch.settings.TwitchSettings(),
             'twitchchat': nowplaying.twitch.chat.TwitchChatSettings(),
+            'kick': nowplaying.kick.settings.KickSettings(),
+            'kickchat': nowplaying.kick.settings.KickChatSettings(),
             'requests': nowplaying.trackrequests.RequestSettings(),
         }
 
@@ -66,6 +69,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         # twitch chat files are irrelevant
         if self.config.initialized:
             self.settingsclasses['twitchchat'].update_twitchbot_commands(self.config)
+            self.settingsclasses['kickchat'].update_kickbot_commands(self.config)
 
     def _setup_widgets(self, uiname, displayname=None):
         self.widgets[uiname] = load_widget_ui(self.config, f'{uiname}')
@@ -95,7 +99,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         else:
             baseuis = [
                 'general', 'source', 'filter', 'trackskip', 'textoutput', 'webserver', 'twitch',
-                'twitchchat', 'requests', 'artistextras', 'obsws', 'discordbot', 'quirks'
+                'twitchchat', 'kick', 'kickchat', 'requests', 'artistextras', 'obsws', 'discordbot',
+                'quirks'
             ]
 
         for uiname in baseuis:
@@ -124,6 +129,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             for key in [
                     'twitch',
                     'twitchchat',
+                    'kick',
+                    'kickchat',
                     'requests',
             ]:
                 self.settingsclasses[key].load(self.config, self.widgets[key])
@@ -230,6 +237,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             for key in [
                     'twitch',
                     'twitchchat',
+                    'kick',
                     'requests',
             ]:
                 self.settingsclasses[key].load(self.config, self.widgets[key])
@@ -401,14 +409,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         logging.getLogger().setLevel(loglevel)
 
         if not self.config.cparser.value('control/beam', type=bool):
-            for key in [
-                    'twitch',
-                    'twitchchat',
-                    'requests',
-            ]:
-                self.settingsclasses[key].save(self.config, self.widgets[key],
-                                               self.tray.subprocesses)
-
+            self._upd_conf_external_services()
             self._upd_conf_textoutput()
             self._upd_conf_artistextras()
             self._upd_conf_filters()
@@ -417,11 +418,23 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self._upd_conf_obsws()
             self._upd_conf_quirks()
             self._upd_conf_discordbot()
+            self._upd_conf_kickbot()
 
         self._upd_conf_recognition()
         self._upd_conf_input()
         self._upd_conf_plugins()
         self.config.cparser.sync()
+
+    def _upd_conf_external_services(self):
+        """Update external service configurations (Twitch, Kick, etc.)"""
+        for key in [
+                'twitch',
+                'twitchchat',
+                'kick',
+                'kickchat',
+                'requests',
+        ]:
+            self.settingsclasses[key].save(self.config, self.widgets[key], self.tray.subprocesses)
 
     def _upd_conf_textoutput(self):
         self.config.cparser.setValue('setlist/enabled',
@@ -535,6 +548,22 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.config.cparser.setValue('discord/template',
                                      self.widgets['discordbot'].template_lineedit.text())
         self.config.cparser.setValue('discord/enabled', enabled)
+
+    def _upd_conf_kickbot(self):
+        ''' update the kickbot settings '''
+
+        old_enabled = self.config.cparser.value('kick/enabled', type=bool)
+        old_chat = self.config.cparser.value('kick/chat', type=bool)
+
+        new_enabled = self.widgets['kick'].enable_checkbox.isChecked()
+        new_chat = self.widgets['kickchat'].enable_checkbox.isChecked()
+
+        # The individual settings save methods handle their own config values
+        # We just need to check if the overall enable/disable state changed
+        # and restart the kickbot if needed
+
+        if (old_enabled != new_enabled) or (old_chat != new_chat):
+            self.tray.subprocesses.restart_kickbot()
 
     def verify_regex_filters(self):
         ''' verify the regex filters are real '''
@@ -770,6 +799,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             for key in [
                     'twitch',
                     'twitchchat',
+                    'kick',
+                    'kickchat',
                     'requests',
             ]:
                 try:

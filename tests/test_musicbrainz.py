@@ -95,8 +95,8 @@ async def test_recordingid_api_cache_call_count(getmusicbrainz, temp_api_cache):
         async def mock_recordingid_uncached(recordingid):
             nonlocal api_call_count
             api_call_count += 1
-            logging.debug('MusicBrainz API call #%d for recording ID: %s',
-                         api_call_count, recordingid)
+            logging.debug('MusicBrainz API call #%d for recording ID: %s', api_call_count,
+                          recordingid)
             # Call the original method to get real data
             return await original_recordingid_uncached(recordingid)
 
@@ -112,8 +112,7 @@ async def test_recordingid_api_cache_call_count(getmusicbrainz, temp_api_cache):
 
             # Verify one API call was made
             assert api_call_count == 1, (
-                f'Expected 1 API call after first recordingid lookup, got {api_call_count}'
-            )
+                f'Expected 1 API call after first recordingid lookup, got {api_call_count}')
             assert result1 is not None, 'Expected valid result from first MusicBrainz lookup'
 
             # Second call - should use cached result, no additional API call
@@ -122,8 +121,7 @@ async def test_recordingid_api_cache_call_count(getmusicbrainz, temp_api_cache):
             # Verify still only one API call was made (cache hit)
             assert api_call_count == 1, (
                 f'Expected 1 API call after second recordingid lookup (cache hit), '
-                f'got {api_call_count}'
-            )
+                f'got {api_call_count}')
 
             # Both results should be identical
             assert result1 == result2, 'Results should be identical when using cache'
@@ -139,8 +137,7 @@ async def test_recordingid_api_cache_call_count(getmusicbrainz, temp_api_cache):
             # Verify still only one API call total
             assert api_call_count == 1, (
                 f'Expected 1 API call after third recordingid lookup (cache hit), '
-                f'got {api_call_count}'
-            )
+                f'got {api_call_count}')
             assert result1 == result3, 'Third result should also be identical (cached)'
 
             logging.info('MusicBrainz recordingid API cache verified: 1 API call for 3 lookups')
@@ -413,13 +410,28 @@ async def test_musicbrainz_missing_metadata_fields(getmusicbrainz):  # pylint: d
     # Test various missing metadata scenarios for lastditcheffort
     metadata_cases = [
         {},  # Empty metadata
-        {'artist': ''},  # Empty artist
-        {'title': ''},  # Empty title
-        {'artist': None},  # None artist
-        {'title': None},  # None title
-        {'artist': 'Valid Artist'},  # Missing title
-        {'title': 'Valid Title'},  # Missing artist
-        {'artist': '   ', 'title': '   '},  # Whitespace only
+        {
+            'artist': ''
+        },  # Empty artist
+        {
+            'title': ''
+        },  # Empty title
+        {
+            'artist': None
+        },  # None artist
+        {
+            'title': None
+        },  # None title
+        {
+            'artist': 'Valid Artist'
+        },  # Missing title
+        {
+            'title': 'Valid Title'
+        },  # Missing artist
+        {
+            'artist': '   ',
+            'title': '   '
+        },  # Whitespace only
     ]
 
     for i, metadata in enumerate(metadata_cases):
