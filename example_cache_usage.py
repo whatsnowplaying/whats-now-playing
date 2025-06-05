@@ -65,13 +65,11 @@ async def demo_cached_fetch():
     # First call - cache miss
     print("\n1. First cached_fetch call (cache miss):")
     start_time = time.time()
-    data = await nowplaying.apicache.cached_fetch(
-        provider='demo',
-        artist_name='Deadmau5',
-        endpoint='artist_bio',
-        fetch_func=lambda: fetch_artist_bio('Deadmau5'),
-        ttl_seconds=300
-    )
+    data = await nowplaying.apicache.cached_fetch(provider='demo',
+                                                  artist_name='Deadmau5',
+                                                  endpoint='artist_bio',
+                                                  fetch_func=lambda: fetch_artist_bio('Deadmau5'),
+                                                  ttl_seconds=300)
     elapsed = time.time() - start_time
     print(f"   ⏱️  Time: {elapsed:.2f}s")
     print(f"   📄 Data: {data}")
@@ -79,13 +77,11 @@ async def demo_cached_fetch():
     # Second call - cache hit
     print("\n2. Second cached_fetch call (cache hit):")
     start_time = time.time()
-    data = await nowplaying.apicache.cached_fetch(
-        provider='demo',
-        artist_name='Deadmau5',
-        endpoint='artist_bio',
-        fetch_func=lambda: fetch_artist_bio('Deadmau5'),
-        ttl_seconds=300
-    )
+    data = await nowplaying.apicache.cached_fetch(provider='demo',
+                                                  artist_name='Deadmau5',
+                                                  endpoint='artist_bio',
+                                                  fetch_func=lambda: fetch_artist_bio('Deadmau5'),
+                                                  ttl_seconds=300)
     elapsed = time.time() - start_time
     print(f"   ⏱️  Time: {elapsed:.2f}s")
     print(f"   📄 Data: {data}")

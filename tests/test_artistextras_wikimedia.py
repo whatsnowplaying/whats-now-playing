@@ -8,8 +8,7 @@ import ssl
 import pytest
 from aiohttp import ClientResponseError
 
-from utils_artistextras import (configureplugins, configuresettings,
-                               run_cache_consistency_test)
+from utils_artistextras import (configureplugins, configuresettings, run_cache_consistency_test)
 
 import nowplaying.apicache  # pylint: disable=import-error
 import nowplaying.wikiclient  # pylint: disable=import-error
@@ -275,16 +274,26 @@ async def test_wikimedia_malformed_urls(bootstrap, malformed_urls, test_id):
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(f'Wikimedia plugin raised exception for malformed URL case ({test_id}): {exc}. '
-                   f'Plugins must handle all errors gracefully for live performance.')
+                    f'Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.parametrize("metadata,test_id", [
     ({}, "empty-metadata"),
-    ({'artist': 'Test Artist'}, "missing-artistwebsites"),
-    ({'artistwebsites': None}, "none-artistwebsites"),
-    ({'artistwebsites': []}, "empty-artistwebsites-list"),
-    ({'artistwebsites': ['']}, "empty-string-in-list"),
-    ({'artistwebsites': [None]}, "none-in-list"),
+    ({
+        'artist': 'Test Artist'
+    }, "missing-artistwebsites"),
+    ({
+        'artistwebsites': None
+    }, "none-artistwebsites"),
+    ({
+        'artistwebsites': []
+    }, "empty-artistwebsites-list"),
+    ({
+        'artistwebsites': ['']
+    }, "empty-string-in-list"),
+    ({
+        'artistwebsites': [None]
+    }, "none-in-list"),
 ])
 @pytest.mark.asyncio
 async def test_wikimedia_missing_metadata_fields(bootstrap, metadata, test_id):
@@ -308,21 +317,17 @@ async def test_wikimedia_missing_metadata_fields(bootstrap, metadata, test_id):
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(
             f'Wikimedia plugin raised exception for missing metadata case ({test_id}): {exc}. '
-            f'Plugins must handle all errors gracefully for live performance.'
-        )
+            f'Plugins must handle all errors gracefully for live performance.')
 
 
 # Language Handling Edge Cases
 
 
-@pytest.mark.parametrize("invalid_language,test_id", [
-    ('xx', 'unsupported-code'),
-    ('invalid-lang', 'hyphenated-invalid'),
-    ('', 'empty-string'),
-    ('toolong', 'too-long'),
-    ('123', 'numeric'),
-    ('en-US-invalid', 'complex-invalid')
-])
+@pytest.mark.parametrize("invalid_language,test_id", [('xx', 'unsupported-code'),
+                                                      ('invalid-lang', 'hyphenated-invalid'),
+                                                      ('', 'empty-string'), ('toolong', 'too-long'),
+                                                      ('123', 'numeric'),
+                                                      ('en-US-invalid', 'complex-invalid')])
 @pytest.mark.asyncio
 async def test_wikimedia_invalid_language_codes(bootstrap, invalid_language, test_id):
     ''' test handling of invalid language codes '''
@@ -354,8 +359,7 @@ async def test_wikimedia_invalid_language_codes(bootstrap, invalid_language, tes
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(
             f'Wikimedia plugin raised exception for invalid language "{invalid_language}" '
-            f'({test_id}): {exc}. Plugins must handle all errors gracefully for live performance.'
-        )
+            f'({test_id}): {exc}. Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.asyncio
@@ -390,7 +394,7 @@ async def test_wikimedia_language_fallback_chain(bootstrap):
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(f'Wikimedia plugin raised exception during language fallback: {exc}. '
-                   f'Plugins must handle all errors gracefully for live performance.')
+                    f'Plugins must handle all errors gracefully for live performance.')
 
 
 # Content Processing and Sanitization Tests
@@ -484,9 +488,11 @@ async def test_wikimedia_malformed_content_handling(bootstrap):
         original_get_page = nowplaying.wikiclient.get_page_async
 
         def create_mock_response(response_data):
+
             async def mock_malformed_response(*args, **kwargs):  # pylint: disable=unused-argument
                 """Return mock malformed response."""
                 return response_data
+
             return mock_malformed_response
 
         mock_func = create_mock_response(malformed_response)
@@ -509,7 +515,7 @@ async def test_wikimedia_malformed_content_handling(bootstrap):
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
             pytest.fail(f'Wikimedia plugin raised exception for malformed response {i}: {exc}. '
-                       f'Plugins must handle all errors gracefully for live performance.')
+                        f'Plugins must handle all errors gracefully for live performance.')
 
         finally:
             # Restore original function
@@ -646,7 +652,7 @@ async def test_wikimedia_rapid_entity_lookups(bootstrap):
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(f'Wikimedia plugin raised exception during rapid entity lookups: {exc}. '
-                   f'Plugins must handle all errors gracefully for live performance.')
+                    f'Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.asyncio
@@ -733,7 +739,7 @@ async def test_wikimedia_memory_stability_long_session(bootstrap):
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
             pytest.fail(f'Wikimedia plugin raised exception for entity {i}: {exc}. '
-                       f'Plugins must handle all errors gracefully for live performance.')
+                        f'Plugins must handle all errors gracefully for live performance.')
 
     logging.info('Memory stability test completed: %d/%d entities processed successfully',
                  successful_lookups, len(entities))
@@ -776,16 +782,14 @@ async def test_wikimedia_api_call_count(bootstrap):
 
         # Verify one API call was made
         assert api_call_count == 1, (
-            f'Expected 1 API call after first download, got {api_call_count}'
-        )
+            f'Expected 1 API call after first download, got {api_call_count}')
 
         # Second call - should use cached result, no additional API call
         result2 = await plugin.download_async(metadata.copy(), imagecache=imagecaches['wikimedia'])
 
         # Verify still only one API call was made (cache hit)
         assert api_call_count == 1, (
-            f'Expected 1 API call after second download (cache hit), got {api_call_count}'
-        )
+            f'Expected 1 API call after second download (cache hit), got {api_call_count}')
 
         # Both results should be consistent
         assert (result1 is None) == (result2 is None)
@@ -833,6 +837,7 @@ async def test_wikimedia_failure_cache(bootstrap):
             return None
         # Second call: simulate successful response
         logging.debug('Simulating successful Wikipedia API response on second call')
+
         # Return a minimal WikiPage-like object
         class MockWikiPage:  # pylint: disable=too-few-public-methods
             """Mock WikiPage for testing."""
@@ -867,8 +872,7 @@ async def test_wikimedia_failure_cache(bootstrap):
 
         # Verify one API call was made and result is None (failure)
         assert api_call_count == 1, (
-            f'Expected 1 API call after first download, got {api_call_count}'
-        )
+            f'Expected 1 API call after first download, got {api_call_count}')
         assert result1 is None, 'Expected None result from failed Wikipedia API call'
 
         # Second call - should retry (not use cached failure) and succeed
@@ -877,8 +881,7 @@ async def test_wikimedia_failure_cache(bootstrap):
         # Verify second API call was made (failure wasn't cached)
         assert api_call_count == 2, (
             f'Expected 2 API calls after second download (retry after failure), '
-            f'got {api_call_count}'
-        )
+            f'got {api_call_count}')
 
         # Should get valid result from successful second call
         assert result2 is not None, ('Expected successful result from '
@@ -889,8 +892,7 @@ async def test_wikimedia_failure_cache(bootstrap):
 
         # Verify still only two API calls (third used cached success)
         assert api_call_count == 2, (
-            f'Expected 2 API calls after third download (cache hit), got {api_call_count}'
-        )
+            f'Expected 2 API calls after third download (cache hit), got {api_call_count}')
         # Results should be consistent for successful calls
         assert result2 == result3
         logging.info('Wikimedia cache failure test passed - '

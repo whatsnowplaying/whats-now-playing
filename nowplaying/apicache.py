@@ -162,11 +162,7 @@ class APIResponseCache:
 
     @staticmethod
     async def _process_cache_hit(  # pylint: disable=too-many-arguments
-            data: str,
-            provider: str,
-            artist_name: str,
-            endpoint: str,
-            expires_at: int,
+            data: str, provider: str, artist_name: str, endpoint: str, expires_at: int,
             current_time: int) -> t.Optional[dict]:
         """Process a cache hit and return the deserialized data."""
         try:

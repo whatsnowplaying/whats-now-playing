@@ -3,6 +3,13 @@
 
 ## Version 4.2.0 - In Progress
 
+* **NEW: Kick.com Integration** - Initial support for Kick.com streaming platform:
+  * OAuth2 authentication with Kick.com
+  * Template-based track announcements to chat
+  * Smart message splitting at sentence and word boundaries
+  * Support for `{{ startnewmessage }}` template tag for multi-part messages
+  * NLTK-powered intelligent message splitting preserving full content
+  * Interactive chat commands and user permissions coming soon
 * New input plugin for JRiver Media Center via MCWS API support.
 * FIXED: Windows subprocess shutdown errors (BrokenPipeError [WinError 232])
   that occurred when multiprocessing.Manager() closed pipes before subprocesses finished.
@@ -15,6 +22,10 @@
 * Error logging for when wikimedia attempts to continue
   but the program doesn't handle it.
 * A few minor template changes.
+* **Enhanced Twitch Chat** - Improved message handling:
+  * NLTK-powered intelligent message splitting at sentence and word boundaries
+  * Preserves full message content by splitting long messages into multiple parts
+  * Enhanced `{{ startnewmessage }}` support with automatic overflow splitting
 * Twitch scope has changed and may request new permissions.
 * Twitch scope is no longer saved in the configuration to allow
   for a future update to the Twitch code.

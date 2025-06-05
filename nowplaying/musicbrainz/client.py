@@ -33,8 +33,11 @@ class ResponseError(MusicBrainzError):
 class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
     """Async MusicBrainz API client with rate limiting and error handling"""
 
-    def __init__(self, user_agent: str = "whats-now-playing/1.0",
-                 rate_limit_interval: float = 0.5, timeout: int = 15, max_retries: int = 2):
+    def __init__(self,
+                 user_agent: str = "whats-now-playing/1.0",
+                 rate_limit_interval: float = 0.5,
+                 timeout: int = 15,
+                 max_retries: int = 2):
         self.base_url = "https://musicbrainz.org/ws/2"
         self.caa_base_url = "https://coverartarchive.org"
         self.user_agent = user_agent
@@ -61,9 +64,11 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
                 await asyncio.sleep(self.rate_limit_interval - time_since_last)
             self.last_request_time = time.time()
 
-    async def _make_request(self, url: str,  # pylint: disable=too-many-branches,too-many-locals
-                           params: dict | None = None,
-                           timeout: int | None = None) -> dict[str, Any]:
+    async def _make_request(  # pylint: disable=too-many-locals
+            self,
+            url: str,  # pylint: disable=too-many-branches
+            params: dict | None = None,
+            timeout: int | None = None) -> dict[str, Any]:
         """Make an async HTTP request to MusicBrainz API with rate limiting"""
         await self._rate_limit()
 
@@ -80,8 +85,8 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
         for attempt in range(self.max_retries + 1):
             try:
                 connector = nowplaying.utils.create_http_connector(ssl_context, 'musicbrainz')
-                async with aiohttp.ClientSession(
-                        connector=connector, timeout=timeout_config) as session:
+                async with aiohttp.ClientSession(connector=connector,
+                                                 timeout=timeout_config) as session:
                     async with session.get(url, params=params, headers=headers) as response:
                         if response.status == 200:
                             xml_data = await response.text()
@@ -93,8 +98,8 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
                                     f"XML parsing failed: {parse_error}") from parse_error
                         elif response.status == 503:
                             if attempt < self.max_retries:
-                                logger.debug(
-                                    "Service unavailable (503), retrying (attempt %d)", attempt + 1)
+                                logger.debug("Service unavailable (503), retrying (attempt %d)",
+                                             attempt + 1)
                                 await asyncio.sleep(1.0)  # Wait longer for 503 errors
                                 continue
                             raise NetworkError("MusicBrainz service unavailable (503)")
@@ -112,8 +117,8 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
                     f"SSL certificate verification failed: {cert_error}") from cert_error
             except aiohttp.ClientError as client_error:
                 if attempt < self.max_retries:
-                    logger.debug(
-                        "Client error: %s, retrying (attempt %d)", client_error, attempt + 1)
+                    logger.debug("Client error: %s, retrying (attempt %d)", client_error,
+                                 attempt + 1)
                     continue
                 raise NetworkError(f"Request failed: {client_error}") from client_error
 
@@ -159,7 +164,8 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
         url = f"{self.base_url}/recording"
         return await self._make_request(url, params)
 
-    async def get_recording_by_id(self, recording_id: str,
+    async def get_recording_by_id(self,
+                                  recording_id: str,
                                   includes: list[str] | None = None) -> dict[str, Any]:
         """Get recording by MBID"""
         params = {}
@@ -169,7 +175,8 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
         url = f"{self.base_url}/recording/{recording_id}"
         return await self._make_request(url, params)
 
-    async def get_recordings_by_isrc(self, isrc: str,
+    async def get_recordings_by_isrc(self,
+                                     isrc: str,
                                      includes: list[str] | None = None,
                                      release_status: list[str] | None = None) -> dict[str, Any]:
         """Get recordings by ISRC"""
@@ -182,11 +189,13 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
         url = f"{self.base_url}/isrc/{isrc}"
         return await self._make_request(url, params)
 
-    async def browse_releases(self, recording: str,  # pylint: disable=too-many-arguments
-                              includes: list[str] | None = None,
-                              limit: int | None = None,
-                              offset: int | None = None,
-                              release_status: list[str] | None = None) -> dict[str, Any]:
+    async def browse_releases(  # pylint: disable=too-many-arguments
+            self,
+            recording: str,
+            includes: list[str] | None = None,
+            limit: int | None = None,
+            offset: int | None = None,
+            release_status: list[str] | None = None) -> dict[str, Any]:
         """Browse releases by recording"""
         params = {'recording': recording}
         if includes:
@@ -201,7 +210,8 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
         url = f"{self.base_url}/release"
         return await self._make_request(url, params)
 
-    async def get_artist_by_id(self, artist_id: str,
+    async def get_artist_by_id(self,
+                               artist_id: str,
                                includes: list[str] | None = None) -> dict[str, Any]:
         """Get artist by MBID"""
         params = {}
@@ -232,7 +242,8 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
         url = f"{self.base_url}/release"
         return await self._make_request(url, params)
 
-    async def get_release_by_id(self, release_id: str,
+    async def get_release_by_id(self,
+                                release_id: str,
                                 includes: list[str] | None = None) -> dict[str, Any]:
         """Get release by MBID"""
         params = {}
@@ -263,7 +274,8 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
         url = f"{self.base_url}/release-group"
         return await self._make_request(url, params)
 
-    async def get_release_group_by_id(self, rg_id: str,
+    async def get_release_group_by_id(self,
+                                      rg_id: str,
                                       includes: list[str] | None = None) -> dict[str, Any]:
         """Get release group by MBID"""
         params = {}
@@ -285,7 +297,9 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
                 return {}  # No cover art available
             raise
 
-    async def get_image_front(self, mbid: str, entity_type: str = 'release',
+    async def get_image_front(self,
+                              mbid: str,
+                              entity_type: str = 'release',
                               size: str = '500') -> bytes:
         """Get front cover art image"""
         url = f"{self.caa_base_url}/{entity_type}/{mbid}/front-{size}"
@@ -316,21 +330,23 @@ async def get_recording_by_id(recording_id: str,
     return await get_default_client().get_recording_by_id(recording_id, includes)
 
 
-async def get_recordings_by_isrc(isrc: str,  # pylint: disable=too-many-arguments
-                                 includes: list[str] | None = None,
-                                 release_status: list[str] | None = None) -> dict[str, Any]:
+async def get_recordings_by_isrc(
+        isrc: str,  # pylint: disable=too-many-arguments
+        includes: list[str] | None = None,
+        release_status: list[str] | None = None) -> dict[str, Any]:
     """Get recordings by ISRC using default client"""
     return await get_default_client().get_recordings_by_isrc(isrc, includes, release_status)
 
 
-async def browse_releases(recording: str,  # pylint: disable=too-many-arguments
-                          includes: list[str] | None = None,
-                          limit: int | None = None,
-                          offset: int | None = None,
-                          release_status: list[str] | None = None) -> dict[str, Any]:
+async def browse_releases(
+        recording: str,  # pylint: disable=too-many-arguments
+        includes: list[str] | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        release_status: list[str] | None = None) -> dict[str, Any]:
     """Browse releases by recording using default client"""
-    return await get_default_client().browse_releases(
-        recording, includes, limit, offset, release_status)
+    return await get_default_client().browse_releases(recording, includes, limit, offset,
+                                                      release_status)
 
 
 async def get_artist_by_id(artist_id: str, includes: list[str] | None = None) -> dict[str, Any]:

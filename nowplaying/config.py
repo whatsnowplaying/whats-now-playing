@@ -20,7 +20,6 @@ import nowplaying.artistextras
 import nowplaying.inputs
 import nowplaying.pluginimporter
 import nowplaying.recognition
-import nowplaying.utils
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 
 
@@ -136,6 +135,32 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
                              QCoreApplication.organizationName(),
                              QCoreApplication.applicationName())
 
+        self._defaults_artistextras(settings)
+        self._defaults_recognition(settings)
+        self._defaults_general_settings(settings)
+        self._defaults_output(settings)
+        self._defaults_chat_services(settings)
+        self._defaults_quirks(settings)
+        self._defaults_plugins(settings)
+
+    def _initial_plugins(self):
+
+        self.plugins['inputs'] = nowplaying.pluginimporter.import_plugins(nowplaying.inputs)
+        if self.beam and self.plugins['inputs']['nowplaying.inputs.beam']:
+            del self.plugins['inputs']['nowplaying.inputs.beam']
+        self.pluginobjs['inputs'] = {}
+        self.plugins['recognition'] = nowplaying.pluginimporter.import_plugins(
+            nowplaying.recognition)
+        self.pluginobjs['recognition'] = {}
+
+        if not self.beam:
+            self.plugins['artistextras'] = nowplaying.pluginimporter.import_plugins(
+                nowplaying.artistextras)
+            self.pluginobjs['artistextras'] = {}
+
+    @staticmethod
+    def _defaults_artistextras(settings):
+        ''' default values for artist extras '''
         settings.setValue('artistextras/enabled', True)
         for field in ['banners', 'logos', 'thumbnails']:
             settings.setValue(f'artistextras/{field}', 2)
@@ -152,17 +177,23 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue('artistextras/coverfornothumbs', True)
         settings.setValue('artistextras/nocoverfallback', 'none')
 
+    @staticmethod
+    def _defaults_recognition(settings):
+        ''' default values for recognition '''
         settings.setValue('recognition/replacetitle', False)
         settings.setValue('recognition/replaceartist', False)
-
         settings.setValue('setlist/enabled', False)
 
+    def _defaults_general_settings(self, settings):
+        ''' default values for general settings '''
         settings.setValue('settings/delay', '1.0')
         settings.setValue('settings/initialized', False)
         settings.setValue('settings/loglevel', self.loglevel)
         settings.setValue('settings/notif', self.notif)
         settings.setValue('settings/stripextras', False)
 
+    def _defaults_output(self, settings):
+        ''' default values for output settings '''
         settings.setValue('textoutput/file', None)
         settings.setValue('textoutput/txttemplate', self.txttemplate)
         settings.setValue('textoutput/clearonstartup', True)
@@ -192,28 +223,20 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue('weboutput/httpport', '8899')
         settings.setValue('weboutput/once', True)
 
+    def _defaults_chat_services(self, settings):
+        ''' default values for chat services '''
         settings.setValue('twitchbot/enabled', False)
+        settings.setValue('kick/enabled', False)
+        settings.setValue('kick/chat', False)
+        settings.setValue('kick/announce', str(self.templatedir.joinpath("kickbot_track.txt")))
+        settings.setValue('kick/announcedelay', 1.0)
 
+    @staticmethod
+    def _defaults_quirks(settings):
+        ''' default values for quirks '''
         settings.setValue('quirks/pollingobserver', False)
         settings.setValue('quirks/filesubst', False)
         settings.setValue('quirks/slashmode', 'nochange')
-
-        self._defaults_plugins(settings)
-
-    def _initial_plugins(self):
-
-        self.plugins['inputs'] = nowplaying.pluginimporter.import_plugins(nowplaying.inputs)
-        if self.beam and self.plugins['inputs']['nowplaying.inputs.beam']:
-            del self.plugins['inputs']['nowplaying.inputs.beam']
-        self.pluginobjs['inputs'] = {}
-        self.plugins['recognition'] = nowplaying.pluginimporter.import_plugins(
-            nowplaying.recognition)
-        self.pluginobjs['recognition'] = {}
-
-        if not self.beam:
-            self.plugins['artistextras'] = nowplaying.pluginimporter.import_plugins(
-                nowplaying.artistextras)
-            self.pluginobjs['artistextras'] = {}
 
     def _defaults_plugins(self, settings):
         ''' configure the defaults for plugins '''
