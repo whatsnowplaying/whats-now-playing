@@ -21,10 +21,8 @@ import nowplaying.utils
 #     AuthScope.CHAT_EDIT
 # ]
 
-USER_SCOPE = [
-    AuthScope.CHAT_READ,
-    AuthScope.CHAT_EDIT
-]
+USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
+
 
 async def get_user_image(twitch, loginname):
     ''' ask twitch for the user profile image '''

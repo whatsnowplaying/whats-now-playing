@@ -16,12 +16,9 @@ import nowplaying.utils
 class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
     ''' handle twitch  '''
 
-    def __init__(self, config=None, stopevent=None):
+    def __init__(self, config=None, stopevent: asyncio.Event = None):
         self.config = config
-        if stopevent:
-            self.stopevent = stopevent
-        else:
-            self.stopevent = asyncio.Event()
+        self.stopevent = stopevent or asyncio.Event()
         self.widgets = None
         self.chat = None
         #self.redemptions = None

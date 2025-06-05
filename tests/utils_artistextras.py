@@ -13,26 +13,17 @@ import typing as t
 import pytest
 
 # Shared pytest.mark.skipif decorators for API key requirements
-skip_no_discogs_key = pytest.mark.skipif(
-    not os.environ.get('DISCOGS_API_KEY'),
-    reason="Discogs API key not available"
-)
+skip_no_discogs_key = pytest.mark.skipif(not os.environ.get('DISCOGS_API_KEY'),
+                                         reason="Discogs API key not available")
 
-skip_no_fanarttv_key = pytest.mark.skipif(
-    not os.environ.get('FANARTTV_API_KEY'),
-    reason="FanartTV API key not available"
-)
+skip_no_fanarttv_key = pytest.mark.skipif(not os.environ.get('FANARTTV_API_KEY'),
+                                          reason="FanartTV API key not available")
 
-skip_no_theaudiodb_key = pytest.mark.skipif(
-    not os.environ.get('THEAUDIODB_API_KEY'),
-    reason="TheAudioDB API key not available"
-)
+skip_no_theaudiodb_key = pytest.mark.skipif(not os.environ.get('THEAUDIODB_API_KEY'),
+                                            reason="TheAudioDB API key not available")
 
-skip_no_acoustid_key = pytest.mark.skipif(
-    not os.environ.get('ACOUSTID_TEST_APIKEY'),
-    reason="AcoustID test API key not available"
-)
-
+skip_no_acoustid_key = pytest.mark.skipif(not os.environ.get('ACOUSTID_TEST_APIKEY'),
+                                          reason="AcoustID test API key not available")
 
 
 class FakeImageCache:  # pylint: disable=too-few-public-methods
@@ -153,16 +144,14 @@ async def run_api_call_count_test(plugin, test_metadata, mock_method_name, image
 
         # Verify one API call was made
         assert api_call_count == 1, (
-            f'Expected 1 API call after first download, got {api_call_count}'
-        )
+            f'Expected 1 API call after first download, got {api_call_count}')
 
         # Second call - should use cached result, no additional API call
         result2 = await plugin.download_async(test_metadata.copy(), imagecache=imagecache)
 
         # Verify still only one API call was made (cache hit)
         assert api_call_count == 1, (
-            f'Expected 1 API call after second download (cache hit), got {api_call_count}'
-        )
+            f'Expected 1 API call after second download (cache hit), got {api_call_count}')
 
         # Both results should be consistent
         assert (result1 is None) == (result2 is None)
@@ -225,8 +214,7 @@ async def run_failure_cache_test(plugin, test_metadata, mock_method_name, imagec
 
         # Verify one API call was made and result is None (failure)
         assert api_call_count == 1, (
-            f'Expected 1 API call after first download, got {api_call_count}'
-        )
+            f'Expected 1 API call after first download, got {api_call_count}')
         assert result1 is None, 'Expected None result from failed API call'
 
         # Second call - should retry API (not use cached failure), API succeeds this time
@@ -242,8 +230,7 @@ async def run_failure_cache_test(plugin, test_metadata, mock_method_name, imagec
 
         # Verify still only two API calls (success result was cached)
         assert api_call_count == 2, (
-            f'Expected 2 API calls after third download (success cached), got {api_call_count}'
-        )
+            f'Expected 2 API calls after third download (success cached), got {api_call_count}')
 
         # Results should show the pattern: None (failure), data (success), data (cached success)
         assert result1 is None, 'First result should be None (API failure)'

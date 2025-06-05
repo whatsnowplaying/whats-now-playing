@@ -72,6 +72,7 @@ class Plugin(ArtistExtrasPlugin):
             # Create a mock WikiPage with the cached data
             class MockWikiPage:  # pylint: disable=too-few-public-methods
                 """Mock WikiPage with cached data."""
+
                 def __init__(self, entity, lang, data, images):
                     self.entity = entity
                     self.lang = lang
@@ -82,15 +83,10 @@ class Plugin(ArtistExtrasPlugin):
                     """Return images with specified fields."""
                     if fields is None:
                         return self._images
-                    return [{k: img.get(k) for k in fields if k in img}
-                            for img in self._images]
+                    return [{k: img.get(k) for k in fields if k in img} for img in self._images]
 
-            return MockWikiPage(
-                cached_result['entity'],
-                cached_result['lang'],
-                cached_result['data'],
-                cached_result['images']
-            )
+            return MockWikiPage(cached_result['entity'], cached_result['lang'],
+                                cached_result['data'], cached_result['images'])
 
         return cached_result
 
@@ -128,9 +124,10 @@ class Plugin(ArtistExtrasPlugin):
 
         return page
 
-    async def download_async(self,  # pylint: disable=too-many-branches,too-many-locals
-                             metadata=None,
-                             imagecache: "nowplaying.imagecache.ImageCache" = None):
+    async def download_async(   # pylint: disable=too-many-branches,too-many-locals
+            self,
+            metadata=None,
+            imagecache: "nowplaying.imagecache.ImageCache" = None):
         ''' async download content '''
 
         async def _get_bio_async():
@@ -153,8 +150,9 @@ class Plugin(ArtistExtrasPlugin):
         try:  # pylint: disable=too-many-nested-blocks
             # Safely handle artistwebsites - filter out None/empty values
             artist_websites = metadata.get('artistwebsites', [])
-            wikidata_websites = [url for url in artist_websites
-                               if url and isinstance(url, str) and 'wikidata' in url]
+            wikidata_websites = [
+                url for url in artist_websites if url and isinstance(url, str) and 'wikidata' in url
+            ]
             if not wikidata_websites:
                 logging.debug('no wikidata entity')
                 return None

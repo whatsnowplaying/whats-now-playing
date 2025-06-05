@@ -8,7 +8,6 @@ import pytest
 
 from utils_artistextras import configureplugins, configuresettings
 
-
 PLUGINS = ['wikimedia']
 
 if os.environ.get('DISCOGS_API_KEY'):

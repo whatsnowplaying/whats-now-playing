@@ -5,10 +5,9 @@ import os
 
 import pytest
 
-from utils_artistextras import (
-    configureplugins, configuresettings, skip_no_fanarttv_key,
-    run_cache_consistency_test, run_api_call_count_test, run_failure_cache_test
-)
+from utils_artistextras import (configureplugins, configuresettings, skip_no_fanarttv_key,
+                                run_cache_consistency_test, run_api_call_count_test,
+                                run_failure_cache_test)
 
 
 def _setup_fanarttv_plugin(bootstrap):
@@ -40,8 +39,7 @@ async def test_fanarttv_apicache_usage(bootstrap):
         plugin=plugin,
         test_metadata=_get_test_metadata(),
         imagecache=imagecache,
-        success_message='FanartTV API call successful, caching verified'
-    )
+        success_message='FanartTV API call successful, caching verified')
 
 
 @pytest.mark.asyncio
@@ -50,13 +48,10 @@ async def test_fanarttv_apicache_api_call_count(bootstrap):
     ''' test that fanarttv plugin makes only one API call when cache is used '''
     plugin, imagecache = _setup_fanarttv_plugin(bootstrap)
 
-    await run_api_call_count_test(
-        plugin=plugin,
-        test_metadata=_get_test_metadata(),
-        mock_method_name='_fetch_async',
-        imagecache=imagecache
-    )
-
+    await run_api_call_count_test(plugin=plugin,
+                                  test_metadata=_get_test_metadata(),
+                                  mock_method_name='_fetch_async',
+                                  imagecache=imagecache)
 
 
 @pytest.mark.asyncio
@@ -73,9 +68,7 @@ async def test_fanarttv_apicache_api_failure_behavior(bootstrap):
         'musicbrainzartistid': ['invalid-mbid-that-will-fail']  # Invalid MBID
     }
 
-    await run_failure_cache_test(
-        plugin=plugin,
-        test_metadata=test_metadata,
-        mock_method_name='_fetch_async',
-        imagecache=imagecache
-    )
+    await run_failure_cache_test(plugin=plugin,
+                                 test_metadata=test_metadata,
+                                 mock_method_name='_fetch_async',
+                                 imagecache=imagecache)

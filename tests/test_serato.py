@@ -13,8 +13,8 @@ import lxml.html
 
 import nowplaying.inputs.serato  # pylint: disable=import-error
 
+MONEYSTRING = 'Money Thats What I Want'  # codespell:ignore
 
-MONEYSTRING = 'Money Thats What I Want' # codespell:ignore
 
 @pytest.fixture
 def serato_bootstrap(bootstrap):

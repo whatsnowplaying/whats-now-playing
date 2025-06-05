@@ -25,11 +25,11 @@ def _check_tinytag_compatibility():
             return False
         if not hasattr(tinytag.tinytag._MP4, '_parse_custom_field'):  # pylint: disable=protected-access
             logging.error("tinytag._MP4._parse_custom_field method not found. "
-                         "Incompatible tinytag version.")
+                          "Incompatible tinytag version.")
             return False
         if not hasattr(tinytag.tinytag.TinyTag, '_set_field'):
             logging.error("tinytag.TinyTag._set_field method not found. "
-                         "Incompatible tinytag version.")
+                          "Incompatible tinytag version.")
             return False
         return True
     except AttributeError as exc:

@@ -22,7 +22,7 @@ class UIHelp:
         if startfile:
             startdir = os.path.dirname(startfile)
         elif not startdir:
-            startdir = os.path.join(self.config.templatedir, "templates")
+            startdir = str(self.config.templatedir)
         if filename := QFileDialog.getOpenFileName(self.qtui, 'Open file', startdir, limit):
             return filename[0]
         return None

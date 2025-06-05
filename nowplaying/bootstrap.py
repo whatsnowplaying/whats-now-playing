@@ -69,9 +69,8 @@ def setuplogging(logdir=None, logname='debug.log', rotate=False):
         logfhandler.doRollover()
 
     logging.basicConfig(
-        format=
-        '%(asctime)s %(levelname)s %(process)d %(processName)s/%(threadName)s '
-        + '%(module)s:%(funcName)s:%(lineno)d %(message)s',
+        format='%(asctime)s %(levelname)s %(process)d %(processName)s/%(threadName)s ' +
+        '%(module)s:%(funcName)s:%(lineno)d %(message)s',
         datefmt='%Y-%m-%dT%H:%M:%S%z',
         handlers=[logfhandler],
         level=logging.DEBUG)

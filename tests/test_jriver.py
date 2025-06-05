@@ -123,7 +123,7 @@ def test_settings_ui_save_handles_empty_strings(jriver_bootstrap):  # pylint: di
     mock_qwidget.host_lineedit.text.return_value = 'localhost'
     mock_qwidget.port_lineedit.text.return_value = '52199'
     mock_qwidget.username_lineedit.text.return_value = '   '  # whitespace-only
-    mock_qwidget.password_lineedit.text.return_value = ''     # empty string
+    mock_qwidget.password_lineedit.text.return_value = ''  # empty string
     mock_qwidget.access_key_lineedit.text.return_value = '  '  # whitespace-only
 
     plugin.save_settingsui(mock_qwidget)
@@ -246,7 +246,7 @@ async def test_test_connection_success():
 
     with aioresponses() as mock_resp:
         mock_resp.get('http://localhost:52199/MCWS/v1/Alive',
-              body='''<Response Status="OK">
+                      body='''<Response Status="OK">
                         <Item Name="AccessKey">testkey</Item>
                       </Response>''')
 
@@ -268,7 +268,7 @@ async def test_test_connection_wrong_access_key():
 
     with aioresponses() as mock_resp:
         mock_resp.get('http://localhost:52199/MCWS/v1/Alive',
-              body='''<Response Status="OK">
+                      body='''<Response Status="OK">
                         <Item Name="AccessKey">correctkey</Item>
                       </Response>''')
 
@@ -329,7 +329,7 @@ async def test_authenticate_success():
     with aioresponses() as mock_resp:
         url = 'http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass'
         mock_resp.get(url,
-              body='''
+                      body='''
               <Response Status="OK">
                   <Item Name="Token">abc123token</Item>
               </Response>
@@ -367,7 +367,7 @@ async def test_authenticate_no_token():
     with aioresponses() as mock_resp:
         url = 'http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass'
         mock_resp.get(url,
-              body='''
+                      body='''
               <Response Status="OK">
               </Response>
               ''')
@@ -419,7 +419,7 @@ async def test_getplayingtrack_success(jriver_plugin_with_session):  # pylint: d
     with aioresponses() as mock_resp:
         # aioresponses matches the URL pattern, including query parameters
         mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info?Token=testtoken',
-              body='''<Response Status="OK">
+                      body='''<Response Status="OK">
                         <Item Name="State">Playing</Item>
                         <Item Name="Artist">The Beatles</Item>
                         <Item Name="Album">Abbey Road</Item>
@@ -446,7 +446,7 @@ async def test_getplayingtrack_minimal_data():
 
     with aioresponses() as mock_resp:
         mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info',
-              body='''
+                      body='''
               <Response Status="OK">
                   <Item Name="Name">Unknown Track</Item>
               </Response>
@@ -565,7 +565,7 @@ async def test_getplayingtrack_with_token():
     with aioresponses() as mock_resp:
         # aioresponses matches the exact URL including query parameters
         mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info?Token=mytoken123',
-              body='<Response Status="OK"></Response>')
+                      body='<Response Status="OK"></Response>')
 
         await plugin.getplayingtrack()
 
@@ -585,7 +585,7 @@ async def test_getplayingtrack_without_token():
     with aioresponses() as mock_resp:
         # aioresponses matches the exact URL without query parameters
         mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info',
-              body='<Response Status="OK"></Response>')
+                      body='<Response Status="OK"></Response>')
 
         await plugin.getplayingtrack()
 
@@ -605,7 +605,7 @@ async def test_getplayingtrack_with_access_key():
     with aioresponses() as mock_resp:
         # aioresponses matches the exact URL including query parameters
         mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info?AccessKey=myaccesskey123',
-              body='<Response Status="OK"></Response>')
+                      body='<Response Status="OK"></Response>')
 
         await plugin.getplayingtrack()
 
@@ -648,7 +648,7 @@ async def test_get_filename_with_access_key():
     with aioresponses() as mock_resp:
         url = 'http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&AccessKey=myaccesskey123'
         mock_resp.get(url,
-              body='''<Response Status="OK">
+                      body='''<Response Status="OK">
                         <Item Name="Filename">test.mp3</Item>
                       </Response>''')
 
@@ -673,7 +673,7 @@ async def test_get_filename_with_token_and_access_key():
         url = ('http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&'
                'Token=mytoken123&AccessKey=myaccesskey123')
         mock_resp.get(url,
-              body='''<Response Status="OK">
+                      body='''<Response Status="OK">
                         <Item Name="Filename">test.mp3</Item>
                       </Response>''')
 
@@ -703,42 +703,44 @@ def test_connect_settingsui():
     assert plugin.uihelp == mock_uihelp
 
 
-@pytest.mark.parametrize("host,expected", [
-    # Localhost variants
-    ('localhost', True),
-    ('127.0.0.1', True),
-    ('::1', True),
-    # Private IPv4 ranges
-    ('192.168.1.100', True),
-    ('10.0.0.5', True),
-    ('172.16.1.10', True),
-    # Private IPv6 ranges
-    ('fe80::1', True),  # Link-local
-    ('fd00::1', True),  # Unique local
-    # Public IPv4 addresses
-    ('8.8.8.8', False),
-    ('1.1.1.1', False),
-    # Public IPv6 addresses
-    ('2001:4860:4860::8888', False),  # Google DNS
-    ('2606:4700:4700::1111', False),  # Cloudflare DNS
-    # Generic hostnames (should NOT be considered local - security risk)
-    ('jriver-server', False),
-    ('remote.example.com', False),
-    # Explicit local domain patterns
-    ('media-pc.local', True),
-    ('jriver.lan', True),
-    ('server.home', True),
-    ('media.internal', True),
-    # Remote hostnames (security test)
-    ('jriver.example.com', False),
-    ('music-server.net', False),
-    ('remote-jriver.org', False),
-    ('malicious-server.co.uk', False),
-    ('untrusted-host', False),
-    ('random-hostname', False),
-    # Edge case
-    (None, False),
-])
+@pytest.mark.parametrize(
+    "host,expected",
+    [
+        # Localhost variants
+        ('localhost', True),
+        ('127.0.0.1', True),
+        ('::1', True),
+        # Private IPv4 ranges
+        ('192.168.1.100', True),
+        ('10.0.0.5', True),
+        ('172.16.1.10', True),
+        # Private IPv6 ranges
+        ('fe80::1', True),  # Link-local
+        ('fd00::1', True),  # Unique local
+        # Public IPv4 addresses
+        ('8.8.8.8', False),
+        ('1.1.1.1', False),
+        # Public IPv6 addresses
+        ('2001:4860:4860::8888', False),  # Google DNS
+        ('2606:4700:4700::1111', False),  # Cloudflare DNS
+        # Generic hostnames (should NOT be considered local - security risk)
+        ('jriver-server', False),
+        ('remote.example.com', False),
+        # Explicit local domain patterns
+        ('media-pc.local', True),
+        ('jriver.lan', True),
+        ('server.home', True),
+        ('media.internal', True),
+        # Remote hostnames (security test)
+        ('jriver.example.com', False),
+        ('music-server.net', False),
+        ('remote-jriver.org', False),
+        ('malicious-server.co.uk', False),
+        ('untrusted-host', False),
+        ('random-hostname', False),
+        # Edge case
+        (None, False),
+    ])
 def test_is_local_connection(host, expected):
     """Test local connection detection for various hosts"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
@@ -753,28 +755,30 @@ def test_is_local_connection_ipv6_url_formatting():
     assert formatted_host == '[::1]'
 
 
-@pytest.mark.parametrize("input_host,expected", [
-    # IPv4 addresses (should remain unchanged)
-    ('192.168.1.100', '192.168.1.100'),
-    ('127.0.0.1', '127.0.0.1'),
-    ('10.0.0.1', '10.0.0.1'),
-    # IPv6 addresses (should be wrapped in brackets)
-    ('2001:db8::1', '[2001:db8::1]'),
-    ('::1', '[::1]'),
-    ('fe80::1%lo0', '[fe80::1%lo0]'),
-    ('2001:0db8:85a3:0000:0000:8a2e:0370:7334', '[2001:0db8:85a3:0000:0000:8a2e:0370:7334]'),
-    # Already bracketed IPv6 (should remain unchanged)
-    ('[2001:db8::1]', '[2001:db8::1]'),
-    ('[::1]', '[::1]'),
-    # Hostnames (should remain unchanged)
-    ('localhost', 'localhost'),
-    ('jriver.local', 'jriver.local'),
-    ('media-server.lan', 'media-server.lan'),
-    # Edge cases
-    (None, None),
-    ('', ''),
-    ('invalid-ip', 'invalid-ip'),
-])
+@pytest.mark.parametrize(
+    "input_host,expected",
+    [
+        # IPv4 addresses (should remain unchanged)
+        ('192.168.1.100', '192.168.1.100'),
+        ('127.0.0.1', '127.0.0.1'),
+        ('10.0.0.1', '10.0.0.1'),
+        # IPv6 addresses (should be wrapped in brackets)
+        ('2001:db8::1', '[2001:db8::1]'),
+        ('::1', '[::1]'),
+        ('fe80::1%lo0', '[fe80::1%lo0]'),
+        ('2001:0db8:85a3:0000:0000:8a2e:0370:7334', '[2001:0db8:85a3:0000:0000:8a2e:0370:7334]'),
+        # Already bracketed IPv6 (should remain unchanged)
+        ('[2001:db8::1]', '[2001:db8::1]'),
+        ('[::1]', '[::1]'),
+        # Hostnames (should remain unchanged)
+        ('localhost', 'localhost'),
+        ('jriver.local', 'jriver.local'),
+        ('media-server.lan', 'media-server.lan'),
+        # Edge cases
+        (None, None),
+        ('', ''),
+        ('invalid-ip', 'invalid-ip'),
+    ])
 def test_format_host_for_url(input_host, expected):
     """Test host formatting for URL construction"""
     plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
@@ -812,7 +816,7 @@ async def test_get_filename_success(jriver_plugin_with_session):  # pylint: disa
 
     with aioresponses() as mock_resp:
         mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?File=12345&Token=testtoken',
-              body='''<Response Status="OK">
+                      body='''<Response Status="OK">
                         <Item Name="FileKey">12345</Item>
                         <Item Name="Name">Come Together</Item>
                         <Item Name="Artist">The Beatles</Item>
@@ -834,7 +838,7 @@ async def test_get_filename_not_found():
 
     with aioresponses() as mock_resp:
         mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?File=12345',
-              body='''
+                      body='''
               <Response Status="OK">
                   <Item Name="FileKey">12345</Item>
                   <Item Name="Name">Come Together</Item>

@@ -1,0 +1,73 @@
+KickBot
+=======
+
+**What's Now Playing** integrates with Kick.com to provide chat bot functionality with track announcements.
+
+Kick Chat Support
+------------------
+
+The current Kick integration supports:
+
+* **Track Announcements**: Automatic announcements when tracks change
+* **Template-based Messages**: Rich formatting with metadata variables
+* **Smart Message Splitting**: Intelligent splitting of long messages
+
+**Coming Soon**: Interactive chat commands and user input processing.
+
+Authentication
+--------------
+
+To use Kick.com integration, you'll need to set up OAuth2 authentication with your Kick account.
+
+#. Go to the Kick Developer Portal to register **What's Now Playing** as an application.
+#. Create a new OAuth2 application and note down:
+
+   * Client ID
+   * Client Secret
+   * Redirect URI (typically ``http://localhost:8899/kickredirect``)
+
+#. Scopes Requested should include the following for current and future features:
+
+   * Read user information (including email address) - ``user:read``
+   * Write to chat feed - ``chat:write``
+   * Subscribe to events (read chat feed, follows, subscribes, gifts) - ``events:subscribe``
+
+#. In **What's Now Playing** settings:
+
+   * Enter your Client ID and Client Secret
+   * Set your Kick channel name
+   * Configure the Redirect URI
+   * Click "Authenticate with Kick" to complete OAuth2 setup
+
+Template Features
+-----------------
+
+Kick templates support powerful formatting features:
+
+* **Template Variables**: All standard metadata variables (``{{ artist }}``, ``{{ title }}``, etc.)
+* **Message Splitting**: Use ``{{ startnewmessage }}`` to split long announcements across multiple messages
+* **Smart Splitting**: Messages longer than 500 characters are automatically split at sentence or word boundaries using NLTK
+
+Example announcement template::
+
+    {% if artist %}{{ artist }} - {% endif %}"{{ title }}"
+    {% if album %} from {{ album }}{% endif %}
+    {{ startnewmessage }}
+    {% if artistshortbio %}{{ artistshortbio }}{% endif %}
+
+Configuration
+-------------
+
+#. Enable Kick chat in the Kick settings tab
+#. Configure your OAuth2 credentials
+#. Set up your announcement template
+#. Configure announcement delay if needed
+#. Test the connection with the "Authenticate with Kick" button
+
+Current Limitations
+-------------------
+
+* **Chat Commands**: Interactive commands are not yet implemented (coming soon)
+* **Permissions**: User permission system will be added with command support
+
+The Kick integration uses the same intelligent message splitting technology as the enhanced Twitch integration, ensuring that long messages with rich metadata are delivered in full while respecting platform limits.
