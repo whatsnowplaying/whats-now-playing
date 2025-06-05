@@ -41,6 +41,7 @@ import nowplaying.db
 import nowplaying.frozen
 import nowplaying.hostmeta
 import nowplaying.imagecache
+import nowplaying.kick.oauth2
 import nowplaying.trackrequests
 import nowplaying.utils
 
@@ -454,6 +455,153 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         data = {"dbfile": str(request.app[METADB_KEY].databasefile)}
         return web.json_response(data)
 
+    async def kickredirect_handler(self, request):
+        ''' handle oauth2 redirect callbacks '''
+        # Extract query parameters from the redirect
+        params = dict(request.query)
+        
+        # Log the redirect for debugging (don't log the auth code for security)
+        logging.info('Kick OAuth2 redirect received with parameters: %s', 
+                    {k: v for k, v in params.items() if k != 'code'})
+        
+        # Check for OAuth2 error
+        if 'error' in params:
+            error_code = params.get('error', 'unknown_error')
+            error_description = params.get('error_description', 'No description provided')
+            
+            response_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Kick OAuth2 - Error</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }}
+                    .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                    .error {{ color: #d32f2f; }}
+                    .close-btn {{ background: #1976d2; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2 class="error">Kick OAuth2 Authentication Failed</h2>
+                    <p><strong>Error:</strong> {error_code}</p>
+                    <p><strong>Description:</strong> {error_description}</p>
+                    <p>Please return to the settings and try again.</p>
+                    <button class="close-btn" onclick="window.close()">Close Window</button>
+                </div>
+            </body>
+            </html>
+            """
+            return web.Response(content_type='text/html', text=response_html)
+        
+        # Check for authorization code
+        authorization_code = params.get('code')
+        state = params.get('state')
+        
+        if not authorization_code:
+            response_html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Kick OAuth2 - Error</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+                    .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .error { color: #d32f2f; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2 class="error">No Authorization Code Received</h2>
+                    <p>The OAuth2 callback did not include an authorization code.</p>
+                    <p>Please return to the settings and try again.</p>
+                    <button onclick="window.close()">Close Window</button>
+                </div>
+            </body>
+            </html>
+            """
+            return web.Response(content_type='text/html', text=response_html)
+        
+        # Attempt to exchange the code for tokens
+        try:
+            # Get config to initialize OAuth2 handler
+            config = request.app[CONFIG_KEY]
+            oauth = nowplaying.kick.oauth2.KickOAuth2(config)
+            
+            # Exchange code for tokens
+            token_response = await oauth.exchange_code_for_token(authorization_code, state)
+            
+            # Success response
+            response_html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Kick OAuth2 - Success</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+                    .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .success { color: #388e3c; }
+                    .info { background: #e3f2fd; padding: 15px; border-radius: 4px; margin: 20px 0; }
+                    .close-btn { background: #388e3c; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2 class="success">✓ Kick OAuth2 Authentication Successful!</h2>
+                    <p>Your Kick account has been successfully authenticated with What's Now Playing.</p>
+                    <div class="info">
+                        <p><strong>What's Next:</strong></p>
+                        <ul>
+                            <li>Your authentication tokens have been saved securely</li>
+                            <li>You can now close this window</li>
+                            <li>Return to the settings panel to complete your configuration</li>
+                            <li>Save your settings to activate Kick integration</li>
+                        </ul>
+                    </div>
+                    <button class="close-btn" onclick="window.close()">Close Window</button>
+                </div>
+                <script>
+                    // Auto-close after 10 seconds
+                    setTimeout(function() {
+                        window.close();
+                    }, 10000);
+                </script>
+            </body>
+            </html>
+            """
+            
+            logging.info('Kick OAuth2 authentication completed successfully')
+            return web.Response(content_type='text/html', text=response_html)
+            
+        except Exception as error:
+            logging.error('Kick OAuth2 token exchange failed: %s', error)
+            
+            # Error response
+            response_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Kick OAuth2 - Error</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }}
+                    .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                    .error {{ color: #d32f2f; }}
+                    .close-btn {{ background: #d32f2f; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2 class="error">Kick OAuth2 Token Exchange Failed</h2>
+                    <p>There was an error completing the authentication process:</p>
+                    <p><code>{str(error)}</code></p>
+                    <p>Please check your Kick application configuration and try again.</p>
+                    <button class="close-btn" onclick="window.close()">Close Window</button>
+                </div>
+            </body>
+            </html>
+            """
+            return web.Response(content_type='text/html', text=response_html)
+
     def create_runner(self):
         ''' setup http routing '''
         threading.current_thread().name = 'WebServer-runner'
@@ -478,6 +626,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             web.get('/index.htm', self.index_htm_handler),
             web.get('/index.html', self.index_htm_handler),
             web.get('/index.txt', self.indextxt_handler),
+            web.get('/kickredirect', self.kickredirect_handler),
             web.get('/request.htm', self.requesterlaunch_htm_handler),
             web.get('/internals', self.internals),
             web.get('/ws', self.websocket_handler),

@@ -18,7 +18,7 @@ class SubprocessManager:
         if self.config.cparser.value('control/beam', type=bool):
             processlist = ['trackpoll', 'beamsender']
         else:
-            processlist = ['trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver']
+            processlist = ['trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver', 'kickbot']
 
         for name in processlist:
             self.processes[name] = {
@@ -134,6 +134,15 @@ class SubprocessManager:
         ''' stop the web process '''
         self._process_stop('webserver')
 
+    def start_kickbot(self):
+        ''' Start the kickbot '''
+        if self.config.cparser.value('kick/enabled', type=bool) and self.config.cparser.value('kick/chat', type=bool):
+            self._process_start('kickbot')
+
+    def stop_kickbot(self):
+        ''' stop the kickbot process '''
+        self._process_stop('kickbot')
+
     def restart_discordbot(self):
         ''' handle starting or restarting the discordbot process '''
         self.stop_discordbot()
@@ -158,3 +167,8 @@ class SubprocessManager:
         ''' handle starting or restarting the twitchbot process '''
         self.stop_twitchbot()
         self.start_twitchbot()
+
+    def restart_kickbot(self):
+        ''' handle starting or restarting the kickbot process '''
+        self.stop_kickbot()
+        self.start_kickbot()

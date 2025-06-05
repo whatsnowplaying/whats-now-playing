@@ -1,0 +1,2 @@
+{% if requester %} This {{requestdisplayname}} track was requested by @{{ requester }}. {% endif %}
+{% if artist %}{{ artist }} - {% endif %}"{{ title }}"
