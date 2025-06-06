@@ -8,6 +8,7 @@ __What's Now Playing__ is a tool written in Python to retrieve live song data fo
 streaming DJs using a variety of software, including:
 
 * [MIXXX](https://mixxx.org/)
+* [JRiver Media Center](https://jriver.com/)
 * [Serato DJ](https://serato.com/)
 * [Traktor](https://www.native-instruments.com/en/catalog/traktor/)
 * [Virtual DJ](https://www.virtualdj.com/) and other software that writes m3u files

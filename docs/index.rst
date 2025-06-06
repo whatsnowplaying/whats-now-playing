@@ -6,7 +6,7 @@ Welcome to What's Now Playing!
    :alt: Meerkat Logo
 
 **What's Now Playing** is a tool written in Python to retrieve the current/last played
-song in MIXXX, Serato, Traktor, Virtual DJ, and many other audio and DJ programs. It gives
+song in MIXXX, JRiver Media Center, Serato, Traktor, Virtual DJ, and many other audio and DJ programs. It gives
 you full control to use or not use whatever features you like and fully customize the
 output to match your style. You can even pretend to be a fancy music channel:
 
