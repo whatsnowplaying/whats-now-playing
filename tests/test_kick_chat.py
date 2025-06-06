@@ -28,7 +28,7 @@ class TestKickChat:
         assert chat.stopevent == stopevent
         assert chat.watcher is None
         assert chat.oauth is None
-        assert chat.authenticated is False
+        assert not chat.authenticated
         assert chat.api_base == "https://api.kick.com/public/v1"
         assert isinstance(chat.jinja2, nowplaying.kick.chat.jinja2.Environment)
 
@@ -55,8 +55,8 @@ class TestKickChat:
         
         result = await chat._authenticate()
         
-        assert result is True
-        assert chat.authenticated is True
+        assert result
+        assert chat.authenticated
 
     @pytest.mark.asyncio
     async def test_authenticate_no_tokens(self, bootstrap):
@@ -73,7 +73,7 @@ class TestKickChat:
         
         result = await chat._authenticate()
         
-        assert result is False
+        assert not result
         assert chat.authenticated is False
 
     @pytest.mark.asyncio
@@ -182,6 +182,69 @@ class TestKickChat:
             
             assert result is False
             assert chat.authenticated is False
+
+    @pytest.mark.asyncio
+    async def test_send_message_smart_splitting(self, bootstrap):
+        """Test message splitting for messages longer than KICK_MESSAGE_LIMIT."""
+        config = bootstrap
+        stopevent = asyncio.Event()
+        
+        chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)
+        chat.authenticated = True
+        
+        # Mock OAuth2 handler
+        mock_oauth = MagicMock()
+        mock_oauth.get_stored_tokens.return_value = ('access_token', 'refresh_token')
+        chat.oauth = mock_oauth
+        
+        # Create a long message that exceeds KICK_MESSAGE_LIMIT (500 chars)
+        long_message = "This is a very long message. " * 20  # ~600 characters
+        assert len(long_message) > nowplaying.kick.chat.KICK_MESSAGE_LIMIT
+        
+        # Mock _send_single_message to track calls
+        with patch.object(chat, '_send_single_message', new_callable=AsyncMock) as mock_send_single:
+            mock_send_single.return_value = True
+            
+            result = await chat._send_message(long_message)
+            
+            # Verify the message was split and sent in multiple parts
+            assert result is True
+            assert mock_send_single.call_count > 1  # Should be called multiple times
+            
+            # Verify each part is within the limit
+            for call in mock_send_single.call_args_list:
+                message_part = call[0][0]  # First argument of each call
+                assert len(message_part) <= nowplaying.kick.chat.KICK_MESSAGE_LIMIT
+                assert message_part.strip()  # Should not be empty
+            
+            # Verify content preservation - reconstruct message from parts
+            sent_parts = [call[0][0] for call in mock_send_single.call_args_list]
+            reconstructed = ' '.join(sent_parts)
+            
+            # Should preserve essential content (allowing for some spacing differences)
+            assert "This is a very long message" in reconstructed
+
+    @pytest.mark.asyncio
+    async def test_send_message_empty_content(self, bootstrap):
+        """Test message sending with empty or whitespace-only content."""
+        config = bootstrap
+        stopevent = asyncio.Event()
+        
+        chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)
+        chat.authenticated = True
+        
+        # Mock OAuth2 handler
+        mock_oauth = MagicMock()
+        mock_oauth.get_stored_tokens.return_value = ('access_token', 'refresh_token')
+        chat.oauth = mock_oauth
+        
+        # Test empty message
+        result = await chat._send_message("")
+        assert result is False
+        
+        # Test whitespace-only message
+        result = await chat._send_message("   \n\t   ")
+        assert result is False
 
     @pytest.mark.asyncio
     async def test_async_announce_track_no_metadata(self, bootstrap):
@@ -307,7 +370,7 @@ class TestKickChat:
         jinja_env = chat.setup_jinja2(template_dir)
         
         assert isinstance(jinja_env, nowplaying.kick.chat.jinja2.Environment)
-        assert jinja_env.trim_blocks is True
+        assert jinja_env.trim_blocks
 
     def test_finalize_method(self):
         """Test _finalize static method."""
@@ -432,7 +495,7 @@ class TestKickChatSettings:
         
         nowplaying.kick.chat.KickChatSettings.save(config, mock_widget, mock_subprocesses)
         
-        assert config.cparser.value('kick/chat', type=bool) is True
+        assert config.cparser.value('kick/chat', type=bool)
         assert config.cparser.value('kick/announce') == 'new_template.txt'
         assert config.cparser.value('kick/announcedelay', type=float) == 3.0
 

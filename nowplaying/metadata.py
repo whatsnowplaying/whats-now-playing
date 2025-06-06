@@ -14,7 +14,6 @@ import sys
 import textwrap
 import typing as t
 
-import nltk
 import tinytag
 import url_normalize
 
@@ -399,7 +398,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         message = message.replace('\r', ' ')
         message = str(message).strip()
         text = textwrap.TextWrapper(width=450).wrap(message)[0]
-        tokens = nltk.sent_tokenize(text)
+        tokens = nowplaying.utils.tokenize_sentences(text)
 
         nonotes = [sent for sent in tokens if not NOTE_RE.match(sent)]
         tokens = nonotes

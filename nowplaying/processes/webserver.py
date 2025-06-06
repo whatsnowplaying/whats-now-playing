@@ -467,35 +467,31 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             for k, v in params.items() if k != 'code'
         })
 
+        # Get config for template loading
+        config = request.app[CONFIG_KEY]
+        template_dir = config.getbundledir().joinpath('templates', 'oauth')
+
+        def load_oauth_template(template_name: str, **kwargs) -> str:
+            """Load and render an OAuth template with variables"""
+            template_path = template_dir.joinpath(template_name)
+            if not template_path.exists():
+                logging.error('OAuth template not found: %s', template_path)
+                return '<html><body><h1>Template Error</h1><p>Template not found</p></body></html>'
+            template_content = template_path.read_text(encoding='utf-8')
+            # Simple template variable replacement
+            for key, value in kwargs.items():
+                template_content = template_content.replace('{{ ' + key + ' }}', str(value))
+            return template_content
+
         # Check for OAuth2 error
         if 'error' in params:
             error_code = html.escape(params.get('error', 'unknown_error'))
             error_description = html.escape(
                 params.get('error_description', 'No description provided'))
 
-            response_html = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Kick OAuth2 - Error</title>
-                <style>
-                    body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }}
-                    .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-                    .error {{ color: #d32f2f; }}
-                    .close-btn {{ background: #1976d2; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h2 class="error">Kick OAuth2 Authentication Failed</h2>
-                    <p><strong>Error:</strong> {error_code}</p>
-                    <p><strong>Description:</strong> {error_description}</p>
-                    <p>Please return to the settings and try again.</p>
-                    <button class="close-btn" onclick="window.close()">Close Window</button>
-                </div>
-            </body>
-            </html>
-            """
+            response_html = load_oauth_template('kick_oauth_error.htm',
+                                              error_code=error_code,
+                                              error_description=error_description)
             return web.Response(content_type='text/html', text=response_html)
 
         # Check for authorization code
@@ -503,85 +499,18 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         received_state = params.get('state')
 
         if not authorization_code:
-            response_html = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Kick OAuth2 - Error</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
-                    .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                    .error { color: #d32f2f; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h2 class="error">No Authorization Code Received</h2>
-                    <p>The OAuth2 callback did not include an authorization code.</p>
-                    <p>Please return to the settings and try again.</p>
-                    <button onclick="window.close()">Close Window</button>
-                </div>
-            </body>
-            </html>
-            """
+            response_html = load_oauth_template('kick_oauth_no_code.htm')
             return web.Response(content_type='text/html', text=response_html)
 
-        # Get config to validate state parameter
-        config = request.app[CONFIG_KEY]
         # Validate state parameter to prevent CSRF attacks
         expected_state = config.cparser.value('kick/temp_state')
         if not expected_state:
-            response_html = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Kick OAuth2 - Error</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
-                    .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                    .error { color: #d32f2f; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h2 class="error">Invalid OAuth2 Session</h2>
-                    <p>No OAuth2 session found. Please start the authentication process again.</p>
-                    <p>This may happen if the authentication session has expired.</p>
-                    <button onclick="window.close()">Close Window</button>
-                </div>
-            </body>
-            </html>
-            """
+            response_html = load_oauth_template('kick_oauth_invalid_session.htm')
             logging.warning('Kick OAuth2 callback received without valid session state')
             return web.Response(content_type='text/html', text=response_html)
 
         if received_state != expected_state:
-            response_html = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Kick OAuth2 - Security Error</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
-                    .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                    .error { color: #d32f2f; }
-                    .security-warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 10px; border-radius: 4px; margin: 10px 0; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h2 class="error">OAuth2 State Mismatch</h2>
-                    <div class="security-warning">
-                        <strong>Security Warning:</strong> The OAuth2 state parameter does not match the expected value.
-                        This may indicate a Cross-Site Request Forgery (CSRF) attack.
-                    </div>
-                    <p>For your security, the authentication process has been blocked.</p>
-                    <p>Please return to the settings and start the authentication process again.</p>
-                    <button onclick="window.close()">Close Window</button>
-                </div>
-            </body>
-            </html>
-            """
+            response_html = load_oauth_template('kick_oauth_csrf_error.htm')
             logging.error(
                 'Kick OAuth2 CSRF attack detected: state mismatch (expected: %s, received: %s)',
                 expected_state[:8] + '...',
@@ -597,44 +526,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             await oauth.exchange_code_for_token(authorization_code, received_state)
 
             # Success response
-            response_html = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Kick OAuth2 - Success</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
-                    .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                    .success { color: #388e3c; }
-                    .info { background: #e3f2fd; padding: 15px; border-radius: 4px; margin: 20px 0; }
-                    .close-btn { background: #388e3c; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h2 class="success">Kick OAuth2 Authentication Successful!</h2>
-                    <p>Your Kick account has been successfully authenticated with What's Now Playing.</p>
-                    <div class="info">
-                        <p><strong>What's Next:</strong></p>
-                        <ul>
-                            <li>Your authentication tokens have been saved securely</li>
-                            <li>You can now close this window</li>
-                            <li>Return to the settings panel to complete your configuration</li>
-                            <li>Save your settings to activate Kick integration</li>
-                        </ul>
-                    </div>
-                    <button class="close-btn" onclick="window.close()">Close Window</button>
-                </div>
-                <script>
-                    // Auto-close after 10 seconds
-                    setTimeout(function() {
-                        window.close();
-                    }, 10000);
-                </script>
-            </body>
-            </html>
-            """
-
+            response_html = load_oauth_template('kick_oauth_success.htm')
             logging.info('Kick OAuth2 authentication completed successfully')
             return web.Response(content_type='text/html', text=response_html)
 
@@ -642,29 +534,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             logging.error('Kick OAuth2 token exchange failed: %s', error)
 
             # Error response
-            response_html = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Kick OAuth2 - Error</title>
-                <style>
-                    body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }}
-                    .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-                    .error {{ color: #d32f2f; }}
-                    .close-btn {{ background: #d32f2f; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h2 class="error">Kick OAuth2 Token Exchange Failed</h2>
-                    <p>There was an error completing the authentication process:</p>
-                    <p><code>{html.escape(str(error))}</code></p>
-                    <p>Please check your Kick application configuration and try again.</p>
-                    <button class="close-btn" onclick="window.close()">Close Window</button>
-                </div>
-            </body>
-            </html>
-            """
+            response_html = load_oauth_template('kick_oauth_token_error.htm',
+                                              error_message=html.escape(str(error)))
             return web.Response(content_type='text/html', text=response_html)
 
     def create_runner(self):

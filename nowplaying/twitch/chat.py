@@ -14,7 +14,6 @@ import traceback
 import aiohttp  # pylint: disable=import-error
 
 import jinja2  # pylint: disable=import-error
-import nltk  # pylint: disable=import-error
 
 from twitchAPI.twitch import Twitch  # pylint: disable=import-error
 from twitchAPI.types import AuthScope  # pylint: disable=import-error
@@ -31,6 +30,7 @@ import nowplaying.db
 from nowplaying.exceptions import PluginVerifyError
 import nowplaying.metadata
 import nowplaying.trackrequests
+import nowplaying.utils
 
 LASTANNOUNCED = {'artist': None, 'title': None}
 SPLITMESSAGETEXT = '****SPLITMESSSAGEHERE****'
@@ -67,13 +67,6 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         self.starttime = datetime.datetime.now(datetime.timezone.utc)
         self.timeout = aiohttp.ClientTimeout(total=60)
         self.modernmeerkat_greeted = False
-        
-        # Initialize NLTK for smart message splitting
-        try:
-            nltk.data.find('tokenizers/punkt')
-        except LookupError:
-            logging.info('Downloading NLTK punkt tokenizer for message splitting')
-            nltk.download('punkt', quiet=True)
 
     async def _try_custom_token(self, token):
         ''' if a custom token has been provided, try it. '''
@@ -367,76 +360,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
     def _split_message_smart(self, message: str, max_length: int = TWITCH_MESSAGE_LIMIT) -> list[str]:
         ''' intelligently split long messages at sentence or word boundaries '''
-        if len(message) <= max_length:
-            return [message]
-        
-        messages = []
-        
-        try:
-            # Try to split at sentence boundaries first
-            sentences = nltk.sent_tokenize(message)
-            current_chunk = ""
-            
-            for sentence in sentences:
-                # If a single sentence is too long, split it at word boundaries
-                if len(sentence) > max_length:
-                    if current_chunk:
-                        messages.append(current_chunk.strip())
-                        current_chunk = ""
-                    
-                    # Split long sentence at word boundaries
-                    words = sentence.split()
-                    word_chunk = ""
-                    for word in words:
-                        if len(word_chunk + " " + word) > max_length:
-                            if word_chunk:
-                                messages.append(word_chunk.strip())
-                                word_chunk = word
-                            else:
-                                # Single word is too long, just truncate it
-                                messages.append(word[:max_length-3] + "...")
-                                word_chunk = ""
-                        else:
-                            word_chunk = word_chunk + " " + word if word_chunk else word
-                    
-                    if word_chunk:
-                        messages.append(word_chunk.strip())
-                
-                # Check if adding this sentence would exceed the limit
-                elif len(current_chunk + " " + sentence) > max_length:
-                    if current_chunk:
-                        messages.append(current_chunk.strip())
-                        current_chunk = sentence
-                    else:
-                        # Single sentence fits, but no room for more
-                        messages.append(sentence.strip())
-                else:
-                    current_chunk = current_chunk + " " + sentence if current_chunk else sentence
-            
-            # Add any remaining text
-            if current_chunk:
-                messages.append(current_chunk.strip())
-                
-        except Exception as error:
-            logging.warning('NLTK splitting failed, falling back to simple split: %s', error)
-            # Fallback to simple word boundary splitting
-            words = message.split()
-            current_chunk = ""
-            for word in words:
-                if len(current_chunk + " " + word) > max_length:
-                    if current_chunk:
-                        messages.append(current_chunk.strip())
-                        current_chunk = word
-                    else:
-                        messages.append(word[:max_length-3] + "...")
-                        current_chunk = ""
-                else:
-                    current_chunk = current_chunk + " " + word if current_chunk else word
-            
-            if current_chunk:
-                messages.append(current_chunk.strip())
-        
-        return [msg for msg in messages if msg.strip()]
+        return nowplaying.utils.smart_split_message(message, max_length)
 
     def _announce_track(self, event):  #pylint: disable=unused-argument
         logging.debug('watcher event called')

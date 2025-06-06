@@ -9,7 +9,6 @@ from typing import Any
 
 import aiohttp
 import jinja2
-import nltk
 
 from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 
@@ -17,6 +16,7 @@ import nowplaying.config
 import nowplaying.db
 from nowplaying.exceptions import PluginVerifyError
 import nowplaying.kick.oauth2
+import nowplaying.utils
 
 LASTANNOUNCED: dict[str, str | None] = {'artist': None, 'title': None}
 SPLITMESSAGETEXT = '****SPLITMESSSAGEHERE****'
@@ -48,13 +48,6 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         # Kick API endpoints
         self.api_base: str = "https://api.kick.com/public/v1"
 
-        # Initialize NLTK for smart message splitting
-        try:
-            nltk.data.find('tokenizers/punkt')
-        except LookupError:
-            logging.info('Downloading NLTK punkt tokenizer for message splitting')
-            nltk.download('punkt', quiet=True)
-
     async def _authenticate(self) -> bool:
         ''' authenticate with kick using stored tokens '''
         if not self.oauth:
@@ -84,76 +77,7 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
 
     def _split_message_smart(self, message: str, max_length: int = KICK_MESSAGE_LIMIT) -> list[str]:
         ''' intelligently split long messages at sentence or word boundaries '''
-        if len(message) <= max_length:
-            return [message]
-
-        messages = []
-
-        try:
-            # Try to split at sentence boundaries first
-            sentences = nltk.sent_tokenize(message)
-            current_chunk = ""
-
-            for sentence in sentences:
-                # If a single sentence is too long, split it at word boundaries
-                if len(sentence) > max_length:
-                    if current_chunk:
-                        messages.append(current_chunk.strip())
-                        current_chunk = ""
-
-                    # Split long sentence at word boundaries
-                    words = sentence.split()
-                    word_chunk = ""
-                    for word in words:
-                        if len(word_chunk + " " + word) > max_length:
-                            if word_chunk:
-                                messages.append(word_chunk.strip())
-                                word_chunk = word
-                            else:
-                                # Single word is too long, just truncate it
-                                messages.append(word[:max_length-3] + "...")
-                                word_chunk = ""
-                        else:
-                            word_chunk = word_chunk + " " + word if word_chunk else word
-
-                    if word_chunk:
-                        messages.append(word_chunk.strip())
-
-                # Check if adding this sentence would exceed the limit
-                elif len(current_chunk + " " + sentence) > max_length:
-                    if current_chunk:
-                        messages.append(current_chunk.strip())
-                        current_chunk = sentence
-                    else:
-                        # Single sentence fits, but no room for more
-                        messages.append(sentence.strip())
-                else:
-                    current_chunk = current_chunk + " " + sentence if current_chunk else sentence
-
-            # Add any remaining text
-            if current_chunk:
-                messages.append(current_chunk.strip())
-
-        except Exception as error:
-            logging.warning('NLTK splitting failed, falling back to simple split: %s', error)
-            # Fallback to simple word boundary splitting
-            words = message.split()
-            current_chunk = ""
-            for word in words:
-                if len(current_chunk + " " + word) > max_length:
-                    if current_chunk:
-                        messages.append(current_chunk.strip())
-                        current_chunk = word
-                    else:
-                        messages.append(word[:max_length-3] + "...")
-                        current_chunk = ""
-                else:
-                    current_chunk = current_chunk + " " + word if current_chunk else word
-
-            if current_chunk:
-                messages.append(current_chunk.strip())
-
-        return [msg for msg in messages if msg.strip()]
+        return nowplaying.utils.smart_split_message(message, max_length)
 
     async def _send_message(self, message: str) -> bool:
         ''' send a message to kick chat using official API '''
@@ -398,8 +322,8 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
                     # Split message on startnewmessage tag like Twitch
                     messages = announcement.split(SPLITMESSAGETEXT)
                     for message_part in messages:
-                        if message_part.strip():
-                            await self._send_message(message_part.strip())
+                        if stripped_part := message_part.strip():
+                            await self._send_message(stripped_part)
 
                     logging.info('Sent Kick chat announcement (%d parts)', len([m for m in messages if m.strip()]))
 
@@ -463,7 +387,6 @@ class KickChatSettings:
     @staticmethod
     def verify(widget: Any) -> None:
         ''' verify kick chat settings '''
-        if widget.chat_checkbox.isChecked():
-            if not widget.announce_lineedit.text():
-                raise PluginVerifyError(
-                    'Kick announcement template is required when chat is enabled')
+        if widget.chat_checkbox.isChecked() and not widget.announce_lineedit.text():
+            raise PluginVerifyError(
+                'Kick announcement template is required when chat is enabled')

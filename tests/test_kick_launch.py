@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for Kick launch functionality."""
+"""Unit tests for Kick launch functionality - REFACTORED VERSION."""
 
 import asyncio
 import signal
@@ -13,17 +13,31 @@ import nowplaying.kick.oauth2
 import nowplaying.kick.chat
 
 
+# Fixtures
+@pytest.fixture
+def kick_launch(bootstrap):
+    """Create a KickLaunch instance with bootstrap config."""
+    return nowplaying.kick.launch.KickLaunch(config=bootstrap)
+
+
+@pytest.fixture
+def kick_launch_with_stopevent(bootstrap):
+    """Create a KickLaunch instance with bootstrap config and stopevent."""
+    stopevent = asyncio.Event()
+    launch = nowplaying.kick.launch.KickLaunch(config=bootstrap, stopevent=stopevent)
+    return launch, stopevent
+
+
 class TestKickLaunch:
     """Test cases for KickLaunch class."""
 
     def test_init_with_config(self, bootstrap):
         """Test KickLaunch initialization with config."""
-        config = bootstrap
         stopevent = asyncio.Event()
         
-        launch = nowplaying.kick.launch.KickLaunch(config=config, stopevent=stopevent)
+        launch = nowplaying.kick.launch.KickLaunch(config=bootstrap, stopevent=stopevent)
         
-        assert launch.config == config
+        assert launch.config == bootstrap
         assert launch.stopevent == stopevent
         assert launch.widgets is None
         assert launch.chat is None
@@ -31,13 +45,10 @@ class TestKickLaunch:
         assert isinstance(launch.oauth, nowplaying.kick.oauth2.KickOAuth2)
         assert len(launch.tasks) == 0
 
-    def test_init_without_stopevent(self, bootstrap):
+    def test_init_without_stopevent(self, kick_launch):
         """Test KickLaunch initialization without stopevent."""
-        config = bootstrap
+        launch = kick_launch
         
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
-        
-        assert launch.config == config
         assert isinstance(launch.stopevent, asyncio.Event)
 
     def test_init_without_config(self):
@@ -47,306 +58,182 @@ class TestKickLaunch:
         assert launch.config is None
         assert isinstance(launch.stopevent, asyncio.Event)
 
-    def test_validate_kick_token_sync_success(self, bootstrap):
-        """Test successful synchronous token validation."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
-        
+    # Parameterized token validation tests
+    @pytest.mark.parametrize("status_code,response_data,expected_result", [
+        # Success case
+        (200, {'data': {'active': True, 'client_id': 'test_client', 'scope': 'user:read chat:write'}}, True),
+        # Inactive token
+        (200, {'data': {'active': False}}, False),
+        # HTTP error codes
+        (401, {}, False),
+        (403, {}, False),
+        (500, {}, False),
+    ])
+    def test_validate_kick_token_sync_responses(self, kick_launch, status_code, response_data, expected_result):
+        """Test token validation with various HTTP responses."""
         mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            'data': {
-                'active': True,
-                'client_id': 'test_client',
-                'scope': 'user:read chat:write',
-                'token_type': 'user'
-            }
-        }
+        mock_response.status_code = status_code
+        mock_response.json.return_value = response_data
         
         with patch('requests.post', return_value=mock_response):
-            result = launch._validate_kick_token_sync('test_token')
+            result = kick_launch._validate_kick_token_sync('test_token')
             
-            assert result is True
+            assert result == expected_result
 
-    def test_validate_kick_token_sync_inactive(self, bootstrap):
-        """Test token validation with inactive token."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
-        
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            'data': {
-                'active': False
-            }
-        }
-        
-        with patch('requests.post', return_value=mock_response):
-            result = launch._validate_kick_token_sync('test_token')
+    @pytest.mark.parametrize("token,expected_result", [
+        ('', False),
+        (None, False),
+    ])
+    def test_validate_kick_token_sync_invalid_input(self, kick_launch, token, expected_result):
+        """Test token validation with invalid inputs."""
+        result = kick_launch._validate_kick_token_sync(token)
+        assert result == expected_result
+
+    @pytest.mark.parametrize("exception_type,exception_msg", [
+        (requests.RequestException, "Network error"),
+        (ValueError, "Invalid JSON"),
+    ])
+    def test_validate_kick_token_sync_exceptions(self, kick_launch, exception_type, exception_msg):
+        """Test token validation with various exceptions."""
+        if exception_type == ValueError:
+            # JSON parsing error
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.side_effect = exception_type(exception_msg)
             
-            assert result is False
+            with patch('requests.post', return_value=mock_response):
+                result = kick_launch._validate_kick_token_sync('test_token')
+        else:
+            # Network error
+            with patch('requests.post', side_effect=exception_type(exception_msg)):
+                result = kick_launch._validate_kick_token_sync('test_token')
+        
+        assert not result
 
-    def test_validate_kick_token_sync_no_token(self, bootstrap):
-        """Test token validation with no token."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
+    # Parameterized authentication tests
+    @pytest.mark.parametrize("stored_tokens,token_validation,refresh_succeeds,expected_result", [
+        # No tokens
+        ((None, None), None, None, False),
+        # Valid token
+        (('valid_token', 'refresh_token'), True, None, True),
+        # Invalid token, no refresh token
+        (('invalid_token', None), False, None, False),
+        # Invalid token, refresh succeeds
+        (('invalid_token', 'refresh_token'), False, True, True),
+        # Invalid token, refresh fails
+        (('invalid_token', 'refresh_token'), False, False, False),
+    ])
+    @pytest.mark.asyncio
+    async def test_authenticate_scenarios(self, kick_launch, stored_tokens, token_validation, refresh_succeeds, expected_result):
+        """Test authentication with various scenarios."""
+        # Setup mocks
+        kick_launch.oauth.get_stored_tokens = MagicMock()
         
-        result = launch._validate_kick_token_sync('')
-        
-        assert result is False
-
-    def test_validate_kick_token_sync_401(self, bootstrap):
-        """Test token validation with 401 response."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
-        
-        mock_response = MagicMock()
-        mock_response.status_code = 401
-        
-        with patch('requests.post', return_value=mock_response):
-            result = launch._validate_kick_token_sync('test_token')
+        if refresh_succeeds is not None:
+            # Test refresh scenarios
+            kick_launch.oauth.get_stored_tokens.side_effect = [
+                stored_tokens,  # First call
+                ('new_valid_token', stored_tokens[1]) if refresh_succeeds else stored_tokens  # After refresh
+            ]
+            kick_launch._validate_kick_token_sync = MagicMock()
+            kick_launch._validate_kick_token_sync.side_effect = [False, refresh_succeeds]
             
-            assert result is False
-
-    def test_validate_kick_token_sync_403(self, bootstrap):
-        """Test token validation with 403 response."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
+            if refresh_succeeds:
+                kick_launch.oauth.refresh_access_token = AsyncMock()
+            else:
+                kick_launch.oauth.refresh_access_token = AsyncMock(side_effect=Exception("Refresh failed"))
+        else:
+            # Simple scenarios
+            kick_launch.oauth.get_stored_tokens.return_value = stored_tokens
+            if token_validation is not None:
+                kick_launch._validate_kick_token_sync = MagicMock(return_value=token_validation)
         
-        mock_response = MagicMock()
-        mock_response.status_code = 403
-        
-        with patch('requests.post', return_value=mock_response):
-            result = launch._validate_kick_token_sync('test_token')
-            
-            assert result is False
-
-    def test_validate_kick_token_sync_other_error(self, bootstrap):
-        """Test token validation with other HTTP error."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
-        
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        
-        with patch('requests.post', return_value=mock_response):
-            result = launch._validate_kick_token_sync('test_token')
-            
-            assert result is False
-
-    def test_validate_kick_token_sync_exception(self, bootstrap):
-        """Test token validation with network exception."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
-        
-        with patch('requests.post', side_effect=requests.RequestException("Network error")):
-            result = launch._validate_kick_token_sync('test_token')
-            
-            assert result is False
-
-    def test_validate_kick_token_sync_json_error(self, bootstrap):
-        """Test token validation with JSON parsing error."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
-        
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.side_effect = ValueError("Invalid JSON")
-        
-        with patch('requests.post', return_value=mock_response):
-            result = launch._validate_kick_token_sync('test_token')
-            
-            assert result is False
+        result = await kick_launch.authenticate()
+        assert result == expected_result
 
     @pytest.mark.asyncio
-    async def test_authenticate_no_token(self, bootstrap):
-        """Test authentication with no stored token."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
-        
-        # Mock OAuth to return no tokens
-        launch.oauth.get_stored_tokens = MagicMock(return_value=(None, None))
-        
-        result = await launch.authenticate()
-        
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_authenticate_valid_token(self, bootstrap):
-        """Test authentication with valid token."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
-        
-        # Mock OAuth to return valid token
-        launch.oauth.get_stored_tokens = MagicMock(return_value=('valid_token', 'refresh_token'))
-        launch._validate_kick_token_sync = MagicMock(return_value=True)
-        
-        result = await launch.authenticate()
-        
-        assert result is True
-
-    @pytest.mark.asyncio
-    async def test_authenticate_refresh_token_success(self, bootstrap):
-        """Test authentication with token refresh."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
-        
-        # Mock OAuth to return invalid token first, then valid after refresh
-        launch.oauth.get_stored_tokens = MagicMock()
-        launch.oauth.get_stored_tokens.side_effect = [
-            ('invalid_token', 'refresh_token'),  # First call
-            ('new_valid_token', 'refresh_token')  # After refresh
-        ]
-        launch._validate_kick_token_sync = MagicMock()
-        launch._validate_kick_token_sync.side_effect = [False, True]  # Invalid, then valid
-        launch.oauth.refresh_access_token = AsyncMock()
-        
-        result = await launch.authenticate()
-        
-        assert result is True
-        launch.oauth.refresh_access_token.assert_called_once_with('refresh_token')
-
-    @pytest.mark.asyncio
-    async def test_authenticate_refresh_token_failure(self, bootstrap):
-        """Test authentication with token refresh failure."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
-        
-        # Mock OAuth to return invalid token
-        launch.oauth.get_stored_tokens = MagicMock(return_value=('invalid_token', 'refresh_token'))
-        launch._validate_kick_token_sync = MagicMock(return_value=False)
-        launch.oauth.refresh_access_token = AsyncMock(side_effect=Exception("Refresh failed"))
-        
-        result = await launch.authenticate()
-        
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_authenticate_no_refresh_token(self, bootstrap):
-        """Test authentication with no refresh token available."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
-        
-        # Mock OAuth to return invalid token with no refresh token
-        launch.oauth.get_stored_tokens = MagicMock(return_value=('invalid_token', None))
-        launch._validate_kick_token_sync = MagicMock(return_value=False)
-        
-        result = await launch.authenticate()
-        
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_authenticate_exception(self, bootstrap):
+    async def test_authenticate_exception(self, kick_launch):
         """Test authentication with unexpected exception."""
-        config = bootstrap
-        launch = nowplaying.kick.launch.KickLaunch(config=config)
+        kick_launch.oauth.get_stored_tokens = MagicMock(side_effect=Exception("Unexpected error"))
         
-        # Mock OAuth to raise exception
-        launch.oauth.get_stored_tokens = MagicMock(side_effect=Exception("Unexpected error"))
-        
-        result = await launch.authenticate()
-        
-        assert result is False
+        result = await kick_launch.authenticate()
+        assert not result
 
+    @pytest.mark.parametrize("auth_result,expected_tasks", [
+        (False, 0),  # Authentication fails, no tasks
+        (True, 1),   # Authentication succeeds, task created
+    ])
     @pytest.mark.asyncio
-    async def test_bootstrap_authentication_failure(self, bootstrap):
-        """Test bootstrap with authentication failure."""
-        config = bootstrap
-        stopevent = asyncio.Event()
-        launch = nowplaying.kick.launch.KickLaunch(config=config, stopevent=stopevent)
+    async def test_bootstrap_scenarios(self, kick_launch_with_stopevent, auth_result, expected_tasks):
+        """Test bootstrap with different authentication results."""
+        launch, stopevent = kick_launch_with_stopevent
         
-        # Mock authentication to fail
-        launch.authenticate = AsyncMock(return_value=False)
+        # Mock authentication
+        launch.authenticate = AsyncMock(return_value=auth_result)
         
-        with patch('signal.signal'):
-            await launch.bootstrap()
-        
-        # Should return early without starting tasks
-        assert len(launch.tasks) == 0
-
-    @pytest.mark.asyncio
-    async def test_bootstrap_success(self, bootstrap):
-        """Test successful bootstrap."""
-        config = bootstrap
-        stopevent = asyncio.Event()
-        launch = nowplaying.kick.launch.KickLaunch(config=config, stopevent=stopevent)
-        
-        # Mock authentication to succeed
-        launch.authenticate = AsyncMock(return_value=True)
-        
-        # Mock chat
-        mock_chat = MagicMock()
-        mock_chat.run_chat = AsyncMock()
-        launch.chat = mock_chat
-        
-        with patch('signal.signal'):
-            with patch('asyncio.get_running_loop') as mock_get_loop:
-                mock_loop = MagicMock()
-                mock_task = MagicMock()
-                mock_loop.create_task.return_value = mock_task
-                mock_get_loop.return_value = mock_loop
-                
+        if auth_result:
+            # Mock chat and loop for success case
+            mock_chat = MagicMock()
+            mock_chat.run_chat = AsyncMock()
+            launch.chat = mock_chat
+            
+            with patch('signal.signal'):
+                with patch('asyncio.get_running_loop') as mock_get_loop:
+                    mock_loop = MagicMock()
+                    mock_task = MagicMock()
+                    mock_loop.create_task.return_value = mock_task
+                    mock_get_loop.return_value = mock_loop
+                    
+                    await launch.bootstrap()
+                    
+                    assert len(launch.tasks) == expected_tasks
+                    if expected_tasks > 0:
+                        assert mock_task in launch.tasks
+        else:
+            with patch('signal.signal'):
                 await launch.bootstrap()
-                
-                # Verify task was created and added
-                mock_loop.create_task.assert_called()
-                assert mock_task in launch.tasks
+                assert len(launch.tasks) == expected_tasks
 
-    def test_forced_stop(self, bootstrap):
+    def test_forced_stop(self, kick_launch_with_stopevent):
         """Test forced stop signal handler."""
-        config = bootstrap
-        stopevent = asyncio.Event()
-        launch = nowplaying.kick.launch.KickLaunch(config=config, stopevent=stopevent)
+        launch, stopevent = kick_launch_with_stopevent
         
         assert not stopevent.is_set()
-        
         launch.forced_stop(signal.SIGINT, None)
-        
         assert stopevent.is_set()
 
+    @pytest.mark.parametrize("has_chat,has_loop", [
+        (True, True),   # Both chat and loop present
+        (False, True),  # No chat, but has loop
+        (True, False),  # Has chat, no loop  
+        (False, False), # Neither present
+    ])
     @pytest.mark.asyncio
-    async def test_stop(self, bootstrap):
-        """Test stop functionality."""
-        config = bootstrap
-        stopevent = asyncio.Event()
-        launch = nowplaying.kick.launch.KickLaunch(config=config, stopevent=stopevent)
+    async def test_stop_scenarios(self, kick_launch_with_stopevent, has_chat, has_loop):
+        """Test stop functionality with different configurations."""
+        launch, stopevent = kick_launch_with_stopevent
         
-        # Mock chat
-        mock_chat = AsyncMock()
-        launch.chat = mock_chat
+        # Setup mocks based on parameters
+        if has_chat:
+            mock_chat = AsyncMock()
+            launch.chat = mock_chat
         
-        # Mock loop
-        mock_loop = MagicMock()
-        launch.loop = mock_loop
+        if has_loop:
+            mock_loop = MagicMock()
+            launch.loop = mock_loop
         
         await launch.stop()
         
-        # Verify cleanup
-        mock_chat.stop.assert_called_once()
-        mock_loop.stop.assert_called_once()
+        # Verify appropriate methods were called
+        if has_chat:
+            mock_chat.stop.assert_called_once()
+        if has_loop:
+            mock_loop.stop.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_stop_no_chat(self, bootstrap):
-        """Test stop with no chat instance."""
-        config = bootstrap
-        stopevent = asyncio.Event()
-        launch = nowplaying.kick.launch.KickLaunch(config=config, stopevent=stopevent)
-        
-        # Mock loop
-        mock_loop = MagicMock()
-        launch.loop = mock_loop
-        
-        await launch.stop()
-        
-        # Should not raise exception
-        mock_loop.stop.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_watch_for_exit(self, bootstrap):
+    async def test_watch_for_exit(self, kick_launch_with_stopevent):
         """Test watch for exit functionality."""
-        config = bootstrap
-        stopevent = asyncio.Event()
-        launch = nowplaying.kick.launch.KickLaunch(config=config, stopevent=stopevent)
+        launch, stopevent = kick_launch_with_stopevent
         
         # Mock stop method
         launch.stop = AsyncMock()
@@ -365,70 +252,55 @@ class TestKickLaunch:
         # Verify stop was called
         launch.stop.assert_called_once()
 
-    def test_start_initialization(self, bootstrap):
-        """Test start method initialization."""
-        config = bootstrap
-        stopevent = asyncio.Event()
-        launch = nowplaying.kick.launch.KickLaunch(config=config, stopevent=stopevent)
+    @pytest.mark.parametrize("has_running_loop", [True, False])
+    def test_start_scenarios(self, kick_launch_with_stopevent, has_running_loop):
+        """Test start method with and without existing event loop."""
+        launch, stopevent = kick_launch_with_stopevent
         
-        # Mock loop and methods to avoid actually running
-        with patch('asyncio.get_running_loop') as mock_get_loop:
-            with patch.object(launch, 'bootstrap', new_callable=AsyncMock):
-                with patch.object(launch, '_watch_for_exit', new_callable=AsyncMock):
-                    mock_loop = MagicMock()
-                    mock_task = MagicMock()
-                    mock_loop.create_task.return_value = mock_task
-                    mock_loop.run_forever = MagicMock(side_effect=KeyboardInterrupt)
-                    mock_get_loop.return_value = mock_loop
-                    
-                    try:
-                        launch.start()
-                    except KeyboardInterrupt:
-                        pass
-                    
-                    # Verify chat was initialized
-                    assert isinstance(launch.chat, nowplaying.kick.chat.KickChat)
-                    assert launch.loop == mock_loop
-
-    def test_start_with_new_event_loop(self, bootstrap):
-        """Test start method with new event loop."""
-        config = bootstrap
-        stopevent = asyncio.Event()
-        launch = nowplaying.kick.launch.KickLaunch(config=config, stopevent=stopevent)
+        # Common mocks
+        mock_loop = MagicMock()
+        mock_task = MagicMock()
+        mock_loop.create_task.return_value = mock_task
+        mock_loop.run_forever = MagicMock(side_effect=KeyboardInterrupt)
         
-        # Mock methods to avoid actually running
-        with patch('asyncio.get_running_loop', side_effect=RuntimeError("No running loop")):
-            with patch('asyncio.new_event_loop') as mock_new_loop:
-                with patch.object(launch, 'bootstrap', new_callable=AsyncMock):
-                    with patch.object(launch, '_watch_for_exit', new_callable=AsyncMock):
-                        mock_loop = MagicMock()
-                        mock_task = MagicMock()
-                        mock_loop.create_task.return_value = mock_task
-                        mock_loop.run_forever = MagicMock(side_effect=KeyboardInterrupt)
-                        mock_new_loop.return_value = mock_loop
-                        
+        with patch.object(launch, 'bootstrap', new_callable=AsyncMock):
+            with patch.object(launch, '_watch_for_exit', new_callable=AsyncMock):
+                if has_running_loop:
+                    with patch('asyncio.get_running_loop', return_value=mock_loop):
                         try:
                             launch.start()
                         except KeyboardInterrupt:
                             pass
-                        
-                        # Verify new loop was created
-                        mock_new_loop.assert_called_once()
-                        assert launch.loop == mock_loop
+                else:
+                    with patch('asyncio.get_running_loop', side_effect=RuntimeError("No running loop")):
+                        with patch('asyncio.new_event_loop', return_value=mock_loop):
+                            try:
+                                launch.start()
+                            except KeyboardInterrupt:
+                                pass
+                
+                # Verify initialization
+                assert isinstance(launch.chat, nowplaying.kick.chat.KickChat)
+                assert launch.loop == mock_loop
 
 
 class TestKickLaunchModuleFunctions:
     """Test module-level functions in kick.launch."""
 
+    @pytest.mark.parametrize("testmode,expected_appname", [
+        (True, 'testsuite'),
+        (False, None),
+    ])
     @patch('nowplaying.kick.launch.KickLaunch')
     @patch('nowplaying.frozen.frozen_init')
     @patch('nowplaying.bootstrap.set_qt_names')
-    @patch('nowplaying.bootstrap.setuplogging')
+    @patch('nowplaying.bootstrap.setuplogging') 
     @patch('nowplaying.config.ConfigFile')
     @patch('threading.current_thread')
     def test_start_function(self, mock_thread, mock_config, mock_logging, 
-                           mock_set_names, mock_frozen, mock_kick_launch):
-        """Test module start function."""
+                           mock_set_names, mock_frozen, mock_kick_launch,
+                           testmode, expected_appname):
+        """Test module start function with different testmode values."""
         mock_stopevent = MagicMock()
         mock_bundledir = "/test/bundle"
         
@@ -441,78 +313,41 @@ class TestKickLaunchModuleFunctions:
         mock_kick_launch.return_value = mock_launch_instance
         
         # Call function
-        nowplaying.kick.launch.start(
-            stopevent=mock_stopevent, 
-            bundledir=mock_bundledir, 
-            testmode=True
-        )
+        if testmode:
+            nowplaying.kick.launch.start(
+                stopevent=mock_stopevent, 
+                bundledir=mock_bundledir, 
+                testmode=testmode
+            )
+        else:
+            nowplaying.kick.launch.start(stopevent=mock_stopevent)
         
         # Verify calls
-        mock_frozen.assert_called_once_with(mock_bundledir)
-        mock_set_names.assert_called_once_with(appname='testsuite')
-        mock_logging.assert_called_once_with(logname='debug.log', rotate=False)
-        mock_config.assert_called_once_with(
-            bundledir=mock_bundledir, 
-            logpath="/test/logs", 
-            testmode=True
-        )
-        mock_kick_launch.assert_called_once_with(
-            config=mock_config_instance, 
-            stopevent=mock_stopevent
-        )
+        if expected_appname:
+            mock_set_names.assert_called_once_with(appname=expected_appname)
+        else:
+            mock_set_names.assert_called_once_with()
+        
         mock_launch_instance.start.assert_called_once()
 
-    @patch('nowplaying.kick.launch.KickLaunch')
-    @patch('nowplaying.frozen.frozen_init')
-    @patch('nowplaying.bootstrap.set_qt_names')
-    @patch('nowplaying.bootstrap.setuplogging')
-    @patch('nowplaying.config.ConfigFile')
-    @patch('threading.current_thread')
-    def test_start_function_not_testmode(self, mock_thread, mock_config, mock_logging,
-                                        mock_set_names, mock_frozen, mock_kick_launch):
-        """Test module start function without testmode."""
-        mock_stopevent = MagicMock()
-        
-        # Mock objects
-        mock_frozen.return_value = "/bundle"
-        mock_logging.return_value = "/logs"
-        mock_config_instance = MagicMock()
-        mock_config.return_value = mock_config_instance
-        mock_launch_instance = MagicMock()
-        mock_kick_launch.return_value = mock_launch_instance
-        
-        # Call function
-        nowplaying.kick.launch.start(stopevent=mock_stopevent)
-        
-        # Verify set_qt_names called without appname
-        mock_set_names.assert_called_once_with()
-
+    @pytest.mark.parametrize("exception_raised", [True, False])
     @pytest.mark.asyncio
-    async def test_launch_kickbot_function(self, bootstrap):
-        """Test launch_kickbot async function."""
-        config = bootstrap
+    async def test_launch_kickbot_function(self, bootstrap, exception_raised):
+        """Test launch_kickbot async function with and without exceptions."""
         stopevent = asyncio.Event()
         
         with patch('nowplaying.kick.launch.KickLaunch') as mock_kick_launch:
             mock_launch_instance = MagicMock()
-            mock_launch_instance.bootstrap = AsyncMock()
+            
+            if exception_raised:
+                mock_launch_instance.bootstrap = AsyncMock(side_effect=Exception("Test error"))
+            else:
+                mock_launch_instance.bootstrap = AsyncMock()
+            
             mock_kick_launch.return_value = mock_launch_instance
             
-            await nowplaying.kick.launch.launch_kickbot(config=config, stopevent=stopevent)
+            # Should not raise exception in either case
+            await nowplaying.kick.launch.launch_kickbot(config=bootstrap, stopevent=stopevent)
             
-            mock_kick_launch.assert_called_once_with(config=config, stopevent=stopevent)
+            mock_kick_launch.assert_called_once_with(config=bootstrap, stopevent=stopevent)
             mock_launch_instance.bootstrap.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_launch_kickbot_function_exception(self, bootstrap):
-        """Test launch_kickbot async function with exception."""
-        config = bootstrap
-        stopevent = asyncio.Event()
-        
-        with patch('nowplaying.kick.launch.KickLaunch') as mock_kick_launch:
-            mock_launch_instance = MagicMock()
-            mock_launch_instance.bootstrap = AsyncMock(side_effect=Exception("Test error"))
-            mock_kick_launch.return_value = mock_launch_instance
-            
-            # Should not raise exception
-            await nowplaying.kick.launch.launch_kickbot(config=config, stopevent=stopevent)

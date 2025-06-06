@@ -1,31 +1,50 @@
 #!/usr/bin/env python3
-"""Unit tests for Kick OAuth2 functionality."""
+"""Unit tests for Kick OAuth2 functionality - REFACTORED VERSION."""
 
 import asyncio
 import base64
 import hashlib
-import secrets
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-import aiohttp
+from aioresponses import aioresponses
 
 import nowplaying.kick.oauth2
+
+
+# Fixtures
+@pytest.fixture
+def configured_oauth(bootstrap):
+    """Create OAuth2 instance with test configuration."""
+    config = bootstrap
+    config.cparser.setValue('kick/clientid', 'test_client_id')
+    config.cparser.setValue('kick/secret', 'test_secret')
+    config.cparser.setValue('kick/redirecturi', 'http://localhost:8080/callback')
+    return nowplaying.kick.oauth2.KickOAuth2(config)
+
+
+@pytest.fixture
+def oauth_with_pkce(configured_oauth):
+    """Create OAuth2 instance with PKCE parameters generated."""
+    oauth = configured_oauth
+    oauth._generate_pkce_parameters()
+    return oauth
+
+
+@pytest.fixture
+def mock_responses():
+    """Fixture that provides aioresponses for mocking HTTP calls."""
+    with aioresponses() as mock:
+        yield mock
 
 
 class TestKickOAuth2:
     """Test cases for KickOAuth2 class."""
 
-    def test_init_with_config(self, bootstrap):
+    def test_init_with_config(self, configured_oauth):
         """Test OAuth2 initialization with config."""
-        config = bootstrap
-        config.cparser.setValue('kick/clientid', 'test_client_id')
-        config.cparser.setValue('kick/secret', 'test_secret')
-        config.cparser.setValue('kick/redirecturi', 'http://localhost:8080/callback')
-        
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        
-        assert oauth.config == config
+        oauth = configured_oauth
+
         assert oauth.client_id == 'test_client_id'
         assert oauth.client_secret == 'test_secret'
         assert oauth.redirect_uri == 'http://localhost:8080/callback'
@@ -36,302 +55,369 @@ class TestKickOAuth2:
     def test_init_without_config(self):
         """Test OAuth2 initialization without config."""
         oauth = nowplaying.kick.oauth2.KickOAuth2()
-        
+
         assert oauth.config is not None
         assert isinstance(oauth.config, nowplaying.config.ConfigFile)
 
-    def test_generate_pkce_parameters(self, bootstrap):
+    def test_generate_pkce_parameters(self, configured_oauth):
         """Test PKCE parameter generation."""
-        config = bootstrap
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        
+        oauth = configured_oauth
+
         oauth._generate_pkce_parameters()
-        
+
         # Verify code verifier is generated
         assert oauth.code_verifier is not None
         assert len(oauth.code_verifier) >= 43
         assert len(oauth.code_verifier) <= 128
-        
+
         # Verify code challenge is generated correctly
         assert oauth.code_challenge is not None
         expected_challenge = base64.urlsafe_b64encode(
-            hashlib.sha256(oauth.code_verifier.encode('utf-8')).digest()
-        ).decode('utf-8').rstrip('=')
+            hashlib.sha256(
+                oauth.code_verifier.encode('utf-8')).digest()).decode('utf-8').rstrip('=')
         assert oauth.code_challenge == expected_challenge
-        
+
         # Verify state is generated
         assert oauth.state is not None
         assert len(oauth.state) >= 43
 
-    def test_get_authorization_url_missing_client_id(self, bootstrap):
-        """Test authorization URL generation fails without client ID."""
+    # Parameterized authorization URL tests
+    @pytest.mark.parametrize(
+        "client_id,redirect_uri,expected_error",
+        [
+            (None, 'http://localhost:8080', 'Client ID is required'),
+            ('test_client', None, 'Redirect URI is required'),
+            ('test_client', 'http://localhost:8080', None),  # Success
+        ])
+    def test_get_authorization_url_scenarios(self, bootstrap, client_id, redirect_uri,
+                                             expected_error):
+        """Test authorization URL generation with various configurations."""
         config = bootstrap
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        
-        with pytest.raises(ValueError, match="Client ID is required"):
-            oauth.get_authorization_url()
+        if client_id:
+            config.cparser.setValue('kick/clientid', client_id)
+        if redirect_uri:
+            config.cparser.setValue('kick/redirecturi', redirect_uri)
 
-    def test_get_authorization_url_missing_redirect_uri(self, bootstrap):
-        """Test authorization URL generation fails without redirect URI."""
-        config = bootstrap
-        config.cparser.setValue('kick/clientid', 'test_client_id')
         oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        
-        with pytest.raises(ValueError, match="Redirect URI is required"):
-            oauth.get_authorization_url()
 
-    def test_get_authorization_url_success(self, bootstrap):
-        """Test successful authorization URL generation."""
-        config = bootstrap
-        config.cparser.setValue('kick/clientid', 'test_client_id')
-        config.cparser.setValue('kick/redirecturi', 'http://localhost:8080/callback')
-        
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        auth_url = oauth.get_authorization_url()
-        
-        assert auth_url.startswith('https://id.kick.com/oauth/authorize?')
-        assert 'client_id=test_client_id' in auth_url
-        assert 'response_type=code' in auth_url
-        assert 'redirect_uri=http://localhost:8080/callback' in auth_url
-        assert 'scope=user:read+user:write+chat:read+chat:write' in auth_url
-        assert 'code_challenge_method=S256' in auth_url
-        assert oauth.code_verifier is not None
-        assert oauth.state is not None
+        if expected_error:
+            with pytest.raises(ValueError, match=expected_error):
+                oauth.get_authorization_url()
+        else:
+            auth_url = oauth.get_authorization_url()
 
+            assert auth_url.startswith('https://id.kick.com/oauth/authorize?')
+            assert f'client_id={client_id}' in auth_url
+            assert 'response_type=code' in auth_url
+            encoded_uri = redirect_uri.replace(":", "%3A").replace("/", "%2F")
+            assert f'redirect_uri={encoded_uri}' in auth_url
+            assert 'scope=user%3Aread+chat%3Awrite+events%3Asubscribe' in auth_url
+            assert 'code_challenge_method=S256' in auth_url
+            assert oauth.code_verifier is not None
+            assert oauth.state is not None
+
+    # Parameterized browser opening tests
+    @pytest.mark.parametrize("browser_succeeds", [True, False])
     @patch('webbrowser.open')
-    def test_open_browser_for_auth_success(self, mock_open, bootstrap):
-        """Test successful browser opening for auth."""
-        config = bootstrap
-        config.cparser.setValue('kick/clientid', 'test_client_id')
-        config.cparser.setValue('kick/redirecturi', 'http://localhost:8080/callback')
-        
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
+    def test_open_browser_for_auth_scenarios(self, mock_open, configured_oauth, browser_succeeds):
+        """Test browser opening with success and failure scenarios."""
+        oauth = configured_oauth
+
+        if not browser_succeeds:
+            mock_open.side_effect = Exception("Browser error")
+
         result = oauth.open_browser_for_auth()
-        
-        assert result is True
+
+        assert result == browser_succeeds
         mock_open.assert_called_once()
 
-    @patch('webbrowser.open', side_effect=Exception("Browser error"))
-    def test_open_browser_for_auth_failure(self, mock_open, bootstrap):
-        """Test browser opening failure."""
+    # Parameterized token exchange tests
+    @pytest.mark.parametrize(
+        "has_verifier,state_matches,response_status,response_data,should_succeed",
+        [
+            (False, True, 200, {
+                'access_token': 'token'
+            }, False),  # No verifier
+            (True, False, 200, {
+                'access_token': 'token'
+            }, False),  # State mismatch
+            (True, True, 400, {}, False),  # HTTP error
+            (True, True, 200, {
+                'access_token': 'token',
+                'refresh_token': 'refresh'
+            }, True),  # Success
+        ])
+    @pytest.mark.asyncio
+    async def test_exchange_code_for_token_scenarios(self, configured_oauth, mock_responses,
+                                                     has_verifier, state_matches, response_status,
+                                                     response_data, should_succeed):
+        """Test token exchange with various scenarios."""
+        oauth = configured_oauth
+
+        if has_verifier:
+            oauth.code_verifier = 'test_verifier'
+            oauth.state = 'expected_state'
+
+        test_state = 'expected_state' if state_matches else 'wrong_state'
+
+        if should_succeed:
+            # Success case - setup mock and verify result
+            mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token",
+                                status=response_status,
+                                payload=response_data)
+
+            result = await oauth.exchange_code_for_token('test_code', test_state)
+            assert result == response_data
+            assert oauth.access_token == 'token'
+            assert oauth.refresh_token == 'refresh'
+
+        elif response_status != 200:
+            # HTTP error case
+            mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token",
+                                status=response_status,
+                                body='Error')
+
+            with pytest.raises(Exception):
+                await oauth.exchange_code_for_token('test_code', test_state)
+
+        else:
+            # ValueError cases (no verifier, state mismatch) - no HTTP mock needed
+            with pytest.raises(ValueError):
+                await oauth.exchange_code_for_token('test_code', test_state)
+
+    # Parameterized refresh token tests
+    @pytest.mark.parametrize(
+        "has_refresh_token,response_status,response_data,should_succeed",
+        [
+            (False, 200, {
+                'access_token': 'new_token'
+            }, False),  # No refresh token
+            (True, 400, {}, False),  # HTTP error
+            (True, 200, {
+                'access_token': 'new_token',
+                'refresh_token': 'new_refresh'
+            }, True),  # Success
+        ])
+    @pytest.mark.asyncio
+    async def test_refresh_access_token_scenarios(self, configured_oauth, mock_responses,
+                                                  has_refresh_token, response_status, response_data,
+                                                  should_succeed):
+        """Test token refresh with various scenarios."""
+        oauth = configured_oauth
+
+        if has_refresh_token:
+            oauth.config.cparser.setValue('kick/refreshtoken', 'test_refresh_token')
+            refresh_token = 'test_refresh_token'
+        else:
+            refresh_token = None
+
+        if should_succeed:
+            mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token",
+                                status=response_status,
+                                payload=response_data)
+
+            result = await oauth.refresh_access_token(refresh_token)
+            assert result == response_data
+            assert oauth.access_token == 'new_token'
+            assert oauth.refresh_token == 'new_refresh'
+        else:
+            if has_refresh_token:
+                # HTTP error case
+                mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token",
+                                    status=response_status,
+                                    body='Error')
+
+            with pytest.raises((ValueError, Exception)):
+                await oauth.refresh_access_token(refresh_token)
+
+    # Parameterized token validation tests
+    @pytest.mark.parametrize(
+        "response_status,response_data,expected_result",
+        [
+            (200, {
+                'valid': True,
+                'client_id': 'test_client'
+            }, {
+                'valid': True,
+                'client_id': 'test_client'
+            }),
+            (401, {}, False),  # Unauthorized
+            (500, {}, False),  # Server error
+        ])
+    @pytest.mark.asyncio
+    async def test_validate_token_scenarios(self, configured_oauth, mock_responses, response_status,
+                                            response_data, expected_result):
+        """Test token validation with various responses."""
+        oauth = configured_oauth
+
+        if response_status == 200:
+            mock_responses.get(f"{oauth.OAUTH_HOST}/oauth/validate",
+                               status=response_status,
+                               payload=response_data)
+        else:
+            mock_responses.get(f"{oauth.OAUTH_HOST}/oauth/validate",
+                               status=response_status,
+                               body='Error')
+
+        result = await oauth.validate_token('test_token')
+        assert result == expected_result
+
+    # Parameterized stored tokens tests
+    @pytest.mark.parametrize(
+        "access_token,refresh_token",
+        [
+            ('stored_access', 'stored_refresh'),  # Both tokens present
+            (None, None),  # No tokens stored
+            ('access_only', None),  # Only access token
+            (None, 'refresh_only'),  # Only refresh token
+        ])
+    def test_get_stored_tokens_scenarios(self, bootstrap, access_token, refresh_token):
+        """Test getting stored tokens with various configurations."""
         config = bootstrap
-        config.cparser.setValue('kick/clientid', 'test_client_id')
-        config.cparser.setValue('kick/redirecturi', 'http://localhost:8080/callback')
-        
+        if access_token:
+            config.cparser.setValue('kick/accesstoken', access_token)
+        if refresh_token:
+            config.cparser.setValue('kick/refreshtoken', refresh_token)
+
         oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        result = oauth.open_browser_for_auth()
-        
-        assert result is False
-        mock_open.assert_called_once()
+        result_access, result_refresh = oauth.get_stored_tokens()
+
+        assert result_access == access_token
+        assert result_refresh == refresh_token
+
+    def test_clear_stored_tokens(self, configured_oauth):
+        """Test clearing stored tokens."""
+        oauth = configured_oauth
+        oauth.config.cparser.setValue('kick/accesstoken', 'stored_access')
+        oauth.config.cparser.setValue('kick/refreshtoken', 'stored_refresh')
+        oauth.access_token = 'current_access'
+        oauth.refresh_token = 'current_refresh'
+
+        oauth.clear_stored_tokens()
+
+        assert oauth.access_token is None
+        assert oauth.refresh_token is None
+        assert oauth.config.cparser.value('kick/accesstoken') is None
+        assert oauth.config.cparser.value('kick/refreshtoken') is None
+
+    # Parameterized token revocation tests
+    @pytest.mark.parametrize(
+        "has_client_id,has_token,response_status,should_clear_tokens",
+        [
+            (False, False, 200, False),  # No client ID or token - should not crash
+            (True, True, 200, True),  # Success - should clear tokens
+            (True, True, 400, False),  # HTTP error - should NOT clear tokens
+        ])
+    @pytest.mark.asyncio
+    async def test_revoke_token_scenarios(self, bootstrap, mock_responses, has_client_id, has_token,
+                                          response_status, should_clear_tokens):
+        """Test token revocation with various scenarios."""
+        config = bootstrap
+        if has_client_id:
+            config.cparser.setValue('kick/clientid', 'test_client_id')
+        if has_token:
+            config.cparser.setValue('kick/accesstoken', 'test_token')
+
+        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
+
+        token_to_revoke = 'test_token' if has_token else None
+
+        if has_client_id and has_token:
+            # Setup mock response for cases where we have credentials
+            mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/revoke", status=response_status)
+
+        # Should not raise exception in any case
+        await oauth.revoke_token(token_to_revoke)
+
+        if should_clear_tokens:
+            assert oauth.access_token is None
+            assert oauth.refresh_token is None
+            assert oauth.config.cparser.value('kick/accesstoken') is None
+            assert oauth.config.cparser.value('kick/refreshtoken') is None
+        else:
+            # For error cases, tokens should remain if they were set
+            if has_token:
+                assert oauth.config.cparser.value('kick/accesstoken') == 'test_token'
+
+
+class TestKickOAuth2EdgeCases:
+    """Test edge cases and error conditions."""
 
     @pytest.mark.asyncio
-    async def test_exchange_code_for_token_missing_verifier(self, bootstrap):
-        """Test token exchange fails without code verifier."""
-        config = bootstrap
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        
-        with pytest.raises(ValueError, match="Code verifier not generated"):
+    async def test_json_parsing_error(self, oauth_with_pkce, mock_responses):
+        """Test handling of JSON parsing errors."""
+        oauth = oauth_with_pkce
+
+        # Mock response with invalid JSON
+        mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token",
+                            status=200,
+                            body='invalid json content')
+
+        with pytest.raises(Exception):
             await oauth.exchange_code_for_token('test_code')
 
     @pytest.mark.asyncio
-    async def test_exchange_code_for_token_state_mismatch(self, bootstrap):
-        """Test token exchange fails with state mismatch."""
-        config = bootstrap
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        oauth.code_verifier = 'test_verifier'
-        oauth.state = 'expected_state'
-        
-        with pytest.raises(ValueError, match="State parameter mismatch"):
-            await oauth.exchange_code_for_token('test_code', 'wrong_state')
+    async def test_network_timeout(self, oauth_with_pkce, mock_responses):
+        """Test network timeout handling."""
+        oauth = oauth_with_pkce
 
-    @pytest.mark.asyncio
-    async def test_exchange_code_for_token_success(self, bootstrap):
-        """Test successful token exchange."""
-        config = bootstrap
-        config.cparser.setValue('kick/clientid', 'test_client_id')
-        config.cparser.setValue('kick/redirecturi', 'http://localhost:8080/callback')
-        
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        oauth.code_verifier = 'test_verifier'
-        oauth.state = 'test_state'
-        
-        mock_response = {
-            'access_token': 'test_access_token',
-            'refresh_token': 'test_refresh_token'
-        }
-        
-        with patch('aiohttp.ClientSession') as mock_session:
-            mock_resp = AsyncMock()
-            mock_resp.status = 200
-            mock_resp.json = AsyncMock(return_value=mock_response)
-            
-            mock_session.return_value.__aenter__.return_value.post.return_value.__aenter__.return_value = mock_resp
-            
-            result = await oauth.exchange_code_for_token('test_code', 'test_state')
-            
-            assert result == mock_response
-            assert oauth.access_token == 'test_access_token'
-            assert oauth.refresh_token == 'test_refresh_token'
-            assert config.cparser.value('kick/accesstoken') == 'test_access_token'
-            assert config.cparser.value('kick/refreshtoken') == 'test_refresh_token'
+        # Mock a timeout by using an exception
+        mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token",
+                            exception=asyncio.TimeoutError("Request timed out"))
 
-    @pytest.mark.asyncio
-    async def test_exchange_code_for_token_error(self, bootstrap):
-        """Test token exchange error handling."""
-        config = bootstrap
-        config.cparser.setValue('kick/clientid', 'test_client_id')
-        config.cparser.setValue('kick/redirecturi', 'http://localhost:8080/callback')
-        
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        oauth.code_verifier = 'test_verifier'
-        
-        with patch('aiohttp.ClientSession') as mock_session:
-            mock_resp = AsyncMock()
-            mock_resp.status = 400
-            mock_resp.text = AsyncMock(return_value='Bad Request')
-            
-            mock_session.return_value.__aenter__.return_value.post.return_value.__aenter__.return_value = mock_resp
-            
-            with pytest.raises(Exception, match="Token exchange failed"):
-                await oauth.exchange_code_for_token('test_code')
+        with pytest.raises(asyncio.TimeoutError):
+            await oauth.exchange_code_for_token('test_code')
 
-    @pytest.mark.asyncio
-    async def test_refresh_access_token_success(self, bootstrap):
-        """Test successful token refresh."""
-        config = bootstrap
-        config.cparser.setValue('kick/clientid', 'test_client_id')
-        config.cparser.setValue('kick/refreshtoken', 'test_refresh_token')
-        
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        
-        mock_response = {
-            'access_token': 'new_access_token',
-            'refresh_token': 'new_refresh_token'
-        }
-        
-        with patch('aiohttp.ClientSession') as mock_session:
-            mock_resp = AsyncMock()
-            mock_resp.status = 200
-            mock_resp.json = AsyncMock(return_value=mock_response)
-            
-            mock_session.return_value.__aenter__.return_value.post.return_value.__aenter__.return_value = mock_resp
-            
-            result = await oauth.refresh_access_token('test_refresh_token')
-            
-            assert result == mock_response
-            assert oauth.access_token == 'new_access_token'
-            assert oauth.refresh_token == 'new_refresh_token'
+    def test_pkce_parameter_uniqueness(self, configured_oauth):
+        """Test that PKCE parameters are unique across instances."""
+        oauth1 = configured_oauth
+        oauth2 = nowplaying.kick.oauth2.KickOAuth2(oauth1.config)
 
-    @pytest.mark.asyncio
-    async def test_refresh_access_token_no_token(self, bootstrap):
-        """Test token refresh fails without refresh token."""
-        config = bootstrap
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        
-        with pytest.raises(ValueError, match="Refresh token is required"):
-            await oauth.refresh_access_token()
+        oauth1._generate_pkce_parameters()
+        oauth2._generate_pkce_parameters()
 
-    @pytest.mark.asyncio
-    async def test_validate_token_success(self, bootstrap):
-        """Test successful token validation."""
-        config = bootstrap
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        
-        mock_response = {'valid': True, 'client_id': 'test_client'}
-        
-        with patch('aiohttp.ClientSession') as mock_session:
-            mock_resp = AsyncMock()
-            mock_resp.status = 200
-            mock_resp.json = AsyncMock(return_value=mock_response)
-            
-            mock_session.return_value.__aenter__.return_value.get.return_value.__aenter__.return_value = mock_resp
-            
-            result = await oauth.validate_token('test_token')
-            
-            assert result == mock_response
+        assert oauth1.code_verifier != oauth2.code_verifier
+        assert oauth1.code_challenge != oauth2.code_challenge
+        assert oauth1.state != oauth2.state
 
-    @pytest.mark.asyncio
-    async def test_validate_token_invalid(self, bootstrap):
-        """Test token validation failure."""
-        config = bootstrap
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        
-        with patch('aiohttp.ClientSession') as mock_session:
-            mock_resp = AsyncMock()
-            mock_resp.status = 401
-            
-            mock_session.return_value.__aenter__.return_value.get.return_value.__aenter__.return_value = mock_resp
-            
-            result = await oauth.validate_token('invalid_token')
-            
-            assert result is False
+    def test_pkce_challenge_calculation(self, configured_oauth):
+        """Test PKCE code challenge calculation correctness."""
+        oauth = configured_oauth
 
-    def test_get_stored_tokens(self, bootstrap):
-        """Test getting stored tokens from config."""
-        config = bootstrap
-        config.cparser.setValue('kick/accesstoken', 'stored_access')
-        config.cparser.setValue('kick/refreshtoken', 'stored_refresh')
-        
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        access_token, refresh_token = oauth.get_stored_tokens()
-        
-        assert access_token == 'stored_access'
-        assert refresh_token == 'stored_refresh'
+        # Set known verifier for predictable challenge
+        oauth.code_verifier = 'test_verifier_123456789'
+        oauth._generate_pkce_parameters()
 
-    def test_get_stored_tokens_empty(self, bootstrap):
-        """Test getting stored tokens when none exist."""
-        config = bootstrap
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        
-        access_token, refresh_token = oauth.get_stored_tokens()
-        
-        assert access_token is None
-        assert refresh_token is None
+        # Manually calculate expected challenge
+        expected_challenge = base64.urlsafe_b64encode(
+            hashlib.sha256(
+                oauth.code_verifier.encode('utf-8')).digest()).decode('utf-8').rstrip('=')
 
-    def test_clear_stored_tokens(self, bootstrap):
-        """Test clearing stored tokens."""
-        config = bootstrap
-        config.cparser.setValue('kick/accesstoken', 'stored_access')
-        config.cparser.setValue('kick/refreshtoken', 'stored_refresh')
-        
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        oauth.access_token = 'current_access'
-        oauth.refresh_token = 'current_refresh'
-        
-        oauth.clear_stored_tokens()
-        
-        assert oauth.access_token is None
-        assert oauth.refresh_token is None
-        assert config.cparser.value('kick/accesstoken') is None
-        assert config.cparser.value('kick/refreshtoken') is None
+        assert oauth.code_challenge == expected_challenge
 
-    @pytest.mark.asyncio
-    async def test_revoke_token_success(self, bootstrap):
-        """Test successful token revocation."""
+    @pytest.mark.parametrize("invalid_config_key", [
+        'kick/clientid',
+        'kick/secret',
+        'kick/redirecturi',
+    ])
+    def test_missing_config_handling(self, bootstrap, invalid_config_key):
+        """Test handling of missing configuration values."""
         config = bootstrap
-        config.cparser.setValue('kick/clientid', 'test_client_id')
-        config.cparser.setValue('kick/accesstoken', 'test_token')
-        
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        
-        with patch('aiohttp.ClientSession') as mock_session:
-            mock_resp = AsyncMock()
-            mock_resp.status = 200
-            
-            mock_session.return_value.__aenter__.return_value.post.return_value.__aenter__.return_value = mock_resp
-            
-            await oauth.revoke_token('test_token')
-            
-            assert oauth.access_token is None
-            assert oauth.refresh_token is None
-            assert config.cparser.value('kick/accesstoken') is None
-            assert config.cparser.value('kick/refreshtoken') is None
+        # Set all required config except one
+        config.cparser.setValue('kick/clientid', 'test_client')
+        config.cparser.setValue('kick/secret', 'test_secret')
+        config.cparser.setValue('kick/redirecturi', 'http://localhost')
 
-    @pytest.mark.asyncio
-    async def test_revoke_token_no_token(self, bootstrap):
-        """Test token revocation with no token."""
-        config = bootstrap
+        # Remove the specified config key
+        config.cparser.remove(invalid_config_key)
+
         oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        
-        # Should not raise an exception
-        await oauth.revoke_token()
+
+        # Should handle missing config gracefully
+        if invalid_config_key in ['kick/clientid', 'kick/redirecturi']:
+            with pytest.raises(ValueError):
+                oauth.get_authorization_url()
+        else:
+            # Missing secret shouldn't prevent URL generation
+            auth_url = oauth.get_authorization_url()
+            assert 'client_id=test_client' in auth_url

@@ -19,10 +19,10 @@ class KickOAuth2:
     ''' Handle Kick.com OAuth 2.1 authentication flow with PKCE '''
 
     OAUTH_HOST = 'https://id.kick.com'
-    SCOPES = ['user:read', 'user:write', 'chat:read', 'chat:write']
+    SCOPES = ['user:read', 'chat:write', 'events:subscribe']
 
     def __init__(self, config: nowplaying.config.ConfigFile | None = None) -> None:
-        self.config = config if config else nowplaying.config.ConfigFile()
+        self.config = config or nowplaying.config.ConfigFile()
         self.client_id: str = self.config.cparser.value('kick/clientid')
         self.client_secret: str = self.config.cparser.value('kick/secret')
         self.redirect_uri: str = self.config.cparser.value('kick/redirecturi')

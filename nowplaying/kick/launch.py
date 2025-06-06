@@ -23,10 +23,7 @@ class KickLaunch:  # pylint: disable=too-many-instance-attributes
                  config: nowplaying.config.ConfigFile | None = None,
                  stopevent: asyncio.Event | None = None) -> None:
         self.config = config
-        if stopevent:
-            self.stopevent = stopevent
-        else:
-            self.stopevent = asyncio.Event()
+        self.stopevent = stopevent or asyncio.Event()
         self.widgets: Any = None
         self.chat: nowplaying.kick.chat.KickChat | None = None
         self.loop: asyncio.AbstractEventLoop | None = None

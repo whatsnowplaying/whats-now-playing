@@ -28,10 +28,9 @@ To use Kick.com integration, you'll need to set up OAuth2 authentication with yo
 
 #. Scopes Requested should include the following for current and future features:
 
-   * Read user information
-   * Write to Chat feed
-   * Read channel information
-   * Subscribe to events
+   * Read user information (including email address) - ``user:read``
+   * Write to chat feed - ``chat:write``
+   * Subscribe to events (read chat feed, follows, subscribes, gifts) - ``events:subscribe``
 
 #. In **What's Now Playing** settings:
 

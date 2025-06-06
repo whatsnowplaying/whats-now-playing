@@ -408,16 +408,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         logging.getLogger().setLevel(loglevel)
 
         if not self.config.cparser.value('control/beam', type=bool):
-            for key in [
-                    'twitch',
-                    'twitchchat',
-                    'kick',
-                    'kickchat',
-                    'requests',
-            ]:
-                self.settingsclasses[key].save(self.config, self.widgets[key],
-                                               self.tray.subprocesses)
-
+            self._upd_conf_external_services()
             self._upd_conf_textoutput()
             self._upd_conf_artistextras()
             self._upd_conf_filters()
@@ -432,6 +423,18 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._upd_conf_input()
         self._upd_conf_plugins()
         self.config.cparser.sync()
+
+    def _upd_conf_external_services(self):
+        """Update external service configurations (Twitch, Kick, etc.)"""
+        for key in [
+                'twitch',
+                'twitchchat',
+                'kick',
+                'kickchat',
+                'requests',
+        ]:
+            self.settingsclasses[key].save(self.config, self.widgets[key],
+                                           self.tray.subprocesses)
 
     def _upd_conf_textoutput(self):
         self.config.cparser.setValue('setlist/enabled',

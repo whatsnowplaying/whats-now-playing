@@ -279,9 +279,8 @@ class KickChatSettings:
                 # Set checkbox states for each permission
                 for col, checkbox_type in enumerate(self.KICKBOT_CHECKBOXES, 1):
                     checkbox_value = config.cparser.value(checkbox_type, type=bool)
-                    checkbox = widget.command_perm_table.cellWidget(
-                        widget.command_perm_table.rowCount() - 1, col)
-                    if checkbox:
+                    if checkbox := widget.command_perm_table.cellWidget(
+                        widget.command_perm_table.rowCount() - 1, col):
                         checkbox.setChecked(checkbox_value)
                 config.cparser.endGroup()
 
@@ -337,17 +336,14 @@ class KickChatSettings:
         for row in range(widget.command_perm_table.rowCount()):
             command_item = widget.command_perm_table.item(row, 0)
 
-            if command_item:
-                command = command_item.text().strip()
-                if command:
+            if command_item and (command := command_item.text().strip()):
                     # Remove ! prefix for group name
                     group_name = f'kickbot-command-{command.replace("!", "")}'
                     config.cparser.beginGroup(group_name)
 
                     # Save checkbox states for each permission
                     for col, checkbox_type in enumerate(KickChatSettings.KICKBOT_CHECKBOXES, 1):
-                        checkbox = widget.command_perm_table.cellWidget(row, col)
-                        if checkbox:
+                        if checkbox := widget.command_perm_table.cellWidget(row, col):
                             config.cparser.setValue(checkbox_type, checkbox.isChecked())
 
                     config.cparser.endGroup()

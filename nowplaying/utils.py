@@ -16,6 +16,7 @@ import typing as t
 
 import aiohttp
 import jinja2
+import nltk
 import normality
 import PIL.Image
 import pillow_avif  # pylint: disable=unused-import
@@ -313,3 +314,141 @@ def create_http_connector(ssl_context=None, service_type='default'):
         })
 
     return aiohttp.TCPConnector(**base_config)
+
+
+def ensure_nltk_data() -> None:
+    """Ensure NLTK punkt tokenizer data is available.
+    
+    This function handles NLTK initialization in a centralized way to avoid
+    duplication across multiple modules (metadata.py, kick/chat.py, twitch/chat.py).
+    """
+    try:
+        # Test if punkt tokenizer is available
+        nltk.data.find('tokenizers/punkt')
+        logging.debug('NLTK punkt tokenizer already available')
+    except LookupError:
+        logging.info('Downloading NLTK punkt tokenizer data')
+        try:
+            nltk.download('punkt', quiet=True)
+            logging.info('NLTK punkt tokenizer downloaded successfully')
+        except Exception as error:
+            logging.error('Failed to download NLTK punkt tokenizer: %s', error)
+            # Continue anyway - sent_tokenize will fall back to basic splitting
+
+
+def smart_split_message(message: str, max_length: int = 500) -> list[str]:
+    """Intelligently split long messages at sentence or word boundaries.
+    
+    This function provides smart message splitting logic shared between
+    Kick and Twitch chat implementations to avoid code duplication.
+    
+    Args:
+        message: The message to split
+        max_length: Maximum length for each message part
+        
+    Returns:
+        List of message parts, each within the length limit
+    """
+    if len(message) <= max_length:
+        return [message]
+
+    messages = []
+
+    try:
+        # Ensure NLTK data is available
+        ensure_nltk_data()
+        
+        # Try to split at sentence boundaries first
+        sentences = nltk.sent_tokenize(message)
+        current_chunk = ""
+
+        for sentence in sentences:
+            # If a single sentence is too long, split it at word boundaries
+            if len(sentence) > max_length:
+                if current_chunk:
+                    messages.append(current_chunk.strip())
+                    current_chunk = ""
+
+                # Split long sentence at word boundaries
+                words = sentence.split()
+                word_chunk = ""
+                for word in words:
+                    if len(f"{word_chunk} {word}") > max_length:
+                        if word_chunk:
+                            messages.append(word_chunk.strip())
+                            word_chunk = word
+                        else:
+                            # Single word is too long, just truncate it
+                            messages.append(f"{word[:max_length-3]}...")
+                            word_chunk = ""
+                    else:
+                        word_chunk = f"{word_chunk} {word}" if word_chunk else word
+
+                if word_chunk:
+                    messages.append(word_chunk.strip())
+
+            # Check if adding this sentence would exceed the limit
+            elif len(f"{current_chunk} {sentence}") > max_length:
+                if current_chunk:
+                    messages.append(current_chunk.strip())
+                    current_chunk = sentence
+                else:
+                    # Single sentence fits, but no room for more
+                    messages.append(sentence.strip())
+            else:
+                # Add sentence to current chunk
+                current_chunk = f"{current_chunk} {sentence}" if current_chunk else sentence
+
+        # Add any remaining content
+        if current_chunk:
+            messages.append(current_chunk.strip())
+
+    except Exception as error:
+        logging.warning('Smart message splitting failed, using simple truncation: %s', error)
+        # Fallback to simple splitting if NLTK fails
+        messages = []
+        remaining = message
+        while remaining:
+            if len(remaining) <= max_length:
+                messages.append(remaining)
+                break
+            else:
+                # Find last space within limit
+                split_pos = remaining.rfind(' ', 0, max_length)
+                if split_pos == -1:
+                    # No space found, just truncate
+                    split_pos = max_length - 3
+                    messages.append(f"{remaining[:split_pos]}...")
+                    remaining = remaining[split_pos:]
+                else:
+                    messages.append(remaining[:split_pos])
+                    remaining = remaining[split_pos:].strip()
+
+    # Remove empty messages and return
+    return [msg for msg in messages if msg.strip()]
+
+
+def tokenize_sentences(text: str) -> list[str]:
+    """Split text into sentences using NLTK tokenizer.
+    
+    This function provides centralized sentence tokenization for use
+    in metadata processing and other modules.
+    
+    Args:
+        text: Text to split into sentences
+        
+    Returns:
+        List of sentences
+    """
+    try:
+        ensure_nltk_data()
+        return nltk.sent_tokenize(text)
+    except Exception as error:
+        logging.warning('NLTK sentence tokenization failed, using simple splitting: %s', error)
+        # Fallback to simple sentence splitting
+        sentences = []
+        for sent in text.replace('!', '.').replace('?', '.').split('.'):
+            sent = sent.strip()
+            if sent:
+                sentences.append(f"{sent}.")
+        return sentences
