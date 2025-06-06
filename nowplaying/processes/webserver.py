@@ -4,6 +4,7 @@
 import asyncio
 import base64
 import contextlib
+import html
 import logging
 import logging.config
 import os
@@ -455,20 +456,23 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         data = {"dbfile": str(request.app[METADB_KEY].databasefile)}
         return web.json_response(data)
 
-    async def kickredirect_handler(self, request):
+    async def kickredirect_handler(self, request):  # pylint: disable=no-self-use
         ''' handle oauth2 redirect callbacks '''
         # Extract query parameters from the redirect
         params = dict(request.query)
-        
+
         # Log the redirect for debugging (don't log the auth code for security)
-        logging.info('Kick OAuth2 redirect received with parameters: %s', 
-                    {k: v for k, v in params.items() if k != 'code'})
-        
+        logging.info('Kick OAuth2 redirect received with parameters: %s', {
+            k: v
+            for k, v in params.items() if k != 'code'
+        })
+
         # Check for OAuth2 error
         if 'error' in params:
-            error_code = params.get('error', 'unknown_error')
-            error_description = params.get('error_description', 'No description provided')
-            
+            error_code = html.escape(params.get('error', 'unknown_error'))
+            error_description = html.escape(
+                params.get('error_description', 'No description provided'))
+
             response_html = f"""
             <!DOCTYPE html>
             <html>
@@ -493,11 +497,11 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             </html>
             """
             return web.Response(content_type='text/html', text=response_html)
-        
+
         # Check for authorization code
         authorization_code = params.get('code')
-        state = params.get('state')
-        
+        received_state = params.get('state')
+
         if not authorization_code:
             response_html = """
             <!DOCTYPE html>
@@ -521,16 +525,77 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             </html>
             """
             return web.Response(content_type='text/html', text=response_html)
-        
+
+        # Get config to validate state parameter
+        config = request.app[CONFIG_KEY]
+        # Validate state parameter to prevent CSRF attacks
+        expected_state = config.cparser.value('kick/temp_state')
+        if not expected_state:
+            response_html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Kick OAuth2 - Error</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+                    .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .error { color: #d32f2f; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2 class="error">Invalid OAuth2 Session</h2>
+                    <p>No OAuth2 session found. Please start the authentication process again.</p>
+                    <p>This may happen if the authentication session has expired.</p>
+                    <button onclick="window.close()">Close Window</button>
+                </div>
+            </body>
+            </html>
+            """
+            logging.warning('Kick OAuth2 callback received without valid session state')
+            return web.Response(content_type='text/html', text=response_html)
+
+        if received_state != expected_state:
+            response_html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Kick OAuth2 - Security Error</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+                    .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .error { color: #d32f2f; }
+                    .security-warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 10px; border-radius: 4px; margin: 10px 0; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2 class="error">OAuth2 State Mismatch</h2>
+                    <div class="security-warning">
+                        <strong>Security Warning:</strong> The OAuth2 state parameter does not match the expected value.
+                        This may indicate a Cross-Site Request Forgery (CSRF) attack.
+                    </div>
+                    <p>For your security, the authentication process has been blocked.</p>
+                    <p>Please return to the settings and start the authentication process again.</p>
+                    <button onclick="window.close()">Close Window</button>
+                </div>
+            </body>
+            </html>
+            """
+            logging.error(
+                'Kick OAuth2 CSRF attack detected: state mismatch (expected: %s, received: %s)',
+                expected_state[:8] + '...',
+                received_state[:8] + '...' if received_state else 'None')
+            return web.Response(content_type='text/html', text=response_html)
+
         # Attempt to exchange the code for tokens
         try:
-            # Get config to initialize OAuth2 handler
-            config = request.app[CONFIG_KEY]
+            # Initialize OAuth2 handler (config already retrieved above)
             oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-            
-            # Exchange code for tokens
-            token_response = await oauth.exchange_code_for_token(authorization_code, state)
-            
+
+            # Exchange code for tokens with validated state
+            await oauth.exchange_code_for_token(authorization_code, received_state)
+
             # Success response
             response_html = """
             <!DOCTYPE html>
@@ -547,7 +612,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             </head>
             <body>
                 <div class="container">
-                    <h2 class="success">✓ Kick OAuth2 Authentication Successful!</h2>
+                    <h2 class="success">Kick OAuth2 Authentication Successful!</h2>
                     <p>Your Kick account has been successfully authenticated with What's Now Playing.</p>
                     <div class="info">
                         <p><strong>What's Next:</strong></p>
@@ -569,13 +634,13 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             </body>
             </html>
             """
-            
+
             logging.info('Kick OAuth2 authentication completed successfully')
             return web.Response(content_type='text/html', text=response_html)
-            
+
         except Exception as error:
             logging.error('Kick OAuth2 token exchange failed: %s', error)
-            
+
             # Error response
             response_html = f"""
             <!DOCTYPE html>
@@ -593,7 +658,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 <div class="container">
                     <h2 class="error">Kick OAuth2 Token Exchange Failed</h2>
                     <p>There was an error completing the authentication process:</p>
-                    <p><code>{str(error)}</code></p>
+                    <p><code>{html.escape(str(error))}</code></p>
                     <p>Please check your Kick application configuration and try again.</p>
                     <button class="close-btn" onclick="window.close()">Close Window</button>
                 </div>
