@@ -35,6 +35,11 @@ def upgrade_bootstrap(getroot):
 
 def compare_content(srcdir, destdir, conflict=None):
     ''' compare src templates to what was copied '''
+    _compare_directory_recursive(srcdir, destdir, conflict)
+
+
+def _compare_directory_recursive(srcdir, destdir, conflict=None):
+    ''' recursively compare directories '''
     srctemplates = os.listdir(srcdir)
     desttemplates = os.listdir(destdir)
     filelist = []
@@ -51,6 +56,13 @@ def compare_content(srcdir, destdir, conflict=None):
         if '.new' in filename:
             continue
 
+        # Handle directories recursively
+        if os.path.isdir(srcfn):
+            assert os.path.isdir(destfn), f"Expected {destfn} to be a directory"
+            _compare_directory_recursive(srcfn, destfn, conflict)
+            continue
+
+        # Handle files
         if conflict and os.path.basename(srcfn) == os.path.basename(conflict):
             newname = filename.replace('.txt', '.new')
             newname = newname.replace('.htm', '.new')
@@ -114,3 +126,37 @@ def test_upgrade_old(upgrade_bootstrap, getroot):  # pylint: disable=redefined-o
     assert list(open(os.path.join(srcdir, 'songquotes.txt'))) == list(  #pylint: disable=consider-using-with, unspecified-encoding
         open(os.path.join(destdir, 'songquotes.new')))  #pylint: disable=consider-using-with, unspecified-encoding
     compare_content(srcdir, destdir, conflict=touchfile)
+
+
+def test_upgrade_subdirectories(upgrade_bootstrap):  # pylint: disable=redefined-outer-name
+    ''' test that subdirectories are properly handled '''
+    (testpath, config) = upgrade_bootstrap
+    bundledir = config.getbundledir()
+    nowplaying.upgrade.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
+
+    # Check that oauth subdirectory was created
+    oauth_destdir = os.path.join(testpath, 'testsuite', 'templates', 'oauth')
+    assert os.path.isdir(oauth_destdir), "oauth subdirectory should be created"
+
+    # Check that files in oauth subdirectory were copied
+    oauth_files = os.listdir(oauth_destdir)
+    assert len(oauth_files) > 0, "oauth subdirectory should contain files"
+
+    # Verify specific oauth template files exist
+    expected_oauth_files = [
+        'kick_oauth_csrf_error.htm', 'kick_oauth_error.htm', 'kick_oauth_invalid_session.htm',
+        'kick_oauth_no_code.htm', 'kick_oauth_success.htm', 'kick_oauth_token_error.htm'
+    ]
+
+    for expected_file in expected_oauth_files:
+        oauth_file_path = os.path.join(oauth_destdir, expected_file)
+        assert os.path.isfile(
+            oauth_file_path), f"Expected {expected_file} to exist in oauth subdirectory"
+
+        # Verify content matches source
+        src_file_path = os.path.join(bundledir, 'templates', 'oauth', expected_file)
+        with open(src_file_path, 'r', encoding='utf-8') as src_file:
+            src_content = src_file.read()
+        with open(oauth_file_path, 'r', encoding='utf-8') as dest_file:
+            dest_content = dest_file.read()
+        assert src_content == dest_content, f"Content mismatch for {expected_file}"

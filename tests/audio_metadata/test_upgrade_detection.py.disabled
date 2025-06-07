@@ -144,8 +144,8 @@ class LibraryVersionTracker:
         return capability_changes
 
     @staticmethod
-    def _find_capability_differences(prev: dict[str, Any],
-                                     current: dict[str, Any]) -> dict[str, Any]:
+    def _find_capability_differences(prev: dict[str, Any], current: dict[str,
+                                                                         Any]) -> dict[str, Any]:
         """Find differences in capabilities."""
         changes = {}
 

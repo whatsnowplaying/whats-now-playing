@@ -37,13 +37,7 @@ class DiscogsRelease:  # pylint: disable=too-few-public-methods
             else:
                 # Fallback: use the entire title as artist name if no dash
                 artist_name = title
-            artist_data = {
-                'name': artist_name,
-                'id': None,
-                'profile': '',
-                'urls': [],
-                'images': []
-            }
+            artist_data = {'name': artist_name, 'id': None, 'profile': '', 'urls': [], 'images': []}
             self.artists = [DiscogsArtist(artist_data)]
 
     async def load_full_data(self):
@@ -100,9 +94,10 @@ class DiscogsSearchResult:
             for i, release_artist in enumerate(release.artists[:1]):  # Only first artist
                 if release_artist.discogs_id and release._client:  # pylint: disable=protected-access
                     # Use optimized artist loading with limited images
-                    full_artist = await release._client.artist(release_artist.discogs_id,  # pylint: disable=protected-access
-                                                               limit_images=5,
-                                                               include_bio=True)
+                    full_artist = await release._client.artist(
+                        release_artist.discogs_id,  # pylint: disable=protected-access
+                        limit_images=5,
+                        include_bio=True)
                     if full_artist:
                         release.artists[i] = full_artist
                         loaded_count += 1
@@ -138,14 +133,15 @@ class AsyncDiscogsClient:
         if self.session:
             await self.session.close()
 
-    async def search(self,  # pylint: disable=too-many-arguments
-                     query: str,
-                     artist: str | None = None,
-                     search_type: str = 'release',
-                     page: int = 1,
-                     per_page: int = 50,
-                     load_full_artists: bool = True,
-                     max_results: int | None = None) -> DiscogsSearchResult:
+    async def search(
+            self,  # pylint: disable=too-many-arguments
+            query: str,
+            artist: str | None = None,
+            search_type: str = 'release',
+            page: int = 1,
+            per_page: int = 50,
+            load_full_artists: bool = True,
+            max_results: int | None = None) -> DiscogsSearchResult:
         """Search for releases, artists, etc."""
         if not self.session:
             raise RuntimeError("Client not initialized - use async context manager")
@@ -245,7 +241,8 @@ class AsyncDiscogsClientWrapper:
         limit_images = 5 if self._need_images else 0
         include_bio = self._need_bio
         async with AsyncDiscogsClient(self.user_agent, self.user_token, self.timeout) as client:
-            return await client.artist(artist_id, limit_images=limit_images,
+            return await client.artist(artist_id,
+                                       limit_images=limit_images,
                                        include_bio=include_bio)
 
     async def search_async(self,

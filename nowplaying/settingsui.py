@@ -99,7 +99,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         else:
             baseuis = [
                 'general', 'source', 'filter', 'trackskip', 'textoutput', 'webserver', 'twitch',
-                'twitchchat', 'kick', 'kickchat', 'requests', 'artistextras', 'obsws', 'discordbot', 'quirks'
+                'twitchchat', 'kick', 'kickchat', 'requests', 'artistextras', 'obsws', 'discordbot',
+                'quirks'
             ]
 
         for uiname in baseuis:
@@ -433,8 +434,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 'kickchat',
                 'requests',
         ]:
-            self.settingsclasses[key].save(self.config, self.widgets[key],
-                                           self.tray.subprocesses)
+            self.settingsclasses[key].save(self.config, self.widgets[key], self.tray.subprocesses)
 
     def _upd_conf_textoutput(self):
         self.config.cparser.setValue('setlist/enabled',
@@ -551,17 +551,17 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _upd_conf_kickbot(self):
         ''' update the kickbot settings '''
-        
+
         old_enabled = self.config.cparser.value('kick/enabled', type=bool)
         old_chat = self.config.cparser.value('kick/chat', type=bool)
-        
+
         new_enabled = self.widgets['kick'].enable_checkbox.isChecked()
         new_chat = self.widgets['kickchat'].enable_checkbox.isChecked()
-        
+
         # The individual settings save methods handle their own config values
         # We just need to check if the overall enable/disable state changed
         # and restart the kickbot if needed
-        
+
         if (old_enabled != new_enabled) or (old_chat != new_chat):
             self.tray.subprocesses.restart_kickbot()
 

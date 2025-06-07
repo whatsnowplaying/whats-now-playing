@@ -490,8 +490,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 params.get('error_description', 'No description provided'))
 
             response_html = load_oauth_template('kick_oauth_error.htm',
-                                              error_code=error_code,
-                                              error_description=error_description)
+                                                error_code=error_code,
+                                                error_description=error_description)
             return web.Response(content_type='text/html', text=response_html)
 
         # Check for authorization code
@@ -535,7 +535,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
             # Error response
             response_html = load_oauth_template('kick_oauth_token_error.htm',
-                                              error_message=html.escape(str(error)))
+                                                error_message=html.escape(str(error)))
             return web.Response(content_type='text/html', text=response_html)
 
     def create_runner(self):

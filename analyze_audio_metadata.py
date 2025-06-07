@@ -180,20 +180,15 @@ def compare_metadata(tinytag_data: dict, audio_metadata_data: dict) -> dict[str,
 def main():
     """Main analysis function."""
     parser = argparse.ArgumentParser(
-        description='Analyze audio metadata using tinytag and audio_metadata libraries'
-    )
-    parser.add_argument(
-        '--audio-dir',
-        type=Path,
-        default=None,
-        help='Directory containing audio files to analyze (default: ./tests/audio)'
-    )
-    parser.add_argument(
-        '--output-file',
-        type=Path,
-        default=None,
-        help='Output JSON file path (default: ./metadata_analysis_results.json)'
-    )
+        description='Analyze audio metadata using tinytag and audio_metadata libraries')
+    parser.add_argument('--audio-dir',
+                        type=Path,
+                        default=None,
+                        help='Directory containing audio files to analyze (default: ./tests/audio)')
+    parser.add_argument('--output-file',
+                        type=Path,
+                        default=None,
+                        help='Output JSON file path (default: ./metadata_analysis_results.json)')
 
     args = parser.parse_args()
 
@@ -229,8 +224,8 @@ def main():
         result['comparison'] = compare_metadata(result['tinytag'], result['audio_metadata'])
 
         tinytag_field_count = len([k for k in result['tinytag'] if not k.endswith('_info')])
-        audio_metadata_field_count = len([k for k in result['audio_metadata']
-                                         if not k.endswith('_info')])
+        audio_metadata_field_count = len(
+            [k for k in result['audio_metadata'] if not k.endswith('_info')])
         print(f"  - TinyTag fields: {tinytag_field_count}")
         print(f"  - audio_metadata fields: {audio_metadata_field_count}")
         if 'error' in result['tinytag']:

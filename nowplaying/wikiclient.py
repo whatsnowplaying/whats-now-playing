@@ -102,10 +102,11 @@ class AsyncWikiClient:
 
             return result
 
-    async def _get_wikipedia_extract(self,  # pylint: disable=too-many-return-statements
-                                     entity: str,
-                                     lang: str,
-                                     sitelinks: dict | None = None) -> str | None:
+    async def _get_wikipedia_extract(
+            self,  # pylint: disable=too-many-return-statements
+            entity: str,
+            lang: str,
+            sitelinks: dict | None = None) -> str | None:
         """Get Wikipedia page extract using sitelinks (fetched separately if not provided)."""
         if sitelinks is None:
             # Fallback: fetch sitelinks separately if not provided
@@ -156,10 +157,8 @@ class AsyncWikiClient:
                 return None
 
             pages = data['query']['pages']
-            return next(
-                (page_data['extract'] for page_data in pages.values() if 'extract' in page_data),
-                None
-            )
+            return next((page_data['extract']
+                         for page_data in pages.values() if 'extract' in page_data), None)
 
     async def _get_wikidata_images(self, entity: str) -> list[dict[str, str]]:
         """Get images directly from Wikidata entity."""
@@ -214,19 +213,16 @@ class AsyncWikiClient:
                     return None
 
                 pages = data['query']['pages']
-                return next(
-                    (page_data['imageinfo'][0].get('url')
-                     for page_data in pages.values()
-                     if 'imageinfo' in page_data and page_data['imageinfo']),
-                    None
-                )
+                return next((page_data['imageinfo'][0].get('url') for page_data in pages.values()
+                             if 'imageinfo' in page_data and page_data['imageinfo']), None)
         except Exception:  # pylint: disable=broad-exception-caught
             return None
 
-    async def _get_wikipedia_images(self,  # pylint: disable=too-many-locals
-                                    entity: str,
-                                    lang: str,
-                                    sitelinks: dict | None = None) -> list[dict[str, str]]:
+    async def _get_wikipedia_images(
+            self,  # pylint: disable=too-many-locals
+            entity: str,
+            lang: str,
+            sitelinks: dict | None = None) -> list[dict[str, str]]:
         """Get images from Wikipedia page using sitelinks (fetched separately if not provided)."""
         if sitelinks is None:
             # Fallback: fetch sitelinks separately if not provided
@@ -316,21 +312,18 @@ class AsyncWikiClient:
                     return None
 
                 pages = data['query']['pages']
-                return next(
-                    (page_data['imageinfo'][0].get('url')
-                     for page_data in pages.values()
-                     if 'imageinfo' in page_data and page_data['imageinfo']),
-                    None
-                )
+                return next((page_data['imageinfo'][0].get('url') for page_data in pages.values()
+                             if 'imageinfo' in page_data and page_data['imageinfo']), None)
         except Exception:  # pylint: disable=broad-exception-caught
             return None
 
-    async def get_page(self,  # pylint: disable=too-many-arguments
-                       entity: str,
-                       lang: str = 'en',
-                       fetch_bio: bool = True,
-                       fetch_images: bool = True,
-                       max_images: int = 10) -> WikiPage:
+    async def get_page(
+            self,  # pylint: disable=too-many-arguments
+            entity: str,
+            lang: str = 'en',
+            fetch_bio: bool = True,
+            fetch_images: bool = True,
+            max_images: int = 10) -> WikiPage:
         """Get a Wikipedia page by Wikidata entity ID with selective fetching."""
         wiki_page = WikiPage(entity, lang)
 
@@ -363,12 +356,13 @@ class AsyncWikiClient:
         return wiki_page
 
 
-async def get_page_async(entity: str,  # pylint: disable=too-many-arguments
-                         lang: str = 'en',
-                         timeout: int = 5,
-                         need_bio: bool = True,
-                         need_images: bool = True,
-                         max_images: int = 5) -> WikiPage:
+async def get_page_async(
+        entity: str,  # pylint: disable=too-many-arguments
+        lang: str = 'en',
+        timeout: int = 5,
+        need_bio: bool = True,
+        need_images: bool = True,
+        max_images: int = 5) -> WikiPage:
     """
     Async function for nowplaying wikimedia plugin.
 

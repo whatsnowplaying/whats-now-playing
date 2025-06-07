@@ -111,7 +111,7 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         for i, part in enumerate(message_parts):
             if not await self._send_single_message(part):
                 success = False
-                logging.error('Failed to send message part %d/%d', i+1, len(message_parts))
+                logging.error('Failed to send message part %d/%d', i + 1, len(message_parts))
 
         return success
 
@@ -242,6 +242,12 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
 
     async def _setup_timer(self) -> None:
         ''' setup announcement timer '''
+        # Prevent multiple watcher instances
+        if self.watcher is not None:
+            logging.debug('Kick chat watcher already exists, stopping previous instance')
+            self.watcher.stop()
+            self.watcher = None
+
         self.watcher = self.metadb.watcher()
         self.watcher.start(customhandler=self._announce_track)
         await self._async_announce_track()
@@ -249,7 +255,9 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
             await asyncio.sleep(1)
 
         logging.debug('Kick chat watcher stop event received')
-        self.watcher.stop()
+        if self.watcher:
+            self.watcher.stop()
+            self.watcher = None
 
     def _announce_track(self, event: Any) -> None:  # pylint: disable=unused-argument
         ''' handle track change announcements '''
@@ -325,7 +333,8 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
                         if stripped_part := message_part.strip():
                             await self._send_message(stripped_part)
 
-                    logging.info('Sent Kick chat announcement (%d parts)', len([m for m in messages if m.strip()]))
+                    logging.info('Sent Kick chat announcement (%d parts)',
+                                 len([m for m in messages if m.strip()]))
 
             except Exception as error:
                 logging.exception('Error generating Kick announcement: %s', error)
@@ -350,9 +359,10 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         for task in self.tasks:
             task.cancel()
 
-        # Stop watcher
+        # Stop watcher and clear reference
         if self.watcher:
             self.watcher.stop()
+            self.watcher = None
 
         self.authenticated = False
 
@@ -388,5 +398,4 @@ class KickChatSettings:
     def verify(widget: Any) -> None:
         ''' verify kick chat settings '''
         if widget.chat_checkbox.isChecked() and not widget.announce_lineedit.text():
-            raise PluginVerifyError(
-                'Kick announcement template is required when chat is enabled')
+            raise PluginVerifyError('Kick announcement template is required when chat is enabled')

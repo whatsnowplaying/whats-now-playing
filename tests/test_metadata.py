@@ -723,42 +723,46 @@ async def test_preset_image(get_imagecache, getroot):  #pylint: disable=redefine
         assert row > 1
 
 
-@pytest.mark.parametrize("input_value,expected_output", [
-    # Base64 encoded JSON (MixedInKey format)
-    ('eyJhbGdvcml0aG0iOjk0LCJrZXkiOiI0QSIsInNvdXJjZSI6Im1peGVkaW5rZXkifQ==',  # pragma: allowlist secret  # pylint: disable=line-too-long
-     '4A'),
-    # Direct JSON
-    ('{"algorithm":94,"key":"9B","source":"mixedinkey"}', '9B'),
-    # Simple string keys
-    ('Am', 'Am'),
-    ('C#m', 'C#m'),
-    ('12A', '12A'),
-    # Empty/None values
-    (None, None),
-    ('', None),
-    ('   ', ''),
-    # Malformed input
-    ('not-base64-or-json', 'not-base64-or-json'),
-    ('invalid-json{"key":"test"}', 'invalid-json{"key":"test"}'),
-    # Valid base64 that decodes to non-JSON text
-    ('SGVsbG8gV29ybGQ=', 'SGVsbG8gV29ybGQ='),  # "Hello World"
-    # Valid base64 that decodes to non-object JSON (array)
-    ('WyJ0ZXN0IiwiYXJyYXkiXQ==', 'WyJ0ZXN0IiwiYXJyYXkiXQ=='),  # ["test","array"]
-    # Valid base64 that decodes to non-object JSON (string)
-    ('InRlc3Qgc3RyaW5nIg==', 'InRlc3Qgc3RyaW5nIg=='),  # "test string"
-    # Valid base64 that decodes to JSON object missing 'key' field
-    ('eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0=',  # pragma: allowlist secret
-     'eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0='),  # pragma: allowlist secret
-    # Direct JSON without 'key' field
-    ('{"algorithm":94,"source":"mixedinkey"}', '{"algorithm":94,"source":"mixedinkey"}'),
-    # Direct JSON array
-    ('["test","array"]', '["test","array"]'),
-    # Direct JSON string
-    ('"test string"', '"test string"'),
-    # JSON with null key value
-    ('{"algorithm":94,"key":null,"source":"mixedinkey"}',
-     '{"algorithm":94,"key":null,"source":"mixedinkey"}'),
-])
+@pytest.mark.parametrize(
+    "input_value,expected_output",
+    [
+        # Base64 encoded JSON (MixedInKey format)
+        (
+            'eyJhbGdvcml0aG0iOjk0LCJrZXkiOiI0QSIsInNvdXJjZSI6Im1peGVkaW5rZXkifQ==',  # pragma: allowlist secret  # pylint: disable=line-too-long
+            '4A'),
+        # Direct JSON
+        ('{"algorithm":94,"key":"9B","source":"mixedinkey"}', '9B'),
+        # Simple string keys
+        ('Am', 'Am'),
+        ('C#m', 'C#m'),
+        ('12A', '12A'),
+        # Empty/None values
+        (None, None),
+        ('', None),
+        ('   ', ''),
+        # Malformed input
+        ('not-base64-or-json', 'not-base64-or-json'),
+        ('invalid-json{"key":"test"}', 'invalid-json{"key":"test"}'),
+        # Valid base64 that decodes to non-JSON text
+        ('SGVsbG8gV29ybGQ=', 'SGVsbG8gV29ybGQ='),  # "Hello World"
+        # Valid base64 that decodes to non-object JSON (array)
+        ('WyJ0ZXN0IiwiYXJyYXkiXQ==', 'WyJ0ZXN0IiwiYXJyYXkiXQ=='),  # ["test","array"]
+        # Valid base64 that decodes to non-object JSON (string)
+        ('InRlc3Qgc3RyaW5nIg==', 'InRlc3Qgc3RyaW5nIg=='),  # "test string"
+        # Valid base64 that decodes to JSON object missing 'key' field
+        (
+            'eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0=',  # pragma: allowlist secret
+            'eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0='),  # pragma: allowlist secret
+        # Direct JSON without 'key' field
+        ('{"algorithm":94,"source":"mixedinkey"}', '{"algorithm":94,"source":"mixedinkey"}'),
+        # Direct JSON array
+        ('["test","array"]', '["test","array"]'),
+        # Direct JSON string
+        ('"test string"', '"test string"'),
+        # JSON with null key value
+        ('{"algorithm":94,"key":null,"source":"mixedinkey"}',
+         '{"algorithm":94,"key":null,"source":"mixedinkey"}'),
+    ])
 def test_decode_musical_key(input_value, expected_output):
     """Test the _decode_musical_key method handles various key formats."""
     result = nowplaying.metadata.TinyTagRunner._decode_musical_key(input_value)  # pylint: disable=protected-access

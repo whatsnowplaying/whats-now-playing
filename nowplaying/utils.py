@@ -357,7 +357,7 @@ def smart_split_message(message: str, max_length: int = 500) -> list[str]:
     try:
         # Ensure NLTK data is available
         ensure_nltk_data()
-        
+
         # Try to split at sentence boundaries first
         sentences = nltk.sent_tokenize(message)
         current_chunk = ""

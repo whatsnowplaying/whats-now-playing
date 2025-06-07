@@ -136,7 +136,8 @@ class SubprocessManager:
 
     def start_kickbot(self):
         ''' Start the kickbot '''
-        if self.config.cparser.value('kick/enabled', type=bool) and self.config.cparser.value('kick/chat', type=bool):
+        if self.config.cparser.value('kick/enabled', type=bool) and self.config.cparser.value(
+                'kick/chat', type=bool):
             self._process_start('kickbot')
 
     def stop_kickbot(self):

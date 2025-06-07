@@ -33,7 +33,7 @@ def start(stopevent, bundledir, testmode=False):  # pragma: no cover
         nowplaying.bootstrap.set_qt_names()
     logpath = nowplaying.bootstrap.setuplogging(logname='debug.log', rotate=False)
     config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=logpath, testmode=testmode)
-    
+
     logging.info('boot up')
     try:
         kickbot = nowplaying.kick.launch.KickLaunch(stopevent=stopevent, config=config)
