@@ -193,6 +193,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
         settings.setValue('twitchbot/enabled', False)
 
+        settings.setValue('kick/enabled', False)
+        settings.setValue('kick/chat', False)
+        settings.setValue('kick/announce', str(self.templatedir.joinpath("kickbot_track.txt")))
+        settings.setValue('kick/announcedelay', 1.0)
+
         settings.setValue('quirks/pollingobserver', False)
         settings.setValue('quirks/filesubst', False)
         settings.setValue('quirks/slashmode', 'nochange')

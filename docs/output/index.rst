@@ -9,6 +9,7 @@ Outputs
 
    textoutput
    discord
+   kickbot
    obswebsocket
    twitchbot
    webserver

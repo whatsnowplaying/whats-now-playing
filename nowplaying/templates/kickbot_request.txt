@@ -1,0 +1,5 @@
+{% if requester %} Thanks @{{ requester }}! {% endif %}
+Your {% if requestdisplayname %} {{ requestdisplayname }} {% endif %} request
+{% if requesttitle %} of "{{requesttitle}}"{% endif %}
+{% if requestartist %} by {{ requestartist }}{% endif %}
+ has been noted!

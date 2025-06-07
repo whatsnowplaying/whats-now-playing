@@ -300,7 +300,7 @@ def parse_label_info_list(element: ET.Element) -> list[dict[str, Any]]:  # pylin
                         label_tag = (label_child.tag.split('}')[-1]
                                      if '}' in label_child.tag else label_child.tag)
                         if (label_tag in ["name", "sort-name", "disambiguation"]
-                            and label_child.text):
+                                and label_child.text):
                             label[label_tag] = label_child.text
                     label_info["label"] = label
             labels.append(label_info)

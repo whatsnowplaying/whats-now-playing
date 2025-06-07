@@ -4,6 +4,7 @@
 import asyncio
 import base64
 import contextlib
+import html
 import logging
 import logging.config
 import os
@@ -41,6 +42,7 @@ import nowplaying.db
 import nowplaying.frozen
 import nowplaying.hostmeta
 import nowplaying.imagecache
+import nowplaying.kick.oauth2
 import nowplaying.trackrequests
 import nowplaying.utils
 
@@ -454,6 +456,88 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         data = {"dbfile": str(request.app[METADB_KEY].databasefile)}
         return web.json_response(data)
 
+    async def kickredirect_handler(self, request):  # pylint: disable=no-self-use
+        ''' handle oauth2 redirect callbacks '''
+        # Extract query parameters from the redirect
+        params = dict(request.query)
+
+        # Log the redirect for debugging (don't log the auth code for security)
+        logging.info('Kick OAuth2 redirect received with parameters: %s', {
+            k: v
+            for k, v in params.items() if k != 'code'
+        })
+
+        # Get config for template loading
+        config = request.app[CONFIG_KEY]
+        template_dir = config.getbundledir().joinpath('templates', 'oauth')
+
+        def load_oauth_template(template_name: str, **kwargs) -> str:
+            """Load and render an OAuth template with variables"""
+            template_path = template_dir.joinpath(template_name)
+            if not template_path.exists():
+                logging.error('OAuth template not found: %s', template_path)
+                return '<html><body><h1>Template Error</h1><p>Template not found</p></body></html>'
+            template_content = template_path.read_text(encoding='utf-8')
+            # Simple template variable replacement
+            for key, value in kwargs.items():
+                template_content = template_content.replace('{{ ' + key + ' }}', str(value))
+            return template_content
+
+        # Check for OAuth2 error
+        if 'error' in params:
+            error_code = html.escape(params.get('error', 'unknown_error'))
+            error_description = html.escape(
+                params.get('error_description', 'No description provided'))
+
+            response_html = load_oauth_template('kick_oauth_error.htm',
+                                                error_code=error_code,
+                                                error_description=error_description)
+            return web.Response(content_type='text/html', text=response_html)
+
+        # Check for authorization code
+        authorization_code = params.get('code')
+        received_state = params.get('state')
+
+        if not authorization_code:
+            response_html = load_oauth_template('kick_oauth_no_code.htm')
+            return web.Response(content_type='text/html', text=response_html)
+
+        # Validate state parameter to prevent CSRF attacks
+        expected_state = config.cparser.value('kick/temp_state')
+        if not expected_state:
+            response_html = load_oauth_template('kick_oauth_invalid_session.htm')
+            logging.warning('Kick OAuth2 callback received without valid session state')
+            return web.Response(content_type='text/html', text=response_html)
+
+        if received_state != expected_state:
+            response_html = load_oauth_template('kick_oauth_csrf_error.htm')
+            logging.error(
+                'Kick OAuth2 CSRF attack detected: state mismatch (expected: %s, received: %s)',
+                expected_state[:8] + '...',
+                received_state[:8] + '...' if received_state else 'None')
+            return web.Response(content_type='text/html', text=response_html)
+
+        # Attempt to exchange the code for tokens
+        try:
+            # Initialize OAuth2 handler (config already retrieved above)
+            oauth = nowplaying.kick.oauth2.KickOAuth2(config)
+
+            # Exchange code for tokens with validated state
+            await oauth.exchange_code_for_token(authorization_code, received_state)
+
+            # Success response
+            response_html = load_oauth_template('kick_oauth_success.htm')
+            logging.info('Kick OAuth2 authentication completed successfully')
+            return web.Response(content_type='text/html', text=response_html)
+
+        except Exception as error:
+            logging.error('Kick OAuth2 token exchange failed: %s', error)
+
+            # Error response
+            response_html = load_oauth_template('kick_oauth_token_error.htm',
+                                                error_message=html.escape(str(error)))
+            return web.Response(content_type='text/html', text=response_html)
+
     def create_runner(self):
         ''' setup http routing '''
         threading.current_thread().name = 'WebServer-runner'
@@ -478,6 +562,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             web.get('/index.htm', self.index_htm_handler),
             web.get('/index.html', self.index_htm_handler),
             web.get('/index.txt', self.indextxt_handler),
+            web.get('/kickredirect', self.kickredirect_handler),
             web.get('/request.htm', self.requesterlaunch_htm_handler),
             web.get('/internals', self.internals),
             web.get('/ws', self.websocket_handler),
