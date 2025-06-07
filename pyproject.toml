@@ -107,6 +107,7 @@ qt_qapp_name = "testsuite"
 # List of plugins (as comma separated values of python module names) to load,
 # usually to register additional checkers.
 load-plugins = ["pylint.extensions.no_self_use"]
+init-hook = 'import sys; sys.path.append(".")'
 ignore-paths = [
   "nowplaying/beam",
   "nowplaying/qtrc.py",
@@ -148,3 +149,71 @@ ignore_patterns = [
   "nowplaying/vendor/**",
   "nowplaying/qtrc.py",
 ]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = [
+  "nowplaying/version.py",
+  "nowplaying/vendor/**",
+  "nowplaying/qtrc.py",
+  "nowplaying/beam/**",
+]
+
+[tool.ruff.lint]
+# Enable pylint-like rule sets
+select = [
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "F",    # pyflakes
+  "I",    # isort
+  "N",    # pep8-naming
+  "UP",   # pyupgrade
+  "YTT",  # flake8-2020
+  "S",    # flake8-bandit
+  "BLE",  # flake8-blind-except
+  "B",    # flake8-bugbear
+  "A",    # flake8-builtins
+  "C4",   # flake8-comprehensions
+  "PIE",  # flake8-pie
+  "T20",  # flake8-print
+  "SIM",  # flake8-simplify
+  "ARG",  # flake8-unused-arguments
+  "PTH",  # flake8-use-pathlib
+  "PL",   # pylint rules
+]
+
+# Ignore specific rules that don't match pylint defaults or project needs
+ignore = [
+  "S101",   # assert statements (common in tests)
+  "T201",   # print statements (may be needed for CLI)
+  "PLR0913", # too many arguments (pylint equivalent: R0913)
+  "PLR0915", # too many statements (pylint equivalent: R0915)
+  "PLR2004", # magic value comparison
+  "S603",   # subprocess without shell=True check
+  "S607",   # subprocess with partial executable path
+]
+
+# Per-file ignores (similar to pylint ignore-paths)
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+  "S101",     # assert statements in tests
+  "PLR0913",  # many arguments in test functions
+  "ARG001",   # unused function arguments (fixtures)
+  "S105",     # hardcoded passwords in tests
+]
+
+[tool.ruff.lint.pylint]
+# Configure pylint-specific rules
+max-args = 7
+max-locals = 20
+max-statements = 60
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+# Use spaces around equals signs in keyword arguments
+skip-magic-trailing-comma = false
+# Indent with spaces
+indent-style = "space"
+# Keep line breaks in function signatures like yapf
+docstring-code-format = true

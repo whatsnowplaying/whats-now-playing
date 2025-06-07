@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from aioresponses import aioresponses
 
-import nowplaying.kick.oauth2
-import nowplaying.kick.chat
-import nowplaying.kick.launch
-import nowplaying.kick.settings
+import nowplaying.kick.oauth2  # pylint: disable=import-error,no-name-in-module
+import nowplaying.kick.chat  # pylint: disable=import-error,no-name-in-module
+import nowplaying.kick.launch  # pylint: disable=import-error,no-name-in-module
+import nowplaying.kick.settings  # pylint: disable=import-error,no-name-in-module
 
 
 # Fixtures
@@ -53,7 +53,7 @@ def mock_oauth_failure():
 
 
 @pytest.fixture
-def kick_templates(kick_integration_config):
+def kick_templates(kick_integration_config):  # pylint: disable=redefined-outer-name
     """Create test template files for integration tests."""
     config = kick_integration_config
     # Bootstrap fixture already sets up templatedir, just use it
@@ -75,10 +75,10 @@ def kick_templates(kick_integration_config):
 
 
 @pytest.fixture
-def mock_chat_with_oauth(kick_integration_config, mock_oauth_success):
+def mock_chat_with_oauth(kick_integration_config, mock_oauth_success): # pylint: disable=redefined-outer-name
     """Create a chat instance with mocked OAuth."""
     stopevent = asyncio.Event()
-    chat = nowplaying.kick.chat.KickChat(config=kick_integration_config, stopevent=stopevent)
+    chat = nowplaying.kick.chat.KickChat(config=kick_integration_config, stopevent=stopevent)  # pylint: disable=no-member
     chat.oauth = mock_oauth_success
     return chat, stopevent
 
@@ -103,12 +103,12 @@ def mock_responses():
 
 
 @pytest.mark.asyncio
-async def test_full_authentication_flow(kick_integration_config, mock_responses):
+async def test_full_authentication_flow(kick_integration_config, mock_responses): # pylint: disable=redefined-outer-name
     """Test complete OAuth2 authentication flow."""
     config = kick_integration_config
 
     # Create OAuth2 handler
-    oauth = nowplaying.kick.oauth2.KickOAuth2(config)
+    oauth = nowplaying.kick.oauth2.KickOAuth2(config) # pylint: disable=no-member
 
     # Test authorization URL generation
     auth_url = oauth.get_authorization_url()
@@ -136,12 +136,12 @@ async def test_full_authentication_flow(kick_integration_config, mock_responses)
 
 
 @pytest.mark.asyncio
-async def test_chat_with_oauth_integration(mock_chat_with_oauth, mock_responses):
+async def test_chat_with_oauth_integration(mock_chat_with_oauth, mock_responses): # pylint: disable=redefined-outer-name
     """Test chat integration with OAuth2."""
     chat, stopevent = mock_chat_with_oauth
 
     # Test authentication
-    result = await chat._authenticate()
+    result = await chat._authenticate() # pylint: disable=protected-access
     assert result
     assert chat.authenticated
 
@@ -156,18 +156,18 @@ async def test_chat_with_oauth_integration(mock_chat_with_oauth, mock_responses)
                         })
 
     # Test message sending
-    result = await chat._send_message("Test message")
+    result = await chat._send_message("Test message")  # pylint: disable=protected-access
     assert result is True
 
 
 # Parameterized settings integration tests
 @pytest.mark.parametrize("settings_type", ['main', 'chat'])
-def test_settings_integration_scenarios(kick_integration_config, settings_type):
+def test_settings_integration_scenarios(kick_integration_config, settings_type): # pylint: disable=redefined-outer-name
     """Test settings integration for different types."""
     config = kick_integration_config
 
     if settings_type == 'main':
-        settings = nowplaying.kick.settings.KickSettings()
+        settings = nowplaying.kick.settings.KickSettings() # pylint: disable=no-member
 
         # Create a very explicit mock to avoid AsyncMock contamination
         mock_widget = MagicMock(spec=[
@@ -182,9 +182,9 @@ def test_settings_integration_scenarios(kick_integration_config, settings_type):
         mock_widget.channel_lineedit.text.return_value = 'testchannel'
 
         settings.load(config, mock_widget)
-        assert isinstance(settings.oauth, nowplaying.kick.oauth2.KickOAuth2)
+        assert isinstance(settings.oauth, nowplaying.kick.oauth2.KickOAuth2) # pylint: disable=no-member
     else:
-        chat_settings = nowplaying.kick.settings.KickChatSettings()
+        chat_settings = nowplaying.kick.settings.KickChatSettings() # pylint: disable=no-member
         mock_chat_widget = MagicMock()
 
         chat_settings.load(config, mock_chat_widget)
@@ -192,13 +192,13 @@ def test_settings_integration_scenarios(kick_integration_config, settings_type):
 
 
 @pytest.mark.asyncio
-async def test_token_refresh_integration(kick_integration_config, mock_responses):
+async def test_token_refresh_integration(kick_integration_config, mock_responses): # pylint: disable=redefined-outer-name
     """Test token refresh across components."""
     config = kick_integration_config
     config.cparser.setValue('kick/accesstoken', 'expired_token')
 
     # Create OAuth2 handler
-    oauth = nowplaying.kick.oauth2.KickOAuth2(config)
+    oauth = nowplaying.kick.oauth2.KickOAuth2(config) # pylint: disable=no-member
 
     # Mock refresh token response
     mock_refresh_response = {
@@ -221,13 +221,13 @@ async def test_token_refresh_integration(kick_integration_config, mock_responses
 
 
 @pytest.mark.asyncio
-async def test_announcement_flow_integration(kick_integration_config, kick_templates):
+async def test_announcement_flow_integration(kick_integration_config, kick_templates): # pylint: disable=redefined-outer-name
     """Test track announcement flow integration."""
     config = kick_integration_config
     config.cparser.setValue('kick/announce', str(kick_templates['announce']))
 
     stopevent = asyncio.Event()
-    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)
+    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent) # pylint: disable=no-member
     chat.authenticated = True
 
     # Mock metadata
@@ -235,25 +235,25 @@ async def test_announcement_flow_integration(kick_integration_config, kick_templ
     chat.metadb.read_last_meta_async = AsyncMock(return_value=mock_metadata)
 
     # Mock message sending
-    chat._send_message = AsyncMock(return_value=True)
+    chat._send_message = AsyncMock(return_value=True)  # pylint: disable=protected-access
 
     # Test announcement
-    await chat._async_announce_track()
+    await chat._async_announce_track()  # pylint: disable=protected-access
 
     # Verify message was sent with rendered template
-    chat._send_message.assert_called_once_with('Now playing: Test Artist - Test Song')
+    chat._send_message.assert_called_once_with('Now playing: Test Artist - Test Song')  # pylint: disable=protected-access
 
     # Verify last announced was updated
-    assert nowplaying.kick.chat.LASTANNOUNCED['artist'] == 'Test Artist'
-    assert nowplaying.kick.chat.LASTANNOUNCED['title'] == 'Test Song'
+    assert nowplaying.kick.chat.LASTANNOUNCED['artist'] == 'Test Artist' # pylint: disable=no-member
+    assert nowplaying.kick.chat.LASTANNOUNCED['title'] == 'Test Song' # pylint: disable=no-member
 
 
-def test_command_discovery_integration(kick_integration_config, kick_templates):
+def test_command_discovery_integration(kick_integration_config, kick_templates): # pylint: disable=redefined-outer-name
     """Test command template discovery integration."""
     config = kick_integration_config
 
     # Create settings and update commands
-    chat_settings = nowplaying.kick.settings.KickChatSettings()
+    chat_settings = nowplaying.kick.settings.KickChatSettings() # pylint: disable=no-member
     chat_settings.update_kickbot_commands(config)
 
     # Verify commands were created
@@ -276,13 +276,13 @@ def test_command_discovery_integration(kick_integration_config, kick_templates):
     ('chat', 'not_authenticated', 'returns_false'),
 ])
 @pytest.mark.asyncio
-async def test_error_handling_scenarios(kick_integration_config, component, error_scenario,
+async def test_error_handling_scenarios(kick_integration_config, component, error_scenario, # pylint: disable=redefined-outer-name
                                         expected_behavior):
     """Test error handling across different components and scenarios."""
     config = kick_integration_config
 
     if component == 'oauth':
-        oauth = nowplaying.kick.oauth2.KickOAuth2(config)
+        oauth = nowplaying.kick.oauth2.KickOAuth2(config) # pylint: disable=no-member
         oauth.code_verifier = 'test_verifier'
 
         # Use aioresponses to mock network error
@@ -294,7 +294,7 @@ async def test_error_handling_scenarios(kick_integration_config, component, erro
 
     elif component == 'chat':
         stopevent = asyncio.Event()
-        chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)
+        chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent) # pylint: disable=no-member
 
         if error_scenario == 'no_tokens':
             # Mock OAuth to fail
@@ -302,19 +302,19 @@ async def test_error_handling_scenarios(kick_integration_config, component, erro
             mock_oauth.get_stored_tokens.return_value = (None, None)
             chat.oauth = mock_oauth
 
-            result = await chat._authenticate()
+            result = await chat._authenticate()  # pylint: disable=protected-access
             assert not result
             assert not chat.authenticated
 
         elif error_scenario == 'not_authenticated':
             chat.authenticated = False
 
-            result = await chat._send_message("Test message")
+            result = await chat._send_message("Test message")  # pylint: disable=protected-access
             assert result is False
 
 
 @pytest.mark.asyncio
-async def test_config_changes_integration(kick_integration_config):
+async def test_config_changes_integration(kick_integration_config): # pylint: disable=redefined-outer-name
     """Test configuration changes affecting components."""
     config = kick_integration_config
 
@@ -334,7 +334,7 @@ async def test_config_changes_integration(kick_integration_config):
     mock_subprocesses = MagicMock()
 
     with patch('time.sleep'):  # Speed up test
-        nowplaying.kick.settings.KickSettings.save(config, mock_widget, mock_subprocesses)
+        nowplaying.kick.settings.KickSettings.save(config, mock_widget, mock_subprocesses) # pylint: disable=no-member
 
     # Verify kickbot was restarted due to changes
     mock_subprocesses.stop_kickbot.assert_called_once()
@@ -349,7 +349,7 @@ async def test_config_changes_integration(kick_integration_config):
 def test_ui_widget_integration_scenarios(widget_type):
     """Test UI widget integration for different widget types."""
     if widget_type == 'main':
-        main_settings = nowplaying.kick.settings.KickSettings()
+        main_settings = nowplaying.kick.settings.KickSettings() # pylint: disable=no-member
         mock_uihelp = MagicMock()
         mock_widget = MagicMock()
 
@@ -360,7 +360,7 @@ def test_ui_widget_integration_scenarios(widget_type):
         mock_widget.clientid_lineedit.editingFinished.connect.assert_called_once()
 
     else:
-        chat_settings = nowplaying.kick.settings.KickChatSettings()
+        chat_settings = nowplaying.kick.settings.KickChatSettings() # pylint: disable=no-member
         mock_chat_widget = MagicMock()
         mock_chat_widget.announce_button = MagicMock()
         mock_chat_widget.add_button = MagicMock()
@@ -378,10 +378,10 @@ def test_ui_widget_integration_scenarios(widget_type):
 
 
 @pytest.mark.asyncio
-async def test_malformed_api_responses(kick_integration_config):
+async def test_malformed_api_responses(kick_integration_config): # pylint: disable=redefined-outer-name
     """Test handling of malformed API responses."""
     config = kick_integration_config
-    oauth = nowplaying.kick.oauth2.KickOAuth2(config)
+    oauth = nowplaying.kick.oauth2.KickOAuth2(config) # pylint: disable=no-member
     oauth.code_verifier = 'test_verifier'
 
     # Test malformed JSON response using aioresponses
@@ -393,11 +393,11 @@ async def test_malformed_api_responses(kick_integration_config):
 
 
 @pytest.mark.asyncio
-async def test_network_timeouts(kick_integration_config, mock_oauth_success):
+async def test_network_timeouts(kick_integration_config, mock_oauth_success): # pylint: disable=redefined-outer-name
     """Test network timeout handling."""
     config = kick_integration_config
     stopevent = asyncio.Event()
-    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)
+    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent) # pylint: disable=no-member
     chat.authenticated = True
     chat.oauth = mock_oauth_success
 
@@ -410,7 +410,7 @@ async def test_network_timeouts(kick_integration_config, mock_oauth_success):
         assert result is False
 
 
-def test_invalid_template_files(kick_integration_config):
+def test_invalid_template_files(kick_integration_config): # pylint: disable=redefined-outer-name
     """Test handling of invalid template files."""
     config = kick_integration_config
 
@@ -418,7 +418,7 @@ def test_invalid_template_files(kick_integration_config):
     config.cparser.setValue('kick/announce', '/nonexistent/template.txt')
 
     stopevent = asyncio.Event()
-    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)
+    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent) # pylint: disable=no-member
     chat.authenticated = True
 
     # Mock metadata
@@ -427,36 +427,36 @@ def test_invalid_template_files(kick_integration_config):
 
     # Test announcement with invalid template - should not crash
     async def test_announcement():
-        await chat._async_announce_track()
+        await chat._async_announce_track()  # pylint: disable=protected-access
 
     # Should not raise exception
     asyncio.run(test_announcement())
 
 
-def test_concurrent_access(kick_integration_config):
+def test_concurrent_access(kick_integration_config): # pylint: disable=redefined-outer-name
     """Test concurrent access to components."""
     config = kick_integration_config
 
     # Test multiple OAuth instances
-    oauth1 = nowplaying.kick.oauth2.KickOAuth2(config)
-    oauth2 = nowplaying.kick.oauth2.KickOAuth2(config)
+    oauth1 = nowplaying.kick.oauth2.KickOAuth2(config) # pylint: disable=no-member
+    oauth2 = nowplaying.kick.oauth2.KickOAuth2(config) # pylint: disable=no-member
 
     # Both should work independently
-    oauth1._generate_pkce_parameters()
-    oauth2._generate_pkce_parameters()
+    oauth1._generate_pkce_parameters()  # pylint: disable=protected-access
+    oauth2._generate_pkce_parameters()  # pylint: disable=protected-access
 
     assert oauth1.code_verifier != oauth2.code_verifier
     assert oauth1.state != oauth2.state
 
 
-def test_memory_cleanup(kick_integration_config):
+def test_memory_cleanup(kick_integration_config): # pylint: disable=redefined-outer-name
     """Test memory cleanup on component destruction."""
     config = kick_integration_config
     stopevent = asyncio.Event()
 
     # Create components
-    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)
-    launch = nowplaying.kick.launch.KickLaunch(config=config, stopevent=stopevent)
+    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent) # pylint: disable=no-member
+    launch = nowplaying.kick.launch.KickLaunch(config=config, stopevent=stopevent)# pylint: disable=no-member
 
     # Add tasks
     mock_task = MagicMock()
@@ -474,7 +474,7 @@ def test_memory_cleanup(kick_integration_config):
     mock_task.cancel.assert_called()
 
 
-def test_unicode_and_special_characters(kick_integration_config):
+def test_unicode_and_special_characters(kick_integration_config): # pylint: disable=redefined-outer-name
     """Test handling of unicode and special characters."""
     config = kick_integration_config
 
@@ -487,7 +487,7 @@ def test_unicode_and_special_characters(kick_integration_config):
     template_path.write_text(template_content, encoding='utf-8')
 
     stopevent = asyncio.Event()
-    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)
+    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent) # pylint: disable=no-member
 
     # Test Jinja2 environment can handle unicode
     env = chat.setup_jinja2(pathlib.Path(config.templatedir))
@@ -503,32 +503,32 @@ def test_unicode_and_special_characters(kick_integration_config):
 
 
 @pytest.mark.asyncio
-async def test_rapid_message_sending(mock_chat_with_oauth, mock_aiohttp_success):
+async def test_rapid_message_sending(mock_chat_with_oauth, mock_aiohttp_success): # pylint: disable=redefined-outer-name
     """Test rapid successive message sending."""
     chat, stopevent = mock_chat_with_oauth
     chat.authenticated = True
 
     # Send multiple messages quickly
-    results = await asyncio.gather(*[chat._send_message(f"Message {i}") for i in range(5)])
+    results = await asyncio.gather(*[chat._send_message(f"Message {i}") for i in range(5)])  # pylint: disable=protected-access
 
     # All should succeed
     assert all(results)
 
 
 @pytest.mark.asyncio
-async def test_concurrent_authentication_attempts(kick_integration_config):
+async def test_concurrent_authentication_attempts(kick_integration_config): # pylint: disable=redefined-outer-name
     """Test concurrent authentication attempts."""
     config = kick_integration_config
 
     # Create multiple launch instances
     launches = [
-        nowplaying.kick.launch.KickLaunch(config=config, stopevent=asyncio.Event())
+        nowplaying.kick.launch.KickLaunch(config=config, stopevent=asyncio.Event()) # pylint: disable=no-member
         for _ in range(3)
     ]
 
     # Mock token validation for all
     for launch in launches:
-        launch._validate_kick_token_sync = MagicMock(return_value=True)
+        launch._validate_kick_token_sync = MagicMock(return_value=True)  # pylint: disable=protected-access
 
     # Authenticate concurrently
     results = await asyncio.gather(*[launch.authenticate() for launch in launches])
@@ -537,7 +537,7 @@ async def test_concurrent_authentication_attempts(kick_integration_config):
     assert all(results)
 
 
-def test_large_template_processing(kick_integration_config):
+def test_large_template_processing(kick_integration_config): # pylint: disable=redefined-outer-name
     """Test processing of large template files."""
     config = kick_integration_config
 
@@ -549,7 +549,7 @@ def test_large_template_processing(kick_integration_config):
     template_path.write_text(large_template)
 
     stopevent = asyncio.Event()
-    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)
+    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent) # pylint: disable=no-member
 
     # Should handle large templates without issues
     env = chat.setup_jinja2(pathlib.Path(config.templatedir))

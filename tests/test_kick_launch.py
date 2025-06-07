@@ -8,23 +8,22 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import requests
 
-import nowplaying.kick.launch
-import nowplaying.kick.oauth2
-import nowplaying.kick.chat
 
+import nowplaying.kick.oauth2  # pylint: disable=import-error,no-name-in-module
+import nowplaying.kick.launch  # pylint: disable=import-error,no-name-in-module
 
 # Fixtures
 @pytest.fixture
 def kick_launch(bootstrap):
     """Create a KickLaunch instance with bootstrap config."""
-    return nowplaying.kick.launch.KickLaunch(config=bootstrap)
+    return nowplaying.kick.launch.KickLaunch(config=bootstrap) # pylint: disable=no-member
 
 
 @pytest.fixture
 def kick_launch_with_stopevent(bootstrap):
     """Create a KickLaunch instance with bootstrap config and stopevent."""
     stopevent = asyncio.Event()
-    launch = nowplaying.kick.launch.KickLaunch(config=bootstrap, stopevent=stopevent)
+    launch = nowplaying.kick.launch.KickLaunch(config=bootstrap, stopevent=stopevent) # pylint: disable=no-member
     return launch, stopevent
 
 
@@ -32,18 +31,18 @@ def test_init_with_config(bootstrap):
     """Test KickLaunch initialization with config."""
     stopevent = asyncio.Event()
 
-    launch = nowplaying.kick.launch.KickLaunch(config=bootstrap, stopevent=stopevent)
+    launch = nowplaying.kick.launch.KickLaunch(config=bootstrap, stopevent=stopevent) # pylint: disable=no-member
 
     assert launch.config == bootstrap
     assert launch.stopevent == stopevent
     assert launch.widgets is None
     assert launch.chat is None
     assert launch.loop is None
-    assert isinstance(launch.oauth, nowplaying.kick.oauth2.KickOAuth2)
+    assert isinstance(launch.oauth, nowplaying.kick.oauth2.KickOAuth2) # pylint: disable=no-member
     assert len(launch.tasks) == 0
 
 
-def test_init_without_stopevent(kick_launch):
+def test_init_without_stopevent(kick_launch):  # pylint: disable=redefined-outer-name
     """Test KickLaunch initialization without stopevent."""
     launch = kick_launch
 
@@ -52,7 +51,7 @@ def test_init_without_stopevent(kick_launch):
 
 def test_init_without_config():
     """Test KickLaunch initialization without config."""
-    launch = nowplaying.kick.launch.KickLaunch()
+    launch = nowplaying.kick.launch.KickLaunch() # pylint: disable=no-member
 
     assert launch.config is None
     assert isinstance(launch.stopevent, asyncio.Event)
@@ -81,7 +80,7 @@ def test_init_without_config():
         (403, {}, False),
         (500, {}, False),
     ])
-def test_validate_kick_token_sync_responses(kick_launch, status_code, response_data,
+def test_validate_kick_token_sync_responses(kick_launch, status_code, response_data, # pylint: disable=redefined-outer-name
                                             expected_result):
     """Test token validation with various HTTP responses."""
     mock_response = MagicMock()
@@ -89,7 +88,7 @@ def test_validate_kick_token_sync_responses(kick_launch, status_code, response_d
     mock_response.json.return_value = response_data
 
     with patch('requests.post', return_value=mock_response):
-        result = kick_launch._validate_kick_token_sync('test_token')
+        result = kick_launch._validate_kick_token_sync('test_token')  # pylint: disable=protected-access
 
         assert result == expected_result
 
@@ -98,9 +97,9 @@ def test_validate_kick_token_sync_responses(kick_launch, status_code, response_d
     ('', False),
     (None, False),
 ])
-def test_validate_kick_token_sync_invalid_input(kick_launch, token, expected_result):
+def test_validate_kick_token_sync_invalid_input(kick_launch, token, expected_result): # pylint: disable=redefined-outer-name
     """Test token validation with invalid inputs."""
-    result = kick_launch._validate_kick_token_sync(token)
+    result = kick_launch._validate_kick_token_sync(token)  # pylint: disable=protected-access
     assert result == expected_result
 
 
@@ -108,7 +107,7 @@ def test_validate_kick_token_sync_invalid_input(kick_launch, token, expected_res
     (requests.RequestException, "Network error"),
     (ValueError, "Invalid JSON"),
 ])
-def test_validate_kick_token_sync_exceptions(kick_launch, exception_type, exception_msg):
+def test_validate_kick_token_sync_exceptions(kick_launch, exception_type, exception_msg): # pylint: disable=redefined-outer-name
     """Test token validation with various exceptions."""
     if exception_type == ValueError:
         # JSON parsing error
@@ -117,11 +116,11 @@ def test_validate_kick_token_sync_exceptions(kick_launch, exception_type, except
         mock_response.json.side_effect = exception_type(exception_msg)
 
         with patch('requests.post', return_value=mock_response):
-            result = kick_launch._validate_kick_token_sync('test_token')
+            result = kick_launch._validate_kick_token_sync('test_token')  # pylint: disable=protected-access
     else:
         # Network error
         with patch('requests.post', side_effect=exception_type(exception_msg)):
-            result = kick_launch._validate_kick_token_sync('test_token')
+            result = kick_launch._validate_kick_token_sync('test_token')  # pylint: disable=protected-access
 
     assert not result
 
@@ -142,7 +141,7 @@ def test_validate_kick_token_sync_exceptions(kick_launch, exception_type, except
         (('invalid_token', 'refresh_token'), False, False, False),
     ])
 @pytest.mark.asyncio
-async def test_authenticate_scenarios(kick_launch, stored_tokens, token_validation,
+async def test_authenticate_scenarios(kick_launch, stored_tokens, token_validation, # pylint: disable=redefined-outer-name
                                       refresh_succeeds, expected_result):
     """Test authentication with various scenarios."""
     # Setup mocks
@@ -155,8 +154,8 @@ async def test_authenticate_scenarios(kick_launch, stored_tokens, token_validati
             ('new_valid_token',
              stored_tokens[1]) if refresh_succeeds else stored_tokens  # After refresh
         ]
-        kick_launch._validate_kick_token_sync = MagicMock()
-        kick_launch._validate_kick_token_sync.side_effect = [False, refresh_succeeds]
+        kick_launch._validate_kick_token_sync = MagicMock()  # pylint: disable=protected-access
+        kick_launch._validate_kick_token_sync.side_effect = [False, refresh_succeeds]  # pylint: disable=protected-access
 
         if refresh_succeeds:
             kick_launch.oauth.refresh_access_token = AsyncMock()
@@ -167,14 +166,14 @@ async def test_authenticate_scenarios(kick_launch, stored_tokens, token_validati
         # Simple scenarios
         kick_launch.oauth.get_stored_tokens.return_value = stored_tokens
         if token_validation is not None:
-            kick_launch._validate_kick_token_sync = MagicMock(return_value=token_validation)
+            kick_launch._validate_kick_token_sync = MagicMock(return_value=token_validation)  # pylint: disable=protected-access
 
     result = await kick_launch.authenticate()
     assert result == expected_result
 
 
 @pytest.mark.asyncio
-async def test_authenticate_exception(kick_launch):
+async def test_authenticate_exception(kick_launch): # pylint: disable=redefined-outer-name
     """Test authentication with unexpected exception."""
     kick_launch.oauth.get_stored_tokens = MagicMock(side_effect=Exception("Unexpected error"))
 
@@ -182,7 +181,7 @@ async def test_authenticate_exception(kick_launch):
     assert not result
 
 
-def test_forced_stop(kick_launch_with_stopevent):
+def test_forced_stop(kick_launch_with_stopevent): # pylint: disable=redefined-outer-name
     """Test forced stop signal handler."""
     launch, stopevent = kick_launch_with_stopevent
 
@@ -200,7 +199,7 @@ def test_forced_stop(kick_launch_with_stopevent):
         (False, False),  # Neither present
     ])
 @pytest.mark.asyncio
-async def test_stop_scenarios(kick_launch_with_stopevent, has_chat, has_loop):
+async def test_stop_scenarios(kick_launch_with_stopevent, has_chat, has_loop): # pylint: disable=redefined-outer-name
     """Test stop functionality with different configurations."""
     launch, stopevent = kick_launch_with_stopevent
 
@@ -223,7 +222,7 @@ async def test_stop_scenarios(kick_launch_with_stopevent, has_chat, has_loop):
 
 
 @pytest.mark.asyncio
-async def test_watch_for_exit(kick_launch_with_stopevent):
+async def test_watch_for_exit(kick_launch_with_stopevent): # pylint: disable=redefined-outer-name
     """Test watch for exit functionality."""
     launch, stopevent = kick_launch_with_stopevent
 
@@ -236,7 +235,7 @@ async def test_watch_for_exit(kick_launch_with_stopevent):
         stopevent.set()
 
     # Run both tasks
-    await asyncio.gather(launch._watch_for_exit(), set_stop_event())
+    await asyncio.gather(launch._watch_for_exit(), set_stop_event())  # pylint: disable=protected-access
 
     # Verify stop was called
     launch.stop.assert_called_once()
@@ -253,7 +252,7 @@ async def test_watch_for_exit(kick_launch_with_stopevent):
 @patch('nowplaying.bootstrap.setuplogging')
 @patch('nowplaying.config.ConfigFile')
 @patch('threading.current_thread')
-def test_start_function(mock_thread, mock_config, mock_logging, mock_set_names, mock_frozen,
+def test_start_function(mock_thread, mock_config, mock_logging, mock_set_names, mock_frozen, # pylint: disable=redefined-outer-name
                         mock_kick_launch, testmode, expected_appname):
     """Test module start function with different testmode values."""
     mock_stopevent = MagicMock()
@@ -269,11 +268,11 @@ def test_start_function(mock_thread, mock_config, mock_logging, mock_set_names, 
 
     # Call function
     if testmode:
-        nowplaying.kick.launch.start(stopevent=mock_stopevent,
+        nowplaying.kick.launch.start(stopevent=mock_stopevent, # pylint: disable=no-member
                                      bundledir=mock_bundledir,
                                      testmode=testmode)
     else:
-        nowplaying.kick.launch.start(stopevent=mock_stopevent)
+        nowplaying.kick.launch.start(stopevent=mock_stopevent) # pylint: disable=no-member
 
     # Verify calls
     if expected_appname:
@@ -286,7 +285,7 @@ def test_start_function(mock_thread, mock_config, mock_logging, mock_set_names, 
 
 @pytest.mark.parametrize("exception_raised", [True, False])
 @pytest.mark.asyncio
-async def test_launch_kickbot_function(bootstrap, exception_raised):
+async def test_launch_kickbot_function(bootstrap, exception_raised): # pylint: disable=redefined-outer-name
     """Test launch_kickbot async function with and without exceptions."""
     stopevent = asyncio.Event()
 
@@ -301,7 +300,7 @@ async def test_launch_kickbot_function(bootstrap, exception_raised):
         mock_kick_launch.return_value = mock_launch_instance
 
         # Should not raise exception in either case
-        await nowplaying.kick.launch.launch_kickbot(config=bootstrap, stopevent=stopevent)
+        await nowplaying.kick.launch.launch_kickbot(config=bootstrap, stopevent=stopevent) # pylint: disable=no-member
 
         mock_kick_launch.assert_called_once_with(config=bootstrap, stopevent=stopevent)
         mock_launch_instance.bootstrap.assert_called_once()
