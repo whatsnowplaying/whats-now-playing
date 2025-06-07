@@ -62,14 +62,15 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
                 self.authenticated = True
                 logging.info('Kick chat authentication successful')
                 return True
-            elif refresh_token:
+
+            if refresh_token:
                 # Try to refresh the token
                 try:
                     await self.oauth.refresh_access_token(refresh_token)
                     self.authenticated = True
                     logging.info('Kick chat token refreshed successfully')
                     return True
-                except Exception as error:
+                except Exception as error: # pylint: disable=broad-except
                     logging.warning('Failed to refresh Kick token: %s', error)
 
         logging.error('No valid Kick tokens available for chat')
