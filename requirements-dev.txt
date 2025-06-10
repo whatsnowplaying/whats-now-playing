@@ -3,7 +3,7 @@
 #
 basedpyright
 pip-upgrader
-pyinstaller==6.13.0
+pyinstaller==6.14.1
 pyinstaller_versionfile==3.0.1
 pylint==2.17.5
 sourcery
