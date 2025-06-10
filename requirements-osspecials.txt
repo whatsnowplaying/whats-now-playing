@@ -1,4 +1,4 @@
-pyicu==2.15.2 ; sys_platform == 'linux' or sys_platform == 'darwin'
+pyicu @ git+https://github.com/whatsnowplaying/pyicu@wnp; sys_platform == 'linux' or sys_platform == 'darwin'
 dbus-fast==2.44.1 ; sys_platform == 'linux'
 winsdk ; sys_platform == 'win32'
 # needed for pid
