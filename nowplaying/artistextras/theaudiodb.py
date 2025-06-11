@@ -95,8 +95,8 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
     def _extract_bio_data(self, extradata, metadata):
         ''' Extract biography data from TheAudioDB response '''
-        if (metadata.get('artistlongbio') or
-            not self.config.cparser.value('theaudiodb/bio', type=bool)):
+        if (metadata.get('artistlongbio')
+                or not self.config.cparser.value('theaudiodb/bio', type=bool)):
             return ''
 
         lang1 = self.config.cparser.value('theaudiodb/bio_iso')
@@ -129,18 +129,24 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         ''' Handle image data from TheAudioDB response '''
         self._queue_single_image(artdata, metadata, imagecache, 'strArtistBanner',
                                  'artistbannerraw', 'artistbanner', 'banners')
-        self._queue_single_image(artdata, metadata, imagecache, 'strArtistLogo',
-                                 'artistlogoraw', 'artistlogo', 'logos')
+        self._queue_single_image(artdata, metadata, imagecache, 'strArtistLogo', 'artistlogoraw',
+                                 'artistlogo', 'logos')
         self._queue_single_image(artdata, metadata, imagecache, 'strArtistThumb',
                                  'artistthumbnailraw', 'artistthumbnail', 'thumbnails')
         self._handle_fanart_data(artdata, metadata, imagecache)
 
-    def _queue_single_image(self, artdata, metadata, imagecache, source_key, # pylint: disable=too-many-arguments
-                           metadata_key, image_type, config_key):
+    def _queue_single_image(  # pylint: disable=too-many-arguments
+            self,
+            artdata,
+            metadata,
+            imagecache,
+            source_key,
+            metadata_key,
+            image_type,
+            config_key):
         ''' Queue a single image type from TheAudioDB data '''
-        if (metadata.get(metadata_key)
-            or not artdata.get(source_key)
-            or not self.config.cparser.value(f'theaudiodb/{config_key}', type=bool)):
+        if (metadata.get(metadata_key) or not artdata.get(source_key)
+                or not self.config.cparser.value(f'theaudiodb/{config_key}', type=bool)):
             return
 
         imagecache.fill_queue(config=self.config,
@@ -181,8 +187,8 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
             corrected_artist = artdata['strArtist']
             if corrected_artist != metadata['artist']:
-                logging.debug('TheAudioDB corrected artist name: %s -> %s',
-                              metadata['artist'], corrected_artist)
+                logging.debug('TheAudioDB corrected artist name: %s -> %s', metadata['artist'],
+                              corrected_artist)
                 metadata['artist'] = corrected_artist
             break
 
@@ -211,6 +217,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         # Cache individual artist by their unique TheAudioDB ID
         async def fetch_func():
             return artist_data  # Already have the data, just cache it
+
         return await nowplaying.apicache.cached_fetch(
             provider='theaudiodb',
             artist_name=artist_name,

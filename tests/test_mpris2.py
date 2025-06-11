@@ -149,7 +149,7 @@ async def test_getplayingtrack_with_vlc_metadata(getroot):
                     'mpris:artUrl':
                     Variant(
                         's',
-                        'file:///tmp/.cache/vlc/art/artistalbum/Nine%20Inch%20Nails/Ghosts%20I-IV/art' #pylint: disable=line-too-long
+                        'file:///tmp/.cache/vlc/art/artistalbum/Nine%20Inch%20Nails/Ghosts%20I-IV/art'  #pylint: disable=line-too-long
                     ),
                     'vlc:encodedby':
                     Variant('s', 'Lavf61.1.100'),

@@ -47,9 +47,7 @@ class MusicBrainzHelper():
 
         self.emailaddressset = False
         # Create our own MusicBrainz client instance
-        self.mb_client = client.MusicBrainzClient(
-            rate_limit_interval=0.5
-        )
+        self.mb_client = client.MusicBrainzClient(rate_limit_interval=0.5)
 
     def _setemail(self):
         ''' make sure the musicbrainz fetch has an email address set
@@ -159,11 +157,11 @@ class MusicBrainzHelper():
             for artist in artist_name_variations(addmeta['artist']):
                 try:
                     mydict = await self.mb_client.search_recordings(artist=artist,
-                                                                         recording=addmeta['title'],
-                                                                         release=addmeta['album'])
+                                                                    recording=addmeta['title'],
+                                                                    release=addmeta['album'])
                 except Exception:  # pylint: disable=broad-exception-caught
-                    logging.exception("mb_client.search_recordings- ar:%s, t:%s, al:%s",
-                                      artist, addmeta['title'], addmeta['album'])
+                    logging.exception("mb_client.search_recordings- ar:%s, t:%s, al:%s", artist,
+                                      addmeta['title'], addmeta['album'])
                     continue
 
                 if riddata := await self._pickarecording(addmeta,
@@ -193,7 +191,7 @@ class MusicBrainzHelper():
             logging.debug('Trying %s', artist)
             try:
                 mydict = await self.mb_client.search_recordings(artist=artist,
-                                                                     recording=addmeta['title'])
+                                                                recording=addmeta['title'])
             except Exception:  # pylint: disable=broad-exception-caught
                 logging.exception("mb_client.search_recordings- ar:%s, t:%s (strict)", artist,
                                   addmeta['title'])
@@ -305,13 +303,14 @@ class MusicBrainzHelper():
 
         for isrc in isrclist:
             with contextlib.suppress(Exception):
-                mbdata = await self.mb_client.get_recordings_by_isrc(
-                    isrc, includes=['releases'], release_status=['official'])
+                mbdata = await self.mb_client.get_recordings_by_isrc(isrc,
+                                                                     includes=['releases'],
+                                                                     release_status=['official'])
         if not mbdata:
             for isrc in isrclist:
                 try:
-                    mbdata = await self.mb_client.get_recordings_by_isrc(
-                        isrc, includes=['releases'])
+                    mbdata = await self.mb_client.get_recordings_by_isrc(isrc,
+                                                                         includes=['releases'])
                 except Exception as error:  # pylint: disable=broad-except
                     logging.info('musicbrainz cannot find ISRC %s: %s', isrc, error)
 
@@ -378,10 +377,12 @@ class MusicBrainzHelper():
 
             if 'release-count' not in mbdata or mbdata['release-count'] == 0:
                 try:
-                    mbdata = await self.mb_client.browse_releases(
-                        recording=recordingid,
-                        includes=['artist-credits', 'labels', 'release-groups',
-                                  'release-group-rels'])
+                    mbdata = await self.mb_client.browse_releases(recording=recordingid,
+                                                                  includes=[
+                                                                      'artist-credits', 'labels',
+                                                                      'release-groups',
+                                                                      'release-group-rels'
+                                                                  ])
                 except Exception as error:  # pylint: disable=broad-except
                     logging.error('MusicBrainz threw an error: %s', error)
                     return None

@@ -340,8 +340,7 @@ def test_m4a_freeform_tags(test_files):  # pylint: disable=redefined-outer-name
 
         # Check for MusicBrainz IDs in freeform tags (tinytag 2.1.1+ API)
         if hasattr(tag, 'other') and tag.other:
-            musicbrainz_fields = [key for key in tag.other.keys()
-                                if 'musicbrainz' in key.lower()]
+            musicbrainz_fields = [key for key in tag.other.keys() if 'musicbrainz' in key.lower()]
 
             if musicbrainz_fields:
                 print(f"TinyTag MusicBrainz freeform tags in {m4a_file.name}: "

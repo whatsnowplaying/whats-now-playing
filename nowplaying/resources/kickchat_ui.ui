@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>kickchat_form</class>
+ <widget class="QWidget" name="kickchat_form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>625</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Kick Chat</string>
+  </property>
+  <property name="displayName" stdset="0">
+   <string>Kick Chat</string>
+  </property>
+  <widget class="QWidget" name="formLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>30</y>
+     <width>624</width>
+     <height>71</height>
+    </rect>
+   </property>
+   <layout class="QFormLayout" name="settings_layout">
+    <item row="0" column="0">
+     <widget class="QLabel" name="commandchar_label">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Command Identifier</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QLineEdit" name="commandchar_lineedit">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>496</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="text">
+       <string>!</string>
+      </property>
+      <property name="maxLength">
+       <number>1</number>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="announce_delay_label">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Announce Delay</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QLineEdit" name="announce_delay_lineedit">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>496</width>
+        <height>0</height>
+       </size>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QCheckBox" name="enable_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>0</y>
+     <width>171</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enable Kick Chat</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="announce_label">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>100</y>
+     <width>103</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Track Announce</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="announce_lineedit">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>100</y>
+     <width>381</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>381</width>
+     <height>0</height>
+    </size>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="announce_button">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>140</x>
+     <y>100</y>
+     <width>83</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Template</string>
+   </property>
+  </widget>
+  <widget class="QTableWidget" name="command_perm_table">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>170</y>
+     <width>611</width>
+     <height>261</height>
+    </rect>
+   </property>
+   <property name="alternatingRowColors">
+    <bool>true</bool>
+   </property>
+   <property name="selectionBehavior">
+    <enum>QAbstractItemView::SelectRows</enum>
+   </property>
+   <column>
+    <property name="text">
+     <string>Command</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Anyone</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Broadcaster</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Moderator</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Subscriber</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Founder</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>VIP</string>
+    </property>
+   </column>
+  </widget>
+  <widget class="QWidget" name="horizontalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>440</y>
+     <width>621</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="commandbuttons_layout">
+    <item>
+     <widget class="QPushButton" name="add_button">
+      <property name="text">
+       <string>Add Entry</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="del_button">
+      <property name="text">
+       <string>Delete Entry</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QCheckBox" name="replies_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>140</y>
+     <width>321</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Use Kick 'Replies' when answering commands</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>commandchar_label</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>commandchar_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>announce_delay_label</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>announce_delay_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>announce_label</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>announce_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>announce_button</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>replies_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>command_perm_table</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>add_button</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>del_button</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+ </connections>
+</ui>
