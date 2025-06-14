@@ -23,7 +23,7 @@ def temp_config(bootstrap):
     config.cparser.setValue('weboutput/httpport', '9000')
 
     # Set some sensitive data
-    config.cparser.setValue('discogs/apikey', 'test_discogs_key_12345')  # pragma: allowlist secret
+    config.cparser.setValue('discogs/apikey', 'discogs_key_12345')  # pragma: allowlist secret
     # pragma: allowlist secret
     config.cparser.setValue('twitchbot/chattoken', 'oauth:test_token_67890')
 
@@ -64,9 +64,7 @@ def test_export_config_basic(temp_config):  # pylint: disable=redefined-outer-na
         assert exported_data['serato/libpath'] == '/test/path/to/serato'
 
         # Check that sensitive data is included (as required for version upgrades)
-        # pragma: allowlist secret
-        assert exported_data['discogs/apikey'] == 'test_discogs_key_12345'
-        # pragma: allowlist secret
+        assert exported_data['discogs/apikey'] == 'discogs_key_12345' # pragma: allowlist secret
         assert exported_data['twitchbot/chattoken'] == 'oauth:test_token_67890'
 
 
