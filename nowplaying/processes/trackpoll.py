@@ -24,6 +24,9 @@ import nowplaying.trackrequests
 import nowplaying.textoutput
 import nowplaying.utils
 
+
+
+
 COREMETA = ['artist', 'filename', 'title']
 
 
@@ -121,12 +124,13 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             logging.debug('Waiting for user to configure source input.')
 
         # sleep until we have something to do
-        while not self.stopevent.is_set() and not self.config.getpause(
-        ) and not self.config.cparser.value('settings/input', defaultValue=None):
+        while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and
+               not self.config.getpause() and
+               not self.config.cparser.value('settings/input', defaultValue=None)):
             await asyncio.sleep(.5)
             self.config.get()
 
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(.5)
             self.config.get()
 
@@ -288,10 +292,10 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         ''' get currently playing track, returns None if not new or not found '''
 
         # check paused state
-        while self.config.getpause() and not self.stopevent.is_set():
+        while self.config.getpause() and not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(.5)
 
-        if self.stopevent.is_set():
+        if nowplaying.utils.safe_stopevent_check(self.stopevent):
             return
 
         try:

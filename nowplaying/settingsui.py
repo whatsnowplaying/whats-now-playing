@@ -2,6 +2,7 @@
 ''' user interface to configure '''
 
 import contextlib
+import json
 import logging
 import os
 import pathlib
@@ -9,7 +10,7 @@ import re
 
 # pylint: disable=no-name-in-module
 from PySide6.QtCore import Slot, QFile, Qt, QStandardPaths
-from PySide6.QtWidgets import (QErrorMessage, QFileDialog, QWidget, QListWidgetItem)
+from PySide6.QtWidgets import (QErrorMessage, QFileDialog, QWidget, QListWidgetItem, QMessageBox)
 from PySide6.QtGui import QIcon
 from PySide6.QtUiTools import QUiLoader
 import PySide6.QtXml  # pylint: disable=unused-import, import-error
@@ -154,6 +155,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _connect_destroy_widget(self, qobject):
         qobject.startover_button.clicked.connect(self.fresh_start)
+
+    def _connect_general_widget(self, qobject):
+        ''' connect the export/import buttons '''
+        qobject.export_config_button.clicked.connect(self.on_export_config_button)
+        qobject.import_config_button.clicked.connect(self.on_import_config_button)
 
     def _connect_beamstatus_widget(self, qobject):
         ''' refresh the status'''
@@ -805,6 +811,89 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         ''' exit the tray '''
         if self.qtui:
             self.qtui.close()
+
+    @Slot()
+    def on_export_config_button(self):
+        ''' handle export configuration button '''
+        try:
+            # Get save file path from user
+            suggested_name = f"nowplaying_config_{self.config.version.replace('.', '_')}.json"
+            default_dir = QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
+
+            file_path, _ = QFileDialog.getSaveFileName(
+                self.qtui,
+                "Export Configuration",
+                os.path.join(default_dir, suggested_name),
+                "JSON Files (*.json);;All Files (*)"
+            )
+
+            if file_path:
+                export_path = pathlib.Path(file_path)
+                if self.config.export_config(export_path):
+                    QMessageBox.information(
+                        self.qtui,
+                        "Export Successful",
+                        f"Configuration exported to:\n{export_path}\n\n"
+                        "⚠️ WARNING: This file contains sensitive data including API keys "
+                        "and passwords. Store it securely and do not share it."
+                    )
+                else:
+                    QMessageBox.critical(
+                        self.qtui,
+                        "Export Failed",
+                        "Failed to export configuration. Check the logs for details."
+                    )
+        except (OSError, PermissionError, FileNotFoundError) as error:
+            logging.error("Export configuration error: %s", error)
+            QMessageBox.critical(self.qtui, "Export Error", f"An error occurred: {error}")
+
+    @Slot()
+    def on_import_config_button(self):
+        ''' handle import configuration button '''
+        try:
+            # Confirm with user since this overwrites settings
+            reply = QMessageBox.question(
+                self.qtui,
+                "Import Configuration",
+                "This will overwrite your current settings with those from the imported file.\n\n"
+                "Are you sure you want to continue?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+
+            if reply != QMessageBox.Yes:
+                return
+
+            # Get file path from user
+            default_dir = QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
+
+            file_path, _ = QFileDialog.getOpenFileName(
+                self.qtui,
+                "Import Configuration",
+                default_dir,
+                "JSON Files (*.json);;All Files (*)"
+            )
+
+            if file_path:
+                import_path = pathlib.Path(file_path)
+                if self.config.import_config(import_path):
+                    QMessageBox.information(
+                        self.qtui,
+                        "Import Successful",
+                        f"Configuration imported from:\n{import_path}\n\n"
+                        "The application may need to be restarted for all changes to take effect."
+                    )
+                    # Refresh the UI to show imported settings
+                    self.load_ui()
+                else:
+                    QMessageBox.critical(
+                        self.qtui,
+                        "Import Failed",
+                        "Failed to import configuration. Check the logs for details."
+                    )
+        except (OSError, PermissionError, FileNotFoundError, json.JSONDecodeError) as error:
+            logging.error("Import configuration error: %s", error)
+            QMessageBox.critical(self.qtui, "Import Error", f"An error occurred: {error}")
 
 
 def about_version_text(config, qwidget):

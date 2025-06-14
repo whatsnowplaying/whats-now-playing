@@ -4,8 +4,14 @@
 ## Version 4.2.0 - In Progress
 
 * New input plugin for JRiver Media Center via MCWS API support.
-* Better handling of when the program is already running.
-  It should help prevent some weird crashes.
+* FIXED: Windows subprocess shutdown errors (BrokenPipeError [WinError 232])
+  that occurred when multiprocessing.Manager() closed pipes before subprocesses finished.
+* IMPROVED: Single instance enforcement completely rewritten using Qt's QLockFile
+  instead of PID files - eliminates Windows PID reuse race conditions and provides
+  more reliable cross-platform behavior with automatic cleanup.
+* FIXED: Wikimedia plugin UI icon pollution - switched from raw 'images' API
+  to curated 'pageimages' API to prevent UI icons and logos from being cached
+  as artist images. Now only shows appropriate artist photos.
 * Error logging for when wikimedia attempts to continue
   but the program doesn't handle it.
 * A few minor template changes.
@@ -30,7 +36,11 @@
 * Better support for multi-artist collaborations with proper
   formatting (e.g., "Artist feat. Other Artist" instead of
   manual "&" joining).
-* Fixed Serato Live Playlist support to use new format.
+* Fixed Serato Live Playlist support to use new format with improved reliability:
+  * Added circuit breaker pattern for network failures with DJ-friendly
+    backoff (1-5 seconds)
+  * Reduced log spam by only logging track changes instead of every successful extraction
+  * Refactored extraction methods for better maintainability and error handling
 * Fixed hostname display bug showing reverse DNS results instead
   of proper machine names.
 * Fixed excluded files not getting properly excluded during processing.
@@ -85,6 +95,7 @@
     * tinytag
     * discogs_client
     * wptools
+    * pid (replaced with Qt QLockFile single instance system)
 
 ## Version 4.1.0 - 2023-08-20
 

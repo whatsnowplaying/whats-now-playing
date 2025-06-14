@@ -30,6 +30,7 @@ import nowplaying.db
 from nowplaying.exceptions import PluginVerifyError
 import nowplaying.metadata
 import nowplaying.trackrequests
+import nowplaying.utils
 
 LASTANNOUNCED = {'artist': None, 'title': None}
 SPLITMESSAGETEXT = '****SPLITMESSSAGEHERE****'
@@ -120,16 +121,16 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         # otherwise, use the existing authentication and run as
         # the user
 
-        while not self.config.cparser.value('twitchbot/chat',
-                                            type=bool) and not self.stopevent.is_set():
+        while (not self.config.cparser.value('twitchbot/chat', type=bool) and
+               not nowplaying.utils.safe_stopevent_check(self.stopevent)):
             await asyncio.sleep(1)
             self.config.get()
 
-        if self.stopevent.is_set():
+        if nowplaying.utils.safe_stopevent_check(self.stopevent):
             return
 
         loggedin = False
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
 
             if loggedin and self.chat and not self.chat.is_connected():
                 logging.error('No longer logged into chat')
@@ -339,7 +340,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         self.watcher = self.metadb.watcher()
         self.watcher.start(customhandler=self._announce_track)
         await self._async_announce_track()
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(1)
 
         logging.debug('watcher stop event received')

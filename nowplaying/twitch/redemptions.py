@@ -15,6 +15,7 @@ from twitchAPI.helper import first
 # import nowplaying.metadata
 import nowplaying.trackrequests
 import nowplaying.twitch.utils
+import nowplaying.utils
 
 #USER_SCOPE = [AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
 
@@ -80,20 +81,20 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         # -> stat redemption request support
         #
 
-        while not self.stopevent.is_set() and (
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent) and (
                 not self.config.cparser.value('twitchbot/redemptions', type=bool)
                 or not self.config.cparser.value('settings/requests', type=bool)):
             await asyncio.sleep(1)
             self.config.get()
 
-        if self.stopevent.is_set():
+        if nowplaying.utils.safe_stopevent_check(self.stopevent):
             return
 
         self.chat = chat
         loggedin = False
-        while not self.stopevent.is_set() and not loggedin:
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent) and not loggedin:
             await asyncio.sleep(5)
-            if self.stopevent.is_set():
+            if nowplaying.utils.safe_stopevent_check(self.stopevent):
                 break
 
             if loggedin and self.pubsub and not self.pubsub.is_connected():

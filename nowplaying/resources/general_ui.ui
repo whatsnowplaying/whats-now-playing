@@ -206,6 +206,73 @@
     <string>Artist Websites</string>
    </property>
   </widget>
+  <widget class="QLabel" name="config_backup_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>320</y>
+     <width>201</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>**Configuration Backup**</string>
+   </property>
+   <property name="textFormat">
+    <enum>Qt::MarkdownText</enum>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="export_config_button">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>350</y>
+     <width>150</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Export Configuration</string>
+   </property>
+   <property name="toolTip">
+    <string>Export all settings to a JSON file. WARNING: Contains sensitive data including API keys and passwords.</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="import_config_button">
+   <property name="geometry">
+    <rect>
+     <x>170</x>
+     <y>350</y>
+     <width>150</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Import Configuration</string>
+   </property>
+   <property name="toolTip">
+    <string>Import settings from a JSON file. This will overwrite current settings.</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="config_warning_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>390</y>
+     <width>610</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>⚠️ Exported configuration files contain sensitive data including API keys, tokens, and passwords. Store them securely and do not share them.</string>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+   <property name="styleSheet">
+    <string>QLabel { color: orange; font-weight: bold; }</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>

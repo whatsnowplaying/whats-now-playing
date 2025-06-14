@@ -255,14 +255,16 @@ class AsyncWikiClient:
 
         page_title = sitelinks[wiki_key]['title']
 
-        # Get images from Wikipedia page
+        # Get images from Wikipedia page using pageimages API (cleaner, no UI icons)
         wiki_url = f"https://{lang}.wikipedia.org/w/api.php"
         image_params = {
             'action': 'query',
             'format': 'json',
             'titles': page_title,
-            'prop': 'images|pageimages',
-            'pithumbsize': 500
+            'prop': 'pageimages',
+            'piprop': 'original|name',
+            'pithumbsize': 500,
+            'pilicense': 'any'  # Include both free and fair-use images
         }
 
         images = []
@@ -277,21 +279,19 @@ class AsyncWikiClient:
 
             pages = data['query']['pages']
             for page_data in pages.values():
-                # Add thumbnail if available
-                if 'thumbnail' in page_data:
+                # Add pageimage (main representative image) if available
+                if 'original' in page_data:
+                    images.append({
+                        'kind': 'wikidata-image',  # Keep same kind for compatibility
+                        'url': page_data['original']['source']
+                    })
+
+                # Add thumbnail if available and no original
+                elif 'thumbnail' in page_data:
                     images.append({
                         'kind': 'query-thumbnail',
                         'url': page_data['thumbnail']['source']
                     })
-
-                # Add page images
-                if 'images' in page_data:
-                    for img in page_data['images']:
-                        if img['title'].lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.svg')):
-                            # Get image URL
-                            img_url = await self._get_image_url(img['title'], lang)
-                            if img_url:
-                                images.append({'kind': 'parse-image', 'url': img_url})
 
         return images
 

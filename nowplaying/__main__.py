@@ -16,10 +16,9 @@ import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
+import nowplaying.singleinstance
 import nowplaying.systemtray
 import nowplaying.upgrade
-from nowplaying.vendor.pid import PidFile
-from nowplaying.vendor.pid.base import PidFileAlreadyLockedError, PidFileAlreadyRunningError
 
 #
 # as of now, there isn't really much here to test... basic bootstrap stuff
@@ -57,10 +56,7 @@ def actualmain(beam=False):  # pragma: no cover
     qapp.setQuitOnLastWindowClosed(False)
     nowplaying.bootstrap.set_qt_names()
     try:
-        with PidFile(pidname='nowplaying.pid',
-                     register_term_signal_handler=False,
-                     register_atexit=False) as pid:
-
+        with nowplaying.singleinstance.SingleInstance():
             logpath = run_bootstrap(bundledir=bundledir)
 
             if not nowplaying.bootstrap.verify_python_version():
@@ -69,13 +65,12 @@ def actualmain(beam=False):  # pragma: no cover
             config = nowplaying.config.ConfigFile(logpath=logpath, bundledir=bundledir)
             logging.getLogger().setLevel(config.loglevel)
             logging.captureWarnings(True)
-            logging.debug('Using pidfile %s/%s', pid.piddir, pid.pidname)
             tray = nowplaying.systemtray.Tray(beam=beam)  # pylint: disable=unused-variable
             icon = QIcon(str(config.iconfile))
             qapp.setWindowIcon(icon)
             exitval = qapp.exec_()
             logging.info('shutting main down v%s', config.version)
-    except (PidFileAlreadyLockedError, BlockingIOError, PidFileAlreadyRunningError):
+    except nowplaying.singleinstance.AlreadyRunningError:
         nowplaying.bootstrap.already_running()
 
     sys.exit(exitval)

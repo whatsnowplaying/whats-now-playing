@@ -254,7 +254,8 @@ def test_remote_extract_by_js_id(getroot):  # pylint: disable=redefined-outer-na
 
     tree = lxml.html.fromstring(page_text)
 
-    result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_js_id(page_text, tree)
+    handler = nowplaying.inputs.serato.SeratoHandler()
+    result = handler._remote_extract_by_js_id(page_text, tree)
     assert result is not None
     assert 'Barrett Strong' in result
     assert MONEYSTRING in result
@@ -311,7 +312,8 @@ def test_remote_extract_fallback_order(getroot):  # pylint: disable=redefined-ou
     tree = lxml.html.fromstring(page_text)
 
     # All methods should work with this test data
-    js_result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_js_id(page_text, tree)
+    handler = nowplaying.inputs.serato.SeratoHandler()
+    js_result = handler._remote_extract_by_js_id(page_text, tree)
     pos_result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_position(tree)
     pattern_result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_pattern(tree)
     text_result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_text_search(tree)
@@ -334,11 +336,11 @@ def test_remote_extract_edge_cases():  # pylint: disable=protected-access
     empty_tree = lxml.html.fromstring('<html></html>')
 
     # All methods should return None for empty content
-    handler = nowplaying.inputs.serato.SeratoHandler
+    handler = nowplaying.inputs.serato.SeratoHandler()
     assert handler._remote_extract_by_js_id('no js data', empty_tree) is None
-    assert handler._remote_extract_by_position(empty_tree) is None
-    assert handler._remote_extract_by_pattern(empty_tree) is None
-    assert handler._remote_extract_by_text_search(empty_tree) is None
+    assert nowplaying.inputs.serato.SeratoHandler._remote_extract_by_position(empty_tree) is None
+    assert nowplaying.inputs.serato.SeratoHandler._remote_extract_by_pattern(empty_tree) is None
+    assert nowplaying.inputs.serato.SeratoHandler._remote_extract_by_text_search(empty_tree) is None
 
     # Test with content that has tracks but malformed
     malformed_html = '''<html><div class="playlist-track">

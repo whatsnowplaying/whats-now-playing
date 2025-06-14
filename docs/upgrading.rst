@@ -6,6 +6,28 @@ Be sure to check the
 `release notes <https://github.com/whatsnowplaying/whats-now-playing/releases>`_ for any
 breaking changes and news.
 
+.. tip::
+   **New in 4.2+**: Use the **Configuration Backup** feature in General Settings to export your settings before upgrading as a safety backup. Normal upgrades preserve your settings automatically, but having a backup helps if anything goes wrong during the upgrade process.
+
+Configuration Recovery (4.2+)
+----------------------------
+
+If an upgrade fails or settings are lost, you can restore from a configuration backup:
+
+#. **Export before upgrading** (recommended):
+
+   * Open Settings → General → **Export Configuration**
+   * Save the JSON file to a secure location
+
+#. **Import if needed** (only if settings are lost):
+
+   * Open Settings → General → **Import Configuration**
+   * Select your exported JSON file
+   * Save and restart the application
+
+.. warning::
+   Only import configurations when necessary. Normal upgrades preserve settings automatically. Configuration files contain sensitive data - store securely and delete when no longer needed.
+
 From 3.x.x
 ----------
 

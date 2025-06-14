@@ -44,6 +44,8 @@ import nowplaying.imagecache
 import nowplaying.trackrequests
 import nowplaying.utils
 
+
+
 INDEXREFRESH = \
     '<!doctype html><html lang="en">' \
     '<head><meta http-equiv="refresh" content="5" ></head>' \
@@ -73,7 +75,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         self._init_webdb()
         self.stopevent = stopevent
 
-        while not enabled and not self.stopevent.is_set():
+        while not enabled and not nowplaying.utils.safe_stopevent_check(self.stopevent):
             try:
                 time.sleep(5)
                 config.get()
@@ -107,7 +109,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
     async def stopeventtask(self):
         ''' task to wait for the stop event '''
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(.5)
         await self.forced_stop()
 
@@ -303,7 +305,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         trackrequest = nowplaying.trackrequests.Requests(request.app[CONFIG_KEY])
 
         try:
-            while (not self.stopevent.is_set() and not endloop and not websocket.closed):
+            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and
+                   not endloop and not websocket.closed):
                 metadata = await trackrequest.check_for_gifwords()
                 if not metadata.get('image'):
                     await websocket.send_json({'noimage': True})
@@ -338,7 +341,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         endloop = False
 
         try:
-            while not self.stopevent.is_set() and not endloop and not websocket.closed:
+            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and
+                   not endloop and not websocket.closed):
                 metadata = await request.app[METADB_KEY].read_last_meta_async()
                 if not metadata or not metadata.get('artist'):
                     await asyncio.sleep(5)
@@ -389,7 +393,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         await asyncio.sleep(1)
         metadata = None
         while not metadata and not websocket.closed:
-            if self.stopevent.is_set():
+            if nowplaying.utils.safe_stopevent_check(self.stopevent):
                 return time.time()
             metadata = await database.read_last_meta_async()
             await asyncio.sleep(1)
@@ -407,8 +411,10 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
         try:
             mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
-            while not self.stopevent.is_set() and not websocket.closed:
-                while mytime > request.app[WATCHER_KEY].updatetime and not self.stopevent.is_set():
+            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and
+                   not websocket.closed):
+                while (mytime > request.app[WATCHER_KEY].updatetime and
+                       not nowplaying.utils.safe_stopevent_check(self.stopevent)):
                     await asyncio.sleep(1)
 
                 mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
@@ -462,7 +468,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         app.on_startup.append(self.on_startup)
         app.on_cleanup.append(self.on_cleanup)
         app.on_shutdown.append(self.on_shutdown)
-        app.add_routes([
+        _ = app.add_routes([
             web.get('/', self.index_htm_handler),
             web.get('/v1/last', self.api_v1_last_handler),
             web.get('/cover.png', self.cover_handler),

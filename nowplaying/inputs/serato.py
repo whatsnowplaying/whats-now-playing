@@ -13,6 +13,8 @@ import pathlib
 import random
 import struct
 import time
+import typing as t
+from collections.abc import Callable
 
 import aiofiles
 import lxml.html
@@ -29,7 +31,7 @@ from nowplaying.inputs import InputPlugin
 from nowplaying.exceptions import PluginVerifyError
 
 # when in local mode, these are shared variables between threads
-LASTPROCESSED = 0
+LASTPROCESSED:int = 0
 PARSEDSESSIONS = []
 
 TIDAL_FORMAT = re.compile('^_(.*).tdl')
@@ -39,8 +41,8 @@ class SeratoCrateReader:
     ''' read a Serato crate (not smart crate) -
         based on https://gist.github.com/kerrickstaley/8eb04988c02fa7c62e75c4c34c04cf02 '''
 
-    def __init__(self, filename):
-        self.decode_func_full = {
+    def __init__(self, filename: str | pathlib.Path) -> None:
+        self.decode_func_full: dict[str | None, Callable[[bytes], t.Any]] = {
             None: self._decode_struct,
             'vrsn': self._decode_unicode,
             'sbav': self._noop,
@@ -49,7 +51,7 @@ class SeratoCrateReader:
             'rurt': self._noop,
         }
 
-        self.decode_func_first = {
+        self.decode_func_first: dict[str, Callable[[bytes], t.Any]] = {
             'o': self._decode_struct,
             't': self._decode_unicode,
             'p': self._decode_unicode,
@@ -57,12 +59,12 @@ class SeratoCrateReader:
             'b': self._noop,
         }
 
-        self.cratepath = pathlib.Path(filename)
-        self.crate = None
+        self.cratepath: pathlib.Path = pathlib.Path(filename)
+        self.crate: list[tuple[str, t.Any]] | None = None
 
-    def _decode_struct(self, data):
+    def _decode_struct(self, data: bytes) -> list[tuple[str, t.Any]]:
         ''' decode the structures of the crate'''
-        ret = []
+        ret: list[tuple[str, t.Any]] = []
         i = 0
         while i < len(data):
             tag = data[i:i + 4].decode('ascii')
@@ -74,18 +76,18 @@ class SeratoCrateReader:
         return ret
 
     @staticmethod
-    def _decode_unicode(data):
+    def _decode_unicode(data: bytes) -> str:
         return data.decode('utf-16-be')
 
     @staticmethod
-    def _decode_unsigned(data):
+    def _decode_unsigned(data: bytes) -> int:
         return struct.unpack('>I', data)[0]
 
     @staticmethod
-    def _noop(data):
+    def _noop(data: bytes) -> bytes:
         return data
 
-    def _datadecode(self, data, tag=None):
+    def _datadecode(self, data: bytes, tag: str | None = None) -> t.Any:
         if tag in self.decode_func_full:
             decode_func = self.decode_func_full[tag]
         else:
@@ -93,17 +95,17 @@ class SeratoCrateReader:
 
         return decode_func(data)
 
-    async def loadcrate(self):
+    async def loadcrate(self) -> None:
         ''' load/overwrite current crate '''
         async with aiofiles.open(self.cratepath, 'rb') as cratefhin:
             self.crate = self._datadecode(await cratefhin.read())
 
-    def getfilenames(self):
+    def getfilenames(self) -> list[str] | None:
         ''' get the filenames from this crate '''
         if not self.crate:
             logging.error('crate has not been loaded')
             return None
-        filelist = []
+        filelist: list[str] = []
         anchor = self.cratepath.anchor
         for tag in self.crate:
             if tag[0] != 'otrk':
@@ -119,15 +121,15 @@ class SeratoCrateReader:
 class SeratoSessionReader:
     ''' read a Serato session file '''
 
-    def __init__(self):
-        self.decode_func_full = {
+    def __init__(self) -> None:
+        self.decode_func_full: dict[str | None, Callable[[bytes], t.Any]] = {
             None: self._decode_struct,
             'vrsn': self._decode_unicode,
             'adat': self._decode_adat,
             'oent': self._decode_struct,
         }
 
-        self.decode_func_first = {
+        self.decode_func_first: dict[str, Callable[[bytes], t.Any]] = {
             'o': self._decode_struct,
             't': self._decode_unicode,
             'p': self._decode_unicode,
@@ -135,7 +137,7 @@ class SeratoSessionReader:
             'b': self._noop,
         }
 
-        self._adat_func = {
+        self._adat_func: dict[int, list[str | Callable[[bytes], t.Any]]] = {
             2: ['pathstr', self._decode_unicode],
             3: ['location', self._decode_unicode],
             4: ['filename', self._decode_unicode],
@@ -169,10 +171,10 @@ class SeratoSessionReader:
             64: ['commentname', self._decode_unicode],
         }
 
-        self.sessiondata = []
+        self.sessiondata: list[dict[str, t.Any]] = []
 
-    def _decode_adat(self, data):
-        ret = {}
+    def _decode_adat(self, data: bytes) -> dict[str, t.Any]:
+        ret: dict[str, t.Any] = {}
         #i = 0
         #tag = struct.unpack('>I', data[0:i + 4])[0]
         #length = struct.unpack('>I', data[i + 4:i + 8])[0]
@@ -193,9 +195,9 @@ class SeratoSessionReader:
             ret['filename'] = ret.get('pathstr')
         return ret
 
-    def _decode_struct(self, data):
+    def _decode_struct(self, data: bytes) -> list[tuple[str, t.Any]]:
         ''' decode the structures of the session'''
-        ret = []
+        ret: list[tuple[str, t.Any]] = []
         i = 0
         while i < len(data):
             tag = data[i:i + 4].decode('ascii')
@@ -207,11 +209,11 @@ class SeratoSessionReader:
         return ret
 
     @staticmethod
-    def _decode_unicode(data):
+    def _decode_unicode(data: bytes) -> str:
         return data.decode('utf-16-be')[:-1]
 
     @staticmethod
-    def _decode_timestamp(data):
+    def _decode_timestamp(data: bytes) -> datetime.datetime:
         try:
             timestamp = struct.unpack('>I', data)[0]
         except struct.error:
@@ -219,17 +221,17 @@ class SeratoSessionReader:
         return datetime.datetime.fromtimestamp(timestamp)
 
     @staticmethod
-    def _decode_hex(data):
+    def _decode_hex(data: bytes) -> str:
         ''' read a string, then encode as hex '''
         return data.encode('utf-8').hex()
 
     @staticmethod
-    def _decode_bool(data):
+    def _decode_bool(data: bytes) -> bool:
         ''' true/false handling '''
         return bool(struct.unpack('b', data)[0])
 
     @staticmethod
-    def _decode_unsigned(data):
+    def _decode_unsigned(data: bytes) -> int:
         try:
             field = struct.unpack('>I', data)[0]
         except struct.error:
@@ -237,24 +239,24 @@ class SeratoSessionReader:
         return field
 
     @staticmethod
-    def _noop(data):
+    def _noop(data: bytes) -> bytes:
         return data
 
-    def _datadecode(self, data, tag=None):
+    def _datadecode(self, data: bytes, tag: str | None = None) -> t.Any:
         if tag in self.decode_func_full:
             decode_func = self.decode_func_full[tag]
         else:
             decode_func = self.decode_func_first[tag[0]]
         return decode_func(data)
 
-    async def loadsessionfile(self, filename):
+    async def loadsessionfile(self, filename: str | pathlib.Path) -> None:
         ''' load/extend current session '''
         async with aiofiles.open(filename, 'rb') as sessionfhin:
             self.sessiondata.extend(self._datadecode(await sessionfhin.read()))
 
-    def condense(self):
+    def condense(self) -> None:
         ''' shrink to just adats '''
-        adatdata = []
+        adatdata: list[dict[str, t.Any]] = []
         if not self.sessiondata:
             logging.error('session has not been loaded')
             return
@@ -265,19 +267,19 @@ class SeratoSessionReader:
 
         self.sessiondata = adatdata
 
-    def sortsession(self):
+    def sortsession(self) -> None:
         ''' sort them by starttime '''
         records = sorted(self.sessiondata, key=lambda x: x.get('starttime'))
         self.sessiondata = records
 
-    def getadat(self):
+    def getadat(self) -> t.Generator[dict[str, t.Any], None, None]:
         ''' get the filenames from this session '''
         if not self.sessiondata:
             logging.error('session has not been loaded')
             return
         yield from self.sessiondata
 
-    def getreverseadat(self):
+    def getreverseadat(self) -> t.Generator[dict[str, t.Any], None, None]:
         ''' same as getadat, but reversed order '''
         if not self.sessiondata:
             logging.error('session has not been loaded')
@@ -299,11 +301,11 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
 
     def __init__(  #pylint: disable=too-many-arguments
             self,
-            mixmode='oldest',
-            pollingobserver=False,
-            seratodir=None,
-            seratourl=None,
-            testmode=False):
+            mixmode: str = 'oldest',
+            pollingobserver: bool = False,
+            seratodir:str|None = None,
+            seratourl: str|None =None,
+            testmode: bool = False):
         global LASTPROCESSED, PARSEDSESSIONS  #pylint: disable=global-statement
         self.pollingobserver = pollingobserver
         self.tasks = set()
@@ -311,10 +313,11 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         self.observer = None
         self.testmode = testmode
         self.decks = {}
-        self.playingadat = {}
+        self.playingadat: dict[str,t.Any] = {}
         PARSEDSESSIONS = []
         LASTPROCESSED = 0
         self.lastfetched = 0
+        self.url: str|None = None  # Explicitly clear URL in local mode
         # Prefer local mode over remote mode when both are configured
         if seratodir:
             self.seratodir = pathlib.Path(seratodir)
@@ -331,9 +334,19 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         else:
             self.url = None
             self.seratodir = None
+            self.mode = None
+            self.mixmode = mixmode
 
         if self.mixmode not in ['newest', 'oldest']:
             self.mixmode = 'newest'
+
+        # Network failure tracking for circuit breaker pattern
+        self.network_failure_count = 0
+        self.backoff_until = 0
+
+        # Track change detection for log spam reduction
+        self.last_extracted_track = None
+        self.last_extraction_method = None
 
     async def start(self):
         ''' perform any startup tasks '''
@@ -355,7 +368,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             self.observer = Observer()
             logging.debug('Using fsevent observer')
 
-        self.observer.schedule(self.event_handler,
+        _ = self.observer.schedule(self.event_handler,
                                str(self.seratodir.joinpath("History", "Sessions")),
                                recursive=False)
         self.observer.start()
@@ -507,7 +520,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                               self.playingadat.get('starttime'), deck,
                               self.playingadat.get('artist'), self.playingadat.get('title'))
 
-    def getlocalplayingtrack(self, deckskiplist=None):
+    def getlocalplayingtrack(self, deckskiplist=None) -> tuple[str | None, str | None, str | None]:
         ''' parse out last track from binary session file
             get latest session file
         '''
@@ -526,8 +539,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                 'title'), self.playingadat.get('filename')
         return None, None, None
 
-    @staticmethod
-    def _remote_extract_by_js_id(page_text, tree):
+    def _remote_extract_by_js_id(self, page_text, tree) -> str|None:
         ''' Extract track using JavaScript track ID (most robust) '''
         if not (track_id_match := re.search(r'end_track_id:\s*(\d+)', page_text)):
             return None
@@ -535,12 +547,16 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         track_xpath = f'//div[@id="track_{current_track_id}"]//div[@class="playlist-trackname"]/text()'  # pylint: disable=line-too-long
         result = tree.xpath(track_xpath)
         if result:
-            logging.debug("Method 1 success: JavaScript+XPath (track_%s)", current_track_id)
-            return result[0]
+            # Only log when track changes to reduce spam
+            track_text = result[0]
+            if track_text != self.last_extracted_track:
+                logging.debug("Method 1 success: JavaScript+XPath (track_%s)", current_track_id)
+                self.last_extracted_track = track_text
+            return track_text
         return None
 
     @staticmethod
-    def _remote_extract_by_position(tree):
+    def _remote_extract_by_position(tree) -> str|None:
         ''' Extract track using positional XPath (fallback) '''
         result = tree.xpath('(//div[@class="playlist-trackname"]/text())[1]')
         if result:
@@ -549,7 +565,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         return None
 
     @staticmethod
-    def _remote_extract_by_pattern(tree):
+    def _remote_extract_by_pattern(tree) -> str|None:
         ''' Extract track using text pattern matching (regex fallback) '''
         track_divs = tree.xpath('//div[contains(@class, "playlist-track")]')
         for track_div in track_divs[:3]:  # Check first 3 tracks
@@ -563,7 +579,7 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         return None
 
     @staticmethod
-    def _remote_extract_by_text_search(tree):
+    def _remote_extract_by_text_search(tree) -> str|None:
         ''' Extract track using fallback text search (last resort) '''
         all_text = tree.xpath('//text()[contains(., " - ")]')
         for text in all_text:
@@ -574,34 +590,76 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
                 return cleaned
         return None
 
-    def getremoteplayingtrack(self):  # pylint: disable=too-many-return-statements, too-many-branches
+    def getremoteplayingtrack(self):    # pylint: disable=too-many-return-statements
         ''' get the currently playing title from Live Playlists '''
 
         if self.mode == 'local':
             logging.debug('in local mode; skipping')
             return
 
-        #
-        # It is hard to believe in 2021, we are still scraping websites
-        # and companies don't have APIs for data.
-        #
-        try:
-            page = requests.get(self.url, timeout=5)
-        except Exception as error:  # pylint: disable=broad-except
-            logging.error("Cannot process %s: %s", self.url, error)
+        # Circuit breaker: check if we should back off due to recent failures
+        if not self._can_make_request():
             return
 
+        # Fetch the page with error handling
+        page = self._fetch_page()
         if not page:
             return
 
+        if track_text := self._extract_track_from_page(page):
+            # Parse and store the track data
+            self._parse_and_store_track(track_text)
+        else:
+            return
+
+    def _can_make_request(self) -> bool:
+        ''' Check if we can make a request based on circuit breaker state '''
+        current_time = time.time()
+        return current_time >= self.backoff_until
+
+    def _fetch_page(self) -> requests.Response|None:
+        ''' Fetch the page with network error handling '''
+        current_time = time.time()
+        try:
+            page = requests.get(self.url, timeout=5)
+            # Success: reset failure tracking
+            self.network_failure_count = 0
+            self.backoff_until = 0
+            return page
+        except Exception as error:  # pylint: disable=broad-except
+            self._handle_network_failure(current_time, error)
+            return None
+
+    def _handle_network_failure(self, current_time: float, error):
+        ''' Handle network failure with live DJ-friendly backoff '''
+        self.network_failure_count += 1
+
+        # Live DJ backoff: 1s, 2s, 3s, then max 5s
+        if self.network_failure_count <= 3:
+            backoff_seconds = self.network_failure_count
+        else:
+            backoff_seconds = 5
+        self.backoff_until = current_time + backoff_seconds
+
+        # Reduce log spam: only log every 10th error after first few
+        should_log = (self.network_failure_count <= 3 or
+                     self.network_failure_count % 10 == 0)
+
+        if should_log:
+            if self.network_failure_count == 1:
+                logging.error("Cannot process %s: %s", self.url, error)
+            else:
+                logging.error("Cannot process %s: %s (failure #%d, backing off for %ds)",
+                            self.url, error, self.network_failure_count, backoff_seconds)
+
+    def _extract_track_from_page(self, page) -> str | None:
+        ''' Extract track information from the page '''
         try:
             tree = lxml.html.fromstring(page.text)
-            track_text = None
-
             # Try methods in order of reliability
             extraction_methods = [
                 ('JavaScript+XPath',
-                 lambda: SeratoHandler._remote_extract_by_js_id(page.text, tree)),
+                 lambda: self._remote_extract_by_js_id(page.text, tree)),
                 ('Positional XPath', lambda: SeratoHandler._remote_extract_by_position(tree)),
                 ('Pattern matching', lambda: SeratoHandler._remote_extract_by_pattern(tree)),
                 ('Text search', lambda: SeratoHandler._remote_extract_by_text_search(tree))
@@ -610,19 +668,25 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             for method_name, method_func in extraction_methods:
                 try:
                     if track_text := method_func():
-                        logging.debug("Successfully extracted track using: %s", method_name)
-                        break
+                        # Only log when track or method changes to reduce spam
+                        if (track_text != self.last_extracted_track or
+                            method_name != self.last_extraction_method):
+                            logging.debug("Successfully extracted track using: %s", method_name)
+                            self.last_extracted_track = track_text
+                            self.last_extraction_method = method_name
+                        return track_text
                 except Exception as method_error:  # pylint: disable=broad-except
                     logging.debug("Method %s failed: %s", method_name, method_error)
                     continue
-
-            # Convert to expected list format for compatibility with existing code
-            item = [track_text] if track_text else None
-
+            return None
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Cannot process %s: %s", self.url, error)
-            return
+            return None
 
+    def _parse_and_store_track(self, track_text):
+        ''' Parse track text and store in playingadat '''
+        # Convert to expected list format for compatibility with existing code
+        item = [track_text] if track_text else None
         if not item:
             return
 
@@ -636,34 +700,33 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             self.playingadat = {}
             return
 
+        # Parse artist and title
         if ' - ' not in tdat:
             artist = None
             title = tdat.strip()
         else:
-            # artist - track
-            #
             # The only hope we have is to split on ' - ' and hope that the
             # artist/title doesn't have a similar split.
             (artist, title) = tdat.split(' - ', 1)
 
+        # Clean up artist
         if not artist or artist == '.':
             artist = None
         else:
             artist = artist.strip()
 
-        self.playingadat['artist'] = artist
-
+        # Clean up title
         if not title or title == '.':
             title = None
         else:
             title = title.strip()
 
+        # Store the results
+        self.playingadat['artist'] = artist
         self.playingadat['title'] = title
 
         if not title and not artist:
             self.playingadat = {}
-
-        return
 
     def _get_tidal_cover(self, filename):
         ''' try to get the cover from tidal '''
@@ -737,12 +800,19 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
     def __init__(self, config=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Serato"
-        self.url = None
+        self.url: str|None = None
         self.libpath = None
         self.local = True
         self.serato = None
         self.mixmode = "newest"
         self.testmode = False
+        # Network failure tracking for circuit breaker pattern
+        self.network_failure_count = 0
+        self.last_network_failure_time = 0
+        self.backoff_until: int = 0
+        # Track last extracted track to reduce success log spam
+        self.last_extracted_track = None
+        self.last_extraction_method = None
 
     def install(self):
         ''' auto-install for Serato '''
@@ -764,7 +834,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
         # now configured as remote!
         if not stilllocal:
-            stillurl = self.config.cparser.value('serato/url')
+            stillurl: str = self.config.cparser.value('serato/url')
 
             # if previously remote and same URL, do nothing
             if not self.local and self.url == stillurl:
@@ -835,7 +905,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             return self.serato.getplayingtrack(deckskiplist=deckskip)
         return {}
 
-    async def getrandomtrack(self, playlist):
+    async def getrandomtrack(self, playlist:str) -> str|None:
         ''' Get the files associated with a playlist, crate, whatever '''
 
         libpath = self.config.cparser.value('serato/libpath')
@@ -859,8 +929,9 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
         crate = SeratoCrateReader(playlistfile)
         await crate.loadcrate()
-        filelist = crate.getfilenames()
-        return filelist[random.randrange(len(filelist))]
+        if filelist := crate.getfilenames():
+            return filelist[random.randrange(len(filelist))]
+        return None
 
     def defaults(self, qsettings):
         qsettings.setValue(
