@@ -7,8 +7,6 @@ Discord support code
 
 import asyncio
 import logging
-import logging.config
-import logging.handlers
 import os
 import signal
 import sys
@@ -23,6 +21,8 @@ import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
 import nowplaying.utils
+
+
 
 
 class DiscordSupport:
@@ -56,7 +56,8 @@ class DiscordSupport:
         task = loop.create_task(self.client['bot'].connect(reconnect=True))
         self.tasks.add(task)
         task.add_done_callback(self.tasks.discard)
-        while not self.stopevent.is_set() and not self.client['bot'].is_ready():
+        while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and
+               not self.client['bot'].is_ready()):
             await asyncio.sleep(1)
         logging.debug('bot setup')
 

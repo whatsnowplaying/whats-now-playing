@@ -1,5 +1,11 @@
+
 #!/usr/bin/env python3
 ''' test utils not covered elsewhere '''
+
+
+from unittest.mock import Mock
+
+import pytest
 
 import nowplaying.utils  # pylint: disable=import-error
 
@@ -63,199 +69,121 @@ def test_songsubst_towindows(bootstrap):
     assert location == 'Z:\\Music\\Band\\Song'
 
 
-def test_basicstrip_explicitdash():
-    ''' automated integration test '''
-    metadata = {'title': 'Test - Explicit'}
+@pytest.mark.parametrize("input_title,expected_clean_title", [
+    ('Test - Explicit', 'Test'),
+    ('Test - Dirty', 'Test'),
+    ('Test - Clean', 'Test'),
+    ('Clean', 'Clean'),
+    ('Test (Clean)', 'Test'),
+    ('Test [Clean]', 'Test'),
+    ('Test (Clean) (Single Mix)', 'Test (Single Mix)'),
+    ('Test (Clean) (Official Music Video)', 'Test'),
+    ('Test (Clean) [official music video]', 'Test'),
+    ('Clean [official music video]', 'Clean'),
+    ('Clean - Clean', 'Clean'),
+    ('Clean - Official Music Video', 'Clean'),
+])
+def test_basicstrip_parameterized(input_title, expected_clean_title):
+    ''' Test title stripping with various patterns '''
+    metadata = {'title': input_title}
     title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
-    assert metadata['title'] == 'Test - Explicit'
-    assert title == 'Test'
+    assert metadata['title'] == input_title  # Original unchanged
+    assert title == expected_clean_title
 
 
-def test_basicstrip_dirtydash():
-    ''' automated integration test '''
-    metadata = {'title': 'Test - Dirty'}
-    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
-    assert metadata['title'] == 'Test - Dirty'
-    assert title == 'Test'
-
-
-def test_basicstrip_cleandash():
-    ''' automated integration test '''
-    metadata = {'title': 'Test - Clean'}
-    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
-    assert metadata['title'] == 'Test - Clean'
-    assert title == 'Test'
-
-
-def test_basicstrip_noclean():
-    ''' automated integration test '''
-    metadata = {'title': 'Clean'}
-    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
-    assert metadata['title'] == 'Clean'
-    assert title == 'Clean'
-
-
-def test_basicstrip_cleanparens():
-    ''' automated integration test '''
-    metadata = {'title': 'Test (Clean)'}
-    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
-    assert metadata['title'] == 'Test (Clean)'
-    assert title == 'Test'
-
-
-def test_basicstrip_cleansquareb():
-    ''' automated integration test '''
-    metadata = {'title': 'Test [Clean]'}
-    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
-    assert metadata['title'] == 'Test [Clean]'
-    assert title == 'Test'
-
-
-def test_basicstrip_cleanextraparens():
-    ''' automated integration test '''
-    metadata = {'title': 'Test (Clean) (Single Mix)'}
-    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
-    assert metadata['title'] == 'Test (Clean) (Single Mix)'
-    assert title == 'Test (Single Mix)'
-
-
-def test_basicstrip_ovm1():
-    ''' automated integration test '''
-    metadata = {'title': 'Test (Clean) (Official Music Video)'}
-    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
-    assert metadata['title'] == 'Test (Clean) (Official Music Video)'
-    assert title == 'Test'
-
-
-def test_basicstrip_ovm2():
-    ''' automated integration test '''
-    metadata = {'title': 'Test (Clean) [official music video]'}
-    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
-    assert metadata['title'] == 'Test (Clean) [official music video]'
-    assert title == 'Test'
-
-
-def test_basicstrip_ovm3():
-    ''' automated integration test '''
-    metadata = {'title': 'Clean [official music video]'}
-    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
-    assert metadata['title'] == 'Clean [official music video]'
-    assert title == 'Clean'
-
-
-def test_basicstrip_doubleclean():
-    ''' automated integration test '''
-    metadata = {'title': 'Clean - Clean'}
-    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
-    assert metadata['title'] == 'Clean - Clean'
-    assert title == 'Clean'
-
-
-def test_basicstrip_ovm4():
-    ''' automated integration test '''
-    metadata = {'title': 'Clean - Official Music Video'}
-    title = nowplaying.utils.titlestripper_basic(title=metadata['title'])
-    assert metadata['title'] == 'Clean - Official Music Video'
-    assert title == 'Clean'
-
-
-def test_image2png(getroot):
-    ''' check png image conversion '''
+@pytest.mark.parametrize("conversion_func,expected_header,format_name", [
+    (nowplaying.utils.image2png, b'\211PNG\r\n\032\n', 'PNG'),
+    (nowplaying.utils.image2avif, b'\x00\x00\x00 ftypavif', 'AVIF'),
+])
+def test_image_conversion_parameterized(getroot, conversion_func, expected_header, format_name):
+    ''' Test image conversion to different formats '''
     filename = getroot.joinpath('tests', 'images', '1x1.jpg')
     with open(filename, 'rb') as fhin:
         image = fhin.read()
 
-    pngdata = nowplaying.utils.image2png(image)
+    # Convert image to target format
+    converted_data = conversion_func(image)
+    assert converted_data.startswith(expected_header), \
+        f"Converted {format_name} should have correct header"
 
-    pngdata2 = nowplaying.utils.image2png(pngdata)
-    assert pngdata.startswith(b'\211PNG\r\n\032\n')
-    assert pngdata2 == pngdata
-
-
-def test_image2avif(getroot):
-    ''' check png image conversion '''
-    filename = getroot.joinpath('tests', 'images', '1x1.jpg')
-    with open(filename, 'rb') as fhin:
-        image = fhin.read()
-
-    avifdata = nowplaying.utils.image2avif(image)
-    avifdata2 = nowplaying.utils.image2avif(avifdata)
-    assert avifdata.startswith(b'\x00\x00\x00 ftypavif')
-    assert avifdata2 == avifdata
+    # Convert again (should be idempotent)
+    converted_data2 = conversion_func(converted_data)
+    assert converted_data2 == converted_data, \
+        f"Re-converting {format_name} should be idempotent"
 
 
-def test_artist_variations1():
-    ''' verify artist variation '''
-    namelist = nowplaying.utils.artist_name_variations("The Call")
-    assert namelist[0] == "the call"
-    assert namelist[1] == "call"
-    assert len(namelist) == 2
+@pytest.mark.parametrize("artist_name,expected_variations", [
+    ("The Call", ["the call", "call"]),
+    ("Prince", ["prince"]),
+    ("Presidents of the United States of America",
+     ["presidents of the united states of america"]),
+    ("Grimes feat Janelle Monáe",
+     ["grimes feat janelle monáe", "grimes feat janelle monae", "grimes"]),
+    ("G feat J and featuring U", ["g feat j and featuring u", "g"]),
+    ("MӨЯIS BLΛK feat. grabyourface",
+     ["mөяis blλk feat. grabyourface", "moris blak feat. grabyourface",
+      "mөяis blλk feat grabyourface", "moris blak feat grabyourface",
+      "mөяis blλk", "moris blak"]),
+    ("†HR33ΔM", ["†hr33δm", "thr33am", "hr33δm", "hr33am"]),
+    ("Ultra Naté", ["ultra naté", "ultra nate"]),
+    ("A★Teens", ["a★teens", "a teens"]),  # less than ideal
+])
+def test_artist_variations_parameterized(artist_name, expected_variations):
+    ''' Test artist name variations generation '''
+    namelist = nowplaying.utils.artist_name_variations(artist_name)
+    assert len(namelist) == len(expected_variations)
+    for i, expected in enumerate(expected_variations):
+        assert namelist[i] == expected
 
 
-def test_artist_variations2():
-    ''' verify artist variation '''
-    namelist = nowplaying.utils.artist_name_variations("Prince")
-    assert namelist[0] == "prince"
-    assert len(namelist) == 1
+def test_safe_stopevent_check_normal():
+    ''' Test safe_stopevent_check with normal stopevent behavior '''
+    # Test normal case - stopevent not set
+    mock_stopevent = Mock()
+    mock_stopevent.is_set.return_value = False
+    assert nowplaying.utils.safe_stopevent_check(mock_stopevent) is False
+
+    # Test normal case - stopevent is set
+    mock_stopevent.is_set.return_value = True
+    assert nowplaying.utils.safe_stopevent_check(mock_stopevent) is True
 
 
-def test_artist_variations3():
-    ''' verify artist variation '''
-    namelist = nowplaying.utils.artist_name_variations("Presidents of the United States of America")
-    assert namelist[0] == "presidents of the united states of america"
-    assert len(namelist) == 1
+@pytest.mark.parametrize("exception_type,error_message,expected_description", [
+    (BrokenPipeError, "The pipe is being closed", "BrokenPipeError"),
+    (EOFError, "EOF error", "EOFError"),
+    (OSError, "OS error", "OSError"),
+])
+def test_safe_stopevent_check_windows_shutdown_errors(exception_type, error_message,
+                                                      expected_description):
+    ''' Test safe_stopevent_check handles Windows shutdown pipe errors gracefully '''
+    mock_stopevent = Mock()
+    mock_stopevent.is_set.side_effect = exception_type(error_message)
+    result = nowplaying.utils.safe_stopevent_check(mock_stopevent)
+    assert result is True, f"{expected_description} should be treated as stop requested"
 
 
-def test_artist_variations4():
-    ''' verify artist variation '''
-    namelist = nowplaying.utils.artist_name_variations("Grimes feat Janelle Monáe")
-    assert namelist[0] == "grimes feat janelle monáe"
-    assert namelist[1] == "grimes feat janelle monae"
-    assert namelist[2] == "grimes"
-    assert len(namelist) == 3
+def test_safe_stopevent_check_windows_specific():
+    ''' Test safe_stopevent_check specifically simulates Windows [WinError 232] scenario '''
+    # This simulates the exact Windows error: BrokenPipeError [WinError 232]
+    mock_stopevent = Mock()
+
+    # Create a more realistic Windows BrokenPipeError
+    windows_error = BrokenPipeError(232, "The pipe is being closed")
+    mock_stopevent.is_set.side_effect = windows_error
+
+    result = nowplaying.utils.safe_stopevent_check(mock_stopevent)
+    assert result is True, "Windows BrokenPipeError [WinError 232] should be handled gracefully"
+
+    # Verify the mock was called (showing the function tried to check stopevent)
+    mock_stopevent.is_set.assert_called_once()
 
 
-def test_artist_variations5():
-    ''' verify artist variation '''
-    namelist = nowplaying.utils.artist_name_variations("G feat J and featuring U")
-    assert namelist[0] == "g feat j and featuring u"
-    assert namelist[1] == "g"
-    assert len(namelist) == 2
+def test_safe_stopevent_check_preserves_other_exceptions():
+    ''' Test that safe_stopevent_check only catches OS-level shutdown errors '''
+    mock_stopevent = Mock()
 
+    # Test that non-OS exceptions are not caught (they should propagate)
+    mock_stopevent.is_set.side_effect = ValueError("Some other error")
 
-def test_artist_variations6():
-    ''' verify artist variation '''
-    namelist = nowplaying.utils.artist_name_variations("MӨЯIS BLΛK feat. grabyourface")
-    assert namelist[0] == "mөяis blλk feat. grabyourface"
-    assert namelist[1] == "moris blak feat. grabyourface"
-    assert namelist[2] == "mөяis blλk feat grabyourface"
-    assert namelist[3] == "moris blak feat grabyourface"
-    assert namelist[4] == "mөяis blλk"
-    assert namelist[5] == "moris blak"
-    assert len(namelist) == 6
-
-
-def test_artist_variations7():
-    ''' verify artist variation '''
-    namelist = nowplaying.utils.artist_name_variations("†HR33ΔM")
-    assert namelist[0] == "†hr33δm"
-    assert namelist[1] == "thr33am"
-    assert namelist[2] == "hr33δm"
-    assert namelist[3] == "hr33am"
-    assert len(namelist) == 4
-
-
-def test_artist_variations8():
-    ''' verify artist variation '''
-    namelist = nowplaying.utils.artist_name_variations("Ultra Naté")
-    assert namelist[0] == "ultra naté"
-    assert namelist[1] == "ultra nate"
-    assert len(namelist) == 2
-
-
-def test_artist_variations9():
-    ''' verify artist variation '''
-    namelist = nowplaying.utils.artist_name_variations("A★Teens")
-    assert namelist[0] == "a★teens"
-    assert namelist[1] == "a teens"  # less than ideal
-    assert len(namelist) == 2
+    with pytest.raises(ValueError, match="Some other error"):
+        nowplaying.utils.safe_stopevent_check(mock_stopevent)

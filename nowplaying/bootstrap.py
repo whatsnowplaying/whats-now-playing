@@ -26,7 +26,7 @@ def verify_python_version():
 def already_running():
     ''' errorbox if app is already running '''
     msgbox = QErrorMessage()
-    msgbox.showMessage("What's Now Playing appears to be already running.")
+    msgbox.showMessage("What's Now Playing appears to be already running or still shutting down.")
     msgbox.show()
     msgbox.exec()
 

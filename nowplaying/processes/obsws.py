@@ -24,6 +24,8 @@ import nowplaying.frozen
 import nowplaying.utils
 
 
+
+
 class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
     ''' Talk to OBS directly via WebSocket '''
 
@@ -54,7 +56,7 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
         ''' run the web client '''
 
         lasttext = None
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             if not self.updateevent.is_set():
                 await asyncio.sleep(1)
                 continue

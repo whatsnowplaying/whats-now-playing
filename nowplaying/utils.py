@@ -44,6 +44,31 @@ CUSTOM_TRANSLATE = str.maketrans(MISSED_TRANSLITERAL + MISSED_TRANSLITERAL.lower
                                  REPLACED_CHARACTERS + REPLACED_CHARACTERS.lower())
 
 
+def safe_stopevent_check(stopevent):
+    """
+    Safely check if stopevent is set, handling shutdown pipe errors.
+    Returns True if stopevent is set OR if pipe is broken (indicating shutdown).
+
+    This fixes Windows shutdown errors where multiprocessing.Manager() closes
+    pipes before subprocesses finish, causing BrokenPipeError when accessing
+    managed Event objects.
+    """
+    try:
+        return stopevent.is_set()
+    except (BrokenPipeError, EOFError):
+        # Expected shutdown errors - pipe closed before subprocess finished
+        logging.debug("Shutdown pipe error detected, treating as stop signal")
+        return True
+    except OSError as error:
+        # Log details for analysis of unexpected OSErrors in production
+        error_details = f"errno={getattr(error, 'errno', 'N/A')}"
+        if hasattr(error, 'winerror'):
+            error_details += f", winerror={error.winerror}"
+        logging.info("OSError in stopevent check (%s): %s - treating as stop signal",
+                    error_details, error)
+        return True
+
+
 class HTMLFilter(HTMLParser):
     ''' simple class to strip HTML '''
 

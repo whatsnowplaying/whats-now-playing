@@ -8,6 +8,9 @@ import signal
 import nowplaying.twitch.chat
 #import nowplaying.twitch.redemptions
 import nowplaying.twitch.utils
+import nowplaying.utils
+
+
 
 
 class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
@@ -50,7 +53,7 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
         #    task.add_done_callback(self.tasks.discard)
 
     async def _watch_for_exit(self):
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(1)
         await self.stop()
 

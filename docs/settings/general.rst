@@ -27,6 +27,19 @@ General
   **Logging Level** - By default, **What's Now Playing** will write debug logs into your Documents/NowPlaying/Logs directory.
   This option lets you control the level of logging.
 
+*
+  **Configuration Backup** - Export and import your complete configuration to make version upgrades easier.
+
+  * **Export Configuration** - Saves all your settings to a JSON file. This includes API keys, passwords, file paths, and all plugin configurations. ⚠️ **Security Warning**: The exported file contains sensitive data including API keys and passwords. Store it securely and do not share it.
+
+  * **Import Configuration** - Restores settings from a previously exported JSON file. This will overwrite your current settings. Cache and runtime settings are automatically excluded and rebuilt.
+
+  * **Use Cases**:
+    - Back up settings before major version upgrades
+    - Transfer settings between installations
+    - Restore settings after a fresh install
+    - Recover from configuration corruption
+
 At the bottom of every page will be the "Reset", "Cancel", and "Save" buttons:
 
 *
