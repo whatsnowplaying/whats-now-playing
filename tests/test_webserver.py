@@ -104,9 +104,10 @@ def shared_webserver_config(pytestconfig):    # pylint: disable=redefined-outer-
                 manager = nowplaying.subprocesses.SubprocessManager(config=config, testmode=True)
                 manager.start_webserver()
 
-                # Poll webserver until ready instead of fixed sleep
-                max_attempts = 50  # 5 seconds with 0.1s intervals
-                for _ in range(max_attempts):
+                # Poll webserver until ready with time-based deadline for accurate timeout
+                timeout = 10.0  # 10 seconds for webserver startup
+                start_time = time.time()
+                while time.time() - start_time < timeout:
                     with contextlib.suppress(requests.exceptions.RequestException,
                                              requests.exceptions.ConnectionError):
                         req = requests.get(f'http://localhost:{port}/internals', timeout=2)
@@ -115,7 +116,7 @@ def shared_webserver_config(pytestconfig):    # pylint: disable=redefined-outer-
                             break
                     time.sleep(0.1)
                 else:
-                    raise RuntimeError(f"Webserver on port {port} failed to start within 5 seconds")
+                    raise RuntimeError(f"Webserver on port {port} failed to start within {timeout} seconds")
 
                 # Store the actual port since config gets cleared by autouse fixtures
                 yield config, metadb, manager, port

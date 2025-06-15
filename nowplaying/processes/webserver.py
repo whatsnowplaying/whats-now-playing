@@ -58,6 +58,7 @@ METADB_KEY = web.AppKey("metadb", nowplaying.db.MetadataDB)
 WS_KEY = web.AppKey("websockets", weakref.WeakSet)
 IC_KEY = web.AppKey("imagecache", nowplaying.imagecache.ImageCache)
 WATCHER_KEY = web.AppKey("watcher", nowplaying.db.DBWatcher)
+JINJA2_KEY = web.AppKey("jinja2_env", jinja2.Environment)
 
 
 class WebHandler():  # pylint: disable=too-many-public-methods
@@ -476,19 +477,12 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         # Get config for template loading and refresh it to pick up test changes
         config = request.app[CONFIG_KEY]
         config.get()
-        template_dir = config.getbundledir().joinpath('templates', 'oauth')
-
-        # Set up Jinja2 environment for OAuth templates with proper autoescape
-        jinja2_env = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(template_dir),
-            autoescape=jinja2.select_autoescape(['htm', 'html', 'xml']),
-            trim_blocks=True
-        )
 
         def load_oauth_template(template_name: str, **kwargs) -> str:
             """Load and render an OAuth template with variables using Jinja2"""
             try:
-                template = jinja2_env.get_template(template_name)
+                # Use the shared Jinja2 environment and reference oauth subdirectory
+                template = request.app[JINJA2_KEY].get_template(f'oauth/{template_name}')
                 return template.render(**kwargs)
             except jinja2.TemplateNotFound:
                 logging.error('OAuth template not found: %s', template_name)
@@ -637,6 +631,15 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                              'lastid INTEGER '
                              ')')
         await app['statedb'].commit()
+
+        # Set up Jinja2 environment for templates with proper autoescape (initialized once)
+        template_dir = app[CONFIG_KEY].getbundledir().joinpath('templates')
+        app[JINJA2_KEY] = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(str(template_dir)),
+            autoescape=jinja2.select_autoescape(['htm', 'html', 'xml']),
+            trim_blocks=True,
+            undefined=jinja2.StrictUndefined
+        )
 
     @staticmethod
     async def on_shutdown(app):
