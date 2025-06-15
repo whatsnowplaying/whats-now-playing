@@ -221,6 +221,8 @@ class Plugin(RecognitionPlugin):
                             newdata['musicbrainzrecordingid'] = rid
                         if artistidlist:
                             newdata['musicbrainzartistid'] = artistidlist
+                        if release.get('id'):
+                            newdata['musicbrainzalbumid'] = [release['id']]
                         lastscore = score
 
         for key, value in newdata.items():
