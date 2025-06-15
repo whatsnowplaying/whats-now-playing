@@ -48,6 +48,7 @@
 
 * TCP connection handling and timeout management across network components
 * Artist name processing with proper join phrase handling for multi-artist tracks
+* Discord bot refactored with better resource cleanup and MusicBrainz cover art support
 * Release date calculations for more accurate original release dates
 * Metadata extraction from various audio file formats
 * Error handling for external API failures
