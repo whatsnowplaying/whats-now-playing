@@ -6,7 +6,6 @@ import logging
 import os
 import pathlib
 import socket
-import sys
 import tempfile
 import time
 import unittest.mock
@@ -73,24 +72,13 @@ def shared_webserver_config(pytestconfig):  # pylint: disable=redefined-outer-na
                 yield config, metadb, manager, port
 
                 manager.stop_all_processes()
-                # Give Windows more time for process shutdown and cleanup
-                time.sleep(5)
+                time.sleep(2)
 
-                # Explicitly close database connections on Windows
-                if sys.platform == "win32":
-                    try:
-                        metadb.close_connection()
-                    except (AttributeError, Exception):  # pylint: disable=broad-exception-caught
-                        pass  # Database might already be closed
-                    # Give Windows extra time to release file handles
-                    time.sleep(5)
-                else:
-                    # Try to vacuum database, but handle file locking gracefully
-                    try:
-                        metadb.vacuum_database()
-                    except Exception as error: # pylint: disable=broad-exception-caught
-                        logging.warning("Could not vacuum database during cleanup: %s", error)
-                    time.sleep(1)
+                # Try to vacuum database, but handle file locking gracefully
+                try:
+                    metadb.vacuum_database()
+                except Exception as error: # pylint: disable=broad-exception-caught
+                    logging.warning("Could not vacuum database during cleanup: %s", error)
                 dbinit_mock.stop()
 
 
