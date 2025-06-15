@@ -78,14 +78,22 @@ def shared_webserver_config(pytestconfig):  # pylint: disable=redefined-outer-na
                 manager.stop_all_processes()
                 # Give Windows more time for process shutdown and cleanup
                 time.sleep(5)
-                # Don't vacuum on Windows - causes file locking issues in tests
-                if sys.platform != "win32":
+
+                # Explicitly close database connections on Windows
+                if sys.platform == "win32":
+                    try:
+                        metadb.close_connection()
+                    except (AttributeError, Exception):  # pylint: disable=broad-exception-caught
+                        pass  # Database might already be closed
+                    # Give Windows extra time to release file handles
+                    time.sleep(5)
+                else:
+                    # Don't vacuum on Windows - causes file locking issues in tests
                     try:
                         metadb.vacuum_database()
                     except Exception as error: # pylint: disable=broad-exception-caught
                         logging.warning("Could not vacuum database during cleanup: %s", error)
-                # Give Windows additional time to release file handles
-                time.sleep(2)
+                    time.sleep(2)
                 dbinit_mock.stop()
 
 
@@ -115,9 +123,14 @@ async def getwebserver(shared_webserver_config):  # pylint: disable=redefined-ou
 
     # Stop the webserver again for next test
     manager.stop_all_processes()
-    # Give Windows time to release resources between tests
+
+    # Explicitly close database connection on Windows to prevent file locking
     if sys.platform == "win32":
-        await asyncio.sleep(3)
+        try:
+            metadb.close_connection()
+        except (AttributeError, Exception):  # pylint: disable=broad-exception-caught
+            pass  # Database might already be closed
+        await asyncio.sleep(5)  # Increased delay for Windows
     else:
         await asyncio.sleep(1)
 
