@@ -14,7 +14,6 @@ import sys
 import textwrap
 import typing as t
 
-import nltk
 import tinytag
 import url_normalize
 
@@ -388,7 +387,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     await asyncio.gather(*remaining_tasks, return_exceptions=True)
                 except Exception as cleanup_error:  # pylint: disable=broad-except
                     logging.error('Exception during task cleanup in exception handler: %s',
-                                      cleanup_error)
+                                  cleanup_error)
 
     def _generate_short_bio(self):
         if not self.metadata:
@@ -399,7 +398,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         message = message.replace('\r', ' ')
         message = str(message).strip()
         text = textwrap.TextWrapper(width=450).wrap(message)[0]
-        tokens = nltk.sent_tokenize(text)
+        tokens = nowplaying.utils.tokenize_sentences(text)
 
         nonotes = [sent for sent in tokens if not NOTE_RE.match(sent)]
         tokens = nonotes

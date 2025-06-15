@@ -5,7 +5,6 @@ Driver for the Twitch support code
 
 '''
 
-
 import contextlib
 import logging
 import os

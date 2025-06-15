@@ -90,6 +90,40 @@ class Version:
 
         return False
 
+    def __le__(self, other):
+        ''' version less than or equal '''
+        return self == other or self < other
+
+    def __eq__(self, other):
+        ''' version equality '''
+        if not isinstance(other, Version):
+            return False
+        return (self.chunk.get('major') == other.chunk.get('major') and
+                self.chunk.get('minor') == other.chunk.get('minor') and
+                self.chunk.get('micro') == other.chunk.get('micro') and
+                self.chunk.get('rc') == other.chunk.get('rc') and
+                self.chunk.get('commitnum') == other.chunk.get('commitnum'))
+
+    def __ne__(self, other):
+        ''' version not equal '''
+        return not self == other
+
+    def __hash__(self):
+        ''' version hash '''
+        return hash((self.chunk.get('major'),
+                     self.chunk.get('minor'),
+                     self.chunk.get('micro'),
+                     self.chunk.get('rc'),
+                     self.chunk.get('commitnum')))
+
+    def __gt__(self, other):
+        ''' version greater than '''
+        return not (self < other or self == other)
+
+    def __ge__(self, other):
+        ''' version greater than or equal '''
+        return self == other or self > other
+
 
 class UpgradeBinary:
     ''' routines to determine if the binary is out of date '''

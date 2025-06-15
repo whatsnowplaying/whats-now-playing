@@ -245,13 +245,26 @@ class UpgradeTemplates():
         ''' copy templates to either existing or as a new one '''
 
         self.preload()
+        self._process_template_directory(self.apptemplatedir, self.usertemplatedir)
 
-        for apppath in pathlib.Path(self.apptemplatedir).iterdir():
-            userpath = self.usertemplatedir.joinpath(apppath.name)
+    def _process_template_directory(self, app_dir, user_dir):
+        ''' recursively process template directories '''
+
+        for apppath in pathlib.Path(app_dir).iterdir():
+            if apppath.is_dir():
+                # Handle subdirectories recursively
+                user_subdir = user_dir / apppath.name
+                user_subdir.mkdir(parents=True, exist_ok=True)
+                self._process_template_directory(apppath, user_subdir)
+                continue
+
+            userpath = user_dir / apppath.name
 
             if not userpath.exists():
                 shutil.copyfile(apppath, userpath)
-                logging.info('Added %s to %s', apppath.name, self.usertemplatedir)
+                # Use relative path for logging
+                relative_path = apppath.relative_to(self.apptemplatedir)
+                logging.info('Added %s to %s', relative_path, user_dir)
                 continue
 
             apphash = checksum(apppath)
@@ -260,11 +273,12 @@ class UpgradeTemplates():
             if apphash == userhash:
                 continue
 
-            if version := self.check_preload(apppath.name, userhash):
+            # Use relative path for hash lookup
+            relative_path = apppath.relative_to(self.apptemplatedir)
+            if version := self.check_preload(str(relative_path), userhash):
                 userpath.unlink()
                 shutil.copyfile(apppath, userpath)
-                logging.info('Replaced %s from %s with %s', apppath.name, version,
-                             self.usertemplatedir)
+                logging.info('Replaced %s from %s with %s', relative_path, version, user_dir)
                 continue
 
             destpath = userpath.with_suffix('.new')
@@ -275,9 +289,9 @@ class UpgradeTemplates():
                 destpath.unlink()
 
             self.alert = True
-            logging.info('New version of %s copied to %s', apppath.name, destpath)
+            logging.info('New version of %s copied to %s', relative_path, destpath)
             shutil.copyfile(apppath, destpath)
-            self.copied.append(apppath.name)
+            self.copied.append(str(relative_path))
 
 
 def upgrade_m3u(config, testdir=None):

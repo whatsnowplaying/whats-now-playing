@@ -18,7 +18,7 @@ class SubprocessManager:
         if self.config.cparser.value('control/beam', type=bool):
             processlist = ['trackpoll', 'beamsender']
         else:
-            processlist = ['trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver']
+            processlist = ['trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver', 'kickbot']
 
         for name in processlist:
             self.processes[name] = {
@@ -32,8 +32,7 @@ class SubprocessManager:
 
         for key, module in self.processes.items():
             module['stopevent'].clear()
-            func = getattr(self, f'start_{key}')
-            func()
+            self.start_process(key)
 
     def stop_all_processes(self):
         ''' stop all the subprocesses '''
@@ -44,13 +43,12 @@ class SubprocessManager:
                 module['stopevent'].set()
 
         for key in self.processes:
-            func = getattr(self, f'stop_{key}')
-            func()
+            self.stop_process(key)
 
         if not self.config.cparser.value('control/beam', type=bool):
-            self.stop_obsws()
+            self.stop_process('obsws')
 
-    def _process_start(self, processname):
+    def _start_process(self, processname):
         ''' Start trackpoll '''
         if not self.processes[processname]['process']:
             logging.info('Starting %s', processname)
@@ -65,7 +63,7 @@ class SubprocessManager:
                 ))
             self.processes[processname]['process'].start()
 
-    def _process_stop(self, processname):
+    def _stop_process(self, processname):
         if self.processes[processname]['process']:
             logging.debug('Notifying %s', processname)
             self.processes[processname]['stopevent'].set()
@@ -84,77 +82,60 @@ class SubprocessManager:
             self.processes[processname]['process'] = None
         logging.debug('%s should be stopped', processname)
 
-    def start_discordbot(self):
-        ''' Start discordbot '''
-        self._process_start('discordbot')
+    def start_process(self, processname):
+        ''' Start a specific process '''
+        if processname == 'twitchbot' and not self.config.cparser.value('twitchbot/enabled',
+                                                                         type=bool):
+            return
+        if processname == 'webserver' and not self.config.cparser.value('weboutput/httpenabled',
+                                                                         type=bool):
+            return
+        if (processname == 'kickbot' and
+                not (self.config.cparser.value('kick/enabled', type=bool) and
+                     self.config.cparser.value('kick/chat', type=bool))):
+            return
+        if processname == 'obsws' and not self.config.cparser.value('obsws/enabled', type=bool):
+            return
+        if processname == 'discordbot' and not self.config.cparser.value('discord/enabled',
+                                                                          type=bool):
+            return
+        # trackpoll always starts - it's the core monitoring process
+        self._start_process(processname)
 
-    def stop_discordbot(self):
-        ''' stop discordbot '''
-        self._process_stop('discordbot')
+    def stop_process(self, processname):
+        ''' Stop a specific process '''
+        self._stop_process(processname)
 
-    def start_beamsender(self):
-        ''' Start beamsender '''
-        self._process_start('beamsender')
+    def restart_process(self, processname):
+        ''' Restart a specific process '''
+        self.stop_process(processname)
+        self.start_process(processname)
 
-    def stop_beamsender(self):
-        ''' stop beamsender '''
-        self._process_stop('beamsender')
-
-    def start_obsws(self):
-        ''' Start obsws '''
-        self._process_start('obsws')
-
-    def stop_obsws(self):
-        ''' stop obsws '''
-        self._process_stop('obsws')
-
-    def start_trackpoll(self):
-        ''' Start trackpoll '''
-        self._process_start('trackpoll')
-
-    def stop_trackpoll(self):
-        ''' stop trackpoll '''
-        self._process_stop('trackpoll')
-
-    def start_twitchbot(self):
-        ''' Start the twitchbot '''
-        if self.config.cparser.value('twitchbot/enabled', type=bool):
-            self._process_start('twitchbot')
-
-    def stop_twitchbot(self):
-        ''' stop the twitchbot process '''
-        self._process_stop('twitchbot')
-
+    # Legacy methods for backward compatibility
     def start_webserver(self):
         ''' Start the webserver '''
-        if self.config.cparser.value('weboutput/httpenabled', type=bool):
-            self._process_start('webserver')
+        self.start_process('webserver')
 
     def stop_webserver(self):
-        ''' stop the web process '''
-        self._process_stop('webserver')
+        ''' Stop the webserver '''
+        self.stop_process('webserver')
 
-    def restart_discordbot(self):
-        ''' handle starting or restarting the discordbot process '''
-        self.stop_discordbot()
-        self.start_discordbot()
+    def stop_twitchbot(self):
+        ''' Stop the twitchbot '''
+        self.stop_process('twitchbot')
 
-    def restart_obsws(self):
-        ''' handle starting or restarting the obsws process '''
-        self.stop_obsws()
-        self.start_obsws()
-
-    def restart_trackpoll(self):
-        ''' handle starting or restarting the trackpoll process '''
-        self.stop_trackpoll()
-        self.start_trackpoll()
+    def stop_kickbot(self):
+        ''' Stop the kickbot '''
+        self.stop_process('kickbot')
 
     def restart_webserver(self):
-        ''' handle starting or restarting the webserver process '''
-        self.stop_webserver()
-        self.start_webserver()
+        ''' Restart the webserver process '''
+        self.restart_process('webserver')
 
-    def restart_twitchbot(self):
-        ''' handle starting or restarting the twitchbot process '''
-        self.stop_twitchbot()
-        self.start_twitchbot()
+    def restart_obsws(self):
+        ''' Restart the obsws process '''
+        self.restart_process('obsws')
+
+    def restart_kickbot(self):
+        ''' Restart the kickbot process '''
+        self.restart_process('kickbot')

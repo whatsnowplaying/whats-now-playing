@@ -22,6 +22,12 @@ class MockSubprocesses:
     def start_twitchbot(self):
         ''' mock '''
 
+    def stop_kickbot(self):
+        ''' mock '''
+
+    def start_kickbot(self):
+        ''' mock '''
+
 
 class MockTray:
     ''' mock '''

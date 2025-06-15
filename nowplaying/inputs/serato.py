@@ -571,8 +571,8 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         for track_div in track_divs[:3]:  # Check first 3 tracks
             text_content = track_div.text_content()
             # Look for "Artist - Title" pattern
-            if ((match := re.search(r'([^-\n]+)\s*-\s*([^-\n]+)', text_content)) and
-                    len(match[0].strip()) > 10):  # Reasonable length
+            if ((match := re.search(r'([^-\n]+)\s*-\s*([^-\n]+)', text_content))
+                    and len(match[0].strip()) > 10):  # Reasonable length
                 result = match[0].strip()
                 logging.debug("Method 3 success: Text pattern matching")
                 return result
@@ -584,8 +584,8 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         all_text = tree.xpath('//text()[contains(., " - ")]')
         for text in all_text:
             cleaned = text.strip()
-            if (len(cleaned) > 10 and
-                not any(skip in cleaned.lower() for skip in ['copyright', 'serato', 'playlist'])):
+            if (len(cleaned) > 10 and not any(skip in cleaned.lower()
+                                              for skip in ['copyright', 'serato', 'playlist'])):
                 logging.debug("Method 4 success: Text fallback search")
                 return cleaned
         return None

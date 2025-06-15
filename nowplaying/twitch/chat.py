@@ -34,6 +34,7 @@ import nowplaying.utils
 
 LASTANNOUNCED = {'artist': None, 'title': None}
 SPLITMESSAGETEXT = '****SPLITMESSSAGEHERE****'
+TWITCH_MESSAGE_LIMIT = 500  # Character limit for Twitch messages
 
 # needs to match ui file
 # missing premium, hype-train, artist-badge
@@ -209,10 +210,8 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         if not self.modernmeerkat_greeted and 'modernmeerkat' in msg.user.display_name.lower():
             self.modernmeerkat_greeted = True
             try:
-                await self.chat.send_message(
-                    self.config.cparser.value('twitchbot/channel'),
-                    f'hi @{msg.user.display_name}'
-                )
+                await self.chat.send_message(self.config.cparser.value('twitchbot/channel'),
+                                             f'hi @{msg.user.display_name}')
                 logging.info('Greeted modernmeerkat user: %s', msg.user.display_name)
             except Exception as error:  # pylint: disable=broad-except
                 logging.error('Failed to send modernmeerkat greeting: %s', error)
@@ -337,6 +336,12 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
     async def _setup_timer(self):
         ''' need to watch the metadata db to know to send announcement '''
+        # Prevent multiple watcher instances
+        if self.watcher is not None:
+            logging.debug('Twitch chat watcher already exists, stopping previous instance')
+            self.watcher.stop()
+            self.watcher = None
+
         self.watcher = self.metadb.watcher()
         self.watcher.start(customhandler=self._announce_track)
         await self._async_announce_track()
@@ -344,7 +349,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             await asyncio.sleep(1)
 
         logging.debug('watcher stop event received')
-        self.watcher.stop()
+        if self.watcher:
+            self.watcher.stop()
+            self.watcher = None
 
     async def _delay_write(self):
         ''' handle the twitch chat delay '''
@@ -356,6 +363,12 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             delay = 1.0
         logging.debug('got delay of %s', delay)
         await asyncio.sleep(delay)
+
+    @staticmethod
+    def _split_message_smart(message: str,
+                             max_length: int = TWITCH_MESSAGE_LIMIT) -> list[str]:
+        ''' intelligently split long messages at sentence or word boundaries '''
+        return nowplaying.utils.smart_split_message(message, max_length)
 
     def _announce_track(self, event):  #pylint: disable=unused-argument
         logging.debug('watcher event called')
@@ -469,17 +482,28 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 if not self.chat.is_connected():
                     logging.error('Twitch chat is not connected. Not sending message.')
                     return
-                if msg and self.config.cparser.value('twitchbot/usereplies', type=bool):
-                    try:
-                        await msg.reply(content)
-                    except Exception:  # pylint: disable=broad-except
-                        for line in traceback.format_exc().splitlines():
-                            logging.error(line)
+
+                # Apply smart splitting to each content piece if it's too long
+                content_parts = self._split_message_smart(content.strip())
+                if len(content_parts) > 1:
+                    logging.info('Message split into %d parts for Twitch limits',
+                                 len(content_parts))
+
+                for part in content_parts:
+                    if not part.strip():
+                        continue
+
+                    if msg and self.config.cparser.value('twitchbot/usereplies', type=bool):
+                        try:
+                            await msg.reply(part)
+                        except Exception:  # pylint: disable=broad-except
+                            for line in traceback.format_exc().splitlines():
+                                logging.error(line)
+                            await self.chat.send_message(
+                                self.config.cparser.value('twitchbot/channel'), part)
+                    else:
                         await self.chat.send_message(self.config.cparser.value('twitchbot/channel'),
-                                                     content)
-                else:
-                    await self.chat.send_message(self.config.cparser.value('twitchbot/channel'),
-                                                 content)
+                                                     part)
         except ConnectionResetError:
             logging.debug('Twitch appears to be down.  Cannot send message.')
         except Exception:  # pylint: disable=broad-except
@@ -491,6 +515,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         ''' stop the twitch chat support '''
         if self.watcher:
             self.watcher.stop()
+            self.watcher = None
         if self.chat:
             self.chat.stop()
         self.chat = None

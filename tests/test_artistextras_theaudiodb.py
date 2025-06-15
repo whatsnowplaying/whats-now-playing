@@ -6,10 +6,8 @@ import os
 
 import pytest
 
-from utils_artistextras import (
-    configureplugins, configuresettings, skip_no_theaudiodb_key,
-    run_api_call_count_test
-)
+from utils_artistextras import (configureplugins, configuresettings, skip_no_theaudiodb_key,
+                                run_api_call_count_test)
 
 
 def _setup_theaudiodb_plugin(bootstrap):
@@ -39,8 +37,8 @@ async def test_theaudiodb_artist_name_correction(bootstrap):
     if result1:  # Only test if we got data back
         # Should have corrected the artist name to proper case
         assert result1['artist'] == 'Nine Inch Nails'
-        logging.info('Artist name corrected: %s -> %s',
-                    metadata_lowercase['artist'], result1['artist'])
+        logging.info('Artist name corrected: %s -> %s', metadata_lowercase['artist'],
+                     result1['artist'])
 
     # Test 2: With MusicBrainz ID (should NOT correct artist name)
     metadata_with_mbid = {
@@ -66,10 +64,7 @@ async def test_theaudiodb_apicache_duplicate_artists(bootstrap):
 
     # Test two different searches that might return different artists with similar names
     # First search - likely to match main "Madonna"
-    metadata_madonna1 = {
-        'artist': 'Madonna',
-        'imagecacheartist': 'madonna1'
-    }
+    metadata_madonna1 = {'artist': 'Madonna', 'imagecacheartist': 'madonna1'}
 
     # Second search - variation that might match different artist
     metadata_madonna2 = {
@@ -78,16 +73,12 @@ async def test_theaudiodb_apicache_duplicate_artists(bootstrap):
     }
 
     # Test both variations - first calls hit API, second calls use cache
-    result1a = await plugin.download_async(metadata_madonna1.copy(),
-                                          imagecache=imagecache)
-    result2a = await plugin.download_async(metadata_madonna2.copy(),
-                                          imagecache=imagecache)
+    result1a = await plugin.download_async(metadata_madonna1.copy(), imagecache=imagecache)
+    result2a = await plugin.download_async(metadata_madonna2.copy(), imagecache=imagecache)
 
     # Second calls - should use cached data
-    result1b = await plugin.download_async(metadata_madonna1.copy(),
-                                          imagecache=imagecache)
-    result2b = await plugin.download_async(metadata_madonna2.copy(),
-                                          imagecache=imagecache)
+    result1b = await plugin.download_async(metadata_madonna1.copy(), imagecache=imagecache)
+    result2b = await plugin.download_async(metadata_madonna2.copy(), imagecache=imagecache)
 
     # Verify caching works for both variations
     assert (result1a is None) == (result1b is None)
@@ -107,8 +98,8 @@ async def test_theaudiodb_apicache_duplicate_artists(bootstrap):
         artist2 = result2a.get('artist', '')
 
         if artist1 and artist2 and artist1 != artist2:
-            logging.info('TheAudioDB distinguished between different artists: %s vs %s',
-                     artist1, artist2)
+            logging.info('TheAudioDB distinguished between different artists: %s vs %s', artist1,
+                         artist2)
         else:
             logging.info('TheAudioDB returned same artist for both variations')
     else:
@@ -184,8 +175,7 @@ async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
         # Verify the call pattern: MBID tried first, then fallback to name-based
         assert mbid_call_count == 1, f'Expected 1 MBID call, got {mbid_call_count}'
         assert name_call_count >= 1, (
-            f'Expected at least 1 name call (fallback), got {name_call_count}'
-        )
+            f'Expected at least 1 name call (fallback), got {name_call_count}')
 
         # Should get a result from name-based fallback with corrected artist name
         assert result is not None, 'Expected result from name-based fallback'
@@ -193,13 +183,12 @@ async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
         # If name correction feature is enabled, verify corrected artist name
         if result and result.get('artist'):
             assert result['artist'] == 'Nine Inch Nails', (
-                f'Expected corrected artist name, got {result.get("artist")}'
-            )
+                f'Expected corrected artist name, got {result.get("artist")}')
             logging.info('TheAudioDB invalid MBID fallback verified: '
-                        'MBID failed, name-based succeeded with correction')
+                         'MBID failed, name-based succeeded with correction')
         else:
             logging.info('TheAudioDB invalid MBID fallback verified: '
-                        'MBID failed, name-based search attempted')
+                         'MBID failed, name-based search attempted')
 
         # Test without any MusicBrainz ID to ensure same name-based behavior
         mbid_call_count = 0
@@ -216,11 +205,9 @@ async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
 
         # Should skip MBID and go straight to name-based search
         assert mbid_call_count == 0, (
-            f'Expected 0 MBID calls when no MBID provided, got {mbid_call_count}'
-        )
+            f'Expected 0 MBID calls when no MBID provided, got {mbid_call_count}')
         assert name_call_count >= 1, (
-            f'Expected at least 1 name call when no MBID, got {name_call_count}'
-        )
+            f'Expected at least 1 name call when no MBID, got {name_call_count}')
 
         logging.info('TheAudioDB MBID fallback behavior test completed successfully')
 
@@ -238,13 +225,9 @@ async def test_theaudiodb_api_call_count(bootstrap):
     plugin, imagecache = _setup_theaudiodb_plugin(bootstrap)
 
     # Test with a known artist
-    metadata = {
-        'artist': 'Madonna',
-        'imagecacheartist': 'madonna'
-    }
+    metadata = {'artist': 'Madonna', 'imagecacheartist': 'madonna'}
 
-    await run_api_call_count_test(
-        plugin=plugin,
-        test_metadata=metadata,
-        mock_method_name='_fetch_async',
-        imagecache=imagecache)
+    await run_api_call_count_test(plugin=plugin,
+                                  test_metadata=metadata,
+                                  mock_method_name='_fetch_async',
+                                  imagecache=imagecache)

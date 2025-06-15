@@ -97,8 +97,8 @@ class Plugin(ArtistExtrasPlugin):
         """Process and queue artist images from FanartTV data."""
         identifier = metadata['imagecacheartist']
         # Process banners
-        if (artist_data.get('musicbanner') and
-            self.config.cparser.value('fanarttv/banners', type=bool)):
+        if (artist_data.get('musicbanner')
+                and self.config.cparser.value('fanarttv/banners', type=bool)):
             self._queue_images(artist_data['musicbanner'], identifier, 'artistbanner', imagecache)
 
         # Process logos (prefer HD, fallback to regular)
@@ -108,16 +108,16 @@ class Plugin(ArtistExtrasPlugin):
                 self._queue_images(logo_data, identifier, 'artistlogo', imagecache)
 
         # Process thumbnails
-        if (artist_data.get('artistthumb') and
-            self.config.cparser.value('fanarttv/thumbnails', type=bool)):
+        if (artist_data.get('artistthumb')
+                and self.config.cparser.value('fanarttv/thumbnails', type=bool)):
             self._queue_images(artist_data['artistthumb'], identifier, 'artistthumbnail',
                                imagecache)
 
         # Process fanart backgrounds
-        if (self.config.cparser.value('fanarttv/fanart', type=bool) and
-            artist_data.get('artistbackground')):
-            self._process_fanart_backgrounds(artist_data['artistbackground'], metadata,
-                                              identifier, imagecache)
+        if (self.config.cparser.value('fanarttv/fanart', type=bool)
+                and artist_data.get('artistbackground')):
+            self._process_fanart_backgrounds(artist_data['artistbackground'], metadata, identifier,
+                                             imagecache)
 
     def _queue_images(self, image_list, identifier, image_type, imagecache):
         """Queue images sorted by popularity (likes)."""

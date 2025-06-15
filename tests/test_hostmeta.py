@@ -75,7 +75,7 @@ def test_socket_failure_graceful_degradation():
     with unittest.mock.patch('socket.gethostname', side_effect=OSError("Mock socket error")):
         with unittest.mock.patch('socket.getfqdn', side_effect=OSError("Mock socket error")):
             with unittest.mock.patch('socket.gethostbyname',
-                                      side_effect=OSError("Mock socket error")):
+                                     side_effect=OSError("Mock socket error")):
                 hostinfo = nowplaying.hostmeta.gethostmeta()
 
                 # Critical: Must not crash and must return proper structure
@@ -105,7 +105,7 @@ def test_netifaces_fallback():
 
     # Mock partial socket failure (hostname works, IP fails)
     with unittest.mock.patch('socket.gethostbyname',
-                              side_effect=OSError("Mock IP resolution error")):
+                             side_effect=OSError("Mock IP resolution error")):
         hostinfo = nowplaying.hostmeta.gethostmeta()
 
         # Should still get valid results (either from netifaces or fallback)
@@ -127,14 +127,13 @@ def test_extreme_network_failure_resilience():
     socket_error = OSError("Mock complete network failure")
     with unittest.mock.patch('socket.gethostname', side_effect=socket_error):
         with unittest.mock.patch('socket.getfqdn', side_effect=socket_error):
-            with unittest.mock.patch('socket.gethostbyname',
-                                      side_effect=socket_error):
+            with unittest.mock.patch('socket.gethostbyname', side_effect=socket_error):
                 # Mock netifaces complete failure if available
                 if nowplaying.hostmeta.IFACES:
                     # Mock netifaces module itself to fail internally
                     with unittest.mock.patch(
-                        'netifaces.gateways',
-                        side_effect=Exception("Mock netifaces module failure")):
+                            'netifaces.gateways',
+                            side_effect=Exception("Mock netifaces module failure")):
                         hostinfo = nowplaying.hostmeta.gethostmeta()
                 else:
                     hostinfo = nowplaying.hostmeta.gethostmeta()

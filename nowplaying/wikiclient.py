@@ -11,6 +11,7 @@ with just the functionality needed by the nowplaying application.
 import logging
 import ssl
 from typing import Any
+from urllib.parse import quote
 import aiohttp
 
 import nowplaying.utils
@@ -102,10 +103,11 @@ class AsyncWikiClient:
 
             return result
 
-    async def _get_wikipedia_extract(self,  # pylint: disable=too-many-return-statements
-                                     entity: str,
-                                     lang: str,
-                                     sitelinks: dict | None = None) -> str | None:
+    async def _get_wikipedia_extract(
+            self,
+            entity: str,
+            lang: str,
+            sitelinks: dict | None = None) -> str | None:
         """Get Wikipedia page extract using sitelinks (fetched separately if not provided)."""
         if sitelinks is None:
             # Fallback: fetch sitelinks separately if not provided
@@ -156,13 +158,11 @@ class AsyncWikiClient:
                 return None
 
             pages = data['query']['pages']
-            return next(
-                (page_data['extract'] for page_data in pages.values() if 'extract' in page_data),
-                None
-            )
+            return next((page_data['extract']
+                         for page_data in pages.values() if 'extract' in page_data), None)
 
     async def _get_wikidata_images(self, entity: str) -> list[dict[str, str]]:
-        """Get images directly from Wikidata entity."""
+        """Get images directly from Wikidata entity with batch processing."""
         images = []
 
         # Get Wikidata entity with claims
@@ -182,51 +182,77 @@ class AsyncWikiClient:
 
             # Get P18 (image) claims
             if 'P18' in claims:
+                filenames = []
                 for claim in claims['P18']:
                     if 'mainsnak' in claim and 'datavalue' in claim['mainsnak']:
                         filename = claim['mainsnak']['datavalue']['value']
-                        # Convert to Commons URL
-                        img_url = await self._get_commons_image_url(filename)
+                        filenames.append(filename)
+
+                # Batch process all filenames at once for better performance
+                if filenames:
+                    image_urls = await self._get_commons_image_urls_batch(filenames)
+                    for img_url in image_urls:
                         if img_url:
                             images.append({'kind': 'wikidata-image', 'url': img_url})
 
         return images
 
-    async def _get_commons_image_url(self, filename: str) -> str | None:
-        """Get Commons image URL from filename."""
-        # Query Commons for the image URL
+    async def _get_commons_image_urls_batch(self, filenames: list[str]) -> list[str | None]:
+        """Get Commons image URLs for multiple filenames in a single batch API call."""
+        if not filenames or not self.session:
+            return []
+
+        # Create pipe-separated list of file titles for batch query, URL-encoding each filename
+        titles = '|'.join(f'File:{quote(filename, safe="")}' for filename in filenames)
+
         commons_url = "https://commons.wikimedia.org/w/api.php"
         params = {
             'action': 'query',
             'format': 'json',
-            'titles': f'File:{filename}',
+            'titles': titles,
             'prop': 'imageinfo',
             'iiprop': 'url'
         }
 
         try:
-            if not self.session:
-                return None
             async with self.session.get(commons_url, params=params) as response:
                 data = await response.json()
 
                 if 'query' not in data or 'pages' not in data['query']:
-                    return None
+                    return []
 
                 pages = data['query']['pages']
-                return next(
-                    (page_data['imageinfo'][0].get('url')
-                     for page_data in pages.values()
-                     if 'imageinfo' in page_data and page_data['imageinfo']),
-                    None
-                )
-        except Exception:  # pylint: disable=broad-exception-caught
-            return None
+                results = []
 
-    async def _get_wikipedia_images(self,  # pylint: disable=too-many-locals
-                                    entity: str,
-                                    lang: str,
-                                    sitelinks: dict | None = None) -> list[dict[str, str]]:
+                # Maintain order by matching against original filenames
+                for filename in filenames:
+                    file_title = f'File:{filename}'
+                    url = None
+
+                    for page_data in pages.values():
+                        if (page_data.get('title') == file_title and
+                            'imageinfo' in page_data and page_data['imageinfo']):
+                            url = page_data['imageinfo'][0].get('url')
+                            break
+
+                    results.append(url)
+
+                return results
+
+        except Exception:  # pylint: disable=broad-exception-caught
+            logging.debug("Batch Commons image URL fetch failed, skipping images")
+            return []
+
+    async def _get_commons_image_url(self, filename: str) -> str | None:
+        """Get Commons image URL from filename (single file convenience method)."""
+        results = await self._get_commons_image_urls_batch([filename])
+        return results[0] if results else None
+
+    async def _get_wikipedia_images(  # pylint: disable=too-many-locals
+            self,
+            entity: str,
+            lang: str,
+            sitelinks: dict | None = None) -> list[dict[str, str]]:
         """Get images from Wikipedia page using sitelinks (fetched separately if not provided)."""
         if sitelinks is None:
             # Fallback: fetch sitelinks separately if not provided
@@ -295,42 +321,14 @@ class AsyncWikiClient:
 
         return images
 
-    async def _get_image_url(self, filename: str, lang: str) -> str | None:
-        """Get the actual URL for an image file."""
-        wiki_url = f"https://{lang}.wikipedia.org/w/api.php"
-        params = {
-            'action': 'query',
-            'format': 'json',
-            'titles': filename,
-            'prop': 'imageinfo',
-            'iiprop': 'url'
-        }
 
-        try:
-            if not self.session:
-                return None
-            async with self.session.get(wiki_url, params=params) as response:
-                data = await response.json()
-
-                if 'query' not in data or 'pages' not in data['query']:
-                    return None
-
-                pages = data['query']['pages']
-                return next(
-                    (page_data['imageinfo'][0].get('url')
-                     for page_data in pages.values()
-                     if 'imageinfo' in page_data and page_data['imageinfo']),
-                    None
-                )
-        except Exception:  # pylint: disable=broad-exception-caught
-            return None
-
-    async def get_page(self,  # pylint: disable=too-many-arguments
-                       entity: str,
-                       lang: str = 'en',
-                       fetch_bio: bool = True,
-                       fetch_images: bool = True,
-                       max_images: int = 10) -> WikiPage:
+    async def get_page(  # pylint: disable=too-many-arguments
+            self,
+            entity: str,
+            lang: str = 'en',
+            fetch_bio: bool = True,
+            fetch_images: bool = True,
+            max_images: int = 10) -> WikiPage:
         """Get a Wikipedia page by Wikidata entity ID with selective fetching."""
         wiki_page = WikiPage(entity, lang)
 
@@ -363,12 +361,13 @@ class AsyncWikiClient:
         return wiki_page
 
 
-async def get_page_async(entity: str,  # pylint: disable=too-many-arguments
-                         lang: str = 'en',
-                         timeout: int = 5,
-                         need_bio: bool = True,
-                         need_images: bool = True,
-                         max_images: int = 5) -> WikiPage:
+async def get_page_async(  # pylint: disable=too-many-arguments
+        entity: str,
+        lang: str = 'en',
+        timeout: int = 5,
+        need_bio: bool = True,
+        need_images: bool = True,
+        max_images: int = 5) -> WikiPage:
     """
     Async function for nowplaying wikimedia plugin.
 

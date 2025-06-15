@@ -51,19 +51,20 @@ class Plugin(ArtistExtrasPlugin):
         """Cached version of discogs search_async."""
 
         async def fetch_func():
-            result = await self.client.search_async(album_title, artist=artist_name,
-                                                   search_type=search_type)
+            result = await self.client.search_async(album_title,
+                                                    artist=artist_name,
+                                                    search_type=search_type)
             # Convert to JSON-serializable format for caching
             if hasattr(result, 'results'):
                 return {
-                    'results': [
-                        {
-                            'type': 'release' if isinstance(r, models.Release) else 'unknown',
-                            'data': r.data if hasattr(r, 'data') else r,
-                            'artists': [a.data if hasattr(a, 'data') else a
-                                       for a in getattr(r, 'artists', [])]
-                        } for r in result.results
-                    ]
+                    'results': [{
+                        'type':
+                        'release' if isinstance(r, models.Release) else 'unknown',
+                        'data':
+                        r.data if hasattr(r, 'data') else r,
+                        'artists':
+                        [a.data if hasattr(a, 'data') else a for a in getattr(r, 'artists', [])]
+                    } for r in result.results]
                 }
             return result
 
@@ -80,6 +81,7 @@ class Plugin(ArtistExtrasPlugin):
             # Create a mock search result with reconstructed Release objects
             class MockSearchResult:  # pylint: disable=too-few-public-methods
                 """Mock search result with reconstructed Release objects."""
+
                 def __init__(self, results):
                     self.results = []
                     for item in results:
@@ -87,8 +89,9 @@ class Plugin(ArtistExtrasPlugin):
                             # Reconstruct Release object
                             release = models.Release(item['data'])
                             # Reconstruct artist objects
-                            release.artists = [models.Artist(artist_data)
-                                              for artist_data in item['artists']]
+                            release.artists = [
+                                models.Artist(artist_data) for artist_data in item['artists']
+                            ]
                             self.results.append(release)
 
                 def page(self, page_num):  # pylint: disable=unused-argument

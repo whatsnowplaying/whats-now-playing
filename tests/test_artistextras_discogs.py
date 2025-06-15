@@ -387,13 +387,34 @@ async def test_discogs_malformed_json_handling(bootstrap):
 
 @pytest.mark.parametrize("metadata,test_id", [
     ({}, "empty-dict"),
-    ({'artist': None, 'album': 'Test'}, "none-values"),
-    ({'artist': '', 'album': ''}, "empty-strings"),
-    ({'artist': 'A' * 1000, 'album': 'B' * 1000}, "very-long-strings"),
-    ({'artist': 'Test\x00Artist', 'album': 'Test\x00Album'}, "null-bytes"),
-    ({'artist': '<script>alert("xss")</script>', 'album': 'Test'}, "xss-attempt"),
-    ({'artist': 'Björk', 'album': 'Homogénic'}, "unicode-characters"),
-    ({'artist': 'AC/DC', 'album': 'Back in Black'}, "special-characters"),
+    ({
+        'artist': None,
+        'album': 'Test'
+    }, "none-values"),
+    ({
+        'artist': '',
+        'album': ''
+    }, "empty-strings"),
+    ({
+        'artist': 'A' * 1000,
+        'album': 'B' * 1000
+    }, "very-long-strings"),
+    ({
+        'artist': 'Test\x00Artist',
+        'album': 'Test\x00Album'
+    }, "null-bytes"),
+    ({
+        'artist': '<script>alert("xss")</script>',
+        'album': 'Test'
+    }, "xss-attempt"),
+    ({
+        'artist': 'Björk',
+        'album': 'Homogénic'
+    }, "unicode-characters"),
+    ({
+        'artist': 'AC/DC',
+        'album': 'Back in Black'
+    }, "special-characters"),
 ])
 @pytest.mark.asyncio
 @skip_no_discogs_key
@@ -419,21 +440,18 @@ async def test_discogs_malformed_metadata_input(bootstrap, metadata, test_id):
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(f'Discogs plugin raised exception for malformed input ({test_id}): {exc}. '
-                   f'Plugins must handle all errors gracefully for live performance.')
+                    f'Plugins must handle all errors gracefully for live performance.')
 
 
-@pytest.mark.parametrize("artist_name,test_id", [
-    ('Madonna', 'basic-name'),
-    ('Madonna feat. Justin Timberlake', 'featuring-feat'),
-    ('Madonna featuring Justin Timberlake', 'featuring-full'),
-    ('Madonna & Justin Timberlake', 'ampersand'),
-    ('Madonna and Justin Timberlake', 'and-word'),
-    ('Madonna (Artist)', 'parentheses'),
-    ('madonna', 'lowercase'),
-    ('MADONNA', 'uppercase'),
-    ('The Beatles', 'with-article'),
-    ('Beatles, The', 'inverted-article')
-])
+@pytest.mark.parametrize("artist_name,test_id",
+                         [('Madonna', 'basic-name'),
+                          ('Madonna feat. Justin Timberlake', 'featuring-feat'),
+                          ('Madonna featuring Justin Timberlake', 'featuring-full'),
+                          ('Madonna & Justin Timberlake', 'ampersand'),
+                          ('Madonna and Justin Timberlake', 'and-word'),
+                          ('Madonna (Artist)', 'parentheses'), ('madonna', 'lowercase'),
+                          ('MADONNA', 'uppercase'), ('The Beatles', 'with-article'),
+                          ('Beatles, The', 'inverted-article')])
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_artist_name_variations(bootstrap, artist_name, test_id):
@@ -465,22 +483,20 @@ async def test_discogs_artist_name_variations(bootstrap, artist_name, test_id):
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(
             f'Discogs plugin raised exception for artist variation "{artist_name}" '
-            f'({test_id}): {exc}. Plugins must handle all errors gracefully for live performance.'
-        )
+            f'({test_id}): {exc}. Plugins must handle all errors gracefully for live performance.')
 
 
-@pytest.mark.parametrize("test_urls,test_id", [
-    (['https://www.discogs.com/artist/'], 'missing-id'),
-    (['https://www.discogs.com/artist/abc'], 'non-numeric-id'),
-    (['https://discogs.com/artist/123456'], 'missing-www'),
-    (['http://www.discogs.com/artist/123456'], 'http-not-https'),
-    (['https://www.discogs.com/artist/123456?param=value'], 'with-query-params'),
-    (['https://www.discogs.com/artist/123456#fragment'], 'with-fragment'),
-    (['https://www.spotify.com/artist/123'], 'non-discogs-spotify'),
-    (['https://musicbrainz.org/artist/123'], 'non-discogs-musicbrainz'),
-    (['not-a-url'], 'invalid-url-format'),
-    ([''], 'empty-url')
-])
+@pytest.mark.parametrize(
+    "test_urls,test_id",
+    [(['https://www.discogs.com/artist/'], 'missing-id'),
+     (['https://www.discogs.com/artist/abc'], 'non-numeric-id'),
+     (['https://discogs.com/artist/123456'], 'missing-www'),
+     (['http://www.discogs.com/artist/123456'], 'http-not-https'),
+     (['https://www.discogs.com/artist/123456?param=value'], 'with-query-params'),
+     (['https://www.discogs.com/artist/123456#fragment'], 'with-fragment'),
+     (['https://www.spotify.com/artist/123'], 'non-discogs-spotify'),
+     (['https://musicbrainz.org/artist/123'], 'non-discogs-musicbrainz'),
+     (['not-a-url'], 'invalid-url-format'), ([''], 'empty-url')])
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_website_url_parsing(bootstrap, test_urls, test_id):
@@ -512,8 +528,7 @@ async def test_discogs_website_url_parsing(bootstrap, test_urls, test_id):
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(
             f'Discogs plugin raised exception for URL test case "{test_urls}" ({test_id}): {exc}. '
-            f'Plugins must handle all errors gracefully for live performance.'
-        )
+            f'Plugins must handle all errors gracefully for live performance.')
 
 
 # Configuration State Validation Tests
@@ -566,19 +581,36 @@ def test_discogs_invalid_api_key_format(bootstrap):
                 logging.info('Invalid API key %d setup result: %s', i, setup_result)
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 pytest.fail(f'Discogs plugin raised exception for invalid API key {i}: {exc}. '
-                           f'Plugins must handle all errors gracefully for live performance.')
+                            f'Plugins must handle all errors gracefully for live performance.')
 
         logging.info('Invalid API key %d handled gracefully', i)
 
 
-@pytest.mark.parametrize("features,test_id", [
-    ({'bio': True, 'fanart': False, 'thumbnails': False}, 'bio-only'),
-    ({'bio': False, 'fanart': True, 'thumbnails': False}, 'fanart-only'),
-    ({'bio': False, 'fanart': False, 'thumbnails': True}, 'thumbnails-only'),
-    ({'bio': True, 'fanart': True, 'thumbnails': False}, 'bio-fanart'),
-    ({'bio': False, 'fanart': False, 'thumbnails': False}, 'nothing-enabled'),
-    ({'bio': True, 'fanart': True, 'thumbnails': True}, 'everything-enabled')
-])
+@pytest.mark.parametrize("features,test_id", [({
+    'bio': True,
+    'fanart': False,
+    'thumbnails': False
+}, 'bio-only'), ({
+    'bio': False,
+    'fanart': True,
+    'thumbnails': False
+}, 'fanart-only'), ({
+    'bio': False,
+    'fanart': False,
+    'thumbnails': True
+}, 'thumbnails-only'), ({
+    'bio': True,
+    'fanart': True,
+    'thumbnails': False
+}, 'bio-fanart'), ({
+    'bio': False,
+    'fanart': False,
+    'thumbnails': False
+}, 'nothing-enabled'), ({
+    'bio': True,
+    'fanart': True,
+    'thumbnails': True
+}, 'everything-enabled')])
 @skip_no_discogs_key
 def test_discogs_selective_feature_disabling(bootstrap, features, test_id):
     ''' test plugin behavior when specific features are disabled '''
@@ -836,7 +868,7 @@ async def test_discogs_rapid_track_changes(bootstrap):
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(f'Discogs plugin raised exception during rapid track changes: {exc}. '
-                   f'Plugins must handle all errors gracefully for live performance.')
+                    f'Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.asyncio
@@ -920,7 +952,7 @@ async def test_discogs_common_dj_genres(bootstrap):
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
             pytest.fail(f'Discogs plugin raised exception for DJ track "{track["artist"]}": {exc}. '
-                       f'Plugins must handle all errors gracefully for live performance.')
+                        f'Plugins must handle all errors gracefully for live performance.')
 
 
 @pytest.mark.asyncio
@@ -1040,7 +1072,7 @@ async def test_discogs_memory_usage_stability(bootstrap):
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
             pytest.fail(f'Discogs plugin raised exception for memory test track {i}: {exc}. '
-                       f'Plugins must handle all errors gracefully for live performance.')
+                        f'Plugins must handle all errors gracefully for live performance.')
 
     logging.info('Memory stability test completed: %d/%d tracks processed successfully',
                  successful_lookups, len(tracks))
@@ -1150,8 +1182,7 @@ async def test_discogs_api_call_count(bootstrap):
 
             # Verify one API call was made
             assert api_call_count == 1, (
-                f'Expected 1 API call after first download, got {api_call_count}'
-            )
+                f'Expected 1 API call after first download, got {api_call_count}')
 
             # Second call - should use cached result, no additional API call
             result2 = await plugin.download_async(metadata.copy(),
@@ -1159,8 +1190,7 @@ async def test_discogs_api_call_count(bootstrap):
 
             # Verify still only one API call was made (cache hit)
             assert api_call_count == 1, (
-                f'Expected 1 API call after second download (cache hit), got {api_call_count}'
-            )
+                f'Expected 1 API call after second download (cache hit), got {api_call_count}')
 
             # Both results should be consistent
             assert (result1 is None) == (result2 is None)
