@@ -39,7 +39,12 @@ def compare_content(srcdir, destdir, conflict=None):
 
 
 def _compare_directory_recursive(srcdir, destdir, conflict=None):
-    ''' recursively compare directories '''
+    ''' recursively compare directories
+
+    Extra files in destination directories are allowed (e.g., user-created templates
+    or .new files from previous upgrades). This function only validates that all
+    source files are correctly copied to the destination.
+    '''
     srctemplates = os.listdir(srcdir)
     desttemplates = os.listdir(destdir)
     filelist = []
