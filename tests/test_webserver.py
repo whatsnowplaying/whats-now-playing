@@ -33,12 +33,11 @@ async def wait_for_webserver_ready(port: int, timeout: float = 10.0) -> bool:
     ''' Poll webserver until it's ready or timeout '''
     start_time = time.time()
     while time.time() - start_time < timeout:
-        try:
+        with contextlib.suppress(requests.exceptions.RequestException,
+                                 requests.exceptions.ConnectionError):
             response = requests.get(f'http://localhost:{port}/internals', timeout=2)
             if response.status_code == 200:
                 return True
-        except (requests.exceptions.RequestException, requests.exceptions.ConnectionError):
-            pass
         await asyncio.sleep(0.1)
     return False
 
