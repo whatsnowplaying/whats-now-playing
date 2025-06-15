@@ -181,6 +181,8 @@ async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-out
     assert req.text == ' artisthtm2 - titlehtm2'
 
 
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="Windows SQLite file locking issues with multiprocess webserver")
 @pytest.mark.asyncio
 async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-outer-name
     ''' start webserver, read existing data, add new data, then read that '''
