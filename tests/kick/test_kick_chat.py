@@ -336,8 +336,8 @@ async def test_kickchat_async_announce_track_same_track(bootstrap):
     chat.authenticated = True
 
     # Set last announced track
-    nowplaying.kick.chat.LASTANNOUNCED['artist'] = 'Test Artist'  # pylint: disable=no-member
-    nowplaying.kick.chat.LASTANNOUNCED['title'] = 'Test Title'  # pylint: disable=no-member
+    chat.last_announced['artist'] = 'Test Artist'
+    chat.last_announced['title'] = 'Test Title'
 
     # Mock metadb to return same metadata
     mock_metadata = {'artist': 'Test Artist', 'title': 'Test Title'}

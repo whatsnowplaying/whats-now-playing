@@ -253,8 +253,8 @@ async def test_refresh_access_token_scenarios(
             'valid': True,
             'client_id': 'test_client'
         }),
-        (401, {}, False),  # Unauthorized
-        (500, {}, False),  # Server error
+        (401, {}, None),  # Unauthorized
+        (500, {}, None),  # Server error
     ])
 @pytest.mark.asyncio
 async def test_validate_token_scenarios(
@@ -384,7 +384,7 @@ async def test_network_timeout(oauth_with_pkce, mock_responses):  # pylint: disa
                         exception=asyncio.TimeoutError("Request timed out"))
 
     with pytest.raises(asyncio.TimeoutError):
-        await oauth.exchange_code_for_token('test_code')
+        await oauth.exchange_code_for_token('test_code', oauth.state)
 
 
 def test_pkce_parameter_uniqueness(configured_oauth):  # pylint: disable=redefined-outer-name

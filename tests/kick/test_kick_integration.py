@@ -244,8 +244,8 @@ async def test_announcement_flow_integration(kick_integration_config, kick_templ
     chat._send_message.assert_called_once_with('Now playing: Test Artist - Test Song')  # pylint: disable=protected-access
 
     # Verify last announced was updated
-    assert nowplaying.kick.chat.LASTANNOUNCED['artist'] == 'Test Artist'  # pylint: disable=no-member
-    assert nowplaying.kick.chat.LASTANNOUNCED['title'] == 'Test Song'  # pylint: disable=no-member
+    assert chat.last_announced['artist'] == 'Test Artist'
+    assert chat.last_announced['title'] == 'Test Song'
 
 
 def test_command_discovery_integration(kick_integration_config, kick_templates):  # pylint: disable=redefined-outer-name,unused-argument
@@ -345,7 +345,9 @@ async def test_config_changes_integration(kick_integration_config):  # pylint: d
 
     mock_subprocesses = MagicMock()
 
-    with patch('time.sleep'):  # Speed up test
+    with patch('nowplaying.kick.settings.QTimer.singleShot') as mock_timer:
+        # Configure the mock to immediately call the callback
+        mock_timer.side_effect = lambda delay, callback: callback()
         nowplaying.kick.settings.KickSettings.save(config, mock_widget, mock_subprocesses)  # pylint: disable=no-member
 
     # Verify kickbot was restarted due to changes

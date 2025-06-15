@@ -94,6 +94,12 @@ class SubprocessManager:
                 not (self.config.cparser.value('kick/enabled', type=bool) and
                      self.config.cparser.value('kick/chat', type=bool))):
             return
+        if processname == 'obsws' and not self.config.cparser.value('obsws/enabled', type=bool):
+            return
+        if processname == 'discordbot' and not self.config.cparser.value('discord/enabled',
+                                                                          type=bool):
+            return
+        # trackpoll always starts - it's the core monitoring process
         self._start_process(processname)
 
     def stop_process(self, processname):

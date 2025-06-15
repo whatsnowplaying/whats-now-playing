@@ -30,10 +30,11 @@ class KickLaunch:  # pylint: disable=too-many-instance-attributes
             self.config)
         self.tasks: set[asyncio.Task[Any]] = set()
 
+        # Register signal handler in main thread during initialization
+        signal.signal(signal.SIGINT, self.forced_stop)
+
     async def bootstrap(self) -> None:
         ''' Authenticate kick and launch related tasks '''
-
-        signal.signal(signal.SIGINT, self.forced_stop)
 
         # Authenticate with Kick
         if not await self.authenticate():

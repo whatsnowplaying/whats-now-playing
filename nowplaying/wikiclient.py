@@ -11,6 +11,7 @@ with just the functionality needed by the nowplaying application.
 import logging
 import ssl
 from typing import Any
+from urllib.parse import quote
 import aiohttp
 
 import nowplaying.utils
@@ -201,8 +202,8 @@ class AsyncWikiClient:
         if not filenames or not self.session:
             return []
 
-        # Create pipe-separated list of file titles for batch query
-        titles = '|'.join(f'File:{filename}' for filename in filenames)
+        # Create pipe-separated list of file titles for batch query, URL-encoding each filename
+        titles = '|'.join(f'File:{quote(filename, safe="")}' for filename in filenames)
 
         commons_url = "https://commons.wikimedia.org/w/api.php"
         params = {

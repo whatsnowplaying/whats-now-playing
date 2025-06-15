@@ -20,7 +20,7 @@ def checksum(filename):
     return hashfunc.hexdigest()
 
 
-def main():
+def main():  # pylint: disable=too-many-statements
     ''' build a new file '''
     parser = argparse.ArgumentParser(description='Build template hash file for upgrade detection')
     parser.add_argument('shafile', help='Path to the updateshas.json file')
@@ -47,6 +47,24 @@ def main():
             logging.error('Failed to load existing hash file: %s', error)
             sys.exit(1)
 
+    # Capture current branch before checkout
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
+        )
+        current_branch = result.stdout.strip()
+        if current_branch == 'HEAD':
+            # Detached HEAD, get commit hash
+            result = subprocess.run(
+                ['git', 'rev-parse', 'HEAD'],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True
+            )
+            current_branch = result.stdout.strip()
+    except subprocess.CalledProcessError as error:
+        logging.error('Failed to determine current branch: %s', error)
+        sys.exit(1)
+
     # Process each version
     for version in args.versions:
         logging.info('Processing version: %s', version)
@@ -55,20 +73,28 @@ def main():
             subprocess.check_call(['git', 'checkout', version],
                                   stdout=subprocess.DEVNULL if not args.verbose else None,
                                   stderr=subprocess.STDOUT if not args.verbose else None)
+            templates_dir = pathlib.Path('nowplaying', 'templates')
+            if not templates_dir.exists():
+                logging.warning('Templates directory not found for version %s', version)
+                continue
+
+            try:
+                _process_template_directory(templates_dir, templates_dir, oldshas, version)
+            except OSError as error:
+                logging.error('Failed to process templates for version %s: %s', version, error)
+                continue
         except subprocess.CalledProcessError as error:
             logging.error('Failed to checkout version %s: %s', version, error)
             continue
 
-        templates_dir = pathlib.Path('nowplaying', 'templates')
-        if not templates_dir.exists():
-            logging.warning('Templates directory not found for version %s', version)
-            continue
-
-        try:
-            _process_template_directory(templates_dir, templates_dir, oldshas, version)
-        except OSError as error:
-            logging.error('Failed to process templates for version %s: %s', version, error)
-            continue
+    # Restore the original branch or commit
+    try:
+        subprocess.check_call(['git', 'checkout', current_branch],
+                              stdout=subprocess.DEVNULL if not args.verbose else None,
+                              stderr=subprocess.STDOUT if not args.verbose else None)
+        logging.info('Restored original branch/commit: %s', current_branch)
+    except subprocess.CalledProcessError as error:
+        logging.error('Failed to restore original branch/commit %s: %s', current_branch, error)
 
     # Write updated hashes
     try:

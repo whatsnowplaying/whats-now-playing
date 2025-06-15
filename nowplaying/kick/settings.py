@@ -3,11 +3,10 @@
 
 import logging
 import os
-import time
 from typing import Any
 
 from PySide6.QtWidgets import QCheckBox, QTableWidgetItem  # pylint: disable=no-name-in-module
-from PySide6.QtCore import Slot  # pylint: disable=no-name-in-module
+from PySide6.QtCore import Slot, QTimer  # pylint: disable=no-name-in-module
 
 from nowplaying.exceptions import PluginVerifyError
 import nowplaying.config
@@ -74,8 +73,8 @@ class KickSettings:
             config.cparser.remove('kick/refreshtoken')
             config.cparser.sync()
 
-            time.sleep(2)
-            subprocesses.start_kickbot()
+            # Use QTimer for non-blocking delay to keep UI responsive
+            QTimer.singleShot(2000, subprocesses.start_kickbot)
 
     @staticmethod
     def verify(widget: Any) -> None:
@@ -316,8 +315,8 @@ class KickChatSettings:
         # If chat settings changed, restart kick bot
         if (oldchat != newchat) or (oldannounce != newannounce):
             subprocesses.stop_kickbot()
-            time.sleep(2)
-            subprocesses.start_kickbot()
+            # Use QTimer for non-blocking delay to keep UI responsive
+            QTimer.singleShot(2000, subprocesses.start_kickbot)
 
     @staticmethod
     def _save_kickbot_commands(config: nowplaying.config.ConfigFile, widget: Any) -> None:

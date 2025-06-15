@@ -142,7 +142,9 @@ def test_kick_settings_save_scenarios(bootstrap, mock_kick_widget, has_changes, 
 
     mock_subprocesses = MagicMock()
 
-    with patch('time.sleep'):  # Speed up test
+    with patch('nowplaying.kick.settings.QTimer.singleShot') as mock_timer:
+        # Configure the mock to immediately call the callback
+        mock_timer.side_effect = lambda delay, callback: callback()
         nowplaying.kick.settings.KickSettings.save(config, mock_kick_widget, mock_subprocesses)
 
     if should_restart:

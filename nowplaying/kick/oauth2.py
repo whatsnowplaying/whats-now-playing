@@ -39,8 +39,7 @@ class KickOAuth2:  # pylint: disable=too-many-instance-attributes
     def _generate_pkce_parameters(self) -> None:
         ''' Generate PKCE code verifier and challenge '''
         # Generate code verifier (43-128 characters, URL-safe)
-        self.code_verifier = base64.urlsafe_b64encode(
-            secrets.token_bytes(32)).decode('utf-8').rstrip('=')
+        self.code_verifier = secrets.token_urlsafe(43)
 
         # Generate code challenge (SHA256 hash of verifier, base64url encoded)
         challenge_bytes = hashlib.sha256(self.code_verifier.encode('utf-8')).digest()
@@ -110,8 +109,13 @@ class KickOAuth2:  # pylint: disable=too-many-instance-attributes
             self.cleanup_temp_pkce_params()
             raise ValueError("Code verifier not generated. Call get_authorization_url first.")
 
-        # Skip state validation if state has already been validated and removed by callback handler
-        if received_state and self.state and received_state != self.state:
+        # Enforce state parameter presence for robust CSRF protection
+        if not received_state:
+            self.cleanup_temp_pkce_params()
+            raise ValueError("State parameter is required for CSRF protection.")
+
+        # Validate state parameter if we have a stored state to compare against
+        if self.state and received_state != self.state:
             self.cleanup_temp_pkce_params()
             raise ValueError("State parameter mismatch. Possible CSRF attack.")
 
@@ -255,13 +259,14 @@ class KickOAuth2:  # pylint: disable=too-many-instance-attributes
                     error_text = await response.text()
                     logging.error('Failed to revoke token: %s - %s', response.status, error_text)
 
-    async def validate_token(self, token: str | None = None) -> dict[str, Any] | bool:
+    async def validate_token(self, token: str | None = None) -> dict[str, Any] | None:
         ''' Validate an access token '''
         if not token:
             token = self.access_token or self.config.cparser.value('kick/accesstoken')
 
         if not token:
-            return False
+            logging.warning("No token to validate")
+            return None
 
         headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/json'}
 
@@ -275,7 +280,7 @@ class KickOAuth2:  # pylint: disable=too-many-instance-attributes
                     return validation_response
 
                 logging.debug('Token validation failed: %s', response.status)
-                return False
+                return None
 
     def get_stored_tokens(self) -> tuple[str | None, str | None]:
         ''' Get tokens from config storage '''

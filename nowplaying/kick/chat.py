@@ -17,7 +17,6 @@ import nowplaying.db
 import nowplaying.kick.oauth2
 import nowplaying.utils
 
-LASTANNOUNCED: dict[str, str | None] = {'artist': None, 'title': None}
 SPLITMESSAGETEXT = '****SPLITMESSSAGEHERE****'
 KICK_MESSAGE_LIMIT = 500  # Character limit for Kick messages
 
@@ -45,6 +44,7 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         self.authenticated: bool = False
         self._watcher_lock: asyncio.Lock = asyncio.Lock()
         self._watcher_running: bool = False
+        self.last_announced: dict[str, str | None] = {'artist': None, 'title': None}
 
         # Kick API endpoints
         self.api_base: str = "https://api.kick.com/public/v1"
@@ -139,7 +139,10 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
             logging.debug('Sending message to: %s', url)
             logging.debug('Message content: %r', message)
             logging.debug('Message data: %s', data)
-            logging.debug('Headers: %s', headers)
+            # Log headers with sensitive data redacted
+            safe_headers = {k: ('Bearer ***' if k == 'Authorization' and v.startswith('Bearer ')
+                               else v) for k, v in headers.items()}
+            logging.debug('Headers: %s', safe_headers)
 
             async with aiohttp.ClientSession(timeout=self.timeout) as session:
                 async with session.post(url, headers=headers, json=data) as response:
@@ -290,7 +293,6 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
 
     async def _process_announcement(self) -> None:
         ''' process track announcement logic '''
-        global LASTANNOUNCED # pylint: disable=global-statement, global-variable-not-assigned
 
         self.config.get()
 
@@ -344,20 +346,16 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         return metadata
 
 
-    @staticmethod
-    def _is_duplicate_announcement(metadata: dict) -> bool:
+    def _is_duplicate_announcement(self, metadata: dict) -> bool:
         ''' check if this is a duplicate announcement '''
-        global LASTANNOUNCED # pylint: disable=global-statement, global-variable-not-assigned
-        return (LASTANNOUNCED['artist'] == metadata.get('artist')
-                and LASTANNOUNCED['title'] == metadata.get('title'))
+        return (self.last_announced['artist'] == metadata.get('artist')
+                and self.last_announced['title'] == metadata.get('title'))
 
 
-    @staticmethod
-    def _update_last_announced(metadata: dict) -> None:
+    def _update_last_announced(self, metadata: dict) -> None:
         ''' update last announced track '''
-        global LASTANNOUNCED # pylint: disable=global-statement, global-variable-not-assigned
-        LASTANNOUNCED['artist'] = metadata.get('artist')
-        LASTANNOUNCED['title'] = metadata.get('title')
+        self.last_announced['artist'] = metadata.get('artist')
+        self.last_announced['title'] = metadata.get('title')
 
 
     async def _send_announcement(self, template_path: pathlib.Path, metadata: dict) -> None:

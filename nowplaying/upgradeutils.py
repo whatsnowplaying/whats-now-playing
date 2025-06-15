@@ -108,6 +108,14 @@ class Version:
         ''' version not equal '''
         return not self == other
 
+    def __hash__(self):
+        ''' version hash '''
+        return hash((self.chunk.get('major'),
+                     self.chunk.get('minor'),
+                     self.chunk.get('micro'),
+                     self.chunk.get('rc'),
+                     self.chunk.get('commitnum')))
+
     def __gt__(self, other):
         ''' version greater than '''
         return not (self < other or self == other)
