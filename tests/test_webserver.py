@@ -116,7 +116,8 @@ def shared_webserver_config(pytestconfig):    # pylint: disable=redefined-outer-
                             break
                     time.sleep(0.1)
                 else:
-                    raise RuntimeError(f"Webserver on port {port} failed to start within {timeout} seconds")
+                    raise RuntimeError(f"Webserver on port {port} failed to start within "
+                                       f"{timeout} seconds")
 
                 # Store the actual port since config gets cleared by autouse fixtures
                 yield config, metadb, manager, port
