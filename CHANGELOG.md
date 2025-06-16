@@ -3,110 +3,66 @@
 
 ## Version 4.2.0 - In Progress
 
-* **NEW: Kick.com Integration** - Initial support for Kick.com streaming platform:
-  * OAuth2 authentication with Kick.com
-  * Template-based track announcements to chat
-  * Smart message splitting at sentence and word boundaries
-  * Support for `{{ startnewmessage }}` template tag for multi-part messages
-  * NLTK-powered intelligent message splitting preserving full content
-  * Interactive chat commands and user permissions coming soon
-* New input plugin for JRiver Media Center via MCWS API support.
-* FIXED: Windows subprocess shutdown errors (BrokenPipeError [WinError 232])
-  that occurred when multiprocessing.Manager() closed pipes before subprocesses finished.
-* IMPROVED: Single instance enforcement completely rewritten using Qt's QLockFile
-  instead of PID files - eliminates Windows PID reuse race conditions and provides
-  more reliable cross-platform behavior with automatic cleanup.
-* FIXED: Wikimedia plugin UI icon pollution - switched from raw 'images' API
-  to curated 'pageimages' API to prevent UI icons and logos from being cached
-  as artist images. Now only shows appropriate artist photos.
-* Error logging for when wikimedia attempts to continue
-  but the program doesn't handle it.
-* A few minor template changes.
-* **Enhanced Twitch Chat** - Improved message handling:
-  * NLTK-powered intelligent message splitting at sentence and word boundaries
-  * Preserves full message content by splitting long messages into multiple parts
-  * Enhanced `{{ startnewmessage }}` support with automatic overflow splitting
-* Twitch scope has changed and may request new permissions.
-* Twitch scope is no longer saved in the configuration to allow
-  for a future update to the Twitch code.
-* Twitch requests has been disabled for the time being.
-* Better error handling for when the Twitch token check fails.
-* New discord link.
-* Better support for limiting how long to look for additional
-  information about tracks.
-* Better crash recovery when parts of the system fail due to
-  bad input from external services.
-* Some external services got a speed-up.
-* MusicBrainz lookups should be a tad smarter.
-* Date calculations should more accurately reflect the original
-  release date.
-* In some cases, metadata wasn't being read from
-  certain file types. That should be improved now.
-* Upgraded pyacoustid for improved
-  multi-artist track recognition using join phrases.
-* Better support for multi-artist collaborations with proper
-  formatting (e.g., "Artist feat. Other Artist" instead of
-  manual "&" joining).
-* Fixed Serato Live Playlist support to use new format with improved reliability:
-  * Added circuit breaker pattern for network failures with DJ-friendly
-    backoff (1-5 seconds)
-  * Reduced log spam by only logging track changes instead of every successful extraction
-  * Refactored extraction methods for better maintainability and error handling
-* Fixed hostname display bug showing reverse DNS results instead
-  of proper machine names.
-* Fixed excluded files not getting properly excluded during processing.
-* Upgraded tinytag library from vendored 1.10.1 to 2.1.1
-  with enhanced multi-value field support for better metadata extraction.
-* Improved M4A file metadata processing - now properly extracts multiple
-  ISRC codes and artist IDs where previously only the last value was captured.
-* Enhanced multi-value field handling across all audio formats (MP3, FLAC, M4A, AIFF)
-  with automatic detection and splitting of delimited metadata values.
-* Various HTTP timeout fixes.
-* Added support for MixedInKey's oddball JSON key format.
+### Notes
 
-* Internal changes:
-  * Upgrade to Python 3.11.
-  * Ability to read multiple covers and store them in a slightly
-    revamped imagecache.
-  * Imagecache DB is now v2 to reflect the front cover cache.
-  * Removed vendored TinyTag in favor of system package 2.1.1 with
-    custom M4A multi-value field parsing fix via monkey patch.
-  * Many, many dependency updates which fix various bugs and
-    security problems.
-  * Support attempting to build on older macOS releases.
-  * Switch from coveralls to codecov.
-  * Rework unit tests to use some mocks and env vars.
-  * DB now keeps tracks of watchers and will kill
-    watchers if it gets unallocated.
-  * Switch to use aiohttp AppKey.
-  * Add internals to webserver to help debugging.
-  * Code coverage and testing setup rework.
-  * Simplify some requirements.
-  * Better exception logging for some subsystems.
-  * Some of the metadata DB schemas have changed.
-  * API cache was added. New SQLite-based cache system
-    with TTL support for all external API responses, including advanced
-    duplicate artist handling and provider-specific cache strategies.
-  * Overhauled the artist extras to be async clients for FanArtTV, MusicBrainz,
-    Discogs, TheAudioDB, and Wikipedia/Wikidata replacing slower synchronous libraries.
-  * Added comprehensive API cache tests and broke up large test files into focused,
-    maintainable plugin-specific files.
-  * Migrated from deprecated netifaces to netifaces-plus.
-  * Major dependency updates including:
+* Likely will be last Windows 10-compatible, Mac Intel, and Mac on
+  Monterey/12.x releases. Pre-built binaries for these older platforms is
+  being phased out.
 
-    * aiohttp 3.8.5 → 3.12.2
-    * lxml 4.9.3 → 5.4.0
-    * pillow 10.3.0 → 11.2.1
-    * discord.py 2.3.2 → 2.5.2
-    * psutil 5.9.8 → 7.0.0
-    * pyinstaller 5.13.2 → 6.12.0
-    * And many others for security and performance improvements.
-  * Removed vendored directories:
+### Added
 
-    * tinytag
-    * discogs_client
-    * wptools
-    * pid (replaced with Qt QLockFile single instance system)
+* Preliminary Kick.com chat bot support with OAuth2 authentication
+  and template-based messaging
+* JRiver Media Center input plugin via MCWS API
+* MixedInKey support for musical key metadata detection
+* Configuration import/export functionality with JSON format
+* SQLite-based API cache with TTL support and duplicate artist resolution
+  to speed up remote service queries
+* GUI "Clear Cache" button in Artist Extras settings to remove all cached
+  content
+
+### Fixed
+
+* Serato Live Playlist parsing - Complete rewrite with 4-tier fallback
+  system for new HTML format
+* Windows subprocess shutdown errors (BrokenPipeError [WinError 232])
+* Hostname display bug showing "1.0.0.127.in-addr.arpa" instead of proper hostnames
+* M4A multi-value metadata extraction with monkey patch for tinytag 2.1.1
+* File exclusion in build system not working properly
+* MPRIS2 support restored after temporary disable during development
+
+### Changed
+
+* Single instance enforcement replaced PID files with Qt's QLockFile which should
+  help with the "already running" errors on Windows
+* TinyTag upgraded from vendored 1.10.1 to system package 2.1.1 which replaced
+  the multiple ways in which audio tags were read (and should now be faster
+  as a result)
+* pyacoustid upgraded to 1.3.0 with better join phrase support
+* netifaces replaced with netifaces-plus for upcoming Python 3.13 compatibility
+* MPRIS2 implementation upgraded to dbus-fast from python-dbus
+* Rewritten, custom clients for discogs, musicbrainz, and wikidata that will
+  now run in parallel, making metadata lookups faster
+
+### Improved
+
+* TCP connection handling and timeout management across network components
+* Artist name processing with proper join phrase handling for multi-artist tracks
+* Release date calculations for more accurate original release dates
+* Metadata extraction from various audio file formats
+* Error handling for external API failures
+* Chat message splitting with NLTK-powered intelligent segmentation
+
+### Dependencies Updated
+
+* aiohttp: 3.12.6 → 3.12.13
+* requests: 2.32.3 → 2.32.4
+* pyinstaller: 6.13.0 → 6.14.1
+* pytest: 8.3.5 → 8.4.0
+* discord-py: 2.4.0 → 2.5.2
+* pillow: 11.1.0 → 11.2.1
+* psutil: 6.1.1 → 7.0.0
+* Multiple other security and compatibility updates
 
 ## Version 4.1.0 - 2023-08-20
 
