@@ -17,6 +17,9 @@ from types import ModuleType
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QWidget  # pylint: disable=no-name-in-module
 
+# IMPORTANT: Import compatibility shim FIRST to handle old AuthScope enums in Qt config
+import nowplaying.twitch.compat
+
 import nowplaying.artistextras
 import nowplaying.inputs
 import nowplaying.pluginimporter

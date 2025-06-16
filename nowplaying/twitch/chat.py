@@ -16,7 +16,7 @@ import aiohttp  # pylint: disable=import-error
 import jinja2  # pylint: disable=import-error
 
 from twitchAPI.twitch import Twitch  # pylint: disable=import-error
-from twitchAPI.types import AuthScope  # pylint: disable=import-error
+from twitchAPI.type import AuthScope  # pylint: disable=import-error
 from twitchAPI.chat import Chat, ChatEvent  # pylint: disable=import-error
 from twitchAPI.oauth import validate_token  # pylint: disable=import-error
 
@@ -30,17 +30,12 @@ import nowplaying.db
 from nowplaying.exceptions import PluginVerifyError
 import nowplaying.metadata
 import nowplaying.trackrequests
+import nowplaying.twitch.oauth2
+import nowplaying.twitch.utils
 import nowplaying.utils
+from nowplaying.twitch.constants import TWITCHBOT_CHECKBOXES, TWITCH_MESSAGE_LIMIT, SPLITMESSAGETEXT
 
 LASTANNOUNCED = {'artist': None, 'title': None}
-SPLITMESSAGETEXT = '****SPLITMESSSAGEHERE****'
-TWITCH_MESSAGE_LIMIT = 500  # Character limit for Twitch messages
-
-# needs to match ui file
-# missing premium, hype-train, artist-badge
-TWITCHBOT_CHECKBOXES = [
-    'anyone', 'broadcaster', 'moderator', 'subscriber', 'founder', 'conductor', 'vip', 'bits'
-]
 
 
 class TwitchChat:  #pylint: disable=too-many-instance-attributes
@@ -67,6 +62,62 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         self.starttime = datetime.datetime.now(datetime.timezone.utc)
         self.timeout = aiohttp.ClientTimeout(total=60)
         self.modernmeerkat_greeted = False
+
+    async def _token_validation(self):
+        ''' check for separate chat token (for bot accounts) '''
+        if token := self.config.cparser.value('twitchbot/chattoken'):
+            if 'oauth:' in token:
+                token = token.replace('oauth:', '')
+                self.config.cparser.setValue('twitchbot/chattoken', token)
+            logging.debug('validating separate chat token')
+            try:
+                valid = await validate_token(token)
+                if valid.get('status') == 401:
+                    logging.debug('Chat token expired, attempting refresh')
+                    # Attempt to refresh the chat token using the chat refresh token
+                    chat_refresh_token = self.config.cparser.value('twitchbot/chatrefreshtoken')
+                    if chat_refresh_token:
+                        try:
+                            oauth = nowplaying.twitch.oauth2.TwitchOAuth2(self.config)
+                            token_response = await oauth.refresh_access_token(chat_refresh_token)
+
+                            # Save the new chat tokens
+                            new_access_token = token_response.get('access_token')
+                            new_refresh_token = token_response.get('refresh_token')
+
+                            if new_access_token:
+                                self.config.cparser.setValue('twitchbot/chattoken',
+                                                             new_access_token)
+                                if new_refresh_token:
+                                    self.config.cparser.setValue('twitchbot/chatrefreshtoken',
+                                                                 new_refresh_token)
+                                self.config.save()
+                                token = new_access_token
+                                logging.info('Successfully refreshed chat token')
+                            else:
+                                # Clear tokens when refresh response is invalid
+                                self.config.cparser.remove('twitchbot/chattoken')
+                                self.config.cparser.remove('twitchbot/chatrefreshtoken')
+                                self.config.save()
+                                token = None
+                                logging.error('Chat token refresh failed - no access token')
+                        except Exception as refresh_error:  #pylint: disable=broad-except
+                            logging.error('Failed to refresh chat token: %s', refresh_error)
+                            # Clear invalid tokens from config to prevent repeated failures
+                            self.config.cparser.remove('twitchbot/chattoken')
+                            self.config.cparser.remove('twitchbot/chatrefreshtoken')
+                            self.config.save()
+                            token = None
+                    else:
+                        # Clear expired token with no refresh token available
+                        self.config.cparser.remove('twitchbot/chattoken')
+                        self.config.save()
+                        token = None
+                        logging.error('Chat token expired and no refresh token available')
+            except Exception as error:  #pylint: disable=broad-except
+                logging.error('cannot validate chat token: %s', error)
+                token = None
+        return token
 
     async def _try_custom_token(self, token):
         ''' if a custom token has been provided, try it. '''
@@ -96,22 +147,6 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
 
-    async def _token_validation(self):
-        if token := self.config.cparser.value('twitchbot/chattoken'):
-            if 'oauth:' in token:
-                token = token.replace('oauth:', '')
-                self.config.cparser.setValue('twitchbot/chattoken', token)
-            logging.debug('validating old token')
-            try:
-                valid = await validate_token(token)
-                if valid.get('status') == 401:
-                    token = None
-                    logging.error('Old twitchbot-specific token has expired')
-            except Exception as error:  #pylint: disable=broad-except
-                logging.error('cannot validate token: %s', error)
-                token = None
-        return token
-
     async def run_chat(self, twitchlogin):  # pylint: disable=too-many-branches, too-many-statements
         ''' twitch chat '''
 
@@ -122,8 +157,8 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         # otherwise, use the existing authentication and run as
         # the user
 
-        while (not self.config.cparser.value('twitchbot/chat', type=bool) and
-               not nowplaying.utils.safe_stopevent_check(self.stopevent)):
+        while (not self.config.cparser.value('twitchbot/chat', type=bool)
+               and not nowplaying.utils.safe_stopevent_check(self.stopevent)):
             await asyncio.sleep(1)
             self.config.get()
 
@@ -139,32 +174,60 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 loggedin = False
 
             if loggedin:
+                # Check for token changes every 60 seconds even when logged in
                 await asyncio.sleep(60)
+
+                # Check if a new chat token was added while we were using OAuth2
+                if not self.twitchcustom:  # Only if we're using OAuth2, not custom token
+                    new_chat_token = await self._token_validation()
+                    if new_chat_token:
+                        logging.info('New chat token detected - switching to bot account')
+                        await self.stop()
+                        loggedin = False
+                        continue  # Restart with new token
+
                 continue
 
             try:
+                # First priority: Try separate chat token (for bot accounts)
                 token = await self._token_validation()
-
                 if token:
-                    logging.debug('attempting to use old token')
+                    logging.debug('attempting to use separate chat token')
                     await self._try_custom_token(token)
 
+                # Second priority: Try OAuth2 tokens (unified single account)
                 if not self.twitch:
-                    logging.debug('attempting to use global token')
+                    logging.debug('attempting to use OAuth2 token')
+                    oauth = nowplaying.twitch.oauth2.TwitchOAuth2(self.config)
+                    access_token, _ = oauth.get_stored_tokens()
+
+                    if (access_token and nowplaying.twitch.utils.qtsafe_validate_twitch_oauth_token(
+                            access_token)):
+                        logging.debug('Using OAuth2 token for chat')
+                        await self._try_custom_token(access_token)
+
+                # Third priority: Try main login
+                if not self.twitch:
+                    logging.debug('attempting to use main login')
                     self.twitch = await twitchlogin.api_login()
                     self.twitchcustom = False
-                    # sourcery skip: hoist-if-from-if
-                    if not self.twitch:
-                        await twitchlogin.cache_token_del()
+
+                # If all fail, clear cached tokens and retry
+                if not self.twitch:
+                    await twitchlogin.cache_token_del()
 
                 if not self.twitch:
                     logging.error('No valid credentials to start Twitch Chat support.')
                     await asyncio.sleep(60)
                     continue
 
-                self.chat = await Chat(
-                    self.twitch, initial_channel=self.config.cparser.value('twitchbot/channel'))
-                self.chat.register_event(ChatEvent.READY, self.on_twitchchat_ready)
+                channel = self.config.cparser.value('twitchbot/channel')
+                if not channel or not channel.strip():
+                    logging.error('Twitch channel not configured. Cannot start chat support.')
+                    await asyncio.sleep(60)
+                    continue
+
+                self.chat = await Chat(self.twitch, initial_channel=[channel.strip()])
                 self.chat.register_event(ChatEvent.MESSAGE, self.on_twitchchat_incoming_message)
                 self.chat.register_command('whatsnowplayingversion',
                                            self.on_twitchchat_whatsnowplayingversion)
@@ -199,10 +262,6 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 await self.twitch.close()
             else:
                 await twitchlogin.api_logout()
-
-    async def on_twitchchat_ready(self, ready_event):
-        ''' twitch chatbot has connected, now join '''
-        await ready_event.chat.join_room(self.config.cparser.value('twitchbot/channel'))
 
     async def on_twitchchat_incoming_message(self, msg):
         ''' handle incoming chat messages for special responses '''
@@ -365,8 +424,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         await asyncio.sleep(delay)
 
     @staticmethod
-    def _split_message_smart(message: str,
-                             max_length: int = TWITCH_MESSAGE_LIMIT) -> list[str]:
+    def _split_message_smart(message: str, max_length: int = TWITCH_MESSAGE_LIMIT) -> list[str]:
         ''' intelligently split long messages at sentence or word boundaries '''
         return nowplaying.utils.smart_split_message(message, max_length)
 

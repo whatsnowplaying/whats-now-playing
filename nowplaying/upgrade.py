@@ -156,6 +156,18 @@ class UpgradeConfig:
                 logging.info('Setting twitchbot to use replies by default')
                 config.setValue('twitchbot/usereplies', True)
 
+        # Ensure backward compatibility for dual-token system
+        if oldversion < nowplaying.upgradeutils.Version('4.2.1'):
+            access_token = config.value('twitchbot/accesstoken')
+            chat_token = config.value('twitchbot/chattoken')
+
+            # If we have OAuth2 tokens but no separate chat token, ensure compatibility
+            if access_token and not chat_token:
+                logging.info('Upgrade to 4.2.1: OAuth2 tokens will be used for both '
+                             'broadcaster and chat functionality')
+                # No changes needed - the dual-token system automatically falls back
+                # This is just for logging the compatibility behavior
+
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
         config.setValue('settings/configversion', thisverstr)

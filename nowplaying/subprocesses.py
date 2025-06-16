@@ -157,6 +157,14 @@ class SubprocessManager:
         ''' Start the webserver '''
         self.start_process('webserver')
 
+    def start_kickbot(self):
+        ''' Start the kickbot '''
+        self.start_process('kickbot')
+
+    def start_twitchbot(self):
+        ''' Start the twitchbot '''
+        self.start_process('twitchbot')
+
     def stop_webserver(self):
         ''' Stop the webserver '''
         self.stop_process('webserver')

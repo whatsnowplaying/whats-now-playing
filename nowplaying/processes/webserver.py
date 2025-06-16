@@ -43,6 +43,7 @@ import nowplaying.frozen
 import nowplaying.hostmeta
 import nowplaying.imagecache
 import nowplaying.kick.oauth2
+import nowplaying.twitch.oauth2
 import nowplaying.trackrequests
 import nowplaying.utils
 
@@ -308,8 +309,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         trackrequest = nowplaying.trackrequests.Requests(request.app[CONFIG_KEY])
 
         try:
-            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and
-                   not endloop and not websocket.closed):
+            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and not endloop
+                   and not websocket.closed):
                 metadata = await trackrequest.check_for_gifwords()
                 if not metadata.get('image'):
                     await websocket.send_json({'noimage': True})
@@ -344,8 +345,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         endloop = False
 
         try:
-            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and
-                   not endloop and not websocket.closed):
+            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and not endloop
+                   and not websocket.closed):
                 metadata = await request.app[METADB_KEY].read_last_meta_async()
                 if not metadata or not metadata.get('artist'):
                     await asyncio.sleep(5)
@@ -414,10 +415,10 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
         try:
             mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
-            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and
-                   not websocket.closed):
-                while (mytime > request.app[WATCHER_KEY].updatetime and
-                       not nowplaying.utils.safe_stopevent_check(self.stopevent)):
+            while (not nowplaying.utils.safe_stopevent_check(self.stopevent)
+                   and not websocket.closed):
+                while (mytime > request.app[WATCHER_KEY].updatetime
+                       and not nowplaying.utils.safe_stopevent_check(self.stopevent)):
                     await asyncio.sleep(1)
 
                 mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
@@ -562,6 +563,229 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                                                 ' Please check your configuration and try again.')
             return web.Response(content_type='text/html', text=response_html)
 
+    async def twitchredirect_handler(self, request):  # pylint: disable=no-self-use
+        ''' handle oauth2 redirect callbacks for Twitch '''
+        # Extract query parameters from the redirect
+        params = dict(request.query)
+
+        # Log the redirect for debugging (don't log the auth code for security)
+        logging.info('Twitch OAuth2 redirect received with parameters: %s', {
+            k: v
+            for k, v in params.items() if k != 'code'
+        })
+
+        # Get config and Jinja2 environment
+        config = request.app[CONFIG_KEY]
+        config.get()
+        jinja2_env = request.app[JINJA2_KEY]
+
+        def load_oauth_template(template_name: str, **kwargs) -> str:
+            """Load and render an OAuth template using Jinja2"""
+            try:
+                template = jinja2_env.get_template(f'oauth/{template_name}')
+                return template.render(**kwargs)
+            except jinja2.TemplateNotFound:
+                logging.error('OAuth template not found: %s', template_name)
+                return '<html><body><h1>Template Error</h1><p>Template not found</p></body></html>'
+            except Exception as error:
+                logging.error('Template rendering failed for %s: %s', template_name, error)
+                return '<html><body><h1>Template Error</h1><p>Template rendering failed</p></body></html>'
+
+        # Check for OAuth2 error
+        if 'error' in params:
+            # Jinja2 autoescape will handle HTML escaping automatically
+            error_code = params.get('error', 'unknown_error')
+            error_description = params.get('error_description', 'No description provided')
+
+            response_html = load_oauth_template('twitch_oauth_error.htm',
+                                                error_code=error_code,
+                                                error_description=error_description)
+            return web.Response(content_type='text/html', text=response_html)
+
+        # Check for authorization code
+        authorization_code = params.get('code')
+        received_state = params.get('state')
+
+        if not authorization_code:
+            # Clean up temporary PKCE parameters when OAuth flow fails
+            oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)
+            oauth.cleanup_temp_pkce_params()
+            response_html = load_oauth_template('twitch_oauth_no_code.htm')
+            return web.Response(content_type='text/html', text=response_html)
+
+        # Validate state parameter to prevent CSRF attacks
+        expected_state = config.cparser.value('twitchbot/temp_state')
+        if not expected_state:
+            # Clean up temporary PKCE parameters when session is invalid
+            oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)
+            oauth.cleanup_temp_pkce_params()
+            response_html = load_oauth_template('twitch_oauth_invalid_session.htm')
+            logging.warning('Twitch OAuth2 callback received without valid session state')
+            return web.Response(content_type='text/html', text=response_html)
+
+        if received_state != expected_state:
+            # Clean up temporary PKCE parameters when CSRF attack is detected
+            oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)
+            oauth.cleanup_temp_pkce_params()
+            response_html = load_oauth_template('twitch_oauth_csrf_error.htm')
+            logging.error(
+                'Twitch OAuth2 CSRF attack detected: state mismatch (expected: %s, received: %s)',
+                expected_state[:8] + '...',
+                received_state[:8] + '...' if received_state else 'None')
+            return web.Response(content_type='text/html', text=response_html)
+
+        # State validation successful - immediately invalidate to prevent replay attacks
+        config.cparser.remove('twitchbot/temp_state')
+        config.save()
+        logging.debug('State parameter invalidated after successful validation')
+
+        # Attempt to exchange the code for tokens
+        try:
+            # Initialize OAuth2 handler
+            oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)
+            # Set the redirect URI based on the current request path
+            port = config.cparser.value('webserver/port', type=int) or 8899
+            oauth.redirect_uri = f'http://localhost:{port}/twitchredirect'
+
+            # Exchange code for tokens with validated state
+            token_response = await oauth.exchange_code_for_token(authorization_code, received_state)
+
+            # Save broadcaster tokens
+            access_token = token_response.get('access_token')
+            refresh_token = token_response.get('refresh_token')
+            if access_token:
+                config.cparser.setValue('twitchbot/accesstoken', access_token)
+                if refresh_token:
+                    config.cparser.setValue('twitchbot/refreshtoken', refresh_token)
+                config.save()
+                logging.info('Twitch broadcaster tokens saved successfully')
+
+            # Success response
+            response_html = load_oauth_template('twitch_oauth_success.htm')
+            logging.info('Twitch OAuth2 main authentication completed successfully')
+            return web.Response(content_type='text/html', text=response_html)
+
+        except (ValueError, OSError, asyncio.TimeoutError) as error:
+            logging.error('Twitch OAuth2 token exchange failed: %s', error)
+
+            # Error response - use generic message to avoid information exposure
+            response_html = load_oauth_template('twitch_oauth_token_error.htm',
+                                                error_message='Authentication failed.'
+                                                ' Please check your configuration and try again.')
+            return web.Response(content_type='text/html', text=response_html)
+
+    async def twitchchatredirect_handler(self, request):  # pylint: disable=no-self-use
+        ''' handle oauth2 redirect callbacks for Twitch chat tokens '''
+        # Extract query parameters from the redirect
+        params = dict(request.query)
+
+        # Log the redirect for debugging (don't log the auth code for security)
+        logging.info('Twitch Chat OAuth2 redirect received with parameters: %s', {
+            k: v
+            for k, v in params.items() if k != 'code'
+        })
+
+        # Get config and Jinja2 environment
+        config = request.app[CONFIG_KEY]
+        config.get()
+        jinja2_env = request.app[JINJA2_KEY]
+
+        def load_oauth_template(template_name: str, **kwargs) -> str:
+            """Load and render an OAuth template using Jinja2"""
+            try:
+                template = jinja2_env.get_template(f'oauth/{template_name}')
+                return template.render(**kwargs)
+            except jinja2.TemplateNotFound:
+                logging.error('OAuth template not found: %s', template_name)
+                return '<html><body><h1>Template Error</h1><p>Template not found</p></body></html>'
+            except Exception as error:
+                logging.error('Template rendering failed for %s: %s', template_name, error)
+                return '<html><body><h1>Template Error</h1><p>Template rendering failed</p></body></html>'
+
+        # Check for OAuth2 error
+        if 'error' in params:
+            # Jinja2 autoescape will handle HTML escaping automatically
+            error_code = params.get('error', 'unknown_error')
+            error_description = params.get('error_description', 'No description provided')
+
+            response_html = load_oauth_template('twitch_oauth_error.htm',
+                                                error_code=error_code,
+                                                error_description=error_description)
+            return web.Response(content_type='text/html', text=response_html)
+
+        # Check for authorization code
+        authorization_code = params.get('code')
+        received_state = params.get('state')
+
+        if not authorization_code:
+            # Clean up temporary PKCE parameters when OAuth flow fails
+            oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)
+            oauth.cleanup_temp_pkce_params()
+            response_html = load_oauth_template('twitch_oauth_no_code.htm')
+            return web.Response(content_type='text/html', text=response_html)
+
+        # Validate state parameter to prevent CSRF attacks
+        expected_state = config.cparser.value('twitchbot/temp_state')
+        if not expected_state:
+            # Clean up temporary PKCE parameters when session is invalid
+            oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)
+            oauth.cleanup_temp_pkce_params()
+            response_html = load_oauth_template('twitch_oauth_invalid_session.htm')
+            logging.warning('Twitch Chat OAuth2 callback received without valid session state')
+            return web.Response(content_type='text/html', text=response_html)
+
+        if received_state != expected_state:
+            # Clean up temporary PKCE parameters when CSRF attack is detected
+            oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)
+            oauth.cleanup_temp_pkce_params()
+            response_html = load_oauth_template('twitch_oauth_csrf_error.htm')
+            logging.error(
+                'Twitch Chat OAuth2 CSRF attack detected: state mismatch (expected: %s, received: %s)',
+                expected_state[:8] + '...',
+                received_state[:8] + '...' if received_state else 'None')
+            return web.Response(content_type='text/html', text=response_html)
+
+        # State validation successful - immediately invalidate to prevent replay attacks
+        config.cparser.remove('twitchbot/temp_state')
+        config.save()
+        logging.debug('Chat state parameter invalidated after successful validation')
+
+        # Attempt to exchange the code for chat token
+        try:
+            # Initialize OAuth2 handler
+            oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)
+            # Set the redirect URI based on the current request path
+            port = config.cparser.value('webserver/port', type=int) or 8899
+            oauth.redirect_uri = f'http://localhost:{port}/twitchchatredirect'
+
+            # Exchange code for tokens with validated state
+            token_response = await oauth.exchange_code_for_token(authorization_code, received_state)
+
+            # Store chat token separately using the chattoken config key
+            access_token = token_response.get('access_token')
+            refresh_token = token_response.get('refresh_token')
+            if access_token:
+                config.cparser.setValue('twitchbot/chattoken', access_token)
+                # Store chat refresh token separately too
+                if refresh_token:
+                    config.cparser.setValue('twitchbot/chatrefreshtoken', refresh_token)
+                config.save()
+                logging.info('Twitch chat tokens stored successfully')
+
+            # Success response
+            response_html = load_oauth_template('twitch_chat_oauth_success.htm')
+            logging.info('Twitch OAuth2 chat authentication completed successfully')
+            return web.Response(content_type='text/html', text=response_html)
+
+        except (ValueError, OSError, asyncio.TimeoutError) as error:
+            logging.error('Twitch Chat OAuth2 token exchange failed: %s', error)
+
+            # Error response - use generic message to avoid information exposure
+            response_html = load_oauth_template('twitch_oauth_token_error.htm',
+                                                error_message='Chat authentication failed.'
+                                                ' Please check your configuration and try again.')
+            return web.Response(content_type='text/html', text=response_html)
+
     def create_runner(self):
         ''' setup http routing '''
         threading.current_thread().name = 'WebServer-runner'
@@ -587,6 +811,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             web.get('/index.html', self.index_htm_handler),
             web.get('/index.txt', self.indextxt_handler),
             web.get('/kickredirect', self.kickredirect_handler),
+            web.get('/twitchredirect', self.twitchredirect_handler),
+            web.get('/twitchchatredirect', self.twitchchatredirect_handler),
             web.get('/request.htm', self.requesterlaunch_htm_handler),
             web.get('/internals', self.internals),
             web.get('/ws', self.websocket_handler),
@@ -634,12 +860,11 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
         # Set up Jinja2 environment for templates with proper autoescape (initialized once)
         template_dir = app[CONFIG_KEY].getbundledir().joinpath('templates')
-        app[JINJA2_KEY] = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(str(template_dir)),
-            autoescape=jinja2.select_autoescape(['htm', 'html', 'xml']),
-            trim_blocks=True,
-            undefined=jinja2.StrictUndefined
-        )
+        app[JINJA2_KEY] = jinja2.Environment(loader=jinja2.FileSystemLoader(str(template_dir)),
+                                             autoescape=jinja2.select_autoescape(
+                                                 ['htm', 'html', 'xml']),
+                                             trim_blocks=True,
+                                             undefined=jinja2.StrictUndefined)
 
     @staticmethod
     async def on_shutdown(app):

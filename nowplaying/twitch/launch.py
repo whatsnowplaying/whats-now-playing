@@ -6,11 +6,9 @@ import logging
 import signal
 
 import nowplaying.twitch.chat
-#import nowplaying.twitch.redemptions
+import nowplaying.twitch.redemptions
 import nowplaying.twitch.utils
 import nowplaying.utils
-
-
 
 
 class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
@@ -21,7 +19,7 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
         self.stopevent = stopevent or asyncio.Event()
         self.widgets = None
         self.chat = None
-        #self.redemptions = None
+        self.redemptions = None
         self.loop = None
         self.twitchlogin = nowplaying.twitch.utils.TwitchLogin(self.config)
         self.tasks = set()
@@ -43,11 +41,11 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
             self.tasks.add(task)
             task.add_done_callback(self.tasks.discard)
             await asyncio.sleep(5)
-        #if self.redemptions:
-        #    task = self.loop.create_task(
-        #        self.redemptions.run_redemptions(self.twitchlogin, self.chat))
-        #    self.tasks.add(task)
-        #    task.add_done_callback(self.tasks.discard)
+        if self.redemptions:
+            task = self.loop.create_task(
+                self.redemptions.run_redemptions(self.twitchlogin, self.chat))
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.discard)
 
     async def _watch_for_exit(self):
         while not nowplaying.utils.safe_stopevent_check(self.stopevent):
@@ -59,8 +57,8 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
         try:
             self.chat = nowplaying.twitch.chat.TwitchChat(config=self.config,
                                                           stopevent=self.stopevent)
-            #self.redemptions = nowplaying.twitch.redemptions.TwitchRedemptions(
-            #    config=self.config, stopevent=self.stopevent)
+            self.redemptions = nowplaying.twitch.redemptions.TwitchRedemptions(
+                config=self.config, stopevent=self.stopevent)
             if not self.loop:
                 try:
                     self.loop = asyncio.get_running_loop()
@@ -84,12 +82,15 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
 
     async def stop(self):
         ''' stop the twitch support '''
-        #if self.redemptions:
-        #    await self.redemptions.stop()
+        if self.redemptions:
+            await self.redemptions.stop()
         if self.chat:
             await self.chat.stop()
         await asyncio.sleep(1)
-        await self.twitchlogin.api_logout()
+        # Don't revoke tokens on shutdown - preserve them for restart
+        # Only clear the in-memory client, don't call api_logout() which revokes tokens
+        if nowplaying.twitch.utils.TwitchLogin.OAUTH_CLIENT:
+            nowplaying.twitch.utils.TwitchLogin.OAUTH_CLIENT = None
         if self.loop:
             self.loop.stop()
         logging.debug('twitchbot stopped')
