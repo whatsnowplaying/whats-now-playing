@@ -6,15 +6,15 @@
 ### Notes
 
 * Likely will be last Windows 10-compatible, Mac Intel, and Mac on
-  Monterey/12.x releases from me.  My ability to make old builds is
-  going away.
+  Monterey/12.x releases. Pre-built binaries for these older platforms is
+  being phased out.
 
 ### Added
 
 * Preliminary Kick.com chat bot support with OAuth2 authentication
   and template-based messaging
 * JRiver Media Center input plugin via MCWS API
-* Mixed in Key support for musical key metadata detection
+* MixedInKey support for musical key metadata detection
 * Configuration import/export functionality with JSON format
 * SQLite-based API cache with TTL support and duplicate artist resolution
   to speed up remote service queries
@@ -35,7 +35,7 @@
 
 * Single instance enforcement replaced PID files with Qt's QLockFile which should
   help with the "already running" errors on Windows
-* TinyTag upgraded from vendored 1.10.1 to system package 2.1.1 whic replaced
+* TinyTag upgraded from vendored 1.10.1 to system package 2.1.1 which replaced
   the multiple ways in which audio tags were read (and should now be faster
   as a result)
 * pyacoustid upgraded to 1.3.0 with better join phrase support
