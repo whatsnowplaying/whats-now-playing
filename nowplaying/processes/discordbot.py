@@ -39,6 +39,9 @@ class DiscordClients:
 
 class DiscordSupport:
     ''' Work with discord '''
+    # Sleep intervals
+    DISABLED_SLEEP_INTERVAL = 5  # seconds to sleep when discord is disabled
+    UPDATE_INTERVAL = 20  # seconds between updates (discord rate limit: max every 15s)
 
     def __init__(self, config: nowplaying.config.ConfigFile | None = None,
                  stopevent: asyncio.Event | None = None) -> None:
@@ -141,8 +144,8 @@ class DiscordSupport:
                     # Handle case where musicbrainzalbumid might be a list
                     if isinstance(musicbrainz_album_id, list):
                         musicbrainz_album_id = musicbrainz_album_id[0]
-                    large_image = ("https://coverartarchive.org/release/"
-                                    "{musicbrainz_album_id}/front")
+                    large_image = (f"https://coverartarchive.org/release/"
+                                    f"{musicbrainz_album_id}/front")
 
                 # Fall back to configured asset key if no MusicBrainz ID
                 if not large_image:
@@ -200,12 +203,12 @@ class DiscordSupport:
     async def _run_service_loop(self, metadb: nowplaying.db.MetadataDB,
                                watcher: nowplaying.db.DBWatcher) -> None:
         ''' main service loop '''
-        disabled_sleep_interval = 5
-        update_interval = 20  # Discord rate limit: no more than every 15 seconds
+        disabled_sleep_interval = self.DISABLED_SLEEP_INTERVAL
+        update_interval = self.UPDATE_INTERVAL
 
         last_update_time = 0.0
 
-        while not (self.stopevent and self.stopevent.is_set()):
+        while not self._should_stop():
             if not self._is_discord_enabled():
                 await asyncio.sleep(disabled_sleep_interval)
                 continue
@@ -215,6 +218,10 @@ class DiscordSupport:
 
             if last_update_time < watcher.updatetime:
                 last_update_time = await self._process_metadata_update(metadb, watcher.updatetime)
+
+    def _should_stop(self) -> bool:
+        ''' check if the service should stop '''
+        return self.stopevent is not None and self.stopevent.is_set()
 
     def _is_discord_enabled(self) -> bool:
         ''' check if discord integration is enabled '''
@@ -256,9 +263,12 @@ class DiscordSupport:
 
         try:
             await update_func(*args)
+        except (ConnectionResetError, ConnectionRefusedError,
+                discord.HTTPException, pypresence.exceptions.DiscordError) as error:
+            logging.error('Discord %s client error: %s', client_type, error)
+            setattr(self.clients, client_type, None)
         except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
+            logging.exception('Unexpected error updating %s client', client_type)
             setattr(self.clients, client_type, None)
 
     async def _cleanup_resources(self, watcher: nowplaying.db.DBWatcher) -> None:
