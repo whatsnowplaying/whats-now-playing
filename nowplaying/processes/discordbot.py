@@ -144,7 +144,7 @@ class DiscordSupport:
                     # Handle case where musicbrainzalbumid might be a list
                     if isinstance(musicbrainz_album_id, list):
                         musicbrainz_album_id = musicbrainz_album_id[0]
-                    large_image = (f"https://coverartarchive.org/release/"
+                    large_image = ("https://coverartarchive.org/release/"
                                     f"{musicbrainz_album_id}/front")
 
                 # Fall back to configured asset key if no MusicBrainz ID
