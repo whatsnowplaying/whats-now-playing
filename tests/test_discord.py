@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 ''' test discord functionality '''
+# pylint: disable=protected-access,redefined-outer-name,no-member
 
 import asyncio
 import os
@@ -12,7 +13,7 @@ import pypresence
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.processes.discordbot
-from nowplaying.processes.discordbot import DiscordSupport, DiscordClients
+from nowplaying.processes.discordbot import DiscordSupport, DiscordClients  # pylint: disable=no-name-in-module
 
 
 # Skip decorators for integration tests requiring Discord credentials
@@ -294,7 +295,7 @@ async def test_update_ipc_with_musicbrainz_cover_art(discord_support):
     ''' Test IPC update with MusicBrainz cover art '''
     mock_ipc = AsyncMock(spec=pypresence.AioPresence)
     discord_support.clients.ipc = mock_ipc
-    
+
     metadata = {
         'title': 'Test Song',
         'artist': 'Test Artist',
@@ -302,10 +303,12 @@ async def test_update_ipc_with_musicbrainz_cover_art(discord_support):
     }
 
     await discord_support._update_ipc("test message", metadata)
+    expected_url = ('https://coverartarchive.org/release/'
+                   '12345678-1234-1234-1234-123456789abc/front')
     mock_ipc.update.assert_called_once_with(
         state='Streaming',
         details='test message',
-        large_image='https://coverartarchive.org/release/12345678-1234-1234-1234-123456789abc/front',
+        large_image=expected_url,
         large_text='♪ Test Song'
     )
 
@@ -315,7 +318,7 @@ async def test_update_ipc_with_musicbrainz_cover_art_string(discord_support):
     ''' Test IPC update with MusicBrainz cover art as string '''
     mock_ipc = AsyncMock(spec=pypresence.AioPresence)
     discord_support.clients.ipc = mock_ipc
-    
+
     metadata = {
         'title': 'Test Song',
         'artist': 'Test Artist',
@@ -323,10 +326,12 @@ async def test_update_ipc_with_musicbrainz_cover_art_string(discord_support):
     }
 
     await discord_support._update_ipc("test message", metadata)
+    expected_url = ('https://coverartarchive.org/release/'
+                   '12345678-1234-1234-1234-123456789abc/front')
     mock_ipc.update.assert_called_once_with(
         state='Streaming',
         details='test message',
-        large_image='https://coverartarchive.org/release/12345678-1234-1234-1234-123456789abc/front',
+        large_image=expected_url,
         large_text='♪ Test Song'
     )
 
@@ -336,10 +341,10 @@ async def test_update_ipc_with_asset_key_fallback(discord_support):
     ''' Test IPC update falls back to asset key when no MusicBrainz ID '''
     discord_support.config.cparser.setValue('discord/large_image_key', 'music_note')
     discord_support.config.cparser.setValue('discord/small_image_key', 'app_logo')
-    
+
     mock_ipc = AsyncMock(spec=pypresence.AioPresence)
     discord_support.clients.ipc = mock_ipc
-    
+
     metadata = {
         'title': 'Test Song',
         'artist': 'Test Artist'
@@ -450,11 +455,11 @@ def test_start_function():
 
         mock_frozen.return_value = '/fake/path'
         mock_logging.return_value = '/fake/log/path'
-        
+
         # Mock the database and watcher to prevent actual DB operations
         mock_watcher = MagicMock()
         mock_metadb.return_value.watcher.return_value = mock_watcher
-        
+
         # Mock the stop event to immediately return so start() completes quickly
         mock_event.is_set.return_value = True
 
