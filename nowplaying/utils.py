@@ -3,6 +3,7 @@
 
 from html.parser import HTMLParser
 
+import asyncio
 import base64
 import copy
 import io
@@ -45,7 +46,7 @@ CUSTOM_TRANSLATE = str.maketrans(MISSED_TRANSLITERAL + MISSED_TRANSLITERAL.lower
                                  REPLACED_CHARACTERS + REPLACED_CHARACTERS.lower())
 
 
-def safe_stopevent_check(stopevent):
+def safe_stopevent_check(stopevent: asyncio.Event) -> bool:
     """
     Safely check if stopevent is set, handling shutdown pipe errors.
     Returns True if stopevent is set OR if pipe is broken (indicating shutdown).
