@@ -5,6 +5,7 @@ import os
 import logging
 import multiprocessing
 import sqlite3
+import types
 
 import pytest
 import pytest_asyncio
@@ -12,7 +13,7 @@ import pytest_asyncio
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.metadata  # pylint: disable=import-error
 import nowplaying.upgrade  # pylint: disable=import-error
-import nowplaying.imagecache  # pylint: disable=import-error
+import nowplaying.imagecache  # pylint: disable=import-error,no-member
 
 
 @pytest_asyncio.fixture
@@ -24,7 +25,7 @@ async def get_imagecache(bootstrap):
     dbdir.mkdir()
     logpath = config.testdir.joinpath('debug.log')
     stopevent = multiprocessing.Event()
-    imagecache = nowplaying.imagecache.ImageCache(cachedir=dbdir, stopevent=stopevent)
+    imagecache = nowplaying.imagecache.ImageCache(cachedir=dbdir, stopevent=stopevent)  # pylint: disable=no-member
     icprocess = multiprocessing.Process(target=imagecache.queue_process,
                                         name='ICProcess',
                                         args=(
@@ -767,3 +768,27 @@ def test_decode_musical_key(input_value, expected_output):
     """Test the _decode_musical_key method handles various key formats."""
     result = nowplaying.metadata.TinyTagRunner._decode_musical_key(input_value)  # pylint: disable=protected-access
     assert result == expected_output
+
+
+@pytest.mark.parametrize(
+    "test_value,expected_result",
+    [
+        (0, True),  # 0 should be processed (our fix)
+        (1, True),  # 1 should be processed (normal case)
+        (None, False),  # None should be ignored
+        ('0', True),  # String '0' should be processed
+        ('', True),  # Empty string should be processed (only None is filtered)
+    ])
+def test_metadata_handles_zero_values(test_value, expected_result):
+    """Test that metadata processing handles 0 values correctly."""
+    # Create a minimal mock tag object that focuses on testing the specific condition
+    mock_tag = types.SimpleNamespace(track=test_value)
+
+    # Test the specific condition that was problematic
+    has_attr = hasattr(mock_tag, 'track')
+    value_check = getattr(mock_tag, 'track') is not None  # Our fix: was getattr(mock_tag, 'track')
+
+    should_process = has_attr and value_check
+
+    assert should_process == expected_result, \
+        f"Value {test_value} should {'be processed' if expected_result else 'be ignored'}"

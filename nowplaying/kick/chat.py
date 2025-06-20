@@ -239,7 +239,7 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
     @staticmethod
     def _finalize(variable: Any) -> str:
         ''' helper routine to avoid NoneType exceptions '''
-        if variable:
+        if variable is not None:
             return variable
         return ''
 

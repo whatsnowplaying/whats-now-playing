@@ -1,0 +1,2 @@
+{% if track %}Track: {{ track }}{% endif %}
+{% if disc %}Disc: {{ disc }}{% endif %}

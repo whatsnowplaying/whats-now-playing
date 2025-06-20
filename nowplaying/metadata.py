@@ -582,7 +582,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
                 'composer', 'disc', 'disc_total', 'duration', 'genre', 'lang', 'publisher', 'title',
                 'track', 'track_total', 'label'
         ]:
-            if key not in self.metadata and hasattr(tag, key) and getattr(tag, key):
+            if key not in self.metadata and hasattr(tag, key) and getattr(tag, key) is not None:
                 self.metadata[key] = str(getattr(tag, key))
 
         # Handle the 'key' field separately to decode JSON if needed
