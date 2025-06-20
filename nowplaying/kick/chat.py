@@ -5,6 +5,7 @@ import asyncio
 import datetime
 import logging
 import pathlib
+import platform
 from typing import Any
 
 import aiohttp
@@ -15,6 +16,7 @@ from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=n
 import nowplaying.config
 import nowplaying.db
 import nowplaying.kick.oauth2
+import nowplaying.kick.utils
 import nowplaying.utils
 
 SPLITMESSAGETEXT = '****SPLITMESSSAGEHERE****'
@@ -54,25 +56,11 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         if not self.oauth:
             self.oauth = nowplaying.kick.oauth2.KickOAuth2(self.config)
 
-        # Check if we have valid tokens
-        access_token, refresh_token = self.oauth.get_stored_tokens()
-        if access_token:
-            # Validate the token
-            validation_result = await self.oauth.validate_token(access_token)
-            if validation_result:
-                self.authenticated = True
-                logging.info('Kick chat authentication successful')
-                return True
-
-            if refresh_token:
-                # Try to refresh the token
-                try:
-                    await self.oauth.refresh_access_token(refresh_token)
-                    self.authenticated = True
-                    logging.info('Kick chat token refreshed successfully')
-                    return True
-                except Exception as error:# pylint: disable=broad-exception-caught
-                    logging.warning('Failed to refresh Kick token: %s', error)
+        # Use consolidated token refresh function
+        if await nowplaying.kick.utils.attempt_token_refresh(self.config):
+            self.authenticated = True
+            logging.info('Kick chat authentication successful')
+            return True
 
         logging.error('No valid Kick tokens available for chat')
         return False
@@ -211,8 +199,12 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
 
                 logging.info('Successfully authenticated with Kick. Channel: %s', channel_name)
 
-                # Send test message to verify connection
-                test_message = f'🤖 Kick bot connected! Now monitoring {channel_name} for commands.'
+                # Send connection message with version info (like Twitch !whatsnowplayingversion)
+                inputsource = self.config.cparser.value('settings/input')
+                plat = platform.platform()
+
+                test_message = (f'🤖 whatsnowplaying v{self.config.version} by @modernmeerkat '
+                               f'connected! Using {inputsource} on {plat}.')
                 test_sent = await self._send_message(test_message)
                 if test_sent:
                     logging.info('Test message sent successfully to Kick chat')

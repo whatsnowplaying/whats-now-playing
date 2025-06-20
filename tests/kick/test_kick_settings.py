@@ -23,13 +23,11 @@ def mock_kick_widget():
     widget.channel_lineedit = MagicMock()
     widget.clientid_lineedit = MagicMock()
     widget.secret_lineedit = MagicMock()
-    widget.redirecturi_lineedit = MagicMock()
+    widget.redirecturi_label = MagicMock()
     widget.authenticate_button = MagicMock()
     widget.oauth_status_label = MagicMock()
-    # Set default text values for the update_oauth_status method
     widget.clientid_lineedit.text.return_value = 'test_client'
     widget.secret_lineedit.text.return_value = 'test_secret'
-    widget.redirecturi_lineedit.text.return_value = 'http://localhost:8080'
     return widget
 
 
@@ -79,7 +77,6 @@ def test_kick_settings_connect(mock_kick_widget):
     mock_kick_widget.authenticate_button.clicked.connect.assert_called_once()
     mock_kick_widget.clientid_lineedit.editingFinished.connect.assert_called_once()
     mock_kick_widget.secret_lineedit.editingFinished.connect.assert_called_once()
-    mock_kick_widget.redirecturi_lineedit.editingFinished.connect.assert_called_once()
 
 
 def test_kick_settings_load(configured_kick_config, mock_kick_widget):
@@ -93,8 +90,8 @@ def test_kick_settings_load(configured_kick_config, mock_kick_widget):
     mock_kick_widget.channel_lineedit.setText.assert_called_with('testchannel')
     mock_kick_widget.clientid_lineedit.setText.assert_called_with('test_client_id')
     mock_kick_widget.secret_lineedit.setText.assert_called_with('test_secret')
-    mock_kick_widget.redirecturi_lineedit.setText.assert_called_with(
-        'http://localhost:8080/callback')
+    mock_kick_widget.redirecturi_label.setText.assert_called_with(
+        'http://localhost:8899/kickredirect')
     assert isinstance(settings.oauth, nowplaying.kick.oauth2.KickOAuth2)
 
 
@@ -104,9 +101,8 @@ def test_kick_settings_load_default_redirect_uri(bootstrap, mock_kick_widget):
 
     settings.load(bootstrap, mock_kick_widget)
 
-    # Should set default redirect URI
-    mock_kick_widget.redirecturi_lineedit.setText.assert_called_with(
-        'http://localhost:8080/kickredirect')
+    mock_kick_widget.redirecturi_label.setText.assert_called_with(
+        'http://localhost:8899/kickredirect')
 
 
 @pytest.mark.parametrize(
@@ -138,7 +134,6 @@ def test_kick_settings_save_scenarios(bootstrap, mock_kick_widget, has_changes, 
     mock_kick_widget.channel_lineedit.text.return_value = 'testchannel'
     mock_kick_widget.clientid_lineedit.text.return_value = 'testclient'
     mock_kick_widget.secret_lineedit.text.return_value = 'testsecret'
-    mock_kick_widget.redirecturi_lineedit.text.return_value = 'testuri'
 
     mock_subprocesses = MagicMock()
 
@@ -160,25 +155,20 @@ def test_kick_settings_save_scenarios(bootstrap, mock_kick_widget, has_changes, 
 
 # Parameterized verification tests
 @pytest.mark.parametrize(
-    "enabled,client_id,secret,redirect_uri,channel,expected_error",
+    "enabled,client_id,secret,channel,expected_error",
     [
-        (False, '', '', '', '', None),  # Disabled - no validation
-        (True, '', 'secret', 'http://localhost', 'channel', 'Kick Client ID is required'),
-        (True, 'client', '', 'http://localhost', 'channel', 'Kick Client Secret is required'),
-        (True, 'client', 'secret', '', 'channel', 'Kick Redirect URI is required'),
-        (True, 'client', 'secret', 'http://localhost', '', 'Kick Channel is required'),
-        (True, 'client', 'secret', 'invalid_uri', 'channel',
-         'Kick Redirect URI must start with http'),
-        (True, 'client', 'secret', 'http://localhost', 'channel', None),  # Valid
+        (False, '', '', '', None),  # Disabled - no validation
+        (True, '', 'secret', 'channel', 'Kick Client ID is required'),
+        (True, 'client', '', 'channel', 'Kick Client Secret is required'),
+        (True, 'client', 'secret', '', 'Kick Channel is required'),
+        (True, 'client', 'secret', 'channel', None),  # Valid
     ])
-def test_kick_settings_verify_scenarios(enabled, client_id, secret, redirect_uri, channel,
-                                        expected_error):
+def test_kick_settings_verify_scenarios(enabled, client_id, secret, channel, expected_error):
     """Test verification with various input combinations."""
     mock_widget = MagicMock()
     mock_widget.enable_checkbox.isChecked.return_value = enabled
     mock_widget.clientid_lineedit.text.return_value = client_id
     mock_widget.secret_lineedit.text.return_value = secret
-    mock_widget.redirecturi_lineedit.text.return_value = redirect_uri
     mock_widget.channel_lineedit.text.return_value = channel
 
     if expected_error:

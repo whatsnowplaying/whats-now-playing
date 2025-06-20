@@ -60,42 +60,12 @@ class KickLaunch:  # pylint: disable=too-many-instance-attributes
     async def authenticate(self) -> bool:
         ''' authenticate with Kick using stored tokens (no browser interaction) '''
         try:
-            # Check if we have stored tokens
-            access_token, refresh_token = self.oauth.get_stored_tokens()
-
-            if not access_token:
-                logging.error(
-                    'No Kick access token stored - please authenticate via Settings first')
-                return False
-
-            logging.info('Validating stored Kick token...')
-
-            # Validate token using simple sync validation
-            if nowplaying.kick.utils.qtsafe_validate_kick_token(access_token):
+            # Use consolidated token refresh function
+            if await nowplaying.kick.utils.attempt_token_refresh(self.config):
                 logging.info('Kick token is valid - proceeding with chat')
                 return True
 
-            # Token invalid - try refresh if available
-            if refresh_token:
-                logging.info('Token invalid, attempting automatic refresh...')
-                try:
-                    _ = await self.oauth.refresh_access_token(refresh_token)
-
-                    # Re-validate the refreshed token
-                    new_access_token, _ = self.oauth.get_stored_tokens()
-                    if new_access_token and nowplaying.kick.utils.qtsafe_validate_kick_token(
-                            new_access_token):
-                        logging.info('Token refreshed successfully - proceeding with chat')
-                        return True
-
-                    logging.error('Refreshed token is still invalid')
-
-                except Exception as error:  # pylint: disable=broad-exception-caught
-                    logging.error('Failed to refresh Kick token: %s', error)
-                    logging.error('Please re-authenticate via Settings -> Kick -> Authenticate')
-            else:
-                logging.error('No refresh token available for automatic renewal')
-                logging.error('Please re-authenticate via Settings -> Kick -> Authenticate')
+            logging.error('Please re-authenticate via Settings -> Kick -> Authenticate')
 
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error('Kick authentication error: %s', error)

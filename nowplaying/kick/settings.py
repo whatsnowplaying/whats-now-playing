@@ -21,6 +21,7 @@ class KickSettings:
         self.widget: Any = None
         self.oauth: nowplaying.kick.oauth2.KickOAuth2 | None = None
         self.refresh_token: str | None = None
+        self.status_timer: QTimer | None = None
 
     def connect(self, uihelp: Any, widget: Any) -> None:  # pylint: disable=unused-argument
         '''  connect kick '''
@@ -28,7 +29,6 @@ class KickSettings:
         widget.authenticate_button.clicked.connect(self.authenticate_oauth)
         widget.clientid_lineedit.editingFinished.connect(self.update_oauth_status)
         widget.secret_lineedit.editingFinished.connect(self.update_oauth_status)
-        widget.redirecturi_lineedit.editingFinished.connect(self.update_oauth_status)
 
     def load(self, config: nowplaying.config.ConfigFile, widget: Any) -> None:
         ''' load the settings window '''
@@ -37,12 +37,16 @@ class KickSettings:
         widget.channel_lineedit.setText(config.cparser.value('kick/channel'))
         widget.clientid_lineedit.setText(config.cparser.value('kick/clientid'))
         widget.secret_lineedit.setText(config.cparser.value('kick/secret'))
-        widget.redirecturi_lineedit.setText(
-            config.cparser.value('kick/redirecturi') or 'http://localhost:8080/kickredirect')
+
+        # Always set redirect URI to match webserver port (not user-configurable)
+        webserver_port = config.cparser.value('weboutput/httpport', '8899')
+        redirect_uri = f'http://localhost:{webserver_port}/kickredirect'
+        widget.redirecturi_label.setText(redirect_uri)
 
         # Initialize OAuth2 handler
         self.oauth = nowplaying.kick.oauth2.KickOAuth2(config)
         self.update_oauth_status()
+        self.start_status_timer()
 
     @staticmethod
     def save(config: nowplaying.config.ConfigFile, widget: Any, subprocesses: Any) -> None:
@@ -53,18 +57,15 @@ class KickSettings:
         newclientid = widget.clientid_lineedit.text()
         oldsecret = config.cparser.value('kick/secret')
         newsecret = widget.secret_lineedit.text()
-        oldredirecturi = config.cparser.value('kick/redirecturi')
-        newredirecturi = widget.redirecturi_lineedit.text()
-
         config.cparser.setValue('kick/enabled', widget.enable_checkbox.isChecked())
         config.cparser.setValue('kick/channel', newchannel)
         config.cparser.setValue('kick/clientid', newclientid)
         config.cparser.setValue('kick/secret', newsecret)
-        config.cparser.setValue('kick/redirecturi', newredirecturi)
+        # Note: redirect URI is not saved - it's always generated from webserver port
 
         # If critical settings changed, restart kick bot and clear tokens
         if (oldchannel != newchannel) or (oldclientid != newclientid) or (
-                oldsecret != newsecret) or (oldredirecturi != newredirecturi):
+                oldsecret != newsecret):
             # Stop kick bot if running
             subprocesses.stop_kickbot()
 
@@ -89,16 +90,10 @@ class KickSettings:
         if not widget.secret_lineedit.text().strip():
             raise PluginVerifyError('Kick Client Secret is required')
 
-        if not widget.redirecturi_lineedit.text().strip():
-            raise PluginVerifyError('Kick Redirect URI is required')
-
         if not widget.channel_lineedit.text().strip():
             raise PluginVerifyError('Kick Channel is required')
 
-        # Validate redirect URI format
-        redirect_uri = widget.redirecturi_lineedit.text().strip()
-        if not redirect_uri.startswith('http://') and not redirect_uri.startswith('https://'):
-            raise PluginVerifyError('Kick Redirect URI must start with http:// or https://')
+        # Note: redirect URI validation removed - it's auto-generated and not user-configurable
 
     def authenticate_oauth(self) -> None:
         ''' initiate OAuth2 authentication flow '''
@@ -110,7 +105,8 @@ class KickSettings:
         if self.widget:
             self.oauth.client_id = self.widget.clientid_lineedit.text().strip()
             self.oauth.client_secret = self.widget.secret_lineedit.text().strip()
-            self.oauth.redirect_uri = self.widget.redirecturi_lineedit.text().strip()
+            # Redirect URI is always set from webserver port, not from form
+            self.oauth.redirect_uri = self.widget.redirecturi_label.text().strip()
 
         # Validate required fields
         if not self.oauth.client_id:
@@ -119,9 +115,7 @@ class KickSettings:
         if not self.oauth.client_secret:
             self.widget.oauth_status_label.setText('Error: Client Secret required')
             return
-        if not self.oauth.redirect_uri:
-            self.widget.oauth_status_label.setText('Error: Redirect URI required')
-            return
+        # Note: redirect URI is always valid since it's auto-generated
 
         try:
             # Open browser for authentication
@@ -140,6 +134,24 @@ class KickSettings:
             logging.error('Kick OAuth2 authentication error: %s', error)
             self.widget.oauth_status_label.setText(f'Authentication error: {error}')
 
+    def start_status_timer(self) -> None:
+        ''' Start periodic status updates to catch automatic token refresh '''
+        if not self.status_timer:
+            self.status_timer = QTimer()
+            self.status_timer.timeout.connect(self.update_oauth_status)
+            # Check every 30 seconds for token status changes
+            self.status_timer.start(30000)
+
+    def stop_status_timer(self) -> None:
+        ''' Stop periodic status updates '''
+        if self.status_timer:
+            self.status_timer.stop()
+            self.status_timer = None
+
+    def cleanup(self) -> None:
+        ''' Clean up resources when settings UI is closed '''
+        self.stop_status_timer()
+
     def update_oauth_status(self) -> None:
         ''' update the OAuth status display '''
         if not self.oauth or not self.widget:
@@ -152,25 +164,28 @@ class KickSettings:
         # Check if we have valid configuration
         client_id = self.widget.clientid_lineedit.text().strip()
         client_secret = self.widget.secret_lineedit.text().strip()
-        redirect_uri = self.widget.redirecturi_lineedit.text().strip()
+        # Note: redirect URI is always valid since it's auto-generated
 
-        if not client_id or not client_secret or not redirect_uri:
+        if not client_id or not client_secret:
             self.widget.oauth_status_label.setText('Configuration incomplete')
             return
 
         # Check for stored tokens and validate them
-        access_token, _ = self.oauth.get_stored_tokens()
+        access_token, refresh_token = self.oauth.get_stored_tokens()
 
         if access_token:
             # Validate token synchronously like Twitch does
             if nowplaying.kick.utils.qtsafe_validate_kick_token(access_token):
-                self.widget.oauth_status_label.setText('Authenticated (valid)')
+                self.widget.oauth_status_label.setText('Authenticated')
                 self.widget.authenticate_button.setText('Re-authenticate')
             else:
-                self.widget.oauth_status_label.setText(
-                    'Authentication expired - please re-authenticate')
-                self.widget.authenticate_button.setText('Authenticate')
-                # Don't auto-clear tokens here - let the user decide
+                # Check if we can refresh automatically
+                if refresh_token:
+                    self.widget.oauth_status_label.setText('Refreshing expired token...')
+                else:
+                    self.widget.oauth_status_label.setText(
+                        'Token expired - re-authentication needed')
+                    self.widget.authenticate_button.setText('Authenticate')
         else:
             self.widget.oauth_status_label.setText('Not authenticated')
 

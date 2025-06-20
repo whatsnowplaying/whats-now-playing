@@ -38,65 +38,27 @@ def test_kickchat_init_without_config():
     assert isinstance(chat.stopevent, asyncio.Event)
 
 
+@pytest.mark.parametrize("refresh_succeeds,expected_result", [
+    (True, True),   # Authentication succeeds
+    (False, False), # Authentication fails
+])
 @pytest.mark.asyncio
-async def test_kickchat_authenticate_success(bootstrap):
-    """Test successful authentication."""
+async def test_kickchat_authenticate(bootstrap, refresh_succeeds, expected_result):
+    """Test authentication success and failure scenarios."""
     config = bootstrap
     stopevent = asyncio.Event()
 
     chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)  #pylint: disable=no-member
 
-    # Mock OAuth2 handler
-    mock_oauth = MagicMock()
-    mock_oauth.get_stored_tokens.return_value = ('access_token', 'refresh_token')
-    mock_oauth.validate_token = AsyncMock(return_value=True)
-    chat.oauth = mock_oauth
+    with patch('nowplaying.kick.utils.attempt_token_refresh',
+               new_callable=AsyncMock) as mock_refresh:
+        mock_refresh.return_value = refresh_succeeds
 
-    result = await chat._authenticate()
+        result = await chat._authenticate()
 
-    assert result
-    assert chat.authenticated
-
-
-@pytest.mark.asyncio
-async def test_kickchat_authenticate_no_tokens(bootstrap):
-    """Test authentication failure with no tokens."""
-    config = bootstrap
-    stopevent = asyncio.Event()
-
-    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)  #pylint: disable=no-member
-
-    # Mock OAuth2 handler with no tokens
-    mock_oauth = MagicMock()
-    mock_oauth.get_stored_tokens.return_value = (None, None)
-    chat.oauth = mock_oauth
-
-    result = await chat._authenticate()
-
-    assert not result
-    assert chat.authenticated is False
-
-
-@pytest.mark.asyncio
-async def test_kickchat_authenticate_token_refresh(bootstrap):
-    """Test authentication with token refresh."""
-    config = bootstrap
-    stopevent = asyncio.Event()
-
-    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)  #pylint: disable=no-member
-
-    # Mock OAuth2 handler with invalid token that needs refresh
-    mock_oauth = MagicMock()
-    mock_oauth.get_stored_tokens.return_value = ('invalid_token', 'refresh_token')
-    mock_oauth.validate_token = AsyncMock(return_value=False)
-    mock_oauth.refresh_access_token = AsyncMock()
-    chat.oauth = mock_oauth
-
-    result = await chat._authenticate()
-
-    assert result is True
-    assert chat.authenticated is True
-    mock_oauth.refresh_access_token.assert_called_once_with('refresh_token')
+        assert result == expected_result
+        assert chat.authenticated == expected_result
+        mock_refresh.assert_called_once_with(config)
 
 
 @pytest.mark.asyncio

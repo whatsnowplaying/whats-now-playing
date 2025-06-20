@@ -247,11 +247,15 @@ async def test_refresh_access_token_scenarios(
     "response_status,response_data,expected_result",
     [
         (200, {
-            'valid': True,
-            'client_id': 'test_client'
+            'data': {
+                'active': True,
+                'client_id': 'test_client'
+            }
         }, {
-            'valid': True,
-            'client_id': 'test_client'
+            'data': {
+                'active': True,
+                'client_id': 'test_client'
+            }
         }),
         (401, {}, None),  # Unauthorized
         (500, {}, None),  # Server error
@@ -266,12 +270,14 @@ async def test_validate_token_scenarios(
     """Test token validation with various responses."""
     oauth = configured_oauth
 
+    # Use the correct introspect endpoint and POST method
+    introspect_url = 'https://api.kick.com/public/v1/token/introspect'
     if response_status == 200:
-        mock_responses.get(f"{oauth.OAUTH_HOST}/oauth/validate",
+        mock_responses.post(introspect_url,
                            status=response_status,
                            payload=response_data)
     else:
-        mock_responses.get(f"{oauth.OAUTH_HOST}/oauth/validate",
+        mock_responses.post(introspect_url,
                            status=response_status,
                            body='Error')
 
