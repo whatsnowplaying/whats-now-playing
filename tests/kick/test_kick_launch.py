@@ -129,68 +129,28 @@ def test_validate_kick_token_sync_exceptions(kick_launch, exception_type, except
     assert not result
 
 
-# Parameterized authentication tests
-@pytest.mark.parametrize(
-    "stored_tokens,token_validation,refresh_succeeds,expected_result",
-    [
-        # No tokens
-        ((None, None), None, None, False),
-        # Valid token
-        (('valid_token', 'refresh_token'), True, None, True),
-        # Invalid token, no refresh token
-        (('invalid_token', None), False, None, False),
-        # Invalid token, refresh succeeds
-        (('invalid_token', 'refresh_token'), False, True, True),
-        # Invalid token, refresh fails
-        (('invalid_token', 'refresh_token'), False, False, False),
-    ])
+@pytest.mark.parametrize("refresh_succeeds", [True, False])
 @pytest.mark.asyncio
-async def test_authenticate_scenarios(  # pylint: disable=redefined-outer-name,unused-argument
-        kick_launch,
-        stored_tokens,
-        token_validation,
-        refresh_succeeds,
-        expected_result):
-    """Test authentication with various scenarios."""
-    # Setup mocks
-    kick_launch.oauth.get_stored_tokens = MagicMock()
+async def test_authenticate(kick_launch, refresh_succeeds):  # pylint: disable=redefined-outer-name
+    """Test authentication success and failure."""
+    with patch('nowplaying.kick.utils.attempt_token_refresh',
+               new_callable=AsyncMock) as mock_refresh:
+        mock_refresh.return_value = refresh_succeeds
 
-    if refresh_succeeds is not None:
-        # Test refresh scenarios
-        kick_launch.oauth.get_stored_tokens.side_effect = [
-            stored_tokens,  # First call
-            ('new_valid_token',
-             stored_tokens[1]) if refresh_succeeds else stored_tokens  # After refresh
-        ]
-        with patch('nowplaying.kick.utils.qtsafe_validate_kick_token') as mock_validate:
-            mock_validate.side_effect = [False, refresh_succeeds]
-
-            if refresh_succeeds:
-                kick_launch.oauth.refresh_access_token = AsyncMock()
-            else:
-                kick_launch.oauth.refresh_access_token = AsyncMock(
-                    side_effect=Exception("Refresh failed"))
-
-            result = await kick_launch.authenticate()
-            assert result == expected_result
-    else:
-        # Simple scenarios
-        kick_launch.oauth.get_stored_tokens.return_value = stored_tokens
-        with patch('nowplaying.kick.utils.qtsafe_validate_kick_token') as mock_validate:
-            if token_validation is not None:
-                mock_validate.return_value = token_validation
-
-            result = await kick_launch.authenticate()
-            assert result == expected_result
+        result = await kick_launch.authenticate()
+        assert result == refresh_succeeds
+        mock_refresh.assert_called_once_with(kick_launch.config)
 
 
 @pytest.mark.asyncio
 async def test_authenticate_exception(kick_launch):  # pylint: disable=redefined-outer-name
     """Test authentication with unexpected exception."""
-    kick_launch.oauth.get_stored_tokens = MagicMock(side_effect=Exception("Unexpected error"))
+    with patch('nowplaying.kick.utils.attempt_token_refresh',
+               new_callable=AsyncMock) as mock_refresh:
+        mock_refresh.side_effect = Exception("Unexpected error")
 
-    result = await kick_launch.authenticate()
-    assert not result
+        result = await kick_launch.authenticate()
+        assert not result
 
 
 def test_forced_stop(kick_launch_with_stopevent):  # pylint: disable=redefined-outer-name

@@ -30,26 +30,6 @@ def kick_integration_config(bootstrap):
     return config
 
 
-@pytest.fixture
-def mock_oauth_success():
-    """Create a mock OAuth handler that succeeds."""
-    mock_oauth = MagicMock()
-    mock_oauth.get_stored_tokens.return_value = ('valid_token', 'refresh_token')
-
-    # Create AsyncMock with explicit spec to avoid attribute access issues
-    validate_mock = AsyncMock(return_value=True)
-    validate_mock.__name__ = 'validate_token'  # Prevent string conversion issues
-    mock_oauth.validate_token = validate_mock
-    return mock_oauth
-
-
-@pytest.fixture
-def mock_oauth_failure():
-    """Create a mock OAuth handler that fails."""
-    mock_oauth = MagicMock()
-    mock_oauth.get_stored_tokens.return_value = (None, None)
-    mock_oauth.validate_token = AsyncMock(return_value=False)
-    return mock_oauth
 
 
 @pytest.fixture
@@ -75,11 +55,10 @@ def kick_templates(kick_integration_config):  # pylint: disable=redefined-outer-
 
 
 @pytest.fixture
-def mock_chat_with_oauth(kick_integration_config, mock_oauth_success):  # pylint: disable=redefined-outer-name
-    """Create a chat instance with mocked OAuth."""
+def mock_chat_with_oauth(kick_integration_config):  # pylint: disable=redefined-outer-name
+    """Create a chat instance for integration testing."""
     stopevent = asyncio.Event()
     chat = nowplaying.kick.chat.KickChat(config=kick_integration_config, stopevent=stopevent)  # pylint: disable=no-member
-    chat.oauth = mock_oauth_success
     return chat, stopevent
 
 
@@ -131,7 +110,8 @@ async def test_full_authentication_flow(kick_integration_config, mock_responses)
     assert oauth.refresh_token == 'test_refresh_token'
 
     # Verify tokens were stored in config
-    assert config.cparser.value('kick/accesstoken') == 'test_access_token'
+    assert config.cparser.value('kick/accesstoken') == \
+        'test_access_token'
     assert config.cparser.value('kick/refreshtoken') == 'test_refresh_token'
 
 
@@ -140,10 +120,15 @@ async def test_chat_with_oauth_integration(mock_chat_with_oauth, mock_responses)
     """Test chat integration with OAuth2."""
     chat, _ = mock_chat_with_oauth
 
-    # Test authentication
-    result = await chat._authenticate()  # pylint: disable=protected-access
-    assert result
-    assert chat.authenticated
+    # Mock the consolidated token refresh function
+    with patch('nowplaying.kick.utils.attempt_token_refresh',
+               new_callable=AsyncMock) as mock_refresh:
+        mock_refresh.return_value = True
+
+        # Test authentication
+        result = await chat._authenticate()  # pylint: disable=protected-access
+        assert result
+        assert chat.authenticated
 
     # Mock message sending endpoint
     mock_responses.post("https://api.kick.com/public/v1/chat",
@@ -172,13 +157,12 @@ def test_settings_integration_scenarios(kick_integration_config, settings_type):
         # Create a very explicit mock to avoid AsyncMock contamination
         mock_widget = MagicMock(spec=[
             'enable_checkbox', 'channel_lineedit', 'clientid_lineedit', 'secret_lineedit',
-            'redirecturi_lineedit', 'authenticate_button', 'oauth_status_label'
+            'redirecturi_label', 'authenticate_button', 'oauth_status_label'
         ])
 
         # Ensure all text methods return proper strings
         mock_widget.clientid_lineedit.text.return_value = 'test_client'
         mock_widget.secret_lineedit.text.return_value = 'test_secret'
-        mock_widget.redirecturi_lineedit.text.return_value = 'http://localhost:8080'
         mock_widget.channel_lineedit.text.return_value = 'testchannel'
 
         settings.load(config, mock_widget)
@@ -407,13 +391,17 @@ async def test_malformed_api_responses(kick_integration_config):  # pylint: disa
 
 
 @pytest.mark.asyncio
-async def test_network_timeouts(kick_integration_config, mock_oauth_success):  # pylint: disable=redefined-outer-name
+async def test_network_timeouts(kick_integration_config):  # pylint: disable=redefined-outer-name
     """Test network timeout handling."""
     config = kick_integration_config
     stopevent = asyncio.Event()
     chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)  # pylint: disable=no-member
     chat.authenticated = True
-    chat.oauth = mock_oauth_success
+
+    # Mock OAuth for message sending
+    mock_oauth = MagicMock()
+    mock_oauth.get_stored_tokens.return_value = ('valid_token', 'refresh_token')
+    chat.oauth = mock_oauth
 
     # Test timeout during message sending using aioresponses
     with aioresponses() as mock:
@@ -522,6 +510,11 @@ async def test_rapid_message_sending(mock_chat_with_oauth, mock_aiohttp_success)
     chat, _ = mock_chat_with_oauth
     chat.authenticated = True
 
+    # Mock OAuth for message sending
+    mock_oauth = MagicMock()
+    mock_oauth.get_stored_tokens.return_value = ('valid_token', 'refresh_token')
+    chat.oauth = mock_oauth
+
     # Send multiple messages quickly
     results = await asyncio.gather(*[chat._send_message(f"Message {i}") for i in range(5)])  # pylint: disable=protected-access
 
@@ -540,12 +533,11 @@ async def test_concurrent_authentication_attempts(kick_integration_config):  # p
         for _ in range(3)
     ]
 
-    # Mock token validation for all using the shared utils function
-    with patch('nowplaying.kick.utils.qtsafe_validate_kick_token', return_value=True):
-        # Mock stored tokens for all launches
-        for launch in launches:
-            launch.oauth.get_stored_tokens = MagicMock(return_value=('valid_token',
-                                                                     'refresh_token'))
+    # Mock the consolidated token refresh function
+    with patch('nowplaying.kick.utils.attempt_token_refresh',
+               new_callable=AsyncMock) as mock_refresh:
+        mock_refresh.return_value = True
+
         # Authenticate concurrently
         results = await asyncio.gather(*[launch.authenticate() for launch in launches])
 

@@ -19,12 +19,13 @@ Authentication
 
 To use Kick.com integration, you'll need to set up OAuth2 authentication with your Kick account.
 
-#. Go to the Kick Developer Portal to register **What's Now Playing** as an application.
-#. Create a new OAuth2 application and note down:
+#. Go to your Kick streamer settings and navigate to the **Developer** tab to create an application.
+#. Create a new OAuth2 application with these important settings:
 
-   * Client ID
-   * Client Secret
-   * Redirect URI (typically ``http://localhost:8899/kickredirect``)
+   * **Application Type**: Set to **Bot** (required for chat functionality)
+   * **Application Name**: This will be the name displayed in chat when the bot sends messages
+   * Note down your Client ID and Client Secret
+   * Set Redirect URI to ``http://localhost:8899/kickredirect`` (port must match your webserver settings, default is 8899)
 
 #. Scopes Requested should include the following for current and future features:
 

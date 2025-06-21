@@ -260,7 +260,8 @@ class KickOAuth2:  # pylint: disable=too-many-instance-attributes
                     logging.error('Failed to revoke token: %s - %s', response.status, error_text)
 
     async def validate_token(self, token: str | None = None) -> dict[str, Any] | None:
-        ''' Validate an access token '''
+        ''' Validate an access token (async version for non-UI components)
+        Note: utils.py provides sync wrapper for Qt UI components '''
         if not token:
             token = self.access_token or self.config.cparser.value('kick/accesstoken')
 
@@ -268,19 +269,43 @@ class KickOAuth2:  # pylint: disable=too-many-instance-attributes
             logging.warning("No token to validate")
             return None
 
-        headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/json'}
+        # Use Kick's token introspect endpoint (same as sync version)
+        url = 'https://api.kick.com/public/v1/token/introspect'
+        headers = {'Authorization': f'Bearer {token}'}
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{self.OAUTH_HOST}/oauth/validate",
-                                   headers=headers,
-                                   timeout=aiohttp.ClientTimeout(total=10)) as response:
-                if response.status == 200:
-                    validation_response = await response.json()
-                    logging.debug('Token validation successful')
-                    return validation_response
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, headers=headers,
+                                       timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    if response.status == 200:
+                        validation_response = await response.json()
+                        data = validation_response.get('data', {})
 
-                logging.debug('Token validation failed: %s', response.status)
-                return None
+                        # Check if token is active
+                        if data.get('active'):
+                            logging.debug('Token validation successful')
+                            return validation_response
+
+                        logging.debug('Token is inactive')
+                        return None
+
+                    if response.status == 401:
+                        logging.debug('Token validation failed: invalid/expired')
+                    elif response.status == 429:
+                        logging.warning('Token validation rate limited (HTTP 429)')
+                    elif response.status >= 500:
+                        logging.error('Kick API server error during token validation (HTTP %s)',
+                                    response.status)
+                    else:
+                        logging.warning('Unexpected token validation response (HTTP %s)',
+                                      response.status)
+                    return None
+        except (aiohttp.ClientConnectionError, aiohttp.ServerTimeoutError) as error:
+            logging.warning('Network error during token validation: %s', error)
+            return None
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error('Unexpected error during token validation: %s', error)
+            return None
 
     def get_stored_tokens(self) -> tuple[str | None, str | None]:
         ''' Get tokens from config storage '''
