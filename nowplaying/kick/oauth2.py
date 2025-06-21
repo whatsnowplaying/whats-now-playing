@@ -260,7 +260,7 @@ class KickOAuth2:  # pylint: disable=too-many-instance-attributes
                     logging.error('Failed to revoke token: %s - %s', response.status, error_text)
 
     async def validate_token(self, token: str | None = None) -> dict[str, Any] | None:
-        ''' Validate an access token (async version for non-UI components) 
+        ''' Validate an access token (async version for non-UI components)
         Note: utils.py provides sync wrapper for Qt UI components '''
         if not token:
             token = self.access_token or self.config.cparser.value('kick/accesstoken')
