@@ -637,7 +637,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
                     content=cover.data)
 
 
-def recognition_replacement(config: "nowplaying.config.ConfigFile" | None = None,
+def recognition_replacement(config: "nowplaying.config.ConfigFile | None" = None,
                             metadata: TrackMetadata | None = None,
                             addmeta: TrackMetadata | None = None) -> TrackMetadata:
     ''' handle any replacements '''

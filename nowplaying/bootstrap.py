@@ -77,7 +77,8 @@ def setuplogging(logdir=None, logname='debug.log', rotate=False):
                     time.sleep(0.5 * (attempt + 1))  # 0.5s, then 1.0s
                     continue
                 # Final attempt failed - continue without rotation rather than crash
-                logging.warning('Could not rotate log file after 3 attempts (previous instance may still be shutting down): %s', error)
+                logging.warning('Could not rotate log file after 3 attempts '
+                                '(previous instance may still be shutting down): %s', error)
 
     logging.basicConfig(
         format='%(asctime)s %(levelname)s %(process)d %(processName)s/%(threadName)s ' +

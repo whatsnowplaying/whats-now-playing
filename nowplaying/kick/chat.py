@@ -177,7 +177,7 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         self.oauth = oauth_handler
 
         # Wait for chat to be enabled
-        while (not self.config.cparser.value('kick/chat', type=bool) and 
+        while (not self.config.cparser.value('kick/chat', type=bool) and
                not nowplaying.utils.safe_stopevent_check(self.stopevent)):
             await asyncio.sleep(1)
             self.config.get()
