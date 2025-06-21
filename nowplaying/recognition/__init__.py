@@ -2,43 +2,50 @@
 ''' Input Plugin definition '''
 
 import sys
-import typing as t
+from typing import TYPE_CHECKING
 
 #from nowplaying.exceptions import PluginVerifyError
 from nowplaying.plugin import WNPBasePlugin
+from nowplaying.types import TrackMetadata
+
+if TYPE_CHECKING:
+    import nowplaying.config
+    from PySide6.QtWidgets import QWidget
 
 
 class RecognitionPlugin(WNPBasePlugin):
     ''' base class of recognition plugins '''
 
-    def __init__(self, config=None, qsettings=None):
+    def __init__(self,
+                 config: "nowplaying.config.ConfigFile | None" = None,
+                 qsettings: "QWidget | None" = None):
         super().__init__(config=config, qsettings=qsettings)
-        self.plugintype = 'recognition'
+        self.plugintype: str = 'recognition'
 
 #### Recognition methods
 
-    async def recognize(self, metadata=None) -> t.Optional[dict]:  #pylint: disable=no-self-use
+    async def recognize(  #pylint: disable=no-self-use
+            self, metadata: TrackMetadata | None = None) -> TrackMetadata | None:
         ''' return metadata '''
         raise NotImplementedError
 
-    def providerinfo(self) -> dict:
+    def providerinfo(self) -> dict[str, object]:
         ''' return list of what is provided by this recognition system '''
         raise NotImplementedError
 
 
 #### Utilities
 
-    def calculate_delay(self):
+    def calculate_delay(self) -> float:
         ''' determine a reasonable, minimal delay '''
 
         try:
-            delay = self.config.cparser.value('settings/delay', type=float, defaultValue=10.0)
+            delay: float = self.config.cparser.value('settings/delay',
+                                                     type=float,
+                                                     defaultValue=10.0)
         except ValueError:
             delay = 10.0
 
         if sys.platform == 'win32':
-            delay = max(delay / 2, 10)
-        else:
-            delay = max(delay / 2, 5)
-
-        return delay
+            return max(delay / 2, 10)
+        return max(delay / 2, 5)
