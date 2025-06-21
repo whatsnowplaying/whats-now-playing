@@ -272,7 +272,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 if YOUTUBE_MATCH_RE.match(comments):
                     await self._mb_youtube_fallback(musicbrainz)
 
-    async def _mb_youtube_fallback(self, musicbrainz: "nowplaying.musicbrainz.MusicBrainzHelper") -> None:
+    async def _mb_youtube_fallback(self,
+                                   musicbrainz: "nowplaying.musicbrainz.MusicBrainzHelper") -> None:
         if not self.metadata:
             return
         addmeta2 = copy.deepcopy(self.metadata)
