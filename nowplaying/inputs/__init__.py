@@ -2,22 +2,29 @@
 ''' Input Plugin definition '''
 
 #import logging
-import typing as t
+from typing import TYPE_CHECKING
 
 #from nowplaying.exceptions import PluginVerifyError
 from nowplaying.plugin import WNPBasePlugin
+from nowplaying.types import TrackMetadata
+
+if TYPE_CHECKING:
+    import nowplaying.config
+    from PySide6.QtWidgets import QWidget
 
 
 class InputPlugin(WNPBasePlugin):
     ''' base class of input plugins '''
 
-    def __init__(self, config=None, qsettings=None):
+    def __init__(self,
+                 config: "nowplaying.config.ConfigFile | None" = None,
+                 qsettings: "QWidget | None" = None):
         super().__init__(config=config, qsettings=qsettings)
-        self.plugintype = 'input'
+        self.plugintype: str = 'input'
 
 #### Additional UI method
 
-    def desc_settingsui(self, qwidget):  # pylint: disable=no-self-use
+    def desc_settingsui(self, qwidget: "QWidget") -> None:  # pylint: disable=no-self-use
         ''' description of this input '''
         qwidget.setText('No description available.')
 
@@ -49,20 +56,20 @@ class InputPlugin(WNPBasePlugin):
 
 #### Data feed methods
 
-    async def getplayingtrack(self) -> t.Optional[dict]:
+    async def getplayingtrack(self) -> TrackMetadata | None:
         ''' Get the currently playing track '''
         raise NotImplementedError
 
-    async def getrandomtrack(self, playlist: str) -> t.Optional[str]:
+    async def getrandomtrack(self, playlist: str) -> str | None:
         ''' Get a file associated with a playlist, crate, whatever '''
         raise NotImplementedError
 
 
 #### Control methods
 
-    async def start(self):
+    async def start(self) -> None:
         ''' any initialization before actual polling starts '''
 
-    async def stop(self):
+    async def stop(self) -> None:
         ''' stopping either the entire program or just this
             input '''

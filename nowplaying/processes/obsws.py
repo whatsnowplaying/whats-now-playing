@@ -61,7 +61,7 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
                 await asyncio.sleep(1)
                 continue
 
-            if self.stopevent.is_set():
+            if nowplaying.utils.safe_stopevent_check(self.stopevent):
                 break
 
             if not self.config.cparser.value('obsws/enabled', type=bool):

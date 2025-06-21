@@ -12,7 +12,7 @@ import os
 import string
 import sys
 import textwrap
-import typing as t
+from typing import TYPE_CHECKING
 
 import tinytag
 import url_normalize
@@ -22,6 +22,10 @@ import nowplaying.hostmeta
 import nowplaying.musicbrainz
 import nowplaying.tinytag_fixes
 import nowplaying.utils
+from nowplaying.types import TrackMetadata
+
+if TYPE_CHECKING:
+    import nowplaying.imagecache
 
 # Apply tinytag patches - will be called after logging is set up
 
@@ -29,7 +33,7 @@ NOTE_RE = re.compile('N(?i:ote):')
 YOUTUBE_MATCH_RE = re.compile('^https?://[www.]*youtube.com/watch.v=')
 
 
-def _date_calc(datedata: dict) -> t.Optional[str]:
+def _date_calc(datedata: dict[str, str]) -> str | None:
     if datedata.get('originalyear') and datedata.get(
             'date') and datedata['originalyear'] in datedata['date']:
         del datedata['originalyear']
@@ -56,15 +60,15 @@ def _date_calc(datedata: dict) -> t.Optional[str]:
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
     ''' Run through a bunch of different metadata processors '''
 
-    def __init__(self, config: 'nowplaying.config.ConfigFile' = None):
-        self.metadata: dict[str, t.Any] = {}
-        self.imagecache = None
+    def __init__(self, config: nowplaying.config.ConfigFile | None = None):
+        self.metadata: TrackMetadata = {}
+        self.imagecache: "nowplaying.imagecache.ImageCache | None" = None
         if config:
-            self.config = config
+            self.config: nowplaying.config.ConfigFile = config
         else:
             self.config = nowplaying.config.ConfigFile()
 
-        self.extraslist = self._sortextras()
+        self.extraslist: dict[int, list[str]] = self._sortextras()
         #logging.debug("%s %s", type(self.extraslist), self.extraslist)
 
     def _sortextras(self) -> dict[int, list[str]]:
@@ -76,7 +80,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             extras[priority].append(plugin)
         return dict(reversed(list(extras.items())))
 
-    async def getmoremetadata(self, metadata=None, imagecache=None, skipplugins=False):
+    async def getmoremetadata(self,
+                              metadata: TrackMetadata | None = None,
+                              imagecache: "nowplaying.imagecache.ImageCache | None" = None,
+                              skipplugins: bool = False) -> TrackMetadata:
         ''' take metadata and process it '''
         if metadata:
             self.metadata = metadata
@@ -89,7 +96,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         if self.metadata.get('coverimageraw') and self.imagecache and self.metadata.get('album'):
             logging.debug("Placing provided front cover")
-            self.imagecache.put_db_cachekey(identifier=self.metadata['album'],
+            _ = self.imagecache.put_db_cachekey(identifier=self.metadata['album'],
                                             srclocation=f"{self.metadata['album']}_provided_0",
                                             imagetype="front_cover",
                                             content=self.metadata['coverimageraw'])
@@ -123,7 +130,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self._fix_duration()
         return self.metadata
 
-    def _fix_dates(self):
+    def _fix_dates(self) -> None:
         ''' take care of year / date cleanup '''
         if not self.metadata:
             return
@@ -136,7 +143,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if 'date' in self.metadata and (not self.metadata['date'] or self.metadata['date'] == '0'):
             del self.metadata['date']
 
-    def _fix_duration(self):
+    def _fix_duration(self) -> None:
         if not self.metadata or not self.metadata.get('duration'):
             return
 
@@ -149,7 +156,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         self.metadata['duration'] = duration
 
-    def _strip_identifiers(self):
+    def _strip_identifiers(self) -> None:
         if not self.metadata:
             return
 
@@ -158,7 +165,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata['title'] = nowplaying.utils.titlestripper_advanced(
                 title=self.metadata['title'], title_regex_list=self.config.getregexlist())
 
-    def _uniqlists(self):
+    def _uniqlists(self) -> None:
         if not self.metadata:
             return
 
@@ -186,7 +193,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     newlist.append(url)
             self.metadata['artistwebsites'] = newlist
 
-    def _process_hostmeta(self):
+    def _process_hostmeta(self) -> None:
         ''' add the host metadata so other subsystems can use it '''
         if self.metadata is None:
             self.metadata = {}
@@ -197,7 +204,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         for key, value in hostmeta.items():
             self.metadata[key] = value
 
-    def _process_tinytag(self):
+    def _process_tinytag(self) -> None:
         try:
             tempdata = TinyTagRunner(imagecache=self.imagecache).process(
                 metadata=copy.copy(self.metadata))
@@ -207,7 +214,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("TinyTag crashed: %s", err)
 
-    def _process_image2png(self):
+    def _process_image2png(self) -> None:
         # always convert to png
 
         if not self.metadata or 'coverimageraw' not in self.metadata or not self.metadata[
@@ -218,7 +225,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self.metadata['coverimagetype'] = 'png'
         self.metadata['coverurl'] = 'cover.png'
 
-    async def _musicbrainz(self):
+    async def _musicbrainz(self) -> None:
         if not self.metadata:
             return None
 
@@ -237,7 +244,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         except Exception as error:  # pylint: disable=broad-except
             logging.error('MusicBrainz recognition failed: %s', error)
 
-    async def _mb_fallback(self):
+    async def _mb_fallback(self) -> None:
         ''' at least see if album can be found '''
 
         addmeta = {}
@@ -265,7 +272,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 if YOUTUBE_MATCH_RE.match(comments):
                     await self._mb_youtube_fallback(musicbrainz)
 
-    async def _mb_youtube_fallback(self, musicbrainz):
+    async def _mb_youtube_fallback(self,
+                                   musicbrainz: "nowplaying.musicbrainz.MusicBrainzHelper") -> None:
         if not self.metadata:
             return
         addmeta2 = copy.deepcopy(self.metadata)
@@ -285,7 +293,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         except Exception:  #pylint: disable=broad-except
             logging.error('Ignoring fallback failure.')
 
-    async def _process_plugins(self, skipplugins):
+    async def _process_plugins(self, skipplugins: bool) -> None:
         await self._musicbrainz()
 
         for plugin in self.config.plugins['recognition']:
@@ -315,7 +323,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 type=bool) and not self.config.cparser.value('control/beam', type=bool):
             await self._artist_extras()
 
-    async def _artist_extras(self):  # pylint: disable=too-many-branches
+    async def _artist_extras(self) -> None:  # pylint: disable=too-many-branches
         """Efficiently process artist extras plugins using native async calls"""
         tasks: list[tuple[str, asyncio.Task]] = []
 
@@ -389,7 +397,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     logging.error('Exception during task cleanup in exception handler: %s',
                                   cleanup_error)
 
-    def _generate_short_bio(self):
+    def _generate_short_bio(self) -> None:
         if not self.metadata:
             return
 
@@ -412,12 +420,12 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 class TinyTagRunner:  # pylint: disable=too-few-public-methods
     ''' tinytag manager '''
 
-    _patches_applied = False
+    _patches_applied: bool = False
 
-    def __init__(self, imagecache: "nowplaying.imagecache.ImageCache" = None):
-        self.imagecache = imagecache
-        self.metadata = {}
-        self.datedata = {}
+    def __init__(self, imagecache: "nowplaying.imagecache.ImageCache | None" = None):
+        self.imagecache: "nowplaying.imagecache.ImageCache | None" = imagecache
+        self.metadata: TrackMetadata = {}
+        self.datedata: dict[str, str] = {}
 
         # Apply tinytag patches once after logging is set up
         if not TinyTagRunner._patches_applied:
@@ -425,7 +433,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             TinyTagRunner._patches_applied = True
 
     @staticmethod
-    def tt_date_calc(tag) -> t.Optional[str]:
+    def tt_date_calc(tag: object) -> str | None:
         ''' deal with tinytag dates '''
         datedata = {}
         other = getattr(tag, "other", {})
@@ -441,7 +449,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
                     datedata[datetype] = value
         return _date_calc(datedata)
 
-    def process(self, metadata) -> dict:  # pylint: disable=too-many-branches
+    def process(self, metadata: TrackMetadata) -> TrackMetadata:  # pylint: disable=too-many-branches
         ''' given a chunk of metadata, try to fill in more '''
         self.metadata = metadata
 
@@ -459,7 +467,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
 
         return self.metadata
 
-    def _ufid(self, extra):
+    def _ufid(self, extra: dict[str, object]) -> None:
         if ufid := extra.get('ufid'):
             # Handle both string and list cases from tinytag 2.1.1
             ufid_str = ufid[0] if isinstance(ufid, list) and ufid else ufid
@@ -531,7 +539,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
         # If all else fails, return the string as-is
         return key_str
 
-    def _process_extra(self, extra):
+    def _process_extra(self, extra: dict[str, object]) -> None:
         extra_mapping = {
             "acoustid id": "acoustidid",
             "bpm": "bpm",
@@ -564,15 +572,15 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             else:
                 self._process_single_field(extra[key], newkey)
 
-    def _got_tag(self, tag):
+    def _got_tag(self, tag: object) -> None:
         if not self.metadata.get('date'):
             if calcdate := self.tt_date_calc(tag):
                 self.metadata['date'] = calcdate
 
         for key in [
-                'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'comment', 'comments', 'disc',
-                'disc_total', 'duration', 'genre', 'lang', 'publisher', 'title', 'track',
-                'track_total', 'label'
+                'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'comment', 'comments',
+                'composer', 'disc', 'disc_total', 'duration', 'genre', 'lang', 'publisher', 'title',
+                'track', 'track_total', 'label'
         ]:
             if key not in self.metadata and hasattr(tag, key) and getattr(tag, key):
                 self.metadata[key] = str(getattr(tag, key))
@@ -606,7 +614,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
 
         self._images(tag.images)
 
-    def _images(self, images):
+    def _images(self, images: object) -> None:
 
         if 'coverimageraw' not in self.metadata and images.front_cover:
             self.metadata['coverimageraw'] = images.front_cover.data
@@ -630,13 +638,13 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
                     content=cover.data)
 
 
-def recognition_replacement(config: 'nowplaying.config.ConfigFile' = None,
-                            metadata=None,
-                            addmeta=None) -> dict:
+def recognition_replacement(config: "nowplaying.config.ConfigFile | None" = None,
+                            metadata: TrackMetadata | None = None,
+                            addmeta: TrackMetadata | None = None) -> TrackMetadata:
     ''' handle any replacements '''
     # if there is nothing in addmeta, then just bail early
     if not addmeta:
-        return metadata
+        return metadata or {}
 
     if not metadata:
         metadata = {}
@@ -652,7 +660,7 @@ def recognition_replacement(config: 'nowplaying.config.ConfigFile' = None,
     return metadata
 
 
-def main():
+def main() -> None:
     ''' entry point as a standalone app'''
     logging.basicConfig(
         format='%(asctime)s %(process)d %(threadName)s %(module)s:%(funcName)s:%(lineno)d ' +

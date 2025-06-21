@@ -65,7 +65,7 @@ class Plugin(InputPlugin):
 
     async def _data_loop(self):
         ''' check the metadata transport every so often '''
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(5)
             sessions = await MediaManager.request_async()
             current_session = sessions.get_current_session()

@@ -155,10 +155,10 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
     async def _broadcast_location(self):
         ''' announce the port '''
 
-        while not self.port and not self.stopevent.is_set():
+        while not self.port and not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(1)
 
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             idname = platform.node()
             namelen = len(idname)
             interfaces = socket.getaddrinfo(host=socket.gethostname(),
@@ -260,7 +260,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
                     logging.error('ws connection closed with exception %s', websocket.exception())
                     break
 
-                if self.stopevent.is_set() or websocket.closed:
+                if nowplaying.utils.safe_stopevent_check(self.stopevent) or websocket.closed:
                     break
 
                 json = msg.json()
@@ -281,7 +281,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
 
     async def _beamv1_pingpong(self, websocket):
         logging.debug('here %s', websocket)
-        while not self.stopevent.is_set() and not websocket.closed:
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent) and not websocket.closed:
             try:
                 await websocket.send_json({'msgtype': 'PING'})
             except Exception:  # pylint: disable=broad-except
@@ -291,7 +291,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
     async def _beamv1_trackrequest(self, websocket):
         ''' read the track requests, send them to our client, and then erase '''
         try:
-            while not self.stopevent.is_set() and not websocket.closed:
+            while not nowplaying.utils.safe_stopevent_check(self.stopevent) and not websocket.closed:
                 entries = []
                 async for row in self.trackrequests.get_all_generator():
                     await websocket.send_json({'msgtype': 'REQUEST', 'request': row})
@@ -356,7 +356,7 @@ class Plugin(InputPlugin):  # pylint: disable = too-many-instance-attributes
 
     async def stopeventtask(self):
         ''' task to wait for the stop event '''
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(.5)
         if self.site:
             await self.site.stop()

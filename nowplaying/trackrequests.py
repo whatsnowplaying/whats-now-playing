@@ -446,7 +446,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
     async def watch_for_respin(self, stopevent):
         ''' startup a watcher to handle respins '''
         datatuple = (RESPIN_TEXT, )
-        while not stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(stopevent):
             await asyncio.sleep(5)
             if not self.databasefile.exists():
                 continue

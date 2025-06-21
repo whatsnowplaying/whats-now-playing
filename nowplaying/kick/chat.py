@@ -177,15 +177,16 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         self.oauth = oauth_handler
 
         # Wait for chat to be enabled
-        while not self.config.cparser.value('kick/chat', type=bool) and not self.stopevent.is_set():
+        while (not self.config.cparser.value('kick/chat', type=bool) and
+               not nowplaying.utils.safe_stopevent_check(self.stopevent)):
             await asyncio.sleep(1)
             self.config.get()
 
-        if self.stopevent.is_set():
+        if nowplaying.utils.safe_stopevent_check(self.stopevent):
             return
 
         connected = False
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
 
             if connected and not self.authenticated:
                 logging.error('Lost Kick authentication')
@@ -266,7 +267,7 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
             self._watcher_running = True
 
         await self._process_announcement()
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(1)
 
         logging.debug('Kick chat watcher stop event received')

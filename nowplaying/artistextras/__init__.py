@@ -4,25 +4,35 @@
 import contextlib
 #import logging
 import sys
-import typing as t
+from typing import TYPE_CHECKING
 
 from nowplaying.plugin import WNPBasePlugin
+from nowplaying.types import TrackMetadata
+
+if TYPE_CHECKING:
+    import nowplaying.config
+    from PySide6.QtWidgets import QWidget
 
 
 class ArtistExtrasPlugin(WNPBasePlugin):
     ''' base class of plugins '''
 
-    def __init__(self, config=None, qsettings=None):
+    def __init__(self,
+                 config: "nowplaying.config.ConfigFile | None" = None,
+                 qsettings: "QWidget | None" = None):
         super().__init__(config=config, qsettings=qsettings)
         self.plugintype: str = 'artistextras'
 
 #### Plug-in methods
 
-    async def download_async(self, metadata=None, imagecache=None) -> t.Optional[dict]:  #  pylint: disable=no-self-use,unused-argument
+    async def download_async(  #  pylint: disable=no-self-use,unused-argument
+            self,
+            metadata: TrackMetadata | None = None,
+            imagecache: object | None = None) -> TrackMetadata | None:
         ''' return metadata (async version) - override this in async plugins '''
         return None
 
-    def providerinfo(self) -> t.Optional[list]:  # pylint: disable=no-self-use, unused-argument
+    def providerinfo(self) -> list[str] | None:  # pylint: disable=no-self-use, unused-argument
         ''' return list of what is provided by this recognition system '''
         return None
 

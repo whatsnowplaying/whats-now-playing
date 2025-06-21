@@ -221,7 +221,7 @@ class DiscordSupport:
 
     def _should_stop(self) -> bool:
         ''' check if the service should stop '''
-        return self.stopevent is not None and self.stopevent.is_set()
+        return self.stopevent is not None and nowplaying.utils.safe_stopevent_check(self.stopevent)
 
     def _is_discord_enabled(self) -> bool:
         ''' check if discord integration is enabled '''
