@@ -106,6 +106,28 @@ def test_kick_settings_load_default_redirect_uri(bootstrap, mock_kick_widget):
 
 
 @pytest.mark.parametrize(
+    "webserver_port,expected_redirect_uri",
+    [
+        ('8080', 'http://localhost:8080/kickredirect'),
+        ('3000', 'http://localhost:3000/kickredirect'),
+        ('9999', 'http://localhost:9999/kickredirect'),
+        ('80', 'http://localhost:80/kickredirect'),
+        (None, 'http://localhost:8899/kickredirect'),  # None defaults to 8899
+    ])
+def test_kick_settings_load_non_default_webserver_ports(bootstrap, mock_kick_widget,
+                                                        webserver_port, expected_redirect_uri):
+    """Test settings loading with non-default webserver ports to verify redirect URI logic."""
+    config = bootstrap
+    if webserver_port is not None:
+        config.cparser.setValue('weboutput/httpport', webserver_port)
+
+    settings = nowplaying.kick.settings.KickSettings()
+    settings.load(config, mock_kick_widget)
+
+    mock_kick_widget.redirecturi_label.setText.assert_called_with(expected_redirect_uri)
+
+
+@pytest.mark.parametrize(
     "has_changes,should_restart",
     [
         (False, False),  # No changes - no restart

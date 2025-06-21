@@ -178,14 +178,12 @@ class KickSettings:
             if nowplaying.kick.utils.qtsafe_validate_kick_token(access_token):
                 self.widget.oauth_status_label.setText('Authenticated')
                 self.widget.authenticate_button.setText('Re-authenticate')
+            elif refresh_token:
+                self.widget.oauth_status_label.setText('Refreshing expired token...')
             else:
-                # Check if we can refresh automatically
-                if refresh_token:
-                    self.widget.oauth_status_label.setText('Refreshing expired token...')
-                else:
-                    self.widget.oauth_status_label.setText(
-                        'Token expired - re-authentication needed')
-                    self.widget.authenticate_button.setText('Authenticate')
+                self.widget.oauth_status_label.setText(
+                    'Token expired - re-authentication needed')
+                self.widget.authenticate_button.setText('Authenticate')
         else:
             self.widget.oauth_status_label.setText('Not authenticated')
 

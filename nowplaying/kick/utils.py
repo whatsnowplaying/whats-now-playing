@@ -58,7 +58,7 @@ async def validate_kick_token_async(config: nowplaying.config.ConfigFile,
     return await oauth.validate_token(access_token)
 
 
-def qtsafe_validate_kick_token(access_token: str) -> bool:
+def qtsafe_validate_kick_token(access_token: str) -> bool:  # pylint: disable=too-many-return-statements
     ''' Validate kick token synchronously (Qt-safe for UI components) '''
     if not access_token:
         return False
@@ -69,8 +69,11 @@ def qtsafe_validate_kick_token(access_token: str) -> bool:
 
     try:
         req = requests.post(url, headers=headers, timeout=10)
+    except (requests.ConnectionError, requests.Timeout) as error:
+        logging.warning('Kick token validation network error (token status unknown): %s', error)
+        return False
     except Exception as error:  # pylint: disable=broad-except
-        logging.error('Kick token validation check failed: %s', error)
+        logging.error('Kick token validation unexpected error: %s', error)
         return False
 
     if req.status_code != 200:

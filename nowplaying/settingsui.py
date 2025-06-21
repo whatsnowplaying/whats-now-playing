@@ -756,6 +756,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     @Slot()
     def on_cancel_button(self):
         ''' cancel button clicked action '''
+        self._cleanup_settings_classes()
         if self.tray:
             self.tray.settings_action.setEnabled(True)
         self.upd_win()
@@ -832,16 +833,33 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.qtui.show()
             self.qtui.setFocus()
 
+    def _cleanup_settings_classes(self):
+        ''' Clean up resources from settings classes when UI is closed '''
+        for settings_class in self.settingsclasses.values():
+            if hasattr(settings_class, 'cleanup'):
+                try:
+                    settings_class.cleanup()
+                except Exception as error:  # pylint: disable=broad-exception-caught
+                    logging.error('Error cleaning up settings class %s: %s',
+                                  type(settings_class).__name__, error)
+
     def close(self):
         ''' close the system tray '''
+        self._cleanup_settings_classes()
         self.tray.settings_action.setEnabled(True)
         if self.qtui:
             self.qtui.hide()
 
     def exit(self):
         ''' exit the tray '''
+        self._cleanup_settings_classes()
         if self.qtui:
             self.qtui.close()
+
+    def closeEvent(self, event):  # pylint: disable=invalid-name
+        ''' Handle window close event (X button) '''
+        self._cleanup_settings_classes()
+        super().closeEvent(event)
 
     @Slot()
     def on_export_config_button(self):
