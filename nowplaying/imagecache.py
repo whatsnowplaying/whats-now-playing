@@ -10,7 +10,7 @@ import sqlite3
 import threading
 import time
 import uuid
-import typing as t
+from typing import TYPE_CHECKING, Any
 
 import logging
 import logging.config
@@ -25,6 +25,9 @@ from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 import nowplaying.bootstrap
 import nowplaying.utils
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
+
+if TYPE_CHECKING:
+    import nowplaying.config
 
 MAX_FANART_DOWNLOADS = 50
 
@@ -42,31 +45,33 @@ class ImageCache:
      );
     '''
 
-    def __init__(self, sizelimit=1, initialize=False, cachedir=None, stopevent=None):
+    def __init__(self, sizelimit: int = 1, initialize: bool = False,
+                 cachedir: str | pathlib.Path | None = None,
+                 stopevent: asyncio.Event | None = None) -> None:
         if not cachedir:
-            self.cachedir = pathlib.Path(
+            self.cachedir: pathlib.Path = pathlib.Path(
                 QStandardPaths.standardLocations(
                     QStandardPaths.CacheLocation)[0]).joinpath('imagecache')
-
         else:
-            self.cachedir = pathlib.Path(cachedir)
+            self.cachedir: pathlib.Path = pathlib.Path(cachedir)
 
         self.cachedir.resolve().mkdir(parents=True, exist_ok=True)
-        self.databasefile = self.cachedir.joinpath('imagecachev2.db')
+        self.databasefile: pathlib.Path = self.cachedir.joinpath('imagecachev2.db')
         if not self.databasefile.exists():
             initialize = True
-        self.httpcachefile = self.cachedir.joinpath('http')
-        self.cache = diskcache.Cache(directory=self.cachedir.joinpath('diskcache'),
-                                     timeout=30,
-                                     eviction_policy='least-frequently-used',
-                                     size_limit=sizelimit * 1024 * 1024 * 1024)
+        self.httpcachefile: pathlib.Path = self.cachedir.joinpath('http')
+        self.cache: diskcache.Cache = diskcache.Cache(
+            directory=self.cachedir.joinpath('diskcache'),
+            timeout=30,
+            eviction_policy='least-frequently-used',
+            size_limit=sizelimit * 1024 * 1024 * 1024)
         if initialize:
             self.setup_sql(initialize=True)
-        self.session = None
-        self.logpath = None
-        self.stopevent: asyncio.Event = stopevent
+        self.session: requests_cache.CachedSession | None = None
+        self.logpath: str | pathlib.Path | None = None
+        self.stopevent: asyncio.Event | None = stopevent
 
-    def attempt_v1tov2_upgrade(self):
+    def attempt_v1tov2_upgrade(self) -> None:
         ''' dbv1 to dbv2 '''
         v1path = self.databasefile.parent.joinpath('imagecachev1.db')
         if not v1path.exists() or self.databasefile.exists():
@@ -91,7 +96,7 @@ class ImageCache:
         if failed:
             self.databasefile.unlink()
 
-    def setup_sql(self, initialize=False):
+    def setup_sql(self, initialize: bool = False) -> None:
         ''' create the database '''
 
         if initialize and self.databasefile.exists():
@@ -119,7 +124,7 @@ class ImageCache:
         self.cache.clear()
         self.cache.cull()
 
-    def random_fetch(self, identifier, imagetype):
+    def random_fetch(self, identifier: str, imagetype: str) -> dict[str, str] | None:
         ''' fetch a random row from a cache for the identifier '''
         normalidentifier = nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True)
         data = None
@@ -157,21 +162,31 @@ class ImageCache:
 
         return data
 
-    def random_image_fetch(self, identifier, imagetype):
+    def random_image_fetch(self, identifier: str, imagetype: str) -> bytes | None:
         ''' fetch a random image from an identifier '''
-        image = None
-        while data := self.random_fetch(identifier, imagetype):
+        image: bytes | None = None
+        attempts = 0
+        max_attempts = 10  # Prevent infinite loops
+
+        while (data := self.random_fetch(identifier, imagetype)) and attempts < max_attempts:
+            attempts += 1
             try:
-                image = self.cache[data['cachekey']]
+                cache_result = self.cache[data['cachekey']]
+                if isinstance(cache_result, bytes):
+                    image = cache_result
+                    break  # Success, exit loop
             except KeyError as error:
                 logging.error('random: cannot fetch key %s', error)
                 self.erase_cachekey(data['cachekey'])
-            if image:
-                break
+                # Continue to next iteration to try another entry
+
+        if attempts >= max_attempts:
+            logging.warning('random_image_fetch: max attempts (%d) reached for %s/%s',
+                          max_attempts, imagetype, identifier)
         return image
 
-    def find_srclocation(self, srclocation):
-        ''' update metadb '''
+    def find_srclocation(self, srclocation: str) -> dict[str, str] | None:
+        ''' find database entry by source location '''
 
         data = None
         if not self.databasefile.exists():
@@ -198,8 +213,8 @@ class ImageCache:
                 }
         return data
 
-    def find_cachekey(self, cachekey):
-        ''' update metadb '''
+    def find_cachekey(self, cachekey: str) -> dict[str, str] | None:
+        ''' find database entry by cache key '''
 
         data = None
         if not self.databasefile.exists():
@@ -226,17 +241,20 @@ class ImageCache:
         return data
 
     def fill_queue(self,
-                   config=None,
-                   identifier: str = None,
-                   imagetype: str = None,
-                   srclocationlist: t.List[str] = None):
+                   config: "nowplaying.config.ConfigFile | None" = None,
+                   identifier: str | None = None,
+                   imagetype: str | None = None,
+                   srclocationlist: list[str] | None = None) -> None:
         ''' fill the queue '''
 
         if not self.databasefile.exists():
             self.setup_sql()
 
+        if not config or not imagetype or not srclocationlist or not identifier:
+            return
+
         if 'logo' in imagetype:
-            maxart = config.cparser.value('identifierextras/logos', defaultValue=3, type=int)
+            maxart: int = config.cparser.value('identifierextras/logos', defaultValue=3, type=int)
         elif 'banner' in imagetype:
             maxart = config.cparser.value('identifierextras/banners', defaultValue=3, type=int)
         elif 'thumb' in imagetype:
@@ -247,16 +265,17 @@ class ImageCache:
         logging.debug('Putting %s unfiltered for %s/%s', min(len(srclocationlist), maxart),
                       imagetype, identifier)
         normalidentifier = nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True)
-        for srclocation in random.sample(srclocationlist, min(len(srclocationlist), maxart)):
-            self.put_db_srclocation(identifier=normalidentifier,
-                                    imagetype=imagetype,
-                                    srclocation=srclocation)
+        if normalidentifier:
+            for srclocation in random.sample(srclocationlist, min(len(srclocationlist), maxart)):
+                self.put_db_srclocation(identifier=normalidentifier,
+                                        imagetype=imagetype,
+                                        srclocation=srclocation)
 
-    def get_next_dlset(self):
-        ''' update metadb '''
+    def get_next_dlset(self) -> list[dict[str, str]] | None:
+        ''' get next download set '''
 
-        def dict_factory(cursor, row):
-            d = {}
+        def dict_factory(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict[str, Any]:
+            d: dict[str, Any] = {}
             for idx, col in enumerate(cursor.description):
                 d[col[0]] = row[idx]
             return d
@@ -302,8 +321,8 @@ ORDER BY TIMESTAMP DESC''')
             identifier: str,
             srclocation: str,
             imagetype: str,
-            cachekey: t.Optional[str] = None,
-            content: t.Optional[bytes] = None) -> bool:
+            cachekey: str | None = None,
+            content: bytes | None = None) -> bool:
         ''' update imagedb '''
 
         if not self.databasefile.exists():
@@ -344,15 +363,16 @@ INSERT OR REPLACE INTO
         return True
 
     @staticmethod
-    def _log_sqlite_error(error):
+    def _log_sqlite_error(error: sqlite3.Error) -> None:
         """ extract the error bits """
         msg = str(error)
-        error_code = error.sqlite_errorcode
-        error_name = error.sqlite_name
+        error_code = getattr(error, 'sqlite_errorcode', 'unknown')
+        error_name = error.__class__.__name__
         logging.error('Error %s [Errno %s]: %s', msg, error_code, error_name)
 
-    def put_db_srclocation(self, identifier, srclocation, imagetype=None):
-        ''' update metadb '''
+    def put_db_srclocation(self, identifier: str, srclocation: str,
+                          imagetype: str | None = None) -> None:
+        ''' add source location to database '''
 
         if not self.databasefile.exists():
             logging.error('imagecache does not exist yet?')
@@ -381,8 +401,8 @@ VALUES (?,?,?);
             except sqlite3.OperationalError as error:
                 logging.error(error)
 
-    def erase_srclocation(self, srclocation):
-        ''' update metadb '''
+    def erase_srclocation(self, srclocation: str) -> None:
+        ''' remove source location from database '''
 
         if not self.databasefile.exists():
             self.setup_sql()
@@ -397,8 +417,8 @@ VALUES (?,?,?);
             except sqlite3.OperationalError:
                 return
 
-    def erase_cachekey(self, cachekey):
-        ''' update metadb '''
+    def erase_cachekey(self, cachekey: str) -> None:
+        ''' remove cache key from database and requeue source '''
 
         if not self.databasefile.exists():
             self.setup_sql()
@@ -418,7 +438,7 @@ VALUES (?,?,?);
                                 srclocation=data['srclocation'])
         return
 
-    def vacuum_database(self):
+    def vacuum_database(self) -> None:
         """Vacuum the image cache database to reclaim space from deleted entries.
 
         This should be called on application shutdown to optimize disk usage.
@@ -435,7 +455,7 @@ VALUES (?,?,?);
         except sqlite3.Error as error:
             logging.error("Database error during vacuum: %s", error)
 
-    def image_dl(self, imagedict):
+    def image_dl(self, imagedict: dict[str, str]) -> None:
         ''' fetch an image and store it '''
         nowplaying.bootstrap.setuplogging(logdir=self.logpath, rotate=False)
         threading.current_thread().name = 'ICFollower'
@@ -468,7 +488,7 @@ VALUES (?,?,?);
 
         return
 
-    async def verify_cache_timer(self, stopevent):
+    async def verify_cache_timer(self, stopevent: asyncio.Event) -> None:
         ''' run verify_cache periodically '''
         await self.verify_cache()
         counter = 0
@@ -479,7 +499,7 @@ VALUES (?,?,?);
                 await self.verify_cache()
                 counter = 0
 
-    async def verify_cache(self):
+    async def verify_cache(self) -> None:
         ''' verify the image cache '''
         if not self.databasefile.exists():
             return
@@ -516,56 +536,96 @@ VALUES (?,?,?);
                 self.erase_srclocation(srclocation)
         logging.debug('Finished image cache verification: %s/%s images', count, startsize)
 
-    def queue_process(self, logpath, maxworkers=5):
+    def queue_process(self, logpath: str | pathlib.Path, maxworkers: int = 5) -> None:
         ''' Process to download stuff in the background to avoid the GIL '''
 
         threading.current_thread().name = 'ICQueue'
         nowplaying.bootstrap.setuplogging(logdir=logpath, rotate=False)
         self.logpath = logpath
         self.erase_srclocation('STOPWNP')
-        endloop = False
-        oldset = []
+
+        # Track recently processed items to avoid duplicates
+        recently_processed: dict[str, float] = {}
+
         with concurrent.futures.ProcessPoolExecutor(max_workers=maxworkers) as executor:
-            while not endloop and not nowplaying.utils.safe_stopevent_check(self.stopevent):
-                if dataset := self.get_next_dlset():
-                    # sometimes images are downloaded but not
-                    # written to sql yet so don't try to resend
-                    # same data
-                    newset = []
-                    newdataset = []
-                    for entry in dataset:
-                        newset.append({
-                            'srclocation': entry['srclocation'],
-                            'time': int(time.time())
-                        })
-                        if entry['srclocation'] == 'STOPWNP':
-                            endloop = True
-                            break
-                        oldcopy = oldset
-                        for oldentry in oldcopy:
-                            if int(time.time()) - oldentry['time'] > 180:
-                                oldset.remove(oldentry)
-                                logging.debug('removing %s from the previously processed queue',
-                                              oldentry['srclocation'])
-                        if all(u['srclocation'] != entry['srclocation'] for u in oldset):
-                            logging.debug('skipping in-progress srclocation %s ',
-                                          entry['srclocation'])
-                        else:
-                            newdataset.append(entry)
-                    oldset = newset
+            while not self._queue_should_stop():
+                # Get next batch of items to download
+                batch = self._get_next_queue_batch(recently_processed)
 
-                    if endloop:
-                        break
+                if not batch:
+                    time.sleep(2)
+                    continue
 
-                    executor.map(self.image_dl, newdataset)
+                # Filter out stop signal and process remaining items
+                items_to_process = [item for item in batch if item['srclocation'] != 'STOPWNP']
+                should_stop = len(items_to_process) != len(batch)  # STOPWNP was found
+
+                # Submit batch for processing if there are items
+                if items_to_process:
+                    executor.map(self.image_dl, items_to_process)
+
+                # Stop after processing if stop signal was found
+                if should_stop:
+                    break
+
+                # Mark items as recently processed (only the ones we actually processed)
+                current_time = time.time()
+                for item in items_to_process:
+                    recently_processed[item['srclocation']] = current_time
+
+                # Clean up old entries from tracking
+                self._cleanup_queue_tracking(recently_processed)
+
                 time.sleep(2)
+
+                # Ensure database exists
                 if not self.databasefile.exists():
                     self.setup_sql()
 
         logging.debug('stopping download processes')
         self.erase_srclocation('STOPWNP')
 
-    def stop_process(self):
+    def _queue_should_stop(self) -> bool:
+        """Check if the queue process should stop."""
+        return nowplaying.utils.safe_stopevent_check(self.stopevent)
+
+    def _get_next_queue_batch(self, recently_processed: dict[str, float]) -> list[dict[str, str]]:
+        """Get next batch of items for queue processing, filtering out recently processed ones."""
+        dataset = self.get_next_dlset()
+        if not dataset:
+            return []
+
+        batch = []
+        for entry in dataset:
+            srclocation = entry['srclocation']
+
+            # Always include stop signal
+            if srclocation == 'STOPWNP':
+                batch.append(entry)
+                continue
+
+            # Skip if recently processed
+            if srclocation in recently_processed:
+                logging.debug('skipping recently processed srclocation %s', srclocation)
+                continue
+
+            batch.append(entry)
+
+        return batch
+
+    def _cleanup_queue_tracking(self, recently_processed: dict[str, float]) -> None:
+        """Remove entries older than 3 minutes from queue processing tracking."""
+        current_time = time.time()
+        expired_keys = [
+            srclocation for srclocation, timestamp in recently_processed.items()
+            if current_time - timestamp > 180  # 3 minutes
+        ]
+
+        for key in expired_keys:
+            del recently_processed[key]
+            logging.debug('removing %s from recently processed tracking', key)
+
+    def stop_process(self) -> None:
         ''' stop the bg ImageCache process'''
         logging.debug('imagecache stop_process called')
         self.put_db_srclocation('STOPWNP', 'STOPWNP', imagetype='STOPWNP')

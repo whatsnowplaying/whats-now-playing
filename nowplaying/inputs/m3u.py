@@ -28,8 +28,6 @@ EXTVDJ_REMIX_RE = re.compile(r'.*<remix>(.+)</remix>.*')
 class Plugin(InputPlugin):
     ''' handler for NowPlaying '''
 
-    metadata = {'artist': None, 'title': None, 'filename': None}
-
     def __init__(self, config=None, m3udir=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "M3U"
@@ -40,6 +38,8 @@ class Plugin(InputPlugin):
 
         self.mixmode = "newest"
         self.event_handler = None
+        # Instance variable instead of class variable to prevent test interference
+        self.metadata: dict[str, str | None] = {'artist': None, 'title': None, 'filename': None}
         self.observer = None
         self._reset_meta()
 
@@ -47,9 +47,9 @@ class Plugin(InputPlugin):
         ''' locate Virtual DJ '''
         return False
 
-    @staticmethod
-    def _reset_meta():
-        Plugin.metadata = {'artist': None, 'title': None, 'filename': None}
+    def _reset_meta(self):
+        ''' reset the metadata '''
+        self.metadata = {'artist': None, 'title': None, 'filename': None}
 
     async def setup_watcher(self, configkey):
         ''' set up a custom watch on the m3u dir so meta info
@@ -194,7 +194,7 @@ class Plugin(InputPlugin):
             self._reset_meta()
             return
 
-        Plugin.metadata = newmeta
+        self.metadata = newmeta
 
     async def start(self):
         ''' setup the watcher to run in a separate thread '''
@@ -205,7 +205,7 @@ class Plugin(InputPlugin):
 
         # just in case called without calling start...
         await self.start()
-        return Plugin.metadata
+        return self.metadata
 
     async def getrandomtrack(self, playlist):
         ''' not supported '''
