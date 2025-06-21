@@ -78,7 +78,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
         self.ipaddr = None
 
     async def _stop(self, loop):
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(.5)
 
         await self.stop_server()
@@ -93,7 +93,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
         ''' start the websocket client '''
 
         try:
-            while not self.watcher and not self.stopevent.is_set():
+            while not self.watcher and not nowplaying.utils.safe_stopevent_check(self.stopevent):
                 await asyncio.sleep(1)
                 logging.debug('waiting for a watcher')
 
@@ -101,7 +101,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
 
             loop = asyncio.get_running_loop()
             tasks = set()
-            while not self.stopevent.is_set():
+            while not nowplaying.utils.safe_stopevent_check(self.stopevent):
                 if not self.port and not self.ipaddr:
                     await asyncio.sleep(1)
                     logging.debug('waiting to hear from beam server')
@@ -110,7 +110,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
                 url = f'ws://{self.ipaddr}:{self.port}/v1/beam'
                 try:
                     async with ClientSession().ws_connect(url) as connection:
-                        while not self.stopevent.is_set() and not connection.closed:
+                        while not nowplaying.utils.safe_stopevent_check(self.stopevent) and not connection.closed:
                             if not tasks:
                                 task = loop.create_task(self._websocket_listener(connection))
                                 tasks.add(task)
@@ -139,7 +139,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
             'PING': self._ping_handler,
         }
 
-        while not self.stopevent.is_set() and not connection.closed:
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent) and not connection.closed:
             await asyncio.sleep(1)
             async for msg in connection:
                 if msg.type == aiohttp.WSMsgType.ERROR:
@@ -157,7 +157,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
 
     async def _websocket_metadata_write(self, connection):
         mytime = 0
-        while not self.stopevent.is_set() and not connection.closed:
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent) and not connection.closed:
             if mytime < self.watcher.updatetime:
                 mytime = await self._wss_do_update(connection)
             await asyncio.sleep(1)
@@ -189,7 +189,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
             sock.bind(('0.0.0.0', 8008))
 
             logging.debug('starting to listen for beam server')
-            while not self.stopevent.is_set():
+            while not nowplaying.utils.safe_stopevent_check(self.stopevent):
                 await asyncio.sleep(1)
 
                 data, addr = await udp_recvfrom(loop, sock, 1024)
@@ -224,7 +224,7 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
 
     async def stopeventtask(self):
         ''' task to wait for the stop event '''
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(.5)
         await self.forced_stop()
 
@@ -274,8 +274,8 @@ class BeamHandler():  # pylint: disable=too-many-instance-attributes
         # pause a bit
         prefilter = None
 
-        while not prefilter and not self.stopevent.is_set() and not connection.closed:
-            if self.stopevent.is_set() or connection.closed:
+        while not prefilter and not nowplaying.utils.safe_stopevent_check(self.stopevent) and not connection.closed:
+            if nowplaying.utils.safe_stopevent_check(self.stopevent) or connection.closed:
                 return 0
             prefilter = self.metadb.read_last_meta()
             await asyncio.sleep(1)

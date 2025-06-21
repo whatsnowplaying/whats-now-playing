@@ -472,7 +472,7 @@ VALUES (?,?,?);
         ''' run verify_cache periodically '''
         await self.verify_cache()
         counter = 0
-        while not stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(stopevent):
             await asyncio.sleep(2)
             counter += 2
             if counter > 3600:
@@ -526,7 +526,7 @@ VALUES (?,?,?);
         endloop = False
         oldset = []
         with concurrent.futures.ProcessPoolExecutor(max_workers=maxworkers) as executor:
-            while not endloop and not self.stopevent.is_set():
+            while not endloop and not nowplaying.utils.safe_stopevent_check(self.stopevent):
                 if dataset := self.get_next_dlset():
                     # sometimes images are downloaded but not
                     # written to sql yet so don't try to resend

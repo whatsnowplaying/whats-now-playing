@@ -570,8 +570,8 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
                 self.metadata['date'] = calcdate
 
         for key in [
-                'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'comment', 'comments', 'disc',
-                'disc_total', 'duration', 'genre', 'lang', 'publisher', 'title', 'track',
+                'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'comment', 'comments', 'composer',
+                'disc', 'disc_total', 'duration', 'genre', 'lang', 'publisher', 'title', 'track',
                 'track_total', 'label'
         ]:
             if key not in self.metadata and hasattr(tag, key) and getattr(tag, key):

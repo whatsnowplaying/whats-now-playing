@@ -5,6 +5,7 @@ import logging
 import logging.handlers
 import pathlib
 import sys
+import time
 
 from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QErrorMessage  # pylint: disable=no-name-in-module
@@ -66,7 +67,17 @@ def setuplogging(logdir=None, logname='debug.log', rotate=False):
                                                        backupCount=10,
                                                        encoding='utf-8')
     if besuretorotate:
-        logfhandler.doRollover()
+        # Try log rotation with retry logic for Windows file handle delays
+        for attempt in range(3):
+            try:
+                logfhandler.doRollover()
+                break
+            except (OSError, PermissionError) as error:
+                if attempt < 2:  # Don't sleep on the last attempt
+                    time.sleep(0.5 * (attempt + 1))  # 0.5s, then 1.0s
+                    continue
+                # Final attempt failed - continue without rotation rather than crash
+                logging.warning('Could not rotate log file after 3 attempts (previous instance may still be shutting down): %s', error)
 
     logging.basicConfig(
         format='%(asctime)s %(levelname)s %(process)d %(processName)s/%(threadName)s ' +

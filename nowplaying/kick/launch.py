@@ -104,7 +104,7 @@ class KickLaunch:  # pylint: disable=too-many-instance-attributes
 
     async def _watch_for_exit(self) -> None:
         ''' watch for exit signal '''
-        while not self.stopevent.is_set():
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(1)
         await self.stop()
 
