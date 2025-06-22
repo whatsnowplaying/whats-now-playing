@@ -42,7 +42,7 @@ JRiver Configuration
    * Set a **Username** and **Password**
 
 .. image:: images/jriver-advanced-port.png
-   :target: images/jjriver-advanced-port.png
+   :target: images/jriver-advanced-port.png
    :alt: JRiver Advanced drop down showing the port
 
 #. Note the **Port** number under Advanced and in some of the previous displays (default is 52199)
