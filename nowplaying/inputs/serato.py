@@ -305,9 +305,11 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
             pollingobserver: bool = False,
             seratodir:str|None = None,
             seratourl: str|None =None,
-            testmode: bool = False):
+            testmode: bool = False,
+            polling_interval: float = 1.0):
         global LASTPROCESSED, PARSEDSESSIONS  #pylint: disable=global-statement
         self.pollingobserver = pollingobserver
+        self.polling_interval = polling_interval
         self.tasks = set()
         self.event_handler = None
         self.observer = None
@@ -362,8 +364,8 @@ class SeratoHandler():  #pylint: disable=too-many-instance-attributes
         self.event_handler.on_modified = self.process_sessions
 
         if self.pollingobserver:
-            self.observer = PollingObserver(timeout=5)
-            logging.debug('Using polling observer')
+            self.observer = PollingObserver(timeout=self.polling_interval)
+            logging.debug('Using polling observer with %s second interval', self.polling_interval)
         else:
             self.observer = Observer()
             logging.debug('Using fsevent observer')
@@ -845,9 +847,12 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             self.url = stillurl
             if self.serato:
                 self.serato.stop()
+            polling_interval = self.config.cparser.value('quirks/pollinginterval',
+                                                          type=float, defaultValue=1.0)
             self.serato = SeratoHandler(pollingobserver=usepoll,
                                         seratourl=self.url,
-                                        testmode=self.testmode)
+                                        testmode=self.testmode,
+                                        polling_interval=polling_interval)
             return
 
         # configured as local!
@@ -870,10 +875,13 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         sess_dir = os.path.abspath(os.path.join(hist_dir, "Sessions"))
         if os.path.isdir(sess_dir):
             logging.debug('new session path = %s', sess_dir)
+            polling_interval = self.config.cparser.value('quirks/pollinginterval',
+                                                          type=float, defaultValue=1.0)
             self.serato = SeratoHandler(seratodir=self.libpath,
                                         mixmode=self.mixmode,
                                         pollingobserver=usepoll,
-                                        testmode=self.testmode)
+                                        testmode=self.testmode,
+                                        polling_interval=polling_interval)
             #if self.serato:
             #    self.serato.process_sessions()
         else:

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 ''' test jriver input plugin '''
 
+#pylint: disable=too-many-lines
+
 from unittest.mock import MagicMock, patch
 
 import aiohttp
@@ -180,6 +182,7 @@ async def test_start_success(jriver_bootstrap):  # pylint: disable=redefined-out
         assert plugin.access_key == 'testkey'
         assert plugin.base_url == 'http://192.168.1.100:52199/MCWS/v1'
         assert plugin.session is not None  # Session should remain open on success
+        assert plugin._connection_failed is False  # Should be False on success  # pylint: disable=protected-access
         mock_test.assert_called_once()
         mock_auth.assert_called_once()
 
@@ -189,49 +192,72 @@ async def test_start_success(jriver_bootstrap):  # pylint: disable=redefined-out
 
 @pytest.mark.asyncio
 async def test_start_connection_failure(jriver_bootstrap):  # pylint: disable=redefined-outer-name
-    """Test start() with connection failure"""
+    """Test start() with connection failure - now returns True for auto-recovery"""
     plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
 
     with patch.object(plugin, '_test_connection', return_value=False):
         result = await plugin.start()
-        assert result is False
+        assert result is True  # Should return True to enable auto-recovery
+        assert plugin._connection_failed is True  # pylint: disable=protected-access
+
+        # Clean up session manually since this is a test
+        await plugin.session.close()  # Should mark connection as failed
+        assert plugin.session is not None  # Session should remain open for recovery
+
+        # Clean up session manually since this is a test
+        await plugin.session.close()
 
 
 @pytest.mark.asyncio
 async def test_start_auth_failure(jriver_bootstrap):  # pylint: disable=redefined-outer-name
-    """Test start() with authentication failure"""
+    """Test start() with authentication failure - now returns True for auto-recovery"""
     plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
 
     with patch.object(plugin, '_test_connection', return_value=True), \
          patch.object(plugin, '_authenticate', return_value=False):
 
         result = await plugin.start()
-        assert result is False
-        assert plugin.session is None  # Session should be closed and set to None
+        assert result is True  # Should return True to enable auto-recovery
+        assert plugin._connection_failed is True  # pylint: disable=protected-access
+
+        # Clean up session manually since this is a test
+        await plugin.session.close()  # Should mark connection as failed
+        assert plugin.session is not None  # Session should remain open for recovery
+
+        # Clean up session manually since this is a test
+        await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_start_session_cleanup_on_connection_failure(jriver_bootstrap):  # pylint: disable=redefined-outer-name
-    """Test that session is properly closed when connection fails"""
+async def test_start_session_kept_open_on_connection_failure(jriver_bootstrap):  # pylint: disable=redefined-outer-name
+    """Test that session is kept open when connection fails for auto-recovery"""
     plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
 
     with patch.object(plugin, '_test_connection', return_value=False):
         result = await plugin.start()
-        assert result is False
-        assert plugin.session is None  # Session should be closed and set to None
+        assert result is True  # Should return True to enable auto-recovery
+        assert plugin.session is not None  # Session should remain open for recovery
+        assert plugin._connection_failed is True  # pylint: disable=protected-access
+
+        # Clean up session manually since this is a test
+        await plugin.session.close()
 
 
 @pytest.mark.asyncio
-async def test_start_session_cleanup_on_auth_failure(jriver_bootstrap):  # pylint: disable=redefined-outer-name
-    """Test that session is properly closed when authentication fails"""
+async def test_start_session_kept_open_on_auth_failure(jriver_bootstrap):  # pylint: disable=redefined-outer-name
+    """Test that session is kept open when authentication fails for auto-recovery"""
     plugin = nowplaying.inputs.jriver.Plugin(config=jriver_bootstrap)  # pylint: disable=no-member
 
     with patch.object(plugin, '_test_connection', return_value=True), \
          patch.object(plugin, '_authenticate', return_value=False):
 
         result = await plugin.start()
-        assert result is False
-        assert plugin.session is None  # Session should be closed and set to None
+        assert result is True  # Should return True to enable auto-recovery
+        assert plugin.session is not None  # Session should remain open for recovery
+        assert plugin._connection_failed is True  # pylint: disable=protected-access
+
+        # Clean up session manually since this is a test
+        await plugin.session.close()
 
 
 @pytest.mark.asyncio
@@ -512,7 +538,7 @@ async def test_getplayingtrack_parse_error():
         mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info', body='invalid xml content')
 
         result = await plugin.getplayingtrack()
-        assert result is None
+        assert result == {}  # Parse errors return empty dict, not None
 
     await plugin.session.close()
 
@@ -923,3 +949,261 @@ async def test_get_filename_response_format():
         assert result == '/Users/aw/Music/Artist/Album/Song.mp3'
 
     await plugin.session.close()
+
+
+# Error condition tests for improved error handling
+@pytest.mark.asyncio
+async def test_test_connection_jriver_not_running():
+    """Test connection test when JRiver is not running (ClientConnectorError)"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Alive',
+                      exception=aiohttp.ClientConnectorError(
+                          connection_key=None, os_error=OSError("Connection refused")))
+
+        result = await plugin._test_connection()  # pylint: disable=protected-access
+        assert result is False
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_test_connection_timeout():
+    """Test connection test with timeout"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Alive',
+                      exception=aiohttp.ClientTimeout())
+
+        result = await plugin._test_connection()  # pylint: disable=protected-access
+        assert result is False
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_authenticate_jriver_not_running():
+    """Test authentication when JRiver is not running (ClientConnectorError)"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+    plugin.username = 'testuser'
+    plugin.password = 'testpass'  # pragma: allowlist secret
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        url = 'http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass'
+        mock_resp.get(url, exception=aiohttp.ClientConnectorError(
+            connection_key=None, os_error=OSError("Connection refused")))
+
+        result = await plugin._authenticate()  # pylint: disable=protected-access
+        assert result is False
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_authenticate_timeout():
+    """Test authentication with timeout"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+    plugin.username = 'testuser'
+    plugin.password = 'testpass'  # pragma: allowlist secret
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        url = 'http://localhost:52199/MCWS/v1/Authenticate?Username=testuser&Password=testpass'
+        mock_resp.get(url, exception=aiohttp.ClientTimeout())
+
+        result = await plugin._authenticate()  # pylint: disable=protected-access
+        assert result is False
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_getplayingtrack_jriver_not_running():
+    """Test getplayingtrack when JRiver is not running (ClientConnectorError)"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info',
+                      exception=aiohttp.ClientConnectorError(
+                          connection_key=None, os_error=OSError("Connection refused")))
+
+        result = await plugin.getplayingtrack()
+        assert result is None
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_getplayingtrack_timeout():
+    """Test getplayingtrack with timeout"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info',
+                      exception=aiohttp.ClientTimeout())
+
+        result = await plugin.getplayingtrack()
+        assert result is None
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_getplayingtrack_xml_none_safety():
+    """Test getplayingtrack with XML parsing error (safety check)"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        # Return completely empty response that will cause XML parsing error
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info', body='')
+
+        result = await plugin.getplayingtrack()
+        # Should return empty dict when XML parsing fails, not crash
+        assert result == {}
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_get_filename_jriver_not_running():
+    """Test _get_filename when JRiver is not running (ClientConnectorError)"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?File=12345',
+                      exception=aiohttp.ClientConnectorError(
+                          connection_key=None, os_error=OSError("Connection refused")))
+
+        result = await plugin._get_filename('12345')  # pylint: disable=protected-access
+        assert result is None
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_get_filename_timeout():
+    """Test _get_filename with timeout"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+
+    # Create real aiohttp session for testing
+    plugin.session = aiohttp.ClientSession()
+
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/File/GetInfo?File=12345',
+                      exception=aiohttp.ClientTimeout())
+
+        result = await plugin._get_filename('12345')  # pylint: disable=protected-access
+        assert result is None
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_auto_recovery_success():
+    """Test successful auto-recovery when JRiver comes back online"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+    plugin.session = aiohttp.ClientSession()
+    plugin._connection_failed = True  # pylint: disable=protected-access
+
+    with patch.object(plugin, '_test_connection', return_value=True), \
+         patch.object(plugin, '_authenticate', return_value=True):
+
+        with aioresponses() as mock_resp:
+            mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info',
+                          body='<Response><Item Name="Artist">Test Artist</Item>'
+                               '<Item Name="Name">Test Title</Item></Response>')
+
+            result = await plugin.getplayingtrack()
+
+            assert result is not None
+            assert result['artist'] == 'Test Artist'
+            assert result['title'] == 'Test Title'
+            assert plugin._connection_failed is False  # pylint: disable=protected-access  # pylint: disable=protected-access
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_auto_recovery_connection_fails():
+    """Test auto-recovery when connection still fails"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+    plugin.session = aiohttp.ClientSession()
+    plugin._connection_failed = True  # pylint: disable=protected-access
+
+    with patch.object(plugin, '_test_connection', return_value=False):
+        result = await plugin.getplayingtrack()
+
+        assert result is None
+        assert plugin._connection_failed is True  # pylint: disable=protected-access
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_connection_error_sets_failed_state():
+    """Test that connection errors set the failed state"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.base_url = 'http://localhost:52199/MCWS/v1'
+    plugin.session = aiohttp.ClientSession()
+    plugin._connection_failed = False  # pylint: disable=protected-access
+
+    with aioresponses() as mock_resp:
+        mock_resp.get('http://localhost:52199/MCWS/v1/Playback/Info',
+                      exception=aiohttp.ClientConnectorError(
+                          connection_key=None, os_error=OSError("Connection refused")))
+
+        result = await plugin.getplayingtrack()
+
+        assert result is None
+        assert plugin._connection_failed is True  # pylint: disable=protected-access
+
+    await plugin.session.close()
+
+
+@pytest.mark.asyncio
+async def test_stop_resets_connection_state():
+    """Test that stop() resets connection failed state"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin.session = aiohttp.ClientSession()
+    plugin._connection_failed = True  # pylint: disable=protected-access
+
+    await plugin.stop()
+
+    assert plugin._connection_failed is False  # pylint: disable=protected-access
+    assert plugin.session is None

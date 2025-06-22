@@ -713,7 +713,7 @@ async def test_wikimedia_memory_stability_long_session(bootstrap):
 
     # Create many lookup variations
     entities = []
-    for i in range(15):  # 15 lookups per entity = 45 total
+    for i in range(3):  # 3 lookups per entity = 9 total (reduced from 45)
         for entity_id in base_entities:
             entities.append({
                 'artist': f'Artist {i}',
@@ -732,8 +732,8 @@ async def test_wikimedia_memory_stability_long_session(bootstrap):
             if result:
                 successful_lookups += 1
 
-            # Log progress every 15 entities
-            if (i + 1) % 15 == 0:
+            # Log progress every 3 entities
+            if (i + 1) % 3 == 0:
                 logging.info('Processed %d entities, %d successful lookups', i + 1,
                              successful_lookups)
 

@@ -179,10 +179,11 @@ async def test_no2newvirtualdjpolltest(virtualdj_bootstrap, getroot):  # pylint:
     config = virtualdj_bootstrap
     myvirtualdjdir = config.cparser.value('virtualdj/history')
     config.cparser.setValue('quirks/pollingobserver', True)
+    config.cparser.setValue('quirks/pollinginterval', 0.1)  # Fast polling for tests
     plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
     metadata = await plugin.getplayingtrack()
     await plugin.start()
-    await asyncio.sleep(5)
+    await asyncio.sleep(1)
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert not metadata.get('filename')
@@ -191,13 +192,13 @@ async def test_no2newvirtualdjpolltest(virtualdj_bootstrap, getroot):  # pylint:
     testmp3 = os.path.join(getroot, 'tests', 'audio', '15_Ghosts_II_64kb_orig.mp3')
     virtualdjfile = os.path.join(myvirtualdjdir, 'test.m3u')
     write_virtualdj(virtualdjfile, testmp3)
-    await asyncio.sleep(10)  # needs to be long enough that the poller finds the update!
+    await asyncio.sleep(1)  # Much faster with 0.1s polling interval
     metadata = await plugin.getplayingtrack()
     assert not metadata.get('artist')
     assert not metadata.get('title')
     assert metadata['filename'] == testmp3
     await plugin.stop()
-    await asyncio.sleep(5)
+    await asyncio.sleep(1)
 
 
 @pytest.mark.asyncio

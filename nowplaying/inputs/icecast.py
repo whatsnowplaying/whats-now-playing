@@ -21,8 +21,6 @@ logging.config.dictConfig({
 #from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
 
-METADATA = {}
-
 METADATALIST = ['artist', 'title', 'album', 'key', 'filename', 'bpm']
 
 PLAYLIST = ['name', 'filename']
@@ -31,9 +29,11 @@ PLAYLIST = ['name', 'filename']
 class IcecastProtocol(asyncio.Protocol):
     ''' a terrible implementation of the Icecast SOURCE protocol '''
 
-    def __init__(self):
+    def __init__(self, metadata_callback=None):
         self.streaming = False
         self.previous_page = b''
+        self.metadata_callback = metadata_callback
+        self._current_metadata = {}
 
     def connection_made(self, transport):
         ''' initial connection gives us a transport to use '''
@@ -89,29 +89,46 @@ class IcecastProtocol(asyncio.Protocol):
                     self.previous_page = b''
             header_data = dataio.read(27)
 
-    @staticmethod
-    def _query_parse(data):
+    def _query_parse(self, data):
         ''' try to parse the query '''
-        global METADATA  # pylint: disable=global-statement
         logging.debug('Processing updinfo')
 
-        METADATA = {}
-        text = data.decode('utf-8').replace('GET ', 'http://localhost').split()[0]
-        url = urllib.parse.urlparse(text)
+        metadata = {}
+        try:
+            text = data.decode('utf-8').replace('GET ', 'http://localhost').split()[0]
+            url = urllib.parse.urlparse(text)
+        except UnicodeDecodeError:
+            logging.warning('Failed to decode icecast query data as UTF-8')
+            return
+        except (IndexError, ValueError) as error:
+            logging.warning('Failed to parse icecast query URL: %s', error)
+            return
         if url.path == '/admin/metadata':
-            query = urllib.parse.parse_qs(url.query)
+            query = urllib.parse.parse_qs(url.query, keep_blank_values=True)
             if query.get('mode') == ['updinfo']:
                 if query.get('artist'):
-                    METADATA['artist'] = query['artist'][0]
+                    metadata['artist'] = query['artist'][0]
                 if query.get('title'):
-                    METADATA['title'] = query['title'][0]
-                if query.get('song'):
-                    METADATA['title'], METADATA['artist'] = query['song'][0].split('-')
+                    metadata['title'] = query['title'][0]
+                if 'song' in query:
+                    song_text = query['song'][0].strip()
+                    if ' - ' not in song_text:
+                        # No separator found, treat entire string as title
+                        metadata['title'] = song_text
+                    else:
+                        # Split on first occurrence of ' - ' (with spaces)
+                        # This handles cases like "Artist - Song - Remix" correctly
+                        artist, title = song_text.split(' - ', 1)
+                        metadata['artist'] = artist.strip()
+                        metadata['title'] = title.strip()
 
-    @staticmethod
-    def _parse_vorbis_comment(fh):  # pylint: disable=invalid-name
+                # Update instance metadata and notify callback
+                self._current_metadata.update(metadata)
+                if self.metadata_callback:
+                    self.metadata_callback(self._current_metadata.copy())
+
+    def _parse_vorbis_comment(self, fh):  # pylint: disable=invalid-name
         ''' from tinytag, with slight modifications, pull out metadata '''
-        global METADATA  # pylint: disable=global-statement
         comment_type_to_attr_mapping = {
             'album': 'album',
             'albumartist': 'albumartist',
@@ -127,7 +144,7 @@ class IcecastProtocol(asyncio.Protocol):
         }
 
         logging.debug('Processing vorbis comment')
-        METADATA = {}
+        metadata = {}
 
         vendor_length = struct.unpack('I', fh.read(4))[0]
         fh.seek(vendor_length, os.SEEK_CUR)  # jump over vendor
@@ -141,7 +158,12 @@ class IcecastProtocol(asyncio.Protocol):
             if '=' in keyvalpair:
                 key, value = keyvalpair.split('=', 1)
                 if fieldname := comment_type_to_attr_mapping.get(key.lower()):
-                    METADATA[fieldname] = value
+                    metadata[fieldname] = value
+
+        # Update instance metadata and notify callback
+        self._current_metadata.update(metadata)
+        if self.metadata_callback:
+            self.metadata_callback(self._current_metadata.copy())
 
 
 class Plugin(InputPlugin):
@@ -154,6 +176,11 @@ class Plugin(InputPlugin):
         self.server = None
         self.mode = None
         self.lastmetadata = {}
+        self._current_metadata = {}
+
+    def _metadata_callback(self, metadata):
+        ''' Callback to receive metadata from the protocol '''
+        self._current_metadata = metadata
 
     def install(self):
         ''' auto-install for Icecast '''
@@ -181,8 +208,8 @@ class Plugin(InputPlugin):
 #### Data feed methods
 
     async def getplayingtrack(self):
-        ''' give back the metadata global '''
-        return METADATA
+        ''' give back the current metadata '''
+        return self._current_metadata
 
     async def getrandomtrack(self, playlist):
         return None
@@ -196,7 +223,10 @@ class Plugin(InputPlugin):
         loop = asyncio.get_running_loop()
         logging.debug('Launching Icecast on %s', port)
         try:
-            self.server = await loop.create_server(IcecastProtocol, '', port)
+            # Create protocol factory that passes the metadata callback
+            def protocol_factory():
+                return IcecastProtocol(metadata_callback=self._metadata_callback)
+            self.server = await loop.create_server(protocol_factory, '', port)
         except Exception as error:  #pylint: disable=broad-except
             logging.error('Failed to launch icecast: %s', error)
 
