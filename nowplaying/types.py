@@ -51,7 +51,12 @@ class TrackMetadata(TypedDict, total=False):
     artistshortbio: str
     artistwebsites: list[str]
     artistfanarturls: list[str]
+    artistfanartraw: bytes
+    artistbannerraw: bytes
+    artistlogoraw: bytes
+    artistthumbnailraw: bytes
     imagecacheartist: str
+    imagecachealbum: str
 
     # Comments and descriptions
     comments: str
@@ -60,4 +65,20 @@ class TrackMetadata(TypedDict, total=False):
     # Host and streaming metadata
     httpport: int
     hostname: str
+    hostfqdn: str
+    hostip: str
     ipaddress: str
+
+    # Request system
+    requester: str
+    requestdisplayname: str
+    requesterimageraw: bytes
+
+    # Processing metadata
+    previoustrack: list[dict[str, str]]
+    dbid: int
+    deck: str
+    duration_hhmmss: str
+    fpcalcduration: int
+    fpcalcfingerprint: str
+    genres: list[str]

@@ -93,7 +93,7 @@ class Plugin(M3UPlugin):
 
         # just in case called without calling start...
         await self.start()
-        return Plugin.metadata
+        return self.metadata
 
     async def getrandomtrack(self, playlist):
         ''' return the contents of a playlist '''

@@ -8,14 +8,19 @@ import pathlib
 import sys
 import sqlite3
 import time
-import typing as t
+from typing import TYPE_CHECKING, Any
 
 import aiosqlite
 
+import watchdog.observers.api  # pylint: disable=import-error, no-name-in-module
 from watchdog.observers import Observer  # pylint: disable=import-error
 from watchdog.events import PatternMatchingEventHandler  # pylint: disable=import-error
 
 from PySide6.QtCore import QStandardPaths  # pylint: disable=import-error, no-name-in-module
+
+if TYPE_CHECKING:
+    from nowplaying.types import TrackMetadata
+    import nowplaying.config
 
 SPLITSTR = '@@SPLITHERE@@'
 
@@ -84,12 +89,12 @@ METADATABLOBLIST = [
 class DBWatcher:
     ''' utility to watch for database changes '''
 
-    def __init__(self, databasefile):
-        self.observer = None
-        self.event_handler = None
-        self.updatetime = time.time()
-        self.databasefile = databasefile
-        self.callback = None
+    def __init__(self, databasefile: str | pathlib.Path):
+        self.observer: watchdog.observers.api.BaseObserver | None = None
+        self.event_handler: PatternMatchingEventHandler | None = None
+        self.updatetime: float = time.time()
+        self.databasefile: str = str(databasefile)  # Convert to string for os.path functions
+        self.callback: Any = None
 
     def start(self, customhandler=None):
         ''' fire up the watcher '''
@@ -137,17 +142,17 @@ class DBWatcher:
 class MetadataDB:
     """ Metadata DB module"""
 
-    def __init__(self, databasefile: t.Optional[str] = None, initialize=False):
-        self.watchers = set()
+    def __init__(self, databasefile: str | pathlib.Path | None = None, initialize: bool = False):
+        self.watchers: set[DBWatcher] = set()
 
-        self.databasefile = self.init_db_var(databasefile=databasefile)
+        self.databasefile: pathlib.Path = self.init_db_var(databasefile=databasefile)
         logging.debug("Metadata DB at %s", self.databasefile)
         if not self.databasefile.exists() or initialize:
             logging.debug('Setting up a new DB')
             self.setupsql()
 
     @staticmethod
-    def init_db_var(databasefile) -> pathlib.Path:
+    def init_db_var(databasefile: str | pathlib.Path | None) -> pathlib.Path:
         """ split this out to make testing easier """
         if os.environ.get("WNP_METADB_TEST_FILE"):
             return pathlib.Path(os.environ["WNP_METADB_TEST_FILE"])
@@ -168,13 +173,16 @@ class MetadataDB:
             logging.exception("Clearing leftover watcher")
             watcher.stop()
 
-    async def write_to_metadb(self, metadata=None):
+    async def write_to_metadb(self, metadata: "TrackMetadata | None" = None) -> None:
         ''' update metadb '''
 
-        def filterkeys(mydict):
+        def filterkeys(mydict: dict[str, Any]) -> dict[str, Any]:
             return {key: mydict[key] for key in METADATALIST + METADATABLOBLIST if key in mydict}
 
         logging.debug('Called (async) write_to_metadb')
+        if metadata is None:
+            logging.debug('metadata is None')
+            return
         if (not metadata or not METADATALIST or 'title' not in metadata
                 or 'artist' not in metadata):
             logging.debug('metadata is either empty or too incomplete')
@@ -186,7 +194,7 @@ class MetadataDB:
         async with aiosqlite.connect(self.databasefile, timeout=10) as connection:
             # do not want to modify the original dictionary
             # otherwise Bad Things(tm) will happen
-            mdcopy = copy.deepcopy(metadata)
+            mdcopy: dict[str, Any] = copy.deepcopy(dict(metadata))
             mdcopy['artistfanartraw'] = None
 
             # toss any keys we do not care about
@@ -214,7 +222,7 @@ class MetadataDB:
             await cursor.execute(sql, datatuple)
             await connection.commit()
 
-    def make_previoustracklist(self):
+    def make_previoustracklist(self) -> list[dict[str, str]] | None:
         ''' create a reversed list of the tracks played '''
 
         if not self.databasefile.exists():
@@ -237,7 +245,7 @@ class MetadataDB:
 
         return previouslist
 
-    async def make_previoustracklist_async(self):
+    async def make_previoustracklist_async(self) -> list[dict[str, str]] | None:
         ''' create a reversed list of the tracks played '''
 
         if not self.databasefile.exists():
@@ -262,9 +270,9 @@ class MetadataDB:
         return previouslist
 
     @staticmethod
-    def _postprocess_read_last_meta(row):
+    def _postprocess_read_last_meta(row: sqlite3.Row) -> "TrackMetadata":
         ''' common post-process of read_last_meta '''
-        metadata = {data: row[data] for data in METADATALIST}
+        metadata: dict[str, Any] = {data: row[data] for data in METADATALIST}
         for key in METADATABLOBLIST:
             metadata[key] = row[key]
             if not metadata[key]:
@@ -276,9 +284,9 @@ class MetadataDB:
                 metadata[key] = metadata[key].split(SPLITSTR)
 
         metadata['dbid'] = row['id']
-        return metadata
+        return metadata  # type: ignore[return-value]
 
-    async def read_last_meta_async(self):
+    async def read_last_meta_async(self) -> "TrackMetadata | None":
         ''' update metadb '''
 
         if not self.databasefile.exists():
@@ -302,10 +310,10 @@ class MetadataDB:
                 return None
 
         metadata = self._postprocess_read_last_meta(row)
-        metadata['previoustrack'] = await self.make_previoustracklist_async()
+        metadata['previoustrack'] = await self.make_previoustracklist_async()  # type: ignore[misc]
         return metadata
 
-    def read_last_meta(self):
+    def read_last_meta(self) -> "TrackMetadata | None":
         ''' update metadb '''
 
         if not self.databasefile.exists():
@@ -326,7 +334,7 @@ class MetadataDB:
                 return None
 
         metadata = self._postprocess_read_last_meta(row)
-        metadata['previoustrack'] = self.make_previoustracklist()
+        metadata['previoustrack'] = self.make_previoustracklist()  # type: ignore[misc]
         return metadata
 
     def setupsql(self):
@@ -369,7 +377,8 @@ class MetadataDB:
             logging.error("Database error during vacuum: %s", error)
 
 
-def create_setlist(config=None, databasefile=None):
+def create_setlist(config: "nowplaying.config.ConfigFile | None" = None,
+                  databasefile: str | None = None) -> None:
     ''' create the setlist '''
 
     if not config:
@@ -385,7 +394,7 @@ def create_setlist(config=None, databasefile=None):
         logging.info('No tracks were played; not saving setlist')
         return
 
-    previoustrack = metadata['previoustrack']
+    previoustrack = metadata['previoustrack']  # type: ignore[misc]
     if not previoustrack:
         logging.info('No previoustracks were played; not saving setlist')
         return
