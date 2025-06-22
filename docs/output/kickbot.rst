@@ -12,12 +12,20 @@ The current Kick integration supports:
 * **Template-based Messages**: Rich formatting with metadata variables
 * **Smart Message Splitting**: Intelligent splitting of long messages
 
-**Coming Soon**: Interactive chat commands and user input processing.
+**Coming Soon**:
+
+  * Interactive chat commands and user input processing.
+  * Point Redemptions
 
 Authentication
 --------------
 
 To use Kick.com integration, you'll need to set up OAuth2 authentication with your Kick account.
+
+
+.. image:: images/kickbot-developer-screen.png
+   :target: images/kickbot-developer-screen.png
+   :alt: Kick.com Developer tab in settings
 
 #. Go to your Kick streamer settings and navigate to the **Developer** tab to create an application.
 #. Create a new OAuth2 application with these important settings:
@@ -27,17 +35,28 @@ To use Kick.com integration, you'll need to set up OAuth2 authentication with yo
    * Note down your Client ID and Client Secret
    * Set Redirect URI to ``http://localhost:8899/kickredirect`` (port must match your webserver settings, default is 8899)
 
+.. image:: images/kickbot-edit-app-screen.png
+   :target: images/kickbot-edit-app-screen.png
+   :alt: Kick.com Edit App Screen
+
+#. Click on the Edit App button to make a few more changes
 #. Scopes Requested should include the following for current and future features:
 
    * Read user information (including email address) - ``user:read``
    * Write to chat feed - ``chat:write``
    * Subscribe to events (read chat feed, follows, subscribes, gifts) - ``events:subscribe``
 
+#. You should also make sure to select the option to make it a bot account.
+
+
+.. image:: images/kickbot-account-settings.png
+   :target: images/kickbot-account-settings.png
+   :alt: What's Now Playing Kick settings
+
 #. In **What's Now Playing** settings:
 
    * Enter your Client ID and Client Secret
    * Set your Kick channel name
-   * Configure the Redirect URI
    * Click "Authenticate with Kick" to complete OAuth2 setup
 
 Template Features
