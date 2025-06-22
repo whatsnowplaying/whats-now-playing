@@ -25,13 +25,27 @@ JRiver Configuration
 #. Open JRiver Media Center
 #. Go to **Tools** → **Options** → **Media Network**
 #. Check **Use Media Network to share this library**
+
+.. image:: images/jriver-access-key.png
+   :target: images/jriver-access-key.png
+   :alt: JRiver Menus showing Use Media Network and the Access Key
+
 #. Note the **Access Key** if one is displayed (optional but recommended for security)
+
+.. image:: images/jriver-username-password.png
+   :target: images/jriver-username-password.png
+   :alt: JRiver Menus showing the username and password
+
 #. Configure authentication if desired:
 
    * Check **Require authentication for requests**
    * Set a **Username** and **Password**
 
-#. Note the **Port** number (default is 52199)
+.. image:: images/jriver-advanced-port.png
+   :target: images/jriver-advanced-port.png
+   :alt: JRiver Advanced drop down showing the port
+
+#. Note the **Port** number under Advanced and in some of the previous displays (default is 52199)
 #. Click **OK** to save settings
 
 What's Now Playing Configuration
@@ -44,6 +58,10 @@ What's Now Playing Configuration
 
 Configuration Options
 ---------------------
+
+.. image:: images/jriver-source-selection.png
+   :target: images/jriver-source-selection.png
+   :alt: JRiver input selection in What's Now Playing showing an access key and port
 
 Host/IP Address
   The hostname or IP address of the machine running JRiver Media Center.

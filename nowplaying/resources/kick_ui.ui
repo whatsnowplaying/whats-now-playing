@@ -99,7 +99,7 @@
      </widget>
     </item>
     <item row="3" column="0">
-     <widget class="QLabel" name="redirecturi_label">
+     <widget class="QLabel" name="redirecturi_text_label">
       <property name="enabled">
        <bool>false</bool>
       </property>
@@ -294,7 +294,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>redirecturi_label</receiver>
+   <receiver>redirecturi_text_label</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -310,7 +310,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>redirecturi_lineedit</receiver>
+   <receiver>redirecturi_label</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -318,7 +318,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <y>21</y>
     </hint>
     <hint type="destinationlabel">
-     <x>356</x>
+     <x>325</x>
      <y>159</y>
     </hint>
    </hints>
