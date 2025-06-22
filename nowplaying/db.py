@@ -180,6 +180,9 @@ class MetadataDB:
             return {key: mydict[key] for key in METADATALIST + METADATABLOBLIST if key in mydict}
 
         logging.debug('Called (async) write_to_metadb')
+        if metadata is None:
+            logging.debug('metadata is None')
+            return
         if (not metadata or not METADATALIST or 'title' not in metadata
                 or 'artist' not in metadata):
             logging.debug('metadata is either empty or too incomplete')

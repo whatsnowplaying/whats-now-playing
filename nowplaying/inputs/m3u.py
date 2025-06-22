@@ -25,7 +25,7 @@ EXTVDJ_REMIX_RE = re.compile(r'.*<remix>(.+)</remix>.*')
 # https://datatracker.ietf.org/doc/html/rfc8216
 
 
-class Plugin(InputPlugin):
+class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     ''' handler for NowPlaying '''
 
     def __init__(self, config=None, m3udir=None, qsettings=None):
@@ -38,7 +38,6 @@ class Plugin(InputPlugin):
 
         self.mixmode = "newest"
         self.event_handler = None
-        # Instance variable instead of class variable to prevent test interference
         self.metadata: dict[str, str | None] = {'artist': None, 'title': None, 'filename': None}
         self.observer = None
         self._reset_meta()

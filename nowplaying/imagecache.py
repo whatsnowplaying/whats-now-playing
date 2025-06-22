@@ -613,7 +613,8 @@ VALUES (?,?,?);
 
         return batch
 
-    def _cleanup_queue_tracking(self, recently_processed: dict[str, float]) -> None:
+    @staticmethod
+    def _cleanup_queue_tracking(recently_processed: dict[str, float]) -> None:
         """Remove entries older than 3 minutes from queue processing tracking."""
         current_time = time.time()
         expired_keys = [

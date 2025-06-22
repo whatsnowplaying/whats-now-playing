@@ -61,7 +61,7 @@ def safe_stopevent_check(stopevent: asyncio.Event|None) -> bool:
     """
     try:
         return stopevent.is_set()
-    except (BrokenPipeError, EOFError):
+    except (BrokenPipeError, EOFError, AttributeError):
         # Expected shutdown errors - pipe closed before subprocess finished
         logging.debug("Shutdown pipe error detected, treating as stop signal")
         return True
