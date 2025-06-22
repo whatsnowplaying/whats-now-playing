@@ -39,7 +39,7 @@ To use Kick.com integration, you'll need to set up OAuth2 authentication with yo
    :target: images/kickbot-edit-app-screen.png
    :alt: Kick.com Edit App Screen
 
-#. Click on the Edit App button to make a few more changes
+#. Click on the Edit button to make a few more changes
 #. Scopes Requested should include the following for current and future features:
 
    * Read user information (including email address) - ``user:read``

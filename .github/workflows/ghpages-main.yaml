@@ -39,5 +39,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_WRITE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: "./build-website.sh"
+        run: "./build-ci-website.sh"
         shell: bash
