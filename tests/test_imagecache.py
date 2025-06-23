@@ -258,14 +258,24 @@ def test_cleanup_queue_tracking_empty():
 @pytest.mark.asyncio
 async def test_get_next_dlset_empty_database(bootstrap):
     ''' test get_next_dlset with empty database '''
+    import contextlib
+    import sqlite3
+    
     config = bootstrap
     dbdir = config.testdir.joinpath('imagecache')
     dbdir.mkdir()
 
     imagecache = nowplaying.imagecache.ImageCache(cachedir=dbdir)
-    result = imagecache.get_next_dlset()
-
-    assert result is None or result == []
+    try:
+        result = imagecache.get_next_dlset()
+        assert result is None or result == []
+    finally:
+        # Clean up SQLite WAL files to prevent flaky test failures
+        if imagecache.databasefile.exists():
+            with contextlib.suppress(Exception):
+                with sqlite3.connect(imagecache.databasefile, timeout=5) as conn:
+                    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                    conn.execute("PRAGMA journal_mode=DELETE")
 
 
 @pytest.mark.asyncio
