@@ -161,7 +161,7 @@ async def test_start_no_host():
     plugin.config = mock_config
 
     result = await plugin.start()
-    assert result is False
+    assert not result
 
 
 @pytest.mark.asyncio
@@ -174,7 +174,7 @@ async def test_start_success(jriver_bootstrap):  # pylint: disable=redefined-out
 
         result = await plugin.start()
 
-        assert result is True
+        assert result
         assert plugin.host == '192.168.1.100'
         assert plugin.port == '52199'
         assert plugin.username == 'testuser'
@@ -182,7 +182,7 @@ async def test_start_success(jriver_bootstrap):  # pylint: disable=redefined-out
         assert plugin.access_key == 'testkey'
         assert plugin.base_url == 'http://192.168.1.100:52199/MCWS/v1'
         assert plugin.session is not None  # Session should remain open on success
-        assert plugin._connection_failed is False  # Should be False on success  # pylint: disable=protected-access
+        assert not plugin._connection_failed  # Should be False on success  # pylint: disable=protected-access
         mock_test.assert_called_once()
         mock_auth.assert_called_once()
 
@@ -197,15 +197,12 @@ async def test_start_connection_failure(jriver_bootstrap):  # pylint: disable=re
 
     with patch.object(plugin, '_test_connection', return_value=False):
         result = await plugin.start()
-        assert result is True  # Should return True to enable auto-recovery
-        assert plugin._connection_failed is True  # pylint: disable=protected-access
+        assert result  # Should return True to enable auto-recovery
+        assert plugin._connection_failed  # pylint: disable=protected-access
 
-        # Clean up session manually since this is a test
         await plugin.session.close()  # Should mark connection as failed
         assert plugin.session is not None  # Session should remain open for recovery
 
-        # Clean up session manually since this is a test
-        await plugin.session.close()
 
 
 @pytest.mark.asyncio
@@ -217,15 +214,11 @@ async def test_start_auth_failure(jriver_bootstrap):  # pylint: disable=redefine
          patch.object(plugin, '_authenticate', return_value=False):
 
         result = await plugin.start()
-        assert result is True  # Should return True to enable auto-recovery
-        assert plugin._connection_failed is True  # pylint: disable=protected-access
+        assert result  # Should return True to enable auto-recovery
+        assert plugin._connection_failed  # pylint: disable=protected-access
 
-        # Clean up session manually since this is a test
         await plugin.session.close()  # Should mark connection as failed
         assert plugin.session is not None  # Session should remain open for recovery
-
-        # Clean up session manually since this is a test
-        await plugin.session.close()
 
 
 @pytest.mark.asyncio
@@ -235,9 +228,9 @@ async def test_start_session_kept_open_on_connection_failure(jriver_bootstrap): 
 
     with patch.object(plugin, '_test_connection', return_value=False):
         result = await plugin.start()
-        assert result is True  # Should return True to enable auto-recovery
+        assert result  # Should return True to enable auto-recovery
         assert plugin.session is not None  # Session should remain open for recovery
-        assert plugin._connection_failed is True  # pylint: disable=protected-access
+        assert plugin._connection_failed  # pylint: disable=protected-access
 
         # Clean up session manually since this is a test
         await plugin.session.close()
@@ -252,9 +245,9 @@ async def test_start_session_kept_open_on_auth_failure(jriver_bootstrap):  # pyl
          patch.object(plugin, '_authenticate', return_value=False):
 
         result = await plugin.start()
-        assert result is True  # Should return True to enable auto-recovery
+        assert result  # Should return True to enable auto-recovery
         assert plugin.session is not None  # Session should remain open for recovery
-        assert plugin._connection_failed is True  # pylint: disable=protected-access
+        assert plugin._connection_failed  # pylint: disable=protected-access
 
         # Clean up session manually since this is a test
         await plugin.session.close()
@@ -277,7 +270,7 @@ async def test_test_connection_success():
                       </Response>''')
 
         result = await plugin._test_connection()  # pylint: disable=protected-access
-        assert result is True
+        assert result
 
     await plugin.session.close()
 
@@ -299,7 +292,7 @@ async def test_test_connection_wrong_access_key():
                       </Response>''')
 
         result = await plugin._test_connection()  # pylint: disable=protected-access
-        assert result is False
+        assert not result
 
     await plugin.session.close()
 
@@ -317,7 +310,7 @@ async def test_test_connection_http_error():
         mock_resp.get('http://localhost:52199/MCWS/v1/Alive', status=404)
 
         result = await plugin._test_connection()  # pylint: disable=protected-access
-        assert result is False
+        assert not result
 
     await plugin.session.close()
 
@@ -336,7 +329,7 @@ async def test_test_connection_network_error():
                       exception=Exception('Connection failed'))
 
         result = await plugin._test_connection()  # pylint: disable=protected-access
-        assert result is False
+        assert not result
 
     await plugin.session.close()
 
@@ -362,7 +355,7 @@ async def test_authenticate_success():
               ''')
 
         result = await plugin._authenticate()  # pylint: disable=protected-access
-        assert result is True
+        assert result
         assert plugin.token == 'abc123token'
 
     await plugin.session.close()
@@ -376,7 +369,7 @@ async def test_authenticate_no_credentials():
     plugin.password = None
 
     result = await plugin._authenticate()  # pylint: disable=protected-access
-    assert result is True  # Should succeed when no auth is needed
+    assert result  # Should succeed when no auth is needed
 
 
 @pytest.mark.asyncio
@@ -399,7 +392,7 @@ async def test_authenticate_no_token():
               ''')
 
         result = await plugin._authenticate()  # pylint: disable=protected-access
-        assert result is False
+        assert not result
 
     await plugin.session.close()
 
@@ -420,7 +413,7 @@ async def test_authenticate_http_error():
         mock_resp.get(url, status=401)
 
         result = await plugin._authenticate()  # pylint: disable=protected-access
-        assert result is False
+        assert not result
 
     await plugin.session.close()
 
@@ -967,7 +960,7 @@ async def test_test_connection_jriver_not_running():
                           connection_key=None, os_error=OSError("Connection refused")))
 
         result = await plugin._test_connection()  # pylint: disable=protected-access
-        assert result is False
+        assert not result
 
     await plugin.session.close()
 
@@ -986,7 +979,7 @@ async def test_test_connection_timeout():
                       exception=aiohttp.ClientTimeout())
 
         result = await plugin._test_connection()  # pylint: disable=protected-access
-        assert result is False
+        assert not result
 
     await plugin.session.close()
 
@@ -1008,7 +1001,7 @@ async def test_authenticate_jriver_not_running():
             connection_key=None, os_error=OSError("Connection refused")))
 
         result = await plugin._authenticate()  # pylint: disable=protected-access
-        assert result is False
+        assert not result
 
     await plugin.session.close()
 
@@ -1029,7 +1022,7 @@ async def test_authenticate_timeout():
         mock_resp.get(url, exception=aiohttp.ClientTimeout())
 
         result = await plugin._authenticate()  # pylint: disable=protected-access
-        assert result is False
+        assert not result
 
     await plugin.session.close()
 
@@ -1153,7 +1146,7 @@ async def test_auto_recovery_success():
             assert result is not None
             assert result['artist'] == 'Test Artist'
             assert result['title'] == 'Test Title'
-            assert plugin._connection_failed is False  # pylint: disable=protected-access  # pylint: disable=protected-access
+            assert not plugin._connection_failed  # pylint: disable=protected-access
 
     await plugin.session.close()
 
@@ -1170,7 +1163,7 @@ async def test_auto_recovery_connection_fails():
         result = await plugin.getplayingtrack()
 
         assert result is None
-        assert plugin._connection_failed is True  # pylint: disable=protected-access
+        assert plugin._connection_failed  # pylint: disable=protected-access
 
     await plugin.session.close()
 
@@ -1191,7 +1184,7 @@ async def test_connection_error_sets_failed_state():
         result = await plugin.getplayingtrack()
 
         assert result is None
-        assert plugin._connection_failed is True  # pylint: disable=protected-access
+        assert plugin._connection_failed  # pylint: disable=protected-access
 
     await plugin.session.close()
 
@@ -1205,5 +1198,5 @@ async def test_stop_resets_connection_state():
 
     await plugin.stop()
 
-    assert plugin._connection_failed is False  # pylint: disable=protected-access
+    assert not plugin._connection_failed  # pylint: disable=protected-access
     assert plugin.session is None

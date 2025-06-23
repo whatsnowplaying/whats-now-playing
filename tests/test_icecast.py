@@ -57,7 +57,7 @@ def test_connection_made():
      'song with multiple " - " separators'),
     ('song=Just%20A%20Title', None, 'Just A Title', 'song without separator'),
     ('song=Artist-Title', None, 'Artist-Title', 'song with hyphen but no spaces'),
-    ('song=Caf%C3%A9%20-%20R%C3%A9mix', 'Café', 'Rémix',
+    ('song=Caf%C3%A9%20-%20R%C3%A9mix', 'Café', 'Rémix',  # codespell:ignore
      'song with URL-encoded special characters'),
 
     # Separate field tests
