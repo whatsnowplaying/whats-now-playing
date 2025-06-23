@@ -4,6 +4,7 @@
 #pylint: disable=redefined-outer-name
 
 import asyncio
+import contextlib
 import logging
 import multiprocessing
 import sqlite3
@@ -258,9 +259,6 @@ def test_cleanup_queue_tracking_empty():
 @pytest.mark.asyncio
 async def test_get_next_dlset_empty_database(bootstrap):
     ''' test get_next_dlset with empty database '''
-    import contextlib
-    import sqlite3
-    
     config = bootstrap
     dbdir = config.testdir.joinpath('imagecache')
     dbdir.mkdir()
