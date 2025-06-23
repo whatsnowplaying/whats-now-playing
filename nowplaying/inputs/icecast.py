@@ -3,13 +3,18 @@
 
 import asyncio
 import codecs
-
 import io
-import struct
-import os
 import logging
 import logging.config
+import os
+import struct
 import urllib.parse
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import nowplaying.config
+    from PySide6.QtWidgets import QWidget
 
 logging.config.dictConfig({
     'version': 1,
@@ -20,26 +25,27 @@ logging.config.dictConfig({
 
 #from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
+from nowplaying.types import TrackMetadata
 
-METADATA = {}
+METADATALIST: list[str] = ['artist', 'title', 'album', 'key', 'filename', 'bpm']
 
-METADATALIST = ['artist', 'title', 'album', 'key', 'filename', 'bpm']
-
-PLAYLIST = ['name', 'filename']
+PLAYLIST: list[str] = ['name', 'filename']
 
 
 class IcecastProtocol(asyncio.Protocol):
     ''' a terrible implementation of the Icecast SOURCE protocol '''
 
-    def __init__(self):
-        self.streaming = False
-        self.previous_page = b''
+    def __init__(self, metadata_callback: Callable[[dict[str, str]], None] | None = None) -> None:
+        self.streaming: bool = False
+        self.previous_page: bytes = b''
+        self.metadata_callback: Callable[[dict[str, str]], None] | None = metadata_callback
+        self._current_metadata: dict[str, str] = {}
 
-    def connection_made(self, transport):
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
         ''' initial connection gives us a transport to use '''
-        self.transport = transport  # pylint: disable=attribute-defined-outside-init
+        self.transport = transport  # type: ignore  # pylint: disable=attribute-defined-outside-init
 
-    def data_received(self, data):
+    def data_received(self, data: bytes) -> None:
         ''' every time data is received, this method is called '''
 
         if not self.streaming:
@@ -50,7 +56,7 @@ class IcecastProtocol(asyncio.Protocol):
             if data[:19] == b'GET /admin/metadata':
                 self._query_parse(data)
             logging.debug('Sending initial 200')
-            self.transport.write(b'HTTP/1.0 200 OK\r\n\r\n')
+            self.transport.write(b'HTTP/1.0 200 OK\r\n\r\n')  # type: ignore
         else:
             # data block. convert to bytes and process it,
             # adding each block to the previously received block as necessary
@@ -64,7 +70,7 @@ class IcecastProtocol(asyncio.Protocol):
                     pageio.seek(8, os.SEEK_CUR)  # jump over header name
                     self._parse_vorbis_comment(pageio)
 
-    def _parse_page(self, dataio):
+    def _parse_page(self, dataio: io.BytesIO):
         ''' modified from tinytag, modified for here '''
         header_data = dataio.read(27)  # read ogg page header
         while len(header_data) != 0:
@@ -89,30 +95,73 @@ class IcecastProtocol(asyncio.Protocol):
                     self.previous_page = b''
             header_data = dataio.read(27)
 
-    @staticmethod
-    def _query_parse(data):
+    def _query_parse(self, data: bytes) -> None:
         ''' try to parse the query '''
-        global METADATA  # pylint: disable=global-statement
         logging.debug('Processing updinfo')
 
-        METADATA = {}
-        text = data.decode('utf-8').replace('GET ', 'http://localhost').split()[0]
-        url = urllib.parse.urlparse(text)
-        if url.path == '/admin/metadata':
-            query = urllib.parse.parse_qs(url.query)
-            if query.get('mode') == ['updinfo']:
-                if query.get('artist'):
-                    METADATA['artist'] = query['artist'][0]
-                if query.get('title'):
-                    METADATA['title'] = query['title'][0]
-                if query.get('song'):
-                    METADATA['title'], METADATA['artist'] = query['song'][0].split('-')
+        # Parse the URL from the request data
+        url = self._extract_url_from_data(data)
+        if not url:
+            return
+
+        # Check if this is a metadata update request
+        if url.path != '/admin/metadata':
+            return
+
+        query = urllib.parse.parse_qs(url.query, keep_blank_values=True)
+        if query.get('mode') != ['updinfo']:
+            return
+
+        # Extract metadata from query parameters
+        metadata = self._extract_metadata_from_query(query)
+
+        # Update instance metadata and notify callback
+        self._current_metadata.update(metadata)
+        if self.metadata_callback:
+            self.metadata_callback(self._current_metadata.copy())
 
     @staticmethod
-    def _parse_vorbis_comment(fh):  # pylint: disable=invalid-name
+    def _extract_url_from_data(data: bytes) -> urllib.parse.ParseResult | None:
+        ''' Extract and parse URL from request data '''
+        try:
+            text = data.decode('utf-8').replace('GET ', 'http://localhost').split()[0]
+            return urllib.parse.urlparse(text)
+        except UnicodeDecodeError:
+            logging.warning('Failed to decode icecast query data as UTF-8')
+            return None
+        except (IndexError, ValueError) as error:
+            logging.warning('Failed to parse icecast query URL: %s', error)
+            return None
+
+    @staticmethod
+    def _extract_metadata_from_query(query: dict[str, list[str]]) -> dict[str, str]:
+        ''' Extract metadata from parsed query parameters '''
+        metadata: dict[str, str] = {}
+
+        # Direct artist/title parameters
+        if query.get('artist'):
+            metadata['artist'] = query['artist'][0]
+        if query.get('title'):
+            metadata['title'] = query['title'][0]
+
+        # Handle 'song' parameter that might contain "Artist - Title"
+        if 'song' in query:
+            song_text = query['song'][0].strip()
+            if ' - ' not in song_text:
+                # No separator found, treat entire string as title
+                metadata['title'] = song_text
+            else:
+                # Split on first occurrence of ' - ' (with spaces)
+                # This handles cases like "Artist - Song - Remix" correctly
+                artist, title = song_text.split(' - ', 1)
+                metadata['artist'] = artist.strip()
+                metadata['title'] = title.strip()
+
+        return metadata
+
+    def _parse_vorbis_comment(self, fh: io.BytesIO) -> None:  # pylint: disable=invalid-name
         ''' from tinytag, with slight modifications, pull out metadata '''
-        global METADATA  # pylint: disable=global-statement
-        comment_type_to_attr_mapping = {
+        comment_type_to_attr_mapping: dict[str, str] = {
             'album': 'album',
             'albumartist': 'albumartist',
             'title': 'title',
@@ -127,7 +176,7 @@ class IcecastProtocol(asyncio.Protocol):
         }
 
         logging.debug('Processing vorbis comment')
-        METADATA = {}
+        metadata: dict[str, str] = {}
 
         vendor_length = struct.unpack('I', fh.read(4))[0]
         fh.seek(vendor_length, os.SEEK_CUR)  # jump over vendor
@@ -141,71 +190,88 @@ class IcecastProtocol(asyncio.Protocol):
             if '=' in keyvalpair:
                 key, value = keyvalpair.split('=', 1)
                 if fieldname := comment_type_to_attr_mapping.get(key.lower()):
-                    METADATA[fieldname] = value
+                    metadata[fieldname] = value
+
+        # Update instance metadata and notify callback
+        self._current_metadata.update(metadata)
+        if self.metadata_callback:
+            self.metadata_callback(self._current_metadata.copy())
 
 
 class Plugin(InputPlugin):
     ''' base class of input plugins '''
 
-    def __init__(self, config=None, qsettings=None):
+    def __init__(self,
+                 config: "nowplaying.config.ConfigFile | None" = None,
+                 qsettings: "QWidget | None" = None) -> None:
         ''' no custom init '''
         super().__init__(config=config, qsettings=qsettings)
-        self.displayname = "Icecast"
-        self.server = None
-        self.mode = None
-        self.lastmetadata = {}
+        self.displayname: str = "Icecast"
+        self.server: asyncio.Server | None = None
+        self.mode: str | None = None
+        self.lastmetadata: dict[str, str] = {}
+        self._current_metadata: dict[str, str] = {}
 
-    def install(self):
+    def _metadata_callback(self, metadata: dict[str, str]) -> None:
+        ''' Callback to receive metadata from the protocol '''
+        self._current_metadata = metadata
+
+    def install(self) -> bool:
         ''' auto-install for Icecast '''
         return False
 
 #### Settings UI methods
 
-    def defaults(self, qsettings):
+    def defaults(self, qsettings: Any) -> None:
         ''' (re-)set the default configuration values for this plugin '''
         qsettings.setValue('icecast/port', '8000')
 
-    def load_settingsui(self, qwidget):
+    def load_settingsui(self, qwidget: Any) -> None:
         ''' load values from config and populate page '''
-        qwidget.port_lineedit.setText(self.config.cparser.value('icecast/port'))
+        qwidget.port_lineedit.setText(self.config.cparser.value('icecast/port'))  # type: ignore
 
-    def save_settingsui(self, qwidget):
+    def save_settingsui(self, qwidget: Any) -> None:
         ''' take the settings page and save it '''
-        self.config.cparser.setValue('icecast/port', qwidget.port_lineedit.text())
+        self.config.cparser.setValue('icecast/port', qwidget.port_lineedit.text())  # type: ignore
 
-    def desc_settingsui(self, qwidget):
+    def desc_settingsui(self, qwidget: Any) -> None:
         ''' provide a description for the plugins page '''
         qwidget.setText('Icecast is a streaming broadcast protocol.'
                         '  This setting should be used for butt, MIXXX, and many others.')
 
 #### Data feed methods
 
-    async def getplayingtrack(self):
-        ''' give back the metadata global '''
-        return METADATA
+    async def getplayingtrack(self) -> TrackMetadata:
+        ''' give back the current metadata '''
+        return self._current_metadata.copy()  # type: ignore
 
-    async def getrandomtrack(self, playlist):
+    async def getrandomtrack(self, playlist: str) -> None:
         return None
 
 
 #### Control methods
 
-    async def start_port(self, port):
+    async def start_port(self, port: int) -> None:
         ''' start the icecast server on a particular port '''
 
         loop = asyncio.get_running_loop()
         logging.debug('Launching Icecast on %s', port)
         try:
-            self.server = await loop.create_server(IcecastProtocol, '', port)
+            # Create protocol factory that passes the metadata callback
+            def protocol_factory() -> IcecastProtocol:
+                return IcecastProtocol(metadata_callback=self._metadata_callback)
+            self.server = await loop.create_server(protocol_factory, '', port)
         except Exception as error:  #pylint: disable=broad-except
             logging.error('Failed to launch icecast: %s', error)
 
-    async def start(self):
+    async def start(self) -> None:
         ''' any initialization before actual polling starts '''
-        port = self.config.cparser.value('icecast/port', type=int, defaultValue=8000)
+        port: int = self.config.cparser.value('icecast/port', type=int,
+                                              defaultValue=8000)
         await self.start_port(port)
 
-    async def stop(self):
+    async def stop(self) -> None:
         ''' stopping either the entire program or just this
             input '''
-        self.server.close()
+        if self.server:
+            self.server.close()

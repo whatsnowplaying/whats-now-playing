@@ -78,8 +78,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.event_handler.on_created = self._read_track
 
         if self.config.cparser.value('quirks/pollingobserver', type=bool):
-            logging.debug('Using polling observer')
-            self.observer = PollingObserver(timeout=5)
+            polling_interval = self.config.cparser.value('quirks/pollinginterval', type=float)
+            logging.debug('Using polling observer with %s second interval', polling_interval)
+            self.observer = PollingObserver(timeout=polling_interval)
         else:
             logging.debug('Using fsevent observer')
             self.observer = Observer()

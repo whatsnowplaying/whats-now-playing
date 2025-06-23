@@ -1,33 +1,55 @@
 #!/usr/bin/env python3
 ''' JRiver Media Center MCWS API plugin '''
 
+
 import asyncio
+import contextlib
 import ipaddress
 import logging
+import time
+from typing import TYPE_CHECKING
 
 import aiohttp
 import lxml.etree
 
 from nowplaying.inputs import InputPlugin
+from nowplaying.types import TrackMetadata
+
+if TYPE_CHECKING:
+    import nowplaying.config
+    from PySide6.QtWidgets import QWidget
 
 
 class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
     ''' handler for JRiver Media Center via MCWS API '''
 
-    def __init__(self, config=None, qsettings=None):
+    def __init__(self,
+                 config: "nowplaying.config.ConfigFile | None" = None,
+                 qsettings: "QWidget | None" = None):
         super().__init__(config=config, qsettings=qsettings)
-        self.displayname = "JRiver"
-        self.host = None
-        self.port = None
-        self.username = None
-        self.password = None
-        self.access_key = None
-        self.token = None
-        self.base_url = None
-        self.session = None
-        self.mixmode = "newest"
+        self.displayname: str = "JRiver"
+        self.host: str | None = None
+        self.port: str | None = None
+        self.username: str | None = None
+        self.password: str | None = None
+        self.access_key: str | None = None
+        self.token: str | None = None
+        self.base_url: str | None = None
+        self.session: aiohttp.ClientSession | None = None
+        self.mixmode: str = "newest"
+        self._connection_failed: bool = False
+        self._last_error_log_time: float = 0
+        self._log_interval: float = 60.0  # Log errors at most once per minute
 
-    async def start(self):
+    def _should_log_error(self) -> bool:
+        ''' Check if enough time has passed to log another error '''
+        current_time = time.time()
+        if current_time - self._last_error_log_time >= self._log_interval:
+            self._last_error_log_time = current_time
+            return True
+        return False
+
+    async def start(self) -> bool:
         ''' Initialize the plugin and authenticate '''
         self.host = self.config.cparser.value('jriver/host')
         self.port = self.config.cparser.value('jriver/port', '52199')  # Default JRiver port
@@ -48,14 +70,14 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
 
         # Test connection and authenticate
         if await self._test_connection() and await self._authenticate():
+            self._connection_failed = False
             return True
 
-        # Close session if initialization failed
-        await self.session.close()
-        self.session = None
-        return False
+        # Don't close session on failed initialization - keep it for auto-recovery
+        self._connection_failed = True
+        return True  # Return True to allow plugin to be enabled for auto-recovery
 
-    async def _test_connection(self):
+    async def _test_connection(self) -> bool:
         ''' Test connection to JRiver server '''
         try:
             url = f"{self.base_url}/Alive"
@@ -73,11 +95,20 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
                     return True
                 logging.error("JRiver server returned status %d", response.status)
                 return False
+        except aiohttp.ClientConnectorError:
+            if self._should_log_error():
+                logging.debug("JRiver is not running or not accessible at %s", self.base_url)
+            return False
+        except asyncio.TimeoutError:
+            if self._should_log_error():
+                logging.warning("JRiver connection test timed out at %s", self.base_url)
+            return False
         except Exception as error:  # pylint: disable=broad-except
-            logging.error("Cannot connect to JRiver server: %s", error)
+            if self._should_log_error():
+                logging.error("Cannot connect to JRiver server: %s", error)
             return False
 
-    async def _authenticate(self):
+    async def _authenticate(self) -> bool:
         ''' Authenticate with JRiver server '''
         if not self.username or not self.password:
             logging.debug("No username/password provided, skipping authentication")
@@ -87,81 +118,134 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             url = f"{self.base_url}/Authenticate"
             params = {'Username': self.username, 'Password': self.password}
             async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
-                if response.status == 200:
-                    response_text = await response.text()
-                    tree = lxml.etree.fromstring(response_text.encode('utf-8'))  # pylint: disable=c-extension-no-member
-                    if token_items := tree.xpath('//Item[@Name="Token"]'):
-                        self.token = token_items[0].text
-                        logging.debug("JRiver authentication successful")
-                        return True
-                    logging.error("No token received from JRiver server")
+                if response.status != 200:
+                    logging.error("JRiver authentication failed with status %d", response.status)
                     return False
-                logging.error("JRiver authentication failed with status %d", response.status)
+
+                response_text = await response.text()
+                tree = lxml.etree.fromstring(response_text.encode('utf-8'))  # pylint: disable=c-extension-no-member
+                if token_items := tree.xpath('//Item[@Name="Token"]'):
+                    self.token = token_items[0].text
+                    logging.debug("JRiver authentication successful")
+                    return True
+                logging.error("No token received from JRiver server")
                 return False
+        except aiohttp.ClientConnectorError:
+            if self._should_log_error():
+                logging.debug("JRiver is not running or not accessible at %s for auth",
+                              self.base_url)
+        except asyncio.TimeoutError:
+            if self._should_log_error():
+                logging.warning("JRiver authentication timed out at %s", self.base_url)
         except Exception as error:  # pylint: disable=broad-except
-            logging.error("Cannot authenticate with JRiver server: %s", error)
-            return False
+            if self._should_log_error():
+                logging.error("Cannot authenticate with JRiver server: %s", error)
 
-    async def getplayingtrack(self):  # pylint: disable=too-many-branches
-        ''' Get currently playing track from JRiver '''
-        if not self.base_url:
-            return None
+        return False
 
-        await asyncio.sleep(.5)
+    async def _attempt_auto_recovery(self) -> bool:
+        ''' Attempt to recover from connection failure '''
+        if not self._connection_failed:
+            return True
+
+        if self._should_log_error():
+            logging.debug("Attempting JRiver auto-recovery")
+        if await self._test_connection() and await self._authenticate():
+            self._connection_failed = False
+            self._last_error_log_time = 0  # Reset to allow immediate logging of new failures
+            logging.info("JRiver auto-recovery successful")
+            return True
+        return False
+
+    async def _fetch_playback_info(self) -> str | None:
+        ''' Fetch playback info from JRiver API '''
+        url = f"{self.base_url}/Playback/Info"
+        params = {}
+        if self.token:
+            params['Token'] = self.token
+        if self.access_key:
+            params['AccessKey'] = self.access_key
+
         try:
-            url = f"{self.base_url}/Playback/Info"
-            params = {}
-            if self.token:
-                params['Token'] = self.token
-            if self.access_key:
-                params['AccessKey'] = self.access_key
-
             async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
                 if response.status != 200:
                     logging.error("JRiver API returned status %d", response.status)
                     return None
-
-                response_text = await response.text()
-
+                return await response.text()
+        except aiohttp.ClientConnectorError:
+            if not self._connection_failed:
+                if self._should_log_error():
+                    logging.debug("JRiver is not running or not accessible at %s", self.base_url)
+                self._connection_failed = True
+        except (asyncio.TimeoutError, aiohttp.ServerTimeoutError):
+            if not self._connection_failed:
+                if self._should_log_error():
+                    logging.warning("JRiver connection timed out at %s", self.base_url)
+                self._connection_failed = True
         except Exception as error:  # pylint: disable=broad-except
-            logging.error("Cannot get playing track from JRiver: %s", error)
-            return None
+            if self._should_log_error():
+                logging.error("Cannot get playing track from JRiver: %s", error)
+        return None
 
+    @staticmethod
+    def _parse_metadata_xml(response_text: str) -> tuple[TrackMetadata, str | None]:
+        ''' Parse JRiver XML response into metadata dict '''
         try:
             tree = lxml.etree.fromstring(response_text.encode('utf-8'))  # pylint: disable=c-extension-no-member
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Cannot parse JRiver response: %s", error)
+            return {}, None
+
+        metadata: TrackMetadata = {}
+        filekey: str | None = None
+
+        if tree is not None:
+            for item in tree.xpath('//Item'):
+                if item is None:
+                    continue
+                name = item.get('Name')
+                value = item.text
+                if name == 'Artist':
+                    metadata['artist'] = value
+                elif name == 'Album':
+                    metadata['album'] = value
+                elif name == 'Name':  # JRiver uses 'Name' for track title
+                    metadata['title'] = value
+                elif name == 'DurationMS' and value and value.isdigit():
+                    metadata['duration'] = int(value) // 1000
+                elif name == 'FileKey':
+                    filekey = value
+
+        return metadata, filekey
+
+    async def getplayingtrack(self) -> TrackMetadata | None:
+        ''' Get currently playing track from JRiver '''
+        if not self.base_url or not self.session:
             return None
 
-        # Extract metadata from JRiver XML response
-        metadata = {}
-        filekey = None
+        # Attempt auto-recovery if needed
+        if not await self._attempt_auto_recovery():
+            return None
 
-        # Parse the XML items
-        for item in tree.xpath('//Item'):
-            name = item.get('Name')
-            value = item.text
-            if name == 'Artist':
-                metadata['artist'] = value
-            elif name == 'Album':
-                metadata['album'] = value
-            elif name == 'Name':  # JRiver uses 'Name' for track title
-                metadata['title'] = value
-            elif name == 'DurationMS' and value and value.isdigit():
-                # Convert milliseconds to seconds
-                metadata['duration'] = int(value) // 1000
-            elif name == 'FileKey':
-                filekey = value
+        await asyncio.sleep(.5)
 
-        # Get filename if we have a FileKey and this appears to be a local connection
-        if filekey and self._is_local_connection() and (filename := await
-                                                        self._get_filename(filekey)):
-            metadata['filename'] = filename
+        # Fetch data from JRiver
+        response_text = await self._fetch_playback_info()
+        if response_text is None:
+            return None
+
+        # Parse the XML response
+        metadata, filekey = self._parse_metadata_xml(response_text)
+
+        # Get filename if available for local connections
+        if filekey and self._is_local_connection():
+            if filename := await self._get_filename(filekey):
+                metadata['filename'] = filename
 
         return metadata
 
     @staticmethod
-    def _format_host_for_url(host):
+    def _format_host_for_url(host: str | None) -> str | None:
         ''' Format host for URL construction, wrapping IPv6 addresses in brackets '''
         if not host:
             return host
@@ -171,19 +255,15 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             return host
 
         # Try to detect if this is an IPv6 address
-        try:
+        with contextlib.suppress(ValueError):
             ip_addr = ipaddress.ip_address(host)
             # If it's IPv6, wrap in brackets
             if isinstance(ip_addr, ipaddress.IPv6Address):
                 return f"[{host}]"
-        except ValueError:
-            # Not a valid IP address, probably a hostname
-            pass
-
         # Return as-is for IPv4 addresses and hostnames
         return host
 
-    def _is_local_connection(self):
+    def _is_local_connection(self) -> bool:
         ''' Check if this is a local connection where file paths would be meaningful '''
         if not self.host:
             return False
@@ -210,79 +290,102 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             # Only return True for explicit local domain patterns
             return any(host_lower.endswith(pattern) for pattern in local_domain_patterns)
 
-    async def _get_filename(self, filekey):
-        ''' Get filename from FileKey using GetInfo API '''
+    @staticmethod
+    def _extract_filename_from_xml(response_text: str, filekey: str) -> str | None:
+        ''' Extract filename from JRiver XML response '''
         try:
-            url = f"{self.base_url}/File/GetInfo"
-            params = {'File': filekey}
-            if self.token:
-                params['Token'] = self.token
-            if self.access_key:
-                params['AccessKey'] = self.access_key
+            tree = lxml.etree.fromstring(response_text.encode('utf-8'))  # pylint: disable=c-extension-no-member
+        except Exception as error:  # pylint: disable=broad-except
+            logging.debug("Cannot parse GetInfo response for FileKey %s: %s", filekey, error)
+            return None
 
+        # Handle both Response format (simple) and MPL format (detailed)
+        # MPL format: <MPL><Item><Field Name="Filename">...</Field></Item></MPL>
+        filename_fields = tree.xpath('//Field[@Name="Filename"]')
+        if filename_fields and (filename := filename_fields[0].text):
+            return filename
+
+        # Fallback to old Response format: <Response><Item Name="Filename">...</Item></Response>
+        filename_items = tree.xpath('//Item[@Name="Filename"]')
+        if filename_items and (filename := filename_items[0].text):
+            return filename
+
+        logging.debug("No Filename found in GetInfo response for FileKey %s", filekey)
+        return None
+
+    async def _get_filename(self, filekey: str) -> str | None:
+        ''' Get filename from FileKey using GetInfo API '''
+        if not self.session:
+            return None
+
+        url = f"{self.base_url}/File/GetInfo"
+        params = {'File': filekey}
+        if self.token:
+            params['Token'] = self.token
+        if self.access_key:
+            params['AccessKey'] = self.access_key
+
+        try:
             async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
                 if response.status != 200:
-                    logging.debug("GetInfo API returned status %d for FileKey %s", response.status,
-                                  filekey)
+                    logging.debug("GetInfo API returned status %d for FileKey %s",
+                                  response.status, filekey)
                     return None
-
                 response_text = await response.text()
-
-            tree = lxml.etree.fromstring(response_text.encode('utf-8'))  # pylint: disable=c-extension-no-member
-
-            # Handle both Response format (simple) and MPL format (detailed)
-            # MPL format: <MPL><Item><Field Name="Filename">...</Field></Item></MPL>
-            filename_fields = tree.xpath('//Field[@Name="Filename"]')
-            if filename_fields and (filename := filename_fields[0].text):
-                return filename
-
-            # Fallback to old Response format: <Response><Item Name="Filename">...</Item></Response>
-            filename_items = tree.xpath('//Item[@Name="Filename"]')
-            if filename_items and (filename := filename_items[0].text):
-                return filename
-
-            logging.debug("No Filename found in GetInfo response for FileKey %s", filekey)
-            return None
-
+                return self._extract_filename_from_xml(response_text, filekey)
+        except aiohttp.ClientConnectorError:
+            if not self._connection_failed:
+                if self._should_log_error():
+                    logging.debug("JRiver is not running or not accessible for FileKey %s", filekey)
+                self._connection_failed = True
+        except (asyncio.TimeoutError, aiohttp.ServerTimeoutError):
+            if not self._connection_failed:
+                if self._should_log_error():
+                    logging.debug("JRiver GetInfo timed out for FileKey %s", filekey)
+                self._connection_failed = True
         except Exception as error:  # pylint: disable=broad-except
-            logging.debug("Cannot get filename for FileKey %s: %s", filekey, error)
-            return None
+            if self._should_log_error():
+                logging.debug("Cannot get filename for FileKey %s: %s", filekey, error)
 
-    async def getrandomtrack(self, playlist):
+        return None
+
+    async def getrandomtrack(self, playlist: str) -> str | None:
         ''' Not implemented for JRiver MCWS '''
         return None
 
-    async def stop(self):
+    async def stop(self) -> None:
         ''' Clean up resources '''
         if self.session:
             await self.session.close()
             self.session = None
+        self._connection_failed = False
+        self._last_error_log_time = 0  # Reset logging timer
 
-    def defaults(self, qsettings):
+    def defaults(self, qsettings: "QWidget") -> None:
         qsettings.setValue('jriver/host', None)
         qsettings.setValue('jriver/port', '52199')
         qsettings.setValue('jriver/username', None)
         qsettings.setValue('jriver/password', None)
         qsettings.setValue('jriver/access_key', None)
 
-    def validmixmodes(self):
+    def validmixmodes(self) -> list[str]:
         ''' let the UI know which modes are valid '''
         return ['newest']
 
-    def setmixmode(self, mixmode):
+    def setmixmode(self, mixmode: str) -> str:
         ''' set the mixmode '''
         return 'newest'
 
-    def getmixmode(self):
+    def getmixmode(self) -> str:
         ''' get the mixmode '''
         return 'newest'
 
-    def connect_settingsui(self, qwidget, uihelp):
+    def connect_settingsui(self, qwidget: "QWidget", uihelp) -> None:
         ''' connect jriver local dir button '''
         self.qwidget = qwidget
         self.uihelp = uihelp
 
-    def load_settingsui(self, qwidget):
+    def load_settingsui(self, qwidget: "QWidget") -> None:
         ''' draw the plugin's settings page '''
         qwidget.host_lineedit.setText(self.config.cparser.value('jriver/host') or '')
         qwidget.port_lineedit.setText(self.config.cparser.value('jriver/port') or '52199')
@@ -290,7 +393,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         qwidget.password_lineedit.setText(self.config.cparser.value('jriver/password') or '')
         qwidget.access_key_lineedit.setText(self.config.cparser.value('jriver/access_key') or '')
 
-    def save_settingsui(self, qwidget):
+    def save_settingsui(self, qwidget: "QWidget") -> None:
         ''' take the settings page and save it '''
         self.config.cparser.setValue('jriver/host', qwidget.host_lineedit.text().strip())
         self.config.cparser.setValue('jriver/port', qwidget.port_lineedit.text().strip())
@@ -299,7 +402,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         self.config.cparser.setValue('jriver/access_key',
                                      qwidget.access_key_lineedit.text().strip())
 
-    def desc_settingsui(self, qwidget):
+    def desc_settingsui(self, qwidget: "QWidget") -> None:
         ''' description '''
         qwidget.setText('This plugin provides support for JRiver Media Center via MCWS API. '
                         'Configure the host/IP and port of your JRiver server. '

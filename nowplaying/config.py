@@ -236,6 +236,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     def _defaults_quirks(settings: QSettings) -> None:
         ''' default values for quirks '''
         settings.setValue('quirks/pollingobserver', False)
+        settings.setValue('quirks/pollinginterval', 5.0)
         settings.setValue('quirks/filesubst', False)
         settings.setValue('quirks/slashmode', 'nochange')
 

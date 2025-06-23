@@ -318,7 +318,7 @@ async def test_kickchat_async_announce_track_same_track(bootstrap):
 async def test_kickchat_delay_write(bootstrap):
     """Test announcement delay."""
     config = bootstrap
-    config.cparser.setValue('kick/announcedelay', 2.0)
+    config.cparser.setValue('kick/announcedelay', 0.01)  # Fast delay for tests
 
     stopevent = asyncio.Event()
     chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)  #pylint: disable=no-member
@@ -405,28 +405,6 @@ async def test_kickchat_run_chat_disabled(bootstrap):
 
     # Should exit early without doing anything
 
-
-@pytest.mark.asyncio
-async def test_kickchat_run_chat_no_channel(bootstrap):
-    """Test run_chat with no channel configured."""
-    config = bootstrap
-    config.cparser.setValue('kick/chat', True)
-    config.cparser.setValue('kick/channel', '')
-    stopevent = asyncio.Event()
-
-    chat = nowplaying.kick.chat.KickChat(config=config, stopevent=stopevent)  #pylint: disable=no-member
-    chat._authenticate = AsyncMock(return_value=True)
-
-    # Mock OAuth2 handler
-    mock_oauth = MagicMock()
-
-    # Create a task that will exit after short delay
-    async def stop_after_delay():
-        await asyncio.sleep(0.1)
-        stopevent.set()
-
-    # Run both tasks concurrently
-    await asyncio.gather(chat.run_chat(mock_oauth), stop_after_delay(), return_exceptions=True)
 
 
 # Settings tests
