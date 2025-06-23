@@ -3,6 +3,7 @@
 
 #pylint: disable=too-many-lines
 
+import time
 from unittest.mock import MagicMock, patch
 
 import aiohttp
@@ -1200,3 +1201,19 @@ async def test_stop_resets_connection_state():
 
     assert not plugin._connection_failed  # pylint: disable=protected-access
     assert plugin.session is None
+
+
+def test_log_rate_limiting():
+    """Test that error logging is rate limited"""
+    plugin = nowplaying.inputs.jriver.Plugin()  # pylint: disable=no-member
+    plugin._log_interval = 0.1  # 100ms for fast testing  # pylint: disable=protected-access
+
+    # First call should allow logging
+    assert plugin._should_log_error()  # pylint: disable=protected-access
+
+    # Immediate second call should be rate limited
+    assert not plugin._should_log_error()  # pylint: disable=protected-access
+
+    # After waiting, should allow logging again
+    time.sleep(0.2)
+    assert plugin._should_log_error()  # pylint: disable=protected-access

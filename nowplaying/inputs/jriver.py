@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import ipaddress
 import logging
+import time
 from typing import TYPE_CHECKING
 
 import aiohttp
@@ -37,6 +38,16 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         self.session: aiohttp.ClientSession | None = None
         self.mixmode: str = "newest"
         self._connection_failed: bool = False
+        self._last_error_log_time: float = 0
+        self._log_interval: float = 60.0  # Log errors at most once per minute
+
+    def _should_log_error(self) -> bool:
+        ''' Check if enough time has passed to log another error '''
+        current_time = time.time()
+        if current_time - self._last_error_log_time >= self._log_interval:
+            self._last_error_log_time = current_time
+            return True
+        return False
 
     async def start(self) -> bool:
         ''' Initialize the plugin and authenticate '''
@@ -85,13 +96,16 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
                 logging.error("JRiver server returned status %d", response.status)
                 return False
         except aiohttp.ClientConnectorError:
-            logging.debug("JRiver is not running or not accessible at %s", self.base_url)
+            if self._should_log_error():
+                logging.debug("JRiver is not running or not accessible at %s", self.base_url)
             return False
         except asyncio.TimeoutError:
-            logging.warning("JRiver connection test timed out at %s", self.base_url)
+            if self._should_log_error():
+                logging.warning("JRiver connection test timed out at %s", self.base_url)
             return False
         except Exception as error:  # pylint: disable=broad-except
-            logging.error("Cannot connect to JRiver server: %s", error)
+            if self._should_log_error():
+                logging.error("Cannot connect to JRiver server: %s", error)
             return False
 
     async def _authenticate(self) -> bool:
@@ -117,11 +131,15 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
                 logging.error("No token received from JRiver server")
                 return False
         except aiohttp.ClientConnectorError:
-            logging.debug("JRiver is not running or not accessible at %s for auth", self.base_url)
+            if self._should_log_error():
+                logging.debug("JRiver is not running or not accessible at %s for auth",
+                              self.base_url)
         except asyncio.TimeoutError:
-            logging.warning("JRiver authentication timed out at %s", self.base_url)
+            if self._should_log_error():
+                logging.warning("JRiver authentication timed out at %s", self.base_url)
         except Exception as error:  # pylint: disable=broad-except
-            logging.error("Cannot authenticate with JRiver server: %s", error)
+            if self._should_log_error():
+                logging.error("Cannot authenticate with JRiver server: %s", error)
 
         return False
 
@@ -130,9 +148,11 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         if not self._connection_failed:
             return True
 
-        logging.debug("Attempting JRiver auto-recovery")
+        if self._should_log_error():
+            logging.debug("Attempting JRiver auto-recovery")
         if await self._test_connection() and await self._authenticate():
             self._connection_failed = False
+            self._last_error_log_time = 0  # Reset to allow immediate logging of new failures
             logging.info("JRiver auto-recovery successful")
             return True
         return False
@@ -154,14 +174,17 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
                 return await response.text()
         except aiohttp.ClientConnectorError:
             if not self._connection_failed:
-                logging.debug("JRiver is not running or not accessible at %s", self.base_url)
+                if self._should_log_error():
+                    logging.debug("JRiver is not running or not accessible at %s", self.base_url)
                 self._connection_failed = True
         except (asyncio.TimeoutError, aiohttp.ServerTimeoutError):
             if not self._connection_failed:
-                logging.warning("JRiver connection timed out at %s", self.base_url)
+                if self._should_log_error():
+                    logging.warning("JRiver connection timed out at %s", self.base_url)
                 self._connection_failed = True
         except Exception as error:  # pylint: disable=broad-except
-            logging.error("Cannot get playing track from JRiver: %s", error)
+            if self._should_log_error():
+                logging.error("Cannot get playing track from JRiver: %s", error)
         return None
 
     @staticmethod
@@ -312,14 +335,17 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
                 return self._extract_filename_from_xml(response_text, filekey)
         except aiohttp.ClientConnectorError:
             if not self._connection_failed:
-                logging.debug("JRiver is not running or not accessible for FileKey %s", filekey)
+                if self._should_log_error():
+                    logging.debug("JRiver is not running or not accessible for FileKey %s", filekey)
                 self._connection_failed = True
         except (asyncio.TimeoutError, aiohttp.ServerTimeoutError):
             if not self._connection_failed:
-                logging.debug("JRiver GetInfo timed out for FileKey %s", filekey)
+                if self._should_log_error():
+                    logging.debug("JRiver GetInfo timed out for FileKey %s", filekey)
                 self._connection_failed = True
         except Exception as error:  # pylint: disable=broad-except
-            logging.debug("Cannot get filename for FileKey %s: %s", filekey, error)
+            if self._should_log_error():
+                logging.debug("Cannot get filename for FileKey %s: %s", filekey, error)
 
         return None
 
@@ -333,6 +359,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
             await self.session.close()
             self.session = None
         self._connection_failed = False
+        self._last_error_log_time = 0  # Reset logging timer
 
     def defaults(self, qsettings: "QWidget") -> None:
         qsettings.setValue('jriver/host', None)

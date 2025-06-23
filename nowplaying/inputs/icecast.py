@@ -243,7 +243,7 @@ class Plugin(InputPlugin):
 
     async def getplayingtrack(self) -> TrackMetadata:
         ''' give back the current metadata '''
-        return self._current_metadata  # type: ignore
+        return self._current_metadata.copy()  # type: ignore
 
     async def getrandomtrack(self, playlist: str) -> None:
         return None
