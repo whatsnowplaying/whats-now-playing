@@ -11,20 +11,18 @@ from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=no-name-in-modu
 import nowplaying.apicache
 import nowplaying.config
 import nowplaying.db
-import nowplaying.imagecache
 import nowplaying.settingsui
 import nowplaying.subprocesses
 import nowplaying.twitch.chat
 import nowplaying.trackrequests
-import nowplaying.utils
 
-LASTANNOUNCED = {'artist': None, 'title': None}
+LASTANNOUNCED: dict[str,str|None] = {'artist': None, 'title': None}
 
 
 class Tray:  # pylint: disable=too-many-instance-attributes
     ''' System Tray object '''
 
-    def __init__(self, beam=False):  #pylint: disable=too-many-statements
+    def __init__(self, beam: bool = False) -> None:  #pylint: disable=too-many-statements
         self.config = nowplaying.config.ConfigFile(beam=beam)
         self._configure_beamstatus(beam)
         self.icon = QIcon(str(self.config.iconfile))
@@ -36,14 +34,25 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         # create systemtray options and actions
         self.aboutwindow = nowplaying.settingsui.load_widget_ui(self.config, 'about')
+        if not self.aboutwindow:
+            self._show_installation_error('about_ui.ui')
+            return
         nowplaying.settingsui.about_version_text(self.config, self.aboutwindow)
         self.about_action = QAction('About What\'s Now Playing')
         self.menu.addAction(self.about_action)
         self.about_action.setEnabled(True)
         self.about_action.triggered.connect(self.aboutwindow.show)
 
+        # Vacuum databases on startup to reclaim space from previous session
+        self._vacuum_databases_on_startup()
+
         self.subprocesses = nowplaying.subprocesses.SubprocessManager(self.config)
-        self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self, beam=beam)
+        try:
+            self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self, beam=beam)
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.error("Failed to create settings window: %s", error)
+            self._show_installation_error('settings UI files')
+            return
 
         self.settings_action = QAction("Settings")
         self.settings_action.triggered.connect(self.settingswindow.show)
@@ -90,7 +99,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.requestswindow = None
         self._configure_twitchrequests()
 
-    def _configure_beamstatus(self, beam):
+    def _configure_beamstatus(self, beam: bool) -> None:
         self.config.cparser.setValue('control/beam', beam)
         # these will get filled in by their various subsystems as required
         self.config.cparser.remove('control/beamport')
@@ -98,15 +107,58 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.config.cparser.remove('control/beamservername')
         self.config.cparser.remove('control/beamserverip')
 
-    def _configure_twitchrequests(self):
+    def _configure_twitchrequests(self) -> None:
         self.requestswindow = nowplaying.trackrequests.Requests(config=self.config)
         self.requestswindow.initial_ui()
 
-    def _requestswindow(self):
-        if self.config.cparser.value('settings/requests', type=bool):
-            self.requestswindow.raise_window()
+    @staticmethod
+    def _show_installation_error(ui_file: str) -> None:
+        ''' Show error dialog for corrupt installation '''
+        msgbox = QErrorMessage()
+        msgbox.showMessage(f'Critical error: Failed to load {ui_file}. '
+                           'Installation appears corrupt. Please reinstall the application.')
+        msgbox.show()
+        msgbox.exec()
+        # Exit the application since we cannot continue without UI files
+        app = QApplication.instance()
+        if app:
+            app.exit(1)
 
-    def _configure_newold_menu(self):
+    def _vacuum_databases_on_startup(self) -> None:
+        ''' Vacuum databases on startup to reclaim space from previous session '''
+        logging.debug("Starting database vacuum operations on startup")
+
+        # Vacuum API cache database
+        try:
+            nowplaying.apicache.APIResponseCache.vacuum_database_file()
+            logging.debug("API cache database vacuumed successfully")
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.error("Error vacuuming API cache: %s", error)
+
+        # Vacuum metadata database
+        try:
+            metadb = nowplaying.db.MetadataDB()
+            metadb.vacuum_database()
+            logging.debug("Metadata database vacuumed successfully")
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.error("Error vacuuming metadata database: %s", error)
+
+        # Vacuum requests database (will be created later, so check if available)
+        try:
+            if hasattr(self, 'requestswindow') and self.requestswindow:
+                self.requestswindow.vacuum_database()
+                logging.debug("Requests database vacuumed successfully")
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.error("Error vacuuming requests database: %s", error)
+
+        logging.debug("Database vacuum operations completed")
+
+    def _requestswindow(self) -> None:
+        if self.config.cparser.value('settings/requests', type=bool):
+            if self.requestswindow:
+                self.requestswindow.raise_window()
+
+    def _configure_newold_menu(self) -> None:
         self.action_newestmode.setCheckable(True)
         self.action_newestmode.setEnabled(True)
         self.action_oldestmode.setCheckable(True)
@@ -118,38 +170,38 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.action_newestmode.triggered.connect(self.newestmixmode)
         self.action_oldestmode.triggered.connect(self.oldestmixmode)
 
-    def _configure_pause_menu(self):
+    def _configure_pause_menu(self) -> None:
         self.action_pause.triggered.connect(self.pause)
         self.menu.addAction(self.action_pause)
         self.action_pause.setEnabled(False)
 
-    def webenable(self, status):
+    def webenable(self, status: bool) -> None:
         ''' If the web server gets in trouble, we need to tell the user '''
         if not status:
             self.settingswindow.disable_web()
             self.settingswindow.show()
             self.pause()
 
-    def obswsenable(self, status):
+    def obswsenable(self, status: bool) -> None:
         ''' If the OBS WebSocket gets in trouble, we need to tell the user '''
         if not status:
             self.settingswindow.disable_obsws()
             self.settingswindow.show()
             self.pause()
 
-    def unpause(self):
+    def unpause(self) -> None:
         ''' unpause polling '''
         self.config.unpause()
         self.action_pause.setText('Pause')
         self.action_pause.triggered.connect(self.pause)
 
-    def pause(self):
+    def pause(self) -> None:
         ''' pause polling '''
         self.config.pause()
         self.action_pause.setText('Resume')
         self.action_pause.triggered.connect(self.unpause)
 
-    def fix_mixmode_menu(self):
+    def fix_mixmode_menu(self) -> None:
         ''' update the mixmode based upon current rules '''
         plugins = self.config.cparser.value('settings/input', defaultValue=None)
         if not plugins:
@@ -174,17 +226,17 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self.action_oldestmode.setChecked(True)
             self.action_newestmode.setChecked(False)
 
-    def oldestmixmode(self):
+    def oldestmixmode(self) -> None:
         ''' enable active mixing '''
         self.config.setmixmode('oldest')
         self.fix_mixmode_menu()
 
-    def newestmixmode(self):
+    def newestmixmode(self) -> None:
         ''' enable passive mixing '''
         self.config.setmixmode('newest')
         self.fix_mixmode_menu()
 
-    def tracknotify(self):  # pylint: disable=unused-argument
+    def tracknotify(self) -> None:
         ''' signal handler to update the tooltip '''
         global LASTANNOUNCED  # pylint: disable=global-statement, global-variable-not-assigned
 
@@ -196,33 +248,26 @@ class Tray:  # pylint: disable=too-many-instance-attributes
                 return
 
             # don't announce empty content
-            if not metadata['artist'] and not metadata['title']:
+            artist = metadata.get('artist', '')
+            title = metadata.get('title', '')
+
+            if not artist and not title:
                 logging.warning('Both artist and title are empty; skipping notify')
                 return
 
-            if 'artist' in metadata:
-                artist = metadata['artist']
-            else:
-                artist = ''
-
-            if 'title' in metadata:
-                title = metadata['title']
-            else:
-                title = ''
-
-            if metadata['artist'] == LASTANNOUNCED['artist'] and \
-               metadata['title'] == LASTANNOUNCED['title']:
+            if artist == LASTANNOUNCED['artist'] and \
+               title == LASTANNOUNCED['title']:
                 return
 
-            LASTANNOUNCED['artist'] = metadata['artist']
-            LASTANNOUNCED['title'] = metadata['title']
+            LASTANNOUNCED['artist'] = artist
+            LASTANNOUNCED['title'] = title
 
             tip = f'{artist} - {title}'
             self.tray.setIcon(self.icon)
-            self.tray.showMessage('Now Playing ▶ ', tip, icon=QSystemTrayIcon.NoIcon)
+            self.tray.showMessage('Now Playing ▶ ', tip, icon=QSystemTrayIcon.MessageIcon.NoIcon)
             self.tray.show()
 
-    def exit_everything(self):
+    def exit_everything(self) -> None:
         ''' quit app and cleanup '''
 
         logging.debug('Starting shutdown')
@@ -237,24 +282,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self.subprocesses.stop_all_processes()
 
-        # Vacuum databases on shutdown to reclaim space
-        try:
-            nowplaying.apicache.APIResponseCache.vacuum_database_file()
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Error vacuuming API cache: %s", error)
+        # Database vacuum operations moved to startup for better performance
 
-        try:
-            metadb = nowplaying.db.MetadataDB()
-            metadb.vacuum_database()
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Error vacuuming metadata database: %s", error)
-
-        try:
-            self.requestswindow.vacuum_database()
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Error vacuuming requests database: %s", error)
-
-    def fresh_start_quit(self):
+    def fresh_start_quit(self) -> None:
         ''' wipe the current config '''
         self.exit_everything()
         self.config.initialized = False
@@ -265,7 +295,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self._exit_app()
 
-    def cleanquit(self):
+    def cleanquit(self) -> None:
         ''' quit app and cleanup '''
 
         self.exit_everything()
@@ -276,16 +306,16 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self._exit_app()
 
-    def _exit_app(self):
+    def _exit_app(self) -> None:
         ''' actually exit '''
         app = QApplication.instance()
         logging.info('shutting qapp down v%s', self.config.version)
         if app:
             app.exit(0)
 
-    def installer(self):
+    def installer(self) -> None:
         ''' make some guesses as to what the user needs '''
-        plugin = self.config.cparser.value('settings/input', defaultValue=None)
+        plugin: str | None = self.config.cparser.value('settings/input', defaultValue=None)
         if plugin and not self.config.validate_source(plugin):
             self.config.cparser.remove('settings/input')
             msgbox = QErrorMessage()

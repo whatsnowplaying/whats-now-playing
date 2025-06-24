@@ -450,7 +450,7 @@ class APIResponseCache:
     def vacuum_database(self):
         """Vacuum the database to reclaim space from deleted entries.
 
-        This should be called on application shutdown to optimize disk usage.
+        This should be called on application startup to optimize disk usage from previous session.
         Works directly with the database file without requiring async initialization.
         """
         APIResponseCache.vacuum_database_file(self.db_file)
@@ -459,7 +459,7 @@ class APIResponseCache:
     def vacuum_database_file(db_file: t.Optional[pathlib.Path] = None):
         """Vacuum the database file to reclaim space from deleted entries.
 
-        This static method can be called during shutdown without instantiating the class.
+        This static method can be called during startup without instantiating the class.
 
         Args:
             db_file: Path to database file. If None, uses default cache location.

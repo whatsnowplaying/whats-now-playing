@@ -362,7 +362,7 @@ class MetadataDB:
     def vacuum_database(self):
         """Vacuum the metadata database to reclaim space from deleted entries.
 
-        This should be called on application shutdown to optimize disk usage.
+        This should be called on application startup to optimize disk usage from previous session.
         """
         if not self.databasefile or not self.databasefile.exists():
             return
