@@ -74,11 +74,6 @@ def shared_webserver_config(pytestconfig):  # pylint: disable=redefined-outer-na
                 manager.stop_all_processes()
                 time.sleep(2)
 
-                # Try to vacuum database, but handle file locking gracefully
-                try:
-                    metadb.vacuum_database()
-                except Exception as error: # pylint: disable=broad-exception-caught
-                    logging.warning("Could not vacuum database during cleanup: %s", error)
                 dbinit_mock.stop()
 
 

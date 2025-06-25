@@ -136,13 +136,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         except (sqlite3.Error, OSError) as error:
             logging.error("Error vacuuming API cache: %s", error, exc_info=True)
 
-        # Vacuum metadata database
-        try:
-            metadb = nowplaying.db.MetadataDB()
-            metadb.vacuum_database()
-            logging.debug("Metadata database vacuumed successfully")
-        except (sqlite3.Error, OSError) as error:
-            logging.error("Error vacuuming metadata database: %s", error, exc_info=True)
+        # Skip metadata database vacuum - it gets cleared on every startup anyway
 
         # Vacuum requests database (will be created later, so check if available)
         try:
@@ -155,9 +149,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         logging.debug("Database vacuum operations completed")
 
     def _requestswindow(self) -> None:
-        if self.config.cparser.value('settings/requests', type=bool):
-            if self.requestswindow:
-                self.requestswindow.raise_window()
+        if self.config.cparser.value('settings/requests', type=bool) and self.requestswindow:
+            self.requestswindow.raise_window()
 
     def _configure_newold_menu(self) -> None:
         self.action_newestmode.setCheckable(True)

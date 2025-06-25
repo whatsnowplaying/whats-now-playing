@@ -193,11 +193,7 @@ def test_stop_process_parallel_forced_termination(subprocess_manager):
 
         # Mock join to keep process alive on first call, then die on second
         def mock_join_behavior(timeout):  # pylint: disable=unused-argument
-            if mock_join.call_count == 1:
-                # First call (graceful) - process stays alive
-                pass
-            else:
-                # Second call (after terminate) - process dies
+            if mock_join.call_count != 1:
                 mock_process._alive = False
 
         mock_join.side_effect = mock_join_behavior

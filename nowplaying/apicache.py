@@ -465,8 +465,14 @@ class APIResponseCache:
             db_file: Path to database file. If None, uses default cache location.
         """
         if db_file is None:
-            cache_dir = pathlib.Path(QStandardPaths.writableLocation(QStandardPaths.CacheLocation))
+            # Use same path construction as APIResponseCache.__init__
+            cache_dir = pathlib.Path(
+                QStandardPaths.standardLocations(
+                    QStandardPaths.StandardLocation.CacheLocation)[0]).joinpath('api_cache')
             db_file = cache_dir / "api_responses.db"
+
+        logging.debug("Checking API cache database at: %s", db_file)
+        logging.debug("Cache directory exists: %s", db_file.parent.exists())
 
         try:
             if db_file.exists():
@@ -476,7 +482,7 @@ class APIResponseCache:
                     connection.commit()
                     logging.info("API cache database vacuumed successfully")
             else:
-                logging.debug("API cache database does not exist, skipping vacuum")
+                logging.warning("API cache database does not exist at %s - this may indicate a configuration or data loss issue", db_file)
         except (sqlite3.Error, OSError) as error:
             logging.error("Database error during vacuum: %s", error, exc_info=True)
 
