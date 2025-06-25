@@ -164,8 +164,16 @@ async def test_wikimedia_http_error_handling(bootstrap):
 
         def make_mock_http_error(status_code):
 
-            async def mock_http_error(*args, **kwargs):
-                raise ClientResponseError(request_info=None,
+            async def mock_http_error(*args, **kwargs):  # pylint: disable=unused-argument
+                # Create a mock request_info with real_url attribute
+                class MockRequestInfo:  # pylint: disable=too-few-public-methods
+                    ''' Mock request info for ClientResponseError '''
+                    def __init__(self):
+                        self.real_url = (
+                            "https://en.wikipedia.org/api/rest_v1/page/summary/Test_Artist"
+                        )
+
+                raise ClientResponseError(request_info=MockRequestInfo(),
                                           history=(),
                                           status=status_code,
                                           message=f"HTTP {status_code}")

@@ -327,11 +327,23 @@ def test_windows_process_termination_timeout(subprocess_manager):
     ''' Test that Windows gets longer termination timeouts '''
     class WindowsSlowProcess(MockProcess):
         ''' Simulate Windows process that's slow to terminate '''
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._join_call_count = 0
+
         def join(self, timeout=None):
+            ''' Mock process join for Windows slow termination '''
             # On Windows, simulate that termination takes longer
-            if timeout and timeout >= 7:  # Our Windows timeout
+            # First call (graceful shutdown with 8s timeout) - process stays alive
+            # Second call (after terminate, with 7s timeout) - process dies
+            self._join_call_count += 1
+
+            if self._join_call_count == 1:
+                # First call - graceful shutdown fails, process stays alive
+                pass
+            elif self._join_call_count >= 2 and timeout and timeout >= 7:
+                # Second call after terminate - process dies
                 self._alive = False
-            # If timeout is too short, process stays alive
 
     mock_process = WindowsSlowProcess(name='trackpoll')
     subprocess_manager.processes['trackpoll']['process'] = mock_process

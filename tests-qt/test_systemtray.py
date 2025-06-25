@@ -418,7 +418,7 @@ def test_settings_ui_creation_error_handling(qtbot, mock_dependencies):
     # Mock the error dialog to avoid actual UI display during tests
     with patch('nowplaying.systemtray.Tray._show_installation_error') as mock_error_dialog, \
          patch('nowplaying.settingsui.SettingsUI',
-               side_effect=Exception("Settings UI creation failed")):
+               side_effect=RuntimeError("Settings UI creation failed")):
 
         # This should trigger the installation error dialog
         nowplaying.systemtray.Tray(beam=False)
