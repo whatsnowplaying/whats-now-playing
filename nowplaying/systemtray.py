@@ -2,6 +2,7 @@
 ''' system tray '''
 
 import logging
+import sqlite3
 
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QApplication, QErrorMessage, QMenu, QMessageBox, QSystemTrayIcon)
@@ -49,8 +50,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.subprocesses = nowplaying.subprocesses.SubprocessManager(self.config)
         try:
             self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self, beam=beam)
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Failed to create settings window: %s", error)
+        except (RuntimeError, OSError, ModuleNotFoundError, ImportError) as error:
+            logging.error("Failed to create settings window: %s", error, exc_info=True)
             self._show_installation_error('settings UI files')
             return
 
@@ -132,24 +133,24 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         try:
             nowplaying.apicache.APIResponseCache.vacuum_database_file()
             logging.debug("API cache database vacuumed successfully")
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Error vacuuming API cache: %s", error)
+        except (sqlite3.Error, OSError) as error:
+            logging.error("Error vacuuming API cache: %s", error, exc_info=True)
 
         # Vacuum metadata database
         try:
             metadb = nowplaying.db.MetadataDB()
             metadb.vacuum_database()
             logging.debug("Metadata database vacuumed successfully")
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Error vacuuming metadata database: %s", error)
+        except (sqlite3.Error, OSError) as error:
+            logging.error("Error vacuuming metadata database: %s", error, exc_info=True)
 
         # Vacuum requests database (will be created later, so check if available)
         try:
             if hasattr(self, 'requestswindow') and self.requestswindow:
                 self.requestswindow.vacuum_database()
                 logging.debug("Requests database vacuumed successfully")
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Error vacuuming requests database: %s", error)
+        except (sqlite3.Error, AttributeError) as error:
+            logging.error("Error vacuuming requests database: %s", error, exc_info=True)
 
         logging.debug("Database vacuum operations completed")
 

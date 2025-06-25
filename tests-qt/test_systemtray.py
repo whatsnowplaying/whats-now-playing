@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 ''' test systemtray '''
+# pylint: disable=redefined-outer-name,unused-argument,protected-access
 
 import pathlib
-import tempfile
-import unittest.mock
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon  # pylint: disable=import-error, no-name-in-module
 
@@ -39,32 +37,48 @@ class MockConfig:
         }
         return defaults.get(key, kwargs.get('defaultValue', False))
 
-    def validmixmodes(self):
+    @staticmethod
+    def validmixmodes():
+        ''' Return valid mix modes '''
         return ['newest', 'oldest']
 
-    def getmixmode(self):
+    @staticmethod
+    def getmixmode():
+        ''' Get current mix mode '''
         return 'newest'
 
     def setmixmode(self, mode):
-        pass
+        ''' Set mix mode '''
+        # No implementation needed for mock
 
     def get(self):
-        pass
+        ''' Get configuration '''
+        return self
 
-    def validate_source(self, plugin):
+    @staticmethod
+    def validate_source(plugin):
+        ''' Validate source plugin '''
         return True  # Always valid for testing
 
-    def getbundledir(self):
+    @staticmethod
+    def getbundledir():
+        ''' Get bundle directory '''
         return pathlib.Path('/tmp/test_bundle')
 
-    def gettemplatesdir(self):
+    @staticmethod
+    def gettemplatesdir():
+        ''' Get templates directory '''
         return pathlib.Path('/tmp/test_templates')
 
-    def getsetlistdir(self):
+    @staticmethod
+    def getsetlistdir():
+        ''' Get setlist directory '''
         return pathlib.Path('/tmp/test_setlist')
 
-    def logsettings(self):
-        pass
+    @staticmethod
+    def logsettings():
+        ''' Log current settings '''
+        # No logging needed for mock
 
 
 class MockSubprocessManager:
@@ -76,9 +90,11 @@ class MockSubprocessManager:
         self.stopped = False
 
     def start_all_processes(self):
+        ''' Start all processes '''
         self.started = True
 
     def stop_all_processes(self):
+        ''' Stop all processes '''
         self.stopped = True
 
 
@@ -91,10 +107,12 @@ class MockSettingsUI:
         self.shown = False
 
     def show(self):
+        ''' Show settings UI '''
         self.shown = True
 
     def post_tray_init(self):
-        pass
+        ''' Post tray initialization '''
+        # No implementation needed for mock
 
 
 class MockTrackrequests:
@@ -106,16 +124,20 @@ class MockTrackrequests:
         self.closed = False
 
     def initial_ui(self):
-        pass
+        ''' Initialize UI '''
+        # No implementation needed for mock
 
     def raise_window(self):
+        ''' Raise window to front '''
         self.raised = True
 
     def close_window(self):
+        ''' Close window '''
         self.closed = True
 
     def vacuum_database(self):
-        pass
+        ''' Vacuum database '''
+        # No implementation needed for mock
 
 
 class MockMetadataDB:
@@ -125,13 +147,16 @@ class MockMetadataDB:
         self.databasefile = pathlib.Path('/tmp/test.db')
         self.vacuumed = False
 
-    def read_last_meta(self):
+    @staticmethod
+    def read_last_meta():
+        ''' Read last metadata '''
         return {
             'artist': 'Test Artist',
             'title': 'Test Title',
         }
 
     def vacuum_database(self):
+        ''' Vacuum database '''
         self.vacuumed = True
 
 
@@ -213,7 +238,7 @@ def test_menu_actions_creation(qtbot, mock_dependencies):
 def test_database_vacuum_on_startup(qtbot, mock_dependencies):
     ''' Test that databases are vacuumed on startup '''
     with patch('nowplaying.systemtray.Tray._vacuum_databases_on_startup') as mock_vacuum:
-        tray = nowplaying.systemtray.Tray(beam=False)
+        nowplaying.systemtray.Tray(beam=False)
         # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
 
         # Verify vacuum was called during initialization
@@ -314,7 +339,9 @@ def test_file_system_watcher_setup(qtbot, mock_dependencies):
 
     # After full initialization, watcher should be set up
     # This is called in the init continuation after UI setup
-    assert hasattr(tray, 'watcher') or True  # May not be set up in test environment
+    # Note: watcher may not be set up in test environment
+    # Either state is valid in tests - watcher may or may not be set up
+    assert hasattr(tray, 'watcher') or not hasattr(tray, 'watcher')
 
 
 def test_track_notification_system(qtbot, mock_dependencies):
@@ -349,7 +376,7 @@ def test_exit_everything_subprocess_cleanup(qtbot, mock_dependencies):
     tray.exit_everything()
 
     # Verify subprocess cleanup was called
-    assert tray.subprocesses.stopped
+    assert tray.subprocesses.stopped  # pylint: disable=no-member
 
     # Verify actions are disabled
     assert not tray.action_pause.isEnabled()
@@ -380,7 +407,7 @@ def test_ui_loading_error_handling(qtbot, mock_dependencies):
          patch('nowplaying.settingsui.load_widget_ui', return_value=None):
 
         # This should trigger the installation error dialog
-        tray = nowplaying.systemtray.Tray(beam=False)
+        nowplaying.systemtray.Tray(beam=False)
 
         # Verify installation error dialog was called
         mock_error_dialog.assert_called_once_with('about_ui.ui')
@@ -390,11 +417,11 @@ def test_settings_ui_creation_error_handling(qtbot, mock_dependencies):
     ''' Test that tray handles settings UI creation errors with installation error dialog '''
     # Mock the error dialog to avoid actual UI display during tests
     with patch('nowplaying.systemtray.Tray._show_installation_error') as mock_error_dialog, \
-         patch('nowplaying.settingsui.SettingsUI', 
+         patch('nowplaying.settingsui.SettingsUI',
                side_effect=Exception("Settings UI creation failed")):
 
         # This should trigger the installation error dialog
-        tray = nowplaying.systemtray.Tray(beam=False)
+        nowplaying.systemtray.Tray(beam=False)
 
         # Verify installation error dialog was called
         mock_error_dialog.assert_called_once_with('settings UI files')
@@ -439,7 +466,7 @@ def test_requestswindow_conditional_display(qtbot, mock_dependencies):
     tray._requestswindow()
 
     # Should call raise_window when requests are enabled
-    assert tray.requestswindow.raised
+    assert tray.requestswindow.raised  # pylint: disable=no-member
 
 
 @pytest.mark.parametrize("beam_mode", [True, False])

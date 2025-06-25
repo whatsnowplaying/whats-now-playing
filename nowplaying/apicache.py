@@ -477,8 +477,8 @@ class APIResponseCache:
                     logging.info("API cache database vacuumed successfully")
             else:
                 logging.debug("API cache database does not exist, skipping vacuum")
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Database error during vacuum: %s", error)
+        except (sqlite3.Error, OSError) as error:
+            logging.error("Database error during vacuum: %s", error, exc_info=True)
 
 
 # Global cache instance for use across the application
@@ -535,7 +535,7 @@ async def cached_fetch(provider: str,
         if fresh_data is not None:
             await cache.put(provider, artist_name, endpoint, fresh_data, ttl_seconds)
         return fresh_data
-    except Exception as error:  # pylint: disable=broad-exception-caught
+    except (sqlite3.Error, ValueError, TypeError) as error:
         logging.error("Error fetching data for %s:%s:%s - %s", provider, artist_name, endpoint,
-                      error)
+                      error, exc_info=True)
         return None
