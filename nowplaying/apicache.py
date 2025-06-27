@@ -482,7 +482,7 @@ class APIResponseCache:
                     connection.commit()
                     logging.info("API cache database vacuumed successfully")
             else:
-                logging.warning("API cache database does not exist at %s - this may indicate a configuration or data loss issue", db_file)
+                logging.warning("API cache database does not exist at %s", db_file)
         except (sqlite3.Error, OSError) as error:
             logging.error("Database error during vacuum: %s", error, exc_info=True)
 
