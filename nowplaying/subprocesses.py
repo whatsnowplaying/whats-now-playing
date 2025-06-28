@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' handle all of the big sub processes used for output '''
 
+import concurrent.futures
 import importlib
 import logging
 import multiprocessing
@@ -37,13 +38,28 @@ class SubprocessManager:
     def stop_all_processes(self):
         ''' stop all the subprocesses '''
 
+        # Signal all processes to stop first (fast operation)
         for key, module in self.processes.items():
             if module.get('process'):
                 logging.debug('Early notifying %s', key)
                 module['stopevent'].set()
 
-        for key in self.processes:
-            self.stop_process(key)
+        # Use ThreadPoolExecutor to parallelize the blocking join operations
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.processes)) as executor:
+            # Submit all stop operations to run concurrently
+            future_to_process = {
+                executor.submit(self._stop_process_parallel, key): key
+                for key, process_info in self.processes.items() if process_info.get('process')
+            }
+
+            # Wait for all shutdown operations to complete
+            for future in concurrent.futures.as_completed(future_to_process, timeout=15):
+                process_name = future_to_process[future]
+                try:
+                    future.result()
+                    logging.debug('Successfully stopped %s', process_name)
+                except Exception as error:  # pylint: disable=broad-exception-caught
+                    logging.error('Error stopping %s: %s', process_name, error)
 
         if not self.config.cparser.value('control/beam', type=bool):
             self.stop_process('obsws')
@@ -63,23 +79,48 @@ class SubprocessManager:
                 ))
             self.processes[processname]['process'].start()
 
+    def _stop_process_parallel(self, processname):
+        ''' Stop a process - designed for parallel execution '''
+        if not self.processes[processname]['process']:
+            return
+
+        process = self.processes[processname]['process']
+        logging.debug('Waiting for %s', processname)
+
+        # Special handling for twitchbot
+        if processname in ['twitchbot']:
+            try:
+                func = getattr(self.processes[processname]['module'], 'stop')
+                func(process.pid)
+            except Exception as error:  # pylint: disable=broad-exception-caught
+                logging.error('Error calling stop function for %s: %s', processname, error)
+
+        # Wait for graceful shutdown (reduced since we're parallel)
+        process.join(8)
+
+        # Force termination if still alive
+        if process.is_alive():
+            logging.info('Terminating %s %s forcefully', processname, process.pid)
+            process.terminate()
+            # Windows processes can take longer to terminate
+            process.join(7)
+
+        # Cleanup - be defensive on Windows
+        try:
+            process.close()
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.debug('Error closing process %s: %s', processname, error)
+
+        del self.processes[processname]['process']
+        self.processes[processname]['process'] = None
+        logging.debug('%s stopped successfully', processname)
+
     def _stop_process(self, processname):
+        ''' Stop a process - sequential version for individual stops '''
         if self.processes[processname]['process']:
             logging.debug('Notifying %s', processname)
             self.processes[processname]['stopevent'].set()
-            if processname in ['twitchbot']:
-                func = getattr(self.processes[processname]['module'], 'stop')
-                func(self.processes[processname]['process'].pid)
-            logging.debug('Waiting for %s', processname)
-            self.processes[processname]['process'].join(10)
-            if self.processes[processname]['process'].is_alive():
-                logging.info('Terminating %s %s forcefully', processname,
-                             self.processes[processname]['process'].pid)
-                self.processes[processname]['process'].terminate()
-            self.processes[processname]['process'].join(5)
-            self.processes[processname]['process'].close()
-            del self.processes[processname]['process']
-            self.processes[processname]['process'] = None
+            self._stop_process_parallel(processname)
         logging.debug('%s should be stopped', processname)
 
     def start_process(self, processname):

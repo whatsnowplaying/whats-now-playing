@@ -450,7 +450,7 @@ class APIResponseCache:
     def vacuum_database(self):
         """Vacuum the database to reclaim space from deleted entries.
 
-        This should be called on application shutdown to optimize disk usage.
+        This should be called on application startup to optimize disk usage from previous session.
         Works directly with the database file without requiring async initialization.
         """
         APIResponseCache.vacuum_database_file(self.db_file)
@@ -459,14 +459,20 @@ class APIResponseCache:
     def vacuum_database_file(db_file: t.Optional[pathlib.Path] = None):
         """Vacuum the database file to reclaim space from deleted entries.
 
-        This static method can be called during shutdown without instantiating the class.
+        This static method can be called during startup without instantiating the class.
 
         Args:
             db_file: Path to database file. If None, uses default cache location.
         """
         if db_file is None:
-            cache_dir = pathlib.Path(QStandardPaths.writableLocation(QStandardPaths.CacheLocation))
+            # Use same path construction as APIResponseCache.__init__
+            cache_dir = pathlib.Path(
+                QStandardPaths.standardLocations(
+                    QStandardPaths.StandardLocation.CacheLocation)[0]).joinpath('api_cache')
             db_file = cache_dir / "api_responses.db"
+
+        logging.debug("Checking API cache database at: %s", db_file)
+        logging.debug("Cache directory exists: %s", db_file.parent.exists())
 
         try:
             if db_file.exists():
@@ -476,9 +482,9 @@ class APIResponseCache:
                     connection.commit()
                     logging.info("API cache database vacuumed successfully")
             else:
-                logging.debug("API cache database does not exist, skipping vacuum")
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error("Database error during vacuum: %s", error)
+                logging.warning("API cache database does not exist at %s", db_file)
+        except (sqlite3.Error, OSError) as error:
+            logging.error("Database error during vacuum: %s", error, exc_info=True)
 
 
 # Global cache instance for use across the application
@@ -535,7 +541,7 @@ async def cached_fetch(provider: str,
         if fresh_data is not None:
             await cache.put(provider, artist_name, endpoint, fresh_data, ttl_seconds)
         return fresh_data
-    except Exception as error:  # pylint: disable=broad-exception-caught
+    except (sqlite3.Error, ValueError, TypeError) as error:
         logging.error("Error fetching data for %s:%s:%s - %s", provider, artist_name, endpoint,
-                      error)
+                      error, exc_info=True)
         return None

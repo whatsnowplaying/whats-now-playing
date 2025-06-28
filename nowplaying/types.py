@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """Type definitions for nowplaying structures."""
 
-from typing import TypedDict
+from typing import TypedDict, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import nowplaying.inputs
+    import nowplaying.artistextras
+    import nowplaying.recognition
 
 
 class TrackMetadata(TypedDict, total=False):
@@ -82,3 +87,10 @@ class TrackMetadata(TypedDict, total=False):
     fpcalcduration: int
     fpcalcfingerprint: str
     genres: list[str]
+
+
+class PluginObjs(TypedDict):
+    """Dictionary structure for plugin instances organized by type."""
+    inputs: dict[str, "nowplaying.inputs.InputPlugin"]
+    artistextras: dict[str, "nowplaying.artistextras.ArtistExtrasPlugin"]
+    recognition: dict[str, "nowplaying.recognition.RecognitionPlugin"]

@@ -55,7 +55,18 @@ async def imagecache_with_dir(bootstrap):
     config = bootstrap
     dbdir = config.testdir.joinpath('imagecache')
     dbdir.mkdir()
-    yield nowplaying.imagecache.ImageCache(cachedir=dbdir)
+    cache = nowplaying.imagecache.ImageCache(cachedir=dbdir)
+    yield cache
+
+    # Cleanup: close cache to release file handles
+    with contextlib.suppress(Exception):
+        if hasattr(cache, 'close'):
+            cache.close()
+        # Force close any database connections
+        if hasattr(cache, 'databasefile'):
+            with contextlib.suppress(sqlite3.Error, Exception):
+                conn = sqlite3.connect(cache.databasefile)
+                conn.close()
 
 
 @pytest_asyncio.fixture
@@ -64,11 +75,25 @@ async def imagecache_with_stopevent(bootstrap):
     config = bootstrap
     dbdir = config.testdir.joinpath('imagecache')
     dbdir.mkdir()
+    created_caches = []
 
     def _create_imagecache(stopevent=None):
-        return nowplaying.imagecache.ImageCache(cachedir=dbdir, stopevent=stopevent)
+        cache = nowplaying.imagecache.ImageCache(cachedir=dbdir, stopevent=stopevent)
+        created_caches.append(cache)
+        return cache
 
     yield _create_imagecache
+
+    # Cleanup: close all created caches to release file handles
+    for cache in created_caches:
+        with contextlib.suppress(Exception):
+            if hasattr(cache, 'close'):
+                cache.close()
+            # Force close any database connections
+            if hasattr(cache, 'databasefile'):
+                with contextlib.suppress(sqlite3.Error, Exception):
+                    conn = sqlite3.connect(cache.databasefile)
+                    conn.close()
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")

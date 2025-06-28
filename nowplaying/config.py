@@ -21,10 +21,8 @@ import nowplaying.artistextras
 import nowplaying.inputs
 import nowplaying.pluginimporter
 import nowplaying.recognition
+import nowplaying.types
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
-
-# Import plugin base classes for better typing
-from nowplaying.plugin import WNPBasePlugin
 
 
 class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-public-methods
@@ -76,7 +74,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self.loglevel: str = 'DEBUG'
 
         self.plugins: dict[str, dict[str, ModuleType]] = {}
-        self.pluginobjs: dict[str, dict[str, WNPBasePlugin]] = {}
+        self.pluginobjs: nowplaying.types.PluginObjs = {
+            'inputs': {},
+            'artistextras': {},
+            'recognition': {}
+        }
 
         self._force_set_statics()
 
