@@ -6,6 +6,7 @@ import logging
 import pathlib
 import re
 import sqlite3
+import time
 import traceback
 import typing as t
 
@@ -99,7 +100,17 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
         logging.debug('Setting up the database %s', self.databasefile)
         self.databasefile.parent.mkdir(parents=True, exist_ok=True)
         if self.databasefile.exists():
-            self.databasefile.unlink()
+            for attempt in range(3):
+                try:
+                    self.databasefile.unlink()
+                    break
+                except (OSError, PermissionError) as error:
+                    if attempt < 2:  # Don't sleep on the last attempt
+                        time.sleep(0.5 * (attempt + 1))  # 0.5s, then 1.0s
+                        continue
+                    # Final attempt failed - continue without rotation rather than crash
+                    logging.warning('Could not delete request.db after 3 attempts '
+                                    '(previous instance may still be shutting down): %s', error)
 
         with sqlite3.connect(self.databasefile, timeout=30) as connection:
             cursor = connection.cursor()
