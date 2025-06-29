@@ -18,7 +18,7 @@ requests-cache==1.2.1
 requests==2.32.4
 simpleobsws==1.4.3
 tinytag==2.1.1
-twitchAPI==3.11.0
+twitchAPI==4.5.0
 url_normalize==2.2.1
 watchdog==6.0.0
 
