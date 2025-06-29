@@ -36,7 +36,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     def __init__(  # pylint: disable=too-many-arguments
             self,
             bundledir: str | pathlib.Path | None = None,
-            logpath: str | None = None,
+            logpath: str | pathlib.Path | None = None,
             reset: bool = False,
             testmode: bool = False,
             beam: bool = False):

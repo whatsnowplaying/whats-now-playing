@@ -4,6 +4,7 @@
 #import faulthandler
 import logging
 import multiprocessing
+import pathlib
 import platform
 import socket
 import sys
@@ -26,7 +27,7 @@ import nowplaying.upgrade
 #
 
 
-def run_bootstrap(bundledir=None):  # pragma: no cover
+def run_bootstrap(bundledir: str|None = None) -> pathlib.Path:  # pragma: no cover
     ''' bootstrap the app '''
     # we are in a hurry to get results.  If it takes longer than
     # 5 seconds, consider it a failure and move on.  At some
@@ -44,7 +45,7 @@ def run_bootstrap(bundledir=None):  # pragma: no cover
     return logpath
 
 
-def actualmain(beam=False):  # pragma: no cover
+def actualmain(beam: bool = False):  # pragma: no cover
     ''' main entrypoint '''
 
     multiprocessing.freeze_support()

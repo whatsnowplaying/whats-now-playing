@@ -32,7 +32,9 @@ def already_running():
     msgbox.exec()
 
 
-def set_qt_names(app=None, domain='com.github.whatsnowplaying', appname='NowPlaying'):
+def set_qt_names(app: QCoreApplication | None = None,
+                 domain: str ='com.github.whatsnowplaying',
+                 appname: str = 'NowPlaying'):
     ''' bootstrap Qt for configuration '''
     #QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
     if not app:
@@ -44,10 +46,10 @@ def set_qt_names(app=None, domain='com.github.whatsnowplaying', appname='NowPlay
     app.setApplicationName(appname)
 
 
-def setuplogging(logdir=None, logname='debug.log', rotate=False):
+def setuplogging(logdir: pathlib.Path | str | None = None,
+                 logname: str ='debug.log',
+                 rotate: bool = False) -> pathlib.Path:
     ''' configure logging '''
-    besuretorotate = False
-
     if logdir:
         logpath = pathlib.Path(logdir)
         if logpath.is_file():
@@ -60,9 +62,7 @@ def setuplogging(logdir=None, logname='debug.log', rotate=False):
     logpath.mkdir(parents=True, exist_ok=True)
     logfile = logpath.joinpath(logname)
 
-    if logfile.exists() and rotate:
-        besuretorotate = True
-
+    besuretorotate = bool(logfile.exists() and rotate)
     logfhandler = logging.handlers.RotatingFileHandler(filename=logfile,
                                                        backupCount=10,
                                                        encoding='utf-8')

@@ -78,7 +78,7 @@ def fallback():
         HOSTFQDN = 'localhost'
 
 
-def gethostmeta():
+def gethostmeta() -> dict[str, str|None]:
     ''' resolve hostname/ip of this machine '''
     global TIMESTAMP  #pylint: disable=global-statement
 
