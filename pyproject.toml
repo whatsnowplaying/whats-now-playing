@@ -51,7 +51,8 @@ license-files = ["LICENSE.txt"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements-run.txt"] }
-optional-dependencies = { dev = { file = [
+optional-dependencies = { binaries = {file = [
+  "requirements-binaries.txt"] }, dev = { file = [
   "requirements-dev.txt"] },  docs = { file = [
   "docs/requirements.txt"] },  osspecials = { file = [
   "requirements-osspecials.txt"]}, test = { file = [

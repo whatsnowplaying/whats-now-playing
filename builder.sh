@@ -84,7 +84,7 @@ echo "*****"
 echo "* Installing dependencies"
 echo "****"
 
-"${PYTHONBIN}" -m pip install ".[dev,osspecials]"
+"${PYTHONBIN}" -m pip install ".[binaries,osspecials]"
 
 echo "*****"
 echo "* Setting up NLTK"

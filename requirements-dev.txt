@@ -3,9 +3,6 @@
 #
 basedpyright
 pip-upgrader
-pyinstaller==6.14.1
-pyinstaller_versionfile==3.0.1
 pylint==2.17.5
 sourcery
-vendoring==1.2.0
 yapf
