@@ -41,7 +41,7 @@
   * Much more reliable live playlist reading
 
 * MPRIS2
-  * Rebuilt from the ground up for more reliablity
+  * Rebuilt from the ground up for more reliability
 
 * General Metadata
   * Better support for tracks with multiple artists
