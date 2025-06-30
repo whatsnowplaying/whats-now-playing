@@ -1,69 +1,69 @@
 
 # Changelog
 
-## Version 4.2.0 - In Progress
+## Version 4.2.0 - 2025-06-30
 
-### Notes
+* Early Access to Kick.com Streaming Support
+  * Chat bot integration for track announcements
+  * Does not support requests or commands yet
+  * Feature parity with Twitch is currently waiting for Kick to release
+    APIs.
 
-* Likely will be last Windows 10-compatible, Mac Intel, and Mac on
-  Monterey/12.x releases. Pre-built binaries for these older platforms is
-  being phased out.
+* Twitch
+  * Fixed many issues with really long messages getting dropped
 
-### Added
+* Discord
+  * Nearly rewritten from the ground up to have improved reliability
+  * If MusicBrainz is enabled, will put album cover in status using
+    the Rich Presence API
 
-* Preliminary Kick.com chat bot support with OAuth2 authentication
-  and template-based messaging
-* JRiver Media Center input plugin via MCWS API
-* MixedInKey support for musical key metadata detection
-* Configuration import/export functionality with JSON format
-* SQLite-based API cache with TTL support and duplicate artist resolution
-  to speed up remote service queries
-* GUI "Clear Cache" button in Artist Extras settings to remove all cached
-  content
+* New DJ Software Support
+  * JRiver Media Center: Connect to JRiver for automatic track detection
+  * MixedInKey: Support for its custom musical key format in your track data
 
-### Fixed
+* Backup Your Settings
+  * Export your entire configuration to a JSON file for backup or sharing
+  * Import settings on new installations or when switching computers
+  * Keeps your API keys, templates, and preferences safe
 
-* Serato Live Playlist parsing - Complete rewrite with 4-tier fallback
-  system for new HTML format
-* Windows subprocess shutdown errors (BrokenPipeError [WinError 232])
-* Hostname display bug showing "1.0.0.127.in-addr.arpa" instead of proper hostnames
-* M4A multi-value metadata extraction with monkey patch for tinytag 2.1.1
-* File exclusion in build system not working properly
-* MPRIS2 support restored after temporary disable during development
+* Much Faster Artist Information
+  * Artist bios, images, and metadata now load 3-4x faster
+  * Many rebuilt using custom code, replacing most 3rd party libraries
+  * Reduced wait times from 20-60 seconds down to 5-15 seconds
+  * Better handling when multiple tracks change quickly during live sets
 
-### Changed
+* Improved Reliability
+  * Hopefully fixed "application already running" errors on Windows
+  * Better connection handling when DJ software restarts
+  * More stable during long DJ sessions
 
-* Single instance enforcement replaced PID files with Qt's QLockFile which should
-  help with the "already running" errors on Windows
-* TinyTag upgraded from vendored 1.10.1 to system package 2.1.1 which replaced
-  the multiple ways in which audio tags were read (and should now be faster
-  as a result)
-* pyacoustid upgraded to 1.3.0 with better join phrase support
-* netifaces replaced with netifaces-plus for upcoming Python 3.13 compatibility
-* MPRIS2 implementation upgraded to dbus-fast from python-dbus
-* Rewritten, custom clients for discogs, musicbrainz, and wikidata that will
-  now run in parallel, making metadata lookups faster
+* Serato DJ
+  * Much more reliable live playlist reading
 
-### Improved
+* MPRIS2
+  * Rebuilt from the ground up for more reliablity
 
-* TCP connection handling and timeout management across network components
-* Artist name processing with proper join phrase handling for multi-artist tracks
-* Discord bot refactored with better resource cleanup and MusicBrainz cover art support
-* Release date calculations for more accurate original release dates
-* Metadata extraction from various audio file formats
-* Error handling for external API failures
-* Chat message splitting with NLTK-powered intelligent segmentation
+* General Metadata
+  * Better support for tracks with multiple artists
+  * Improved handling of audio files with complex metadata
+  * More accurate release date information
 
-### Dependencies Updated
+* Cache Management
+  * New "Clear Cache" button in Artist Extras settings to easily clear
+    stored artist information and images when needed
 
-* aiohttp: 3.12.6 → 3.12.13
-* requests: 2.32.3 → 2.32.4
-* pyinstaller: 6.13.0 → 6.14.1
-* pytest: 8.3.5 → 8.4.0
-* discord-py: 2.4.0 → 2.5.2
-* pillow: 11.1.0 → 11.2.1
-* psutil: 6.1.1 → 7.0.0
-* Multiple other security and compatibility updates
+* Better Error Handling
+  * Improved reliability in some extreme edge cases
+
+* System Requirements
+  * Improved compatibility with newer operating systems
+  * Enhanced network connectivity handling
+
+* Random Bug Fixes
+  * Fixed various Windows shutdown errors
+  * Resolved hostname display issues in network settings
+  * Improved audio file format compatibility
+  * Better handling of special characters in track information
 
 ## Version 4.1.0 - 2023-08-20
 
