@@ -5,6 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "NowPlaying"
 dynamic = ["version", "dependencies", "optional-dependencies"]
+requires-python = ">=3.11,<3.13"
 
 [project.entry-points.pyinstaller40]
 hook-dirs = "nowplaying.__pyinstaller:get_hook_dirs"
@@ -72,7 +73,7 @@ version = { attr = "nowplaying.version.__VERSION__" }
 [tool.pyright]
 exclude =["build"]
 ignore = ["**/nowplaying/vendor/**",]
-pythonVersion = "3.12"
+pythonVersion = "3.11"
 pythonPlatform = "All"
 reportUnannotatedClassAttribute = false  # Add this line
 include = [

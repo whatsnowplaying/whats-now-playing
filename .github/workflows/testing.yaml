@@ -155,7 +155,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        python: ["3.12"]
+        python: ["3.11", "3.12"]
     env:
       DISPLAY: ':99.0'
     steps:
