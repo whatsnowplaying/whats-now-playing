@@ -8,9 +8,9 @@ import traceback
 
 try:
 
-    from winsdk.windows.media.control import \
+    from winrt.windows.media.control import \
         GlobalSystemMediaTransportControlsSessionManager as MediaManager
-    from winsdk.windows.storage.streams import (DataReader, Buffer, InputStreamOptions)
+    from winrt.windows.storage.streams import (DataReader, Buffer, InputStreamOptions)
     WINMEDIA_STATUS = True
 except ImportError:
     WINMEDIA_STATUS = False
