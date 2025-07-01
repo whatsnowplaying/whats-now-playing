@@ -32,7 +32,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - name: install homebrew dependencies
         run: |
           brew update --preinstall || true
@@ -42,13 +42,13 @@ jobs:
           export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
           export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
           python3 --version
-          python3.11 -m venv /tmp/venv
+          python3.12 -m venv /tmp/venv
           source /tmp/venv/bin/activate
-          python3.11 -m pip install --upgrade pip
+          python3.12 -m pip install --upgrade pip
           pip install ".[test,osspecials]"
           pip uninstall -y nowplaying
           versioningit --write
-          python3.11 setupnltk.py
+          python3.12 setupnltk.py
       - name: tests
         shell: bash
         run: |
@@ -104,7 +104,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - name: install dependencies
         run: |
           python fix_win_ver.py
@@ -155,7 +155,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        python: ["3.10", "3.11"]
+        python: ["3.12"]
     env:
       DISPLAY: ':99.0'
     steps:
@@ -264,7 +264,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - name: install dependencies
         run: |
           python3 -m venv /tmp/venv
