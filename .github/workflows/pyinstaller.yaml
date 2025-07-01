@@ -30,7 +30,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - name: run builder
         run: |
           export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
@@ -44,7 +44,7 @@ jobs:
 
 
   pyinstaller-win:
-    runs-on: windows-2019
+    runs-on: windows-2022
     permissions:
       contents: read
     steps:
@@ -57,7 +57,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - name: run builder
         shell: bash
         run: |
