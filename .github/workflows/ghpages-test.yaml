@@ -1,43 +1,29 @@
-#
-#
-# yamllint disable rule:line-length
 ---
 name: website-test
 
-# execute this workflow automatically when a we push to master
+# Test that documentation builds successfully on all pushes
 on: [push]  # yamllint disable-line rule:truthy
 
-jobs:
 
-  build_docs_job:
+jobs:
+  test_docs_build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    container: debian:stable-slim
 
     steps:
-      - name: Prereqs
-        run: |
-          apt-get update
-          apt-get install -y git python3-pip
-        shell: bash
-
-      - name: checkout
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: test
-        run: |
-          chown -R $(id -u):$(id -g) "${PWD}"
-        shell: bash
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
 
-      # - name: check
-      #   run: |
-      #     pip3 install .
+      - name: Install dependencies
+        run: pip install -r requirements-docs.txt
 
-      - name: Execute script to build our documentation and update pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: "./build-ci-website.sh"
-        shell: bash
+      - name: Test MkDocs build
+        run: mkdocs build --strict
