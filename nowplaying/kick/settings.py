@@ -64,8 +64,7 @@ class KickSettings:
         # Note: redirect URI is not saved - it's always generated from webserver port
 
         # If critical settings changed, restart kick bot and clear tokens
-        if (oldchannel != newchannel) or (oldclientid != newclientid) or (
-                oldsecret != newsecret):
+        if (oldchannel != newchannel) or (oldclientid != newclientid) or (oldsecret != newsecret):
             # Stop kick bot if running
             subprocesses.stop_kickbot()
 
@@ -105,7 +104,7 @@ class KickSettings:
         if self.widget:
             self.oauth.client_id = self.widget.clientid_lineedit.text().strip()
             self.oauth.client_secret = self.widget.secret_lineedit.text().strip()
-            # Redirect URI is always set from webserver port, not from form
+            # Redirect URI is set dynamically by webserver, not stored here
             self.oauth.redirect_uri = self.widget.redirecturi_label.text().strip()
 
         # Validate required fields
@@ -181,8 +180,7 @@ class KickSettings:
             elif refresh_token:
                 self.widget.oauth_status_label.setText('Refreshing expired token...')
             else:
-                self.widget.oauth_status_label.setText(
-                    'Token expired - re-authentication needed')
+                self.widget.oauth_status_label.setText('Token expired - re-authentication needed')
                 self.widget.authenticate_button.setText('Authenticate')
         else:
             self.widget.oauth_status_label.setText('Not authenticated')

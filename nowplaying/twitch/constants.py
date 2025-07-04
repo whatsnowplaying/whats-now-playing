@@ -12,9 +12,7 @@ API_HOST = 'https://api.twitch.tv/helix'
 
 # Chat bot scopes (minimal permissions for dedicated bot accounts)
 CHAT_BOT_AUTH_SCOPES: list[AuthScope] = [
-    AuthScope.CHAT_READ,
-    AuthScope.CHAT_EDIT,
-    AuthScope.USER_BOT
+    AuthScope.CHAT_READ, AuthScope.CHAT_EDIT, AuthScope.USER_BOT
 ]
 
 # Broadcaster scopes (chat scopes + additional broadcaster permissions)

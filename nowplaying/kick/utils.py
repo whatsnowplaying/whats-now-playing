@@ -18,8 +18,8 @@ async def attempt_token_refresh(config: nowplaying.config.ConfigFile) -> bool:
         # Check if we have stored tokens
         access_token, refresh_token = oauth.get_stored_tokens()
         logging.debug('Retrieved stored tokens: access_token=%s, refresh_token=%s',
-                     'present' if access_token else 'missing',
-                     'present' if refresh_token else 'missing')
+                      'present' if access_token else 'missing',
+                      'present' if refresh_token else 'missing')
 
         if access_token:
             # Validate current token
@@ -35,7 +35,16 @@ async def attempt_token_refresh(config: nowplaying.config.ConfigFile) -> bool:
         if refresh_token:
             # Try to refresh the token
             logging.debug('Attempting to refresh token using refresh_token')
-            await oauth.refresh_access_token(refresh_token)
+            token_response = await oauth.refresh_access_token(refresh_token)
+
+            # Save the refreshed tokens
+            new_access_token = token_response.get('access_token')
+            new_refresh_token = token_response.get('refresh_token')
+            if new_access_token:
+                config.cparser.setValue('kick/accesstoken', new_access_token)
+                if new_refresh_token:
+                    config.cparser.setValue('kick/refreshtoken', new_refresh_token)
+                config.save()
             logging.info('Successfully refreshed Kick OAuth2 tokens')
             return True
         logging.debug('No refresh_token available')
@@ -51,8 +60,9 @@ async def attempt_token_refresh(config: nowplaying.config.ConfigFile) -> bool:
 # 2. sync version for UI components (Qt-safe, immediate feedback)
 # Both use the same Kick introspect endpoint for consistency
 
+
 async def validate_kick_token_async(config: nowplaying.config.ConfigFile,
-                                   access_token: str | None = None) -> dict[str, Any] | None:
+                                    access_token: str | None = None) -> dict[str, Any] | None:
     ''' Async wrapper for token validation (for non-UI components) '''
     oauth = nowplaying.kick.oauth2.KickOAuth2(config)
     return await oauth.validate_token(access_token)
@@ -92,8 +102,8 @@ def qtsafe_validate_kick_token(access_token: str) -> bool:  # pylint: disable=to
             client_id = data.get('client_id', 'Unknown')
             scopes = data.get('scope', 'Unknown')
             token_type = data.get('token_type', 'Unknown')
-            logging.debug('Kick token valid - client: %s, type: %s, scopes: %s',
-                         client_id, token_type, scopes)
+            logging.debug('Kick token valid - client: %s, type: %s, scopes: %s', client_id,
+                          token_type, scopes)
             return True
 
         logging.debug('Kick token is inactive')

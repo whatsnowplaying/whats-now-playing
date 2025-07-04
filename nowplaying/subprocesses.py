@@ -126,19 +126,19 @@ class SubprocessManager:
     def start_process(self, processname):
         ''' Start a specific process '''
         if processname == 'twitchbot' and not self.config.cparser.value('twitchbot/enabled',
-                                                                         type=bool):
+                                                                        type=bool):
             return
         if processname == 'webserver' and not self.config.cparser.value('weboutput/httpenabled',
-                                                                         type=bool):
+                                                                        type=bool):
             return
-        if (processname == 'kickbot' and
-                not (self.config.cparser.value('kick/enabled', type=bool) and
-                     self.config.cparser.value('kick/chat', type=bool))):
+        if (processname == 'kickbot'
+                and not (self.config.cparser.value('kick/enabled', type=bool)
+                         and self.config.cparser.value('kick/chat', type=bool))):
             return
         if processname == 'obsws' and not self.config.cparser.value('obsws/enabled', type=bool):
             return
         if processname == 'discordbot' and not self.config.cparser.value('discord/enabled',
-                                                                          type=bool):
+                                                                         type=bool):
             return
         # trackpoll always starts - it's the core monitoring process
         self._start_process(processname)

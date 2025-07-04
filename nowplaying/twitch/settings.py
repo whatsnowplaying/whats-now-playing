@@ -9,9 +9,7 @@ from PySide6.QtCore import QTimer  # pylint: disable=no-name-in-module
 
 from nowplaying.exceptions import PluginVerifyError
 
-import nowplaying.twitch.utils
 import nowplaying.twitch.oauth2
-from nowplaying.twitch.constants import CHAT_BOT_SCOPE_STRINGS
 
 
 class TwitchSettings:
@@ -54,10 +52,8 @@ class TwitchSettings:
         widget.secret_lineedit.setText(config.cparser.value('twitchbot/secret'))
 
         # Display redirect URI info (dynamically generated, not stored)
-        port = config.cparser.value('webserver/port', type=int) or 8899
-        redirect_uri = f'http://localhost:{port}/twitchredirect'
-
         if hasattr(widget, 'redirecturi_lineedit'):
+            redirect_uri = self.oauth.get_redirect_uri('broadcaster') if self.oauth else ''
             widget.redirecturi_lineedit.setText(redirect_uri)
 
         # Initialize single OAuth2 handler
@@ -118,75 +114,79 @@ class TwitchSettings:
 
     def update_token_name(self):
         ''' update the token name in the UI based on both token types '''
-        broadcaster_status = "Not authenticated"
-        chat_status = "Not authenticated"
+        if not self.oauth:
+            self.widget.chatbot_username_line.setText('Not authenticated')
+            return
 
-        # Check OAuth2 broadcaster token
-        if self.oauth:
-            access_token, _ = self.oauth.get_stored_tokens()
-            if (access_token
-                    and nowplaying.twitch.utils.qtsafe_validate_twitch_oauth_token(access_token)):
-                if oauth_username := self._get_oauth_username(access_token):
-                    broadcaster_status = f'{oauth_username} (Broadcaster)'
+        # Get OAuth status from service
+        status = self.oauth.get_oauth_status()
 
-        # Check separate chat token
-        chat_token = self.oauth.config.cparser.value('twitchbot/chattoken') if self.oauth else None
-        if chat_token and nowplaying.twitch.utils.qtsafe_validate_twitch_oauth_token(chat_token):
-            if chat_username := self._get_oauth_username(chat_token):
-                chat_status = f'{chat_username} (Chat Bot)'
+        broadcaster_username = status['broadcaster_username']
+        chat_username = status['chat_username']
+        broadcaster_valid = status['broadcaster_valid']
+        chat_valid = status['chat_valid']
 
         # Display combined status showing both tokens
-        if broadcaster_status != "Not authenticated" and chat_status != "Not authenticated":
+        if broadcaster_valid and chat_valid:
             # Both tokens present
-            self.widget.chatbot_username_line.setText(f'🎥 {broadcaster_status} | 💬 {chat_status}')
-        elif broadcaster_status != "Not authenticated":
+            self.widget.chatbot_username_line.setText(
+                f'🎥 {broadcaster_username} (Broadcaster) | 💬 {chat_username} (Chat Bot)')
+        elif broadcaster_valid:
             # Only broadcaster token
-            self.widget.chatbot_username_line.setText(f'🎥 {broadcaster_status} (also for chat)')
-        elif chat_status != "Not authenticated":
+            self.widget.chatbot_username_line.setText(
+                f'🎥 {broadcaster_username} (Broadcaster, also for chat)')
+        elif chat_valid:
             # Only chat token (unusual but possible)
-            self.widget.chatbot_username_line.setText(f'💬 {chat_status} (no broadcaster auth)')
+            self.widget.chatbot_username_line.setText(
+                f'💬 {chat_username} (Chat Bot, no broadcaster auth)')
         else:
             # No tokens
             self.widget.chatbot_username_line.setText('Not authenticated')
-
-    def _get_oauth_username(self, access_token):
-        ''' Get username from OAuth2 token using existing validation function '''
-        # Reuse the existing token validation logic
-        username = nowplaying.twitch.utils.qtsafe_validate_token(access_token)
-        return username
 
     def update_oauth_status(self):
         ''' update the OAuth status display '''
         if not self.oauth or not self.widget:
             return
 
-        # Check if we have valid configuration
-        client_id = self.widget.clientid_lineedit.text().strip()
-        client_secret = self.widget.secret_lineedit.text().strip()
+        # Update OAuth client with current form values
+        self.oauth.client_id = self.widget.clientid_lineedit.text().strip()
+        self.oauth.client_secret = self.widget.secret_lineedit.text().strip()
 
-        if not client_id or not client_secret:
+        # Check if configuration is complete
+        if not self.oauth.is_configuration_complete():
             if hasattr(self.widget, 'oauth_status_label'):
                 self.widget.oauth_status_label.setText('Configuration incomplete')
             # Disable copy buttons if configuration is incomplete
-            if hasattr(self.widget, 'copy_broadcaster_auth_button'):
-                self.widget.copy_broadcaster_auth_button.setEnabled(False)
-            if hasattr(self.widget, 'copy_chat_auth_button'):
-                self.widget.copy_chat_auth_button.setEnabled(False)
-            # Backward compatibility
-            if hasattr(self.widget, 'copy_auth_link_button'):
-                self.widget.copy_auth_link_button.setEnabled(False)
+            self._set_auth_buttons_enabled(False)
             return
 
-        # Check for stored tokens and validate them
-        access_token, refresh_token = self.oauth.get_stored_tokens()
-        chat_token = self.oauth.config.cparser.value('twitchbot/chattoken')
+        # Get OAuth status from service
+        status = self.oauth.get_oauth_status()
 
-        # Build detailed status message
-        broadcaster_valid = (
-            access_token
-            and nowplaying.twitch.utils.qtsafe_validate_twitch_oauth_token(access_token))
-        chat_valid = (chat_token
-                      and nowplaying.twitch.utils.qtsafe_validate_twitch_oauth_token(chat_token))
+        # Update button states with status-aware messaging
+        self._update_auth_button_states(status)
+
+        # Update status label
+        if hasattr(self.widget, 'oauth_status_label'):
+            self.widget.oauth_status_label.setText(status['status_text'])
+
+        # Update account name display
+        self.update_token_name()
+
+    def _set_auth_buttons_enabled(self, enabled: bool) -> None:
+        ''' Enable or disable authentication buttons '''
+        if hasattr(self.widget, 'copy_broadcaster_auth_button'):
+            self.widget.copy_broadcaster_auth_button.setEnabled(enabled)
+        if hasattr(self.widget, 'copy_chat_auth_button'):
+            self.widget.copy_chat_auth_button.setEnabled(enabled)
+        # Backward compatibility
+        if hasattr(self.widget, 'copy_auth_link_button'):
+            self.widget.copy_auth_link_button.setEnabled(enabled)
+
+    def _update_auth_button_states(self, status: dict) -> None:
+        ''' Update authentication button text and states based on OAuth status '''
+        broadcaster_valid = status['broadcaster_valid']
+        chat_valid = status['chat_valid']
 
         # Update button states with status-aware messaging
         if hasattr(self.widget, 'copy_broadcaster_auth_button'):
@@ -195,37 +195,18 @@ class TwitchSettings:
             else:
                 self.widget.copy_broadcaster_auth_button.setText('Copy Broadcaster Auth URL')
             self.widget.copy_broadcaster_auth_button.setEnabled(True)
+
         if hasattr(self.widget, 'copy_chat_auth_button'):
             if chat_valid:
                 self.widget.copy_chat_auth_button.setText('✅ Chat Bot Authenticated')
             else:
                 self.widget.copy_chat_auth_button.setText('Copy Chat Bot Auth URL')
             self.widget.copy_chat_auth_button.setEnabled(True)
+
         # Backward compatibility
         if hasattr(self.widget, 'copy_auth_link_button'):
             self.widget.copy_auth_link_button.setText('Copy Auth URL')
             self.widget.copy_auth_link_button.setEnabled(True)
-
-        if broadcaster_valid and chat_valid:
-            status_text = 'Broadcaster + Chat Bot authenticated'
-        elif broadcaster_valid and not chat_valid:
-            status_text = 'Broadcaster authenticated (handles chat too)'
-        elif not broadcaster_valid and chat_valid:
-            status_text = 'Chat Bot authenticated (no broadcaster)'
-        elif access_token and not broadcaster_valid:
-            # Token is expired - check if we can refresh
-            if refresh_token:
-                status_text = 'Refreshing expired broadcaster token...'
-            else:
-                status_text = 'Broadcaster token expired - re-authentication needed'
-        else:
-            status_text = 'Not authenticated'
-
-        if hasattr(self.widget, 'oauth_status_label'):
-            self.widget.oauth_status_label.setText(status_text)
-
-        # Update account name display
-        self.update_token_name()
 
     def start_status_timer(self):
         ''' Start periodic status updates to catch automatic token refresh '''
@@ -250,77 +231,23 @@ class TwitchSettings:
     def clear_authentication(self):
         ''' clear stored authentication tokens (OAuth2 and chat) '''
         if self.oauth:
-            self.oauth.clear_stored_tokens()
-            # Also clear chat tokens
-            self.oauth.config.cparser.remove('twitchbot/chattoken')
-            self.oauth.config.cparser.remove('twitchbot/chatrefreshtoken')
-            self.oauth.config.save()
+            self.oauth.clear_all_authentication()
         self.update_oauth_status()
-        logging.info('Cleared Twitch OAuth2 and chat authentication')
 
     def _copy_auth_link(self):
-        ''' generate and copy authentication URL to clipboard '''
-        if not self.oauth:
-            logging.error('OAuth2 handler not initialized')
-            return
-
-        # Update OAuth client with current form values
-        if self.widget:
-            self.oauth.client_id = self.widget.clientid_lineedit.text().strip()
-            self.oauth.client_secret = self.widget.secret_lineedit.text().strip()
-
-            # Use single redirect URI
-            port = self.oauth.config.cparser.value('webserver/port', type=int) or 8899
-            self.oauth.redirect_uri = f'http://localhost:{port}/twitchredirect'
-
-        # Validate required fields
-        if not self.oauth.client_id:
-            if hasattr(self.widget, 'oauth_status_label'):
-                self.widget.oauth_status_label.setText('Error: Client ID required')
-            return
-        if not self.oauth.client_secret:
-            if hasattr(self.widget, 'oauth_status_label'):
-                self.widget.oauth_status_label.setText('Error: Client Secret required')
-            return
-
-        try:
-            # Generate the auth URL without opening browser
-            auth_url = self.oauth.get_authorization_url()
-
-            # Copy to clipboard
-            clipboard = QApplication.clipboard()
-            clipboard.setText(auth_url)
-
-            if hasattr(self.widget, 'oauth_status_label'):
-                self.widget.oauth_status_label.setText('Auth URL copied to clipboard')
-
-            # Show success dialog with the URL
-            if self.uihelp and hasattr(self.uihelp, 'qtui'):
-                msgbox = QMessageBox(self.uihelp.qtui)
-                msgbox.setWindowTitle('Authentication URL Copied')
-                msgbox.setIcon(QMessageBox.Information)
-                msgbox.setText('✅ Authentication URL Copied to Clipboard')
-                msgbox.setInformativeText(
-                    'The authentication URL has been copied to your clipboard.\n\n'
-                    'Next steps:\n'
-                    '1. Open your browser\n'
-                    '2. IMPORTANT: Make sure you are logged into the correct Twitch account\n'
-                    '   (If you want a bot account, log into that account first)\n'
-                    '3. Paste and visit the copied URL\n'
-                    '4. Complete the authorization\n'
-                    '5. The token will be automatically saved\n\n'
-                    f'URL: {auth_url[:60]}{"..." if len(auth_url) > 60 else ""}')
-                msgbox.exec()
-
-            logging.info('Twitch OAuth2 authentication URL copied to clipboard')
-
-        except (OSError, ValueError) as error:
-            logging.error('Failed to generate auth URL: %s', error)
-            if hasattr(self.widget, 'oauth_status_label'):
-                self.widget.oauth_status_label.setText(f'Error generating URL: {error}')
-        except Exception:
-            logging.exception('Unexpected error during Twitch OAuth2 URL generation')
-            raise
+        ''' generate and copy authentication URL to clipboard (backward compatibility) '''
+        self._copy_auth_link_with_message(
+            token_type='broadcaster',
+            success_title='Authentication URL Copied',
+            success_message=(
+                'The authentication URL has been copied to your clipboard.\n\n'
+                'Next steps:\n'
+                '1. Open your browser\n'
+                '2. IMPORTANT: Make sure you are logged into the correct Twitch account\n'
+                '   (If you want a bot account, log into that account first)\n'
+                '3. Paste and visit the copied URL\n'
+                '4. Complete the authorization\n'
+                '5. The token will be automatically saved'))
 
     def _copy_broadcaster_auth_link(self):
         ''' generate and copy broadcaster authentication URL to clipboard '''
@@ -365,38 +292,27 @@ class TwitchSettings:
                                      success_title='',
                                      success_message=''):
         ''' generate and copy authentication URL with custom message '''
-        if not self.oauth:
+        if not self.oauth or not self.widget:
             logging.error('OAuth2 handler not initialized')
             return
 
         # Update OAuth client with current form values
-        if self.widget:
-            self.oauth.client_id = self.widget.clientid_lineedit.text().strip()
-            self.oauth.client_secret = self.widget.secret_lineedit.text().strip()
+        self.oauth.client_id = self.widget.clientid_lineedit.text().strip()
+        self.oauth.client_secret = self.widget.secret_lineedit.text().strip()
 
-            # Use appropriate redirect URI based on token type
-            port = self.oauth.config.cparser.value('webserver/port', type=int) or 8899
-            if token_type == 'chat':
-                self.oauth.redirect_uri = f'http://localhost:{port}/twitchchatredirect'
-            else:
-                self.oauth.redirect_uri = f'http://localhost:{port}/twitchredirect'
-
-        # Validate required fields
-        if not self.oauth.client_id:
+        # Validate configuration
+        if not self.oauth.is_configuration_complete():
             if hasattr(self.widget, 'oauth_status_label'):
-                self.widget.oauth_status_label.setText('Error: Client ID required')
-            return
-        if not self.oauth.client_secret:
-            if hasattr(self.widget, 'oauth_status_label'):
-                self.widget.oauth_status_label.setText('Error: Client Secret required')
+                self.widget.oauth_status_label.setText('Error: Configuration incomplete')
             return
 
         try:
-            # Generate the auth URL with appropriate scopes
-            if token_type == 'chat':
-                auth_url = self.oauth.get_authorization_url(CHAT_BOT_SCOPE_STRINGS)
-            else:
-                auth_url = self.oauth.get_authorization_url()  # Uses broadcaster scopes by default
+            # Generate the auth URL using OAuth service
+            auth_url = self.oauth.get_auth_url(token_type)
+            if not auth_url:
+                if hasattr(self.widget, 'oauth_status_label'):
+                    self.widget.oauth_status_label.setText(f'Error generating {token_type} URL')
+                return
 
             # Copy to clipboard
             clipboard = QApplication.clipboard()
@@ -410,7 +326,7 @@ class TwitchSettings:
             if self.uihelp and hasattr(self.uihelp, 'qtui'):
                 msgbox = QMessageBox(self.uihelp.qtui)
                 msgbox.setWindowTitle(success_title)
-                msgbox.setIcon(QMessageBox.Information)
+                msgbox.setIcon(QMessageBox.Icon.Information)
                 msgbox.setText(f'✅ {success_title}')
                 msgbox.setInformativeText(
                     f'{success_message}\n\n'

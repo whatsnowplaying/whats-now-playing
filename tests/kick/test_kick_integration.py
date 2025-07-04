@@ -30,8 +30,6 @@ def kick_integration_config(bootstrap):
     return config
 
 
-
-
 @pytest.fixture
 def kick_templates(kick_integration_config):  # pylint: disable=redefined-outer-name
     """Create test template files for integration tests."""
@@ -88,6 +86,8 @@ async def test_full_authentication_flow(kick_integration_config, mock_responses)
 
     # Create OAuth2 handler
     oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
+    # Set redirect URI dynamically (as done in real usage)
+    oauth.redirect_uri = 'http://localhost:8080/callback'
 
     # Test authorization URL generation
     auth_url = oauth.get_authorization_url()
@@ -109,9 +109,17 @@ async def test_full_authentication_flow(kick_integration_config, mock_responses)
     assert oauth.access_token == 'test_access_token'
     assert oauth.refresh_token == 'test_refresh_token'
 
+    # Save tokens manually (as the caller is responsible for saving)
+    new_access_token = result.get('access_token')
+    new_refresh_token = result.get('refresh_token')
+    if new_access_token:
+        config.cparser.setValue('kick/accesstoken', new_access_token)
+        if new_refresh_token:
+            config.cparser.setValue('kick/refreshtoken', new_refresh_token)
+        config.save()
+
     # Verify tokens were stored in config
-    assert config.cparser.value('kick/accesstoken') == \
-        'test_access_token'
+    assert config.cparser.value('kick/accesstoken') == 'test_access_token'
     assert config.cparser.value('kick/refreshtoken') == 'test_refresh_token'
 
 
@@ -199,6 +207,15 @@ async def test_token_refresh_integration(kick_integration_config, mock_responses
     assert result == mock_refresh_response
     assert oauth.access_token == 'new_access_token'
 
+    # Save tokens manually (as the caller is responsible for saving)
+    new_access_token = result.get('access_token')
+    new_refresh_token = result.get('refresh_token')
+    if new_access_token:
+        config.cparser.setValue('kick/accesstoken', new_access_token)
+        if new_refresh_token:
+            config.cparser.setValue('kick/refreshtoken', new_refresh_token)
+        config.save()
+
     # Verify new tokens were stored
     assert config.cparser.value('kick/accesstoken') == 'new_access_token'
     assert config.cparser.value('kick/refreshtoken') == 'new_refresh_token'
@@ -260,11 +277,8 @@ def test_command_discovery_integration(kick_integration_config, kick_templates):
     ('chat', 'not_authenticated', 'returns_false'),
 ])
 @pytest.mark.asyncio
-async def test_error_handling_scenarios( # pylint: disable=redefined-outer-name
-        kick_integration_config,
-        component,
-        error_scenario,
-        expected_behavior):
+async def test_error_handling_scenarios(  # pylint: disable=redefined-outer-name
+        kick_integration_config, component, error_scenario, expected_behavior):
     """Test error handling across different components and scenarios."""
     config = kick_integration_config
 

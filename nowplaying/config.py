@@ -36,9 +36,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     def __init__(  # pylint: disable=too-many-arguments
             self,
             bundledir: str | pathlib.Path | None = None,
-            logpath: str|None = None,
+            logpath: str | None = None,
             reset: bool = False,
-            testmode: bool= False,
+            testmode: bool = False,
             beam: bool = False):
         self.version: str = nowplaying.version.__VERSION__  #pylint: disable=no-member
         self.beam: bool = beam
@@ -69,8 +69,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             self.qsettingsformat = QSettings.IniFormat
 
         self.cparser: QSettings = QSettings(self.qsettingsformat, QSettings.UserScope,
-                                 QCoreApplication.organizationName(),
-                                 QCoreApplication.applicationName())
+                                            QCoreApplication.organizationName(),
+                                            QCoreApplication.applicationName())
         logging.info('configuration: %s', self.cparser.fileName())
         self.notif: bool = False
         self.txttemplate: str = str(self.templatedir.joinpath("basic-plain.txt"))
@@ -100,7 +100,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self.lastloaddate: int = 0
         self.setlistdir: str | None = None
         self.striprelist: list[re.Pattern[str]] = []
-        self.testdir: pathlib.Path|None = None
+        self.testdir: pathlib.Path | None = None
 
     def _force_set_statics(self) -> None:
         ''' make sure these are always set '''
@@ -499,7 +499,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
                 self.cparser.endGroup()
 
-
             # Add metadata about the export
             export_metadata = {
                 '_export_info': {
@@ -561,8 +560,8 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             if '_export_info' in import_data:
                 export_info = import_data['_export_info']
                 logging.info('Importing config from version %s, exported on %s',
-                           export_info.get('version', 'unknown'),
-                           export_info.get('export_date', 'unknown'))
+                             export_info.get('version', 'unknown'),
+                             export_info.get('export_date', 'unknown'))
                 # Remove metadata before processing
                 del import_data['_export_info']
 
@@ -577,8 +576,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             ]
 
             for pattern in cache_patterns:
-                keys_to_remove = [key for key in self.cparser.allKeys()
-                                 if key.startswith(pattern)]
+                keys_to_remove = [key for key in self.cparser.allKeys() if key.startswith(pattern)]
                 for key in keys_to_remove:
                     self.cparser.remove(key)
 

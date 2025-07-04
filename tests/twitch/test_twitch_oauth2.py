@@ -12,7 +12,8 @@ from aioresponses import aioresponses
 import nowplaying.twitch.oauth2  # pylint: disable=import-error,no-name-in-module
 from nowplaying.twitch.constants import API_HOST, OAUTH_HOST
 
-  # pylint: disable=redefined-outer-name, too-many-arguments, unused-argument
+# pylint: disable=redefined-outer-name, too-many-arguments, unused-argument
+
 
 # Fixtures
 @pytest.fixture
@@ -49,7 +50,7 @@ def test_init_basic(bootstrap):  # pylint: disable=redefined-outer-name
     config = bootstrap
     config.cparser.setValue('twitchbot/clientid', 'test_client_id')
     config.cparser.setValue('twitchbot/secret', 'test_secret')
-    
+
     oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)  # pylint: disable=no-member
 
     assert oauth.client_id == 'test_client_id'
@@ -115,17 +116,14 @@ def test_generate_pkce_parameters(configured_oauth):  # pylint: disable=redefine
         ('test_client', 'http://localhost:8899', None),  # Success
     ])
 def test_get_authorization_url_scenarios(  # pylint: disable=redefined-outer-name
-        bootstrap,
-        client_id,
-        redirect_uri,
-        expected_error):
+        bootstrap, client_id, redirect_uri, expected_error):
     """Test authorization URL generation with various configurations."""
     config = bootstrap
     if client_id:
         config.cparser.setValue('twitchbot/clientid', client_id)
 
     oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)  # pylint: disable=no-member
-    
+
     # Set redirect_uri directly on the object (no longer stored in config)
     if redirect_uri:
         oauth.redirect_uri = redirect_uri
@@ -181,14 +179,9 @@ def test_open_browser_for_auth_scenarios(mock_open, configured_oauth, browser_su
         }, True),  # Success
     ])
 @pytest.mark.asyncio
-async def test_exchange_code_for_token_scenarios(   # pylint: disable=redefined-outer-name
-        configured_oauth,
-        mock_responses,
-        has_verifier,
-        state_matches,
-        response_status,
-        response_data,
-        should_succeed):
+async def test_exchange_code_for_token_scenarios(  # pylint: disable=redefined-outer-name
+        configured_oauth, mock_responses, has_verifier, state_matches, response_status,
+        response_data, should_succeed):
     """Test token exchange with various scenarios."""
     oauth = configured_oauth
 
@@ -236,9 +229,9 @@ async def test_exchange_code_for_token_scenarios(   # pylint: disable=redefined-
         }, True),  # Success
     ])
 @pytest.mark.asyncio
-async def test_refresh_access_token_scenarios(
-        bootstrap, configured_oauth, mock_responses, has_refresh_token, response_status,
-        response_data, should_succeed):
+async def test_refresh_access_token_scenarios(bootstrap, configured_oauth, mock_responses,
+                                              has_refresh_token, response_status, response_data,
+                                              should_succeed):
     """Test token refresh with various scenarios."""
     oauth = configured_oauth
 
@@ -260,9 +253,7 @@ async def test_refresh_access_token_scenarios(
     else:
         if has_refresh_token:
             # HTTP error case
-            mock_responses.post(f"{OAUTH_HOST}/oauth2/token",
-                                status=response_status,
-                                body='Error')
+            mock_responses.post(f"{OAUTH_HOST}/oauth2/token", status=response_status, body='Error')
 
         with pytest.raises((ValueError, Exception)):
             await oauth.refresh_access_token(refresh_token)
@@ -297,9 +288,7 @@ async def test_validate_token_scenarios(
                            status=response_status,
                            payload=response_data)
     else:
-        mock_responses.get(f"{OAUTH_HOST}/oauth2/validate",
-                           status=response_status,
-                           body='Error')
+        mock_responses.get(f"{OAUTH_HOST}/oauth2/validate", status=response_status, body='Error')
 
     result = await oauth.validate_token('test_token')
     assert result == expected_result
@@ -310,29 +299,31 @@ async def test_validate_token_scenarios(
     "response_status,response_data,expected_result",
     [
         (200, {
-            'data': [{'id': '12345', 'login': 'test_user', 'display_name': 'TestUser'}]
-        }, {'id': '12345', 'login': 'test_user', 'display_name': 'TestUser'}),
+            'data': [{
+                'id': '12345',
+                'login': 'test_user',
+                'display_name': 'TestUser'
+            }]
+        }, {
+            'id': '12345',
+            'login': 'test_user',
+            'display_name': 'TestUser'
+        }),
         (401, {}, None),  # Unauthorized
-        (200, {'data': []}, None),  # No user data
+        (200, {
+            'data': []
+        }, None),  # No user data
     ])
 @pytest.mark.asyncio
-async def test_get_user_info_scenarios(
-        configured_oauth,
-        mock_responses,
-        response_status,
-        response_data,
-        expected_result):
+async def test_get_user_info_scenarios(configured_oauth, mock_responses, response_status,
+                                       response_data, expected_result):
     """Test user info retrieval with various responses."""
     oauth = configured_oauth
 
     if response_status == 200:
-        mock_responses.get(f"{API_HOST}/users",
-                           status=response_status,
-                           payload=response_data)
+        mock_responses.get(f"{API_HOST}/users", status=response_status, payload=response_data)
     else:
-        mock_responses.get(f"{API_HOST}/users",
-                           status=response_status,
-                           body='Error')
+        mock_responses.get(f"{API_HOST}/users", status=response_status, body='Error')
 
     result = await oauth.get_user_info('test_token')
     assert result == expected_result
@@ -420,6 +411,7 @@ async def test_revoke_token_scenarios(  # pylint: disable=redefined-outer-name, 
 
 # Edge cases and error conditions tests
 
+
 @pytest.mark.asyncio
 async def test_json_parsing_error(oauth_with_pkce, mock_responses):  # pylint: disable=redefined-outer-name
     """Test handling of JSON parsing errors."""
@@ -476,7 +468,6 @@ def test_pkce_challenge_calculation(configured_oauth):  # pylint: disable=redefi
 @pytest.mark.parametrize("invalid_config_key", [
     'twitchbot/clientid',
     'twitchbot/secret',
-    'twitchbot/redirecturi',
 ])
 def test_missing_config_handling(bootstrap, invalid_config_key):  # pylint: disable=redefined-outer-name
     """Test handling of missing configuration values."""
@@ -484,18 +475,32 @@ def test_missing_config_handling(bootstrap, invalid_config_key):  # pylint: disa
     # Set all required config except one
     config.cparser.setValue('twitchbot/clientid', 'test_client')
     config.cparser.setValue('twitchbot/secret', 'test_secret')
-    config.cparser.setValue('twitchbot/redirecturi', 'http://localhost')
 
     # Remove the specified config key
     config.cparser.remove(invalid_config_key)
 
     oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)  # pylint: disable=no-member
+    # Set redirect URI directly (no longer from config)
+    oauth.redirect_uri = 'http://localhost'
 
     # Should handle missing config gracefully
-    if invalid_config_key in ['twitchbot/clientid', 'twitchbot/redirecturi']:
-        with pytest.raises(ValueError):
+    if invalid_config_key == 'twitchbot/clientid':
+        with pytest.raises(ValueError, match="Client ID is required"):
             oauth.get_authorization_url()
     else:
         # Missing secret shouldn't prevent URL generation
         auth_url = oauth.get_authorization_url()
         assert 'client_id=test_client' in auth_url
+
+
+def test_missing_redirect_uri_handling(bootstrap):  # pylint: disable=redefined-outer-name
+    """Test handling of missing redirect URI."""
+    config = bootstrap
+    config.cparser.setValue('twitchbot/clientid', 'test_client')
+    config.cparser.setValue('twitchbot/secret', 'test_secret')
+
+    oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)  # pylint: disable=no-member
+    # Don't set redirect_uri - should fail
+
+    with pytest.raises(ValueError, match="Redirect URI is required"):
+        oauth.get_authorization_url()

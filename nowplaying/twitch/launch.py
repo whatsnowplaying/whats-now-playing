@@ -43,7 +43,7 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
             await asyncio.sleep(5)
         if self.redemptions:
             task = self.loop.create_task(
-                self.redemptions.run_redemptions(self.twitchlogin, self.chat))
+                self.redemptions.run_redemptions(self.chat))
             self.tasks.add(task)
             task.add_done_callback(self.tasks.discard)
 

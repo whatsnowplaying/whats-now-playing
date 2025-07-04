@@ -4,6 +4,7 @@
 import asyncio
 import base64
 import hashlib
+import re
 from unittest.mock import patch
 
 import pytest
@@ -11,8 +12,8 @@ from aioresponses import aioresponses
 
 import nowplaying.kick.oauth2  # pylint: disable=import-error,no-name-in-module
 
+# pylint: disable=redefined-outer-name, too-many-arguments, unused-argument
 
-  # pylint: disable=redefined-outer-name, too-many-arguments, unused-argument
 
 # Fixtures
 @pytest.fixture
@@ -21,8 +22,10 @@ def configured_oauth(bootstrap):  # pylint: disable=redefined-outer-name
     config = bootstrap
     config.cparser.setValue('kick/clientid', 'test_client_id')
     config.cparser.setValue('kick/secret', 'test_secret')
-    config.cparser.setValue('kick/redirecturi', 'http://localhost:8080/callback')
-    return nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
+    oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
+    # Set redirect URI dynamically (as done in real usage)
+    oauth.redirect_uri = 'http://localhost:8080/callback'
+    return oauth
 
 
 @pytest.fixture
@@ -92,10 +95,7 @@ def test_generate_pkce_parameters(configured_oauth):  # pylint: disable=redefine
         ('test_client', 'http://localhost:8080', None),  # Success
     ])
 def test_get_authorization_url_scenarios(  # pylint: disable=redefined-outer-name
-        bootstrap,
-        client_id,
-        redirect_uri,
-        expected_error):
+        bootstrap, client_id, redirect_uri, expected_error):
     """Test authorization URL generation with various configurations."""
     config = bootstrap
     if client_id:
@@ -104,6 +104,9 @@ def test_get_authorization_url_scenarios(  # pylint: disable=redefined-outer-nam
         config.cparser.setValue('kick/redirecturi', redirect_uri)
 
     oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
+    # Set redirect URI dynamically (as done in real usage)
+    if redirect_uri:
+        oauth.redirect_uri = redirect_uri
 
     if expected_error:
         with pytest.raises(ValueError, match=expected_error):
@@ -155,14 +158,9 @@ def test_open_browser_for_auth_scenarios(mock_open, configured_oauth, browser_su
         }, True),  # Success
     ])
 @pytest.mark.asyncio
-async def test_exchange_code_for_token_scenarios(   # pylint: disable=redefined-outer-name
-        configured_oauth,
-        mock_responses,
-        has_verifier,
-        state_matches,
-        response_status,
-        response_data,
-        should_succeed):
+async def test_exchange_code_for_token_scenarios(  # pylint: disable=redefined-outer-name
+        configured_oauth, mock_responses, has_verifier, state_matches, response_status,
+        response_data, should_succeed):
     """Test token exchange with various scenarios."""
     oauth = configured_oauth
 
@@ -210,9 +208,9 @@ async def test_exchange_code_for_token_scenarios(   # pylint: disable=redefined-
         }, True),  # Success
     ])
 @pytest.mark.asyncio
-async def test_refresh_access_token_scenarios(
-        bootstrap, configured_oauth, mock_responses, has_refresh_token, response_status,
-        response_data, should_succeed):
+async def test_refresh_access_token_scenarios(bootstrap, configured_oauth, mock_responses,
+                                              has_refresh_token, response_status, response_data,
+                                              should_succeed):
     """Test token refresh with various scenarios."""
     oauth = configured_oauth
 
@@ -273,13 +271,9 @@ async def test_validate_token_scenarios(
     # Use the correct introspect endpoint and POST method
     introspect_url = 'https://api.kick.com/public/v1/token/introspect'
     if response_status == 200:
-        mock_responses.post(introspect_url,
-                           status=response_status,
-                           payload=response_data)
+        mock_responses.post(introspect_url, status=response_status, payload=response_data)
     else:
-        mock_responses.post(introspect_url,
-                           status=response_status,
-                           body='Error')
+        mock_responses.post(introspect_url, status=response_status, body='Error')
 
     result = await oauth.validate_token('test_token')
     assert result == expected_result
@@ -349,7 +343,9 @@ async def test_revoke_token_scenarios(  # pylint: disable=redefined-outer-name, 
 
     if has_client_id and has_token:
         # Setup mock response for cases where we have credentials
-        mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/revoke", status=response_status)
+        # Note: We need to use a regex pattern to match the URL with query parameters
+        url_pattern = re.compile(rf"{re.escape(oauth.OAUTH_HOST)}/oauth/revoke\?.*")
+        mock_responses.post(url_pattern, status=response_status)
 
     # Should not raise exception in any case
     await oauth.revoke_token(token_to_revoke)
@@ -440,10 +436,17 @@ def test_missing_config_handling(bootstrap, invalid_config_key):  # pylint: disa
     oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
 
     # Should handle missing config gracefully
-    if invalid_config_key in ['kick/clientid', 'kick/redirecturi']:
+    if invalid_config_key == 'kick/clientid':
+        # Set redirect URI for client ID test
+        oauth.redirect_uri = 'http://localhost'
+        with pytest.raises(ValueError):
+            oauth.get_authorization_url()
+    elif invalid_config_key == 'kick/redirecturi':
+        # Don't set redirect URI - should fail with ValueError
         with pytest.raises(ValueError):
             oauth.get_authorization_url()
     else:
         # Missing secret shouldn't prevent URL generation
+        oauth.redirect_uri = 'http://localhost'
         auth_url = oauth.get_authorization_url()
         assert 'client_id=test_client' in auth_url

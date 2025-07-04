@@ -12,39 +12,43 @@ import nowplaying.twitch.oauth2
 
 
 # Token validation tests
-def test_qtsafe_validate_token_legacy_valid():
-    """Test legacy token validation with valid token."""
+def test_validate_token_sync_with_username_valid():
+    """Test token validation with username return for valid token."""
     with patch('requests.get') as mock_get:
         mock_response = Mock()
+        mock_response.status_code = 200
         mock_response.json.return_value = {'login': 'test_user', 'client_id': 'test_client'}
         mock_get.return_value = mock_response
 
-        result = nowplaying.twitch.utils.qtsafe_validate_token('valid_token')
+        result = nowplaying.twitch.oauth2.TwitchOAuth2.validate_token_sync('valid_token',
+                                                                           return_username=True)
         assert result == 'test_user'
 
 
-def test_qtsafe_validate_token_legacy_invalid():
-    """Test legacy token validation with invalid token."""
+def test_validate_token_sync_with_username_invalid():
+    """Test token validation with username return for invalid token."""
     with patch('requests.get') as mock_get:
         mock_response = Mock()
-        mock_response.json.return_value = {'status': 401}
+        mock_response.status_code = 401
         mock_get.return_value = mock_response
 
-        result = nowplaying.twitch.utils.qtsafe_validate_token('invalid_token')
+        result = nowplaying.twitch.oauth2.TwitchOAuth2.validate_token_sync('invalid_token',
+                                                                           return_username=True)
         assert result is None
 
 
-def test_qtsafe_validate_token_legacy_network_error():
-    """Test legacy token validation with network error."""
+def test_validate_token_sync_with_username_network_error():
+    """Test token validation with username return for network error."""
     with patch('requests.get') as mock_get:
         mock_get.side_effect = Exception("Network error")
 
-        result = nowplaying.twitch.utils.qtsafe_validate_token('token')
+        result = nowplaying.twitch.oauth2.TwitchOAuth2.validate_token_sync('token',
+                                                                           return_username=True)
         assert result is None
 
 
-def test_qtsafe_validate_twitch_oauth_token_valid():
-    """Test OAuth token validation with valid token."""
+def test_validate_token_sync_boolean_valid():
+    """Test token validation with boolean return for valid token."""
     with patch('requests.get') as mock_get:
         mock_response = Mock()
         mock_response.status_code = 200
@@ -55,23 +59,25 @@ def test_qtsafe_validate_twitch_oauth_token_valid():
         }
         mock_get.return_value = mock_response
 
-        result = nowplaying.twitch.utils.qtsafe_validate_twitch_oauth_token('valid_oauth_token')
+        result = nowplaying.twitch.oauth2.TwitchOAuth2.validate_token_sync('valid_oauth_token',
+                                                                           return_username=False)
         assert result is True
 
 
-def test_qtsafe_validate_twitch_oauth_token_invalid():
-    """Test OAuth token validation with invalid token."""
+def test_validate_token_sync_boolean_invalid():
+    """Test token validation with boolean return for invalid token."""
     with patch('requests.get') as mock_get:
         mock_response = Mock()
         mock_response.status_code = 401
         mock_get.return_value = mock_response
 
-        result = nowplaying.twitch.utils.qtsafe_validate_twitch_oauth_token('invalid_token')
+        result = nowplaying.twitch.oauth2.TwitchOAuth2.validate_token_sync('invalid_token',
+                                                                           return_username=False)
         assert result is False
 
 
-def test_qtsafe_validate_twitch_oauth_token_missing_fields():
-    """Test OAuth token validation with missing required fields."""
+def test_validate_token_sync_boolean_missing_fields():
+    """Test token validation with boolean return for missing required fields."""
     with patch('requests.get') as mock_get:
         mock_response = Mock()
         mock_response.status_code = 200
@@ -81,36 +87,40 @@ def test_qtsafe_validate_twitch_oauth_token_missing_fields():
         }
         mock_get.return_value = mock_response
 
-        result = nowplaying.twitch.utils.qtsafe_validate_twitch_oauth_token('token')
+        result = nowplaying.twitch.oauth2.TwitchOAuth2.validate_token_sync('token',
+                                                                           return_username=False)
         assert result is False
 
 
-def test_qtsafe_validate_twitch_oauth_token_network_error():
-    """Test OAuth token validation with network error."""
+def test_validate_token_sync_boolean_network_error():
+    """Test token validation with boolean return for network error."""
     with patch('requests.get') as mock_get:
         mock_get.side_effect = Exception("Network error")
 
-        result = nowplaying.twitch.utils.qtsafe_validate_twitch_oauth_token('token')
+        result = nowplaying.twitch.oauth2.TwitchOAuth2.validate_token_sync('token',
+                                                                           return_username=False)
         assert result is False
 
 
-def test_qtsafe_validate_twitch_oauth_token_empty():
-    """Test OAuth token validation with empty token."""
-    result = nowplaying.twitch.utils.qtsafe_validate_twitch_oauth_token('')
+def test_validate_token_sync_boolean_empty():
+    """Test token validation with boolean return for empty token."""
+    result = nowplaying.twitch.oauth2.TwitchOAuth2.validate_token_sync('', return_username=False)
     assert result is False
 
-    result = nowplaying.twitch.utils.qtsafe_validate_twitch_oauth_token(None)
+    result = nowplaying.twitch.oauth2.TwitchOAuth2.validate_token_sync(None, return_username=False)
     assert result is False
 
 
-def test_qtsafe_validate_twitch_oauth_token_malformed_json():
-    """Test OAuth token validation with malformed JSON response."""
+def test_validate_token_sync_boolean_malformed_json():
+    """Test token validation with boolean return for malformed JSON response."""
     with patch('requests.get') as mock_get:
         mock_response = Mock()
+        mock_response.status_code = 200
         mock_response.json.side_effect = json.JSONDecodeError("Expecting value", "doc", 0)
         mock_get.return_value = mock_response
 
-        result = nowplaying.twitch.utils.qtsafe_validate_twitch_oauth_token('token')
+        result = nowplaying.twitch.oauth2.TwitchOAuth2.validate_token_sync('token',
+                                                                           return_username=False)
         assert result is False
 
 
@@ -228,7 +238,7 @@ async def test_initiate_oauth_flow_success(bootstrap):
     with patch.object(login, 'get_oauth_client') as mock_get_client:
         mock_oauth = Mock()
         mock_oauth.client_id = 'test_client'
-        mock_oauth.client_secret = 'test_secret'
+        mock_oauth.client_secret = 'test_secret' # pragma: allowlist secret
         mock_oauth.redirect_uri = None
         mock_oauth.open_browser_for_auth.return_value = True
         mock_get_client.return_value = mock_oauth
@@ -246,7 +256,7 @@ async def test_initiate_oauth_flow_missing_config(bootstrap):
     with patch.object(login, 'get_oauth_client') as mock_get_client:
         mock_oauth = Mock()
         mock_oauth.client_id = None  # Missing
-        mock_oauth.client_secret = 'test_secret'
+        mock_oauth.client_secret = 'test_secret' # pragma: allowlist secret
         mock_get_client.return_value = mock_oauth
 
         result = await login.initiate_oauth_flow()
@@ -261,7 +271,7 @@ async def test_api_login_with_valid_tokens(bootstrap):
     # Set up mock OAuth client like other tests
     mock_oauth = Mock()
     mock_oauth.client_id = 'test_client_id'
-    mock_oauth.client_secret = 'test_client_secret'
+    mock_oauth.client_secret = 'test_client_secret' # pragma: allowlist secret
     mock_oauth.access_token = 'test_access_token'
     mock_oauth.refresh_token = 'test_refresh_token'
     nowplaying.twitch.utils.TwitchLogin.OAUTH_CLIENT = mock_oauth
@@ -335,7 +345,7 @@ async def test_get_user_image_success():
     mock_oauth = Mock()
     mock_oauth.access_token = 'test_token'
     mock_oauth.client_id = 'test_client'
-    mock_oauth.API_HOST = 'https://api.twitch.tv/helix'
+    mock_oauth.api_host = 'https://api.twitch.tv/helix'
 
     with aioresponses() as mock_resp:
         # Mock user data response
@@ -360,7 +370,7 @@ async def test_get_user_image_no_user():
     mock_oauth = Mock()
     mock_oauth.access_token = 'test_token'
     mock_oauth.client_id = 'test_client'
-    mock_oauth.API_HOST = 'https://api.twitch.tv/helix'
+    mock_oauth.api_host = 'https://api.twitch.tv/helix'
 
     with aioresponses() as mock_resp:
         mock_resp.get(
@@ -378,7 +388,7 @@ async def test_get_user_image_error():
     mock_oauth = Mock()
     mock_oauth.access_token = 'test_token'
     mock_oauth.client_id = 'test_client'
-    mock_oauth.API_HOST = 'https://api.twitch.tv/helix'
+    mock_oauth.api_host = 'https://api.twitch.tv/helix'
 
     with aioresponses() as mock_resp:
         mock_resp.get('https://api.twitch.tv/helix/users?login=test_user',

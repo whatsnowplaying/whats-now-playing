@@ -3,25 +3,17 @@
 
 import asyncio
 import logging
-from typing import Protocol
 
 import aiohttp
-import requests
 from twitchAPI.twitch import Twitch
 
-import nowplaying.utils
 import nowplaying.twitch.oauth2
+import nowplaying.utils
 from nowplaying.twitch.constants import BROADCASTER_AUTH_SCOPES, BROADCASTER_SCOPE_STRINGS
 
 
-class OAuthClientProtocol(Protocol):
-    '''Protocol for objects that can be used with get_user_image'''
-    access_token: str
-    client_id: str
-    API_HOST: str
-
-
-async def get_user_image(oauth: OAuthClientProtocol, loginname: str) -> bytes | None:
+async def get_user_image(oauth: 'nowplaying.twitch.oauth2.TwitchOAuth2',
+                         loginname: str) -> bytes | None:
     ''' ask twitch for the user profile image '''
     image = None
     try:
@@ -30,77 +22,35 @@ async def get_user_image(oauth: OAuthClientProtocol, loginname: str) -> bytes | 
 
         async with aiohttp.ClientSession() as session:
             # Get user data
-            async with session.get(f'{oauth.API_HOST}/users?login={loginname}',
+            async with session.get(f'{oauth.api_host}/users?login={loginname}',
                                    headers=headers,
                                    timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 if resp.status == 200:
                     user_data = await resp.json()
                     if users := user_data.get('data', []):
                         if profile_image_url := users[0].get('profile_image_url'):
-                            # Download the profile image
-                            async with session.get(profile_image_url, timeout=5) as img_resp:
-                                image = nowplaying.utils.image2png(await img_resp.read())
-    except Exception as error:  #pylint: disable=broad-except
-        logging.error(error)
+                            # Download profile image
+                            async with session.get(
+                                    profile_image_url,
+                                    timeout=aiohttp.ClientTimeout(total=10)) as img_resp:
+                                if img_resp.status == 200:
+                                    raw_image = await img_resp.read()
+                                    image = nowplaying.utils.image2png(raw_image)
+                                    logging.debug('Downloaded profile image for user: %s',
+                                                  loginname)
+                                else:
+                                    logging.warning('Failed to download profile image: %s',
+                                                    img_resp.status)
+                        else:
+                            logging.debug('No profile image URL for user: %s', loginname)
+                    else:
+                        logging.warning('User not found: %s', loginname)
+                else:
+                    logging.warning('Failed to get user info: %s', resp.status)
+    except Exception as error:  # pylint: disable=broad-except
+        logging.error('Error getting user image for %s: %s', loginname, error)
+
     return image
-
-
-def qtsafe_validate_token(token: str) -> str | None:
-    ''' get valid and get the display name for a token '''
-    url = 'https://id.twitch.tv/oauth2/validate'
-    headers = {'Authorization': f'OAuth {token}'}
-
-    try:
-        req = requests.get(url, headers=headers, timeout=5)
-    except Exception as error:  #pylint: disable=broad-except
-        logging.error('Twitch Token validation check failed:%s', error)
-        return None
-    try:
-        valid = req.json()
-    except Exception as error:  #pylint: disable=broad-except
-        logging.error('Twitch Token validation/bad json:%s', error)
-        return None
-
-    if valid.get('status') == 401:
-        logging.debug('Twitch token is invalid')
-        return None
-    return valid.get('login')
-
-
-def qtsafe_validate_twitch_oauth_token(access_token: str | None) -> bool:
-    ''' validate twitch OAuth token synchronously (like Kick's qtsafe_validate_kick_token) '''
-    if not access_token:
-        return False
-
-    # Use Twitch's token validation endpoint
-    url = 'https://id.twitch.tv/oauth2/validate'
-    headers = {'Authorization': f'OAuth {access_token}'}
-
-    try:
-        req = requests.get(url, headers=headers, timeout=10)
-    except Exception as error:  #pylint: disable=broad-except
-        logging.error('Twitch OAuth token validation check failed: %s', error)
-        return False
-
-    if req.status_code != 200:
-        if req.status_code == 401:
-            logging.debug('Twitch OAuth token is invalid/expired')
-        else:
-            logging.warning('Twitch OAuth token validation returned status %s', req.status_code)
-        return False
-
-    try:
-        response_data = req.json()
-
-        # Check if token is valid (has required fields)
-        if response_data.get('client_id') and response_data.get('login'):
-            return True
-
-        logging.debug('Twitch OAuth token is invalid - missing required fields')
-        return False
-    except Exception as error:  #pylint: disable=broad-except
-        logging.error('Twitch OAuth token validation/bad json: %s', error)
-        return False
 
 
 async def async_validate_token(oauth_client: 'nowplaying.twitch.oauth2.TwitchOAuth2',
@@ -153,8 +103,7 @@ class TwitchLogin:
                     oauth_client.refresh_token = refresh_token
                     logging.debug('Existing Twitch token is valid')
                     return True
-                else:
-                    logging.debug('Stored access token is invalid')
+                logging.debug('Stored access token is invalid')
 
             if refresh_token:
                 # Try to refresh the token
@@ -171,8 +120,7 @@ class TwitchLogin:
                     self.config.save()
                 logging.debug('Twitch token refreshed successfully')
                 return True
-            else:
-                logging.debug('No refresh_token available')
+            logging.debug('No refresh_token available')
 
         except Exception as error:  #pylint: disable=broad-except
             logging.error('Token refresh failed: %s', error)
@@ -243,7 +191,8 @@ class TwitchLogin:
 
         logging.debug('Twitch tokens automatically refreshed and saved')
 
-    async def api_logout(self):
+    @staticmethod
+    async def api_logout():
         ''' log out and cleanup '''
         if TwitchLogin.OAUTH_CLIENT:
             try:

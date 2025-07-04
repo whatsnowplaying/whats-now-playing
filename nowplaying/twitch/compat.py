@@ -16,7 +16,6 @@ class AuthScope(Enum):
 
 class InvalidRefreshTokenException(Exception):
     ''' Legacy exception for unpickling old Qt config entries '''
-    pass
 
 
 def install_legacy_types():
@@ -26,23 +25,24 @@ def install_legacy_types():
         import twitchAPI  # pylint: disable=import-outside-toplevel,unused-import
         # Real TwitchAPI exists, just add our legacy types module
         if 'twitchAPI.types' not in sys.modules:
-            fake_types_module = types.ModuleType('twitchAPI.types')
-            fake_types_module.AuthScope = AuthScope
-            fake_types_module.InvalidRefreshTokenException = InvalidRefreshTokenException
-            sys.modules['twitchAPI.types'] = fake_types_module
+            fake_types_module = _common_install_legacy_types()
     except ImportError:
         # Real TwitchAPI doesn't exist, create fake modules for compatibility
         if 'twitchAPI.types' not in sys.modules:
-            fake_types_module = types.ModuleType('twitchAPI.types')
-            fake_types_module.AuthScope = AuthScope
-            fake_types_module.InvalidRefreshTokenException = InvalidRefreshTokenException
-            sys.modules['twitchAPI.types'] = fake_types_module
-            
+            fake_types_module = _common_install_legacy_types()
             # Also create the parent twitchAPI module if it doesn't exist
             if 'twitchAPI' not in sys.modules:
                 fake_twitchapi_module = types.ModuleType('twitchAPI')
                 fake_twitchapi_module.types = fake_types_module
                 sys.modules['twitchAPI'] = fake_twitchapi_module
+
+
+def _common_install_legacy_types():
+    result = types.ModuleType('twitchAPI.types')
+    result.AuthScope = AuthScope
+    result.InvalidRefreshTokenException = InvalidRefreshTokenException
+    sys.modules['twitchAPI.types'] = result
+    return result
 
 
 # Auto-install on import

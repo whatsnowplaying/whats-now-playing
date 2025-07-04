@@ -179,7 +179,9 @@ The TwitchBot adds the following additional values for templating purposes:
 | startnewmessage | Split the text at this location and start a new message to send to chat. |
 
 !!! note "Token Selection"
-    The system automatically uses the most appropriate token for sending messages. If you have both broadcaster and chat bot tokens authenticated, chat messages will be sent from the bot account for cleaner presentation.
+    The system automatically uses the most appropriate token for sending messages.
+    If you have both broadcaster and chat bot tokens authenticated, chat messages
+    will be sent from the bot account for cleaner presentation.
 
 ### Multiple Targets
 
@@ -218,20 +220,18 @@ the Twitchbot track announcement. You can pick and choose which websites
 are printed by taking the following code snippet and modifying as
 necessary:
 
-```jinja
-{% if artistwebsites %}
-{% for website in artistwebsites %}
-{% if 'bandcamp' in website %} |Bandcamp: {{ website }}
-{% elif 'discogs' in website %} | Discogs: {{ website }}
-{% elif 'facebook' in website %} | Facebook: {{ website }}
-{% elif 'instagram' in website %} | IG: {{ website }}
-{% elif 'last.fm' in website %} | last.fm: {{ website }}
-{% elif 'musicbrainz' in website %} | MusicBrainz: {{ website }}
-{% elif 'twitter' in website %} | Twitter: {{ website }}
-{% elif 'wikipedia' in website %} | Wikipedia: {{ website }}
-{% elif 'youtube' in website %} | YouTube: {{ website }}
-{% else %} | Official homepage: {{ website }}
-{% endif %}
-{% endfor %}
-{% endif %}
-```
+  {% if artistwebsites %}
+  {% for website in artistwebsites %}
+  {% if 'bandcamp' in website %} |Bandcamp: {{ website }}
+  {% elif 'discogs' in website %} | Discogs: {{ website }}
+  {% elif 'facebook' in website %} | Facebook: {{ website }}
+  {% elif 'instagram' in website %} | IG: {{ website }}
+  {% elif 'last.fm' in website %} | last.fm: {{ website }}
+  {% elif 'musicbrainz' in website %} | MusicBrainz: {{ website }}
+  {% elif 'twitter' in website %} | Twitter: {{ website }}
+  {% elif 'wikipedia' in website %} | Wikipedia: {{ website }}
+  {% elif 'youtube' in website %} | YouTube: {{ website }}
+  {% else %} | Official homepage: {{ website }}
+  {% endif %}
+  {% endfor %}
+  {% endif %}
