@@ -1,0 +1,121 @@
+---
+site_name: "What's Now Playing"
+site_description: "A tool to retrieve current/last played song in DJ software"
+site_url: https://whatsnowplaying.github.io
+repo_url: https://github.com/whatsnowplaying/whats-now-playing
+repo_name: whatsnowplaying/whats-now-playing
+
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.path
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - content.code.copy
+    - toc.follow
+    - toc.integrate
+
+plugins:
+  - search
+  - macros:
+      render_by_default: false
+      j2_variable_start_string: '{$'
+      j2_variable_end_string: '$}'
+  - mike:
+      version_selector: true
+      css_dir: css
+      javascript_dir: js
+
+extra:
+  version:
+    provider: mike
+    default: latest
+    warning:
+      - version: dev
+        text: "⚠️ Development version - features may be unstable"
+        url: ../latest/
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/whatsnowplaying/whats-now-playing
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+docs_dir: docs
+site_dir: site
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Upgrading: upgrading.md
+  - Usage: usage.md
+  - Settings:
+      - General: settings/index.md
+      - Filters: settings/filter.md
+      - Quirks: settings/quirks.md
+  - Input Sources:
+      - Serato: input/serato.md
+      - Traktor: input/traktor.md
+      - Virtual DJ: input/virtualdj.md
+      - DJ Uced: input/djuced.md
+      - JRiver: input/jriver.md
+      - Icecast: input/icecast.md
+      - M3U: input/m3u.md
+      - MPRIS2: input/mpris2.md
+      - Windows Media: input/winmedia.md
+  - Output Destinations:
+      - Text Output: output/textoutput.md
+      - Discord: output/discord.md
+      - Kick Bot: output/kickbot.md
+      - OBS WebSocket: output/obswebsocket.md
+      - Twitch Bot: output/twitchbot.md
+      - Web Server: output/webserver.md
+  - Recognition:
+      - Overview: recognition/index.md
+      - AcoustID/MusicBrainz: recognition/acoustidmb.md
+  - Artist Extras:
+      - Overview: extras/index.md
+      - Discogs: extras/discogs.md
+      - TheAudioDB: extras/theaudiodb.md
+      - FanArt.TV: extras/fanarttv.md
+  - Requests: requests.md
+  - Help:
+      - How Do I?: help/howdoi.md
+      - Accuracy: help/accuracy.md
+      - Troubleshooting: help/troubleshooting.md
+      - Bug Reports: help/bugreports.md
+      - Open Source: help/opensource.md
+      - Developers: help/developers.md
+  - Reference:
+      - Template Variables: reference/templatevariables.md
+      - Comparisons: reference/comparisons.md
+  - Gallery: gallery.md
+  - Contact: contact.md
