@@ -44,9 +44,14 @@ Here are the steps to get a basic installation working:
 
 1. Download the appropriate binary:
 
-   {% if git.tag and not '-' in git.tag %}* [This release ({$ git.tag $})](https://github.com/whatsnowplaying/whats-now-playing/releases/tag/{$ git.tag $}) - Download binaries for this specific version
-   {% endif %}* [Latest stable release](https://github.com/whatsnowplaying/whats-now-playing/releases/latest) - Always points to the newest stable version
-   * [All releases](https://github.com/whatsnowplaying/whats-now-playing/releases/) - Browse all versions including pre-releases
+   {% if git.tag and not '-' in git.tag %}
+   * [This release ({$ git.tag $})](<https://github.com/whatsnowplaying/whats-now-playing/releases/tag/{$ git.tag $}>) - 
+     Download binaries for this specific version
+   {% endif %}
+   * [Latest stable release](<https://github.com/whatsnowplaying/whats-now-playing/releases/latest>) - 
+     Always points to the newest stable version
+   * [All releases](<https://github.com/whatsnowplaying/whats-now-playing/releases/>) - 
+     Browse all versions including pre-releases
 
    Also of interest: [Current bug list](https://github.com/whatsnowplaying/whats-now-playing/issues?q=is%3Aissue+is%3Aopen+label%3Abug+sort%3Aupdated-desc)
 
