@@ -2,6 +2,7 @@
 refactor:
   skip:
     - assign-if-exp
+    - no-conditional-in-tests
 ignore:
   - conftest.py
   - nowplaying/vendor/*

@@ -10,6 +10,7 @@ import pathlib
 import platform
 import socket
 import traceback
+from typing import Any
 
 import aiohttp  # pylint: disable=import-error
 import aiohttp.client_exceptions
@@ -31,6 +32,7 @@ from nowplaying.exceptions import PluginVerifyError
 import nowplaying.trackrequests
 import nowplaying.twitch.oauth2
 import nowplaying.twitch.utils
+from nowplaying.types import TrackMetadata
 import nowplaying.utils
 from nowplaying.twitch.constants import TWITCHBOT_CHECKBOXES, TWITCH_MESSAGE_LIMIT, SPLITMESSAGETEXT
 
@@ -53,8 +55,8 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 QCoreApplication.applicationName(), 'templates')
         self.jinja2 = self.setup_jinja2(self.templatedir)
         self.jinja2ann = self.setup_jinja2(self.templatedir)
-        self.anndir = None
-        self.twitch = None
+        self.anndir: pathlib.Path | str | None = None
+        self.twitch: Twitch = None
         self.twitchcustom = False
         self.chat = None
         self.tasks = set()
@@ -100,7 +102,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
         try:
             oauth = nowplaying.twitch.oauth2.TwitchOAuth2(self.config)
-            token_response = await oauth.refresh_access_token(chat_refresh_token)
+            token_response = await oauth.refresh_access_token_async(chat_refresh_token)
             return self._save_refreshed_chat_tokens(token_response)
         except Exception as refresh_error:  #pylint: disable=broad-except
             logging.error('Failed to refresh chat token: %s', refresh_error)
@@ -441,13 +443,13 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         return reply
 
     @staticmethod
-    def _finalize(variable):
+    def _finalize(variable: Any) -> Any | str:
         ''' helper routine to avoid NoneType exceptions '''
         if variable is not None:
             return variable
         return ''
 
-    def setup_jinja2(self, directory):
+    def setup_jinja2(self, directory: str | pathlib.Path) -> jinja2.Environment:
         ''' set up the environment '''
         return jinja2.Environment(loader=jinja2.FileSystemLoader(directory),
                                   finalize=self._finalize,
@@ -515,7 +517,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 logging.error('Twitch chat is not connected. Cannot announce.')
                 return
 
-            anntemplstr = self.config.cparser.value('twitchbot/announce')
+            anntemplstr: str = self.config.cparser.value('twitchbot/announce')
             if not anntemplstr:
                 logging.error('Announcement template is not defined.')
                 return
@@ -559,10 +561,10 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 logging.error(line)
 
     async def _post_template(self,
-                             msg: ChatMessage = None,
-                             templatein=None,
-                             moremetadata=None,
-                             jinja2driver=None):
+                             msg: ChatMessage | None = None,
+                             templatein: str | pathlib.Path = None,
+                             moremetadata: dict[str, Any] | None =None,
+                             jinja2driver: jinja2.Environment | None=None) -> None:
         ''' take a template, fill it in, and post it '''
         # Validate inputs and setup
         if not self._validate_template_inputs(templatein):
@@ -578,15 +580,11 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         if not template:
             return
 
-        # Render template
-        message = self._render_template(template, metadata, jinja2driver)
-        if not message:
-            return
+        if message := self._render_template(template, metadata, jinja2driver):
+            # Send messages
+            await self._send_template_messages(message, msg)
 
-        # Send messages
-        await self._send_template_messages(message, msg)
-
-    def _validate_template_inputs(self, templatein) -> bool:
+    def _validate_template_inputs(self, templatein: Any) -> bool:
         ''' Validate template posting inputs '''
         if not templatein:
             return False
@@ -595,7 +593,8 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             return False
         return True
 
-    async def _prepare_template_metadata(self, moremetadata) -> dict:
+    async def _prepare_template_metadata(self,
+               moremetadata: dict[str,str]) -> TrackMetadata:
         ''' Prepare metadata for template rendering '''
         metadata = await self.metadb.read_last_meta_async() or {}
         if 'coverimageraw' in metadata:
@@ -608,7 +607,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
         return metadata
 
-    def _resolve_template_name(self, templatein) -> str | None:
+    def _resolve_template_name(self, templatein:pathlib.Path | str) -> str | None:
         ''' Resolve template name from input path or string '''
         if isinstance(templatein, pathlib.Path):
             if not templatein.is_file():
@@ -621,21 +620,25 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         return templatein
 
     @staticmethod
-    def _render_template(template: str, metadata: dict, jinja2driver) -> str | None:
+    def _render_template(template: str,
+                         metadata: TrackMetadata,
+                         jinja2driver: jinja2.Environment) -> str | None:
         ''' Render template with metadata '''
         try:
             j2template = jinja2driver.get_template(template)
             return j2template.render(metadata)
         except Exception as error:  # pylint: disable=broad-except
             logging.error('template %s rendering failure: %s', template, error)
-            return None
+        return None
 
-    async def _send_template_messages(self, message: str, msg: ChatMessage = None) -> None:
+    async def _send_template_messages(self,
+                                      message: str,
+                                      msg: ChatMessage | None = None) -> None:
         ''' Send rendered template messages to chat '''
         messages = message.split(SPLITMESSAGETEXT)
         try:
             for content in messages:
-                if not self.chat.is_connected():
+                if not self.chat or not self.chat.is_connected():
                     logging.error('Twitch chat is not connected. Not sending message.')
                     return
 
@@ -647,7 +650,9 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 logging.error(line)
             logging.error('Unknown problem.')
 
-    async def _send_content_parts(self, content: str, msg: ChatMessage = None) -> None:
+    async def _send_content_parts(self,
+                                  content: str,
+                                  msg: ChatMessage | None = None) -> None:
         ''' Send content parts with smart splitting '''
         content_parts = self._split_message_smart(content)
         if len(content_parts) > 1:
@@ -658,8 +663,12 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 continue
             await self._send_single_message_part(part, msg)
 
-    async def _send_single_message_part(self, part: str, msg: ChatMessage = None) -> None:
+    async def _send_single_message_part(self,
+                                        part: str,
+                                        msg: ChatMessage | None = None) -> None:
         ''' Send a single message part using reply or direct message '''
+        if not self.chat:
+            return
         if msg and self.config.cparser.value('twitchbot/usereplies', type=bool):
             try:
                 await msg.reply(part)

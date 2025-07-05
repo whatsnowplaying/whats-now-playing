@@ -4,6 +4,8 @@
 from twitchAPI.type import AuthScope
 import twitchAPI.helper
 
+import nowplaying.oauth2
+
 # OAuth and API endpoints
 OAUTH_HOST = 'https://id.twitch.tv'
 API_HOST = 'https://api.twitch.tv/helix'
@@ -34,4 +36,16 @@ TWITCHBOT_CHECKBOXES = [
 ]
 
 # Special message marker for template splitting
-SPLITMESSAGETEXT = '****SPLITMESSSAGEHERE****'
+SPLITMESSAGETEXT = '****SPLITMESSAGEHERE****'
+
+# OAuth2 service configuration
+TWITCH_SERVICE_CONFIG: nowplaying.oauth2.ServiceConfig = {
+    'oauth_host': OAUTH_HOST,
+    'api_host': API_HOST,
+    'config_prefix': 'twitchbot',
+    'default_scopes': BROADCASTER_SCOPE_STRINGS,
+    'token_endpoint': '/oauth2/token',
+    'authorize_endpoint': '/oauth2/authorize',
+    'revoke_endpoint': '/oauth2/revoke',
+    'validate_endpoint': '/oauth2/validate'
+}

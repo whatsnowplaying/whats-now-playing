@@ -9,21 +9,14 @@ import requests
 
 import nowplaying.config
 import nowplaying.oauth2
-from nowplaying.twitch.constants import (OAUTH_HOST, API_HOST, BROADCASTER_SCOPE_STRINGS,
-                                         CHAT_BOT_SCOPE_STRINGS)
+from nowplaying.twitch.constants import (CHAT_BOT_SCOPE_STRINGS, TWITCH_SERVICE_CONFIG)
 
 
 class TwitchOAuth2(nowplaying.oauth2.OAuth2Client):
     ''' Handle Twitch OAuth 2.1 authentication flow with PKCE '''
 
     def __init__(self, config: nowplaying.config.ConfigFile | None = None) -> None:
-        service_config: nowplaying.oauth2.ServiceConfig = {
-            'oauth_host': OAUTH_HOST,
-            'api_host': API_HOST,
-            'config_prefix': 'twitchbot',
-            'default_scopes': BROADCASTER_SCOPE_STRINGS
-        }
-        super().__init__(config, service_config)
+        super().__init__(config, TWITCH_SERVICE_CONFIG)
 
     def _get_additional_auth_params(self) -> dict[str, str]:
         ''' Add Twitch-specific authorization parameters '''
@@ -113,8 +106,8 @@ class TwitchOAuth2(nowplaying.oauth2.OAuth2Client):
 
     @staticmethod
     def validate_token_sync(  # pylint: disable=too-many-return-statements
-                            token: str | None,
-                            return_username: bool = False) -> str | bool | None:
+            token: str | None,
+            return_username: bool = False) -> str | bool | None:
         ''' Synchronously validate Twitch OAuth token
 
         Args:

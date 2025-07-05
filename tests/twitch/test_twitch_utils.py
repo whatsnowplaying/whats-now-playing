@@ -128,7 +128,7 @@ def test_validate_token_sync_boolean_malformed_json():
 async def test_async_validate_token_success():
     """Test async token validation success."""
     mock_oauth = Mock()
-    mock_oauth.validate_token = AsyncMock(return_value={'login': 'test_user'})
+    mock_oauth.validate_token_async = AsyncMock(return_value={'login': 'test_user'})
 
     result = await nowplaying.twitch.utils.async_validate_token(mock_oauth, 'token')
     assert result == 'test_user'
@@ -183,7 +183,7 @@ async def test_attempt_token_refresh_success(bootstrap):
     with patch.object(login, 'get_oauth_client') as mock_get_client:
         mock_oauth = Mock()
         mock_oauth.get_stored_tokens.return_value = ('test_token', 'test_refresh')
-        mock_oauth.validate_token = AsyncMock(return_value={'login': 'test_user'})
+        mock_oauth.validate_token_async = AsyncMock(return_value={'login': 'test_user'})
         mock_get_client.return_value = mock_oauth
 
         result = await login.attempt_token_refresh()
@@ -203,13 +203,14 @@ async def test_attempt_token_refresh_invalid_token(bootstrap):
     with patch.object(login, 'get_oauth_client') as mock_get_client:
         mock_oauth = Mock()
         mock_oauth.get_stored_tokens.return_value = ('invalid_token', 'test_refresh')
-        mock_oauth.validate_token = AsyncMock(return_value=None)  # Invalid token
-        mock_oauth.refresh_access_token = AsyncMock(return_value={'access_token': 'new_token'})
+        mock_oauth.validate_token_async = AsyncMock(return_value=None)  # Invalid token
+        mock_oauth.refresh_access_token_async = AsyncMock(
+            return_value={'access_token': 'new_token'})
         mock_get_client.return_value = mock_oauth
 
         result = await login.attempt_token_refresh()
         assert result is True
-        mock_oauth.refresh_access_token.assert_called_once_with('test_refresh')
+        mock_oauth.refresh_access_token_async.assert_called_once_with('test_refresh')
 
 
 @pytest.mark.asyncio
@@ -238,7 +239,7 @@ async def test_initiate_oauth_flow_success(bootstrap):
     with patch.object(login, 'get_oauth_client') as mock_get_client:
         mock_oauth = Mock()
         mock_oauth.client_id = 'test_client'
-        mock_oauth.client_secret = 'test_secret' # pragma: allowlist secret
+        mock_oauth.client_secret = 'test_secret'  # pragma: allowlist secret
         mock_oauth.redirect_uri = None
         mock_oauth.open_browser_for_auth.return_value = True
         mock_get_client.return_value = mock_oauth
@@ -256,7 +257,7 @@ async def test_initiate_oauth_flow_missing_config(bootstrap):
     with patch.object(login, 'get_oauth_client') as mock_get_client:
         mock_oauth = Mock()
         mock_oauth.client_id = None  # Missing
-        mock_oauth.client_secret = 'test_secret' # pragma: allowlist secret
+        mock_oauth.client_secret = 'test_secret'  # pragma: allowlist secret
         mock_get_client.return_value = mock_oauth
 
         result = await login.initiate_oauth_flow()
@@ -271,7 +272,7 @@ async def test_api_login_with_valid_tokens(bootstrap):
     # Set up mock OAuth client like other tests
     mock_oauth = Mock()
     mock_oauth.client_id = 'test_client_id'
-    mock_oauth.client_secret = 'test_client_secret' # pragma: allowlist secret
+    mock_oauth.client_secret = 'test_client_secret'  # pragma: allowlist secret
     mock_oauth.access_token = 'test_access_token'
     mock_oauth.refresh_token = 'test_refresh_token'
     nowplaying.twitch.utils.TwitchLogin.OAUTH_CLIENT = mock_oauth

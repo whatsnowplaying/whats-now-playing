@@ -46,7 +46,8 @@ class KickSettings:
         # Initialize OAuth2 handler
         self.oauth = nowplaying.kick.oauth2.KickOAuth2(config)
         self.update_oauth_status()
-        self.start_status_timer()
+        # Timer disabled to prevent blocking main thread
+        # self.start_status_timer()
 
     @staticmethod
     def save(config: nowplaying.config.ConfigFile, widget: Any, subprocesses: Any) -> None:
@@ -174,7 +175,7 @@ class KickSettings:
 
         if access_token:
             # Validate token synchronously like Twitch does
-            if nowplaying.kick.utils.qtsafe_validate_kick_token(access_token):
+            if nowplaying.kick.oauth2.KickOAuth2.validate_token_sync(access_token):
                 self.widget.oauth_status_label.setText('Authenticated')
                 self.widget.authenticate_button.setText('Re-authenticate')
             elif refresh_token:

@@ -64,7 +64,8 @@ class TwitchSettings:
         # Start periodic status updates for real-time refresh detection
         # Stop any existing timer first to prevent multiple timers
         self.stop_status_timer()
-        self.start_status_timer()
+        # Timer disabled to prevent blocking main thread
+        # self.start_status_timer()
 
     @staticmethod
     def save(config, widget, subprocesses):

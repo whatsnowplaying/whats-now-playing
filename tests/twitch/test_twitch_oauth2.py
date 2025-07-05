@@ -246,7 +246,7 @@ async def test_refresh_access_token_scenarios(bootstrap, configured_oauth, mock_
                             status=response_status,
                             payload=response_data)
 
-        result = await oauth.refresh_access_token(refresh_token)
+        result = await oauth.refresh_access_token_async(refresh_token)
         assert result == response_data
         assert oauth.access_token == 'new_token'
         assert oauth.refresh_token == 'new_refresh'
@@ -256,7 +256,7 @@ async def test_refresh_access_token_scenarios(bootstrap, configured_oauth, mock_
             mock_responses.post(f"{OAUTH_HOST}/oauth2/token", status=response_status, body='Error')
 
         with pytest.raises((ValueError, Exception)):
-            await oauth.refresh_access_token(refresh_token)
+            await oauth.refresh_access_token_async(refresh_token)
 
 
 # Parameterized token validation tests
@@ -290,7 +290,7 @@ async def test_validate_token_scenarios(
     else:
         mock_responses.get(f"{OAUTH_HOST}/oauth2/validate", status=response_status, body='Error')
 
-    result = await oauth.validate_token('test_token')
+    result = await oauth.validate_token_async('test_token')
     assert result == expected_result
 
 
@@ -325,7 +325,7 @@ async def test_get_user_info_scenarios(configured_oauth, mock_responses, respons
     else:
         mock_responses.get(f"{API_HOST}/users", status=response_status, body='Error')
 
-    result = await oauth.get_user_info('test_token')
+    result = await oauth.get_user_info_async('test_token')
     assert result == expected_result
 
 

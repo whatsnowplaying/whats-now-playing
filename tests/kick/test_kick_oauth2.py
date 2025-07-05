@@ -11,6 +11,7 @@ import pytest
 from aioresponses import aioresponses
 
 import nowplaying.kick.oauth2  # pylint: disable=import-error,no-name-in-module
+from nowplaying.kick.constants import OAUTH_HOST # pylint: disable=import-error,no-name-in-module
 
 # pylint: disable=redefined-outer-name, too-many-arguments, unused-argument
 
@@ -172,7 +173,7 @@ async def test_exchange_code_for_token_scenarios(  # pylint: disable=redefined-o
 
     if should_succeed:
         # Success case - setup mock and verify result
-        mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token",
+        mock_responses.post(f"{OAUTH_HOST}/oauth/token",
                             status=response_status,
                             payload=response_data)
 
@@ -183,7 +184,7 @@ async def test_exchange_code_for_token_scenarios(  # pylint: disable=redefined-o
 
     elif response_status != 200:
         # HTTP error case
-        mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token", status=response_status, body='Error')
+        mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=response_status, body='Error')
 
         with pytest.raises(Exception):
             await oauth.exchange_code_for_token('test_code', test_state)
@@ -221,23 +222,21 @@ async def test_refresh_access_token_scenarios(bootstrap, configured_oauth, mock_
         refresh_token = None
 
     if should_succeed:
-        mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token",
+        mock_responses.post(f"{OAUTH_HOST}/oauth/token",
                             status=response_status,
                             payload=response_data)
 
-        result = await oauth.refresh_access_token(refresh_token)
+        result = await oauth.refresh_access_token_async(refresh_token)
         assert result == response_data
         assert oauth.access_token == 'new_token'
         assert oauth.refresh_token == 'new_refresh'
     else:
         if has_refresh_token:
             # HTTP error case
-            mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token",
-                                status=response_status,
-                                body='Error')
+            mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=response_status, body='Error')
 
         with pytest.raises((ValueError, Exception)):
-            await oauth.refresh_access_token(refresh_token)
+            await oauth.refresh_access_token_async(refresh_token)
 
 
 # Parameterized token validation tests
@@ -344,7 +343,7 @@ async def test_revoke_token_scenarios(  # pylint: disable=redefined-outer-name, 
     if has_client_id and has_token:
         # Setup mock response for cases where we have credentials
         # Note: We need to use a regex pattern to match the URL with query parameters
-        url_pattern = re.compile(rf"{re.escape(oauth.OAUTH_HOST)}/oauth/revoke\?.*")
+        url_pattern = re.compile(rf"{re.escape(OAUTH_HOST)}/oauth/revoke\?.*")
         mock_responses.post(url_pattern, status=response_status)
 
     # Should not raise exception in any case
@@ -370,7 +369,7 @@ async def test_json_parsing_error(oauth_with_pkce, mock_responses):  # pylint: d
     oauth = oauth_with_pkce
 
     # Mock response with invalid JSON
-    mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token", status=200, body='invalid json content')
+    mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=200, body='invalid json content')
 
     with pytest.raises(Exception):
         await oauth.exchange_code_for_token('test_code')
@@ -382,7 +381,7 @@ async def test_network_timeout(oauth_with_pkce, mock_responses):  # pylint: disa
     oauth = oauth_with_pkce
 
     # Mock a timeout by using an exception
-    mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token",
+    mock_responses.post(f"{OAUTH_HOST}/oauth/token",
                         exception=asyncio.TimeoutError("Request timed out"))
 
     with pytest.raises(asyncio.TimeoutError):

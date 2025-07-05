@@ -6,6 +6,8 @@ import importlib
 import logging
 import multiprocessing
 
+from PySide6.QtWidgets import QApplication  # pylint: disable=import-error,no-name-in-module
+
 
 class SubprocessManager:
     ''' manage all of the subprocesses '''
@@ -28,10 +30,14 @@ class SubprocessManager:
                 'stopevent': self.manager.Event(),
             }
 
-    def start_all_processes(self):
+    def start_all_processes(self, startup_window: 'nowplaying.startup.StartupWindow | None' = None):
         ''' start our various threads '''
 
         for key, module in self.processes.items():
+            if startup_window:
+                startup_window.update_progress(f"Starting {key}...")
+                QApplication.processEvents()
+
             module['stopevent'].clear()
             self.start_process(key)
 

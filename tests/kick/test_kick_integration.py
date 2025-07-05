@@ -12,6 +12,7 @@ import nowplaying.kick.oauth2  # pylint: disable=import-error,no-name-in-module
 import nowplaying.kick.chat  # pylint: disable=import-error,no-name-in-module
 import nowplaying.kick.launch  # pylint: disable=import-error,no-name-in-module
 import nowplaying.kick.settings  # pylint: disable=import-error,no-name-in-module
+from nowplaying.kick.constants import OAUTH_HOST  # pylint: disable=import-error,no-name-in-module
 
 
 # Fixtures
@@ -101,7 +102,7 @@ async def test_full_authentication_flow(kick_integration_config, mock_responses)
         'refresh_token': 'test_refresh_token'
     }
 
-    mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token", status=200, payload=mock_token_response)
+    mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=200, payload=mock_token_response)
 
     result = await oauth.exchange_code_for_token('test_auth_code', oauth.state)
 
@@ -198,11 +199,9 @@ async def test_token_refresh_integration(kick_integration_config, mock_responses
         'refresh_token': 'new_refresh_token'
     }
 
-    mock_responses.post(f"{oauth.OAUTH_HOST}/oauth/token",
-                        status=200,
-                        payload=mock_refresh_response)
+    mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=200, payload=mock_refresh_response)
 
-    result = await oauth.refresh_access_token('valid_refresh_token')
+    result = await oauth.refresh_access_token_async('valid_refresh_token')
 
     assert result == mock_refresh_response
     assert oauth.access_token == 'new_access_token'
@@ -288,7 +287,7 @@ async def test_error_handling_scenarios(  # pylint: disable=redefined-outer-name
 
         # Use aioresponses to mock network error
         with aioresponses() as mock:
-            mock.post(f"{oauth.OAUTH_HOST}/oauth/token", exception=Exception("Network error"))
+            mock.post(f"{OAUTH_HOST}/oauth/token", exception=Exception("Network error"))
 
             if expected_behavior == 'raises_exception':
                 with pytest.raises(Exception):
@@ -398,7 +397,7 @@ async def test_malformed_api_responses(kick_integration_config):  # pylint: disa
 
     # Test malformed JSON response using aioresponses
     with aioresponses() as mock:
-        mock.post(f"{oauth.OAUTH_HOST}/oauth/token", status=200, body='invalid json content')
+        mock.post(f"{OAUTH_HOST}/oauth/token", status=200, body='invalid json content')
 
         with pytest.raises(Exception):
             await oauth.exchange_code_for_token('test_code')

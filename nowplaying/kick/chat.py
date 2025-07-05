@@ -15,12 +15,10 @@ from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=n
 
 import nowplaying.config
 import nowplaying.db
+import nowplaying.kick.constants
 import nowplaying.kick.oauth2
 import nowplaying.kick.utils
 import nowplaying.utils
-
-SPLITMESSAGETEXT = '****SPLITMESSSAGEHERE****'
-KICK_MESSAGE_LIMIT = 500  # Character limit for Kick messages
 
 
 class KickChat:  # pylint: disable=too-many-instance-attributes
@@ -42,14 +40,15 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         self.oauth: nowplaying.kick.oauth2.KickOAuth2 | None = None
         self.tasks: set[asyncio.Task[Any]] = set()
         self.starttime: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
-        self.timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=60)
+        self.timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(
+            total=nowplaying.kick.constants.KICK_CHAT_TIMEOUT)
         self.authenticated: bool = False
         self._watcher_lock: asyncio.Lock = asyncio.Lock()
         self._watcher_running: bool = False
         self.last_announced: dict[str, str | None] = {'artist': None, 'title': None}
 
         # Kick API endpoints
-        self.api_base: str = "https://api.kick.com/public/v1"
+        self.api_base: str = nowplaying.kick.constants.API_BASE
 
     async def _authenticate(self) -> bool:
         ''' authenticate with kick using stored tokens '''
@@ -87,7 +86,8 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         cleaned_message = ''.join(char for char in message if ord(char) >= 32 or char in '\n\r\t')
 
         # Use smart splitting instead of truncation
-        message_parts = nowplaying.utils.smart_split_message(cleaned_message, KICK_MESSAGE_LIMIT)
+        message_parts = nowplaying.utils.smart_split_message(
+            cleaned_message, nowplaying.kick.constants.KICK_MESSAGE_LIMIT)
 
         if len(message_parts) > 1:
             logging.info('Message split into %d parts for Kick limits', len(message_parts))
@@ -335,7 +335,7 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
         # Add startnewmessage support like Twitch
         if 'coverimageraw' in metadata:
             del metadata['coverimageraw']
-        metadata['startnewmessage'] = SPLITMESSAGETEXT
+        metadata['startnewmessage'] = nowplaying.kick.constants.SPLIT_MESSAGE_TEXT
         return metadata
 
 
@@ -369,7 +369,7 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
 
     async def _send_announcement_parts(self, announcement: str) -> int:
         ''' send announcement parts with rate limiting '''
-        messages = announcement.split(SPLITMESSAGETEXT)
+        messages = announcement.split(nowplaying.kick.constants.SPLIT_MESSAGE_TEXT)
         sent_parts = 0
 
         for i, message_part in enumerate(messages):

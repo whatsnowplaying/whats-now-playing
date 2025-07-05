@@ -10,7 +10,6 @@ import requests
 
 import nowplaying.kick.oauth2  # pylint: disable=import-error,no-name-in-module,no-member
 import nowplaying.kick.launch  # pylint: disable=import-error,no-name-in-module,no-member
-import nowplaying.kick.utils  # pylint: disable=import-error,no-name-in-module,no-member
 
 
 # Fixtures
@@ -82,17 +81,14 @@ def test_init_without_config():
         (500, {}, False),
     ])
 def test_validate_kick_token_sync_responses(  # pylint: disable=redefined-outer-name,unused-argument
-        kick_launch,
-        status_code,
-        response_data,
-        expected_result):
+        kick_launch, status_code, response_data, expected_result):
     """Test token validation with various HTTP responses."""
     mock_response = MagicMock()
     mock_response.status_code = status_code
     mock_response.json.return_value = response_data
 
     with patch('requests.post', return_value=mock_response):
-        result = nowplaying.kick.utils.qtsafe_validate_kick_token('test_token')  # pylint: disable=no-member
+        result = nowplaying.kick.oauth2.KickOAuth2.validate_token_sync('test_token')  # pylint: disable=no-member
 
         assert result == expected_result
 
@@ -103,7 +99,7 @@ def test_validate_kick_token_sync_responses(  # pylint: disable=redefined-outer-
 ])
 def test_validate_kick_token_sync_invalid_input(kick_launch, token, expected_result):  # pylint: disable=redefined-outer-name,unused-argument
     """Test token validation with invalid inputs."""
-    result = nowplaying.kick.utils.qtsafe_validate_kick_token(token)  # pylint: disable=no-member
+    result = nowplaying.kick.oauth2.KickOAuth2.validate_token_sync(token)  # pylint: disable=no-member
     assert result == expected_result
 
 
@@ -120,11 +116,11 @@ def test_validate_kick_token_sync_exceptions(kick_launch, exception_type, except
         mock_response.json.side_effect = exception_type(exception_msg)
 
         with patch('requests.post', return_value=mock_response):
-            result = nowplaying.kick.utils.qtsafe_validate_kick_token('test_token')  # pylint: disable=no-member
+            result = nowplaying.kick.oauth2.KickOAuth2.validate_token_sync('test_token')  # pylint: disable=no-member
     else:
         # Network error
         with patch('requests.post', side_effect=exception_type(exception_msg)):
-            result = nowplaying.kick.utils.qtsafe_validate_kick_token('test_token')  # pylint: disable=no-member
+            result = nowplaying.kick.oauth2.KickOAuth2.validate_token_sync('test_token')  # pylint: disable=no-member
 
     assert not result
 
@@ -223,13 +219,8 @@ async def test_watch_for_exit(kick_launch_with_stopevent):  # pylint: disable=re
 @patch('nowplaying.bootstrap.set_qt_names')
 @patch('nowplaying.bootstrap.setuplogging')
 @patch('nowplaying.config.ConfigFile')
-def test_start_function(   # pylint: disable=too-many-arguments
-        mock_config,
-        mock_logging,
-        mock_set_names,
-        mock_frozen,
-        mock_kick_launch,
-        testmode,
+def test_start_function(  # pylint: disable=too-many-arguments
+        mock_config, mock_logging, mock_set_names, mock_frozen, mock_kick_launch, testmode,
         expected_appname):
     """Test module start function with different testmode values."""
     mock_stopevent = MagicMock()
@@ -245,7 +236,7 @@ def test_start_function(   # pylint: disable=too-many-arguments
 
     # Call function
     if testmode:
-        nowplaying.kick.launch.start(   # pylint: disable=no-member
+        nowplaying.kick.launch.start(  # pylint: disable=no-member
             stopevent=mock_stopevent,
             bundledir=mock_bundledir,
             testmode=testmode)

@@ -57,7 +57,7 @@ async def async_validate_token(oauth_client: 'nowplaying.twitch.oauth2.TwitchOAu
                                token: str | None = None) -> str | None:
     ''' Async version of token validation using OAuth2 client '''
     try:
-        validation_response = await oauth_client.validate_token(token)
+        validation_response = await oauth_client.validate_token_async(token)
         if validation_response:
             return validation_response.get('login')
     except Exception as error:  #pylint: disable=broad-except
@@ -97,7 +97,7 @@ class TwitchLogin:
             if access_token:
                 # Validate current token
                 logging.debug('Validating stored access token')
-                validation = await oauth_client.validate_token(access_token)
+                validation = await oauth_client.validate_token_async(access_token)
                 if validation:
                     oauth_client.access_token = access_token
                     oauth_client.refresh_token = refresh_token
@@ -108,7 +108,7 @@ class TwitchLogin:
             if refresh_token:
                 # Try to refresh the token
                 logging.debug('Attempting to refresh token using refresh_token')
-                token_response = await oauth_client.refresh_access_token(refresh_token)
+                token_response = await oauth_client.refresh_access_token_async(refresh_token)
 
                 # Save the refreshed tokens
                 new_access_token = token_response.get('access_token')
