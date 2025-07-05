@@ -89,7 +89,7 @@ class MockSubprocessManager:
         self.started = False
         self.stopped = False
 
-    def start_all_processes(self):
+    def start_all_processes(self, startup_window=None):
         ''' Start all processes '''
         self.started = True
 

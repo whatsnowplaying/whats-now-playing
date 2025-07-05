@@ -17,6 +17,7 @@ import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
 import nowplaying.singleinstance
+import nowplaying.startup
 import nowplaying.systemtray
 import nowplaying.upgrade
 
@@ -62,12 +63,27 @@ def actualmain(beam=False):  # pragma: no cover
             if not nowplaying.bootstrap.verify_python_version():
                 sys.exit(1)
 
+            # Show startup window AFTER bootstrap but BEFORE heavy initialization
+            startup_window = nowplaying.startup.StartupWindow(bundledir=bundledir)
+            startup_window.show()
+            startup_window.update_progress("Initializing configuration...")
+            qapp.processEvents()  # Force UI update
+
             config = nowplaying.config.ConfigFile(logpath=logpath, bundledir=bundledir)
             logging.getLogger().setLevel(config.loglevel)
             logging.captureWarnings(True)
-            tray = nowplaying.systemtray.Tray(beam=beam)  # pylint: disable=unused-variable
+
+            startup_window.update_progress("Starting system tray...")
+            qapp.processEvents()
+
+            tray = nowplaying.systemtray.Tray(beam=beam, startup_window=startup_window)  # pylint: disable=unused-variable
             icon = QIcon(str(config.iconfile))
             qapp.setWindowIcon(icon)
+
+            # Close startup window if it still exists
+            if startup_window and startup_window.isVisible():
+                startup_window.complete_startup()
+
             exitval = qapp.exec_()
             logging.info('shutting main down v%s', config.version)
     except nowplaying.singleinstance.AlreadyRunningError:

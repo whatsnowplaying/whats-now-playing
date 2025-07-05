@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Twitch OAuth2 - Success</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .success { color: #00b900; }
+        .info { background: #f0f0ff; padding: 15px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #9146ff; }
+        .close-btn { background: #9146ff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="success">Twitch OAuth2 Authentication Successful!</h2>
+        <p>Your Twitch account has been successfully authenticated with What's Now Playing.</p>
+        <div class="info">
+            <p><strong>What's Next:</strong></p>
+            <ul>
+                <li>Your authentication tokens have been saved securely</li>
+                <li>You can now close this window</li>
+                <li>Return to the settings panel to complete your configuration</li>
+                <li>Save your settings to activate Twitch integration</li>
+            </ul>
+        </div>
+        <button class="close-btn" onclick="window.close()">Close Window</button>
+    </div>
+    <script>
+        // Auto-close after 10 seconds
+        setTimeout(function() {
+            window.close();
+        }, 10000);
+    </script>
+</body>
+</html>

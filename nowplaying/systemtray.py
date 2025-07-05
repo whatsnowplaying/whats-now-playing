@@ -12,93 +12,45 @@ from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=no-name-in-modu
 import nowplaying.apicache
 import nowplaying.config
 import nowplaying.db
+import nowplaying.oauth2
 import nowplaying.settingsui
 import nowplaying.subprocesses
 import nowplaying.twitch.chat
 import nowplaying.trackrequests
 
-LASTANNOUNCED: dict[str,str|None] = {'artist': None, 'title': None}
+LASTANNOUNCED: dict[str, str | None] = {'artist': None, 'title': None}
 
 
 class Tray:  # pylint: disable=too-many-instance-attributes
     ''' System Tray object '''
 
-    def __init__(self, beam: bool = False) -> None:  #pylint: disable=too-many-statements
-        self.config = nowplaying.config.ConfigFile(beam=beam)
-        self._configure_beamstatus(beam)
-        self.icon = QIcon(str(self.config.iconfile))
-        self.tray = QSystemTrayIcon()
-        self.tray.setIcon(self.icon)
-        self.tray.setToolTip("Now Playing ▶")
-        self.tray.setVisible(True)
-        self.menu = QMenu()
+    def __init__(self,
+                 beam: bool = False,
+                 startup_window: 'nowplaying.startup.StartupWindow | None' = None) -> None:
+        self.startup_window = startup_window
 
-        # create systemtray options and actions
-        self.aboutwindow = nowplaying.settingsui.load_widget_ui(self.config, 'about')
-        if not self.aboutwindow:
-            self._show_installation_error('about_ui.ui')
-            return
-        nowplaying.settingsui.about_version_text(self.config, self.aboutwindow)
-        self.about_action = QAction('About What\'s Now Playing')
-        self.menu.addAction(self.about_action)
-        self.about_action.setEnabled(True)
-        self.about_action.triggered.connect(self.aboutwindow.show)
-
-        # Vacuum databases on startup to reclaim space from previous session
-        self._vacuum_databases_on_startup()
-
-        self.subprocesses = nowplaying.subprocesses.SubprocessManager(self.config)
-        try:
-            self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self, beam=beam)
-        except (RuntimeError, OSError, ModuleNotFoundError, ImportError) as error:
-            logging.error("Failed to create settings window: %s", error, exc_info=True)
-            self._show_installation_error('settings UI files')
-            return
-
-        self.settings_action = QAction("Settings")
-        self.settings_action.triggered.connect(self.settingswindow.show)
-        self.menu.addAction(self.settings_action)
-        self.request_action = QAction('Requests')
-        self.request_action.triggered.connect(self._requestswindow)
-        self.request_action.setEnabled(True)
-        self.menu.addAction(self.request_action)
-        self.menu.addSeparator()
-
-        self.action_newestmode = QAction('Newest')
-        self.action_oldestmode = QAction('Oldest')
-        self.mixmode_actiongroup = QActionGroup(self.tray)
-        self._configure_newold_menu()
-        self.menu.addSeparator()
-
-        self.action_pause = QAction()
-        self._configure_pause_menu()
-        self.menu.addSeparator()
-
-        self.action_exit = QAction("Exit")
-        self.action_exit.triggered.connect(self.cleanquit)
-        self.menu.addAction(self.action_exit)
-
-        # add menu to the systemtray UI
-        self.tray.setContextMenu(self.menu)
-        self.tray.show()
-
-        self.config.get()
-        self.installer()
-        self.action_pause.setText('Pause')
-        self.action_pause.setEnabled(True)
-        self.fix_mixmode_menu()
-
-        self.settingswindow.post_tray_init()
-        self.subprocesses.start_all_processes()
-
-        # Start the track notify handler
-        metadb = nowplaying.db.MetadataDB()
-        self.watcher = QFileSystemWatcher()
-        self.watcher.addPath(str(metadb.databasefile))
-        self.watcher.fileChanged.connect(self.tracknotify)
-
+        # Initialize attributes that will be set later
+        self.watcher = None
         self.requestswindow = None
-        self._configure_twitchrequests()
+
+        # Core initialization
+        self._initialize_core_components(beam)
+
+        # UI setup
+        self._setup_about_window()
+        if not self.aboutwindow:  # Early return if about window failed
+            return
+
+        # System setup
+        self._setup_database_and_processes()
+
+        # Settings and finalization
+        self._setup_settings_window(beam)
+        if not self.settingswindow:  # Early return if settings window failed
+            return
+
+        self._setup_tray_menu()
+        self._finalize_initialization()
 
     def _configure_beamstatus(self, beam: bool) -> None:
         self.config.cparser.setValue('control/beam', beam)
@@ -107,6 +59,136 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.config.cparser.remove('control/beamserverport')
         self.config.cparser.remove('control/beamservername')
         self.config.cparser.remove('control/beamserverip')
+
+    def _initialize_core_components(self, beam: bool) -> None:
+        """Initialize core configuration and tray components."""
+        self._update_startup_progress("Loading configuration...")
+
+        self.config = nowplaying.config.ConfigFile(beam=beam)
+        self._configure_beamstatus(beam)
+
+        # Clean up any stray temporary OAuth2 credentials from previous sessions
+        self._update_startup_progress("Cleaning OAuth2 credentials...")
+        nowplaying.oauth2.OAuth2Client.cleanup_stray_temp_credentials(self.config)
+        self.icon = QIcon(str(self.config.iconfile))
+        self.tray = QSystemTrayIcon()
+        self.tray.setIcon(self.icon)
+        self.tray.setToolTip("Now Playing ▶")
+        self.tray.setVisible(True)
+        self.menu = QMenu()
+
+    def _setup_about_window(self) -> None:
+        """Setup the about window and action."""
+        self._update_startup_progress("Loading about window...")
+
+        self.aboutwindow = nowplaying.settingsui.load_widget_ui(self.config, 'about')
+        if not self.aboutwindow:
+            self._show_installation_error('about_ui.ui')
+            return
+
+        nowplaying.settingsui.about_version_text(self.config, self.aboutwindow)
+        self.about_action = QAction('About What\'s Now Playing')
+        self.menu.addAction(self.about_action)
+        self.about_action.setEnabled(True)
+        self.about_action.triggered.connect(self.aboutwindow.show)
+
+    def _setup_database_and_processes(self) -> None:
+        """Setup database optimization and process manager."""
+        self._update_startup_progress("Optimizing database...")
+        self._vacuum_databases_on_startup()
+
+        self._update_startup_progress("Initializing process manager...")
+        self.subprocesses = nowplaying.subprocesses.SubprocessManager(self.config)
+
+    def _setup_settings_window(self, beam: bool) -> None:
+        """Setup the settings window."""
+        self._update_startup_progress("Loading settings interface...")
+
+        try:
+            self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self, beam=beam)
+        except (RuntimeError, OSError, ImportError) as error:
+            logging.error("Failed to create settings window: %s", error, exc_info=True)
+            self._show_installation_error('settings UI files')
+            self.settingswindow = None
+
+    def _setup_tray_menu(self) -> None:
+        """Setup all tray menu actions and structure."""
+        # Settings and Requests actions
+        self.settings_action = QAction("Settings")
+        self.settings_action.triggered.connect(self.settingswindow.show)
+        self.menu.addAction(self.settings_action)
+
+        self.request_action = QAction('Requests')
+        self.request_action.triggered.connect(self._requestswindow)
+        self.request_action.setEnabled(True)
+        self.menu.addAction(self.request_action)
+        self.menu.addSeparator()
+
+        # Mix mode actions
+        self.action_newestmode = QAction('Newest')
+        self.action_oldestmode = QAction('Oldest')
+        self.mixmode_actiongroup = QActionGroup(self.tray)
+        self._configure_newold_menu()
+        self.menu.addSeparator()
+
+        # Pause and Exit actions
+        self.action_pause = QAction()
+        self._configure_pause_menu()
+        self.menu.addSeparator()
+
+        self.action_exit = QAction("Exit")
+        self.action_exit.triggered.connect(self.cleanquit)
+        self.menu.addAction(self.action_exit)
+
+        # Finalize menu
+        self.tray.setContextMenu(self.menu)
+        self.tray.show()
+
+    def _finalize_initialization(self) -> None:
+        """Complete the initialization process."""
+        self.config.get()
+
+        # Handle installer dialogs
+        self._handle_installer_dialogs()
+
+        # Final UI setup
+        self._update_startup_progress("Finalizing setup...")
+        self.action_pause.setText('Pause')
+        self.action_pause.setEnabled(True)
+        self.fix_mixmode_menu()
+
+        # Settings and process startup
+        self._update_startup_progress("Initializing settings...")
+        self.settingswindow.post_tray_init()
+
+        self._update_startup_progress("Starting processes...")
+        self.subprocesses.start_all_processes(startup_window=self.startup_window)
+
+        # Setup file watcher and requests
+        self._setup_file_watcher()
+        self.requestswindow = None
+        self._configure_twitchrequests()
+
+    def _handle_installer_dialogs(self) -> None:
+        """Handle installer dialogs that may require window hiding."""
+        if self.startup_window:
+            self.startup_window.hide()
+        self.installer()
+        if self.startup_window:
+            self.startup_window.show()
+
+    def _setup_file_watcher(self) -> None:
+        """Setup file system watcher for track notifications."""
+        metadb = nowplaying.db.MetadataDB()
+        self.watcher = QFileSystemWatcher()
+        self.watcher.addPath(str(metadb.databasefile))
+        self.watcher.fileChanged.connect(self.tracknotify)
+
+    def _update_startup_progress(self, message: str) -> None:
+        """Update startup window progress if available."""
+        if self.startup_window:
+            self.startup_window.update_progress(message)
+            QApplication.processEvents()
 
     def _configure_twitchrequests(self) -> None:
         self.requestswindow = nowplaying.trackrequests.Requests(config=self.config)
@@ -275,6 +357,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.settings_action.setEnabled(False)
 
         self.subprocesses.stop_all_processes()
+
+        # Clean up any stray temporary OAuth2 credentials before shutdown
+        nowplaying.oauth2.OAuth2Client.cleanup_stray_temp_credentials(self.config)
 
         # Database vacuum operations moved to startup for better performance
 

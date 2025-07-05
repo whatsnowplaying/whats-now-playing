@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Twitch Chat OAuth2 - Success</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .success { color: #00b900; }
+        .info { background: #f0f0ff; padding: 15px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #9146ff; }
+        .chat-info { background: #fff0f5; padding: 15px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #ff6b35; }
+        .close-btn { background: #9146ff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="success">Twitch Chat Bot Authentication Successful!</h2>
+        <p>Your separate chat bot account has been successfully authenticated with What's Now Playing.</p>
+        <div class="chat-info">
+            <p><strong>Chat Bot Configuration:</strong></p>
+            <ul>
+                <li>This token is specifically for chat messages and commands</li>
+                <li>Your bot account can now send messages to your configured channel</li>
+                <li>This is separate from your broadcaster account used for channel points</li>
+            </ul>
+        </div>
+        <div class="info">
+            <p><strong>What's Next:</strong></p>
+            <ul>
+                <li>Your chat bot authentication token has been saved securely</li>
+                <li>You can now close this window</li>
+                <li>Return to the settings panel to complete your configuration</li>
+                <li>Save your settings to activate chat bot functionality</li>
+                <li>Consider also setting up broadcaster authentication if you haven't already</li>
+            </ul>
+        </div>
+        <button class="close-btn" onclick="window.close()">Close Window</button>
+    </div>
+    <script>
+        // Auto-close after 10 seconds
+        setTimeout(function() {
+            window.close();
+        }, 10000);
+    </script>
+</body>
+</html>

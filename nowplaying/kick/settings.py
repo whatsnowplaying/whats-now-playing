@@ -46,7 +46,8 @@ class KickSettings:
         # Initialize OAuth2 handler
         self.oauth = nowplaying.kick.oauth2.KickOAuth2(config)
         self.update_oauth_status()
-        self.start_status_timer()
+        # Timer disabled to prevent blocking main thread
+        # self.start_status_timer()
 
     @staticmethod
     def save(config: nowplaying.config.ConfigFile, widget: Any, subprocesses: Any) -> None:
@@ -64,8 +65,7 @@ class KickSettings:
         # Note: redirect URI is not saved - it's always generated from webserver port
 
         # If critical settings changed, restart kick bot and clear tokens
-        if (oldchannel != newchannel) or (oldclientid != newclientid) or (
-                oldsecret != newsecret):
+        if (oldchannel != newchannel) or (oldclientid != newclientid) or (oldsecret != newsecret):
             # Stop kick bot if running
             subprocesses.stop_kickbot()
 
@@ -105,7 +105,7 @@ class KickSettings:
         if self.widget:
             self.oauth.client_id = self.widget.clientid_lineedit.text().strip()
             self.oauth.client_secret = self.widget.secret_lineedit.text().strip()
-            # Redirect URI is always set from webserver port, not from form
+            # Redirect URI is set dynamically by webserver, not stored here
             self.oauth.redirect_uri = self.widget.redirecturi_label.text().strip()
 
         # Validate required fields
@@ -175,14 +175,13 @@ class KickSettings:
 
         if access_token:
             # Validate token synchronously like Twitch does
-            if nowplaying.kick.utils.qtsafe_validate_kick_token(access_token):
+            if nowplaying.kick.oauth2.KickOAuth2.validate_token_sync(access_token):
                 self.widget.oauth_status_label.setText('Authenticated')
                 self.widget.authenticate_button.setText('Re-authenticate')
             elif refresh_token:
                 self.widget.oauth_status_label.setText('Refreshing expired token...')
             else:
-                self.widget.oauth_status_label.setText(
-                    'Token expired - re-authentication needed')
+                self.widget.oauth_status_label.setText('Token expired - re-authentication needed')
                 self.widget.authenticate_button.setText('Authenticate')
         else:
             self.widget.oauth_status_label.setText('Not authenticated')

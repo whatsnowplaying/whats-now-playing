@@ -72,6 +72,28 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.settingsclasses['twitchchat'].update_twitchbot_commands(self.config)
             self.settingsclasses['kickchat'].update_kickbot_commands(self.config)
 
+            # Validate stored OAuth2 tokens and update UI status
+            self._validate_all_oauth_tokens()
+
+    def _validate_all_oauth_tokens(self):
+        ''' Validate all stored OAuth2 tokens and update UI status '''
+        try:
+            # Validate Twitch OAuth2 tokens (broadcaster + chat)
+            if 'twitch' in self.settingsclasses:
+                twitch_settings = self.settingsclasses['twitch']
+                if hasattr(twitch_settings, 'update_oauth_status'):
+                    twitch_settings.update_oauth_status()
+
+            # Validate Kick OAuth2 tokens
+            if 'kick' in self.settingsclasses:
+                kick_settings = self.settingsclasses['kick']
+                if hasattr(kick_settings, 'update_oauth_status'):
+                    kick_settings.update_oauth_status()
+
+            logging.debug('OAuth2 token validation completed during settings UI initialization')
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error('Error during OAuth2 token validation: %s', error)
+
     def _setup_widgets(self, uiname, displayname=None):
         self.widgets[uiname] = load_widget_ui(self.config, f'{uiname}')
         if not self.widgets[uiname]:
@@ -869,29 +891,22 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             suggested_name = f"nowplaying_config_{self.config.version.replace('.', '_')}.json"
             default_dir = QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
 
-            file_path, _ = QFileDialog.getSaveFileName(
-                self.qtui,
-                "Export Configuration",
-                os.path.join(default_dir, suggested_name),
-                "JSON Files (*.json);;All Files (*)"
-            )
+            file_path, _ = QFileDialog.getSaveFileName(self.qtui, "Export Configuration",
+                                                       os.path.join(default_dir, suggested_name),
+                                                       "JSON Files (*.json);;All Files (*)")
 
             if file_path:
                 export_path = pathlib.Path(file_path)
                 if self.config.export_config(export_path):
                     QMessageBox.information(
-                        self.qtui,
-                        "Export Successful",
+                        self.qtui, "Export Successful",
                         f"Configuration exported to:\n{export_path}\n\n"
                         "⚠️ WARNING: This file contains sensitive data including API keys "
-                        "and passwords. Store it securely and do not share it."
-                    )
+                        "and passwords. Store it securely and do not share it.")
                 else:
                     QMessageBox.critical(
-                        self.qtui,
-                        "Export Failed",
-                        "Failed to export configuration. Check the logs for details."
-                    )
+                        self.qtui, "Export Failed",
+                        "Failed to export configuration. Check the logs for details.")
         except (OSError, PermissionError, FileNotFoundError) as error:
             logging.error("Export configuration error: %s", error)
             QMessageBox.critical(self.qtui, "Export Error", f"An error occurred: {error}")
@@ -902,13 +917,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         try:
             # Confirm with user since this overwrites settings
             reply = QMessageBox.question(
-                self.qtui,
-                "Import Configuration",
+                self.qtui, "Import Configuration",
                 "This will overwrite your current settings with those from the imported file.\n\n"
-                "Are you sure you want to continue?",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
-            )
+                "Are you sure you want to continue?", QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No)
 
             if reply != QMessageBox.Yes:
                 return
@@ -916,30 +928,23 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             # Get file path from user
             default_dir = QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
 
-            file_path, _ = QFileDialog.getOpenFileName(
-                self.qtui,
-                "Import Configuration",
-                default_dir,
-                "JSON Files (*.json);;All Files (*)"
-            )
+            file_path, _ = QFileDialog.getOpenFileName(self.qtui, "Import Configuration",
+                                                       default_dir,
+                                                       "JSON Files (*.json);;All Files (*)")
 
             if file_path:
                 import_path = pathlib.Path(file_path)
                 if self.config.import_config(import_path):
                     QMessageBox.information(
-                        self.qtui,
-                        "Import Successful",
+                        self.qtui, "Import Successful",
                         f"Configuration imported from:\n{import_path}\n\n"
-                        "The application may need to be restarted for all changes to take effect."
-                    )
+                        "The application may need to be restarted for all changes to take effect.")
                     # Refresh the UI to show imported settings
                     self.load_ui()
                 else:
                     QMessageBox.critical(
-                        self.qtui,
-                        "Import Failed",
-                        "Failed to import configuration. Check the logs for details."
-                    )
+                        self.qtui, "Import Failed",
+                        "Failed to import configuration. Check the logs for details.")
         except (OSError, PermissionError, FileNotFoundError, json.JSONDecodeError) as error:
             logging.error("Import configuration error: %s", error)
             QMessageBox.critical(self.qtui, "Import Error", f"An error occurred: {error}")
