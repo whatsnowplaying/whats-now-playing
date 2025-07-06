@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ''' test webserver OAuth and security functionality '''
 
+import base64
 import contextlib
 import logging
 import os
@@ -17,6 +18,7 @@ import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.config  # pylint: disable=import-error
 import nowplaying.db  # pylint: disable=import-error
 import nowplaying.subprocesses  # pylint: disable=import-error
+from nowplaying.oauth2 import OAuth2Client
 
 
 def is_port_in_use(port: int) -> bool:
@@ -52,7 +54,7 @@ def shared_webserver_config(pytestconfig):  # pylint: disable=redefined-outer-na
                 config.cparser.setValue('weboutput/httpenabled', 'true')
                 config.cparser.sync()
 
-                metadb = nowplaying.db.MetadataDB(initialize=True) # pylint: disable=no-member
+                metadb = nowplaying.db.MetadataDB(initialize=True)  # pylint: disable=no-member
                 logging.debug("shared webserver databasefile = %s", metadb.databasefile)
 
                 port = config.cparser.value('weboutput/httpport', type=int)
@@ -87,9 +89,8 @@ def reset_oauth_state(shared_webserver_config):  # pylint: disable=redefined-out
     config.cparser.setValue('weboutput/httpport', port)  # Restore the actual port
     config.cparser.sync()
 
-    # Clear any kick OAuth state
-    config.cparser.remove('kick/temp_state')
-    config.cparser.remove('kick/temp_code_verifier')
+    # Clear any kick OAuth state - use OAuth2Client cleanup for session-based params
+    OAuth2Client.cleanup_stray_temp_credentials(config)
     config.cparser.remove('kick/clientid')
     config.cparser.remove('kick/redirecturi')
     config.cparser.sync()
@@ -99,22 +100,26 @@ def reset_oauth_state(shared_webserver_config):  # pylint: disable=redefined-out
 
 # Kick OAuth CSRF protection tests
 
+
 def test_kickredirect_valid_state(reset_oauth_state):  # pylint: disable=redefined-outer-name
     """Test OAuth callback with valid state parameter"""
     config, metadb = reset_oauth_state  # pylint: disable=unused-variable
 
-    # Set up valid OAuth session state
-    valid_state = 'valid_state_12345678'
-    config.cparser.setValue('kick/temp_state', valid_state)
-    config.cparser.setValue('kick/temp_code_verifier', 'test_verifier')
+    # Set up valid OAuth session state using new session-based format
+    session_id = 'testsession123'
+    state_data = f"{session_id}:randomstate456"
+    encoded_state = base64.urlsafe_b64encode(state_data.encode('utf-8')).decode('utf-8').rstrip('=')
+
+    config.cparser.setValue(f'kick/temp_state_{session_id}', encoded_state)
+    config.cparser.setValue(f'kick/temp_code_verifier_{session_id}', 'test_verifier')
     config.cparser.setValue('kick/clientid', 'test_client')
     config.cparser.setValue('kick/redirecturi', 'http://localhost:8899/kickredirect')
     config.cparser.sync()
 
     # Test valid state parameter - should attempt token exchange (will fail but that's expected)
     port = config.cparser.value('weboutput/httpport', type=int)
-    req = requests.get(
-        f'http://localhost:{port}/kickredirect?code=test_code&state={valid_state}', timeout=5)
+    req = requests.get(f'http://localhost:{port}/kickredirect?code=test_code&state={encoded_state}',
+                       timeout=5)
 
     # Should get HTML response (not error page)
     assert req.status_code == 200
@@ -127,59 +132,70 @@ def test_kickredirect_invalid_state_csrf_attack(reset_oauth_state):  # pylint: d
     """Test OAuth callback with invalid state parameter (CSRF attack simulation)"""
     config, metadb = reset_oauth_state  # pylint: disable=unused-variable
 
-    # Set up valid OAuth session state
-    valid_state = 'valid_state_12345678'
-    malicious_state = 'malicious_state_attacker'
-    config.cparser.setValue('kick/temp_state', valid_state)
-    config.cparser.setValue('kick/temp_code_verifier', 'test_verifier')
+    # Set up valid OAuth session state using new session-based format
+    session_id = 'testsession123'
+    state_data = f"{session_id}:randomstate456"
+    valid_encoded_state = base64.urlsafe_b64encode(
+        state_data.encode('utf-8')).decode('utf-8').rstrip('=')
+
+    # Create malicious state with different content
+    malicious_state_data = "attackersession:maliciousdata"
+    malicious_encoded_state = base64.urlsafe_b64encode(
+        malicious_state_data.encode('utf-8')).decode('utf-8').rstrip('=')
+
+    config.cparser.setValue(f'kick/temp_state_{session_id}', valid_encoded_state)
+    config.cparser.setValue(f'kick/temp_code_verifier_{session_id}', 'test_verifier')
     config.cparser.sync()
 
     # Test invalid state parameter (CSRF attack)
     port = config.cparser.value('weboutput/httpport', type=int)
     req = requests.get(
-        f'http://localhost:{port}/kickredirect?code=test_code&state={malicious_state}',
+        f'http://localhost:{port}/kickredirect?code=test_code&state={malicious_encoded_state}',
         timeout=5)
 
-    # Should return security error page
+    # Should return security error page (invalid session for non-existent session ID)
     assert req.status_code == 200
     assert 'text/html' in req.headers.get('content-type', '')
-    assert 'OAuth2 State Mismatch' in req.text
-    assert 'Security Warning' in req.text
-    assert 'CSRF' in req.text
+    assert 'Invalid OAuth2 Session' in req.text
+    assert 'authentication session has expired' in req.text
 
 
 def test_kickredirect_missing_state_parameter(reset_oauth_state):  # pylint: disable=redefined-outer-name
     """Test OAuth callback with missing state parameter"""
     config, metadb = reset_oauth_state  # pylint: disable=unused-variable
 
-    # Set up valid OAuth session state
-    valid_state = 'valid_state_12345678'
-    config.cparser.setValue('kick/temp_state', valid_state)
-    config.cparser.setValue('kick/temp_code_verifier', 'test_verifier')
+    # Set up valid OAuth session state using new session-based format
+    session_id = 'testsession123'
+    state_data = f"{session_id}:randomstate456"
+    valid_encoded_state = base64.urlsafe_b64encode(
+        state_data.encode('utf-8')).decode('utf-8').rstrip('=')
+
+    config.cparser.setValue(f'kick/temp_state_{session_id}', valid_encoded_state)
+    config.cparser.setValue(f'kick/temp_code_verifier_{session_id}', 'test_verifier')
     config.cparser.sync()
 
     # Test missing state parameter
     port = config.cparser.value('weboutput/httpport', type=int)
     req = requests.get(f'http://localhost:{port}/kickredirect?code=test_code', timeout=5)
 
-    # Should return security error page
+    # Should return security error page (missing state parameter)
     assert req.status_code == 200
     assert 'text/html' in req.headers.get('content-type', '')
-    assert 'OAuth2 State Mismatch' in req.text
-    assert 'Security Warning' in req.text
+    assert 'Invalid OAuth2 Session' in req.text
+    assert 'authentication session has expired' in req.text
 
 
 def test_kickredirect_no_stored_state_expired_session(reset_oauth_state):  # pylint: disable=redefined-outer-name
     """Test OAuth callback when no state is stored (expired session)"""
     config, metadb = reset_oauth_state  # pylint: disable=unused-variable
 
-    # Ensure no stored state (simulating expired session)
-    config.cparser.remove('kick/temp_state')
-    config.cparser.sync()
+    # Create state with session ID that won't have stored PKCE params (simulating expired session)
+    state_data = "nonexistentsession:randomstate789"
+    encoded_state = base64.urlsafe_b64encode(state_data.encode('utf-8')).decode('utf-8').rstrip('=')
 
     # Test callback with state but no stored session
     port = config.cparser.value('weboutput/httpport', type=int)
-    req = requests.get(f'http://localhost:{port}/kickredirect?code=test_code&state=some_state',
+    req = requests.get(f'http://localhost:{port}/kickredirect?code=test_code&state={encoded_state}',
                        timeout=5)
 
     # Should return invalid session error
@@ -193,14 +209,18 @@ def test_kickredirect_missing_authorization_code(reset_oauth_state):  # pylint: 
     """Test OAuth callback with missing authorization code"""
     config, metadb = reset_oauth_state  # pylint: disable=unused-variable
 
-    # Set up valid OAuth session state
-    valid_state = 'valid_state_12345678'
-    config.cparser.setValue('kick/temp_state', valid_state)
+    # Set up valid OAuth session state using new session-based format
+    session_id = 'testsession123'
+    state_data = f"{session_id}:randomstate456"
+    encoded_state = base64.urlsafe_b64encode(state_data.encode('utf-8')).decode('utf-8').rstrip('=')
+
+    config.cparser.setValue(f'kick/temp_state_{session_id}', encoded_state)
+    config.cparser.setValue(f'kick/temp_code_verifier_{session_id}', 'test_verifier')
     config.cparser.sync()
 
     # Test missing authorization code
     port = config.cparser.value('weboutput/httpport', type=int)
-    req = requests.get(f'http://localhost:{port}/kickredirect?state={valid_state}', timeout=5)
+    req = requests.get(f'http://localhost:{port}/kickredirect?state={encoded_state}', timeout=5)
 
     # Should return no authorization code error
     assert req.status_code == 200

@@ -1,6 +1,24 @@
 
 # Changelog
 
+## Version 5.0.0 - in-progress
+
+* Twitch:
+  * Replaced PubSub with EventSub WebSocket for Twitch Redemptions
+  * User friendly ways to authenticate the app
+
+* Major New Features:
+  * New startup window system - modal progress tracking with failsafe timers
+
+* Important Upgrades
+  * Completely revamped documentation website to make it easy to pick your version
+
+* Important Internal Changes
+  * Windows build server is now running on Server 2022
+  * Python 3.11 is now the base version
+  * WinMedia is now using the winrt set of modules
+  * Python types are slowly getting added
+
 ## Version 4.2.0 - 2025-06-30
 
 * Early Access to Kick.com Streaming Support

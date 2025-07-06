@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""Unit tests for Kick OAuth2 functionality - REFACTORED VERSION."""
+"""Unit tests for Twitch OAuth2 functionality - following Kick OAuth2 test pattern."""
 
 import asyncio
 import base64
 import hashlib
-import re
 from unittest.mock import patch
 
 import pytest
 from aioresponses import aioresponses
 
-import nowplaying.kick.oauth2  # pylint: disable=import-error,no-name-in-module
-from nowplaying.kick.constants import OAUTH_HOST  # pylint: disable=import-error,no-name-in-module
+import nowplaying.twitch.oauth2  # pylint: disable=import-error,no-name-in-module
+from nowplaying.twitch.constants import API_HOST, OAUTH_HOST
 
 # pylint: disable=redefined-outer-name, too-many-arguments, unused-argument
 
@@ -21,11 +20,12 @@ from nowplaying.kick.constants import OAUTH_HOST  # pylint: disable=import-error
 def configured_oauth(bootstrap):  # pylint: disable=redefined-outer-name
     """Create OAuth2 instance with test configuration."""
     config = bootstrap
-    config.cparser.setValue('kick/clientid', 'test_client_id')
-    config.cparser.setValue('kick/secret', 'test_secret')
-    oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
-    # Set redirect URI dynamically (as done in real usage)
-    oauth.redirect_uri = 'http://localhost:8080/callback'
+    config.cparser.setValue('twitchbot/clientid', 'test_client_id')
+    config.cparser.setValue('twitchbot/secret', 'test_secret')
+    # Redirect URI is no longer stored in config - it's set dynamically by callers
+    oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)  # pylint: disable=no-member
+    # Set redirect_uri directly on the OAuth object for tests that need it
+    oauth.redirect_uri = 'http://localhost:8899/twitchredirect'
     return oauth
 
 
@@ -45,13 +45,31 @@ def mock_responses():
 
 
 # Basic OAuth2 functionality tests
+def test_init_basic(bootstrap):  # pylint: disable=redefined-outer-name
+    """Test basic OAuth2 initialization without preset redirect URI."""
+    config = bootstrap
+    config.cparser.setValue('twitchbot/clientid', 'test_client_id')
+    config.cparser.setValue('twitchbot/secret', 'test_secret')
+
+    oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)  # pylint: disable=no-member
+
+    assert oauth.client_id == 'test_client_id'
+    assert oauth.client_secret == 'test_secret'  # pragma: allowlist secret
+    # Redirect URI is dynamically set by calling code, not stored in config
+    assert oauth.redirect_uri is None
+    assert oauth.code_verifier is None
+    assert oauth.code_challenge is None
+    assert oauth.state is None
+
+
 def test_init_with_config(configured_oauth):  # pylint: disable=redefined-outer-name
-    """Test OAuth2 initialization with config."""
+    """Test OAuth2 initialization with config and test fixture setup."""
     oauth = configured_oauth
 
     assert oauth.client_id == 'test_client_id'
     assert oauth.client_secret == 'test_secret'  # pragma: allowlist secret
-    assert oauth.redirect_uri == 'http://localhost:8080/callback'
+    # Redirect URI is set by the fixture for tests that need it
+    assert oauth.redirect_uri == 'http://localhost:8899/twitchredirect'
     assert oauth.code_verifier is None
     assert oauth.code_challenge is None
     assert oauth.state is None
@@ -59,10 +77,12 @@ def test_init_with_config(configured_oauth):  # pylint: disable=redefined-outer-
 
 def test_init_without_config():
     """Test OAuth2 initialization without config."""
-    oauth = nowplaying.kick.oauth2.KickOAuth2()  # pylint: disable=no-member
+    oauth = nowplaying.twitch.oauth2.TwitchOAuth2()  # pylint: disable=no-member
 
     assert oauth.config is not None
     assert hasattr(oauth.config, 'cparser')  # Check it's a config-like object
+    # Redirect URI should be None when no config is provided
+    assert oauth.redirect_uri is None
 
 
 def test_generate_pkce_parameters(configured_oauth):  # pylint: disable=redefined-outer-name
@@ -91,34 +111,33 @@ def test_generate_pkce_parameters(configured_oauth):  # pylint: disable=redefine
 @pytest.mark.parametrize(
     "client_id,redirect_uri,expected_error",
     [
-        (None, 'http://localhost:8080', 'Client ID is required'),
-        ('', 'http://localhost:8080', 'Client ID is required'),  # Empty string
-        ('   ', 'http://localhost:8080', 'Client ID is required'),  # Whitespace only
-        ('client with spaces', 'http://localhost:8080',
+        (None, 'http://localhost:8899', 'Client ID is required'),
+        ('', 'http://localhost:8899', 'Client ID is required'),  # Empty string
+        ('   ', 'http://localhost:8899', 'Client ID is required'),  # Whitespace only
+        ('client with spaces', 'http://localhost:8899',
          'Client ID contains invalid characters'),  # Spaces
-        ('client@invalid', 'http://localhost:8080',
+        ('client@invalid', 'http://localhost:8899',
          'Client ID contains invalid characters'),  # Special chars
-        ('client\nwith\nnewlines', 'http://localhost:8080',
+        ('client\nwith\nnewlines', 'http://localhost:8899',
          'Client ID contains invalid characters'),  # Newlines
-        ('client\twith\ttabs', 'http://localhost:8080',
+        ('client\twith\ttabs', 'http://localhost:8899',
          'Client ID contains invalid characters'),  # Tabs
-        ('client#with$symbols%', 'http://localhost:8080',
+        ('client#with$symbols%', 'http://localhost:8899',
          'Client ID contains invalid characters'),  # Various symbols
         ('test_client', None, 'Redirect URI is required'),
-        ('test_client', 'http://localhost:8080', None),  # Success
-        ('  valid_client  ', 'http://localhost:8080', None),  # Success with trimming
+        ('test_client', 'http://localhost:8899', None),  # Success
+        ('  valid_client  ', 'http://localhost:8899', None),  # Success with trimming
     ])
 def test_get_authorization_url_scenarios(  # pylint: disable=redefined-outer-name
         bootstrap, client_id, redirect_uri, expected_error):
     """Test authorization URL generation with various configurations."""
     config = bootstrap
     if client_id:
-        config.cparser.setValue('kick/clientid', client_id)
-    if redirect_uri:
-        config.cparser.setValue('kick/redirecturi', redirect_uri)
+        config.cparser.setValue('twitchbot/clientid', client_id)
 
-    oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
-    # Set redirect URI dynamically (as done in real usage)
+    oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)  # pylint: disable=no-member
+
+    # Set redirect_uri directly on the object (no longer stored in config)
     if redirect_uri:
         oauth.redirect_uri = redirect_uri
 
@@ -128,15 +147,16 @@ def test_get_authorization_url_scenarios(  # pylint: disable=redefined-outer-nam
     else:
         auth_url = oauth.get_authorization_url()
 
-        assert auth_url.startswith('https://id.kick.com/oauth/authorize?')
+        assert auth_url.startswith('https://id.twitch.tv/oauth2/authorize?')
         # Use trimmed client_id for URL validation since validation normalizes it
         expected_client_id = client_id.strip() if client_id else client_id
         assert f'client_id={expected_client_id}' in auth_url
         assert 'response_type=code' in auth_url
         encoded_uri = redirect_uri.replace(":", "%3A").replace("/", "%2F")
         assert f'redirect_uri={encoded_uri}' in auth_url
-        assert 'scope=user%3Aread+chat%3Awrite+events%3Asubscribe' in auth_url
+        assert 'scope=chat%3Aread+chat%3Aedit' in auth_url
         assert 'code_challenge_method=S256' in auth_url
+        assert 'force_verify=false' in auth_url
         assert oauth.code_verifier is not None
         assert oauth.state is not None
 
@@ -188,7 +208,7 @@ async def test_exchange_code_for_token_scenarios(  # pylint: disable=redefined-o
 
     if should_succeed:
         # Success case - setup mock and verify result
-        mock_responses.post(f"{OAUTH_HOST}/oauth/token",
+        mock_responses.post(f"{OAUTH_HOST}/oauth2/token",
                             status=response_status,
                             payload=response_data)
 
@@ -199,7 +219,7 @@ async def test_exchange_code_for_token_scenarios(  # pylint: disable=redefined-o
 
     elif response_status != 200:
         # HTTP error case
-        mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=response_status, body='Error')
+        mock_responses.post(f"{OAUTH_HOST}/oauth2/token", status=response_status, body='Error')
 
         with pytest.raises(Exception):
             await oauth.exchange_code_for_token('test_code', test_state)
@@ -231,13 +251,13 @@ async def test_refresh_access_token_scenarios(bootstrap, configured_oauth, mock_
     oauth = configured_oauth
 
     if has_refresh_token:
-        oauth.config.cparser.setValue('kick/refreshtoken', 'test_refresh_token')
+        oauth.config.cparser.setValue('twitchbot/refreshtoken', 'test_refresh_token')
         refresh_token = 'test_refresh_token'
     else:
         refresh_token = None
 
     if should_succeed:
-        mock_responses.post(f"{OAUTH_HOST}/oauth/token",
+        mock_responses.post(f"{OAUTH_HOST}/oauth2/token",
                             status=response_status,
                             payload=response_data)
 
@@ -248,7 +268,7 @@ async def test_refresh_access_token_scenarios(bootstrap, configured_oauth, mock_
     else:
         if has_refresh_token:
             # HTTP error case
-            mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=response_status, body='Error')
+            mock_responses.post(f"{OAUTH_HOST}/oauth2/token", status=response_status, body='Error')
 
         with pytest.raises((ValueError, Exception)):
             await oauth.refresh_access_token_async(refresh_token)
@@ -259,13 +279,11 @@ async def test_refresh_access_token_scenarios(bootstrap, configured_oauth, mock_
     "response_status,response_data,expected_result",
     [
         (200, {
-            'data': {
-                'active': True,
-                'client_id': 'test_client'
-            }
+            'client_id': 'test_client',
+            'login': 'test_user'
         }, {
-            'active': True,
-            'client_id': 'test_client'
+            'client_id': 'test_client',
+            'login': 'test_user'
         }),
         (401, {}, None),  # Unauthorized
         (500, {}, None),  # Server error
@@ -280,14 +298,49 @@ async def test_validate_token_scenarios(
     """Test token validation with various responses."""
     oauth = configured_oauth
 
-    # Use the correct introspect endpoint and POST method
-    introspect_url = 'https://api.kick.com/public/v1/token/introspect'
     if response_status == 200:
-        mock_responses.post(introspect_url, status=response_status, payload=response_data)
+        mock_responses.get(f"{OAUTH_HOST}/oauth2/validate",
+                           status=response_status,
+                           payload=response_data)
     else:
-        mock_responses.post(introspect_url, status=response_status, body='Error')
+        mock_responses.get(f"{OAUTH_HOST}/oauth2/validate", status=response_status, body='Error')
 
     result = await oauth.validate_token_async('test_token')
+    assert result == expected_result
+
+
+# Test user info endpoint (Twitch-specific)
+@pytest.mark.parametrize(
+    "response_status,response_data,expected_result",
+    [
+        (200, {
+            'data': [{
+                'id': '12345',
+                'login': 'test_user',
+                'display_name': 'TestUser'
+            }]
+        }, {
+            'id': '12345',
+            'login': 'test_user',
+            'display_name': 'TestUser'
+        }),
+        (401, {}, None),  # Unauthorized
+        (200, {
+            'data': []
+        }, None),  # No user data
+    ])
+@pytest.mark.asyncio
+async def test_get_user_info_scenarios(configured_oauth, mock_responses, response_status,
+                                       response_data, expected_result):
+    """Test user info retrieval with various responses."""
+    oauth = configured_oauth
+
+    if response_status == 200:
+        mock_responses.get(f"{API_HOST}/users", status=response_status, payload=response_data)
+    else:
+        mock_responses.get(f"{API_HOST}/users", status=response_status, body='Error')
+
+    result = await oauth.get_user_info_async('test_token')
     assert result == expected_result
 
 
@@ -304,11 +357,11 @@ def test_get_stored_tokens_scenarios(bootstrap, access_token, refresh_token):  #
     """Test getting stored tokens with various configurations."""
     config = bootstrap
     if access_token:
-        config.cparser.setValue('kick/accesstoken', access_token)
+        config.cparser.setValue('twitchbot/accesstoken', access_token)
     if refresh_token:
-        config.cparser.setValue('kick/refreshtoken', refresh_token)
+        config.cparser.setValue('twitchbot/refreshtoken', refresh_token)
 
-    oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
+    oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)  # pylint: disable=no-member
     result_access, result_refresh = oauth.get_stored_tokens()
 
     assert result_access == access_token
@@ -318,8 +371,8 @@ def test_get_stored_tokens_scenarios(bootstrap, access_token, refresh_token):  #
 def test_clear_stored_tokens(configured_oauth):  # pylint: disable=redefined-outer-name
     """Test clearing stored tokens."""
     oauth = configured_oauth
-    oauth.config.cparser.setValue('kick/accesstoken', 'stored_access')
-    oauth.config.cparser.setValue('kick/refreshtoken', 'stored_refresh')
+    oauth.config.cparser.setValue('twitchbot/accesstoken', 'stored_access')
+    oauth.config.cparser.setValue('twitchbot/refreshtoken', 'stored_refresh')
     oauth.access_token = 'current_access'
     oauth.refresh_token = 'current_refresh'
 
@@ -327,8 +380,8 @@ def test_clear_stored_tokens(configured_oauth):  # pylint: disable=redefined-out
 
     assert oauth.access_token is None
     assert oauth.refresh_token is None
-    assert oauth.config.cparser.value('kick/accesstoken') is None
-    assert oauth.config.cparser.value('kick/refreshtoken') is None
+    assert oauth.config.cparser.value('twitchbot/accesstoken') is None
+    assert oauth.config.cparser.value('twitchbot/refreshtoken') is None
 
 
 # Parameterized token revocation tests
@@ -345,19 +398,17 @@ async def test_revoke_token_scenarios(  # pylint: disable=redefined-outer-name, 
     """Test token revocation with various scenarios."""
     config = bootstrap
     if has_client_id:
-        config.cparser.setValue('kick/clientid', 'test_client_id')
+        config.cparser.setValue('twitchbot/clientid', 'test_client_id')
     if has_token:
-        config.cparser.setValue('kick/accesstoken', 'test_token')
+        config.cparser.setValue('twitchbot/accesstoken', 'test_token')
 
-    oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
+    oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)  # pylint: disable=no-member
 
     token_to_revoke = 'test_token' if has_token else None
 
     if has_client_id and has_token:
         # Setup mock response for cases where we have credentials
-        # Note: We need to use a regex pattern to match the URL with query parameters
-        url_pattern = re.compile(rf"{re.escape(OAUTH_HOST)}/oauth/revoke\?.*")
-        mock_responses.post(url_pattern, status=response_status)
+        mock_responses.post(f"{OAUTH_HOST}/oauth2/revoke", status=response_status)
 
     # Should not raise exception in any case
     await oauth.revoke_token(token_to_revoke)
@@ -365,12 +416,12 @@ async def test_revoke_token_scenarios(  # pylint: disable=redefined-outer-name, 
     if should_clear_tokens:
         assert oauth.access_token is None
         assert oauth.refresh_token is None
-        assert oauth.config.cparser.value('kick/accesstoken') is None
-        assert oauth.config.cparser.value('kick/refreshtoken') is None
+        assert oauth.config.cparser.value('twitchbot/accesstoken') is None
+        assert oauth.config.cparser.value('twitchbot/refreshtoken') is None
     else:
         # For error cases, tokens should remain if they were set
         if has_token:
-            assert oauth.config.cparser.value('kick/accesstoken') == 'test_token'
+            assert oauth.config.cparser.value('twitchbot/accesstoken') == 'test_token'
 
 
 # Edge cases and error conditions tests
@@ -382,7 +433,7 @@ async def test_json_parsing_error(oauth_with_pkce, mock_responses):  # pylint: d
     oauth = oauth_with_pkce
 
     # Mock response with invalid JSON
-    mock_responses.post(f"{OAUTH_HOST}/oauth/token", status=200, body='invalid json content')
+    mock_responses.post(f"{OAUTH_HOST}/oauth2/token", status=200, body='invalid json content')
 
     with pytest.raises(Exception):
         await oauth.exchange_code_for_token('test_code')
@@ -394,7 +445,7 @@ async def test_network_timeout(oauth_with_pkce, mock_responses):  # pylint: disa
     oauth = oauth_with_pkce
 
     # Mock a timeout by using an exception
-    mock_responses.post(f"{OAUTH_HOST}/oauth/token",
+    mock_responses.post(f"{OAUTH_HOST}/oauth2/token",
                         exception=asyncio.TimeoutError("Request timed out"))
 
     with pytest.raises(asyncio.TimeoutError):
@@ -404,7 +455,7 @@ async def test_network_timeout(oauth_with_pkce, mock_responses):  # pylint: disa
 def test_pkce_parameter_uniqueness(configured_oauth):  # pylint: disable=redefined-outer-name
     """Test that PKCE parameters are unique across instances."""
     oauth1 = configured_oauth
-    oauth2 = nowplaying.kick.oauth2.KickOAuth2(oauth1.config)  # pylint: disable=no-member
+    oauth2 = nowplaying.twitch.oauth2.TwitchOAuth2(oauth1.config)  # pylint: disable=no-member
 
     oauth1._generate_pkce_parameters()  # pylint: disable=protected-access
     oauth2._generate_pkce_parameters()  # pylint: disable=protected-access
@@ -437,7 +488,7 @@ def test_pkce_challenge_calculation_independent():
         hashlib.sha256(code_verifier.encode('utf-8')).digest()).decode('utf-8').rstrip('=')
 
     # Call the calculation logic directly from the base class
-    actual_challenge = nowplaying.kick.oauth2.KickOAuth2.calculate_pkce_challenge(code_verifier)
+    actual_challenge = nowplaying.twitch.oauth2.TwitchOAuth2.calculate_pkce_challenge(code_verifier)
 
     assert actual_challenge == expected_challenge
 
@@ -465,42 +516,48 @@ def test_client_id_validation(client_id, expected_result, should_raise):
     """Test client ID validation logic independently."""
     if should_raise:
         with pytest.raises(ValueError):
-            nowplaying.kick.oauth2.KickOAuth2.validate_client_id(client_id)
+            nowplaying.twitch.oauth2.TwitchOAuth2.validate_client_id(client_id)
     else:
-        result = nowplaying.kick.oauth2.KickOAuth2.validate_client_id(client_id)
+        result = nowplaying.twitch.oauth2.TwitchOAuth2.validate_client_id(client_id)
         assert result == expected_result
 
 
 @pytest.mark.parametrize("invalid_config_key", [
-    'kick/clientid',
-    'kick/secret',
-    'kick/redirecturi',
+    'twitchbot/clientid',
+    'twitchbot/secret',
 ])
 def test_missing_config_handling(bootstrap, invalid_config_key):  # pylint: disable=redefined-outer-name
     """Test handling of missing configuration values."""
     config = bootstrap
     # Set all required config except one
-    config.cparser.setValue('kick/clientid', 'test_client')
-    config.cparser.setValue('kick/secret', 'test_secret')
-    config.cparser.setValue('kick/redirecturi', 'http://localhost')
+    config.cparser.setValue('twitchbot/clientid', 'test_client')
+    config.cparser.setValue('twitchbot/secret', 'test_secret')
 
     # Remove the specified config key
     config.cparser.remove(invalid_config_key)
 
-    oauth = nowplaying.kick.oauth2.KickOAuth2(config)  # pylint: disable=no-member
+    oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)  # pylint: disable=no-member
+    # Set redirect URI directly (no longer from config)
+    oauth.redirect_uri = 'http://localhost'
 
     # Should handle missing config gracefully
-    if invalid_config_key == 'kick/clientid':
-        # Set redirect URI for client ID test
-        oauth.redirect_uri = 'http://localhost'
-        with pytest.raises(ValueError):
-            oauth.get_authorization_url()
-    elif invalid_config_key == 'kick/redirecturi':
-        # Don't set redirect URI - should fail with ValueError
-        with pytest.raises(ValueError):
+    if invalid_config_key == 'twitchbot/clientid':
+        with pytest.raises(ValueError, match="Client ID is required"):
             oauth.get_authorization_url()
     else:
         # Missing secret shouldn't prevent URL generation
-        oauth.redirect_uri = 'http://localhost'
         auth_url = oauth.get_authorization_url()
         assert 'client_id=test_client' in auth_url
+
+
+def test_missing_redirect_uri_handling(bootstrap):  # pylint: disable=redefined-outer-name
+    """Test handling of missing redirect URI."""
+    config = bootstrap
+    config.cparser.setValue('twitchbot/clientid', 'test_client')
+    config.cparser.setValue('twitchbot/secret', 'test_secret')
+
+    oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)  # pylint: disable=no-member
+    # Don't set redirect_uri - should fail
+
+    with pytest.raises(ValueError, match="Redirect URI is required"):
+        oauth.get_authorization_url()

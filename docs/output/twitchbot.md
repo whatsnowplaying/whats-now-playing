@@ -1,7 +1,7 @@
 # TwitchBot
 
 **What's Now Playing** integrates with Twitch with channel point
-redemptions and/or chat. They may be run independently or run both at
+redemptions and chat. They may be run independently or run both at
 the same time.
 
 ## Twitch Chat Support
@@ -30,56 +30,87 @@ crate/playlist. For more information see [Requests](../requests.md).
 
 ## Authentication
 
-You can choose to either use your own account or create a new account
-for your bot. It is generally recommended to create a new account and
-these instructions are following those guidelines.
+**What's Now Playing** uses OAuth2 authentication for secure integration with Twitch.  For redemptions,
+you will need to authenticate against your own account.  For the chat bot, you can either use your
+account or create and use another account.
 
-1. Follow the Twitch process for creating a new account.
-2. On the new account, be sure to enable:
-   - Multiple logins per email
-   - Two-factor authentication (2FA)
+### Setup Process
 
-[![Account Settings for bots](images/twitchbot-account-settings.png)](images/twitchbot-account-settings.png)
+1. **Create Bot Account** (Optional but recommended)
 
-1. Go to [Twitch Dev Settings](https://dev.twitch.tv) to register **What's Now Playing**.
-   1. Click Login in the upper right
-   2. Click on "Your Console" in the upper right
-   3. Click on "Applications"
-   4. Click on "Register Your Application"
-   5. Name: login name used by the bot account
-   6. OAuth Redirect URLs: <http://localhost:17563>
-   7. Category: Chat Bot
-   8. Create
-   9. Click on "Manage" and save a copy of the Client ID.
-   10. Click on 'New Secret'. Save a copy of the Client Secret.
-2. Get an OAuth Token:
-   1. Go to [TMI](http://twitchapps.com/tmi).
-   2. Authentication
-   3. Copy the Token down
-3. At the end of this process, you should have four pieces of
-    information:
+   1. Follow the Twitch process for creating a new account.
+   2. On the new account, be sure to enable:
 
-> - Your Twitch Stream/Channel:
-> - Bot's Client ID:
-> - Bot's Client Secret:
-> - Bot's Token:
+      * Multiple logins per email
+      * Two-factor authentication (2FA)
 
-1. Open Settings from the **What's Now Playing** icon.
-2. Select Twitch from the list of settings available.
-3. Fill in the information in **What's Now Playing**'s Twitch setting:
+   ![Account Settings for bots](images/twitchbot-account-settings.png)
 
-[![What's Now Playing's Twitch auth panel](images/twitchbot_auth.png)](images/twitchbot_auth.png)
+2. **Register Application on Twitch**
 
-You will need to provide all four to the Twitchbot Settings.
-Additionally, you should consider making the bot a moderator on your
-channel to avoid limits, such as the message posting rate, URL filters,
-etc.
+   1. Go to [Twitch Developer Console](<https://dev.twitch.tv/console>)
+   2. Click Login in the upper right
+   3. Click on "Your Console" in the upper right
+   4. Click on "Applications"
+   5. Click on "Register Your Application"
+   6. **Name**: Choose a descriptive name (e.g., "YourChannel Now Playing Bot")
+   7. **OAuth Redirect URLs**: Enter **both** redirect URIs as shown in **What's Now Playing**'s Twitch settings:
+      * `http://localhost:8899/twitchredirect`
+      * `http://localhost:8899/twitchchatredirect`
+   8. **Category**: Chat Bot
+   9. Click "Create"
+   10. Click on "Manage" and save a copy of the **Client ID**
+   11. Click on "New Secret" and save a copy of the **Client Secret**
 
-For certain services, such as channel point redemptions, launching
-**What's Now Playing** will also launch a browser in order to
-authenticate the bot to **your** channel. So when it asks for
-permission, make sure it is **your** channel and not the bot's channel
-and to accept the things that it wants to access.
+3. **Configure What's Now Playing**
+
+   1. Open Settings from the **What's Now Playing** icon
+   2. Select "Twitch" from the list of settings available
+   3. Fill in the required information:
+
+      * **Channel**: Your Twitch channel name (where you want to monitor/send messages)
+      * **Client ID**: From your Twitch application
+      * **Client Secret**: From your Twitch application
+      * **Redirect URI**: Will be automatically populated based on your webserver port
+
+   4. Click "Save" to store the configuration
+   5. Click "**Authenticate with Twitch**" to complete OAuth2 setup
+   6. A browser will open - log in and authorize the application
+   7. You should see "Authentication Successful" when complete
+
+### OAuth2 vs Legacy Authentication
+
+**What's Now Playing** now uses modern OAuth2 authentication instead of manual token generation. This provides:
+
+* **Enhanced Security**: No need to manually copy/paste tokens
+* **Automatic Token Refresh**: Tokens are refreshed automatically when they expire
+* **Streamlined Setup**: One-click authentication through your browser
+* **PKCE Security**: Uses Proof Key for Code Exchange for additional protection
+
+!!! note
+    Legacy Bot Token authentication is still supported for backward compatibility, but OAuth2 is recommended for new setups.
+
+![What's Now Playing's Twitch auth panel](images/twitchbot_auth.png)
+
+### Additional Setup Considerations
+
+* **Bot Moderator Status**: Consider making your bot account a moderator on your channel to avoid rate limits,
+  URL filters, and other restrictions.
+
+* **Browser Authentication**: When you click "Authenticate with Twitch", a browser will open asking for permission.
+  Make sure you're logged into the correct Twitch account:
+
+  * For **channel point redemptions**: Log in as your **main streaming account** (the channel owner)
+  * For **chat functionality**: Log in as your **bot account** (if using a separate bot account)
+
+* **Required Permissions**: Accept the requested permissions (`chat:read` and `chat:edit`) to allow the bot to
+  monitor and send messages.
+
+### Legacy Token Authentication
+
+For users who prefer manual token management or have existing setups, the legacy "Bot Token" field is still
+supported. However, OAuth2 authentication is recommended for new installations as it provides better security
+and automatic token management.
 
 ## Twitch Chat Configuration
 
@@ -127,24 +158,30 @@ Post-v3.0.2, the Twitchbot will always respond to the command
 
 ### Troubleshooting
 
-- To test if the chat bot is working, you should be able to use the
+* To test if the chat bot is working, you should be able to use the
   '!whatsnowplayingversion' command. **What's Now Playing** only needs
   to be running. You do not have to be live streaming to test chat.
-- If the bot never connects, try getting a new OAuth token.
-- Be aware that the bot may have trouble connecting if you restart
+
+* If the bot never connects, try getting a new OAuth token.
+
+* Be aware that the bot may have trouble connecting if you restart
   **What's Now Playing** too quickly. It should eventually rejoin, but
   it may take several minutes.
 
 ### Additional Variables
 
-The TwitchBot adds the following additional values for templating
-purposes:
+The TwitchBot adds the following additional values for templating purposes:
 
 | Variable | Description |
 |----|----|
 | cmduser | Person, bot, etc that typed the command |
 | cmdtarget\[x\] | The x'th target on the command, starting with 0. For example, if the command was `!so modernmeerkat`, then `{% raw %}{{ cmdtarget[0] }}{% endraw %}` will have `modernmeerkat` in it. See below for an example. |
 | startnewmessage | Split the text at this location and start a new message to send to chat. |
+
+!!! note "Token Selection"
+    The system automatically uses the most appropriate token for sending messages.
+    If you have both broadcaster and chat bot tokens authenticated, chat messages
+    will be sent from the bot account for cleaner presentation.
 
 ### Multiple Targets
 
@@ -183,20 +220,18 @@ the Twitchbot track announcement. You can pick and choose which websites
 are printed by taking the following code snippet and modifying as
 necessary:
 
-    ``` jinja
-    {% if artistwebsites %}
-    {% for website in artistwebsites %}
-    {% if 'bandcamp' in website %} |Bandcamp: {{ website }}
-    {% elif 'discogs' in website %} | Discogs: {{ website }}
-    {% elif 'facebook' in website %} | Facebook: {{ website }}
-    {% elif 'instagram' in website %} | IG: {{ website }}
-    {% elif 'last.fm' in website %} | last.fm: {{ website }}
-    {% elif 'musicbrainz' in website %} | MusicBrainz: {{ website }}
-    {% elif 'twitter' in website %} | Twitter: {{ website }}
-    {% elif 'wikipedia' in website %} | Wikipedia: {{ website }}
-    {% elif 'youtube' in website %} | YouTube: {{ website }}
-    {% else %} | Official homepage: {{ website }}
-    {% endif %}
-    {% endfor %}
-    {% endif %}
-    ```
+  {% if artistwebsites %}
+  {% for website in artistwebsites %}
+  {% if 'bandcamp' in website %} |Bandcamp: {{ website }}
+  {% elif 'discogs' in website %} | Discogs: {{ website }}
+  {% elif 'facebook' in website %} | Facebook: {{ website }}
+  {% elif 'instagram' in website %} | IG: {{ website }}
+  {% elif 'last.fm' in website %} | last.fm: {{ website }}
+  {% elif 'musicbrainz' in website %} | MusicBrainz: {{ website }}
+  {% elif 'twitter' in website %} | Twitter: {{ website }}
+  {% elif 'wikipedia' in website %} | Wikipedia: {{ website }}
+  {% elif 'youtube' in website %} | YouTube: {{ website }}
+  {% else %} | Official homepage: {{ website }}
+  {% endif %}
+  {% endfor %}
+  {% endif %}

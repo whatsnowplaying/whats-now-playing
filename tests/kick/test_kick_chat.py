@@ -11,6 +11,7 @@ from aioresponses import aioresponses
 
 import nowplaying.kick.chat  #pylint: disable=no-name-in-module
 import nowplaying.kick.settings  #pylint: disable=no-name-in-module
+import nowplaying.kick.constants
 from nowplaying.exceptions import PluginVerifyError  #pylint: disable=no-name-in-module
 
 
@@ -38,10 +39,12 @@ def test_kickchat_init_without_config():
     assert isinstance(chat.stopevent, asyncio.Event)
 
 
-@pytest.mark.parametrize("refresh_succeeds,expected_result", [
-    (True, True),   # Authentication succeeds
-    (False, False), # Authentication fails
-])
+@pytest.mark.parametrize(
+    "refresh_succeeds,expected_result",
+    [
+        (True, True),  # Authentication succeeds
+        (False, False),  # Authentication fails
+    ])
 @pytest.mark.asyncio
 async def test_kickchat_authenticate(bootstrap, refresh_succeeds, expected_result):
     """Test authentication success and failure scenarios."""
@@ -172,7 +175,7 @@ async def test_kickchat_send_message_smart_splitting(bootstrap):
 
     # Create a long message that exceeds KICK_MESSAGE_LIMIT (500 chars)
     long_message = "This is a very long message. " * 20  # ~600 characters
-    assert len(long_message) > nowplaying.kick.chat.KICK_MESSAGE_LIMIT  #pylint: disable=no-member
+    assert len(long_message) > nowplaying.kick.constants.KICK_MESSAGE_LIMIT  #pylint: disable=no-member
 
     # Mock _send_single_message to track calls
     with patch.object(chat, '_send_single_message', new_callable=AsyncMock) as mock_send_single:
@@ -187,7 +190,7 @@ async def test_kickchat_send_message_smart_splitting(bootstrap):
         # Verify each part is within the limit
         for call in mock_send_single.call_args_list:
             message_part = call[0][0]  # First argument of each call
-            assert len(message_part) <= nowplaying.kick.chat.KICK_MESSAGE_LIMIT
+            assert len(message_part) <= nowplaying.kick.constants.KICK_MESSAGE_LIMIT
             assert message_part.strip()  # Should not be empty
 
         # Verify content preservation - reconstruct message from parts
@@ -404,7 +407,6 @@ async def test_kickchat_run_chat_disabled(bootstrap):
     await chat.run_chat(mock_oauth)
 
     # Should exit early without doing anything
-
 
 
 # Settings tests

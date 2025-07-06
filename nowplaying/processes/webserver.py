@@ -43,8 +43,11 @@ import nowplaying.frozen
 import nowplaying.hostmeta
 import nowplaying.imagecache
 import nowplaying.kick.oauth2
+import nowplaying.oauth2
+import nowplaying.twitch.oauth2
 import nowplaying.trackrequests
 import nowplaying.utils
+from nowplaying.types import TrackMetadata
 
 
 
@@ -64,7 +67,7 @@ JINJA2_KEY = web.AppKey("jinja2_env", jinja2.Environment)
 class WebHandler():  # pylint: disable=too-many-public-methods
     ''' aiohttp built server that does both http and websocket '''
 
-    def __init__(self, bundledir=None, config=None, stopevent=None, testmode=False):
+    def __init__(self, bundledir=None, config=None, stopevent=None, testmode: bool = False):
         threading.current_thread().name = 'WebServer'
         self.tasks = set()
         self.testmode = testmode
@@ -117,7 +120,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         await self.forced_stop()
 
     @staticmethod
-    def _base64ifier(metadata):
+    def _base64ifier(metadata: TrackMetadata):
         ''' replace all the binary data with base64 data '''
         for key in nowplaying.db.METADATABLOBLIST:
             if metadata.get(key):
@@ -128,46 +131,48 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             del metadata['dbid']
         return metadata
 
-    def _transparentifier(self, metadata):
+    def _transparentifier(self, metadata: TrackMetadata):
         ''' base64 encoding + transparent missing '''
         for key in nowplaying.db.METADATABLOBLIST:
             if not metadata.get(key):
                 metadata[key] = nowplaying.utils.TRANSPARENT_PNG_BIN
         return self._base64ifier(metadata)
 
-    async def index_htm_handler(self, request):
+    async def index_htm_handler(self, request: web.Request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(request, 'weboutput/htmltemplate')
 
-    async def artistbanner_htm_handler(self, request):
+    async def artistbanner_htm_handler(self, request: web.Request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(request, 'weboutput/artistbannertemplate')
 
-    async def artistlogo_htm_handler(self, request):
+    async def artistlogo_htm_handler(self, request: web.Request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(request, 'weboutput/artistlogotemplate')
 
-    async def artistthumbnail_htm_handler(self, request):
+    async def artistthumbnail_htm_handler(self, request: web.Request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(request, 'weboutput/artistthumbnailtemplate')
 
-    async def artistfanartlaunch_htm_handler(self, request):
+    async def artistfanartlaunch_htm_handler(self, request: web.Request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(request, 'weboutput/artistfanarttemplate')
 
-    async def gifwords_launch_htm_handler(self, request):
+    async def gifwords_launch_htm_handler(self, request: web.Request):
         ''' handle gifwords output '''
         request.app[CONFIG_KEY].cparser.sync()
         htmloutput = await self._htm_handler(
             request, request.app[CONFIG_KEY].cparser.value('weboutput/gifwordstemplate'))
         return web.Response(content_type='text/html', text=htmloutput)
 
-    async def requesterlaunch_htm_handler(self, request):
+    async def requesterlaunch_htm_handler(self, request: web.Request):
         ''' handle web output '''
         return await self._metacheck_htm_handler(request, 'weboutput/requestertemplate')
 
     @staticmethod
-    async def _htm_handler(request, template, metadata=None):
+    async def _htm_handler(request: web.Request,
+                           template: str,
+                           metadata: TrackMetadata | None = None):
         ''' handle static html files'''
         htmloutput = INDEXREFRESH
         try:
@@ -184,7 +189,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 logging.error(line)
         return htmloutput
 
-    async def _metacheck_htm_handler(self, request, cfgtemplate):
+    async def _metacheck_htm_handler(self, request: web.Request, cfgtemplate: str):
         ''' handle static html files after checking metadata'''
         request.app[CONFIG_KEY].cparser.sync()
         template = request.app[CONFIG_KEY].cparser.value(cfgtemplate)
@@ -214,14 +219,14 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         return web.Response(content_type='text/html', text=INDEXREFRESH)
 
     @staticmethod
-    async def setlastid(request, lastid, source):
+    async def setlastid(request: web.Request, lastid: int, source: str):
         ''' get the lastid sent by http/html '''
         await request.app['statedb'].execute(
             'INSERT OR REPLACE INTO lastprocessed(lastid, source) VALUES (?,?) ', [lastid, source])
         await request.app['statedb'].commit()
 
     @staticmethod
-    async def getlastid(request, source):
+    async def getlastid(request: web.Request, source: str):
         ''' get the lastid sent by http/html '''
         cursor = await request.app['statedb'].execute(
             f'SELECT lastid FROM lastprocessed WHERE source="{source}"')
@@ -234,7 +239,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         return lastid
 
     @staticmethod
-    async def indextxt_handler(request):
+    async def indextxt_handler(request: web.Request):
         ''' handle static index.txt '''
         metadata = await request.app[METADB_KEY].read_last_meta_async()
         txtoutput = ""
@@ -250,12 +255,12 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         return web.Response(text=txtoutput)
 
     @staticmethod
-    async def favicon_handler(request):
+    async def favicon_handler(request: web.Request):
         ''' handle favicon.ico '''
         return web.FileResponse(path=request.app[CONFIG_KEY].iconfile)
 
     @staticmethod
-    async def _image_handler(imgtype, request):
+    async def _image_handler(imgtype: str, request: web.Request):
         ''' handle an image '''
 
         # rather than return an error, just send a transparent PNG
@@ -270,23 +275,23 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 logging.error(line)
         return web.Response(content_type='image/png', body=image)
 
-    async def cover_handler(self, request):
+    async def cover_handler(self, request: web.Request):
         ''' handle cover image '''
         return await self._image_handler('coverimageraw', request)
 
-    async def artistbanner_handler(self, request):
+    async def artistbanner_handler(self, request: web.Request):
         ''' handle artist banner image '''
         return await self._image_handler('artistbannerraw', request)
 
-    async def artistlogo_handler(self, request):
+    async def artistlogo_handler(self, request: web.Request):
         ''' handle artist logo image '''
         return await self._image_handler('artistlogoraw', request)
 
-    async def artistthumbnail_handler(self, request):
+    async def artistthumbnail_handler(self, request: web.Request):
         ''' handle artist logo image '''
         return await self._image_handler('artistthumbnailraw', request)
 
-    async def api_v1_last_handler(self, request):
+    async def api_v1_last_handler(self, request: web.Request):
         ''' v1/last just returns the metadata'''
         data = {}
         if metadata := await request.app[METADB_KEY].read_last_meta_async():
@@ -298,7 +303,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                     logging.debug(line)
         return web.json_response(data)
 
-    async def websocket_gifwords_streamer(self, request):
+    async def websocket_gifwords_streamer(self, request: web.Request):
         ''' handle continually streamed updates '''
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
@@ -308,8 +313,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         trackrequest = nowplaying.trackrequests.Requests(request.app[CONFIG_KEY])
 
         try:
-            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and
-                   not endloop and not websocket.closed):
+            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and not endloop
+                   and not websocket.closed):
                 metadata = await trackrequest.check_for_gifwords()
                 if not metadata.get('image'):
                     await websocket.send_json({'noimage': True})
@@ -336,7 +341,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             request.app[WS_KEY].discard(websocket)
         return websocket
 
-    async def websocket_artistfanart_streamer(self, request):
+    async def websocket_artistfanart_streamer(self, request: web.Request):
         ''' handle continually streamed updates '''
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
@@ -344,8 +349,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         endloop = False
 
         try:
-            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and
-                   not endloop and not websocket.closed):
+            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and not endloop
+                   and not websocket.closed):
                 metadata = await request.app[METADB_KEY].read_last_meta_async()
                 if not metadata or not metadata.get('artist'):
                     await asyncio.sleep(5)
@@ -383,14 +388,17 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             request.app[WS_KEY].discard(websocket)
         return websocket
 
-    async def websocket_lastjson_handler(self, request, websocket):
+    async def websocket_lastjson_handler(self, request: web.Request,
+                                         websocket: web.WebSocketResponse):
         ''' handle singular websocket request '''
         metadata = await request.app[METADB_KEY].read_last_meta_async()
-        del metadata['dbid']
-        if not websocket.closed:
-            await websocket.send_json(self._base64ifier(metadata))
+        if metadata:
+            del metadata['dbid']
+            if not websocket.closed:
+                await websocket.send_json(self._base64ifier(metadata))
 
-    async def _wss_do_update(self, websocket, database):
+    async def _wss_do_update(self, websocket: web.WebSocketResponse,
+                             database: nowplaying.db.MetadataDB):
         # early launch can be a bit weird so
         # pause a bit
         await asyncio.sleep(1)
@@ -400,12 +408,13 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 return time.time()
             metadata = await database.read_last_meta_async()
             await asyncio.sleep(1)
-        del metadata['dbid']
-        if not websocket.closed:
-            await websocket.send_json(self._transparentifier(metadata))
+        if metadata:
+            del metadata['dbid']
+            if not websocket.closed:
+                await websocket.send_json(self._transparentifier(metadata))
         return time.time()
 
-    async def websocket_streamer(self, request):
+    async def websocket_streamer(self, request: web.Request):
         ''' handle continually streamed updates '''
 
         websocket = web.WebSocketResponse()
@@ -414,10 +423,10 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
         try:
             mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
-            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and
-                   not websocket.closed):
-                while (mytime > request.app[WATCHER_KEY].updatetime and
-                       not nowplaying.utils.safe_stopevent_check(self.stopevent)):
+            while (not nowplaying.utils.safe_stopevent_check(self.stopevent)
+                   and not websocket.closed):
+                while (mytime > request.app[WATCHER_KEY].updatetime
+                       and not nowplaying.utils.safe_stopevent_check(self.stopevent)):
                     await asyncio.sleep(1)
 
                 mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
@@ -431,7 +440,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             request.app[WS_KEY].discard(websocket)
         return websocket
 
-    async def websocket_handler(self, request):
+    async def websocket_handler(self, request: web.Request):
         ''' handle inbound websockets '''
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
@@ -458,109 +467,66 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         return websocket
 
     @staticmethod
-    async def internals(request):
+    async def internals(request: web.Request):
         ''' internal data debugging '''
         data = {"dbfile": str(request.app[METADB_KEY].databasefile)}
         return web.json_response(data)
 
-    async def kickredirect_handler(self, request):  # pylint: disable=no-self-use
-        ''' handle oauth2 redirect callbacks '''
-        # Extract query parameters from the redirect
-        params = dict(request.query)
-
-        # Log the redirect for debugging (don't log the auth code for security)
-        logging.info('Kick OAuth2 redirect received with parameters: %s', {
-            k: v
-            for k, v in params.items() if k != 'code'
-        })
-
-        # Get config for template loading and refresh it to pick up test changes
+    @staticmethod
+    async def _handle_oauth_redirect(request: web.Request, oauth_config: dict) -> web.Response:
+        """Generic OAuth2 redirect handler - delegates to base OAuth2 class."""
+        # Pass config and jinja2 environment from app context using correct keys
         config = request.app[CONFIG_KEY]
-        config.get()
+        jinja2_env = request.app[JINJA2_KEY]
+        return await nowplaying.oauth2.OAuth2Client.handle_oauth_redirect(
+            request, oauth_config, config, jinja2_env)
 
-        def load_oauth_template(template_name: str, **kwargs) -> str:
-            """Load and render an OAuth template with variables using Jinja2"""
-            try:
-                # Use the shared Jinja2 environment and reference oauth subdirectory
-                template = request.app[JINJA2_KEY].get_template(f'oauth/{template_name}')
-                return template.render(**kwargs)
-            except jinja2.TemplateNotFound:
-                logging.error('OAuth template not found: %s', template_name)
-                return '<html><body><h1>Template Error</h1><p>Template not found</p></body></html>'
-            except jinja2.TemplateError as error:
-                logging.error('OAuth template error in %s: %s', template_name, error)
-                return '<html><body><h1>Template Error</h1>' + \
-                       '<p>Template rendering failed</p></body></html>'
 
-        # Check for OAuth2 error
-        if 'error' in params:
-            # Jinja2 autoescape will handle HTML escaping automatically
-            error_code = params.get('error', 'unknown_error')
-            error_description = params.get('error_description', 'No description provided')
+    async def kickredirect_handler(self, request: web.Request):  # pylint: disable=no-self-use
+        ''' handle oauth2 redirect callbacks for Kick '''
+        return await self._handle_oauth_redirect(
+            request, {
+                'service_name': 'Kick OAuth2',
+                'oauth_class': nowplaying.kick.oauth2.KickOAuth2,
+                'config_prefix': 'kick',
+                'template_prefix': 'kick_oauth',
+                'redirect_path': 'kickredirect',
+                'token_keys': {
+                    'access': 'kick/accesstoken',
+                    'refresh': 'kick/refreshtoken'
+                }
+            })
 
-            response_html = load_oauth_template('kick_oauth_error.htm',
-                                                error_code=error_code,
-                                                error_description=error_description)
-            return web.Response(content_type='text/html', text=response_html)
+    async def twitchredirect_handler(self, request: web.Request):  # pylint: disable=no-self-use
+        ''' handle oauth2 redirect callbacks for Twitch broadcaster tokens '''
+        return await self._handle_oauth_redirect(
+            request, {
+                'service_name': 'Twitch OAuth2',
+                'oauth_class': nowplaying.twitch.oauth2.TwitchOAuth2,
+                'config_prefix': 'twitchbot',
+                'template_prefix': 'twitch_oauth',
+                'redirect_path': 'twitchredirect',
+                'token_keys': {
+                    'access': 'twitchbot/accesstoken',
+                    'refresh': 'twitchbot/refreshtoken'
+                }
+            })
 
-        # Check for authorization code
-        authorization_code = params.get('code')
-        received_state = params.get('state')
-
-        if not authorization_code:
-            # Clean up temporary PKCE parameters when OAuth flow fails
-            oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-            oauth.cleanup_temp_pkce_params()
-            response_html = load_oauth_template('kick_oauth_no_code.htm')
-            return web.Response(content_type='text/html', text=response_html)
-
-        # Validate state parameter to prevent CSRF attacks
-        expected_state = config.cparser.value('kick/temp_state')
-        if not expected_state:
-            # Clean up temporary PKCE parameters when session is invalid
-            oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-            oauth.cleanup_temp_pkce_params()
-            response_html = load_oauth_template('kick_oauth_invalid_session.htm')
-            logging.warning('Kick OAuth2 callback received without valid session state')
-            return web.Response(content_type='text/html', text=response_html)
-
-        if received_state != expected_state:
-            # Clean up temporary PKCE parameters when CSRF attack is detected
-            oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-            oauth.cleanup_temp_pkce_params()
-            response_html = load_oauth_template('kick_oauth_csrf_error.htm')
-            logging.error(
-                'Kick OAuth2 CSRF attack detected: state mismatch (expected: %s, received: %s)',
-                expected_state[:8] + '...',
-                received_state[:8] + '...' if received_state else 'None')
-            return web.Response(content_type='text/html', text=response_html)
-
-        # State validation successful - immediately invalidate to prevent replay attacks
-        config.cparser.remove('kick/temp_state')
-        config.save()
-        logging.debug('State parameter invalidated after successful validation')
-
-        # Attempt to exchange the code for tokens
-        try:
-            # Initialize OAuth2 handler (config already retrieved above)
-            oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-
-            # Exchange code for tokens with validated state
-            await oauth.exchange_code_for_token(authorization_code, received_state)
-
-            # Success response
-            response_html = load_oauth_template('kick_oauth_success.htm')
-            logging.info('Kick OAuth2 authentication completed successfully')
-            return web.Response(content_type='text/html', text=response_html)
-
-        except (ValueError, OSError, asyncio.TimeoutError) as error:
-            logging.error('Kick OAuth2 token exchange failed: %s', error)
-
-            # Error response - use generic message to avoid information exposure
-            response_html = load_oauth_template('kick_oauth_token_error.htm',
-                                                error_message='Authentication failed.'
-                                                ' Please check your configuration and try again.')
-            return web.Response(content_type='text/html', text=response_html)
+    async def twitchchatredirect_handler(self, request: web.Request):  # pylint: disable=no-self-use
+        ''' handle oauth2 redirect callbacks for Twitch chat tokens '''
+        return await self._handle_oauth_redirect(
+            request, {
+                'service_name': 'Twitch Chat OAuth2',
+                'oauth_class': nowplaying.twitch.oauth2.TwitchOAuth2,
+                'config_prefix': 'twitchbot',
+                'template_prefix': 'twitch_oauth',
+                'redirect_path': 'twitchchatredirect',
+                'token_keys': {
+                    'access': 'twitchbot/chattoken',
+                    'refresh': 'twitchbot/chatrefreshtoken'
+                },
+                'success_template': 'twitch_chat_oauth_success.htm'
+            })
 
     def create_runner(self):
         ''' setup http routing '''
@@ -587,6 +553,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             web.get('/index.html', self.index_htm_handler),
             web.get('/index.txt', self.indextxt_handler),
             web.get('/kickredirect', self.kickredirect_handler),
+            web.get('/twitchredirect', self.twitchredirect_handler),
+            web.get('/twitchchatredirect', self.twitchchatredirect_handler),
             web.get('/request.htm', self.requesterlaunch_htm_handler),
             web.get('/internals', self.internals),
             web.get('/ws', self.websocket_handler),
@@ -597,7 +565,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         ])
         return web.AppRunner(app)
 
-    async def start_server(self, host="127.0.0.1", port=8899):
+    async def start_server(self, host: str = "127.0.0.1", port: int = 8899):
         ''' start our server '''
         runner = self.create_runner()
         await runner.setup()
@@ -607,7 +575,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         task.add_done_callback(self.tasks.discard)
         await site.start()
 
-    async def on_startup(self, app):
+    async def on_startup(self, app: web.Application):
         ''' setup app connections '''
         app[CONFIG_KEY] = nowplaying.config.ConfigFile(testmode=self.testmode)
         staticdir = app[CONFIG_KEY].basedir.joinpath('httpstatic')
@@ -634,26 +602,25 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
         # Set up Jinja2 environment for templates with proper autoescape (initialized once)
         template_dir = app[CONFIG_KEY].getbundledir().joinpath('templates')
-        app[JINJA2_KEY] = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(str(template_dir)),
-            autoescape=jinja2.select_autoescape(['htm', 'html', 'xml']),
-            trim_blocks=True,
-            undefined=jinja2.StrictUndefined
-        )
+        app[JINJA2_KEY] = jinja2.Environment(loader=jinja2.FileSystemLoader(str(template_dir)),
+                                             autoescape=jinja2.select_autoescape(
+                                                 ['htm', 'html', 'xml']),
+                                             trim_blocks=True,
+                                             undefined=jinja2.StrictUndefined)
 
     @staticmethod
-    async def on_shutdown(app):
+    async def on_shutdown(app: web.Application):
         ''' handle shutdown '''
         for websocket in set(app[WS_KEY]):
             await websocket.close(code=WSCloseCode.GOING_AWAY, message='Server shutdown')
 
     @staticmethod
-    async def on_cleanup(app):
+    async def on_cleanup(app: web.Application):
         ''' cleanup the app '''
         await app['statedb'].close()
         app[WATCHER_KEY].stop()
 
-    async def stop_server(self, request):
+    async def stop_server(self, request: web.Request):
         ''' stop our server '''
         self.stopevent.set()
         for task in self.tasks:
@@ -673,14 +640,14 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             task.cancel()
 
 
-def stop(pid):
+def stop(pid: int):
     ''' stop the web server -- called from Tray '''
     logging.info('sending INT to %s', pid)
     with contextlib.suppress(ProcessLookupError):
         os.kill(pid, signal.SIGINT)
 
 
-def start(stopevent=None, bundledir=None, testmode=False):
+def start(stopevent=None, bundledir: str | pathlib.Path | None = None, testmode: bool = False):
     ''' multiprocessing start hook '''
     threading.current_thread().name = 'WebServer'
 

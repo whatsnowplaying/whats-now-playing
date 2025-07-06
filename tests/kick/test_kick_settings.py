@@ -10,7 +10,6 @@ import requests
 
 import nowplaying.kick.settings
 import nowplaying.kick.oauth2
-import nowplaying.kick.utils
 from nowplaying.exceptions import PluginVerifyError
 
 
@@ -114,8 +113,8 @@ def test_kick_settings_load_default_redirect_uri(bootstrap, mock_kick_widget):
         ('80', 'http://localhost:80/kickredirect'),
         (None, 'http://localhost:8899/kickredirect'),  # None defaults to 8899
     ])
-def test_kick_settings_load_non_default_webserver_ports(bootstrap, mock_kick_widget,
-                                                        webserver_port, expected_redirect_uri):
+def test_kick_settings_load_non_default_webserver_ports(bootstrap, mock_kick_widget, webserver_port,
+                                                        expected_redirect_uri):
     """Test settings loading with non-default webserver ports to verify redirect URI logic."""
     config = bootstrap
     if webserver_port is not None:
@@ -236,7 +235,8 @@ def test_kick_settings_update_oauth_status_scenarios(bootstrap, mock_kick_widget
         else:
             mock_oauth.get_stored_tokens.return_value = (None, None)
         settings.oauth = mock_oauth
-        with patch('nowplaying.kick.utils.qtsafe_validate_kick_token', return_value=token_valid):
+        with patch('nowplaying.kick.oauth2.KickOAuth2.validate_token_sync',
+                   return_value=token_valid):
             settings.update_oauth_status()
     else:
         settings.oauth = None
@@ -268,19 +268,18 @@ def test_kick_settings_update_oauth_status_scenarios(bootstrap, mock_kick_widget
         (200, {}, requests.RequestException, False),  # Network error
         (200, {}, ValueError, False),  # JSON parsing error
     ])
-def test_qtsafe_validate_kick_token_scenarios(status_code, response_data, exception_type,
-                                              expected_result):
-    """Test Qt-safe token validation with various responses."""
+def test_validate_token_sync_scenarios(status_code, response_data, exception_type, expected_result):
+    """Test sync token validation with various responses."""
     if exception_type:
         with patch('requests.post', side_effect=exception_type("Test error")):
-            result = nowplaying.kick.utils.qtsafe_validate_kick_token('test_token')
+            result = nowplaying.kick.oauth2.KickOAuth2.validate_token_sync('test_token')
     else:
         mock_response = MagicMock()
         mock_response.status_code = status_code
         mock_response.json.return_value = response_data
 
         with patch('requests.post', return_value=mock_response):
-            result = nowplaying.kick.utils.qtsafe_validate_kick_token('test_token')
+            result = nowplaying.kick.oauth2.KickOAuth2.validate_token_sync('test_token')
 
     assert result == expected_result
 

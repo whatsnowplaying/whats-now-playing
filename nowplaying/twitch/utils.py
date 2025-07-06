@@ -3,160 +3,219 @@
 
 import asyncio
 import logging
-import traceback
-import socket
 
 import aiohttp
-import requests
-
 from twitchAPI.twitch import Twitch
-from twitchAPI.helper import first
-from twitchAPI.types import AuthScope, InvalidRefreshTokenException
-from twitchAPI.oauth import UserAuthenticator, validate_token
 
+import nowplaying.twitch.oauth2
 import nowplaying.utils
-
-# USER_SCOPE = [
-#     AuthScope.CHANNEL_READ_REDEMPTIONS, AuthScope.CHANNEL_MANAGE_REDEMPTIONS, AuthScope.CHAT_READ,
-#     AuthScope.CHAT_EDIT
-# ]
-
-USER_SCOPE = [AuthScope.CHAT_READ, AuthScope.CHAT_EDIT]
+from nowplaying.twitch.constants import BROADCASTER_AUTH_SCOPES, BROADCASTER_SCOPE_STRINGS
 
 
-async def get_user_image(twitch, loginname):
+async def get_user_image(oauth: 'nowplaying.twitch.oauth2.TwitchOAuth2',
+                         loginname: str) -> bytes | None:
     ''' ask twitch for the user profile image '''
     image = None
     try:
-        user = await first(twitch.get_users(logins=[loginname]))
-        if not user:
+        if not oauth or not oauth.access_token or not oauth.client_id:
+            logging.error('OAuth2 client or access token is not available')
             return None
+        # Get user info using the OAuth2 client
+        headers = {'Authorization': f'Bearer {oauth.access_token}', 'Client-Id': oauth.client_id}
+
         async with aiohttp.ClientSession() as session:
-            async with session.get(user.profile_image_url, timeout=5) as resp:
-                image = nowplaying.utils.image2png(await resp.read())
-    except Exception as error:  #pylint: disable=broad-except
-        logging.error(error)
+            # Get user data
+            async with session.get(f'{oauth.api_host}/users?login={loginname}',
+                                   headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                if resp.status == 200:
+                    user_data = await resp.json()
+                    if users := user_data.get('data', []):
+                        if profile_image_url := users[0].get('profile_image_url'):
+                            # Download profile image
+                            async with session.get(
+                                    profile_image_url,
+                                    timeout=aiohttp.ClientTimeout(total=10)) as img_resp:
+                                if img_resp.status == 200:
+                                    raw_image = await img_resp.read()
+                                    image = nowplaying.utils.image2png(raw_image)
+                                    logging.debug('Downloaded profile image for user: %s',
+                                                  loginname)
+                                else:
+                                    logging.warning('Failed to download profile image: %s',
+                                                    img_resp.status)
+                        else:
+                            logging.debug('No profile image URL for user: %s', loginname)
+                    else:
+                        logging.warning('User not found: %s', loginname)
+                else:
+                    logging.warning('Failed to get user info: %s', resp.status)
+    except Exception as error:  # pylint: disable=broad-except
+        logging.error('Error getting user image for %s: %s', loginname, error)
+
     return image
 
 
-def qtsafe_validate_token(token):
-    ''' get valid and get the display name for a token '''
-    url = 'https://id.twitch.tv/oauth2/validate'
-    headers = {'Authorization': f'OAuth {token}'}
-
+async def async_validate_token(oauth_client: 'nowplaying.twitch.oauth2.TwitchOAuth2',
+                               token: str | None = None) -> str | None:
+    ''' Async version of token validation using OAuth2 client '''
     try:
-        req = requests.get(url, headers=headers, timeout=5)
+        validation_response = await oauth_client.validate_token_async(token)
+        if validation_response:
+            return validation_response.get('login')
     except Exception as error:  #pylint: disable=broad-except
-        logging.error('Twitch Token validation check failed:%s', error)
-        return None
-    try:
-        valid = req.json()
-    except Exception as error:  #pylint: disable=broad-except
-        logging.error('Twitch Token validation/bad json:%s', error)
-        return None
-
-    if valid.get('status') == 401:
-        logging.debug('Twitch token is invalid')
-        return None
-    return valid.get('login')
+        logging.error('Async token validation failed: %s', error)
+    return None
 
 
 class TwitchLogin:
-    ''' manage the global twitch login for clientid/secret '''
-    TWITCH = None
-    TWITCH_LOCK = asyncio.Lock()
+    ''' manage the global twitch login using OAuth2 '''
+    OAUTH_CLIENT = None
+    OAUTH_LOCK = asyncio.Lock()
 
-    def __init__(self, config):
+    def __init__(self, config: 'nowplaying.config.ConfigFile'):
         self.config = config
-        self.timeout = aiohttp.ClientTimeout(total=60)
 
-    async def attempt_user_auth(self, token, refresh_token):
-        ''' try user auth '''
-        if not token or not refresh_token:
-            return False
+    async def get_oauth_client(self):
+        ''' Get or create OAuth2 client '''
+        if TwitchLogin.OAUTH_CLIENT:
+            return TwitchLogin.OAUTH_CLIENT
 
-        valid = await validate_token(token)
-        if valid.get('status') == 401:
-            return False
+        async with TwitchLogin.OAUTH_LOCK:
+            if not TwitchLogin.OAUTH_CLIENT:
+                TwitchLogin.OAUTH_CLIENT = nowplaying.twitch.oauth2.TwitchOAuth2(self.config)
+            return TwitchLogin.OAUTH_CLIENT
 
-        if not TwitchLogin.TWITCH:
-            return False
+    async def attempt_token_refresh(self):
+        ''' Try to refresh existing tokens '''
+        oauth_client = await self.get_oauth_client()
 
         try:
-            await TwitchLogin.TWITCH.set_user_authentication(token, USER_SCOPE, refresh_token)
-            TwitchLogin.TWITCH.user_auth_refresh_callback = self.save_refreshed_tokens
-            await TwitchLogin.TWITCH.refresh_used_token()
+            # Check if we have stored tokens
+            access_token, refresh_token = oauth_client.get_stored_tokens()
+            logging.debug('Retrieved stored tokens: access_token=%s, refresh_token=%s',
+                          'present' if access_token else 'missing',
+                          'present' if refresh_token else 'missing')
+
+            if access_token:
+                # Validate current token
+                logging.debug('Validating stored access token')
+                validation = await oauth_client.validate_token_async(access_token)
+                if validation:
+                    oauth_client.access_token = access_token
+                    oauth_client.refresh_token = refresh_token
+                    logging.debug('Existing Twitch token is valid')
+                    return True
+                logging.debug('Stored access token is invalid')
+
+            if refresh_token:
+                # Try to refresh the token
+                logging.debug('Attempting to refresh token using refresh_token')
+                token_response = await oauth_client.refresh_access_token_async(refresh_token)
+
+                # Save the refreshed tokens
+                new_access_token = token_response.get('access_token')
+                new_refresh_token = token_response.get('refresh_token')
+                if new_access_token:
+                    self.config.cparser.setValue('twitchbot/accesstoken', new_access_token)
+                    if new_refresh_token:
+                        self.config.cparser.setValue('twitchbot/refreshtoken', new_refresh_token)
+                    self.config.save()
+                logging.debug('Twitch token refreshed successfully')
+                return True
+            logging.debug('No refresh_token available')
+
         except Exception as error:  #pylint: disable=broad-except
-            logging.error(error)
+            logging.error('Token refresh failed: %s', error)
+
+        return False
+
+    async def initiate_oauth_flow(self):
+        ''' Start OAuth flow by opening browser '''
+        oauth_client = await self.get_oauth_client()
+
+        if not oauth_client.client_id or not oauth_client.client_secret:
+            logging.error('Twitch client ID or secret not configured')
             return False
-        return True
+
+        if not oauth_client.redirect_uri:
+            # Set default redirect URI if not configured
+            port = self.config.cparser.value('webserver/port', type=int) or 8899
+            oauth_client.redirect_uri = f'http://localhost:{port}/twitchredirect'
+            self.config.cparser.setValue('twitchbot/redirecturi', oauth_client.redirect_uri)
+            self.config.save()
+
+        return oauth_client.open_browser_for_auth(BROADCASTER_SCOPE_STRINGS)
 
     async def api_login(self):
-        ''' authenticate with the configured clientid/secret '''
+        ''' authenticate with OAuth2 and return TwitchAPI Twitch object '''
+        # Try to refresh existing tokens first
+        if await self.attempt_token_refresh():
+            oauth_client = TwitchLogin.OAUTH_CLIENT
 
-        if TwitchLogin.TWITCH:
-            return TwitchLogin.TWITCH
-
-        logging.debug('entering lock')
-        async with TwitchLogin.TWITCH_LOCK:
+            # Create TwitchAPI Twitch object using our OAuth2 tokens
             try:
-                if self.config.cparser.value('twitchbot/clientid') and self.config.cparser.value(
-                        'twitchbot/secret'):
-                    TwitchLogin.TWITCH = await Twitch(
-                        self.config.cparser.value('twitchbot/clientid'),
-                        self.config.cparser.value('twitchbot/secret'),
-                        session_timeout=self.timeout)
+                timeout = aiohttp.ClientTimeout(total=30)
+                twitch = await Twitch(oauth_client.client_id,
+                                      oauth_client.client_secret,
+                                      authenticate_app=False,
+                                      session_timeout=timeout)
 
-                    token = self.config.cparser.value('twitchbot/oldusertoken')
-                    refresh_token = self.config.cparser.value('twitchbot/oldrefreshtoken')
+                await twitch.set_user_authentication(token=oauth_client.access_token,
+                                                     refresh_token=oauth_client.refresh_token,
+                                                     scope=BROADCASTER_AUTH_SCOPES,
+                                                     validate=False)
 
-                    if not await self.attempt_user_auth(token, refresh_token):
-                        auth = UserAuthenticator(TwitchLogin.TWITCH, USER_SCOPE, force_verify=False)
-                        token, refresh_token = await auth.authenticate()
+                # Set up callback to save automatically refreshed tokens
+                twitch.user_auth_refresh_callback = self.save_refreshed_tokens
 
-                        await self.attempt_user_auth(token, refresh_token)
+                return twitch
 
-                    self.config.cparser.setValue('twitchbot/oldusertoken', token)
-                    self.config.cparser.setValue('twitchbot/oldrefreshtoken', refresh_token)
-            except (aiohttp.client_exceptions.ClientConnectorError, socket.gaierror) as error:
-                logging.error(error)
-            except Exception:  # pylint: disable=broad-except
-                for line in traceback.format_exc().splitlines():
-                    logging.error(line)
+            except Exception as error:  #pylint: disable=broad-except
+                logging.error('Failed to create TwitchAPI object: %s', error)
                 return None
-        logging.debug('exiting lock')
-        return TwitchLogin.TWITCH
 
-    async def save_refreshed_tokens(self, usertoken, refreshtoken):
-        ''' every time token is updated, save it '''
-        self.config.cparser.setValue('twitchbot/oldusertoken', usertoken)
-        self.config.cparser.setValue('twitchbot/oldrefreshtoken', refreshtoken)
+        # If no valid tokens, need to initiate OAuth flow
+        logging.info('No valid Twitch tokens found. OAuth flow required.')
+        return None
+
+    async def save_refreshed_tokens(self, access_token: str, refresh_token: str):
+        ''' Save automatically refreshed tokens from TwitchAPI library '''
+        oauth_client = await self.get_oauth_client()
+
+        # Update our OAuth client with the new tokens
+        oauth_client.access_token = access_token
+        oauth_client.refresh_token = refresh_token
+
+        # Save to config using our OAuth2 storage keys
+        self.config.cparser.setValue('twitchbot/accesstoken', access_token)
+        self.config.cparser.setValue('twitchbot/refreshtoken', refresh_token)
         self.config.save()
-        logging.debug('Twitch tokens refreshed and saved')
 
-    async def api_logout(self):
-        ''' log out of the global twitch login '''
-        if not TwitchLogin.TWITCH:
-            return
+        logging.debug('Twitch tokens automatically refreshed and saved')
 
-        try:
-            async with TwitchLogin.TWITCH_LOCK:
-                await TwitchLogin.TWITCH.refresh_used_token()
-                await TwitchLogin.TWITCH.close()
-            TwitchLogin.TWITCH = None
-            logging.debug('TWITCH shutdown')
-        except InvalidRefreshTokenException:
-            logging.debug('refresh token is invalid, removing')
-            self.config.cparser.remove('twitchbot/oldrefreshtoken')
-            self.config.save()
-        except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
+    @staticmethod
+    async def api_logout():
+        ''' log out and cleanup '''
+        if TwitchLogin.OAUTH_CLIENT:
+            try:
+                await TwitchLogin.OAUTH_CLIENT.revoke_token()
+                logging.debug('Twitch logout completed')
+            except Exception as error:  #pylint: disable=broad-except
+                logging.error('Logout error: %s', error)
+            finally:
+                TwitchLogin.OAUTH_CLIENT = None
 
     async def cache_token_del(self):
-        ''' logout and delete the old tokens '''
+        ''' logout and delete cached tokens '''
         await self.api_logout()
+        if TwitchLogin.OAUTH_CLIENT:
+            TwitchLogin.OAUTH_CLIENT.clear_stored_tokens()
+
+        # Clean up old token storage keys
         self.config.cparser.remove('twitchbot/oldusertoken')
         self.config.cparser.remove('twitchbot/oldrefreshtoken')
-        self.config.cparser.sync()
-        logging.debug('Broken twitch config. Removing any cached API tokens.')
+        self.config.cparser.remove('twitchbot/accesstoken')
+        self.config.cparser.remove('twitchbot/refreshtoken')
+        self.config.save()
+        logging.debug('Twitch tokens cleared')
