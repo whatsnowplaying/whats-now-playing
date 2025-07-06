@@ -33,18 +33,27 @@ async def attempt_token_refresh(config: nowplaying.config.ConfigFile) -> bool:
         if refresh_token:
             # Try to refresh the token
             logging.debug('Attempting to refresh token using refresh_token')
-            token_response = await oauth.refresh_access_token_async(refresh_token)
+            try:
+                token_response = await oauth.refresh_access_token_async(refresh_token)
 
-            # Save the refreshed tokens
-            new_access_token = token_response.get('access_token')
-            new_refresh_token = token_response.get('refresh_token')
-            if new_access_token:
-                config.cparser.setValue('kick/accesstoken', new_access_token)
-                if new_refresh_token:
-                    config.cparser.setValue('kick/refreshtoken', new_refresh_token)
-                config.save()
-            logging.info('Successfully refreshed Kick OAuth2 tokens')
-            return True
+                # Save the refreshed tokens
+                new_access_token = token_response.get('access_token')
+                new_refresh_token = token_response.get('refresh_token')
+                if new_access_token:
+                    config.cparser.setValue('kick/accesstoken', new_access_token)
+                    if new_refresh_token:
+                        config.cparser.setValue('kick/refreshtoken', new_refresh_token)
+                    config.save()
+                logging.info('Successfully refreshed Kick OAuth2 tokens')
+                return True
+            except ValueError as error:
+                # Check if it's an invalid_grant error (expired/revoked refresh token)
+                if '401' in str(error) and 'invalid_grant' in str(error):
+                    logging.warning('Kick refresh token is invalid/expired, clearing stored tokens')
+                    oauth.clear_stored_tokens()
+                    return False
+                # Re-raise other ValueError types
+                raise
         logging.debug('No refresh_token available')
 
     except Exception as error:  # pylint: disable=broad-except

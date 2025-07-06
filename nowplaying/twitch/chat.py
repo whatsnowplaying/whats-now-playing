@@ -563,11 +563,12 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
     async def _post_template(self,
                              msg: ChatMessage | None = None,
                              templatein: str | pathlib.Path = None,
-                             moremetadata: dict[str, Any] | None =None,
-                             jinja2driver: jinja2.Environment | None=None) -> None:
+                             moremetadata: dict[str, Any] | None = None,
+                             jinja2driver: jinja2.Environment | None = None) -> None:
         ''' take a template, fill it in, and post it '''
         # Validate inputs and setup
         if not self._validate_template_inputs(templatein):
+            logging.warning("No template input provided to _post_template; skipping post.")
             return
 
         jinja2driver = jinja2driver or self.jinja2
@@ -593,8 +594,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             return False
         return True
 
-    async def _prepare_template_metadata(self,
-               moremetadata: dict[str,str]) -> TrackMetadata:
+    async def _prepare_template_metadata(self, moremetadata: dict[str, str]) -> TrackMetadata:
         ''' Prepare metadata for template rendering '''
         metadata = await self.metadb.read_last_meta_async() or {}
         if 'coverimageraw' in metadata:
@@ -607,7 +607,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
 
         return metadata
 
-    def _resolve_template_name(self, templatein:pathlib.Path | str) -> str | None:
+    def _resolve_template_name(self, templatein: pathlib.Path | str) -> str | None:
         ''' Resolve template name from input path or string '''
         if isinstance(templatein, pathlib.Path):
             if not templatein.is_file():
@@ -620,8 +620,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
         return templatein
 
     @staticmethod
-    def _render_template(template: str,
-                         metadata: TrackMetadata,
+    def _render_template(template: str, metadata: TrackMetadata,
                          jinja2driver: jinja2.Environment) -> str | None:
         ''' Render template with metadata '''
         try:
@@ -631,9 +630,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
             logging.error('template %s rendering failure: %s', template, error)
         return None
 
-    async def _send_template_messages(self,
-                                      message: str,
-                                      msg: ChatMessage | None = None) -> None:
+    async def _send_template_messages(self, message: str, msg: ChatMessage | None = None) -> None:
         ''' Send rendered template messages to chat '''
         messages = message.split(SPLITMESSAGETEXT)
         try:
@@ -650,9 +647,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 logging.error(line)
             logging.error('Unknown problem.')
 
-    async def _send_content_parts(self,
-                                  content: str,
-                                  msg: ChatMessage | None = None) -> None:
+    async def _send_content_parts(self, content: str, msg: ChatMessage | None = None) -> None:
         ''' Send content parts with smart splitting '''
         content_parts = self._split_message_smart(content)
         if len(content_parts) > 1:
@@ -663,9 +658,7 @@ class TwitchChat:  #pylint: disable=too-many-instance-attributes
                 continue
             await self._send_single_message_part(part, msg)
 
-    async def _send_single_message_part(self,
-                                        part: str,
-                                        msg: ChatMessage | None = None) -> None:
+    async def _send_single_message_part(self, part: str, msg: ChatMessage | None = None) -> None:
         ''' Send a single message part using reply or direct message '''
         if not self.chat:
             return

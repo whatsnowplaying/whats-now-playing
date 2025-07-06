@@ -52,7 +52,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         ''' handle the channel point redemption '''
         redemptitle = data.event.reward.title
         user = data.event.user_name
-        user_input = data.event.user_input if data.event.user_input else None
+        user_input = data.event.user_input or None
 
         reqdata = {}
 
@@ -84,7 +84,8 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
             if self.chat and setting.get('command'):
                 await self.chat.redemption_to_chat_request_bridge(setting['command'], reqdata)
 
-    async def run_redemptions(self, chat: 'nowplaying.twitch.chat.TwitchChat'):
+    async def run_redemptions(self,
+                              chat: 'nowplaying.twitch.chat.TwitchChat | None'):
         ''' twitch redemptions using EventSub WebSockets '''
         # Wait until both redemptions and requests are enabled
         await self._wait_for_redemptions_enabled()
@@ -99,6 +100,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
             await asyncio.sleep(5)
             if nowplaying.utils.safe_stopevent_check(self.stopevent):
                 break
+
 
             # Check if we were connected but lost connection
             if loggedin and self.eventsub and not self._is_eventsub_running():

@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 """ Startup window for showing initialization progress """
 
+import contextlib
 import logging
 import pathlib
 from typing import Any
 
 from PySide6.QtCore import Qt, QTimer  # pylint: disable=import-error,no-name-in-module
+from PySide6.QtWidgets import QApplication  # pylint: disable=import-error,no-name-in-module
 from PySide6.QtGui import QFont, QIcon  # pylint: disable=import-error,no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=import-error,no-name-in-module
-    QDialog, QLabel, QProgressBar, QVBoxLayout)
-from PySide6.QtGui import QPixmap  # pylint: disable=import-error,no-name-in-module
+    QDialog, QLabel, QProgressBar, QVBoxLayout, QHBoxLayout, QPushButton)
+from PySide6.QtGui import QPixmap, QKeyEvent  # pylint: disable=import-error,no-name-in-module
 
 import nowplaying
 
 
-class StartupWindow(QDialog):
+class StartupWindow(QDialog): # pylint: disable=too-many-instance-attributes
     """Startup window showing initialization progress."""
 
     def __init__(self, bundledir: str = None) -> None:
@@ -22,6 +24,7 @@ class StartupWindow(QDialog):
         self.bundledir = pathlib.Path(bundledir) if bundledir else None
         self.progress_value = 0
         self.max_steps = 10  # More detailed steps now
+        self.drag_position = None  # For window dragging
 
         self._setup_ui()
         self._center_window()
@@ -34,11 +37,11 @@ class StartupWindow(QDialog):
 
         logging.debug("Startup window initialized")
 
-    def _setup_ui(self) -> None:
+    def _setup_ui(self) -> None: # pylint: disable=too-many-statements
         """Set up the startup window UI."""
-        self.setWindowTitle("Starting What's Now Playing")
+        self.setWindowTitle("Starting What's Now Playing - Press Escape to cancel")
         self.setModal(True)
-        self.setFixedSize(400, 200)
+        self.setFixedSize(400, 220)  # Slightly taller for close button
 
         # Remove window decorations for splash-like appearance
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint
@@ -51,10 +54,41 @@ class StartupWindow(QDialog):
         if iconfile and iconfile.exists():
             self.setWindowIcon(QIcon(str(iconfile)))
 
+        # Enable focus to receive keyboard events
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
         # Main layout
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
         layout.setContentsMargins(30, 10, 30, 25)
+
+        # Add close button at the top right for accessibility
+        top_layout = QHBoxLayout()
+        top_layout.addStretch()  # Push button to the right
+
+        self.close_button = QPushButton("×")
+        self.close_button.setFixedSize(20, 20)
+        self.close_button.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(255, 255, 255, 0.1);
+                border: none;
+                color: gray;
+                font-weight: bold;
+                border-radius: 10px;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 0, 0, 0.3);
+                color: white;
+            }
+            QPushButton:pressed {
+                background-color: rgba(255, 0, 0, 0.5);
+            }
+        """)
+        self.close_button.setToolTip("Close (or press Escape)")
+        self.close_button.clicked.connect(self.accept)
+
+        top_layout.addWidget(self.close_button)
+        layout.addLayout(top_layout)
 
         # Icon label (if icon found)
         if iconfile and iconfile.exists():
@@ -109,9 +143,7 @@ class StartupWindow(QDialog):
 
     def _center_window(self) -> None:
         """Center the window on the screen."""
-        # Get screen geometry
-        screen = self.screen()
-        if screen:
+        if screen := self.screen():
             screen_geometry = screen.availableGeometry()
             window_geometry = self.frameGeometry()
             center_point = screen_geometry.center()
@@ -128,12 +160,9 @@ class StartupWindow(QDialog):
             search_dirs.extend([self.bundledir, self.bundledir / 'resources'])
 
         # Add standard nowplaying locations
-        try:
+        with contextlib.suppress(ImportError, AttributeError):
             nowplaying_dir = pathlib.Path(nowplaying.__file__).parent
             search_dirs.extend([nowplaying_dir / 'resources', nowplaying_dir.parent / 'resources'])
-        except (ImportError, AttributeError):
-            pass
-
         # Search for icon files
         for testdir in search_dirs:
             if not testdir.exists():
@@ -149,7 +178,7 @@ class StartupWindow(QDialog):
 
     def update_progress(self, step: str, progress: int | None = None) -> None:
         """Update the progress display.
-        
+
         Args:
             step: Description of current step
             progress: Optional specific progress value (0-max_steps)
@@ -167,8 +196,8 @@ class StartupWindow(QDialog):
 
         self.progress_bar.setValue(self.progress_value)
 
-        # Force UI update
-        self.repaint()
+        # Process events to keep UI responsive during long operations
+        QApplication.processEvents()
 
     def complete_startup(self) -> None:
         """Mark startup as complete and close window."""
@@ -180,7 +209,7 @@ class StartupWindow(QDialog):
 
     def show_error(self, error_message: str) -> None:
         """Show an error message and keep window open.
-        
+
         Args:
             error_message: Error message to display
         """
@@ -190,6 +219,26 @@ class StartupWindow(QDialog):
 
         # Cancel failsafe timer since we have an error
         self.failsafe_timer.stop()
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:  # pylint: disable=invalid-name
+        """Handle key press events for accessibility."""
+        if event.key() == Qt.Key.Key_Escape:
+            logging.debug("Startup window closed via Escape key")
+            self.accept()
+        else:
+            super().keyPressEvent(event)
+
+    def mousePressEvent(self, event) -> None:  # pylint: disable=invalid-name
+        """Handle mouse press for window dragging."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event) -> None:  # pylint: disable=invalid-name
+        """Handle mouse move for window dragging."""
+        if (event.buttons() == Qt.MouseButton.LeftButton and self.drag_position is not None):
+            self.move(event.globalPosition().toPoint() - self.drag_position)
+            event.accept()
 
     def closeEvent(self, event: Any) -> None:  # pylint: disable=invalid-name
         """Handle close event."""

@@ -213,7 +213,7 @@ class TwitchSettings:
         ''' Start periodic status updates to catch automatic token refresh '''
         if not self.status_timer:
             # Set widget as parent so Qt automatically cleans up timer on widget destruction
-            parent = self.widget if self.widget else None
+            parent = self.widget or None
             self.status_timer = QTimer(parent)
             self.status_timer.timeout.connect(self.update_oauth_status)
             # Check every 5 seconds for token status changes

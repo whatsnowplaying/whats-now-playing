@@ -17,6 +17,9 @@ async def get_user_image(oauth: 'nowplaying.twitch.oauth2.TwitchOAuth2',
     ''' ask twitch for the user profile image '''
     image = None
     try:
+        if not oauth or not oauth.access_token or not oauth.client_id:
+            logging.error('OAuth2 client or access token is not available')
+            return None
         # Get user info using the OAuth2 client
         headers = {'Authorization': f'Bearer {oauth.access_token}', 'Client-Id': oauth.client_id}
 

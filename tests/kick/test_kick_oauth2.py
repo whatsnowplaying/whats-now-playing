@@ -11,7 +11,7 @@ import pytest
 from aioresponses import aioresponses
 
 import nowplaying.kick.oauth2  # pylint: disable=import-error,no-name-in-module
-from nowplaying.kick.constants import OAUTH_HOST # pylint: disable=import-error,no-name-in-module
+from nowplaying.kick.constants import OAUTH_HOST  # pylint: disable=import-error,no-name-in-module
 
 # pylint: disable=redefined-outer-name, too-many-arguments, unused-argument
 

@@ -8,7 +8,6 @@ from typing import Any
 import aiohttp
 import requests
 
-
 import nowplaying.config
 import nowplaying.kick.constants
 import nowplaying.oauth2
@@ -34,7 +33,7 @@ class KickOAuth2(nowplaying.oauth2.OAuth2Client):
 
         async with aiohttp.ClientSession() as session:
             async with session.post(url, headers=headers,
-                                            timeout=aiohttp.ClientTimeout(total=10)) as response:
+                                    timeout=aiohttp.ClientTimeout(total=10)) as response:
                 if response.status == 200:
                     validation_response = await response.json()
                     data = validation_response.get('data', {})

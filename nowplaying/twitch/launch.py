@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 ''' twitch base launch code '''
 
+
 import asyncio
+import contextlib
 import logging
 import signal
 
@@ -9,6 +11,8 @@ import nowplaying.twitch.chat
 import nowplaying.twitch.redemptions
 import nowplaying.twitch.utils
 import nowplaying.utils
+
+
 
 
 class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
@@ -24,6 +28,13 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
         self.twitchlogin = nowplaying.twitch.utils.TwitchLogin(self.config)
         self.tasks = set()
 
+    def log_task_exception(self, task: asyncio.Task):
+        ''' catch and log task exceptions '''
+        with contextlib.suppress(asyncio.CancelledError):
+            if exception := task.exception():
+                task_name = task.get_name() if hasattr(task, 'get_name') else str(task)
+                logging.exception("Task %s failed", task_name)
+
     async def bootstrap(self):
         ''' Authenticate twitch and launch related tasks '''
 
@@ -37,15 +48,19 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
                 self.loop = asyncio.new_event_loop()
         await asyncio.sleep(5)
         if self.chat:
-            task = self.loop.create_task(self.chat.run_chat(self.twitchlogin))
+            logging.info("Starting Twitch chat task")
+            task = self.loop.create_task(self.chat.run_chat(self.twitchlogin), name="twitch_chat")
             self.tasks.add(task)
             task.add_done_callback(self.tasks.discard)
+            task.add_done_callback(self.log_task_exception)
             await asyncio.sleep(5)
         if self.redemptions:
+            logging.info("Starting Twitch redemptions task")
             task = self.loop.create_task(
-                self.redemptions.run_redemptions(self.chat))
+                self.redemptions.run_redemptions(chat=self.chat), name="twitch_redemptions")
             self.tasks.add(task)
             task.add_done_callback(self.tasks.discard)
+            task.add_done_callback(self.log_task_exception)
 
     async def _watch_for_exit(self):
         while not nowplaying.utils.safe_stopevent_check(self.stopevent):
@@ -55,10 +70,12 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
     def start(self):
         ''' start twitch support '''
         try:
+            logging.info("Creating Twitch chat and redemptions objects")
             self.chat = nowplaying.twitch.chat.TwitchChat(config=self.config,
                                                           stopevent=self.stopevent)
             self.redemptions = nowplaying.twitch.redemptions.TwitchRedemptions(
                 config=self.config, stopevent=self.stopevent)
+            logging.info("Created chat: %s, redemptions: %s", self.chat, self.redemptions)
             if not self.loop:
                 try:
                     self.loop = asyncio.get_running_loop()

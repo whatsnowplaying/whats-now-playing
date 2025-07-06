@@ -2,12 +2,13 @@
 ''' Generic OAuth2 authentication handler with PKCE for streaming services '''
 
 import base64
+import contextlib
 import hashlib
 import logging
 import secrets
 import urllib.parse
 import webbrowser
-from typing import Any, TypedDict, NotRequired  # pylint: disable=no-name-in-module
+from typing import Any, Callable, TypedDict, NotRequired  # pylint: disable=no-name-in-module
 
 import aiohttp
 from aiohttp import web
@@ -146,17 +147,28 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
                                       authorization_code: str,
                                       received_state: str | None = None) -> dict[str, Any]:
         ''' Exchange authorization code for access token '''
+        # Extract session ID from received state parameter for correct PKCE parameter lookup
+        session_id_for_lookup = self.session_id  # Default to instance session ID
+        if received_state:
+            try:
+                # Decode state parameter to extract session ID
+                state_data = base64.urlsafe_b64decode(f'{received_state}==').decode('utf-8')
+                session_id_for_lookup, _ = state_data.split(':', 1)
+            except (ValueError, UnicodeDecodeError):
+                # If state decoding fails, fall back to instance session ID
+                pass
+
         # Load PKCE parameters from config if not already set (for callback handler)
         if not self.code_verifier and self.config:
-            verifier_key = f'{self.config_prefix}/temp_code_verifier_{self.session_id}'
+            verifier_key = f'{self.config_prefix}/temp_code_verifier_{session_id_for_lookup}'
             self.code_verifier = self.config.cparser.value(verifier_key)
             # State may have already been invalidated by callback handler for security
             if not self.state:
-                state_key = f'{self.config_prefix}/temp_state_{self.session_id}'
+                state_key = f'{self.config_prefix}/temp_state_{session_id_for_lookup}'
                 self.state = self.config.cparser.value(state_key)
 
         if not self.code_verifier:
-            self.cleanup_temp_pkce_params()
+            self._cleanup_temp_pkce_params_for_session(session_id_for_lookup)
             raise ValueError(
                 "Code verifier not available. This can happen if:\n"
                 "1. get_authorization_url() was not called before this method\n"
@@ -167,12 +179,12 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
 
         # Enforce state parameter presence for robust CSRF protection
         if not received_state:
-            self.cleanup_temp_pkce_params()
+            self._cleanup_temp_pkce_params_for_session(session_id_for_lookup)
             raise ValueError("State parameter is required for CSRF protection.")
 
         # Validate state parameter if we have a stored state to compare against
         if self.state and received_state != self.state:
-            self.cleanup_temp_pkce_params()
+            self._cleanup_temp_pkce_params_for_session(session_id_for_lookup)
             raise ValueError("State parameter mismatch. Possible CSRF attack.")
 
         token_data = {
@@ -210,9 +222,9 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
                             'present' if self.access_token else 'missing',
                             'present' if self.refresh_token else 'missing')
 
-                        # Clean up temporary PKCE parameters
+                        # Clean up temporary PKCE parameters using the correct session ID
                         # Note: Token saving is now handled by caller for consistency
-                        self.cleanup_temp_pkce_params()
+                        self._cleanup_temp_pkce_params_for_session(session_id_for_lookup)
 
                         logging.info('Successfully obtained %s OAuth2 tokens', self.config_prefix)
                         return token_response
@@ -220,13 +232,13 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
                     logging.error('Failed to exchange code for token: %s - %s', response.status,
                                   error_text)
                     # Clean up temporary PKCE parameters on failure
-                    self.cleanup_temp_pkce_params()
+                    self._cleanup_temp_pkce_params_for_session(session_id_for_lookup)
                     raise ValueError(f"Token exchange failed: {response.status} - {error_text}")
         except Exception as error:
             # Clean up temporary PKCE parameters if OAuth flow is interrupted
             if not isinstance(error, ValueError):
                 # Don't re-cleanup if it's a ValueError we raised above
-                self.cleanup_temp_pkce_params()
+                self._cleanup_temp_pkce_params_for_session(session_id_for_lookup)
             raise
 
     async def refresh_access_token_async(self, refresh_token: str | None = None) -> dict[str, Any]:
@@ -313,7 +325,7 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
             logging.warning("No token to validate")
             return None
 
-        headers = {'Authorization': f'OAuth {token}'}
+        headers = {'Authorization': f'Bearer {token}'}
 
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{self.oauth_host}{self.validate_endpoint}",
@@ -370,15 +382,19 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
 
     def cleanup_temp_pkce_params(self) -> None:
         '''Remove temporary PKCE parameters from config to prevent stale data.'''
+        self._cleanup_temp_pkce_params_for_session(self.session_id)
+
+    def _cleanup_temp_pkce_params_for_session(self, session_id: str) -> None:
+        '''Remove temporary PKCE parameters for a specific session ID.'''
         if self.config:
-            verifier_key = f'{self.config_prefix}/temp_code_verifier_{self.session_id}'
-            state_key = f'{self.config_prefix}/temp_state_{self.session_id}'
+            verifier_key = f'{self.config_prefix}/temp_code_verifier_{session_id}'
+            state_key = f'{self.config_prefix}/temp_state_{session_id}'
             self.config.cparser.remove(verifier_key)
             self.config.cparser.remove(state_key)
             self.config.save()
             self.config.cparser.sync()  # Ensure cross-process visibility
             logging.debug('Cleaned up temporary PKCE parameters for %s session %s',
-                         self.config_prefix, self.session_id)
+                          self.config_prefix, session_id)
 
     def clear_stored_tokens(self) -> None:
         ''' Clear tokens from config storage '''
@@ -450,7 +466,8 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
         return f'http://localhost:{port}/{redirect_path}'
 
     @staticmethod
-    async def handle_oauth_redirect(request, oauth_config: dict, config, jinja2_env):
+    async def handle_oauth_redirect(request: web.Request, oauth_config: dict, config,
+                                    jinja2_env: jinja2.Environment):
         """Generic OAuth2 redirect handler for any service.
 
         This method handles the OAuth2 authorization code flow redirect for any service.
@@ -490,7 +507,8 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
 class _OAuthRedirectHelper:  # pylint: disable=too-many-instance-attributes
     """Helper class to handle OAuth redirect processing steps."""
 
-    def __init__(self, request: web.Request, oauth_config: dict, config, jinja2_env):
+    def __init__(self, request: web.Request, oauth_config: dict[str, Any], config,
+                 jinja2_env: jinja2.Environment):
         self.request = request
         self.oauth_config = oauth_config
         self.params = dict(request.query)
@@ -521,7 +539,7 @@ class _OAuthRedirectHelper:  # pylint: disable=too-many-instance-attributes
         })
 
     @staticmethod
-    def _create_template_loader(jinja2_env: jinja2.Environment):
+    def _create_template_loader(jinja2_env: jinja2.Environment) -> Callable[[str, Any], str]:
         """Create a template loader function with error handling."""
 
         def load_oauth_template(template_name: str, **kwargs) -> str:
@@ -551,19 +569,13 @@ class _OAuthRedirectHelper:  # pylint: disable=too-many-instance-attributes
         if self.params.get('code'):
             return None
 
-        # Try to extract session ID from state for cleanup
-        received_state = self.params.get('state')
-        if received_state:
-            try:
-                state_data = base64.urlsafe_b64decode(received_state + '==').decode('utf-8')
+        if received_state := self.params.get('state'):
+            with contextlib.suppress(ValueError):
+                state_data = base64.urlsafe_b64decode(f'{received_state}==').decode('utf-8')
                 session_id, _ = state_data.split(':', 1)
                 oauth = self.oauth_class(self.config)
                 oauth.session_id = session_id
                 oauth.cleanup_temp_pkce_params()
-            except (ValueError, UnicodeDecodeError):
-                # Malformed state, can't cleanup specific session
-                pass
-
         response_html = self.load_template(f'{self.template_prefix}_no_code.htm')
         return self.web.Response(content_type='text/html', text=response_html)
 
@@ -572,47 +584,48 @@ class _OAuthRedirectHelper:  # pylint: disable=too-many-instance-attributes
         received_state = self.params.get('state')
 
         if not received_state:
-            response_html = self.load_template(f'{self.template_prefix}_invalid_session.htm')
-            logging.warning('%s callback without state parameter', self.service_name)
-            return self.web.Response(content_type='text/html', text=response_html)
-
+            return self._invalid_session_html('%s callback without state parameter')
         # Extract session ID from state parameter
         try:
-            state_data = base64.urlsafe_b64decode(received_state + '==').decode('utf-8')
+            state_data = base64.urlsafe_b64decode(f'{received_state}==').decode('utf-8')
             session_id, _ = state_data.split(':', 1)
-        except (ValueError, UnicodeDecodeError):
-            response_html = self.load_template(f'{self.template_prefix}_invalid_session.htm')
-            logging.warning('%s callback with malformed state parameter', self.service_name)
-            return self.web.Response(content_type='text/html', text=response_html)
-
+        except ValueError:
+            return self._invalid_session_html('%s callback with malformed state parameter')
         # Look up expected state using session ID
         expected_state = self.config.cparser.value(f'{self.config_prefix}/temp_state_{session_id}')
 
         if not expected_state:
             response_html = self.load_template(f'{self.template_prefix}_invalid_session.htm')
             logging.warning('%s callback without valid session state for session %s',
-                          self.service_name, session_id)
+                            self.service_name, session_id)
             return self.web.Response(content_type='text/html', text=response_html)
 
         if received_state != expected_state:
-            # Create OAuth instance with matching session ID for cleanup
-            oauth = self.oauth_class(self.config)
-            oauth.session_id = session_id
-            oauth.cleanup_temp_pkce_params()
-            response_html = self.load_template(f'{self.template_prefix}_csrf_error.htm')
-            logging.error('%s CSRF attack detected: state mismatch for session %s',
-                         self.service_name, session_id)
-            return self.web.Response(content_type='text/html', text=response_html)
-
+            return self._csrf_mismatch_html(session_id)
         # State validation successful - invalidate to prevent replay attacks
         self.config.cparser.remove(f'{self.config_prefix}/temp_state_{session_id}')
         self.config.save()
         logging.debug('%s state parameter invalidated after validation for session %s',
-                     self.service_name, session_id)
+                      self.service_name, session_id)
 
         # Store session ID for use in token exchange
         self.session_id = session_id
         return None
+
+    def _csrf_mismatch_html(self, session_id: str) -> web.Response:
+        # Create OAuth instance with matching session ID for cleanup
+        oauth = self.oauth_class(self.config)
+        oauth.session_id = session_id
+        oauth.cleanup_temp_pkce_params()
+        response_html = self.load_template(f'{self.template_prefix}_csrf_error.htm')
+        logging.error('%s CSRF attack detected: state mismatch for session %s', self.service_name,
+                      session_id)
+        return self.web.Response(content_type='text/html', text=response_html)
+
+    def _invalid_session_html(self, arg0: str) -> web.Response:
+        response_html = self.load_template(f'{self.template_prefix}_invalid_session.htm')
+        logging.warning(arg0, self.service_name)
+        return self.web.Response(content_type='text/html', text=response_html)
 
     async def exchange_code_for_tokens(self):
         """Exchange authorization code for access/refresh tokens."""
@@ -644,7 +657,7 @@ class _OAuthRedirectHelper:  # pylint: disable=too-many-instance-attributes
                                                'Please check your configuration and try again.')
             return self.web.Response(content_type='text/html', text=response_html)
 
-    def _save_tokens(self, token_response: dict) -> None:
+    def _save_tokens(self, token_response: dict[str, Any]) -> None:
         """Save access and refresh tokens to configuration."""
         access_token = token_response.get('access_token')
         refresh_token = token_response.get('refresh_token')
