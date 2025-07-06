@@ -90,9 +90,20 @@ def test_qt_config_serialization_compatibility(test_settings):  # pylint:disable
     assert retrieved_single is not None
     assert retrieved_list is not None
 
+    # Verify single enum value
+    assert isinstance(retrieved_single, AuthScope)
+    assert retrieved_single == AuthScope.CHAT_READ
+    assert retrieved_single.value == 'chat:read'
+
     # For list, verify it's actually a list and has expected length
     if isinstance(retrieved_list, list):
         assert len(retrieved_list) == 2
+        # Verify that deserialized list contains AuthScope enums with correct values
+        assert all(isinstance(item, AuthScope) for item in retrieved_list)
+        assert retrieved_list[0] == AuthScope.CHAT_READ
+        assert retrieved_list[0].value == 'chat:read'
+        assert retrieved_list[1] == AuthScope.CHAT_EDIT
+        assert retrieved_list[1].value == 'chat:edit'
 
 
 def test_compatibility_shim_auto_install():

@@ -95,38 +95,6 @@ class KickOAuth2(nowplaying.oauth2.OAuth2Client):
             logging.error('Kick token validation/bad json: %s', error)
         return False
 
-    async def validate_token(self, token: str | None = None) -> dict[str, Any] | None:
-        ''' Validate an access token using Kick's introspect endpoint '''
-        if not token:
-            token = (self.access_token
-                     or self.config.cparser.value(f'{self.config_prefix}/accesstoken'))
-
-        if not token:
-            logging.warning("No token to validate")
-            return None
-
-        # Use Kick's token introspect endpoint (different from generic OAuth2)
-        url = nowplaying.kick.constants.TOKEN_INTROSPECT_ENDPOINT
-        headers = {'Authorization': f'Bearer {token}'}
-
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers,
-                                    timeout=aiohttp.ClientTimeout(total=10)) as response:
-                if response.status == 200:
-                    validation_response = await response.json()
-                    data = validation_response.get('data', {})
-
-                    # Check if token is active
-                    if data.get('active'):
-                        logging.debug('Token validation successful')
-                        return validation_response
-
-                    logging.debug('Token is inactive')
-                    return None
-
-                logging.debug('Token validation failed: %s', response.status)
-                return None
-
     async def revoke_token(self, token: str | None = None) -> None:
         ''' Revoke an access or refresh token using Kick's endpoint '''
         if not token:

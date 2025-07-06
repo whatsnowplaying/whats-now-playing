@@ -122,7 +122,7 @@ class TwitchOAuth2(nowplaying.oauth2.OAuth2Client):
             return None if return_username else False
 
         url = 'https://id.twitch.tv/oauth2/validate'
-        headers = {'Authorization': f'OAuth {token}'}
+        headers = {'Authorization': f'Bearer {token}'}
 
         try:
             req = requests.get(url, headers=headers, timeout=10)

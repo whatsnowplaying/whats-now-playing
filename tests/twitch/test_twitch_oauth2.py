@@ -112,8 +112,21 @@ def test_generate_pkce_parameters(configured_oauth):  # pylint: disable=redefine
     "client_id,redirect_uri,expected_error",
     [
         (None, 'http://localhost:8899', 'Client ID is required'),
+        ('', 'http://localhost:8899', 'Client ID is required'),  # Empty string
+        ('   ', 'http://localhost:8899', 'Client ID is required'),  # Whitespace only
+        ('client with spaces', 'http://localhost:8899',
+         'Client ID contains invalid characters'),  # Spaces
+        ('client@invalid', 'http://localhost:8899',
+         'Client ID contains invalid characters'),  # Special chars
+        ('client\nwith\nnewlines', 'http://localhost:8899',
+         'Client ID contains invalid characters'),  # Newlines
+        ('client\twith\ttabs', 'http://localhost:8899',
+         'Client ID contains invalid characters'),  # Tabs
+        ('client#with$symbols%', 'http://localhost:8899',
+         'Client ID contains invalid characters'),  # Various symbols
         ('test_client', None, 'Redirect URI is required'),
         ('test_client', 'http://localhost:8899', None),  # Success
+        ('  valid_client  ', 'http://localhost:8899', None),  # Success with trimming
     ])
 def test_get_authorization_url_scenarios(  # pylint: disable=redefined-outer-name
         bootstrap, client_id, redirect_uri, expected_error):
@@ -135,7 +148,9 @@ def test_get_authorization_url_scenarios(  # pylint: disable=redefined-outer-nam
         auth_url = oauth.get_authorization_url()
 
         assert auth_url.startswith('https://id.twitch.tv/oauth2/authorize?')
-        assert f'client_id={client_id}' in auth_url
+        # Use trimmed client_id for URL validation since validation normalizes it
+        expected_client_id = client_id.strip() if client_id else client_id
+        assert f'client_id={expected_client_id}' in auth_url
         assert 'response_type=code' in auth_url
         encoded_uri = redirect_uri.replace(":", "%3A").replace("/", "%2F")
         assert f'redirect_uri={encoded_uri}' in auth_url
@@ -463,6 +478,48 @@ def test_pkce_challenge_calculation(configured_oauth):  # pylint: disable=redefi
         hashlib.sha256(oauth.code_verifier.encode('utf-8')).digest()).decode('utf-8').rstrip('=')
 
     assert oauth.code_challenge == expected_challenge
+
+
+def test_pkce_challenge_calculation_independent():
+    """Test PKCE code challenge calculation logic independently."""
+    code_verifier = 'test_verifier_123456789'
+    # Manually calculate expected challenge
+    expected_challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(code_verifier.encode('utf-8')).digest()).decode('utf-8').rstrip('=')
+
+    # Call the calculation logic directly from the base class
+    actual_challenge = nowplaying.twitch.oauth2.TwitchOAuth2.calculate_pkce_challenge(code_verifier)
+
+    assert actual_challenge == expected_challenge
+
+
+@pytest.mark.parametrize(
+    "client_id,expected_result,should_raise",
+    [
+        ('valid_client', 'valid_client', False),  # Valid client ID
+        ('  valid_client  ', 'valid_client', False),  # Trimmed whitespace
+        ('valid-client-123', 'valid-client-123', False),  # Valid with hyphens and numbers
+        ('valid_client_456', 'valid_client_456', False),  # Valid with underscores
+        (None, None, True),  # None client ID
+        ('', None, True),  # Empty string
+        ('   ', None, True),  # Whitespace only
+        ('client with spaces', None, True),  # Spaces
+        ('client@invalid', None, True),  # @ symbol
+        ('client#test', None, True),  # # symbol
+        ('client$test', None, True),  # $ symbol
+        ('client%test', None, True),  # % symbol
+        ('client\ntest', None, True),  # Newline
+        ('client\ttest', None, True),  # Tab
+        ('client\rtest', None, True),  # Carriage return
+    ])
+def test_client_id_validation(client_id, expected_result, should_raise):
+    """Test client ID validation logic independently."""
+    if should_raise:
+        with pytest.raises(ValueError):
+            nowplaying.twitch.oauth2.TwitchOAuth2.validate_client_id(client_id)
+    else:
+        result = nowplaying.twitch.oauth2.TwitchOAuth2.validate_client_id(client_id)
+        assert result == expected_result
 
 
 @pytest.mark.parametrize("invalid_config_key", [

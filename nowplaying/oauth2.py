@@ -77,14 +77,59 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
         ''' Override in subclasses to add service-specific OAuth parameters '''
         return {}
 
+    @staticmethod
+    def calculate_pkce_challenge(code_verifier: str) -> str:
+        ''' Calculate PKCE code challenge from verifier
+
+        Args:
+            code_verifier: The PKCE code verifier string
+
+        Returns:
+            The calculated PKCE code challenge (SHA256 hash, base64url encoded)
+        '''
+        challenge_bytes = hashlib.sha256(code_verifier.encode('utf-8')).digest()
+        return base64.urlsafe_b64encode(challenge_bytes).decode('utf-8').rstrip('=')
+
+    @staticmethod
+    def validate_client_id(client_id: str | None) -> str:
+        ''' Validate and normalize OAuth client ID
+
+        Args:
+            client_id: The client ID to validate
+
+        Returns:
+            The normalized client ID
+
+        Raises:
+            ValueError: If client ID is invalid
+        '''
+        if not client_id:
+            raise ValueError("Client ID is required")
+
+        # Strip whitespace
+        normalized_id = client_id.strip()
+
+        if not normalized_id:
+            raise ValueError("Client ID is required")
+
+        # Check for invalid characters (OAuth client IDs should be URL-safe)
+        if any(char in normalized_id for char in [' ', '\t', '\n', '\r']):
+            raise ValueError("Client ID contains invalid characters")
+
+        # Check for common problematic characters
+        if any(char in normalized_id
+               for char in ['@', '#', '$', '%', '^', '&', '*', '(', ')', '+', '=']):
+            raise ValueError("Client ID contains invalid characters")
+
+        return normalized_id
+
     def _generate_pkce_parameters(self) -> None:
         ''' Generate PKCE code verifier and challenge '''
         # Generate code verifier (43-128 characters, URL-safe)
         self.code_verifier = secrets.token_urlsafe(43)
 
         # Generate code challenge (SHA256 hash of verifier, base64url encoded)
-        challenge_bytes = hashlib.sha256(self.code_verifier.encode('utf-8')).digest()
-        self.code_challenge = base64.urlsafe_b64encode(challenge_bytes).decode('utf-8').rstrip('=')
+        self.code_challenge = self.calculate_pkce_challenge(self.code_verifier)
 
         # Generate state parameter for CSRF protection, include session ID
         state_data = f"{self.session_id}:{secrets.token_urlsafe(32)}"
@@ -102,8 +147,8 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
 
     def get_authorization_url(self, scopes: list[str] | None = None) -> str:
         ''' Generate the authorization URL for user consent '''
-        if not self.client_id:
-            raise ValueError("Client ID is required")
+        # Validate and normalize client ID
+        validated_client_id = self.validate_client_id(self.client_id)
         if not self.redirect_uri:
             raise ValueError("Redirect URI is required")
 
@@ -113,7 +158,7 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
         self._generate_pkce_parameters()
 
         params = {
-            'client_id': self.client_id,
+            'client_id': validated_client_id,
             'response_type': 'code',
             'redirect_uri': self.redirect_uri,
             'state': self.state,
@@ -150,13 +195,11 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
         # Extract session ID from received state parameter for correct PKCE parameter lookup
         session_id_for_lookup = self.session_id  # Default to instance session ID
         if received_state:
-            try:
+            # If state decoding fails, fall back to instance session ID
+            with contextlib.suppress(ValueError):
                 # Decode state parameter to extract session ID
                 state_data = base64.urlsafe_b64decode(f'{received_state}==').decode('utf-8')
                 session_id_for_lookup, _ = state_data.split(':', 1)
-            except (ValueError, UnicodeDecodeError):
-                # If state decoding fails, fall back to instance session ID
-                pass
 
         # Load PKCE parameters from config if not already set (for callback handler)
         if not self.code_verifier and self.config:

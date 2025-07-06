@@ -16,32 +16,41 @@ from PySide6.QtGui import QPixmap, QKeyEvent  # pylint: disable=import-error,no-
 import nowplaying
 
 
-class StartupWindow(QDialog): # pylint: disable=too-many-instance-attributes
+class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
     """Startup window showing initialization progress."""
 
-    def __init__(self, bundledir: str = None) -> None:
+    def __init__(self, bundledir: str = None, **kwargs) -> None:
         super().__init__()
         self.bundledir = pathlib.Path(bundledir) if bundledir else None
         self.progress_value = 0
         self.max_steps = 10  # More detailed steps now
         self.drag_position = None  # For window dragging
 
+        self._failsafe_timeout_ms = kwargs.get('failsafe_timeout_ms', 30000)  # Default 30 seconds
+        self._failsafe_warning_ms = kwargs.get('failsafe_warning_ms', 5000)  # Warn 5 seconds before
+
         self._setup_ui()
         self._center_window()
 
-        # Auto-close timer as failsafe (30 seconds max)
+        # Auto-close timer as failsafe (configurable)
         self.failsafe_timer = QTimer()
         self.failsafe_timer.timeout.connect(self.accept)
         self.failsafe_timer.setSingleShot(True)
-        self.failsafe_timer.start(30000)  # 30 seconds
+        self.failsafe_timer.start(self._failsafe_timeout_ms)
+
+        # Warning timer to notify user before failsafe triggers
+        self.failsafe_warning_timer = QTimer()
+        self.failsafe_warning_timer.setSingleShot(True)
+        self.failsafe_warning_timer.timeout.connect(self._show_failsafe_warning)
+        self.failsafe_warning_timer.start(self._failsafe_timeout_ms - self._failsafe_warning_ms)
 
         logging.debug("Startup window initialized")
 
-    def _setup_ui(self) -> None: # pylint: disable=too-many-statements
+    def _setup_ui(self) -> None:  # pylint: disable=too-many-statements
         """Set up the startup window UI."""
         self.setWindowTitle("Starting What's Now Playing - Press Escape to cancel")
         self.setModal(True)
-        self.setFixedSize(400, 220)  # Slightly taller for close button
+        self.setFixedSize(400, 240)  # Slightly taller for close button and warning label
 
         # Remove window decorations for splash-like appearance
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint
@@ -66,7 +75,7 @@ class StartupWindow(QDialog): # pylint: disable=too-many-instance-attributes
         top_layout = QHBoxLayout()
         top_layout.addStretch()  # Push button to the right
 
-        self.close_button = QPushButton("×")
+        self.close_button = QPushButton("X")
         self.close_button.setFixedSize(20, 20)
         self.close_button.setStyleSheet("""
             QPushButton {
@@ -127,6 +136,13 @@ class StartupWindow(QDialog): # pylint: disable=too-many-instance-attributes
         self.progress_bar.setMaximum(self.max_steps)
         self.progress_bar.setValue(0)
         layout.addWidget(self.progress_bar)
+
+        # Warning label for failsafe notification (initially hidden)
+        self.failsafe_warning_label = QLabel("")
+        self.failsafe_warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.failsafe_warning_label.setStyleSheet("color: red; font-size: 10px;")
+        self.failsafe_warning_label.setWordWrap(True)
+        layout.addWidget(self.failsafe_warning_label)
 
         # Version label (small, bottom)
         try:
@@ -190,9 +206,9 @@ class StartupWindow(QDialog): # pylint: disable=too-many-instance-attributes
 
         # Update progress bar
         if progress is not None:
-            self.progress_value = progress
+            self.progress_value = min(progress, self.max_steps)
         else:
-            self.progress_value += 1
+            self.progress_value = min(self.progress_value + 1, self.max_steps)
 
         self.progress_bar.setValue(self.progress_value)
 
@@ -240,8 +256,18 @@ class StartupWindow(QDialog): # pylint: disable=too-many-instance-attributes
             self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()
 
+    def _show_failsafe_warning(self) -> None:
+        """Show warning that window will auto-close soon."""
+        warning_seconds = self._failsafe_warning_ms // 1000
+        self.failsafe_warning_label.setText(f"Initialization is taking longer than expected. "
+                                            f"This window will close in {warning_seconds} seconds.")
+        logging.warning("Startup taking longer than expected, auto-closing in %d seconds",
+                        warning_seconds)
+
     def closeEvent(self, event: Any) -> None:  # pylint: disable=invalid-name
         """Handle close event."""
         logging.debug("Startup window closed")
         self.failsafe_timer.stop()
+        if hasattr(self, 'failsafe_warning_timer'):
+            self.failsafe_warning_timer.stop()
         super().closeEvent(event)
