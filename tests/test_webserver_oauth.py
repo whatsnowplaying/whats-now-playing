@@ -18,6 +18,7 @@ import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.config  # pylint: disable=import-error
 import nowplaying.db  # pylint: disable=import-error
 import nowplaying.subprocesses  # pylint: disable=import-error
+from nowplaying.oauth2 import OAuth2Client
 
 
 def is_port_in_use(port: int) -> bool:
@@ -53,7 +54,7 @@ def shared_webserver_config(pytestconfig):  # pylint: disable=redefined-outer-na
                 config.cparser.setValue('weboutput/httpenabled', 'true')
                 config.cparser.sync()
 
-                metadb = nowplaying.db.MetadataDB(initialize=True) # pylint: disable=no-member
+                metadb = nowplaying.db.MetadataDB(initialize=True)  # pylint: disable=no-member
                 logging.debug("shared webserver databasefile = %s", metadb.databasefile)
 
                 port = config.cparser.value('weboutput/httpport', type=int)
@@ -89,7 +90,6 @@ def reset_oauth_state(shared_webserver_config):  # pylint: disable=redefined-out
     config.cparser.sync()
 
     # Clear any kick OAuth state - use OAuth2Client cleanup for session-based params
-    from nowplaying.oauth2 import OAuth2Client
     OAuth2Client.cleanup_stray_temp_credentials(config)
     config.cparser.remove('kick/clientid')
     config.cparser.remove('kick/redirecturi')
@@ -99,6 +99,7 @@ def reset_oauth_state(shared_webserver_config):  # pylint: disable=redefined-out
 
 
 # Kick OAuth CSRF protection tests
+
 
 def test_kickredirect_valid_state(reset_oauth_state):  # pylint: disable=redefined-outer-name
     """Test OAuth callback with valid state parameter"""
@@ -117,8 +118,8 @@ def test_kickredirect_valid_state(reset_oauth_state):  # pylint: disable=redefin
 
     # Test valid state parameter - should attempt token exchange (will fail but that's expected)
     port = config.cparser.value('weboutput/httpport', type=int)
-    req = requests.get(
-        f'http://localhost:{port}/kickredirect?code=test_code&state={encoded_state}', timeout=5)
+    req = requests.get(f'http://localhost:{port}/kickredirect?code=test_code&state={encoded_state}',
+                       timeout=5)
 
     # Should get HTML response (not error page)
     assert req.status_code == 200
@@ -134,11 +135,13 @@ def test_kickredirect_invalid_state_csrf_attack(reset_oauth_state):  # pylint: d
     # Set up valid OAuth session state using new session-based format
     session_id = 'testsession123'
     state_data = f"{session_id}:randomstate456"
-    valid_encoded_state = base64.urlsafe_b64encode(state_data.encode('utf-8')).decode('utf-8').rstrip('=')
+    valid_encoded_state = base64.urlsafe_b64encode(
+        state_data.encode('utf-8')).decode('utf-8').rstrip('=')
 
     # Create malicious state with different content
     malicious_state_data = "attackersession:maliciousdata"
-    malicious_encoded_state = base64.urlsafe_b64encode(malicious_state_data.encode('utf-8')).decode('utf-8').rstrip('=')
+    malicious_encoded_state = base64.urlsafe_b64encode(
+        malicious_state_data.encode('utf-8')).decode('utf-8').rstrip('=')
 
     config.cparser.setValue(f'kick/temp_state_{session_id}', valid_encoded_state)
     config.cparser.setValue(f'kick/temp_code_verifier_{session_id}', 'test_verifier')
@@ -164,7 +167,8 @@ def test_kickredirect_missing_state_parameter(reset_oauth_state):  # pylint: dis
     # Set up valid OAuth session state using new session-based format
     session_id = 'testsession123'
     state_data = f"{session_id}:randomstate456"
-    valid_encoded_state = base64.urlsafe_b64encode(state_data.encode('utf-8')).decode('utf-8').rstrip('=')
+    valid_encoded_state = base64.urlsafe_b64encode(
+        state_data.encode('utf-8')).decode('utf-8').rstrip('=')
 
     config.cparser.setValue(f'kick/temp_state_{session_id}', valid_encoded_state)
     config.cparser.setValue(f'kick/temp_code_verifier_{session_id}', 'test_verifier')

@@ -39,10 +39,12 @@ def test_kickchat_init_without_config():
     assert isinstance(chat.stopevent, asyncio.Event)
 
 
-@pytest.mark.parametrize("refresh_succeeds,expected_result", [
-    (True, True),   # Authentication succeeds
-    (False, False), # Authentication fails
-])
+@pytest.mark.parametrize(
+    "refresh_succeeds,expected_result",
+    [
+        (True, True),  # Authentication succeeds
+        (False, False),  # Authentication fails
+    ])
 @pytest.mark.asyncio
 async def test_kickchat_authenticate(bootstrap, refresh_succeeds, expected_result):
     """Test authentication success and failure scenarios."""
@@ -405,7 +407,6 @@ async def test_kickchat_run_chat_disabled(bootstrap):
     await chat.run_chat(mock_oauth)
 
     # Should exit early without doing anything
-
 
 
 # Settings tests

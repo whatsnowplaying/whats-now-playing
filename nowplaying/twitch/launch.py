@@ -28,12 +28,13 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
         self.twitchlogin = nowplaying.twitch.utils.TwitchLogin(self.config)
         self.tasks = set()
 
-    def log_task_exception(self, task: asyncio.Task):
+    @staticmethod
+    def log_task_exception(task: asyncio.Task):
         ''' catch and log task exceptions '''
         with contextlib.suppress(asyncio.CancelledError):
             if exception := task.exception():
                 task_name = task.get_name() if hasattr(task, 'get_name') else str(task)
-                logging.exception("Task %s failed", task_name)
+                logging.exception("Task %s failed: %s", exception, task_name)
 
     async def bootstrap(self):
         ''' Authenticate twitch and launch related tasks '''
