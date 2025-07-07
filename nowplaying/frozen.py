@@ -6,7 +6,7 @@ import ssl
 import sys
 
 
-def frozen_init(bundledir):
+def frozen_init(bundledir: str|None) -> str:
     ''' do some frozen handling '''
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
         if not bundledir:

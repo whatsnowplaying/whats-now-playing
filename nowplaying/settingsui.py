@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import re
+from typing import TYPE_CHECKING
 
 # pylint: disable=no-name-in-module
 from PySide6.QtCore import Slot, QFile, Qt, QStandardPaths
@@ -29,6 +30,9 @@ import nowplaying.trackrequests
 import nowplaying.uihelp
 import nowplaying.utils
 
+if TYPE_CHECKING:
+    import nowplaying.tray
+
 LOGGING_COMBOBOX = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'FATAL', 'CRITICAL']
 NOCOVER_COMBOBOX = ['None', 'Fanart', 'Logo', 'Thumbnail']
 
@@ -37,7 +41,7 @@ NOCOVER_COMBOBOX = ['None', 'Fanart', 'Logo', 'Thumbnail']
 class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-instance-attributes
     ''' create settings form window '''
 
-    def __init__(self, tray, beam):
+    def __init__(self, tray: "nowplaying.tray.Tray", beam):
 
         self.config = nowplaying.config.ConfigFile(beam=beam)
         if not self.config:

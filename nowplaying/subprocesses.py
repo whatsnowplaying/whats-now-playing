@@ -5,19 +5,25 @@ import concurrent.futures
 import importlib
 import logging
 import multiprocessing
+import typing as t
 
 from PySide6.QtWidgets import QApplication  # pylint: disable=import-error,no-name-in-module
+
+import nowplaying
+import nowplaying.config
 
 
 class SubprocessManager:
     ''' manage all of the subprocesses '''
 
-    def __init__(self, config=None, testmode=False):
+    def __init__(self,
+                 config: nowplaying.config.ConfigFile | None = None,
+                 testmode: bool = False):
         self.config = config
         self.testmode = testmode
         self.obswsobj = None
         self.manager = multiprocessing.Manager()
-        self.processes = {}
+        self.processes: dict[str, dict[str, t.Any]] = {}
         if self.config.cparser.value('control/beam', type=bool):
             processlist = ['trackpoll', 'beamsender']
         else:
@@ -41,7 +47,7 @@ class SubprocessManager:
             module['stopevent'].clear()
             self.start_process(key)
 
-    def stop_all_processes(self):
+    def stop_all_processes(self) -> None:
         ''' stop all the subprocesses '''
 
         # Signal all processes to stop first (fast operation)
@@ -70,7 +76,7 @@ class SubprocessManager:
         if not self.config.cparser.value('control/beam', type=bool):
             self.stop_process('obsws')
 
-    def _start_process(self, processname):
+    def _start_process(self, processname: str) -> None:
         ''' Start trackpoll '''
         if not self.processes[processname]['process']:
             logging.info('Starting %s', processname)
@@ -85,7 +91,7 @@ class SubprocessManager:
                 ))
             self.processes[processname]['process'].start()
 
-    def _stop_process_parallel(self, processname):
+    def _stop_process_parallel(self, processname: str) -> None:
         ''' Stop a process - designed for parallel execution '''
         if not self.processes[processname]['process']:
             return
@@ -94,7 +100,7 @@ class SubprocessManager:
         logging.debug('Waiting for %s', processname)
 
         # Special handling for twitchbot
-        if processname in ['twitchbot']:
+        if processname in {'twitchbot'}:
             try:
                 func = getattr(self.processes[processname]['module'], 'stop')
                 func(process.pid)
@@ -121,7 +127,7 @@ class SubprocessManager:
         self.processes[processname]['process'] = None
         logging.debug('%s stopped successfully', processname)
 
-    def _stop_process(self, processname):
+    def _stop_process(self, processname: str) -> None:
         ''' Stop a process - sequential version for individual stops '''
         if self.processes[processname]['process']:
             logging.debug('Notifying %s', processname)
@@ -129,7 +135,7 @@ class SubprocessManager:
             self._stop_process_parallel(processname)
         logging.debug('%s should be stopped', processname)
 
-    def start_process(self, processname):
+    def start_process(self, processname: str) -> None:
         ''' Start a specific process '''
         if processname == 'twitchbot' and not self.config.cparser.value('twitchbot/enabled',
                                                                         type=bool):
@@ -149,48 +155,48 @@ class SubprocessManager:
         # trackpoll always starts - it's the core monitoring process
         self._start_process(processname)
 
-    def stop_process(self, processname):
+    def stop_process(self, processname: str) -> None:
         ''' Stop a specific process '''
         self._stop_process(processname)
 
-    def restart_process(self, processname):
+    def restart_process(self, processname: str) -> None:
         ''' Restart a specific process '''
         self.stop_process(processname)
         self.start_process(processname)
 
     # Legacy methods for backward compatibility
-    def start_webserver(self):
+    def start_webserver(self) -> None:
         ''' Start the webserver '''
         self.start_process('webserver')
 
-    def start_kickbot(self):
+    def start_kickbot(self) -> None:
         ''' Start the kickbot '''
         self.start_process('kickbot')
 
-    def start_twitchbot(self):
+    def start_twitchbot(self) -> None:
         ''' Start the twitchbot '''
         self.start_process('twitchbot')
 
-    def stop_webserver(self):
+    def stop_webserver(self) -> None:
         ''' Stop the webserver '''
         self.stop_process('webserver')
 
-    def stop_twitchbot(self):
+    def stop_twitchbot(self) -> None:
         ''' Stop the twitchbot '''
         self.stop_process('twitchbot')
 
-    def stop_kickbot(self):
+    def stop_kickbot(self) -> None:
         ''' Stop the kickbot '''
         self.stop_process('kickbot')
 
-    def restart_webserver(self):
+    def restart_webserver(self) -> None:
         ''' Restart the webserver process '''
         self.restart_process('webserver')
 
-    def restart_obsws(self):
+    def restart_obsws(self) -> None:
         ''' Restart the obsws process '''
         self.restart_process('obsws')
 
-    def restart_kickbot(self):
+    def restart_kickbot(self) -> None:
         ''' Restart the kickbot process '''
         self.restart_process('kickbot')

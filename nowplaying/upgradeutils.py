@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import traceback
+import typing as t
 
 import requests
 
@@ -39,7 +40,7 @@ VERSION_REGEX = re.compile(
 class Version:
     ''' process a version'''
 
-    def __init__(self, version):
+    def __init__(self, version: str):
         self.textversion = version
         vermatch = VERSION_REGEX.match(version.replace('.dirty', ''))
         if not vermatch:
@@ -48,7 +49,7 @@ class Version:
         self.chunk = vermatch.groupdict()
         self._calculate()
 
-    def _calculate(self):
+    def _calculate(self) -> None:
         olddict = copy.copy(self.chunk)
         for key, value in olddict.items():
             if isinstance(value, str) and value.isdigit():
@@ -57,14 +58,14 @@ class Version:
         if self.chunk.get('rc') or self.chunk.get('commitnum'):
             self.pre = True
 
-    def is_prerelease(self):
+    def is_prerelease(self) -> bool:
         ''' if a pre-release, return True '''
         return self.pre
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.textversion
 
-    def __lt__(self, other):
+    def __lt__(self, other: t.Any) -> bool:
         ''' version compare
             do the easy stuff, major > minor > micro '''
         for key in ["major", "minor", "micro"]:
@@ -90,11 +91,11 @@ class Version:
 
         return False
 
-    def __le__(self, other):
+    def __le__(self, other: t.Any) -> bool:
         ''' version less than or equal '''
         return self == other or self < other
 
-    def __eq__(self, other):
+    def __eq__(self, other: t.Any) -> bool:
         ''' version equality '''
         if not isinstance(other, Version):
             return False
@@ -104,11 +105,11 @@ class Version:
                 self.chunk.get('rc') == other.chunk.get('rc') and
                 self.chunk.get('commitnum') == other.chunk.get('commitnum'))
 
-    def __ne__(self, other):
+    def __ne__(self, other: t.Any) -> bool:
         ''' version not equal '''
         return not self == other
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         ''' version hash '''
         return hash((self.chunk.get('major'),
                      self.chunk.get('minor'),
@@ -116,19 +117,19 @@ class Version:
                      self.chunk.get('rc'),
                      self.chunk.get('commitnum')))
 
-    def __gt__(self, other):
+    def __gt__(self, other: t.Any) -> bool:
         ''' version greater than '''
         return not (self < other or self == other)
 
-    def __ge__(self, other):
+    def __ge__(self, other: t.Any) -> bool:
         ''' version greater than or equal '''
-        return self == other or self > other
+        return not self < other
 
 
 class UpgradeBinary:
     ''' routines to determine if the binary is out of date '''
 
-    def __init__(self, testmode=False):
+    def __init__(self, testmode: bool = False):
         self.myversion = Version(nowplaying.version.__VERSION__)  #pylint: disable=no-member
         self.prerelease = Version('0.0.0-rc0')
         self.stable = Version('0.0.0')
@@ -137,7 +138,7 @@ class UpgradeBinary:
         if not testmode:
             self.get_versions()
 
-    def get_versions(self, testdata=None):  # pylint: disable=too-many-branches
+    def get_versions(self, testdata: list[dict[str, t.Any]] | None = None):  # pylint: disable=too-many-branches
         ''' ask github about current versions '''
         try:
             if not testdata:
@@ -154,7 +155,7 @@ class UpgradeBinary:
                     headers=headers,
                     timeout=100)
                 req.raise_for_status()
-                jsonreldata = req.json()
+                jsonreldata: list[dict[str, t.Any]] = req.json()
             else:
                 jsonreldata = testdata
 
@@ -187,7 +188,7 @@ class UpgradeBinary:
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
 
-    def get_upgrade_data(self):
+    def get_upgrade_data(self) -> dict[str, t.Any] | None:
         ''' compare our version to fetched version data '''
         if self.myversion.is_prerelease():
             if self.myversion < self.prerelease:

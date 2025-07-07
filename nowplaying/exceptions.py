@@ -6,6 +6,6 @@ class PluginVerifyError(Exception):
     ''' Exception raised when a plugin's verify_settingsui
       needs to fail '''
 
-    def __init__(self, message):
+    def __init__(self, message:str | None = None):
         self.message = message
         super().__init__(self.message)

@@ -12,10 +12,9 @@ import time
 import webbrowser
 
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QDialog, QMessageBox, QDialogButtonBox, QVBoxLayout, QLabel  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QDialog, QMessageBox, QDialogButtonBox, QVBoxLayout, QLabel, QWidget  # pylint: disable=no-name-in-module
 
 import nowplaying.trackrequests
-import nowplaying.twitch.chat
 import nowplaying.upgradeutils
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
@@ -23,7 +22,7 @@ import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
     ''' Qt Dialog for asking the user to upgrade '''
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None=None):
         super().__init__(parent)
         self.setWindowTitle("New Version Available!")
         dialogbuttons = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
@@ -32,7 +31,9 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
         self.buttonbox.rejected.connect(self.reject)
         self.layout = QVBoxLayout()
 
-    def fill_it_in(self, oldversion, newversion):
+    def fill_it_in(self,
+                   oldversion: nowplaying.upgradeutils.Version,
+                   newversion: nowplaying.upgradeutils.Version) -> None:
         ''' fill in the upgrade versions and message '''
         messages = [
             f'Your version: {oldversion}', f'New version: {newversion}', 'Download new version?'
@@ -48,7 +49,7 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
 class UpgradeConfig:
     ''' methods to upgrade from old configs to new configs '''
 
-    def __init__(self, testdir=None):
+    def __init__(self, testdir: str | pathlib.Path | None =None):
 
         if sys.platform == "win32":
             self.qsettingsformat = QSettings.IniFormat
@@ -58,11 +59,11 @@ class UpgradeConfig:
         self.testdir = testdir
         self.upgrade()
 
-    def _getconfig(self):
+    def _getconfig(self) -> QSettings:
         return QSettings(self.qsettingsformat, QSettings.UserScope,
                          QCoreApplication.organizationName(), QCoreApplication.applicationName())
 
-    def backup_config(self):
+    def backup_config(self) -> None:
         ''' back up the old config '''
         config = self._getconfig()
         source = config.fileName()
@@ -83,7 +84,7 @@ class UpgradeConfig:
             logging.error('Failed to make a backup: %s', error)
             sys.exit(0)
 
-    def upgrade(self):
+    def upgrade(self) -> None:
         ''' variable re-mapping '''
         config = self._getconfig()
 
@@ -174,7 +175,10 @@ class UpgradeConfig:
         config.sync()
 
     @staticmethod
-    def _oldkey_to_newkey(oldconfig, newconfig, mapping):
+    def _oldkey_to_newkey(oldconfig: QSettings,
+                          newconfig: QSettings,
+                          mapping: dict[str, str]
+                          ) -> None:
         ''' remap keys '''
         for oldkey, newkey in mapping.items():
             logging.debug('processing %s - %s', oldkey, newkey)
@@ -201,7 +205,9 @@ class UpgradeConfig:
 class UpgradeTemplates():
     ''' Upgrade templates '''
 
-    def __init__(self, bundledir=None, testdir=None):
+    def __init__(self,
+                 bundledir: str | pathlib.Path | None = None,
+                 testdir: str | pathlib.Path | None = None):
         self.bundledir = pathlib.Path(bundledir)
         self.apptemplatedir = self.bundledir.joinpath('templates')
         self.testdir = testdir
@@ -214,8 +220,8 @@ class UpgradeTemplates():
                 QCoreApplication.applicationName()).joinpath('templates')
         self.usertemplatedir.mkdir(parents=True, exist_ok=True)
         self.alert = False
-        self.copied = []
-        self.oldshas = {}
+        self.copied: list[str] = []
+        self.oldshas: dict[str, dict[str, str]] = {}
 
         self.setup_templates()
 
@@ -227,7 +233,7 @@ class UpgradeTemplates():
             msgbox.show()
             msgbox.exec()
 
-    def preload(self):
+    def preload(self) -> None:
         ''' preload the known hashes for bundled templates '''
         shafile = self.bundledir.joinpath('resources', 'updateshas.json')
         if shafile.exists():
@@ -236,7 +242,7 @@ class UpgradeTemplates():
         else:
             logging.error('%s file is missing.', shafile)
 
-    def check_preload(self, filename, userhash):
+    def check_preload(self, filename: str, userhash: str) -> str | None:
         ''' check if the given file matches a known hash '''
         found = None
         hexdigest = None
@@ -253,13 +259,16 @@ class UpgradeTemplates():
                       userhash, hexdigest)
         return found
 
-    def setup_templates(self):
+    def setup_templates(self) -> None:
         ''' copy templates to either existing or as a new one '''
 
         self.preload()
         self._process_template_directory(self.apptemplatedir, self.usertemplatedir)
 
-    def _process_template_directory(self, app_dir, user_dir):
+    def _process_template_directory(self,
+                                    app_dir: str | pathlib.Path,
+                                    user_dir: pathlib.Path,
+                                    ) -> None:
         ''' recursively process template directories '''
 
         for apppath in pathlib.Path(app_dir).iterdir():
@@ -306,7 +315,7 @@ class UpgradeTemplates():
             self.copied.append(str(relative_path))
 
 
-def upgrade_m3u(config, testdir=None):
+def upgrade_m3u(config: QSettings, testdir: str | None = None) -> None:
     ''' convert m3u to virtualdj and maybe other stuff in the future? '''
     if 'VirtualDJ' in config.value('m3u/directory'):
         historypath = pathlib.Path(config.value('m3u/directory'))
@@ -320,7 +329,7 @@ def upgrade_m3u(config, testdir=None):
             msgbox.exec()
 
 
-def upgrade_filters(config):
+def upgrade_filters(config: QSettings) -> None:
     ''' setup the recommended filters '''
     if config.value('settings/stripextras', type=bool) and not config.value('regex_filter/0'):
         stripworldlist = ['clean', 'dirty', 'explicit', 'official music video']
@@ -330,7 +339,7 @@ def upgrade_filters(config):
         config.setValue('regex_filter/2', f' \\[(?i:{joinlist})\\]')
 
 
-def checksum(filename):
+def checksum(filename: str | pathlib.Path) -> str:
     ''' generate sha512 . See also build-update-sha.py '''
     hashfunc = hashlib.sha512()
     with open(filename, 'rb') as fileh:
@@ -339,7 +348,7 @@ def checksum(filename):
     return hashfunc.hexdigest()
 
 
-def upgrade(bundledir=None):
+def upgrade(bundledir: str | pathlib.Path | None = None) -> None:
     ''' do an upgrade of an existing install '''
     logging.debug('Called upgrade')
 
