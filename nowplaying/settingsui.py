@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import re
+from typing import TYPE_CHECKING
 
 # pylint: disable=no-name-in-module
 from PySide6.QtCore import Slot, QFile, Qt, QStandardPaths
@@ -28,7 +29,6 @@ import nowplaying.kick.settings
 import nowplaying.trackrequests
 import nowplaying.uihelp
 import nowplaying.utils
-from typing import TypedDict, TYPE_CHECKING
 
 if TYPE_CHECKING:
     import nowplaying.tray

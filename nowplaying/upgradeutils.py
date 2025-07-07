@@ -119,11 +119,11 @@ class Version:
 
     def __gt__(self, other: t.Any) -> bool:
         ''' version greater than '''
-        return self >= other and self != other
+        return not (self < other or self == other)
 
     def __ge__(self, other: t.Any) -> bool:
         ''' version greater than or equal '''
-        return self == other or self > other
+        return not self < other
 
 
 class UpgradeBinary:
