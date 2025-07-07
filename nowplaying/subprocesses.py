@@ -7,10 +7,10 @@ import logging
 import multiprocessing
 import typing as t
 
+from PySide6.QtWidgets import QApplication  # pylint: disable=import-error,no-name-in-module
+
 import nowplaying
 import nowplaying.config
-
-from PySide6.QtWidgets import QApplication  # pylint: disable=import-error,no-name-in-module
 
 
 class SubprocessManager:
