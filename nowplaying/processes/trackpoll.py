@@ -3,6 +3,7 @@
 
 import asyncio
 import contextlib
+import json
 import multiprocessing
 import logging
 import os
@@ -13,6 +14,8 @@ import threading
 import time
 import sys
 
+import aiohttp
+
 import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
@@ -22,10 +25,8 @@ import nowplaying.metadata
 import nowplaying.pluginimporter
 import nowplaying.trackrequests
 import nowplaying.textoutput
+from nowplaying.types import TrackMetadata
 import nowplaying.utils
-
-
-
 
 COREMETA = ['artist', 'filename', 'title']
 
@@ -35,36 +36,38 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         Do the heavy lifting of reading from the DJ software
     '''
 
-    def __init__(self, stopevent=None, config=None, testmode=False):
+    def __init__(self,
+                 stopevent: asyncio.Event | None = None,
+                 config: nowplaying.config.ConfigFile | None = None,
+                 testmode: bool = False):
         self.datestr = time.strftime("%Y%m%d-%H%M%S")
         self.stopevent = stopevent
         # we can't use asyncio's because it doesn't work on Windows
-        signal.signal(signal.SIGINT, self.forced_stop)
+        _ = signal.signal(signal.SIGINT, self.forced_stop)
         if testmode and config:
             self.config = config
         else:
             self.config = nowplaying.config.ConfigFile()
-        self.currentmeta = {}
+        self.currentmeta: TrackMetadata = {}
         try:
             self.loop = asyncio.get_running_loop()
         except RuntimeError:
             self.loop = asyncio.new_event_loop()
         self._resetcurrent()
         self.testmode = testmode
-        self.input = None
-        self.previousinput = None
-        self.inputname = None
+        self.input: nowplaying.inputs.InputPlugin | None = None
+        self.previousinput: str | None = None
+        self.inputname: str | None = None
         self.plugins = nowplaying.pluginimporter.import_plugins(nowplaying.inputs)
-        self.previoustxttemplate = None
-        self.txttemplatehandler = None
+        self.previoustxttemplate: str | None = None
+        self.txttemplatehandler: str | None = None
         self.imagecache: nowplaying.imagecache.ImageCache = None
         self.icprocess = None
         self.trackrequests = None
-        if not self.config.cparser.value('control/beam', type=bool):
-            self._setup_imagecache()
-            self.trackrequests = nowplaying.trackrequests.Requests(config=self.config,
-                                                                   stopevent=self.stopevent)
-            self.trackrequests.clear_roulette_artist_dupes()
+        self._setup_imagecache()
+        self.trackrequests = nowplaying.trackrequests.Requests(config=self.config,
+                                                               stopevent=self.stopevent)
+        self.trackrequests.clear_roulette_artist_dupes()
 
         self.tasks = set()
         nowplaying.textoutput.deltxttrack(self.config)
@@ -99,7 +102,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             if self.input:
                 logging.info('stopping %s', self.previousinput)
                 await self.input.stop()
-            self.previousinput = self.config.cparser.value('settings/input')
+            self.previousinput: str | None = self.config.cparser.value('settings/input')
             self.input = self.plugins[f'nowplaying.inputs.{self.previousinput}'].Plugin(
                 config=self.config)
             logging.info('Starting %s plugin', self.previousinput)
@@ -124,9 +127,9 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             logging.debug('Waiting for user to configure source input.')
 
         # sleep until we have something to do
-        while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and
-               not self.config.getpause() and
-               not self.config.cparser.value('settings/input', defaultValue=None)):
+        while (not nowplaying.utils.safe_stopevent_check(self.stopevent)
+               and not self.config.getpause()
+               and not self.config.cparser.value('settings/input', defaultValue=None)):
             await asyncio.sleep(.5)
             self.config.get()
 
@@ -168,7 +171,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         ''' caught an int signal so tell the world to stop '''
         self.stopevent.set()
 
-    def _verify_filename(self, metadata):
+    def _verify_filename(self, metadata: TrackMetadata) -> TrackMetadata:
         ''' verify filename actual exists and/or needs path substitution '''
         if metadata.get('filename'):
             filepath = pathlib.Path(metadata['filename'])
@@ -181,7 +184,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                     del metadata['filename']
         return metadata
 
-    def _check_title_for_path(self, title, filename):
+    def _check_title_for_path(self, title: str | None, filename: str) -> tuple[str | None, str]:
         ''' if title actually contains a filename, move it to filename '''
 
         if not title:
@@ -201,7 +204,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         return title, filename
 
     @staticmethod
-    def _ismetaempty(metadata):
+    def _ismetaempty(metadata: TrackMetadata | None) -> bool:
         ''' need at least one value '''
 
         if not metadata:
@@ -209,7 +212,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
 
         return not any(key in metadata and metadata[key] for key in COREMETA)
 
-    def _ismetasame(self, metadata):
+    def _ismetasame(self, metadata: TrackMetadata) -> bool:
         ''' same as current check '''
         if not self.currentmeta:
             return False
@@ -222,13 +225,13 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         return True
 
     @staticmethod
-    def _isignored(metadata):
+    def _isignored(metadata: TrackMetadata | None) -> bool:
         ''' bail out if the text NPIGNORE appears in the comment field '''
         if metadata.get('comments') and 'NPIGNORE' in metadata['comments']:
             return True
         return False
 
-    async def checkskip(self, nextmeta):
+    async def checkskip(self, nextmeta: TrackMetadata) -> bool:
         ''' check if this metadata is meant to be skipped '''
         for skiptype in ['comment', 'genre']:
             skipdata = self.config.cparser.value(f'trackskip/{skiptype}', defaultValue=None)
@@ -238,7 +241,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                 return True
         return False
 
-    async def _fill_inmetadata(self, metadata):  # pylint: disable=too-many-branches
+    async def _fill_inmetadata(self, metadata: TrackMetadata) -> TrackMetadata:  # pylint: disable=too-many-branches
         ''' keep a copy of our fetched data '''
 
         # Fill in as much metadata as possible. everything
@@ -290,7 +293,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         while self.config.getpause() and not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(.5)
 
-        if nowplaying.utils.safe_stopevent_check(self.stopevent):
+        if nowplaying.utils.safe_stopevent_check(self.stopevent) or not self.input:
             return
 
         try:
@@ -335,9 +338,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             self.currentmeta = oldmeta
             return
 
-        if self.config.cparser.value(
-                'settings/requests',
-                type=bool) and not self.config.cparser.value('control/beam', type=bool):
+        if self.config.cparser.value('settings/requests', type=bool):
             if data := await self.trackrequests.get_request(self.currentmeta):
                 self.currentmeta.update(data)
 
@@ -348,6 +349,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             metadb = nowplaying.db.MetadataDB()
             await metadb.write_to_metadb(metadata=self.currentmeta)
         self._write_to_text()
+        await self._write_to_remote()
 
     def _artfallbacks(self):
         if self.config.cparser.value(
@@ -379,6 +381,70 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                                                     filename=configfile,
                                                     templatehandler=self.txttemplatehandler,
                                                     metadata=self.currentmeta)
+
+    @staticmethod
+    def _strip_blobs_metadata(metadata: TrackMetadata) -> TrackMetadata:
+        ''' Strip binary blob data for remote transmission '''
+        remote_data = metadata.copy()
+
+        # Remove all blob fields
+        for key in nowplaying.db.METADATABLOBLIST:
+            remote_data.pop(key, None)
+
+        for key, value in remote_data.items():
+            if isinstance(value, bytes):
+                logging.error("%s was dropped from remote_data (bytes)", key)
+                remote_data.pop(key, None)
+
+        # Remove dbid if present
+        if remote_data.get('dbid'):
+            del remote_data['dbid']
+
+        return remote_data
+
+    async def _write_to_remote(self) -> None:
+        if not self.config.cparser.value('remote/enabled', type=bool):
+            return
+        server: str = self.config.cparser.value('remote/remote_server', type=str)
+        port: int = self.config.cparser.value('remote/remote_port', type=int)
+        key: str = self.config.cparser.value('remote/remote_key', type=str)
+
+        # Prepare metadata with secret for authentication
+        remote_data = self._strip_blobs_metadata(self.currentmeta)
+        if key:
+            remote_data['secret'] = key
+
+        # Debug: write JSON to file to inspect
+        try:
+            debug_file = '/tmp/remote_debug.json'
+            with open(debug_file, 'w', encoding='utf-8') as fnout:
+                json.dump(remote_data, fnout, indent=2)
+            logging.info('Debug: wrote remote data to %s', debug_file)
+        except Exception:  # pylint: disable=broad-except
+            logging.exception('Failed to write debug JSON: %s')
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f'http://{server}:{port}/v1/remoteinput',
+                                    json=remote_data) as response:
+                logging.debug("Sending to %s:%s", server, port)
+                if response.status == 200:
+                    try:
+                        result = await response.json()
+                        dbid = result.get('dbid')
+                        logging.debug('Remote server accepted track update, dbid: %s', dbid)
+                    except Exception as exc:  # pylint: disable=broad-except
+                        logging.warning('Failed to parse remote server response: %s', exc)
+                elif response.status == 403:
+                    logging.error('Remote server authentication failed - check remote secret')
+                elif response.status == 405:
+                    logging.error('Remote server method not allowed - check endpoint')
+                else:
+                    try:
+                        error_data = await response.json()
+                        error_msg = error_data.get('error', 'Unknown error')
+                        logging.error('Remote server returned %s: %s', response.status, error_msg)
+                    except Exception:  # pylint: disable=broad-except
+                        logging.error('Remote server returned %s', response.status)
 
     async def _half_delay_write(self):
         try:
@@ -416,9 +482,7 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         self.icprocess.start()
 
     def _start_artistfanartpool(self):
-        if not self.config.cparser.value('artistextras/enabled',
-                                         type=bool) or self.config.cparser.value('control/beam',
-                                                                                 type=bool):
+        if not self.config.cparser.value('artistextras/enabled', type=bool):
             return
 
         if self.currentmeta.get('artistfanarturls'):
@@ -431,9 +495,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
             del self.currentmeta['artistfanarturls']
 
     async def _process_imagecache(self):
-        if not self.currentmeta.get('artist') or self.config.cparser.value(
-                'control/beam',
-                type=bool) or not self.config.cparser.value('artistextras/enabled', type=bool):
+        if not self.currentmeta.get('artist') or not self.config.cparser.value(
+                'artistextras/enabled', type=bool):
             return
 
         def fill_in(self):

@@ -29,6 +29,7 @@ import nowplaying.kick.settings
 import nowplaying.trackrequests
 import nowplaying.uihelp
 import nowplaying.utils
+import nowplaying.remote_settings
 
 if TYPE_CHECKING:
     import nowplaying.tray
@@ -41,9 +42,8 @@ NOCOVER_COMBOBOX = ['None', 'Fanart', 'Logo', 'Thumbnail']
 class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-instance-attributes
     ''' create settings form window '''
 
-    def __init__(self, tray: "nowplaying.tray.Tray", beam):
-
-        self.config = nowplaying.config.ConfigFile(beam=beam)
+    def __init__(self, tray: "nowplaying.tray.Tray"):
+        self.config = nowplaying.config.ConfigFile()
         if not self.config:
             logging.error('FATAL ERROR: Cannot get configuration!')
             raise RuntimeError("Cannot get configuration")
@@ -58,6 +58,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             'kick': nowplaying.kick.settings.KickSettings(),
             'kickchat': nowplaying.kick.settings.KickChatSettings(),
             'requests': nowplaying.trackrequests.RequestSettings(),
+            'remote': nowplaying.remote_settings.BeamSettings(),
         }
 
         self.uihelp = None
@@ -115,20 +116,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.qtui = load_widget_ui(self.config, 'settings')
         self.uihelp = nowplaying.uihelp.UIHelp(self.config, self.qtui)
 
-        if self.config.cparser.value('control/beam', type=bool):
-
-            baseuis = [
-                'general',
-                'source',
-                'beamstatus',
-            ]
-
-        else:
-            baseuis = [
-                'general', 'source', 'filter', 'trackskip', 'textoutput', 'webserver', 'twitch',
-                'twitchchat', 'kick', 'kickchat', 'requests', 'artistextras', 'obsws', 'discordbot',
-                'quirks'
-            ]
+        baseuis = [
+            'general', 'source', 'filter', 'trackskip', 'textoutput', 'webserver', 'twitch',
+            'twitchchat', 'kick', 'kickchat', 'requests', 'remote', 'artistextras', 'obsws',
+            'discordbot', 'quirks'
+        ]
 
         for uiname in baseuis:
             self._setup_widgets(uiname)
@@ -152,16 +144,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._setup_widgets('destroy')
         self._setup_widgets('about')
 
-        if not self.config.cparser.value('control/beam', type=bool):
-            for key in [
-                    'twitch',
-                    'twitchchat',
-                    'kick',
-                    'kickchat',
-                    'requests',
-            ]:
-                self.settingsclasses[key].load(self.config, self.widgets[key])
-                self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
+        for key in [
+                'twitch',
+                'twitchchat',
+                'kick',
+                'kickchat',
+                'requests',
+                'remote',
+        ]:
+            self.settingsclasses[key].load(self.config, self.widgets[key])
+            self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
 
         self._connect_plugins()
 
@@ -194,9 +186,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         qobject.export_config_button.clicked.connect(self.on_export_config_button)
         qobject.import_config_button.clicked.connect(self.on_import_config_button)
 
-    def _connect_beamstatus_widget(self, qobject):
+    def _connect_remotestatus_widget(self, qobject):
         ''' refresh the status'''
-        qobject.refresh_button.clicked.connect(self.on_beamstatus_refresh_button)
+        qobject.refresh_button.clicked.connect(self.on_remotestatus_refresh_button)
 
     def _connect_webserver_widget(self, qobject):
         ''' file in the hostname/ip and connect the template button'''
@@ -256,23 +248,22 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._upd_win_input()
         self._upd_win_plugins()
 
-        if not self.config.cparser.value('control/beam', type=bool):
-            self._upd_win_textoutput()
-            self._upd_win_artistextras()
-            self._upd_win_filters()
-            self._upd_win_trackskip()
-            self._upd_win_webserver()
-            self._upd_win_obsws()
-            self._upd_win_discordbot()
-            self._upd_win_quirks()
+        self._upd_win_textoutput()
+        self._upd_win_artistextras()
+        self._upd_win_filters()
+        self._upd_win_trackskip()
+        self._upd_win_webserver()
+        self._upd_win_obsws()
+        self._upd_win_discordbot()
+        self._upd_win_quirks()
 
-            for key in [
-                    'twitch',
-                    'twitchchat',
-                    'kick',
-                    'requests',
-            ]:
-                self.settingsclasses[key].load(self.config, self.widgets[key])
+        for key in [
+                'twitch',
+                'twitchchat',
+                'kick',
+                'requests',
+        ]:
+            self.settingsclasses[key].load(self.config, self.widgets[key])
 
     def _upd_win_textoutput(self):
         ''' textoutput settings '''
@@ -348,6 +339,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.config.cparser.value('weboutput/htmltemplate'))
         self.widgets['webserver'].once_checkbox.setChecked(
             self.config.cparser.value('weboutput/once', type=bool))
+        self.widgets['webserver'].remote_secret_lineedit.setText(
+            self.config.cparser.value('remote/remote_key', type=str, defaultValue=''))
 
     def _upd_win_obsws(self):
         ''' update the obsws settings to match config '''
@@ -440,17 +433,17 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         logging.getLogger().setLevel(loglevel)
 
-        if not self.config.cparser.value('control/beam', type=bool):
-            self._upd_conf_external_services()
-            self._upd_conf_textoutput()
-            self._upd_conf_artistextras()
-            self._upd_conf_filters()
-            self._upd_conf_trackskip()
-            self._upd_conf_webserver()
-            self._upd_conf_obsws()
-            self._upd_conf_quirks()
-            self._upd_conf_discordbot()
-            self._upd_conf_kickbot()
+        self._upd_conf_external_services()
+        self._upd_conf_textoutput()
+        self._upd_conf_artistextras()
+        self._upd_conf_filters()
+        self._upd_conf_trackskip()
+        self._upd_conf_webserver()
+        self._upd_conf_obsws()
+        self._upd_conf_quirks()
+        self._upd_conf_discordbot()
+        self._upd_conf_kickbot()
+        self._upd_conf_remote()
 
         self._upd_conf_recognition()
         self._upd_conf_input()
@@ -547,6 +540,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                                      self.widgets['webserver'].template_lineedit.text())
         self.config.cparser.setValue('weboutput/once',
                                      self.widgets['webserver'].once_checkbox.isChecked())
+        self.config.cparser.setValue('remote/remote_key',
+                                     self.widgets['webserver'].remote_secret_lineedit.text())
 
         if oldenabled != httpenabled or oldport != httpport:
             self.tray.subprocesses.restart_webserver()
@@ -596,6 +591,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         if (old_enabled != new_enabled) or (old_chat != new_chat):
             self.tray.subprocesses.restart_kickbot()
+
+    def _upd_conf_remote(self):
+        ''' update the remote settings '''
+        if 'remote' in self.settingsclasses and 'remote' in self.widgets:
+            self.settingsclasses['remote'].save_settings()
 
     def verify_regex_filters(self):
         ''' verify the regex filters are real '''
@@ -690,16 +690,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if api_cache_file.exists():
             logging.debug('Deleting API cache: %s', api_cache_file)
             api_cache_file.unlink()
-
-    @Slot()
-    def on_beamstatus_refresh_button(self):
-        ''' beamstatus refresh button '''
-        ipaddr = self.config.cparser.value('control/beamserverip')
-        idname = self.config.cparser.value('control/beamservername')
-        if port := self.config.cparser.value('control/beamserverport'):
-            self.widgets['beamstatus'].server_label.setText(f'{idname}({ipaddr}):{port}')
-        else:
-            self.widgets['beamstatus'].server_label.setText('Not connected')
 
     @Slot()
     def on_text_template_button(self):
@@ -825,23 +815,23 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 self.errormessage.showMessage('File to write is required')
             return
 
-        if not self.config.cparser.value('control/beam', type=bool):
-            if not self.verify_regex_filters():
-                return
+        if not self.verify_regex_filters():
+            return
 
-            for key in [
-                    'twitch',
-                    'twitchchat',
-                    'kick',
-                    'kickchat',
-                    'requests',
-            ]:
-                try:
-                    self.settingsclasses[key].verify(self.widgets[key])
-                except PluginVerifyError as error:
-                    if self.errormessage:
-                        self.errormessage.showMessage(error.message)
-                    return
+        for key in [
+                'twitch',
+                'twitchchat',
+                'kick',
+                'kickchat',
+                'requests',
+                'remote',
+        ]:
+            try:
+                self.settingsclasses[key].verify(self.widgets[key])
+            except PluginVerifyError as error:
+                if self.errormessage:
+                    self.errormessage.showMessage(error.message)
+                return
 
         self.config.unpause()
         self.upd_conf()

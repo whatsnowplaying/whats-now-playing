@@ -16,7 +16,6 @@ def mock_config():
     ''' Mock config for testing '''
     config = MagicMock()
     config.cparser.value.side_effect = lambda key, **kwargs: {
-        'control/beam': False,
         'twitchbot/enabled': True,
         'weboutput/httpenabled': True,
         'kick/enabled': True,
@@ -55,22 +54,6 @@ def test_subprocess_manager_init(mock_config):
             assert 'module' in manager.processes[process_name]
             assert 'process' in manager.processes[process_name]
             assert 'stopevent' in manager.processes[process_name]
-
-
-def test_subprocess_manager_beam_mode(mock_config):
-    ''' Test SubprocessManager in beam mode '''
-    mock_config.cparser.value.side_effect = lambda key, **kwargs: {
-        'control/beam': True,
-    }.get(key, kwargs.get('defaultValue', False))
-
-    with patch('importlib.import_module'):
-        manager = nowplaying.subprocesses.SubprocessManager(config=mock_config, testmode=True)
-
-        # Should only have beam-specific processes
-        expected_processes = ['trackpoll', 'beamsender']
-        assert len(manager.processes) == len(expected_processes)
-        for process_name in expected_processes:
-            assert process_name in manager.processes
 
 
 def test_start_process_with_conditions(subprocess_manager):
@@ -321,8 +304,10 @@ def test_legacy_methods(subprocess_manager):
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-specific timeout test")
 def test_windows_process_termination_timeout(subprocess_manager):
     ''' Test that Windows gets longer termination timeouts '''
+
     class WindowsSlowProcess(MockProcess):
         ''' Simulate Windows process that's slow to terminate '''
+
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self._join_call_count = 0

@@ -107,7 +107,6 @@ block_cipher = None
 
 executables = {
     'NowPlaying': 'nppyi.py',
-    #BEAM    'NowPlayingBeam': 'beam.py',
 }
 
 for execname, execpy in executables.items():

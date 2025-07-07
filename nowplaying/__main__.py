@@ -45,7 +45,8 @@ def run_bootstrap(bundledir: str|None = None) -> pathlib.Path:  # pragma: no cov
     return logpath
 
 
-def actualmain(beam: bool = False):  # pragma: no cover
+
+def actualmain():  # pragma: no cover
     ''' main entrypoint '''
 
     multiprocessing.freeze_support()
@@ -77,7 +78,7 @@ def actualmain(beam: bool = False):  # pragma: no cover
             startup_window.update_progress("Starting system tray...")
             qapp.processEvents()
 
-            tray = nowplaying.systemtray.Tray(beam=beam, startup_window=startup_window)  # pylint: disable=unused-variable
+            tray = nowplaying.systemtray.Tray(startup_window=startup_window)  # pylint: disable=unused-variable
             icon = QIcon(str(config.iconfile))
             qapp.setWindowIcon(icon)
 
@@ -95,12 +96,7 @@ def actualmain(beam: bool = False):  # pragma: no cover
 
 def main():  # pragma: no cover
     ''' Normal mode '''
-    actualmain(beam=False)
-
-
-def beammain():  # pragma: no cover
-    ''' beam mode '''
-    actualmain(beam=True)
+    actualmain()
 
 
 if __name__ == '__main__':

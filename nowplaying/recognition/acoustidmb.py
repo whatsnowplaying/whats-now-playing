@@ -308,12 +308,6 @@ class Plugin(RecognitionPlugin):
                     'duration': metadata['fpcalcduration']
                 }
 
-            if self.config.cparser.value('control/beam', type=bool):
-                return {
-                    'fpcalcfingerprint': data['fingerprint'],
-                    'fpcalcduration': data['duration'],
-                }
-
             if not data:
                 return None
 

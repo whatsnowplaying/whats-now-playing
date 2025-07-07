@@ -154,11 +154,59 @@
     <string>Only send content once, then send HTTP refresh meta until new content is available.</string>
    </property>
   </widget>
-  <widget class="QLabel" name="networking_label">
+  <widget class="QLabel" name="remote_input_label">
    <property name="geometry">
     <rect>
      <x>10</x>
      <y>250</y>
+     <width>121</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>**Remote Input**</string>
+   </property>
+   <property name="textFormat">
+    <enum>Qt::MarkdownText</enum>
+   </property>
+  </widget>
+  <widget class="QLabel" name="remote_secret_label">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>280</y>
+     <width>49</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Secret</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="remote_secret_lineedit">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>120</x>
+     <y>280</y>
+     <width>501</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="echoMode">
+    <enum>QLineEdit::Password</enum>
+   </property>
+  </widget>
+  <widget class="QLabel" name="networking_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>320</y>
      <width>291</width>
      <height>16</height>
     </rect>
@@ -174,7 +222,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>280</y>
+     <y>350</y>
      <width>91</width>
      <height>16</height>
     </rect>
@@ -187,7 +235,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>310</y>
+     <y>380</y>
      <width>59</width>
      <height>16</height>
     </rect>
@@ -200,7 +248,7 @@
    <property name="geometry">
     <rect>
      <x>140</x>
-     <y>280</y>
+     <y>350</y>
      <width>221</width>
      <height>16</height>
     </rect>
@@ -213,7 +261,7 @@
    <property name="geometry">
     <rect>
      <x>140</x>
-     <y>310</y>
+     <y>380</y>
      <width>221</width>
      <height>16</height>
     </rect>
@@ -334,6 +382,38 @@
     <hint type="destinationlabel">
      <x>220</x>
      <y>135</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>remote_secret_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>52</x>
+     <y>39</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>44</x>
+     <y>287</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>remote_secret_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>52</x>
+     <y>39</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>370</x>
+     <y>290</y>
     </hint>
    </hints>
   </connection>

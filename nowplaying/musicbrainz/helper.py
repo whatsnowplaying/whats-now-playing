@@ -222,9 +222,7 @@ class MusicBrainzHelper():
     async def lastditcheffort(self, metadata):
         ''' there is like no data, so... '''
 
-        if not self.config.cparser.value('musicbrainz/enabled',
-                                         type=bool) or self.config.cparser.value('control/beam',
-                                                                                 type=bool):
+        if not self.config.cparser.value('musicbrainz/enabled', type=bool):
             return None
 
         self._setemail()
@@ -273,9 +271,7 @@ class MusicBrainzHelper():
     async def recognize(self, metadata):
         ''' fill in any blanks from musicbrainz '''
 
-        if not self.config.cparser.value('musicbrainz/enabled',
-                                         type=bool) or self.config.cparser.value('control/beam',
-                                                                                 type=bool):
+        if not self.config.cparser.value('musicbrainz/enabled', type=bool):
             return None
 
         addmeta = {}
@@ -293,9 +289,7 @@ class MusicBrainzHelper():
 
     async def isrc(self, isrclist):
         ''' lookup musicbrainz information based upon isrc '''
-        if not self.config.cparser.value('musicbrainz/enabled',
-                                         type=bool) or self.config.cparser.value('control/beam',
-                                                                                 type=bool):
+        if not self.config.cparser.value('musicbrainz/enabled', type=bool):
             return None
 
         self._setemail()
@@ -324,9 +318,7 @@ class MusicBrainzHelper():
 
     async def recordingid(self, recordingid):  # pylint: disable=too-many-branches, too-many-return-statements, too-many-statements
         ''' lookup the musicbrainz information based upon recording id '''
-        if not self.config.cparser.value('musicbrainz/enabled',
-                                         type=bool) or self.config.cparser.value('control/beam',
-                                                                                 type=bool):
+        if not self.config.cparser.value('musicbrainz/enabled', type=bool):
             return None
 
         # Use cached version for better performance
@@ -478,9 +470,7 @@ class MusicBrainzHelper():
 
         self._setemail()
 
-        if not self.config.cparser.value('musicbrainz/enabled',
-                                         type=bool) or self.config.cparser.value('control/beam',
-                                                                                 type=bool):
+        if not self.config.cparser.value('musicbrainz/enabled', type=bool):
             return None
 
         return {'artistwebsites': await self._websites(idlist)}

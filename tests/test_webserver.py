@@ -42,10 +42,9 @@ async def wait_for_webserver_ready(port: int, timeout: float = 10.0) -> bool:
     return False
 
 
-async def wait_for_webserver_content_update(
-                                            port: int,
+async def wait_for_webserver_content_update(port: int,
                                             endpoint: str,
-                                            expected_content: str|None = None,
+                                            expected_content: str | None = None,
                                             timeout: float = 5.0) -> tuple[bool, str]:
     ''' Poll webserver endpoint until content is
         updated with expected content or status 200, or timeout
@@ -57,15 +56,15 @@ async def wait_for_webserver_content_update(
         with contextlib.suppress(requests.exceptions.RequestException,
                                  requests.exceptions.ConnectionError):
             response = requests.get(f'http://localhost:{port}{endpoint}', timeout=2)
-            if response.status_code == 200 and (
-                expected_content is None or expected_content in response.text):
+            if response.status_code == 200 and (expected_content is None
+                                                or expected_content in response.text):
                 return True, response.text
         await asyncio.sleep(0.1)
     return False, ""
 
 
 @pytest.fixture(scope="module")
-def shared_webserver_config(pytestconfig):    # pylint: disable=redefined-outer-name
+def shared_webserver_config(pytestconfig):  # pylint: disable=redefined-outer-name
     ''' module-scoped webserver configuration for main webserver tests '''
     with contextlib.suppress(PermissionError):  # Windows blows
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as newpath:
@@ -78,9 +77,9 @@ def shared_webserver_config(pytestconfig):    # pylint: disable=redefined-outer-
             dbinit_mock.return_value = dbfile
 
             with unittest.mock.patch.dict(os.environ, {
-                                "WNP_CONFIG_TEST_DIR": str(newpath),
-                                "WNP_METADB_TEST_FILE": str(dbfile)
-                        }):
+                    "WNP_CONFIG_TEST_DIR": str(newpath),
+                    "WNP_METADB_TEST_FILE": str(dbfile)
+            }):
                 bundledir = pathlib.Path(pytestconfig.rootpath).joinpath('nowplaying')
                 nowplaying.bootstrap.set_qt_names(domain='com.github.whatsnowplaying.testsuite',
                                                   appname='testsuite')
@@ -91,7 +90,7 @@ def shared_webserver_config(pytestconfig):    # pylint: disable=redefined-outer-
                 config.cparser.setValue('weboutput/httpenabled', 'true')
                 config.cparser.sync()
 
-                metadb = nowplaying.db.MetadataDB(initialize=True) #pylint: disable=no-member
+                metadb = nowplaying.db.MetadataDB(initialize=True)  #pylint: disable=no-member
                 logging.debug("shared webserver databasefile = %s", metadb.databasefile)
 
                 port = config.cparser.value('weboutput/httpport', type=int)
@@ -204,9 +203,7 @@ async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-out
 
     # Poll for content update instead of fixed sleep
     content_ready, response_text = await wait_for_webserver_content_update(
-        port, '/index.html',
-        expected_content=' testhtmartist - testhtmtitle',
-        timeout=5.0)
+        port, '/index.html', expected_content=' testhtmartist - testhtmtitle', timeout=5.0)
     assert content_ready, "Webserver content failed to update within 5 seconds"
     assert response_text == ' testhtmartist - testhtmtitle'
 
@@ -236,9 +233,7 @@ async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-out
 
     # Poll for content update instead of fixed sleep
     content_ready, response_text = await wait_for_webserver_content_update(
-        port, '/index.html',
-        expected_content=' artisthtm2 - titlehtm2',
-        timeout=5.0)
+        port, '/index.html', expected_content=' artisthtm2 - titlehtm2', timeout=5.0)
     assert content_ready, "Webserver content failed to update within 5 seconds"
     assert response_text == ' artisthtm2 - titlehtm2'
 
@@ -279,9 +274,7 @@ async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-out
 
     # Poll for content update instead of fixed sleep
     content_ready, _ = await wait_for_webserver_content_update(
-        port, '/index.txt',
-        expected_content=' testtxtartist - testtxttitle',
-        timeout=5.0)
+        port, '/index.txt', expected_content=' testtxtartist - testtxttitle', timeout=5.0)
     assert content_ready, "Webserver content failed to update within 5 seconds"
 
     req = requests.get(f'http://localhost:{port}/index.txt', timeout=5)
@@ -318,9 +311,7 @@ async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-out
 
     # Poll for content update instead of fixed sleep
     content_ready, _ = await wait_for_webserver_content_update(
-        port, '/index.txt',
-        expected_content=' artisttxt2 - titletxt2',
-        timeout=5.0)
+        port, '/index.txt', expected_content=' artisttxt2 - titletxt2', timeout=5.0)
     assert content_ready, "Webserver content failed to update within 5 seconds"
 
     req = requests.get(f'http://localhost:{port}/index.txt', timeout=5)
@@ -360,3 +351,132 @@ def test_webserver_coverpng(getwebserver):  # pylint: disable=redefined-outer-na
 
     req = requests.get(f'http://localhost:{port}/cover.png', timeout=5)
     assert req.status_code == 200
+
+
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="Windows SQLite file locking issues with multiprocess webserver")
+def test_webserver_remote_input_no_secret(getwebserver):  # pylint: disable=redefined-outer-name
+    ''' test remote input endpoint without secret '''
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value('weboutput/httpport', type=int)
+
+    # Test without secret configured - should accept any request
+    test_metadata = {'artist': 'Test Artist', 'title': 'Test Title', 'filename': 'test.mp3'}
+
+    req = requests.post(f'http://localhost:{port}/v1/remoteinput', json=test_metadata, timeout=5)
+    assert req.status_code == 200
+    response_data = req.json()
+    assert 'dbid' in response_data
+
+
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="Windows SQLite file locking issues with multiprocess webserver")
+def test_webserver_remote_input_with_secret(getwebserver):  # pylint: disable=redefined-outer-name
+    ''' test remote input endpoint with secret authentication '''
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value('weboutput/httpport', type=int)
+
+    # Configure secret
+    test_secret = 'test_secret_123'  # pragma: allowlist secret
+    config.cparser.setValue('remote/remote_key', test_secret)
+    config.cparser.sync()
+
+    test_metadata = {
+        'artist': 'Test Artist',
+        'title': 'Test Title',
+        'filename': 'test.mp3',
+        'secret': test_secret
+    }
+
+    # Test with correct secret
+    req = requests.post(f'http://localhost:{port}/v1/remoteinput', json=test_metadata, timeout=5)
+    assert req.status_code == 200
+    response_data = req.json()
+    assert 'dbid' in response_data
+
+
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="Windows SQLite file locking issues with multiprocess webserver")
+def test_webserver_remote_input_invalid_secret(getwebserver):  # pylint: disable=redefined-outer-name
+    ''' test remote input endpoint with invalid secret '''
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value('weboutput/httpport', type=int)
+
+    # Configure secret
+    test_secret = 'test_secret_123'   # pragma: allowlist secret
+    config.cparser.setValue('remote/remote_key', test_secret)
+    config.cparser.sync()
+
+    test_metadata = {
+        'artist': 'Test Artist',
+        'title': 'Test Title',
+        'filename': 'test.mp3',
+        'secret': 'wrong_secret' # pragma: allowlist secret
+    }
+
+    # Test with wrong secret
+    req = requests.post(f'http://localhost:{port}/v1/remoteinput', json=test_metadata, timeout=5)
+    assert req.status_code == 403
+    response_data = req.json()
+    assert 'error' in response_data
+
+
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="Windows SQLite file locking issues with multiprocess webserver")
+def test_webserver_remote_input_missing_secret(getwebserver):  # pylint: disable=redefined-outer-name
+    ''' test remote input endpoint with missing secret '''
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value('weboutput/httpport', type=int)
+
+    # Configure secret
+    test_secret = 'test_secret_123'  # pragma: allowlist secret
+    config.cparser.setValue('remote/remote_key', test_secret)
+    config.cparser.sync()
+
+    test_metadata = {
+        'artist': 'Test Artist',
+        'title': 'Test Title',
+        'filename': 'test.mp3'
+        # No secret field
+    }
+
+    # Test without secret when required
+    req = requests.post(f'http://localhost:{port}/v1/remoteinput', json=test_metadata, timeout=5)
+    assert req.status_code == 403
+    response_data = req.json()
+    assert 'error' in response_data
+
+
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="Windows SQLite file locking issues with multiprocess webserver")
+def test_webserver_remote_input_wrong_method(getwebserver):  # pylint: disable=redefined-outer-name
+    ''' test remote input endpoint with wrong HTTP method '''
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value('weboutput/httpport', type=int)
+
+    test_metadata = {'artist': 'Test Artist', 'title': 'Test Title', 'filename': 'test.mp3'}
+
+    # Test with GET instead of POST
+    req = requests.get(f'http://localhost:{port}/v1/remoteinput', params=test_metadata, timeout=5)
+    assert req.status_code == 405
+
+    # Test with PUT instead of POST
+    req = requests.put(f'http://localhost:{port}/v1/remoteinput', json=test_metadata, timeout=5)
+    assert req.status_code == 405
+
+
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="Windows SQLite file locking issues with multiprocess webserver")
+def test_webserver_remote_input_invalid_json(getwebserver):  # pylint: disable=redefined-outer-name
+    ''' test remote input endpoint with invalid JSON '''
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value('weboutput/httpport', type=int)
+
+    # Test with invalid JSON
+    req = requests.post(f'http://localhost:{port}/v1/remoteinput',
+                        data='invalid json',
+                        headers={'Content-Type': 'application/json'},
+                        timeout=5)
+    assert req.status_code == 400
+    response_data = req.json()
+    assert 'error' in response_data

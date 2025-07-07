@@ -97,9 +97,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if self.metadata.get('coverimageraw') and self.imagecache and self.metadata.get('album'):
             logging.debug("Placing provided front cover")
             _ = self.imagecache.put_db_cachekey(identifier=self.metadata['album'],
-                                            srclocation=f"{self.metadata['album']}_provided_0",
-                                            imagetype="front_cover",
-                                            content=self.metadata['coverimageraw'])
+                                                srclocation=f"{self.metadata['album']}_provided_0",
+                                                imagetype="front_cover",
+                                                content=self.metadata['coverimageraw'])
 
         try:
             for processor in 'hostmeta', 'tinytag', 'image2png':
@@ -318,9 +318,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if skipplugins:
             return
 
-        if self.config.cparser.value(
-                'artistextras/enabled',
-                type=bool) and not self.config.cparser.value('control/beam', type=bool):
+        if self.config.cparser.value('artistextras/enabled', type=bool):
             await self._artist_extras()
 
     async def _artist_extras(self) -> None:  # pylint: disable=too-many-branches

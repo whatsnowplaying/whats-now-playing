@@ -34,14 +34,13 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     BUNDLEDIR: pathlib.Path | None = None
 
     def __init__(  # pylint: disable=too-many-arguments
-            self,
-            bundledir: str | pathlib.Path | None = None,
-            logpath: str | pathlib.Path | None = None,
-            reset: bool = False,
-            testmode: bool = False,
-            beam: bool = False):
+        self,
+        bundledir: str | pathlib.Path | None = None,
+        logpath: str | None = None,
+        reset: bool = False,
+        testmode: bool = False,
+    ):
         self.version: str = nowplaying.version.__VERSION__  #pylint: disable=no-member
-        self.beam: bool = beam
         self.testmode: bool = testmode
         self.userdocs: pathlib.Path = pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0])
@@ -107,9 +106,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         if self.testmode:
             self.cparser.setValue('testmode/enabled', True)
 
-        if self.beam:
-            self.cparser.setValue('control/beam', True)
-
     def reset(self) -> None:
         ''' forcibly go back to defaults '''
         logging.debug('config reset')
@@ -152,17 +148,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     def _initial_plugins(self) -> None:
 
         self.plugins['inputs'] = nowplaying.pluginimporter.import_plugins(nowplaying.inputs)
-        if self.beam and self.plugins['inputs']['nowplaying.inputs.beam']:
-            del self.plugins['inputs']['nowplaying.inputs.beam']
         self.pluginobjs['inputs'] = {}
         self.plugins['recognition'] = nowplaying.pluginimporter.import_plugins(
             nowplaying.recognition)
         self.pluginobjs['recognition'] = {}
 
-        if not self.beam:
-            self.plugins['artistextras'] = nowplaying.pluginimporter.import_plugins(
-                nowplaying.artistextras)
-            self.pluginobjs['artistextras'] = {}
+        self.plugins['artistextras'] = nowplaying.pluginimporter.import_plugins(
+            nowplaying.artistextras)
+        self.pluginobjs['artistextras'] = {}
 
     @staticmethod
     def _defaults_artistextras(settings: QSettings) -> None:

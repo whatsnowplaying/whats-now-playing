@@ -58,6 +58,7 @@ INDEXREFRESH = \
 
 CONFIG_KEY = web.AppKey('config', nowplaying.config.ConfigFile)
 METADB_KEY = web.AppKey("metadb", nowplaying.db.MetadataDB)
+REMOTEDB_KEY = web.AppKey("remotedb", nowplaying.db.MetadataDB)
 WS_KEY = web.AppKey("websockets", weakref.WeakSet)
 IC_KEY = web.AppKey("imagecache", nowplaying.imagecache.ImageCache)
 WATCHER_KEY = web.AppKey("watcher", nowplaying.db.DBWatcher)
@@ -303,6 +304,51 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                     logging.debug(line)
         return web.json_response(data)
 
+    @staticmethod
+    async def api_v1_remoteinput_handler(request: web.Request):
+        ''' POST: receive metadata from remote source and store in remote database'''
+        # Only allow POST requests
+        if request.method != 'POST':
+            return web.json_response({'error': 'Method not allowed'}, status=405)
+
+        try:
+            # Parse JSON request body
+            request_data = await request.json()
+        except Exception:  # pylint: disable=broad-except
+            return web.json_response({'error': 'Invalid JSON in request body'}, status=400)
+
+        # Refresh config to get latest settings (important for testing)
+        request.app[CONFIG_KEY].get()
+        if required_secret := request.app[CONFIG_KEY].cparser.value('remote/remote_key',
+                                                                    type=str,
+                                                                    defaultValue=''):
+            provided_secret = request_data.get('secret', '')
+            if not provided_secret:
+                logging.warning('Remote metadata submission without secret from %s', request.remote)
+                return web.json_response({'error': 'Missing secret in request'}, status=403)
+
+            # Use constant-time comparison to prevent timing attacks
+            if not secrets.compare_digest(required_secret, provided_secret):
+                logging.warning('Remote metadata submission with invalid secret from %s',
+                                request.remote)
+                return web.json_response({'error': 'Invalid secret'}, status=403)
+
+        # Remove secret from metadata before storing
+        metadata = request_data.copy()
+        metadata.pop('secret', '')
+
+        logging.info("Got metadata from %s", request.host)
+        # Store metadata in remote database
+        try:
+            await request.app[REMOTEDB_KEY].write_to_metadb(metadata=metadata)
+            # Re-read to get the dbid
+            last_meta = await request.app[REMOTEDB_KEY].read_last_meta_async()
+            dbid = last_meta.get('dbid') if last_meta else None
+            return web.json_response({'dbid': dbid})
+        except Exception as exc:  # pylint: disable=broad-except
+            logging.error('Failed to store metadata in remote database: %s', exc)
+            return web.json_response({'error': 'Failed to store metadata'}, status=500)
+
     async def websocket_gifwords_streamer(self, request: web.Request):
         ''' handle continually streamed updates '''
         websocket = web.WebSocketResponse()
@@ -481,7 +527,6 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         return await nowplaying.oauth2.OAuth2Client.handle_oauth_redirect(
             request, oauth_config, config, jinja2_env)
 
-
     async def kickredirect_handler(self, request: web.Request):  # pylint: disable=no-self-use
         ''' handle oauth2 redirect callbacks for Kick '''
         return await self._handle_oauth_redirect(
@@ -539,6 +584,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         _ = app.add_routes([
             web.get('/', self.index_htm_handler),
             web.get('/v1/last', self.api_v1_last_handler),
+            web.post('/v1/remoteinput', self.api_v1_remoteinput_handler),
             web.get('/cover.png', self.cover_handler),
             web.get('/artistfanart.htm', self.artistfanartlaunch_htm_handler),
             web.get('/artistbanner.png', self.artistbanner_handler),
@@ -591,6 +637,8 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             app[IC_KEY] = nowplaying.imagecache.ImageCache()
         app[WATCHER_KEY] = app[METADB_KEY].watcher()
         app[WATCHER_KEY].start()
+        remotedb: str = app[CONFIG_KEY].cparser.value('remote/remotedb', type=str)
+        app[REMOTEDB_KEY] = nowplaying.db.MetadataDB(databasefile=remotedb)
         app['statedb'] = await aiosqlite.connect(self.databasefile)
         app['statedb'].row_factory = aiosqlite.Row
         cursor = await app['statedb'].cursor()

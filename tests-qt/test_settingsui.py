@@ -34,7 +34,6 @@ class MockTray:
 
     def __init__(self, config=None):
         self.config = config
-        self.beam = False
         self.settings_action = QAction()
         self.action_pause = QAction()
         self.subprocesses = MockSubprocesses()
@@ -50,7 +49,7 @@ def test_settingsui_cancel(bootstrap, qtbot):
     ''' test cancel '''
     config = bootstrap
     tray = MockTray(config)
-    settingsui = nowplaying.settingsui.SettingsUI(tray=tray, beam=False)
+    settingsui = nowplaying.settingsui.SettingsUI(tray=tray)
     qtbot.addWidget(settingsui.qtui)
     qtbot.mouseClick(settingsui.qtui.cancel_button, Qt.MouseButton.LeftButton)
 
@@ -59,7 +58,7 @@ def test_settingsui_save(bootstrap, qtbot):
     ''' test save '''
     config = bootstrap
     tray = MockTray(config)
-    settingsui = nowplaying.settingsui.SettingsUI(tray=tray, beam=False)
+    settingsui = nowplaying.settingsui.SettingsUI(tray=tray)
     qtbot.addWidget(settingsui.qtui)
     item = settingsui.widgets['source'].sourcelist.item(0)
     rect = settingsui.widgets['source'].sourcelist.visualItemRect(item)

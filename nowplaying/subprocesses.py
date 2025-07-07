@@ -24,10 +24,7 @@ class SubprocessManager:
         self.obswsobj = None
         self.manager = multiprocessing.Manager()
         self.processes: dict[str, dict[str, t.Any]] = {}
-        if self.config.cparser.value('control/beam', type=bool):
-            processlist = ['trackpoll', 'beamsender']
-        else:
-            processlist = ['trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver', 'kickbot']
+        processlist = ['trackpoll', 'obsws', 'twitchbot', 'discordbot', 'webserver', 'kickbot']
 
         for name in processlist:
             self.processes[name] = {
@@ -73,8 +70,7 @@ class SubprocessManager:
                 except Exception as error:  # pylint: disable=broad-exception-caught
                     logging.error('Error stopping %s: %s', process_name, error)
 
-        if not self.config.cparser.value('control/beam', type=bool):
-            self.stop_process('obsws')
+        self.stop_process('obsws')
 
     def _start_process(self, processname: str) -> None:
         ''' Start trackpoll '''
