@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     import nowplaying.config
 
 
-class BeamSettings:
+class RemoteSettings:
     """Handles beam/remote output settings UI."""
 
     def __init__(self):
@@ -77,9 +77,7 @@ class BeamSettings:
         self.config.cparser.setValue('remote/enabled', enabled)
 
         # Save server
-        server = self.widget.server_lineedit.text().strip()
-        if not server:
-            server = 'localhost'
+        server = self.widget.server_lineedit.text().strip() or 'localhost'
         self.config.cparser.setValue('remote/remote_server', server)
 
         # Save port
@@ -101,7 +99,6 @@ class BeamSettings:
     def verify(widget: 'QWidget') -> bool:
         """Verify beam settings."""
         # Basic validation - could be extended later
-        if widget.enable_checkbox.isChecked():
-            if not widget.server_lineedit.text().strip():
-                raise PluginVerifyError("Server field is required when beam output is enabled")
+        if widget.enable_checkbox.isChecked() and not widget.server_lineedit.text().strip():
+            raise PluginVerifyError("Server field is required when beam output is enabled")
         return True

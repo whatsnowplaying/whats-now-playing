@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon  # pylint: disable=import-error, no-name-in-module
-from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.systemtray  # pylint: disable=import-error
 

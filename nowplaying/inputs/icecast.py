@@ -10,11 +10,13 @@ import os
 import struct
 import urllib.parse
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import nowplaying.config
+    from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QWidget
+
 
 logging.config.dictConfig({
     'version': 1,
@@ -222,19 +224,19 @@ class Plugin(InputPlugin):
 
 #### Settings UI methods
 
-    def defaults(self, qsettings: Any) -> None:
+    def defaults(self, qsettings: "QSettings") -> None:
         ''' (re-)set the default configuration values for this plugin '''
         qsettings.setValue('icecast/port', '8000')
 
-    def load_settingsui(self, qwidget: Any) -> None:
+    def load_settingsui(self, qwidget: "QWidget") -> None:
         ''' load values from config and populate page '''
         qwidget.port_lineedit.setText(self.config.cparser.value('icecast/port'))  # type: ignore
 
-    def save_settingsui(self, qwidget: Any) -> None:
+    def save_settingsui(self, qwidget: "QWidget") -> None:
         ''' take the settings page and save it '''
         self.config.cparser.setValue('icecast/port', qwidget.port_lineedit.text())  # type: ignore
 
-    def desc_settingsui(self, qwidget: Any) -> None:
+    def desc_settingsui(self, qwidget: "QWidget") -> None:
         ''' provide a description for the plugins page '''
         qwidget.setText('Icecast is a streaming broadcast protocol.'
                         '  This setting should be used for butt, MIXXX, and many others.')

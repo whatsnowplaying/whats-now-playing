@@ -14,7 +14,7 @@ import nowplaying.db
 
 if TYPE_CHECKING:
     import nowplaying.config
-
+    from PySide6.QtCore import QSettings
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     ''' handler for NowPlaying '''
@@ -24,7 +24,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                  qsettings: QWidget | None = None):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Remote"
-        self.remotedbfile: str = config.cparser.value('remote/remotedb', type=str)
+        self.remotedbfile = pathlib.Path(
+                QStandardPaths.standardLocations(
+                    QStandardPaths.CacheLocation)[0]).joinpath('remotedb').joinpath("remote.db")
         self.remotedb: nowplaying.db.MetadataDB | None = None
         self.mixmode = "newest"
         self.event_handler = None
@@ -40,12 +42,6 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         ''' reset the metadata '''
         self.metadata = {'artist': None, 'title': None, 'filename': None}
 
-    def defaults(self, qsettings: QWidget) -> None:
-        dbfile: pathlib.Path = pathlib.Path(
-                QStandardPaths.standardLocations(
-                    QStandardPaths.CacheLocation)[0]).joinpath('remotedb').joinpath("remote.db")
-        self.config.cparser.setValue('remote/remotedb', str(dbfile))
-
     async def setup_watcher(self):
         ''' set up a custom watch on the m3u dir so meta info
             can update on change'''
@@ -53,8 +49,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if self.observer:
             return
 
+        self.remotedbfile.unlink(missing_ok=True)
         logging.info("Opening %s for input", self.remotedbfile)
-        self.observer = nowplaying.db.DBWatcher(databasefile=self.remotedbfile)
+        self.observer = nowplaying.db.DBWatcher(databasefile=str(self.remotedbfile))
         self.observer.start(customhandler=self._read_track)
 
     def _read_track(self, event):
@@ -76,7 +73,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     async def start(self):
         ''' setup the watcher to run in a separate thread '''
         await self.setup_watcher()
-        self.remotedb = nowplaying.db.MetadataDB(databasefile=self.remotedbfile)
+        self.remotedb = nowplaying.db.MetadataDB(databasefile=str(self.remotedbfile))
 
     async def getplayingtrack(self):
         ''' wrapper to call getplayingtrack '''
@@ -95,20 +92,20 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def on_m3u_dir_button(self):
         ''' filename button clicked action'''
 
-    def connect_settingsui(self, qwidget, uihelp):
+    def connect_settingsui(self, qwidget: "QWidget", uihelp):
         ''' connect m3u button to filename picker'''
         self.qwidget = qwidget
         self.uihelp = uihelp
 
-    def load_settingsui(self, qwidget):
+    def load_settingsui(self, qwidget: "QWidget"):
         ''' draw the plugin's settings page '''
 
-    def verify_settingsui(self, qwidget):
+    def verify_settingsui(self, qwidget: "QWidget"):
         ''' no verification to do '''
 
-    def save_settingsui(self, qwidget):
+    def save_settingsui(self, qwidget: "QWidget"):
         ''' take the settings page and save it '''
 
-    def desc_settingsui(self, qwidget):
+    def desc_settingsui(self, qwidget: "QWidget"):
         ''' description '''
         qwidget.setText('Remote gets input from one or more other WNP setups.')

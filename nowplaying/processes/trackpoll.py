@@ -423,28 +423,32 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
         except Exception:  # pylint: disable=broad-except
             logging.exception('Failed to write debug JSON: %s')
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(f'http://{server}:{port}/v1/remoteinput',
-                                    json=remote_data) as response:
-                logging.debug("Sending to %s:%s", server, port)
-                if response.status == 200:
-                    try:
-                        result = await response.json()
-                        dbid = result.get('dbid')
-                        logging.debug('Remote server accepted track update, dbid: %s', dbid)
-                    except Exception as exc:  # pylint: disable=broad-except
-                        logging.warning('Failed to parse remote server response: %s', exc)
-                elif response.status == 403:
-                    logging.error('Remote server authentication failed - check remote secret')
-                elif response.status == 405:
-                    logging.error('Remote server method not allowed - check endpoint')
-                else:
-                    try:
-                        error_data = await response.json()
-                        error_msg = error_data.get('error', 'Unknown error')
-                        logging.error('Remote server returned %s: %s', response.status, error_msg)
-                    except Exception:  # pylint: disable=broad-except
-                        logging.error('Remote server returned %s', response.status)
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f'http://{server}:{port}/v1/remoteinput',
+                                        json=remote_data) as response:
+                    logging.debug("Sending to %s:%s", server, port)
+                    if response.status == 200:
+                        try:
+                            result = await response.json()
+                            dbid = result.get('dbid')
+                            logging.debug('Remote server accepted track update, dbid: %s', dbid)
+                        except Exception as exc:  # pylint: disable=broad-except
+                            logging.warning('Failed to parse remote server response: %s', exc)
+                    elif response.status == 403:
+                        logging.error('Remote server authentication failed - check remote secret')
+                    elif response.status == 405:
+                        logging.error('Remote server method not allowed - check endpoint')
+                    else:
+                        try:
+                            error_data = await response.json()
+                            error_msg = error_data.get('error', 'Unknown error')
+                            logging.error('Remote server returned %s: %s', response.status, error_msg)
+                        except Exception:  # pylint: disable=broad-except
+                            logging.error('Remote server returned %s', response.status)
+
+        except Exception as exc:  # pylint: disable=broad-except
+            logging.exception('aiohttp setup failed: %s', exc)
 
     async def _half_delay_write(self):
         try:

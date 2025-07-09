@@ -58,7 +58,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             'kick': nowplaying.kick.settings.KickSettings(),
             'kickchat': nowplaying.kick.settings.KickChatSettings(),
             'requests': nowplaying.trackrequests.RequestSettings(),
-            'remote': nowplaying.remote_settings.BeamSettings(),
+            'remote': nowplaying.remote_settings.RemoteSettings(),
         }
 
         self.uihelp = None

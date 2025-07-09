@@ -7,8 +7,8 @@ might even be more than on DJ on different computers swapping back and
 forth!
 
 **What's Now Playing** supports a configuration where each setup has
-their own app configuration running.  One or more installation on
-DJ computers sending the track information to a central one.  That
+their own app configuration running.  One or more installations on
+DJ computers send the track information to a central one.  That
 central one will then perform any additional lookups and send the
 output to anything configured such as Twitch.
 

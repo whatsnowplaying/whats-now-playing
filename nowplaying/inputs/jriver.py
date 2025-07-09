@@ -17,6 +17,7 @@ from nowplaying.types import TrackMetadata
 
 if TYPE_CHECKING:
     import nowplaying.config
+    from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QWidget
 
 
@@ -361,7 +362,7 @@ class Plugin(InputPlugin):  #pylint: disable=too-many-instance-attributes
         self._connection_failed = False
         self._last_error_log_time = 0  # Reset logging timer
 
-    def defaults(self, qsettings: "QWidget") -> None:
+    def defaults(self, qsettings: "QSettings") -> None:
         qsettings.setValue('jriver/host', None)
         qsettings.setValue('jriver/port', '52199')
         qsettings.setValue('jriver/username', None)

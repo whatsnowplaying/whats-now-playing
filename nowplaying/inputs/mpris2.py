@@ -14,7 +14,7 @@ import logging
 import pathlib
 import sys
 import urllib
-import urllib.request
+import urllib.parse
 
 try:
     from dbus_fast.aio import MessageBus
