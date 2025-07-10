@@ -443,7 +443,8 @@ class TrackPoll():  # pylint: disable=too-many-instance-attributes
                         try:
                             error_data = await response.json()
                             error_msg = error_data.get('error', 'Unknown error')
-                            logging.error('Remote server returned %s: %s', response.status, error_msg)
+                            logging.error('Remote server returned %s: %s', response.status,
+                                          error_msg)
                         except Exception:  # pylint: disable=broad-except
                             logging.error('Remote server returned %s', response.status)
 

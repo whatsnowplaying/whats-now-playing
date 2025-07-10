@@ -304,7 +304,7 @@ async def test_remote_plugin_config_missing_remotedb(bootstrap):
     # Plugin now sets a default path via defaults() method
     # So remotedbfile should contain a valid path, not be None/empty
     assert plugin.remotedbfile is not None
-    assert 'remote.db' in plugin.remotedbfile
+    assert 'remote.db' in str(plugin.remotedbfile)
 
 
 @pytest.mark.asyncio
