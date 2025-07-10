@@ -26,7 +26,7 @@ async def test_remote_plugin_init(remote_bootstrap):  # pylint: disable=redefine
     plugin = nowplaying.inputs.remote.Plugin(config=config)
 
     assert plugin.displayname == "Remote"
-    assert plugin.remotedbfile == str(config.testdir.joinpath('remote.db'))
+    assert str(plugin.remotedbfile) == str(config.testdir.joinpath('remote.db'))
     assert plugin.remotedb is None
     assert plugin.mixmode == "newest"
     assert plugin.metadata == {'artist': None, 'title': None, 'filename': None}
@@ -69,7 +69,7 @@ async def test_remote_plugin_setup_watcher(remote_bootstrap):  # pylint: disable
 
         await plugin.setup_watcher()
 
-        mock_watcher_class.assert_called_once_with(databasefile=plugin.remotedbfile)
+        mock_watcher_class.assert_called_once_with(databasefile=str(plugin.remotedbfile))
         mock_watcher.start.assert_called_once_with(
             customhandler=plugin._read_track) # pylint: disable=protected-access
         assert plugin.observer == mock_watcher

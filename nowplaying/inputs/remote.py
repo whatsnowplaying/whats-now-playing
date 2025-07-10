@@ -24,9 +24,17 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                  qsettings: QWidget | None = None):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Remote"
-        self.remotedbfile = pathlib.Path(
+        # Set default path
+        default_path = pathlib.Path(
                 QStandardPaths.standardLocations(
                     QStandardPaths.CacheLocation)[0]).joinpath('remotedb').joinpath("remote.db")
+
+        # Use configured path if available, otherwise use default
+        if self.config and self.config.cparser.value('remote/remotedb'):
+            self.remotedbfile = pathlib.Path(self.config.cparser.value('remote/remotedb'))
+        else:
+            self.remotedbfile = default_path
+
         self.remotedb: nowplaying.db.MetadataDB | None = None
         self.mixmode = "newest"
         self.event_handler = None
