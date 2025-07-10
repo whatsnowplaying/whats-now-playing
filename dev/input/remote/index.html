@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/extras/fanarttv/">
+        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/input/remote/">
       
       
-        <link rel="prev" href="../discogs/">
+        <link rel="prev" href="../../output/obswebsocket/">
       
       
-        <link rel="next" href="../theaudiodb/">
+        <link rel="next" href="../../output/textoutput/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -24,7 +24,7 @@
     
     
       
-        <title>FanArt.TV - What's Now Playing</title>
+        <title>Remote - What's Now Playing</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#fanarttv" class="md-skip">
+        <a href="#remote-services" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              FanArt.TV
+              Remote
             
           </span>
         </div>
@@ -511,7 +511,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/djuced/" class="md-nav__link">
+      <a href="../djuced/" class="md-nav__link">
         
   
   
@@ -534,7 +534,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/icecast/" class="md-nav__link">
+      <a href="../icecast/" class="md-nav__link">
         
   
   
@@ -557,7 +557,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/jriver/" class="md-nav__link">
+      <a href="../jriver/" class="md-nav__link">
         
   
   
@@ -580,7 +580,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/m3u/" class="md-nav__link">
+      <a href="../m3u/" class="md-nav__link">
         
   
   
@@ -603,7 +603,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/mpris2/" class="md-nav__link">
+      <a href="../mpris2/" class="md-nav__link">
         
   
   
@@ -623,10 +623,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../input/remote/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Remote
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -637,6 +659,44 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Settings
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#other-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Other Settings
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -649,7 +709,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/serato/" class="md-nav__link">
+      <a href="../serato/" class="md-nav__link">
         
   
   
@@ -672,7 +732,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/traktor/" class="md-nav__link">
+      <a href="../traktor/" class="md-nav__link">
         
   
   
@@ -695,7 +755,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/virtualdj/" class="md-nav__link">
+      <a href="../virtualdj/" class="md-nav__link">
         
   
   
@@ -718,7 +778,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/winmedia/" class="md-nav__link">
+      <a href="../winmedia/" class="md-nav__link">
         
   
   
@@ -745,18 +805,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
@@ -772,7 +834,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Output Destinations
@@ -852,10 +914,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../input/remote/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Remote
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -866,6 +950,44 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Settings
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#other-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Other Settings
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1042,20 +1164,18 @@
       
   
   
-    
   
   
-  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
         
           
           <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
@@ -1071,7 +1191,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             Artist Extras
@@ -1085,7 +1205,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../extras/" class="md-nav__link">
         
   
   
@@ -1108,7 +1228,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../discogs/" class="md-nav__link">
+      <a href="../../extras/discogs/" class="md-nav__link">
         
   
   
@@ -1128,19 +1248,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../extras/fanarttv/" class="md-nav__link">
         
   
   
@@ -1151,7 +1262,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -1164,7 +1274,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../theaudiodb/" class="md-nav__link">
+      <a href="../../extras/theaudiodb/" class="md-nav__link">
         
   
   
@@ -1546,15 +1656,60 @@
   
 
 
-<h1 id="fanarttv">fanart.tv<a class="headerlink" href="#fanarttv" title="Permanent link">&para;</a></h1>
-<p><a href="../images/fanarttv.png"><img alt="fanart.tv Settings" src="../images/fanarttv.png" /></a></p>
-<p>Provides: Banners, Fan art, Logos, and Thumbnails</p>
-<p>Media tags required: MusicBrainz Artist ID</p>
-<p><a href="https://www.fanart.tv">fanart.tv</a> is a community project to provide
-high quality artwork for music and other media. It requires music be
-tagged with <a href="https://www.musicbrainz.org">MusicBrainz</a> artist ids. You
-will need a <a href="https://fanart.tv/get-an-api-key/">Fanart API Key</a> in order
-to use this service.</p>
+<h1 id="remote-services">Remote Services<a class="headerlink" href="#remote-services" title="Permanent link">&para;</a></h1>
+<p>A common streaming configuration is to have more than one computer
+involved, such as one computer working as the DJ machine and one computer
+for processing the stream.  In some very advanced configurations, there
+might even be more than on DJ on different computers swapping back and
+forth!</p>
+<p><strong>What's Now Playing</strong> supports a configuration where each setup has
+their own app configuration running.  One or more installations on
+DJ computers send the track information to a central one.  That
+central one will then perform any additional lookups and send the
+output to anything configured such as Twitch.</p>
+<h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">&para;</a></h2>
+<ul>
+<li>
+<p>Server Side</p>
+</li>
+<li>
+<p>You will need to enable the web server</p>
+</li>
+<li>Also in webserver, you may optionally set a Secret that is required to be set on any
+   other <strong>What's Now Playing</strong> installation that talks to it</li>
+<li>Set the Input to be 'Remote'</li>
+<li>
+<p>It is recommended to enable Artist Extras on the Server</p>
+</li>
+<li>
+<p>Client Side</p>
+</li>
+<li>
+<p>Go to 'Remote Output'</p>
+</li>
+<li>Enable it</li>
+<li>Set the Server to be either the hostname or IP address of the computer
+   acting as the server</li>
+<li>Set the port to be the server's webserver port</li>
+<li>If the Server has a Secret set, you will need to set that as well</li>
+</ul>
+<blockquote>
+<p>NOTE: Some content, such as cover art, will not be sent to the remote server.</p>
+</blockquote>
+<h2 id="other-settings">Other Settings<a class="headerlink" href="#other-settings" title="Permanent link">&para;</a></h2>
+<p>It should be noted that there is no protection against multiple Twitch chat bots,
+multiple Kick bots, etc.  This can result in double posts and other weirdness.
+On the client computers, you will want to turn off such services.  Here is a
+non-complete list of things to check:</p>
+<ul>
+<li>Artist Extras</li>
+<li>Discord</li>
+<li>Kick Chat</li>
+<li>Twitch (Chat and Requests)</li>
+</ul>
+<p>Note that Recognition services such as AcoustID support are required to run
+on the client computer as they need access to the local file for those systems
+that provide access to it.</p>
 
 
 
