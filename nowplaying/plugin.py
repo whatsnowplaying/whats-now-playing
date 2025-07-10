@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QWidget  # pylint: disable=import-error, no-name-i
 
 if TYPE_CHECKING:
     import nowplaying.config
-
+    from PySide6.QtCore import QSettings # pylint: disable=no-name-in-module
 
 class WNPBasePlugin:
     ''' base class of plugins '''
@@ -34,7 +34,7 @@ class WNPBasePlugin:
 
 #### Settings UI methods
 
-    def defaults(self, qsettings: QWidget) -> None:
+    def defaults(self, qsettings: "QSettings") -> None:
         ''' (re-)set the default configuration values for this plugin '''
 
     def connect_settingsui(self, qwidget: QWidget, uihelp: object) -> None:

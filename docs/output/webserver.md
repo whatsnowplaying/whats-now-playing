@@ -1,6 +1,6 @@
 # Webserver
 
-**What's Now Playing**has a built-in web server that allows for a wide
+**What's Now Playing** has a built-in web server that allows for a wide
 variety of customization and deployments, including complex ones
 involving multiple hosts. Treat the files in`templates` as examples; copy them to new
 names and modify them until you are happy. Change the font, change the

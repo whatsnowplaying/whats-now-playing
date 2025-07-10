@@ -82,20 +82,22 @@ nav:
       - Filters: settings/filter.md
       - Quirks: settings/quirks.md
   - Input Sources:
+      - DJ Uced: input/djuced.md
+      - Icecast: input/icecast.md
+      - JRiver: input/jriver.md
+      - M3U: input/m3u.md
+      - MPRIS2: input/mpris2.md
+      - Remote: input/remote.md
       - Serato: input/serato.md
       - Traktor: input/traktor.md
       - Virtual DJ: input/virtualdj.md
-      - DJ Uced: input/djuced.md
-      - JRiver: input/jriver.md
-      - Icecast: input/icecast.md
-      - M3U: input/m3u.md
-      - MPRIS2: input/mpris2.md
       - Windows Media: input/winmedia.md
   - Output Destinations:
-      - Text Output: output/textoutput.md
       - Discord: output/discord.md
       - Kick Bot: output/kickbot.md
       - OBS WebSocket: output/obswebsocket.md
+      - Remote: input/remote.md
+      - Text Output: output/textoutput.md
       - Twitch Bot: output/twitchbot.md
       - Web Server: output/webserver.md
   - Recognition:
@@ -104,8 +106,8 @@ nav:
   - Artist Extras:
       - Overview: extras/index.md
       - Discogs: extras/discogs.md
-      - TheAudioDB: extras/theaudiodb.md
       - FanArt.TV: extras/fanarttv.md
+      - TheAudioDB: extras/theaudiodb.md
   - Requests: requests.md
   - Help:
       - How Do I?: help/howdoi.md

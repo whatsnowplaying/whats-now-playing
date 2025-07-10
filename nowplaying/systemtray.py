@@ -24,9 +24,7 @@ LASTANNOUNCED: dict[str, str | None] = {'artist': None, 'title': None}
 class Tray:  # pylint: disable=too-many-instance-attributes
     ''' System Tray object '''
 
-    def __init__(self,
-                 beam: bool = False,
-                 startup_window: 'nowplaying.startup.StartupWindow | None' = None) -> None:
+    def __init__(self, startup_window: 'nowplaying.startup.StartupWindow | None' = None) -> None:
         self.startup_window = startup_window
 
         # Initialize attributes that will be set later
@@ -34,7 +32,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.requestswindow = None
 
         # Core initialization
-        self._initialize_core_components(beam)
+        self._initialize_core_components()
 
         # UI setup
         self._setup_about_window()
@@ -45,27 +43,19 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self._setup_database_and_processes()
 
         # Settings and finalization
-        self._setup_settings_window(beam)
+        self.settingswindow = None
+        self._setup_settings_window()
         if not self.settingswindow:  # Early return if settings window failed
             return
 
         self._setup_tray_menu()
         self._finalize_initialization()
 
-    def _configure_beamstatus(self, beam: bool) -> None:
-        self.config.cparser.setValue('control/beam', beam)
-        # these will get filled in by their various subsystems as required
-        self.config.cparser.remove('control/beamport')
-        self.config.cparser.remove('control/beamserverport')
-        self.config.cparser.remove('control/beamservername')
-        self.config.cparser.remove('control/beamserverip')
-
-    def _initialize_core_components(self, beam: bool) -> None:
+    def _initialize_core_components(self) -> None:
         """Initialize core configuration and tray components."""
         self._update_startup_progress("Loading configuration...")
 
-        self.config = nowplaying.config.ConfigFile(beam=beam)
-        self._configure_beamstatus(beam)
+        self.config = nowplaying.config.ConfigFile()
 
         # Clean up any stray temporary OAuth2 credentials from previous sessions
         self._update_startup_progress("Cleaning OAuth2 credentials...")
@@ -100,12 +90,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self._update_startup_progress("Initializing process manager...")
         self.subprocesses = nowplaying.subprocesses.SubprocessManager(self.config)
 
-    def _setup_settings_window(self, beam: bool) -> None:
+    def _setup_settings_window(self) -> None:
         """Setup the settings window."""
         self._update_startup_progress("Loading settings interface...")
 
         try:
-            self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self, beam=beam)
+            self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self)
         except (RuntimeError, OSError, ImportError) as error:
             logging.error("Failed to create settings window: %s", error, exc_info=True)
             self._show_installation_error('settings UI files')

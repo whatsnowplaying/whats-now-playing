@@ -109,8 +109,9 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
                         time.sleep(0.5 * (attempt + 1))  # 0.5s, then 1.0s
                         continue
                     # Final attempt failed - continue without rotation rather than crash
-                    logging.warning('Could not delete request.db after 3 attempts '
-                                    '(previous instance may still be shutting down): %s', error)
+                    logging.warning(
+                        'Could not delete request.db after 3 attempts '
+                        '(previous instance may still be shutting down): %s', error)
 
         with sqlite3.connect(self.databasefile, timeout=30) as connection:
             cursor = connection.cursor()
@@ -358,11 +359,7 @@ class Requests:  #pylint: disable=too-many-instance-attributes, too-many-public-
 
         logging.debug('%s requested roulette %s | %s', user, setting['playlist'], user_input)
 
-        plugin = self.config.cparser.value('settings/input')
-        if plugin not in ['beam']:
-            metadata = await self._find_good_request(setting)
-        else:
-            metadata = {'filename': RESPIN_TEXT}
+        metadata = await self._find_good_request(setting)
 
         data = {
             'username': user,
