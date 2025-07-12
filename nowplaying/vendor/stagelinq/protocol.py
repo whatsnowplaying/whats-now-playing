@@ -1,4 +1,4 @@
-"""StageLinq protocol handlers for async communication."""
+"""StagelinQ protocol handlers for async communication."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from .messages import serializer
 logger = logging.getLogger(__name__)
 
 
-class StageLinqProtocol(asyncio.DatagramProtocol):
-    """UDP protocol handler for StageLinq discovery."""
+class StagelinQProtocol(asyncio.DatagramProtocol):
+    """UDP protocol handler for StagelinQ discovery."""
 
     def __init__(
         self, message_handler: Callable[[bytes, tuple[str, int]], None]
@@ -24,7 +24,7 @@ class StageLinqProtocol(asyncio.DatagramProtocol):
     def connection_made(self, transport: asyncio.DatagramTransport) -> None:
         """Called when connection is established."""
         self.transport = transport
-        logger.debug("StageLinq UDP connection established")
+        logger.debug("StagelinQ UDP connection established")
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
         """Called when a datagram is received."""
@@ -39,16 +39,16 @@ class StageLinqProtocol(asyncio.DatagramProtocol):
         if "address family mismatched" in str(
             exc
         ) or "Can't assign requested address" in str(exc):
-            logger.debug("StageLinq protocol error (expected): %s", exc)
+            logger.debug("StagelinQ protocol error (expected): %s", exc)
         else:
-            logger.error("StageLinq protocol error: %s", exc)
+            logger.error("StagelinQ protocol error: %s", exc)
 
     def connection_lost(self, exc: Exception | None) -> None:
         """Called when connection is lost."""
         if exc:
-            logger.error("StageLinq connection lost: %s", exc)
+            logger.error("StagelinQ connection lost: %s", exc)
         else:
-            logger.debug("StageLinq connection closed")
+            logger.debug("StagelinQ connection closed")
 
 
 class MessageStream:
@@ -148,8 +148,8 @@ class MessageStream:
         await self.close()
 
 
-class StageLinqStreamProtocol(asyncio.Protocol):
-    """TCP protocol handler for StageLinq services."""
+class StagelinQStreamProtocol(asyncio.Protocol):
+    """TCP protocol handler for StagelinQ services."""
 
     def __init__(self) -> None:
         self.transport: asyncio.Transport | None = None
@@ -160,7 +160,7 @@ class StageLinqStreamProtocol(asyncio.Protocol):
     def connection_made(self, transport: asyncio.Transport) -> None:
         """Called when connection is established."""
         self.transport = transport
-        logger.debug("StageLinq TCP connection established")
+        logger.debug("StagelinQ TCP connection established")
 
     def data_received(self, data: bytes) -> None:
         """Called when data is received."""
@@ -220,9 +220,9 @@ class StageLinqStreamProtocol(asyncio.Protocol):
     def connection_lost(self, exc: Exception | None) -> None:
         """Called when connection is lost."""
         if exc:
-            logger.error("StageLinq stream connection lost: %s", exc)
+            logger.error("StagelinQ stream connection lost: %s", exc)
         else:
-            logger.debug("StageLinq stream connection closed")
+            logger.debug("StagelinQ stream connection closed")
 
         self._connection_lost.set()
 
@@ -271,8 +271,8 @@ async def connect_message_stream(host: str, port: int) -> MessageStream:
     return MessageStream(reader, writer)
 
 
-class StageLinqConnection:
-    """High-level StageLinq connection."""
+class StagelinQConnection:
+    """High-level StagelinQ connection."""
 
     def __init__(self, host: str, port: int):
         self.host = host
@@ -280,25 +280,25 @@ class StageLinqConnection:
         self._stream: MessageStream | None = None
 
     async def connect(self) -> None:
-        """Connect to the StageLinq service."""
+        """Connect to the StagelinQ service."""
         if self._stream:
             return
 
         try:
             self._stream = await connect_message_stream(self.host, self.port)
-            logger.info("Connected to StageLinq service at %s:%s", self.host, self.port)
+            logger.info("Connected to StagelinQ service at %s:%s", self.host, self.port)
         except Exception as e:
             raise ConnectionError(
                 f"Failed to connect to {self.host}:{self.port}: {e}"
             ) from e
 
     async def disconnect(self) -> None:
-        """Disconnect from the StageLinq service."""
+        """Disconnect from the StagelinQ service."""
         if self._stream:
             await self._stream.close()
             self._stream = None
             logger.info(
-                "Disconnected from StageLinq service at %s:%s", self.host, self.port
+                "Disconnected from StagelinQ service at %s:%s", self.host, self.port
             )
 
     async def send_message(self, message_data: bytes) -> None:
@@ -337,7 +337,7 @@ class StageLinqConnection:
 
         return 0  # Fallback if unable to get port
 
-    async def __aenter__(self) -> StageLinqConnection:
+    async def __aenter__(self) -> StagelinQConnection:
         """Async context manager entry."""
         await self.connect()
         return self
@@ -354,8 +354,8 @@ class StageLinqConnection:
     @classmethod
     def from_streams(
         cls, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-    ) -> StageLinqConnection:
-        """Create a StageLinqConnection from existing streams (for server-side connections)."""
+    ) -> StagelinQConnection:
+        """Create a StagelinQConnection from existing streams (for server-side connections)."""
         # Create an instance without connecting
         peer_addr = writer.get_extra_info("peername")
         host = peer_addr[0] if peer_addr else "unknown"

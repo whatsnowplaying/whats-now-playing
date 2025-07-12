@@ -1,4 +1,4 @@
-"""StageLinq Listener implementation.
+"""StagelinQ Listener implementation.
 
 Based on @honusz's Listener approach that allows devices to connect TO software
 instead of software discovering and connecting to devices.
@@ -20,7 +20,7 @@ from .messages import (
     ServicesRequestMessage,
     Token,
 )
-from .protocol import StageLinqConnection
+from .protocol import StagelinQConnection
 
 logger = logging.getLogger(__name__)
 
@@ -34,13 +34,13 @@ class ServiceInfo:
     handler_class: type
 
 
-class StageLinqService(ABC):
-    """Base class for StageLinq services that can accept device connections."""
+class StagelinQService(ABC):
+    """Base class for StagelinQ services that can accept device connections."""
 
     def __init__(self, port: int, token: Token):
         self.port = port
         self.token = token
-        self.connections: dict[str, StageLinqConnection] = {}
+        self.connections: dict[str, StagelinQConnection] = {}
         self._server: asyncio.Server | None = None
 
     async def start(self) -> None:
@@ -74,8 +74,8 @@ class StageLinqService(ABC):
                 "Device connected to %s: %s", self.__class__.__name__, device_id
             )
 
-            # Create StageLinq connection wrapper
-            connection = StageLinqConnection.from_streams(reader, writer)
+            # Create StagelinQ connection wrapper
+            connection = StagelinQConnection.from_streams(reader, writer)
             self.connections[device_id] = connection
 
             # Handle the specific service protocol
@@ -93,12 +93,12 @@ class StageLinqService(ABC):
 
     @abstractmethod
     async def handle_device_connection(
-        self, device_id: str, connection: StageLinqConnection
+        self, device_id: str, connection: StagelinQConnection
     ) -> None:
         """Handle device-specific protocol for this service."""
 
 
-class DirectoryService(StageLinqService):
+class DirectoryService(StagelinQService):
     """Directory service that handles initial device connections and service announcements."""
 
     def __init__(self, port: int, token: Token, offered_services: list[ServiceInfo]):
@@ -106,7 +106,7 @@ class DirectoryService(StageLinqService):
         self.offered_services = offered_services
 
     async def handle_device_connection(
-        self, device_id: str, connection: StageLinqConnection
+        self, device_id: str, connection: StagelinQConnection
     ) -> None:
         """Handle directory service protocol."""
         try:
@@ -145,7 +145,7 @@ class DirectoryService(StageLinqService):
             logger.error("Directory service error with %s: %s", device_id, e)
 
 
-class FileTransferService(StageLinqService):
+class FileTransferService(StagelinQService):
     """File transfer service that can serve files to devices."""
 
     def __init__(self, port: int, token: Token, file_handler=None):
@@ -153,7 +153,7 @@ class FileTransferService(StageLinqService):
         self.file_handler = file_handler  # Custom file serving logic
 
     async def handle_device_connection(
-        self, device_id: str, connection: StageLinqConnection
+        self, device_id: str, connection: StagelinQConnection
     ) -> None:
         """Handle file transfer service protocol."""
         try:
@@ -179,11 +179,11 @@ class FileTransferService(StageLinqService):
             logger.error("File transfer service error with %s: %s", device_id, e)
 
 
-class StateMapService(StageLinqService):
+class StateMapService(StagelinQService):
     """StateMap service for monitoring device states."""
 
     async def handle_device_connection(
-        self, device_id: str, connection: StageLinqConnection
+        self, device_id: str, connection: StagelinQConnection
     ) -> None:
         """Handle StateMap service protocol."""
         try:
@@ -203,11 +203,11 @@ class StateMapService(StageLinqService):
             logger.error("StateMap service error with %s: %s", device_id, e)
 
 
-class BeatInfoService(StageLinqService):
+class BeatInfoService(StagelinQService):
     """BeatInfo service for receiving beat timing information."""
 
     async def handle_device_connection(
-        self, device_id: str, connection: StageLinqConnection
+        self, device_id: str, connection: StagelinQConnection
     ) -> None:
         """Handle BeatInfo service protocol."""
         try:
@@ -227,8 +227,8 @@ class BeatInfoService(StageLinqService):
             logger.error("BeatInfo service error with %s: %s", device_id, e)
 
 
-class StageLinqListener:
-    """Main listener that manages all StageLinq services and device connections."""
+class StagelinQListener:
+    """Main listener that manages all StagelinQ services and device connections."""
 
     def __init__(self, discovery_port: int = 51337):
         # Use special token format that devices accept (starts with 0xFF...)
@@ -236,7 +236,7 @@ class StageLinqListener:
             b"\xff\xff\xff\xff\xff\xff\x00\x00\x80\x00\x00\x05\x95\x04\x14\x1c"
         )
         self.discovery_port = discovery_port
-        self.services: dict[str, StageLinqService] = {}
+        self.services: dict[str, StagelinQService] = {}
         self.offered_services: list[ServiceInfo] = []
         self._discovery_task: asyncio.Task | None = None
 
@@ -271,7 +271,7 @@ class StageLinqListener:
         self._discovery_task = asyncio.create_task(self._announce_discovery())
 
         logger.info(
-            "StageLinq Listener started on port %d with %d services",
+            "StagelinQ Listener started on port %d with %d services",
             self.discovery_port,
             len(self.services),
         )
@@ -290,14 +290,14 @@ class StageLinqListener:
             await service.stop()
 
         self.services.clear()
-        logger.info("StageLinq Listener stopped")
+        logger.info("StagelinQ Listener stopped")
 
     async def _announce_discovery(self) -> None:
         """Continuously announce discovery to attract device connections."""
         from .discovery import DiscoveryAnnouncer
 
         announcer = DiscoveryAnnouncer(
-            name="Python StageLinq Listener",
+            name="Python StagelinQ Listener",
             software_name="python-stagelinq",
             software_version="0.2.0",
             port=self.discovery_port,
@@ -318,26 +318,26 @@ class StageLinqListener:
 # Convenience functions for common setups
 
 
-async def create_file_server(port: int = 51338) -> StageLinqListener:
+async def create_file_server(port: int = 51338) -> StagelinQListener:
     """Create a listener that serves as a file transfer service."""
-    listener = StageLinqListener()
+    listener = StagelinQListener()
     listener.add_service("FileTransfer", port, FileTransferService)
     return listener
 
 
 async def create_analytics_server(
     state_port: int = 51338, beat_port: int = 51339
-) -> StageLinqListener:
+) -> StagelinQListener:
     """Create a listener for DJ analytics (StateMap + BeatInfo)."""
-    listener = StageLinqListener()
+    listener = StagelinQListener()
     listener.add_service("StateMap", state_port, StateMapService)
     listener.add_service("BeatInfo", beat_port, BeatInfoService)
     return listener
 
 
-async def create_full_server() -> StageLinqListener:
+async def create_full_server() -> StagelinQListener:
     """Create a listener with all services."""
-    listener = StageLinqListener()
+    listener = StagelinQListener()
     listener.add_service("FileTransfer", 51338, FileTransferService)
     listener.add_service("StateMap", 51339, StateMapService)
     listener.add_service("BeatInfo", 51340, BeatInfoService)

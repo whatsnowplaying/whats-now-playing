@@ -1,4 +1,4 @@
-"""StageLinq protocol messages."""
+"""StagelinQ protocol messages."""
 
 from __future__ import annotations
 
@@ -222,7 +222,7 @@ class LengthPrefixedReader:
 
 
 class Message(ABC):
-    """Base class for all StageLinq messages."""
+    """Base class for all StagelinQ messages."""
 
     @abstractmethod
     def read_from(self, reader: BinaryIO) -> None:
@@ -669,7 +669,7 @@ class BeatEmitMessage(Message):
 # Convenience functions for creating common messages
 def create_discovery_message(
     token: Token | None = None,
-    source: str = "Python StageLinq",
+    source: str = "Python StagelinQ",
     action: str = DISCOVERER_HOWDY,
     software_name: str = "python-stagelinq",
     software_version: str = "0.1.0",

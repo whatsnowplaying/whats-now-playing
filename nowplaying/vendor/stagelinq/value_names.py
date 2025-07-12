@@ -1,7 +1,7 @@
 """
-StageLinq Value Names
+StagelinQ Value Names
 
-This module provides constants for known StageLinq state value names.
+This module provides constants for known StagelinQ state value names.
 """
 
 # Global constants

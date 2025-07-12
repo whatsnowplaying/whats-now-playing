@@ -1,4 +1,4 @@
-"""StageLinq device discovery implementation."""
+"""StagelinQ device discovery implementation."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from enum import Enum
 import netifaces
 
 from .messages import DISCOVERER_EXIT, DISCOVERER_HOWDY, DiscoveryMessage, Token
-from .protocol import StageLinqProtocol
+from .protocol import StagelinQProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class DeviceState(Enum):
 
 @dataclass
 class Device:
-    """Represents a StageLinq device."""
+    """Represents a StagelinQ device."""
 
     ip: str
     name: str
@@ -90,7 +90,7 @@ class Device:
 class DiscoveryConfig:
     """Configuration for device discovery."""
 
-    name: str = "Python StageLinq"
+    name: str = "Python StagelinQ"
     software_name: str = "python-stagelinq"
     software_version: str = "0.1.0"
     token: Token | None = None
@@ -104,25 +104,25 @@ class DiscoveryConfig:
             self.token = Token()
 
 
-class StageLinqError(Exception):
-    """Base exception for StageLinq errors."""
+class StagelinQError(Exception):
+    """Base exception for StagelinQ errors."""
 
 
-class DiscoveryError(StageLinqError):
+class DiscoveryError(StagelinQError):
     """Exception raised during device discovery."""
 
 
-class StageLinqDiscovery:
-    """Async StageLinq device discovery."""
+class StagelinQDiscovery:
+    """Async StagelinQ device discovery."""
 
     def __init__(self, config: DiscoveryConfig | None = None) -> None:
         self.config = config or DiscoveryConfig()
         self._transport: asyncio.DatagramTransport | None = None
-        self._protocol: StageLinqProtocol | None = None
+        self._protocol: StagelinQProtocol | None = None
         self._announce_task: asyncio.Task | None = None
         self._discovered_devices: dict[str, Device] = {}
 
-    async def __aenter__(self) -> StageLinqDiscovery:
+    async def __aenter__(self) -> StagelinQDiscovery:
         """Async context manager entry."""
         await self.start()
         return self
@@ -143,12 +143,12 @@ class StageLinqDiscovery:
 
         loop = asyncio.get_event_loop()
         self._transport, self._protocol = await loop.create_datagram_endpoint(
-            lambda: StageLinqProtocol(self._on_message_received),
+            lambda: StagelinQProtocol(self._on_message_received),
             local_addr=("0.0.0.0", self.config.port),
             reuse_port=True,
         )
 
-        logger.info("Started StageLinq discovery on port %s", self.config.port)
+        logger.info("Started StagelinQ discovery on port %s", self.config.port)
 
     async def stop(self) -> None:
         """Stop discovery service."""
@@ -162,7 +162,7 @@ class StageLinqDiscovery:
             self._transport.close()
             self._transport = None
 
-        logger.info("Stopped StageLinq discovery")
+        logger.info("Stopped StagelinQ discovery")
 
     async def start_announcing(self) -> None:
         """Start periodic announcements."""
@@ -298,9 +298,9 @@ class StageLinqDiscovery:
 @contextlib.asynccontextmanager
 async def discover_stagelinq_devices(
     config: DiscoveryConfig | None = None,
-) -> AsyncIterator[StageLinqDiscovery]:
-    """Context manager for StageLinq device discovery."""
-    discovery = StageLinqDiscovery(config)
+) -> AsyncIterator[StagelinQDiscovery]:
+    """Context manager for StagelinQ device discovery."""
+    discovery = StagelinQDiscovery(config)
     try:
         await discovery.start()
         yield discovery

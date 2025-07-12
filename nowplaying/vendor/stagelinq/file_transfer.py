@@ -1,4 +1,4 @@
-"""StageLinq file transfer implementation.
+"""StagelinQ file transfer implementation.
 
 Based on the FileTransfer protocol analysis from:
 https://github.com/icedream/go-stagelinq/issues/8
@@ -89,7 +89,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 from .messages import Message, Token, serializer
-from .protocol import StageLinqConnection
+from .protocol import StagelinQConnection
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +118,7 @@ CHUNK_SIZE = 4096
 
 @dataclass
 class FileInfo:
-    """Information about a file on the StageLinq device."""
+    """Information about a file on the StagelinQ device."""
 
     path: str
     name: str
@@ -134,7 +134,7 @@ class FileInfo:
 
 @dataclass
 class FileSource:
-    """Information about a file source on the StageLinq device."""
+    """Information about a file source on the StagelinQ device."""
 
     name: str
     database_path: str
@@ -588,7 +588,7 @@ class FileTransferConnection:
         self.host = host
         self.port = port
         self.token = token
-        self._connection: StageLinqConnection | None = None
+        self._connection: StagelinQConnection | None = None
         self._sources: list[FileSource] = []
         self._next_request_id = 1
         self._directory_cache: dict[str, list[FileInfo]] = {}  # path -> files
@@ -620,7 +620,7 @@ class FileTransferConnection:
             return
 
         try:
-            self._connection = StageLinqConnection(self.host, self.port)
+            self._connection = StagelinQConnection(self.host, self.port)
             await self._connection.connect()
             logger.info("Connected to FileTransfer at %s:%s", self.host, self.port)
         except Exception as e:

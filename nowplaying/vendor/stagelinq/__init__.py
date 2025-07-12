@@ -1,6 +1,6 @@
-"""StageLinq Protocol Implementation for Python
+"""StagelinQ Protocol Implementation for Python
 
-This library implements Denon's StageLinq protocol, allowing Python applications
+This library implements Denon's StagelinQ protocol, allowing Python applications
 to communicate with DJ equipment like Denon Prime series devices.
 
 This implementation uses modern async/await patterns for all I/O operations.
@@ -12,7 +12,7 @@ from .device import DeviceConnection, DeviceRegistry, StateCategory
 from .discovery import Device, DeviceState, DiscoveryConfig, discover_stagelinq_devices
 from .file_transfer import FileInfo, FileTransferConnection
 from .listener import (
-    StageLinqListener,
+    StagelinQListener,
     create_analytics_server,
     create_file_server,
     create_full_server,
@@ -45,7 +45,7 @@ __all__ = [
     "FileTransferConnection",
     "FileInfo",
     "DeckValueNames",
-    "StageLinqListener",
+    "StagelinQListener",
     "create_analytics_server",
     "create_file_server",
     "create_full_server",

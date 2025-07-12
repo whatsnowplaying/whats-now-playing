@@ -1,4 +1,4 @@
-"""StageLinq device connection implementation."""
+"""StagelinQ device connection implementation."""
 
 from __future__ import annotations
 
@@ -26,13 +26,13 @@ from .messages import (
     Token,
     format_interval,
 )
-from .protocol import StageLinqConnection
+from .protocol import StagelinQConnection
 
 logger = logging.getLogger(__name__)
 
 
 class DeviceRegistry:
-    """Collection of discovered StageLinq devices."""
+    """Collection of discovered StagelinQ devices."""
 
     def __init__(self) -> None:
         self._devices: list[Device] = []
@@ -96,7 +96,7 @@ class DeviceRegistry:
 
 @dataclass
 class Service:
-    """Represents a StageLinq service."""
+    """Represents a StagelinQ service."""
 
     name: str
     port: int
@@ -116,7 +116,7 @@ class StateCategory(Enum):
 
 
 class StateValueType(Enum):
-    """StageLinq StateMap value types based on protocol documentation."""
+    """StagelinQ StateMap value types based on protocol documentation."""
 
     VALUE_FLOAT = 0  # Float value (type 0)
     STATE_BOOL = 1  # Boolean state (type 1)
@@ -221,12 +221,12 @@ class PlayerInfo:
 
 
 class DeviceConnection:
-    """Pythonic async connection to a StageLinq device."""
+    """Pythonic async connection to a StagelinQ device."""
 
     def __init__(self, device: Device, token: Token) -> None:
         self.device = device
         self.token = token
-        self._connection: StageLinqConnection | None = None
+        self._connection: StagelinQConnection | None = None
         self._services: list[Service] | None = None
 
     async def __aenter__(self) -> DeviceConnection:
@@ -249,7 +249,7 @@ class DeviceConnection:
             return
 
         try:
-            self._connection = StageLinqConnection(self.device.ip, self.device.port)
+            self._connection = StagelinQConnection(self.device.ip, self.device.port)
             await self._connection.connect()
             logger.info("Connected to device %s", self.device)
         except Exception as e:
@@ -283,7 +283,7 @@ class DeviceConnection:
 
         # Implement proper service discovery protocol
         # Connect to main port and request services
-        main_conn = StageLinqConnection(self.device.ip, self.device.port)
+        main_conn = StagelinQConnection(self.device.ip, self.device.port)
         services = []
 
         try:
@@ -405,7 +405,7 @@ class StateMap:
         self.host = host
         self.port = port
         self.token = token
-        self._connection: StageLinqConnection | None = None
+        self._connection: StagelinQConnection | None = None
         self._subscriptions: set[str] = set()
 
     async def connect(self) -> None:
@@ -413,7 +413,7 @@ class StateMap:
         if self._connection:
             return
 
-        self._connection = StageLinqConnection(self.host, self.port)
+        self._connection = StagelinQConnection(self.host, self.port)
         await self._connection.connect()
 
         # Send service announcement message (required by protocol)
@@ -532,7 +532,7 @@ class BeatInfoStream:
         self.host = host
         self.port = port
         self.token = token
-        self._connection: StageLinqConnection | None = None
+        self._connection: StagelinQConnection | None = None
         self._streaming = False
 
     async def connect(self) -> None:
@@ -540,7 +540,7 @@ class BeatInfoStream:
         if self._connection:
             return
 
-        self._connection = StageLinqConnection(self.host, self.port)
+        self._connection = StagelinQConnection(self.host, self.port)
         await self._connection.connect()
         logger.info("Connected to BeatInfo at %s:%s", self.host, self.port)
 
