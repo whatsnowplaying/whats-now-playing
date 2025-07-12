@@ -76,6 +76,7 @@ ignore = ["**/nowplaying/vendor/**",]
 pythonVersion = "3.11"
 pythonPlatform = "All"
 reportUnannotatedClassAttribute = false  # Add this line
+reportAny = false
 include = [
   "nowplaying",
   "nowplaying/artistextras",
