@@ -3,24 +3,23 @@
 
 import asyncio
 import contextlib
-from curses import meta
 import dataclasses
 import datetime
 import logging
 
 from typing import TYPE_CHECKING
 
-from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
 from nowplaying.types import TrackMetadata
 
 from nowplaying.vendor.stagelinq.discovery import DiscoveryConfig, discover_stagelinq_devices
+from nowplaying.vendor.stagelinq.device import AsyncDevice
 from nowplaying.vendor.stagelinq.messages import Token
 from nowplaying.vendor.stagelinq.value_names import DeckValueNames
 
 if TYPE_CHECKING:
     import nowplaying.config
-    from nowplaying.vendor.stagelinq.device import AsyncDevice, State
+    from nowplaying.vendor.stagelinq.device import State
     from PySide6.QtWidgets import QWidget
 
 
@@ -30,7 +29,7 @@ class DeckInfo():
     updated: datetime.datetime
     track: str | None = None
     artist: str | None = None
-    bpm: int | None = None
+    bpm: float | None = None
     playing: bool = False
 
     def __post_init__(self):
@@ -58,7 +57,7 @@ class StagelinqHandler():
 
     def __init__(self, event: asyncio.Event):
         """Initialize the StagelinQ handler.
-        
+
         Args:
             event: Asyncio event used to signal shutdown
         """
@@ -69,7 +68,7 @@ class StagelinqHandler():
 
     async def get_device(self):
         """Discover and connect to a StagelinQ device.
-        
+
         Continuously searches for StagelinQ devices until one is found
         or the event is set to stop searching.
         """
@@ -89,12 +88,12 @@ class StagelinqHandler():
                         logging.info("Waiting for devices... (searching)")
                         await asyncio.sleep(2)
 
-            except Exception as e:
-                logging.exception("Discovery error: %s", e)
+            except Exception as err:  # pylint: disable=broad-exception-caught
+                logging.exception("Discovery error: %s", err)
 
     async def loop(self):
         """Main loop that maintains connection to StagelinQ device and processes updates.
-        
+
         This method handles device discovery, connection management, and subscribes
         to track state updates from all decks. It automatically reconnects if
         the connection is lost.
@@ -152,14 +151,15 @@ class StagelinqHandler():
                 if self.event.is_set():
                     return
 
-            except Exception as e:
-                logging.error(f"Connection error: {e}")
+            except Exception as err:  # pylint: disable=broad-exception-caught
+                logging.exception("Connection error: %s", err)
                 logging.error("Retrying connection in 5 seconds...")
                 await asyncio.sleep(5)
 
-    def process_state_update(self, temp_decks: dict[int, DeckInfo], state: "State"):
+    @staticmethod
+    def process_state_update(temp_decks: dict[int, DeckInfo], state: "State"):
         """Process a state update and update deck information.
-        
+
         Args:
             temp_decks: Dictionary of deck information being built during this update cycle
             state: StagelinQ state object containing updated deck information
@@ -186,7 +186,7 @@ class StagelinqHandler():
 
     def update_current_tracks(self, temp_decks: dict[int, DeckInfo]):
         """Update the current deck states with new information.
-        
+
         Args:
             temp_decks: Dictionary of updated deck information from the latest state updates
         """
@@ -196,7 +196,7 @@ class StagelinqHandler():
             if deck_num not in temp_decks:
                 self.decks.pop(deck_num, None)
                 continue
-                
+
             if not temp_decks[deck_num].playing and deck_num in self.decks:
                 del self.decks[deck_num]
             elif self.decks.get(deck_num) is None:
@@ -219,10 +219,10 @@ class StagelinqHandler():
 
     async def get_track(self, mixmode: str) -> DeckInfo | None:
         """Get the currently playing track based on the specified mix mode.
-        
+
         Args:
             mixmode: Either "newest" or "oldest" to determine which deck to return
-            
+
         Returns:
             DeckInfo for the selected deck, or None if no decks are playing
         """
@@ -269,10 +269,10 @@ class Plugin(InputPlugin):
 
     def setmixmode(self, mixmode: str) -> str:  # pylint: disable=no-self-use, unused-argument
         """Set the mix mode for determining which deck to use.
-        
+
         Args:
             mixmode: Either "newest" or "oldest"
-            
+
         Returns:
             The validated mix mode that was set
         """
@@ -290,7 +290,7 @@ class Plugin(InputPlugin):
 
     async def getplayingtrack(self) -> TrackMetadata | None:
         """Get the currently playing track metadata.
-        
+
         Returns:
             Dictionary containing track metadata (artist, track, bpm) or None if no handler
         """
@@ -311,10 +311,10 @@ class Plugin(InputPlugin):
 
     async def getrandomtrack(self, playlist: str) -> str | None:
         """Get a random track from a playlist.
-        
+
         Args:
             playlist: Name of the playlist (not implemented for StagelinQ)
-            
+
         Raises:
             NotImplementedError: This method is not supported for StagelinQ
         """

@@ -8,6 +8,9 @@ import pytest
 
 import nowplaying.inputs.stagelinq
 from nowplaying.inputs.stagelinq import DeckInfo, StagelinqHandler
+from nowplaying.vendor.stagelinq.discovery import Device
+from nowplaying.vendor.stagelinq.device import AsyncDevice
+from nowplaying.vendor.stagelinq.messages import Token
 
 
 @pytest.fixture
@@ -33,13 +36,7 @@ def test_deckinfo_init_default():
 def test_deckinfo_init_with_values():
     ''' test DeckInfo initialization with values '''
     now = datetime.datetime.now(tz=datetime.timezone.utc)
-    deck = DeckInfo(
-        updated=now,
-        track="Test Track",
-        artist="Test Artist",
-        bpm=120,
-        playing=True
-    )
+    deck = DeckInfo(updated=now, track="Test Track", artist="Test Artist", bpm=120, playing=True)
 
     assert deck.track == "Test Track"
     assert deck.artist == "Test Artist"
@@ -75,13 +72,7 @@ def test_deckinfo_less_than_comparison():
 def test_deckinfo_copy():
     ''' test DeckInfo copy method '''
     now = datetime.datetime.now(tz=datetime.timezone.utc)
-    deck = DeckInfo(
-        updated=now,
-        track="Test Track",
-        artist="Test Artist",
-        bpm=120,
-        playing=True
-    )
+    deck = DeckInfo(updated=now, track="Test Track", artist="Test Artist", bpm=120, playing=True)
 
     copied_deck = deck.copy()
 
@@ -143,45 +134,6 @@ def test_stagelinq_handler_init():
     assert handler.decks == {}
 
 
-@pytest.mark.skip(reason="Test hangs due to complex async mocking - device discovery logic works in practice")
-@pytest.mark.asyncio
-async def test_stagelinq_handler_get_device_found():
-    ''' test get_device when device is found '''
-    event = asyncio.Event()
-    handler = StagelinqHandler(event)
-
-    # Create a proper mock device with expected attributes
-    def create_mock_device():
-        device = MagicMock()
-        device.name = "Test Device"
-        device.ip = "192.168.1.1"
-        device.port = 51337
-        return device
-
-    mock_device = create_mock_device()
-
-    def create_mock_discovery():
-        discovery = MagicMock()
-        discovery.__aenter__ = AsyncMock(return_value=discovery)
-        discovery.__aexit__ = AsyncMock()
-        discovery.start_announcing = AsyncMock()
-        discovery.get_devices = AsyncMock(return_value=[mock_device])
-        return discovery
-
-    with patch('nowplaying.inputs.stagelinq.discover_stagelinq_devices') as mock_discover:
-        mock_discover.return_value = create_mock_discovery()
-
-        with patch('nowplaying.vendor.stagelinq.device.AsyncDevice') as mock_async_device:
-            mock_async_device_instance = MagicMock()
-            mock_async_device_instance.name = "Test Device"
-            mock_async_device.return_value = mock_async_device_instance
-            
-            await handler.get_device()
-            
-            assert handler.device == mock_async_device_instance
-            mock_async_device.assert_called_once()
-
-
 @pytest.mark.asyncio
 async def test_stagelinq_handler_get_device_not_found():
     ''' test get_device when no device is found '''
@@ -194,13 +146,49 @@ async def test_stagelinq_handler_get_device_not_found():
         mock_discovery.get_devices = AsyncMock(return_value=[])
         mock_discover.return_value.__aenter__ = AsyncMock(return_value=mock_discovery)
         mock_discover.return_value.__aexit__ = AsyncMock()
-        
+
         # Set event before calling to prevent infinite loop
         event.set()
-        
+
         await handler.get_device()
-        
+
         assert handler.device is None
+
+
+@pytest.mark.asyncio
+async def test_stagelinq_handler_get_device_found():
+    ''' test get_device when device is found '''
+    event = asyncio.Event()
+    handler = StagelinqHandler(event)
+
+    # Mock device with all required parameters
+    mock_token = Token(b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f")
+    mock_device = Device(ip="192.168.1.100",
+                         name="Test Device",
+                         software_name="Test Software",
+                         software_version="1.0.0",
+                         port=12345,
+                         token=mock_token)
+
+    with patch('nowplaying.inputs.stagelinq.discover_stagelinq_devices') as mock_discover:
+        mock_discovery = AsyncMock()
+        mock_discovery.start_announcing = AsyncMock()
+        mock_discovery.get_devices = AsyncMock(return_value=[mock_device])
+        mock_discover.return_value.__aenter__ = AsyncMock(return_value=mock_discovery)
+        mock_discover.return_value.__aexit__ = AsyncMock()
+
+        # Actually call the get_device method
+        await handler.get_device()
+
+        # Verify the method worked correctly
+        assert handler.device is not None
+        assert handler.device.name == "Test Device"
+        assert handler.device.ip == "192.168.1.100"
+        assert isinstance(handler.device, AsyncDevice)
+
+        # Verify discovery mocks were called as expected
+        mock_discovery.start_announcing.assert_called_once()
+        mock_discovery.get_devices.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -211,12 +199,12 @@ async def test_stagelinq_handler_get_device_exception():
 
     with patch('nowplaying.inputs.stagelinq.discover_stagelinq_devices') as mock_discover:
         mock_discover.side_effect = Exception("Test exception")
-        
+
         # Set event to stop the loop after first iteration
         event.set()
-        
+
         await handler.get_device()
-        
+
         assert handler.device is None
 
 
@@ -334,20 +322,17 @@ def test_stagelinq_handler_update_current_tracks_new_playing():
 
     # Initialize temp_decks with playing deck
     temp_decks = {
-        1: DeckInfo(
-            updated=datetime.datetime.now(tz=datetime.timezone.utc),
-            track="Test Track",
-            artist="Test Artist",
-            playing=True
-        )
+        1:
+        DeckInfo(updated=datetime.datetime.now(tz=datetime.timezone.utc),
+                 track="Test Track",
+                 artist="Test Artist",
+                 playing=True)
     }
 
     # Initialize empty decks for all deck numbers
     for deck_num in range(1, 5):
-        temp_decks[deck_num] = DeckInfo(
-            updated=datetime.datetime.now(tz=datetime.timezone.utc),
-            playing=(deck_num == 1)
-        )
+        temp_decks[deck_num] = DeckInfo(updated=datetime.datetime.now(tz=datetime.timezone.utc),
+                                        playing=(deck_num == 1))
 
     handler.update_current_tracks(temp_decks)
 
@@ -361,20 +346,16 @@ def test_stagelinq_handler_update_current_tracks_stopped_playing():
     handler = StagelinqHandler(event)
 
     # Set up existing playing deck
-    handler.decks[1] = DeckInfo(
-        updated=datetime.datetime.now(tz=datetime.timezone.utc),
-        track="Test Track",
-        artist="Test Artist",
-        playing=True
-    )
+    handler.decks[1] = DeckInfo(updated=datetime.datetime.now(tz=datetime.timezone.utc),
+                                track="Test Track",
+                                artist="Test Artist",
+                                playing=True)
 
     # Initialize temp_decks with stopped deck
     temp_decks = {}
     for deck_num in range(1, 5):
-        temp_decks[deck_num] = DeckInfo(
-            updated=datetime.datetime.now(tz=datetime.timezone.utc),
-            playing=False
-        )
+        temp_decks[deck_num] = DeckInfo(updated=datetime.datetime.now(tz=datetime.timezone.utc),
+                                        playing=False)
 
     handler.update_current_tracks(temp_decks)
 
@@ -388,22 +369,18 @@ def test_stagelinq_handler_update_current_tracks_content_changed():
     handler = StagelinqHandler(event)
 
     # Set up existing deck
-    handler.decks[1] = DeckInfo(
-        updated=datetime.datetime.now(tz=datetime.timezone.utc),
-        track="Old Track",
-        artist="Old Artist",
-        playing=True
-    )
+    handler.decks[1] = DeckInfo(updated=datetime.datetime.now(tz=datetime.timezone.utc),
+                                track="Old Track",
+                                artist="Old Artist",
+                                playing=True)
 
     # Initialize temp_decks with updated content
     temp_decks = {}
     for deck_num in range(1, 5):
-        temp_decks[deck_num] = DeckInfo(
-            updated=datetime.datetime.now(tz=datetime.timezone.utc),
-            track="New Track" if deck_num == 1 else None,
-            artist="New Artist" if deck_num == 1 else None,
-            playing=(deck_num == 1)
-        )
+        temp_decks[deck_num] = DeckInfo(updated=datetime.datetime.now(tz=datetime.timezone.utc),
+                                        track="New Track" if deck_num == 1 else None,
+                                        artist="New Artist" if deck_num == 1 else None,
+                                        playing=(deck_num == 1))
 
     handler.update_current_tracks(temp_decks)
 
@@ -620,13 +597,11 @@ async def test_stagelinq_plugin_getplayingtrack_with_deck(stagelinq_bootstrap):
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
 
     # Set up handler with deck
-    mock_deck = DeckInfo(
-        updated=datetime.datetime.now(tz=datetime.timezone.utc),
-        track="Test Track",
-        artist="Test Artist",
-        bpm=120.0,
-        playing=True
-    )
+    mock_deck = DeckInfo(updated=datetime.datetime.now(tz=datetime.timezone.utc),
+                         track="Test Track",
+                         artist="Test Artist",
+                         bpm=120.0,
+                         playing=True)
     plugin.handler = MagicMock()
     plugin.handler.get_track = AsyncMock(return_value=mock_deck)
 
@@ -644,13 +619,11 @@ async def test_stagelinq_plugin_getplayingtrack_partial_data(stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
 
     # Set up handler with partial deck data
-    mock_deck = DeckInfo(
-        updated=datetime.datetime.now(tz=datetime.timezone.utc),
-        track="Test Track",
-        artist=None,
-        bpm=None,
-        playing=True
-    )
+    mock_deck = DeckInfo(updated=datetime.datetime.now(tz=datetime.timezone.utc),
+                         track="Test Track",
+                         artist=None,
+                         bpm=None,
+                         playing=True)
     plugin.handler = MagicMock()
     plugin.handler.get_track = AsyncMock(return_value=mock_deck)
 
@@ -729,32 +702,30 @@ async def test_stagelinq_plugin_full_workflow(stagelinq_bootstrap):
         mock_handler = MagicMock()
         mock_handler.start = AsyncMock()
         mock_handler.stop = AsyncMock()
-        
+
         # Mock get_track to return a deck
-        mock_deck = DeckInfo(
-            updated=datetime.datetime.now(tz=datetime.timezone.utc),
-            track="Integration Test Track",
-            artist="Integration Test Artist",
-            bpm=128.0,
-            playing=True
-        )
+        mock_deck = DeckInfo(updated=datetime.datetime.now(tz=datetime.timezone.utc),
+                             track="Integration Test Track",
+                             artist="Integration Test Artist",
+                             bpm=128.0,
+                             playing=True)
         mock_handler.get_track = AsyncMock(return_value=mock_deck)
         mock_handler_class.return_value = mock_handler
-        
+
         # Start plugin
         await plugin.start()
-        
+
         # Get playing track
         result = await plugin.getplayingtrack()
-        
+
         # Verify results
         assert result['track'] == "Integration Test Track"
         assert result['artist'] == "Integration Test Artist"
         assert result['bpm'] == "128.0"
-        
+
         # Stop plugin
         await plugin.stop()
-        
+
         mock_handler.start.assert_called_once()
         mock_handler.stop.assert_called_once()
         assert plugin.event.is_set()
@@ -776,12 +747,12 @@ async def test_stagelinq_plugin_mixmode_workflow(stagelinq_bootstrap):
         mock_handler.start = AsyncMock()
         mock_handler.get_track = AsyncMock(return_value=None)
         mock_handler_class.return_value = mock_handler
-        
+
         await plugin.start()
-        
+
         # Set mixmode on plugin
         plugin.mixmode = 'oldest'
-        
+
         # Get playing track (should pass mixmode to handler)
         await plugin.getplayingtrack()
 
