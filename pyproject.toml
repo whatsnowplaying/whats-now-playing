@@ -47,6 +47,8 @@ packages = [
   "nowplaying.templates",
   "nowplaying.twitch",
   "nowplaying.vendor",
+  "nowplaying.vendor.musicbrainzngs",
+  "nowplaying.vendor.stagelinq",
 ]
 license-files = ["LICENSE.txt"]
 

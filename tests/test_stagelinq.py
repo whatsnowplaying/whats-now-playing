@@ -3,18 +3,21 @@
 
 import asyncio
 import datetime
-from unittest.mock import MagicMock, patch, AsyncMock
-import pytest
 from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+import nowplaying.inputs.stagelinq
+from nowplaying.inputs.stagelinq import DeckInfo, StagelinqHandler
+from nowplaying.vendor.stagelinq.device import AsyncDevice
+from nowplaying.vendor.stagelinq.discovery import Device
+from nowplaying.vendor.stagelinq.messages import Token
 
 if TYPE_CHECKING:
     from nowplaying.config import ConfigFile
 
-import nowplaying.inputs.stagelinq
-from nowplaying.inputs.stagelinq import DeckInfo, StagelinqHandler
-from nowplaying.vendor.stagelinq.discovery import Device
-from nowplaying.vendor.stagelinq.device import AsyncDevice
-from nowplaying.vendor.stagelinq.messages import Token
+
 
 
 @pytest.fixture
@@ -135,8 +138,7 @@ def test_stagelinq_handler_init():
     assert handler.event == event
     assert handler.device is None
     assert handler.loop_task is None
-    assert handler.decks == {}
-
+    assert not handler.decks
 
 @pytest.mark.asyncio
 async def test_stagelinq_handler_get_device_not_found():
@@ -298,7 +300,7 @@ def test_stagelinq_handler_process_state_update_no_deck():
     handler.process_state_update(temp_decks, mock_state)
 
     # Should not modify temp_decks
-    assert temp_decks == {}
+    assert not temp_decks
 
 
 def test_stagelinq_handler_process_state_update_empty_values():
@@ -336,7 +338,7 @@ def test_stagelinq_handler_update_current_tracks_new_playing():
     # Initialize empty decks for all deck numbers
     for deck_num in range(1, 5):
         temp_decks[deck_num] = DeckInfo(updated=datetime.datetime.now(tz=datetime.timezone.utc),
-                                        playing=(deck_num == 1))
+                                        playing=deck_num == 1)
 
     handler.update_current_tracks(temp_decks)
 

@@ -63,10 +63,10 @@ class StagelinqHandler():
         """
         self.event = event
         self.device: AsyncDevice | None = None
-        self.loop_task: asyncio.Task | None = None
+        self.loop_task: asyncio.Task[None] | None = None
         self.decks: dict[int, DeckInfo] = {}
 
-    async def get_device(self):
+    async def get_device(self) -> None:
         """Discover and connect to a StagelinQ device.
 
         Continuously searches for StagelinQ devices until one is found
@@ -84,14 +84,13 @@ class StagelinqHandler():
                         logging.info("Found device: %s", self.device.name)
                         logging.info("Connecting to %s", self.device.name)
                         break
-                    else:
-                        logging.info("Waiting for devices... (searching)")
-                        await asyncio.sleep(2)
+                    logging.info("Waiting for devices... (searching)")
+                    await asyncio.sleep(2)
 
             except Exception as err:  # pylint: disable=broad-exception-caught
                 logging.exception("Discovery error: %s", err)
 
-    async def loop(self):
+    async def loop(self) -> None:
         """Main loop that maintains connection to StagelinQ device and processes updates.
 
         This method handles device discovery, connection management, and subscribes
@@ -157,7 +156,7 @@ class StagelinqHandler():
                 await asyncio.sleep(5)
 
     @staticmethod
-    def process_state_update(temp_decks: dict[int, DeckInfo], state: "State"):
+    def process_state_update(temp_decks: dict[int, DeckInfo], state: "State") -> None:
         """Process a state update and update deck information.
 
         Args:
@@ -184,7 +183,7 @@ class StagelinqHandler():
             # Boolean states are already properly typed
             temp_decks[deck_num].playing = state.get_typed_value()
 
-    def update_current_tracks(self, temp_decks: dict[int, DeckInfo]):
+    def update_current_tracks(self, temp_decks: dict[int, DeckInfo]) -> None:
         """Update the current deck states with new information.
 
         Args:
@@ -194,7 +193,7 @@ class StagelinqHandler():
         for deck_num in range(1, 5):
             # If deck doesn't exist in temp_decks, remove it from self.decks
             if deck_num not in temp_decks:
-                self.decks.pop(deck_num, None)
+                _ = self.decks.pop(deck_num, None)
                 continue
 
             if not temp_decks[deck_num].playing and deck_num in self.decks:
@@ -202,20 +201,21 @@ class StagelinqHandler():
             elif self.decks.get(deck_num) is None:
                 self.decks[deck_num] = temp_decks[deck_num].copy()
                 self.decks[deck_num].updated = this_update
-            elif self.decks.get(deck_num) and not self.decks[deck_num].same_content(temp_decks[deck_num]):
+            elif self.decks.get(deck_num) and not self.decks[deck_num].same_content(
+                    temp_decks[deck_num]):
                 self.decks[deck_num] = temp_decks[deck_num].copy()
                 self.decks[deck_num].updated = this_update
 
-    async def start(self):
+    async def start(self) -> None:
         """Start the StagelinQ handler by creating the main loop task."""
         self.loop_task = asyncio.create_task(self.loop())
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stop the StagelinQ handler and cancel the main loop task."""
         self.event.set()
         logging.info("Shutting down StagelinQ")
         if self.loop_task:
-            self.loop_task.cancel()
+            _ = self.loop_task.cancel()
 
     async def get_track(self, mixmode: str) -> DeckInfo | None:
         """Get the currently playing track based on the specified mix mode.
