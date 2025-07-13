@@ -5,6 +5,10 @@ import asyncio
 import datetime
 from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from nowplaying.config import ConfigFile
 
 import nowplaying.inputs.stagelinq
 from nowplaying.inputs.stagelinq import DeckInfo, StagelinqHandler
@@ -14,7 +18,7 @@ from nowplaying.vendor.stagelinq.messages import Token
 
 
 @pytest.fixture
-def stagelinq_bootstrap(bootstrap):
+def stagelinq_bootstrap(bootstrap: "ConfigFile"):
     ''' bootstrap test for stagelinq plugin '''
     config = bootstrap
     config.cparser.setValue('stagelinq/mixmode', 'newest')
@@ -479,7 +483,7 @@ async def test_stagelinq_handler_get_track_no_decks():
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_init(stagelinq_bootstrap):
+async def test_stagelinq_plugin_init(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test StagelinqPlugin initialization '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -493,7 +497,7 @@ async def test_stagelinq_plugin_init(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_desc_settingsui(stagelinq_bootstrap):
+async def test_stagelinq_plugin_desc_settingsui(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test desc_settingsui method '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -507,7 +511,7 @@ async def test_stagelinq_plugin_desc_settingsui(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_install(stagelinq_bootstrap):
+async def test_stagelinq_plugin_install(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test install method '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -516,7 +520,7 @@ async def test_stagelinq_plugin_install(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_validmixmodes(stagelinq_bootstrap):
+async def test_stagelinq_plugin_validmixmodes(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test validmixmodes method '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -525,7 +529,7 @@ async def test_stagelinq_plugin_validmixmodes(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_setmixmode_valid(stagelinq_bootstrap):
+async def test_stagelinq_plugin_setmixmode_valid(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test setmixmode with valid mode '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -537,7 +541,7 @@ async def test_stagelinq_plugin_setmixmode_valid(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_setmixmode_invalid(stagelinq_bootstrap):
+async def test_stagelinq_plugin_setmixmode_invalid(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test setmixmode with invalid mode '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -551,7 +555,7 @@ async def test_stagelinq_plugin_setmixmode_invalid(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_getmixmode(stagelinq_bootstrap):
+async def test_stagelinq_plugin_getmixmode(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test getmixmode method '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -565,7 +569,7 @@ async def test_stagelinq_plugin_getmixmode(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_getplayingtrack_no_handler(stagelinq_bootstrap):
+async def test_stagelinq_plugin_getplayingtrack_no_handler(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test getplayingtrack with no handler '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -576,7 +580,7 @@ async def test_stagelinq_plugin_getplayingtrack_no_handler(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_getplayingtrack_no_deck(stagelinq_bootstrap):
+async def test_stagelinq_plugin_getplayingtrack_no_deck(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test getplayingtrack with handler but no deck '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -591,7 +595,7 @@ async def test_stagelinq_plugin_getplayingtrack_no_deck(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_getplayingtrack_with_deck(stagelinq_bootstrap):
+async def test_stagelinq_plugin_getplayingtrack_with_deck(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test getplayingtrack with deck data '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -613,7 +617,7 @@ async def test_stagelinq_plugin_getplayingtrack_with_deck(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_getplayingtrack_partial_data(stagelinq_bootstrap):
+async def test_stagelinq_plugin_getplayingtrack_partial_data(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test getplayingtrack with partial deck data '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -635,7 +639,7 @@ async def test_stagelinq_plugin_getplayingtrack_partial_data(stagelinq_bootstrap
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_getrandomtrack(stagelinq_bootstrap):
+async def test_stagelinq_plugin_getrandomtrack(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test getrandomtrack method '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -645,7 +649,7 @@ async def test_stagelinq_plugin_getrandomtrack(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_start(stagelinq_bootstrap):
+async def test_stagelinq_plugin_start(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test start method '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -663,7 +667,7 @@ async def test_stagelinq_plugin_start(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_stop(stagelinq_bootstrap):
+async def test_stagelinq_plugin_stop(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test stop method '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -680,7 +684,7 @@ async def test_stagelinq_plugin_stop(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_stop_no_handler(stagelinq_bootstrap):
+async def test_stagelinq_plugin_stop_no_handler(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test stop method with no handler '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -693,7 +697,7 @@ async def test_stagelinq_plugin_stop_no_handler(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_full_workflow(stagelinq_bootstrap):
+async def test_stagelinq_plugin_full_workflow(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test full workflow from start to getplayingtrack '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)
@@ -732,7 +736,7 @@ async def test_stagelinq_plugin_full_workflow(stagelinq_bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_stagelinq_plugin_mixmode_workflow(stagelinq_bootstrap):
+async def test_stagelinq_plugin_mixmode_workflow(stagelinq_bootstrap: "ConfigFile"): # pylint: disable=redefined-outer-name
     ''' test mixmode setting and usage '''
     config = stagelinq_bootstrap
     plugin = nowplaying.inputs.stagelinq.Plugin(config=config)

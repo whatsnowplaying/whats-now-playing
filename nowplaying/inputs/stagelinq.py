@@ -202,7 +202,7 @@ class StagelinqHandler():
             elif self.decks.get(deck_num) is None:
                 self.decks[deck_num] = temp_decks[deck_num].copy()
                 self.decks[deck_num].updated = this_update
-            elif not self.decks[deck_num].same_content(temp_decks[deck_num]):
+            elif self.decks.get(deck_num) and not self.decks[deck_num].same_content(temp_decks[deck_num]):
                 self.decks[deck_num] = temp_decks[deck_num].copy()
                 self.decks[deck_num].updated = this_update
 
