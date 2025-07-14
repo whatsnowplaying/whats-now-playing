@@ -10,7 +10,6 @@ import threading
 
 import pytest  # pylint: disable=import-error
 import pytest_asyncio  # pylint: disable=import-error
-from aioresponses import aioresponses
 
 import nowplaying.processes.trackpoll  # pylint: disable=import-error
 
@@ -202,10 +201,10 @@ async def test_trackpoll_metadata(trackpollbootstrap, getroot):  # pylint: disab
 
 
 @pytest.mark.asyncio
-async def test_trackpoll_write_to_remote_disabled(trackpollbootstrap):  # pylint: disable=redefined-outer-name
-    ''' test _write_to_remote when remote is disabled '''
+async def test_trackpoll_notifications_loaded(trackpollbootstrap):  # pylint: disable=redefined-outer-name
+    ''' test that notification plugins are loaded properly '''
     config = trackpollbootstrap
-    config.cparser.setValue('remote/enabled', False)
+    config.cparser.setValue('remote/enabled', True)
     config.cparser.sync()
 
     trackpoll = nowplaying.processes.trackpoll.TrackPoll(stopevent=threading.Event(),
@@ -213,21 +212,21 @@ async def test_trackpoll_write_to_remote_disabled(trackpollbootstrap):  # pylint
                                                          testmode=True)
 
     try:
-        # Should do nothing when remote is disabled
-        await trackpoll._write_to_remote()  # pylint: disable=protected-access
+        # Verify notification plugins are loaded
+        assert trackpoll.notification_plugins is not None
+        assert trackpoll.active_notifications is not None
+        # Should have notification plugins available
+        assert len(trackpoll.notification_plugins) > 0
     finally:
         # Properly cleanup to avoid Windows timing issues
         await trackpoll.stop()
 
 
 @pytest.mark.asyncio
-async def test_trackpoll_write_to_remote_no_secret(trackpollbootstrap):  # pylint: disable=redefined-outer-name
-    ''' test _write_to_remote without secret configured '''
+async def test_trackpoll_notify_plugins_called(trackpollbootstrap):  # pylint: disable=redefined-outer-name
+    ''' test that _notify_plugins is called during track processing '''
     config = trackpollbootstrap
-    config.cparser.setValue('remote/enabled', True)
-    config.cparser.setValue('remote/remote_server', 'localhost')
-    config.cparser.setValue('remote/remote_port', 8899)
-    config.cparser.setValue('remote/remote_key', '')  # No secret
+    config.cparser.setValue('remote/enabled', False)  # Test with disabled to avoid network calls
     config.cparser.sync()
 
     trackpoll = nowplaying.processes.trackpoll.TrackPoll(stopevent=threading.Event(),
@@ -241,102 +240,16 @@ async def test_trackpoll_write_to_remote_no_secret(trackpollbootstrap):  # pylin
             'filename': 'test.mp3'
         }
 
-        with aioresponses() as mock_resp:
-            mock_resp.post('http://localhost:8899/v1/remoteinput', payload={'dbid': 123})
+        # Mock the notify method to avoid actual network calls
+        async def mock_notify(metadata, imagecache=None): # pylint: disable=unused-argument
+            pass
 
-            await trackpoll._write_to_remote()  # pylint: disable=protected-access
+        # Replace the notification plugins with mock
+        for plugin in trackpoll.active_notifications:
+            plugin.notify_track_change = mock_notify
 
-            # Verify the request was made - aioresponses automatically validates the URL and method
-    finally:
-        # Properly cleanup to avoid Windows timing issues
-        await trackpoll.stop()
-
-
-@pytest.mark.asyncio
-async def test_trackpoll_write_to_remote_with_secret(trackpollbootstrap):  # pylint: disable=redefined-outer-name
-    ''' test _write_to_remote with secret configured '''
-    config = trackpollbootstrap
-    config.cparser.setValue('remote/enabled', True)
-    config.cparser.setValue('remote/remote_server', 'localhost')
-    config.cparser.setValue('remote/remote_port', 8899)
-    config.cparser.setValue('remote/remote_key', 'test_secret_123')
-    config.cparser.sync()
-
-    trackpoll = nowplaying.processes.trackpoll.TrackPoll(stopevent=threading.Event(),
-                                                         config=config,
-                                                         testmode=True)
-
-    try:
-        trackpoll.currentmeta = {
-            'artist': 'Test Artist',
-            'title': 'Test Title',
-            'filename': 'test.mp3'
-        }
-
-        with aioresponses() as mock_resp:
-            mock_resp.post('http://localhost:8899/v1/remoteinput', payload={'dbid': 456})
-
-            await trackpoll._write_to_remote()  # pylint: disable=protected-access
-
-            # Verify the request was made - aioresponses automatically validates the URL and method
-    finally:
-        # Properly cleanup to avoid Windows timing issues
-        await trackpoll.stop()
-
-
-@pytest.mark.asyncio
-async def test_trackpoll_write_to_remote_auth_failure(trackpollbootstrap):  # pylint: disable=redefined-outer-name
-    ''' test _write_to_remote with authentication failure '''
-    config = trackpollbootstrap
-    config.cparser.setValue('remote/enabled', True)
-    config.cparser.setValue('remote/remote_server', 'localhost')
-    config.cparser.setValue('remote/remote_port', 8899)
-    config.cparser.setValue('remote/remote_key', 'test_secret')
-    config.cparser.sync()
-
-    trackpoll = nowplaying.processes.trackpoll.TrackPoll(stopevent=threading.Event(),
-                                                         config=config,
-                                                         testmode=True)
-
-    try:
-        trackpoll.currentmeta = {'artist': 'Test Artist', 'title': 'Test Title'}
-
-        with aioresponses() as mock_resp:
-            mock_resp.post('http://localhost:8899/v1/remoteinput',
-                           status=403,
-                           payload={'error': 'Invalid secret'})
-
-            # Should handle auth failure gracefully
-            await trackpoll._write_to_remote()  # pylint: disable=protected-access
-    finally:
-        # Properly cleanup to avoid Windows timing issues
-        await trackpoll.stop()
-
-
-@pytest.mark.asyncio
-async def test_trackpoll_write_to_remote_server_error(trackpollbootstrap):  # pylint: disable=redefined-outer-name
-    ''' test _write_to_remote with server error '''
-    config = trackpollbootstrap
-    config.cparser.setValue('remote/enabled', True)
-    config.cparser.setValue('remote/remote_server', 'localhost')
-    config.cparser.setValue('remote/remote_port', 8899)
-    config.cparser.setValue('remote/remote_key', '')
-    config.cparser.sync()
-
-    trackpoll = nowplaying.processes.trackpoll.TrackPoll(stopevent=threading.Event(),
-                                                         config=config,
-                                                         testmode=True)
-
-    try:
-        trackpoll.currentmeta = {'artist': 'Test Artist', 'title': 'Test Title'}
-
-        with aioresponses() as mock_resp:
-            mock_resp.post('http://localhost:8899/v1/remoteinput',
-                           status=500,
-                           payload={'error': 'Internal server error'})
-
-            # Should handle server error gracefully
-            await trackpoll._write_to_remote()  # pylint: disable=protected-access
+        # Test that _notify_plugins executes without error
+        await trackpoll._notify_plugins()  # pylint: disable=protected-access
     finally:
         # Properly cleanup to avoid Windows timing issues
         await trackpoll.stop()

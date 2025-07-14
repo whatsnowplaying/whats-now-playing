@@ -6,11 +6,13 @@ from typing import TypedDict, TYPE_CHECKING
 if TYPE_CHECKING:
     import nowplaying.inputs
     import nowplaying.artistextras
+    import nowplaying.notifications
     import nowplaying.recognition
 
 
 class TrackMetadata(TypedDict, total=False):
     """Structured metadata for a music track. All fields are optional."""
+
     # Basic track information
     title: str
     artist: str
@@ -88,9 +90,14 @@ class TrackMetadata(TypedDict, total=False):
     fpcalcfingerprint: str
     genres: list[str]
 
+    # Control metadata
+    cache_warmed: bool
+    secret: str
 
 class PluginObjs(TypedDict):
     """Dictionary structure for plugin instances organized by type."""
+
     inputs: dict[str, "nowplaying.inputs.InputPlugin"]
     artistextras: dict[str, "nowplaying.artistextras.ArtistExtrasPlugin"]
+    notifications: dict[str, "nowplaying.notifications.NotificationPlugin"]
     recognition: dict[str, "nowplaying.recognition.RecognitionPlugin"]

@@ -29,7 +29,6 @@ import nowplaying.kick.settings
 import nowplaying.trackrequests
 import nowplaying.uihelp
 import nowplaying.utils
-import nowplaying.remote_settings
 
 if TYPE_CHECKING:
     import nowplaying.tray
@@ -58,7 +57,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             'kick': nowplaying.kick.settings.KickSettings(),
             'kickchat': nowplaying.kick.settings.KickChatSettings(),
             'requests': nowplaying.trackrequests.RequestSettings(),
-            'remote': nowplaying.remote_settings.RemoteSettings(),
         }
 
         self.uihelp = None
@@ -118,8 +116,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         baseuis = [
             'general', 'source', 'filter', 'trackskip', 'textoutput', 'webserver', 'twitch',
-            'twitchchat', 'kick', 'kickchat', 'requests', 'remote', 'artistextras', 'obsws',
-            'discordbot', 'quirks'
+            'twitchchat', 'kick', 'kickchat', 'requests', 'artistextras', 'obsws', 'discordbot',
+            'quirks'
         ]
 
         for uiname in baseuis:
@@ -150,7 +148,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 'kick',
                 'kickchat',
                 'requests',
-                'remote',
         ]:
             self.settingsclasses[key].load(self.config, self.widgets[key])
             self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
@@ -443,7 +440,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._upd_conf_quirks()
         self._upd_conf_discordbot()
         self._upd_conf_kickbot()
-        self._upd_conf_remote()
 
         self._upd_conf_recognition()
         self._upd_conf_input()
@@ -591,11 +587,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         if (old_enabled != new_enabled) or (old_chat != new_chat):
             self.tray.subprocesses.restart_kickbot()
-
-    def _upd_conf_remote(self):
-        ''' update the remote settings '''
-        if 'remote' in self.settingsclasses and 'remote' in self.widgets:
-            self.settingsclasses['remote'].save_settings()
 
     def verify_regex_filters(self):
         ''' verify the regex filters are real '''
@@ -824,7 +815,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 'kick',
                 'kickchat',
                 'requests',
-                'remote',
         ]:
             try:
                 self.settingsclasses[key].verify(self.widgets[key])

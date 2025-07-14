@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' handler to read the metadata from various file formats '''
+"""handler to read the metadata from various file formats"""
 
 from html.parser import HTMLParser
 from typing import TYPE_CHECKING, Any
@@ -17,6 +17,7 @@ import traceback
 
 import aiohttp
 import jinja2
+from jinja2.environment import Template
 import nltk
 import normality
 import PIL.Image
@@ -26,31 +27,33 @@ if TYPE_CHECKING:
     from nowplaying.types import TrackMetadata
     import nowplaying.config
 
-STRIPWORDLIST = ['clean', 'dirty', 'explicit', 'official music video']
+STRIPWORDLIST = ["clean", "dirty", "explicit", "official music video"]
 STRIPRELIST = [
-    re.compile(r' \((?i:{0})\)'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
-    re.compile(r' - (?i:{0}$)'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
-    re.compile(r' \[(?i:{0})\]'.format('|'.join(STRIPWORDLIST))),  #pylint: disable=consider-using-f-string
+    re.compile(r" \((?i:{0})\)".format("|".join(STRIPWORDLIST))),  # pylint: disable=consider-using-f-string
+    re.compile(r" - (?i:{0}$)".format("|".join(STRIPWORDLIST))),  # pylint: disable=consider-using-f-string
+    re.compile(r" \[(?i:{0})\]".format("|".join(STRIPWORDLIST))),  # pylint: disable=consider-using-f-string
 ]
 
-TRANSPARENT_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC'\
-                  '1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAA'\
-                  'ASUVORK5CYII='
+TRANSPARENT_PNG = (
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+)
 
 TRANSPARENT_PNG_BIN = base64.b64decode(TRANSPARENT_PNG)
 
 ARTIST_VARIATIONS_RE = [
-    re.compile('(?i)^the (.*)'),
-    re.compile(r'(?i)^(.*?)( feat.* .*)$'),
+    re.compile("(?i)^the (.*)"),
+    re.compile(r"(?i)^(.*?)( feat.* .*)$"),
 ]
 
 MISSED_TRANSLITERAL = "ΛΔӨЯ†"
 REPLACED_CHARACTERS = "AAORT"
-CUSTOM_TRANSLATE = str.maketrans(MISSED_TRANSLITERAL + MISSED_TRANSLITERAL.lower(),
-                                 REPLACED_CHARACTERS + REPLACED_CHARACTERS.lower())
+CUSTOM_TRANSLATE = str.maketrans(
+    MISSED_TRANSLITERAL + MISSED_TRANSLITERAL.lower(),
+    REPLACED_CHARACTERS + REPLACED_CHARACTERS.lower(),
+)
 
 
-def safe_stopevent_check(stopevent: asyncio.Event|None) -> bool:
+def safe_stopevent_check(stopevent: asyncio.Event | None) -> bool:
     """
     Safely check if stopevent is set, handling shutdown pipe errors.
     Returns True if stopevent is set OR if pipe is broken (indicating shutdown).
@@ -68,73 +71,79 @@ def safe_stopevent_check(stopevent: asyncio.Event|None) -> bool:
     except OSError as error:
         # Log details for analysis of unexpected OSErrors in production
         error_details = f"errno={getattr(error, 'errno', 'N/A')}"
-        if hasattr(error, 'winerror'):
+        if hasattr(error, "winerror"):
             error_details += f", winerror={error.winerror}"
-        logging.info("OSError in stopevent check (%s): %s - treating as stop signal",
-                    error_details, error)
+        logging.info(
+            "OSError in stopevent check (%s): %s - treating as stop signal", error_details, error
+        )
         return True
 
 
 class HTMLFilter(HTMLParser):
-    ''' simple class to strip HTML '''
+    """simple class to strip HTML"""
 
     def __init__(self, convert_charrefs=True):
         super().__init__(convert_charrefs=convert_charrefs)
         self.text = ""
 
     def handle_data(self, data):
-        ''' handle data '''
+        """handle data"""
         self.text += data
 
     @staticmethod
     def error(message):
-        ''' handle error messages '''
-        logging.debug('HTMLFilter: %s', message)
+        """handle error messages"""
+        logging.debug("HTMLFilter: %s", message)
 
 
-class TemplateHandler():  # pylint: disable=too-few-public-methods
-    ''' Set up a template  '''
+class TemplateHandler:  # pylint: disable=too-few-public-methods
+    """Set up a template"""
 
-    def __init__(self, filename: str | None = None) -> None:
+    def __init__(self, filename: str | None = None, rawtemplate: str | None = None) -> None:
         self.envdir = envdir = None
         self.template = None
         self.filename = filename
 
-        if not self.filename:
+        if not self.filename and not rawtemplate:
             return
 
-        if os.path.exists(self.filename):
-            envdir = os.path.dirname(self.filename)
+        if self.filename:
+            if os.path.exists(self.filename):
+                envdir = os.path.dirname(self.filename)
+            else:
+                logging.error("%s does not exist!", self.filename)
+                return
+
+            if not self.envdir or self.envdir != envdir:
+                self.envdir = envdir
+                self.env = self.setup_jinja2(self.envdir)
+
+            basename = os.path.basename(self.filename)
+
+            self.template = self.env.get_template(basename)
         else:
-            logging.error('%s does not exist!', self.filename)
-            return
-
-        if not self.envdir or self.envdir != envdir:
-            self.envdir = envdir
-            self.env = self.setup_jinja2(self.envdir)
-
-        basename = os.path.basename(self.filename)
-
-        self.template = self.env.get_template(basename)
+            self.template = Template(source=rawtemplate)
 
     @staticmethod
     def _finalize(variable: Any) -> str:
-        ''' helper routine to avoid NoneType exceptions '''
+        """helper routine to avoid NoneType exceptions"""
         if variable is not None:
             return variable
-        return ''
+        return ""
 
     def setup_jinja2(self, directory: str) -> jinja2.Environment:
-        ''' set up the environment '''
-        return jinja2.Environment(loader=jinja2.FileSystemLoader(directory),
-                                  finalize=self._finalize,
-                                  autoescape=jinja2.select_autoescape(['htm', 'html', 'xml']))
+        """set up the environment"""
+        return jinja2.Environment(
+            loader=jinja2.FileSystemLoader(directory),
+            finalize=self._finalize,
+            autoescape=jinja2.select_autoescape(["htm", "html", "xml"]),
+        )
 
     def generate(self, metadatadict: "TrackMetadata | None" = None) -> str:
-        ''' get the generated template '''
-        logging.debug('generating data for %s', self.filename)
+        """get the generated template"""
+        logging.debug("generating data for %s", self.filename)
 
-        rendertext = 'Template has syntax errors'
+        rendertext = "Template has syntax errors"
         try:
             if not self.filename or not os.path.exists(self.filename) or not self.template:
                 return " No template found; check Now Playing settings."
@@ -149,23 +158,23 @@ class TemplateHandler():  # pylint: disable=too-few-public-methods
 
 
 def image2png(rawdata: bytes | None) -> bytes | None:
-    ''' convert an image to png '''
+    """convert an image to png"""
 
     if not rawdata:
         return None
 
-    if rawdata.startswith(b'\211PNG\r\n\032\n'):
-        logging.debug('already PNG, skipping convert')
+    if rawdata.startswith(b"\211PNG\r\n\032\n"):
+        logging.debug("already PNG, skipping convert")
         return rawdata
 
     try:
         imgbuffer = io.BytesIO(rawdata)
-        logging.getLogger('PIL.TiffImagePlugin').setLevel(logging.CRITICAL + 1)
-        logging.getLogger('PIL.PngImagePlugin').setLevel(logging.CRITICAL + 1)
+        logging.getLogger("PIL.TiffImagePlugin").setLevel(logging.CRITICAL + 1)
+        logging.getLogger("PIL.PngImagePlugin").setLevel(logging.CRITICAL + 1)
         image = PIL.Image.open(imgbuffer)
         imgbuffer = io.BytesIO(rawdata)
-        if image.format != 'PNG':
-            image.convert(mode='RGB').save(imgbuffer, format='PNG')
+        if image.format != "PNG":
+            image.convert(mode="RGB").save(imgbuffer, format="PNG")
     except Exception as error:  # pylint: disable=broad-exception-caught
         logging.debug(error)
         return None
@@ -174,23 +183,23 @@ def image2png(rawdata: bytes | None) -> bytes | None:
 
 
 def image2avif(rawdata: bytes | None) -> bytes | None:
-    ''' convert an image to avif '''
+    """convert an image to avif"""
 
     if not rawdata:
         return None
 
-    if rawdata.startswith(b'\x00\x00\x00 ftypavif'):
-        logging.debug('already AVIF, skipping convert')
+    if rawdata.startswith(b"\x00\x00\x00 ftypavif"):
+        logging.debug("already AVIF, skipping convert")
         return rawdata
 
     try:
         imgbuffer = io.BytesIO(rawdata)
-        logging.getLogger('PIL.TiffImagePlugin').setLevel(logging.CRITICAL + 1)
-        logging.getLogger('PIL.PngImagePlugin').setLevel(logging.CRITICAL + 1)
+        logging.getLogger("PIL.TiffImagePlugin").setLevel(logging.CRITICAL + 1)
+        logging.getLogger("PIL.PngImagePlugin").setLevel(logging.CRITICAL + 1)
         image = PIL.Image.open(imgbuffer)
         imgbuffer = io.BytesIO(rawdata)
-        if image.format != 'AVIF':
-            image.convert(mode='RGB').save(imgbuffer, format='AVIF')
+        if image.format != "AVIF":
+            image.convert(mode="RGB").save(imgbuffer, format="AVIF")
     except Exception as error:  # pylint: disable=broad-exception-caught
         logging.debug(error)
         return None
@@ -199,40 +208,45 @@ def image2avif(rawdata: bytes | None) -> bytes | None:
 
 
 def songpathsubst(config: "nowplaying.config.ConfigFile", filename: str) -> str:
-    ''' if needed, change the pathing of a file '''
+    """if needed, change the pathing of a file"""
 
     origfilename = filename
 
-    if not config.cparser.value('quirks/filesubst', type=bool):
+    if not config.cparser.value("quirks/filesubst", type=bool):
         return filename
 
-    slashmode = config.cparser.value('quirks/slashmode')
+    slashmode = config.cparser.value("quirks/slashmode")
 
-    if slashmode == 'toforward':
-        newname = filename.replace('\\', '/')
+    if slashmode == "toforward":
+        newname = filename.replace("\\", "/")
         filename = newname
-    elif slashmode == 'toback':
-        newname = filename.replace('/', '\\')
+    elif slashmode == "toback":
+        newname = filename.replace("/", "\\")
         filename = newname
     else:
         newname = filename
 
-    if songin := config.cparser.value('quirks/filesubstin'):
-        songout = config.cparser.value('quirks/filesubstout') or ''
+    if songin := config.cparser.value("quirks/filesubstin"):
+        songout = config.cparser.value("quirks/filesubstout") or ""
 
         try:
             newname = filename.replace(songin, songout)
         except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error('Unable to do path replacement (%s -> %s on %s): %s', songin, songout,
-                          filename, error)
+            logging.error(
+                "Unable to do path replacement (%s -> %s on %s): %s",
+                songin,
+                songout,
+                filename,
+                error,
+            )
             return filename
 
-    logging.debug('filename substitution: %s -> %s', origfilename, newname)
+    logging.debug("filename substitution: %s -> %s", origfilename, newname)
     return newname
 
 
 def normalize_text(text: str | None) -> str | None:
-    ''' take a string and genercize it '''
+    """take a string and genercize it"""
     if not text:
         return None
     transtext = unsmartquotes(text.translate(CUSTOM_TRANSLATE))
@@ -242,67 +256,70 @@ def normalize_text(text: str | None) -> str | None:
 
 
 def unsmartquotes(text: str) -> str:
-    ''' swap smart quotes '''
-    return text \
-            .replace("\u2018", "'") \
-            .replace("\u2019", "'") \
-            .replace("\u201c", '"') \
-            .replace("\u201d", '"')
+    """swap smart quotes"""
+    return (
+        text.replace("\u2018", "'")
+        .replace("\u2019", "'")
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+    )
 
 
 def normalize(text: str | None, sizecheck: int = 0, nospaces: bool = False) -> str | None:
-    ''' genericize string, optionally strip spaces, do a size check '''
+    """genericize string, optionally strip spaces, do a size check"""
     if not text:
         return None
     if len(text) < sizecheck:
-        return 'TEXT IS TOO SMALL IGNORE'
+        return "TEXT IS TOO SMALL IGNORE"
     normaltext = normalize_text(text) or text
     if nospaces:
-        return normaltext.replace(' ', '')
+        return normaltext.replace(" ", "")
     return normaltext
 
 
-def titlestripper_basic(title: str | None = None,
-                       title_regex_list: list[re.Pattern[str]] | None = None) -> str | None:
-    ''' Basic title removal '''
+def titlestripper_basic(
+    title: str | None = None, title_regex_list: list[re.Pattern[str]] | None = None
+) -> str | None:
+    """Basic title removal"""
     if not title_regex_list or len(title_regex_list) == 0:
         title_regex_list = STRIPRELIST
     return titlestripper_advanced(title=title, title_regex_list=title_regex_list)
 
 
-def titlestripper_advanced(title: str | None = None,
-                          title_regex_list: list[re.Pattern[str]] | None = None) -> str | None:
-    ''' Advanced title removal '''
+def titlestripper_advanced(
+    title: str | None = None, title_regex_list: list[re.Pattern[str]] | None = None
+) -> str | None:
+    """Advanced title removal"""
     if not title:
         return None
     trackname = copy.deepcopy(title)
     if not title_regex_list or len(title_regex_list) == 0:
         return trackname
     for index in title_regex_list:
-        trackname = index.sub('', trackname)
+        trackname = index.sub("", trackname)
     if len(trackname) == 0:
         trackname = copy.deepcopy(title)
     return trackname
 
 
 def humanize_time(seconds: float | int | str | None) -> str:
-    ''' convert seconds into hh:mm:ss '''
+    """convert seconds into hh:mm:ss"""
     if seconds is None:
-        return ''
+        return ""
     try:
         convseconds = int(float(seconds))
     except (ValueError, TypeError):
-        return ''
+        return ""
 
     if convseconds > 3600:
-        return time.strftime('%H:%M:%S', time.gmtime(convseconds))
+        return time.strftime("%H:%M:%S", time.gmtime(convseconds))
     if convseconds > 60:
-        return time.strftime('%M:%S', time.gmtime(convseconds))
-    return time.strftime('%S', time.gmtime(convseconds))
+        return time.strftime("%M:%S", time.gmtime(convseconds))
+    return time.strftime("%S", time.gmtime(convseconds))
 
 
 def artist_name_variations(artistname: str) -> list[str]:
-    ''' turn an artistname into various computed variations '''
+    """turn an artistname into various computed variations"""
     lowername = unsmartquotes(artistname.lower())
     names = [lowername, lowername.translate(CUSTOM_TRANSLATE)]
     if normalized := normality.normalize(lowername):
@@ -319,8 +336,9 @@ def artist_name_variations(artistname: str) -> list[str]:
     return list(dict.fromkeys(names))
 
 
-def create_http_connector(ssl_context: ssl.SSLContext | None = None,
-                         service_type: str = 'default') -> aiohttp.TCPConnector:
+def create_http_connector(
+    ssl_context: ssl.SSLContext | None = None, service_type: str = "default"
+) -> aiohttp.TCPConnector:
     """
     Create a standardized aiohttp TCPConnector with optimized SSL settings.
 
@@ -336,17 +354,17 @@ def create_http_connector(ssl_context: ssl.SSLContext | None = None,
         ssl_context = ssl.create_default_context()
 
     base_config = {
-        'ssl': ssl_context,
-        'keepalive_timeout': 0.5 if service_type == 'musicbrainz' else 1,
-        'enable_cleanup_closed': True,
+        "ssl": ssl_context,
+        "keepalive_timeout": 0.5 if service_type == "musicbrainz" else 1,
+        "enable_cleanup_closed": True,
     }
 
     # MusicBrainz needs stricter connection limits
-    if service_type == 'musicbrainz':
-        base_config.update({
-            'limit': 1,
-            'limit_per_host': 1,
-        })
+    if service_type == "musicbrainz":
+        base_config |= {
+            "limit": 1,
+            "limit_per_host": 1,
+        }
 
     return aiohttp.TCPConnector(**base_config)
 
@@ -359,15 +377,15 @@ def ensure_nltk_data() -> None:
     """
     try:
         # Test if punkt tokenizer is available
-        nltk.data.find('tokenizers/punkt')
-        logging.debug('NLTK punkt tokenizer already available')
+        nltk.data.find("tokenizers/punkt")
+        logging.debug("NLTK punkt tokenizer already available")
     except LookupError:
-        logging.info('Downloading NLTK punkt tokenizer data')
+        logging.info("Downloading NLTK punkt tokenizer data")
         try:
-            nltk.download('punkt', quiet=True)
-            logging.info('NLTK punkt tokenizer downloaded successfully')
-        except Exception as error: # pylint: disable=broad-exception-caught
-            logging.error('Failed to download NLTK punkt tokenizer: %s', error)
+            nltk.download("punkt", quiet=True)
+            logging.info("NLTK punkt tokenizer downloaded successfully")
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            logging.error("Failed to download NLTK punkt tokenizer: %s", error)
             # Continue anyway - sent_tokenize will fall back to basic splitting
 
 
@@ -391,7 +409,7 @@ def smart_split_message(message: str, max_length: int = 500) -> list[str]:
         ensure_nltk_data()
         return _split_with_nltk(message, max_length)
     except Exception as error:  # pylint: disable=broad-exception-caught
-        logging.warning('Smart message splitting failed, using simple truncation: %s', error)
+        logging.warning("Smart message splitting failed, using simple truncation: %s", error)
         return _split_simple_fallback(message, max_length)
 
 
@@ -433,7 +451,7 @@ def _split_long_sentence(sentence: str, max_length: int) -> list[str]:
                 word_chunk = word
             else:
                 # Single word is too long, truncate it
-                messages.append(f"{word[:max_length-3]}...")
+                messages.append(f"{word[: max_length - 3]}...")
                 word_chunk = ""
         else:
             word_chunk = _combine_text(word_chunk, word)
@@ -466,7 +484,7 @@ def _split_simple_fallback(message: str, max_length: int) -> list[str]:
             messages.append(remaining)
             break
 
-        split_pos = remaining.rfind(' ', 0, max_length)
+        split_pos = remaining.rfind(" ", 0, max_length)
         if split_pos == -1:
             # No space found, truncate
             split_pos = max_length - 3
@@ -494,14 +512,14 @@ def tokenize_sentences(text: str) -> list[str]:
     try:
         ensure_nltk_data()
         return nltk.sent_tokenize(text)
-    except Exception as error: # pylint: disable=broad-exception-caught
-        logging.warning('NLTK sentence tokenization failed, using simple splitting: %s', error)
+    except Exception as error:  # pylint: disable=broad-exception-caught
+        logging.warning("NLTK sentence tokenization failed, using simple splitting: %s", error)
         # Fallback to simple sentence splitting
         sentences = []
-        for sent in text.replace('!', '.').replace('?', '.').split('.'):
+        for sent in text.replace("!", ".").replace("?", ".").split("."):
             if sent := sent.strip():
                 # Check if sentence already ends with punctuation
-                if sent.endswith(('.', '!', '?', ':', ';')):
+                if sent.endswith((".", "!", "?", ":", ";")):
                     sentences.append(sent)
                 else:
                     sentences.append(f"{sent}.")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' WebServer process '''
+"""WebServer process"""
 
 import asyncio
 import base64
@@ -14,7 +14,6 @@ import string
 import sys
 import threading
 import time
-import traceback
 import weakref
 
 import requests
@@ -25,14 +24,19 @@ import jinja2
 
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
+from nowplaying.webserver.images_websocket import ImagesWebSocketHandler
+from nowplaying.webserver.static_handlers import StaticContentHandler
+
 #
 # quiet down our imports
 #
 
-logging.config.dictConfig({
-    'version': 1,
-    'disable_existing_loggers': True,
-})
+logging.config.dictConfig(
+    {
+        "version": 1,
+        "disable_existing_loggers": True,
+    }
+)
 
 # pylint: disable=wrong-import-position
 
@@ -40,9 +44,9 @@ import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
 import nowplaying.frozen
-import nowplaying.hostmeta
 import nowplaying.imagecache
 import nowplaying.kick.oauth2
+import nowplaying.metadata
 import nowplaying.oauth2
 import nowplaying.twitch.oauth2
 import nowplaying.trackrequests
@@ -50,49 +54,71 @@ import nowplaying.utils
 from nowplaying.types import TrackMetadata
 
 
+INDEXREFRESH = (
+    '<!doctype html><html lang="en">'
+    '<head><meta http-equiv="refresh" content="5" ></head>'
+    "<body></body></html>\n"
+)
 
-INDEXREFRESH = \
-    '<!doctype html><html lang="en">' \
-    '<head><meta http-equiv="refresh" content="5" ></head>' \
-    '<body></body></html>\n'
-
-CONFIG_KEY = web.AppKey('config', nowplaying.config.ConfigFile)
+CONFIG_KEY = web.AppKey("config", nowplaying.config.ConfigFile)
 METADB_KEY = web.AppKey("metadb", nowplaying.db.MetadataDB)
 REMOTEDB_KEY = web.AppKey("remotedb", nowplaying.db.MetadataDB)
 WS_KEY = web.AppKey("websockets", weakref.WeakSet)
 IC_KEY = web.AppKey("imagecache", nowplaying.imagecache.ImageCache)
 WATCHER_KEY = web.AppKey("watcher", nowplaying.db.DBWatcher)
 JINJA2_KEY = web.AppKey("jinja2_env", jinja2.Environment)
+METADATA_KEY = web.AppKey("metadata", nowplaying.metadata.MetadataProcessors)
 
 
-class WebHandler():  # pylint: disable=too-many-public-methods
-    ''' aiohttp built server that does both http and websocket '''
+class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
+    """aiohttp built server that does both http and websocket"""
 
-    def __init__(self, bundledir=None, config=None, stopevent=None, testmode: bool = False):
-        threading.current_thread().name = 'WebServer'
+    def __init__(
+        self,
+        bundledir: pathlib.Path | str | None = None,
+        config: nowplaying.config.ConfigFile | None = None,
+        stopevent: asyncio.Event | None = None,
+        testmode: bool = False,
+    ):
+        threading.current_thread().name = "WebServer"
         self.tasks = set()
         self.testmode = testmode
         if not config:
             config = nowplaying.config.ConfigFile(bundledir=bundledir, testmode=testmode)
-        self.port = config.cparser.value('weboutput/httpport', type=int)
-        enabled = config.cparser.value('weboutput/httpenabled', type=bool)
+        self.port: int = config.cparser.value("weboutput/httpport", type=int)
+        enabled: bool = config.cparser.value("weboutput/httpenabled", type=bool)
         self.databasefile = pathlib.Path(
-            QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]).joinpath(
-                'webserver', 'web.db')
+            QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
+        ).joinpath("webserver", "web.db")
         self._init_webdb()
         self.stopevent = stopevent
+
+        # Initialize WebSocket handler
+        self.images_ws_handler = ImagesWebSocketHandler(
+            stopevent=self.stopevent,
+            ws_key=WS_KEY,
+            ic_key=IC_KEY,
+            metadb_key=METADB_KEY,
+            config_key=CONFIG_KEY,
+            metadata_key=METADATA_KEY,
+        )
+
+        # Initialize static content handler
+        self.static_handler = StaticContentHandler(
+            config_key=CONFIG_KEY, metadb_key=METADB_KEY, remotedb_key=REMOTEDB_KEY
+        )
 
         while not enabled and not nowplaying.utils.safe_stopevent_check(self.stopevent):
             try:
                 time.sleep(5)
                 config.get()
-                enabled = config.cparser.value('weboutput/httpenabled', type=bool)
+                enabled = config.cparser.value("weboutput/httpenabled", type=bool)
             except KeyboardInterrupt:
                 sys.exit(0)
 
-        self.magicstopurl = ''.join(secrets.choice(string.ascii_letters) for _ in range(32))
+        self.magicstopurl = "".join(secrets.choice(string.ascii_letters) for _ in range(32))
 
-        logging.info('Secret url to quit websever: %s', self.magicstopurl)
+        logging.info("Secret url to quit websever: %s", self.magicstopurl)
 
         signal.signal(signal.SIGINT, self.forced_stop)
         try:
@@ -100,7 +126,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         except RuntimeError:
             self.loop = asyncio.new_event_loop()
 
-        self.loop.run_until_complete(self.start_server(host='0.0.0.0', port=self.port))
+        self.loop.run_until_complete(self.start_server(host="0.0.0.0", port=self.port))
         self.loop.run_forever()
 
     def _init_webdb(self):
@@ -108,249 +134,39 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             try:
                 self.databasefile.unlink()
             except PermissionError as error:
-                logging.error('WebServer process already running?')
+                logging.error("WebServer process already running?")
                 logging.error(error)
                 sys.exit(1)
 
         self.databasefile.parent.mkdir(parents=True, exist_ok=True)
 
     async def stopeventtask(self):
-        ''' task to wait for the stop event '''
+        """task to wait for the stop event"""
         while not nowplaying.utils.safe_stopevent_check(self.stopevent):
-            await asyncio.sleep(.5)
+            await asyncio.sleep(0.5)
         await self.forced_stop()
 
     @staticmethod
     def _base64ifier(metadata: TrackMetadata):
-        ''' replace all the binary data with base64 data '''
+        """replace all the binary data with base64 data"""
         for key in nowplaying.db.METADATABLOBLIST:
             if metadata.get(key):
-                newkey = key.replace('raw', 'base64')
-                metadata[newkey] = base64.b64encode(metadata[key]).decode('utf-8')
+                newkey = key.replace("raw", "base64")
+                metadata[newkey] = base64.b64encode(metadata[key]).decode("utf-8")
                 del metadata[key]
-        if metadata.get('dbid'):
-            del metadata['dbid']
+        if metadata.get("dbid"):
+            del metadata["dbid"]
         return metadata
 
     def _transparentifier(self, metadata: TrackMetadata):
-        ''' base64 encoding + transparent missing '''
+        """base64 encoding + transparent missing"""
         for key in nowplaying.db.METADATABLOBLIST:
             if not metadata.get(key):
                 metadata[key] = nowplaying.utils.TRANSPARENT_PNG_BIN
         return self._base64ifier(metadata)
 
-    async def index_htm_handler(self, request: web.Request):
-        ''' handle web output '''
-        return await self._metacheck_htm_handler(request, 'weboutput/htmltemplate')
-
-    async def artistbanner_htm_handler(self, request: web.Request):
-        ''' handle web output '''
-        return await self._metacheck_htm_handler(request, 'weboutput/artistbannertemplate')
-
-    async def artistlogo_htm_handler(self, request: web.Request):
-        ''' handle web output '''
-        return await self._metacheck_htm_handler(request, 'weboutput/artistlogotemplate')
-
-    async def artistthumbnail_htm_handler(self, request: web.Request):
-        ''' handle web output '''
-        return await self._metacheck_htm_handler(request, 'weboutput/artistthumbnailtemplate')
-
-    async def artistfanartlaunch_htm_handler(self, request: web.Request):
-        ''' handle web output '''
-        return await self._metacheck_htm_handler(request, 'weboutput/artistfanarttemplate')
-
-    async def gifwords_launch_htm_handler(self, request: web.Request):
-        ''' handle gifwords output '''
-        request.app[CONFIG_KEY].cparser.sync()
-        htmloutput = await self._htm_handler(
-            request, request.app[CONFIG_KEY].cparser.value('weboutput/gifwordstemplate'))
-        return web.Response(content_type='text/html', text=htmloutput)
-
-    async def requesterlaunch_htm_handler(self, request: web.Request):
-        ''' handle web output '''
-        return await self._metacheck_htm_handler(request, 'weboutput/requestertemplate')
-
-    @staticmethod
-    async def _htm_handler(request: web.Request,
-                           template: str,
-                           metadata: TrackMetadata | None = None):
-        ''' handle static html files'''
-        htmloutput = INDEXREFRESH
-        try:
-            if not metadata:
-                metadata = await request.app[METADB_KEY].read_last_meta_async()
-            if not metadata:
-                metadata = nowplaying.hostmeta.gethostmeta()
-                metadata['httpport'] = request.app[CONFIG_KEY].cparser.value('weboutput/httpport',
-                                                                             type=int)
-            templatehandler = nowplaying.utils.TemplateHandler(filename=template)
-            htmloutput = templatehandler.generate(metadata)
-        except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
-        return htmloutput
-
-    async def _metacheck_htm_handler(self, request: web.Request, cfgtemplate: str):
-        ''' handle static html files after checking metadata'''
-        request.app[CONFIG_KEY].cparser.sync()
-        template = request.app[CONFIG_KEY].cparser.value(cfgtemplate)
-        source = os.path.basename(template)
-        htmloutput = ""
-        request.app[CONFIG_KEY].get()
-        metadata = await request.app[METADB_KEY].read_last_meta_async()
-        lastid = await self.getlastid(request, source)
-        once = request.app[CONFIG_KEY].cparser.value('weboutput/once', type=bool)
-        #once = False
-
-        # | dbid  |  lastid | once |
-        # |   x   |   NA    |      |  -> update lastid, send template
-        # |   x   |  diff   |   NA |  -> update lastid, send template
-        # |   x   |  same   |      |  -> send template
-        # |   x   |  same   |   x  |  -> send refresh
-        # |       |   NA    |      |  -> send refresh because not ready or something broke
-
-        if not metadata or not metadata.get('dbid') or not template:
-            return web.Response(status=202, content_type='text/html', text=INDEXREFRESH)
-
-        if lastid == 0 or lastid != metadata['dbid'] or not once:
-            await self.setlastid(request, metadata['dbid'], source)
-            htmloutput = await self._htm_handler(request, template, metadata=metadata)
-            return web.Response(content_type='text/html', text=htmloutput)
-
-        return web.Response(content_type='text/html', text=INDEXREFRESH)
-
-    @staticmethod
-    async def setlastid(request: web.Request, lastid: int, source: str):
-        ''' get the lastid sent by http/html '''
-        await request.app['statedb'].execute(
-            'INSERT OR REPLACE INTO lastprocessed(lastid, source) VALUES (?,?) ', [lastid, source])
-        await request.app['statedb'].commit()
-
-    @staticmethod
-    async def getlastid(request: web.Request, source: str):
-        ''' get the lastid sent by http/html '''
-        cursor = await request.app['statedb'].execute(
-            f'SELECT lastid FROM lastprocessed WHERE source="{source}"')
-        row = await cursor.fetchone()
-        if not row:
-            lastid = 0
-        else:
-            lastid = row[0]
-        await cursor.close()
-        return lastid
-
-    @staticmethod
-    async def indextxt_handler(request: web.Request):
-        ''' handle static index.txt '''
-        metadata = await request.app[METADB_KEY].read_last_meta_async()
-        txtoutput = ""
-        if metadata:
-            request.app[CONFIG_KEY].get()
-            try:
-                templatehandler = nowplaying.utils.TemplateHandler(
-                    filename=request.app[CONFIG_KEY].cparser.value('textoutput/txttemplate'))
-                txtoutput = templatehandler.generate(metadata)
-            except Exception as error:  #pylint: disable=broad-except
-                logging.error('indextxt_handler: %s', error)
-                txtoutput = ''
-        return web.Response(text=txtoutput)
-
-    @staticmethod
-    async def favicon_handler(request: web.Request):
-        ''' handle favicon.ico '''
-        return web.FileResponse(path=request.app[CONFIG_KEY].iconfile)
-
-    @staticmethod
-    async def _image_handler(imgtype: str, request: web.Request):
-        ''' handle an image '''
-
-        # rather than return an error, just send a transparent PNG
-        # this makes the client code significantly easier
-        image = nowplaying.utils.TRANSPARENT_PNG_BIN
-        try:
-            metadata = await request.app[METADB_KEY].read_last_meta_async()
-            if metadata and metadata.get(imgtype):
-                image = metadata[imgtype]
-        except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
-        return web.Response(content_type='image/png', body=image)
-
-    async def cover_handler(self, request: web.Request):
-        ''' handle cover image '''
-        return await self._image_handler('coverimageraw', request)
-
-    async def artistbanner_handler(self, request: web.Request):
-        ''' handle artist banner image '''
-        return await self._image_handler('artistbannerraw', request)
-
-    async def artistlogo_handler(self, request: web.Request):
-        ''' handle artist logo image '''
-        return await self._image_handler('artistlogoraw', request)
-
-    async def artistthumbnail_handler(self, request: web.Request):
-        ''' handle artist logo image '''
-        return await self._image_handler('artistthumbnailraw', request)
-
-    async def api_v1_last_handler(self, request: web.Request):
-        ''' v1/last just returns the metadata'''
-        data = {}
-        if metadata := await request.app[METADB_KEY].read_last_meta_async():
-            try:
-                del metadata['dbid']
-                data = self._base64ifier(metadata)
-            except Exception:  # pylint: disable=broad-except
-                for line in traceback.format_exc().splitlines():
-                    logging.debug(line)
-        return web.json_response(data)
-
-    @staticmethod
-    async def api_v1_remoteinput_handler(request: web.Request):
-        ''' POST: receive metadata from remote source and store in remote database'''
-        # Only allow POST requests
-        if request.method != 'POST':
-            return web.json_response({'error': 'Method not allowed'}, status=405)
-
-        try:
-            # Parse JSON request body
-            request_data = await request.json()
-        except Exception:  # pylint: disable=broad-except
-            return web.json_response({'error': 'Invalid JSON in request body'}, status=400)
-
-        # Refresh config to get latest settings (important for testing)
-        request.app[CONFIG_KEY].get()
-        if required_secret := request.app[CONFIG_KEY].cparser.value('remote/remote_key',
-                                                                    type=str,
-                                                                    defaultValue=''):
-            provided_secret = request_data.get('secret', '')
-            if not provided_secret:
-                logging.warning('Remote metadata submission without secret from %s', request.remote)
-                return web.json_response({'error': 'Missing secret in request'}, status=403)
-
-            # Use constant-time comparison to prevent timing attacks
-            if not secrets.compare_digest(required_secret, provided_secret):
-                logging.warning('Remote metadata submission with invalid secret from %s',
-                                request.remote)
-                return web.json_response({'error': 'Invalid secret'}, status=403)
-
-        # Remove secret from metadata before storing
-        metadata = request_data.copy()
-        metadata.pop('secret', '')
-
-        logging.info("Got metadata from %s", request.host)
-        # Store metadata in remote database
-        try:
-            await request.app[REMOTEDB_KEY].write_to_metadb(metadata=metadata)
-            # Re-read to get the dbid
-            last_meta = await request.app[REMOTEDB_KEY].read_last_meta_async()
-            dbid = last_meta.get('dbid') if last_meta else None
-            return web.json_response({'dbid': dbid})
-        except Exception as exc:  # pylint: disable=broad-except
-            logging.error('Failed to store metadata in remote database: %s', exc)
-            return web.json_response({'error': 'Failed to store metadata'}, status=500)
-
     async def websocket_gifwords_streamer(self, request: web.Request):
-        ''' handle continually streamed updates '''
+        """handle continually streamed updates"""
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
         request.app[WS_KEY].add(websocket)
@@ -359,46 +175,52 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         trackrequest = nowplaying.trackrequests.Requests(request.app[CONFIG_KEY])
 
         try:
-            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and not endloop
-                   and not websocket.closed):
+            while (
+                not nowplaying.utils.safe_stopevent_check(self.stopevent)
+                and not endloop
+                and not websocket.closed
+            ):
                 metadata = await trackrequest.check_for_gifwords()
-                if not metadata.get('image'):
-                    await websocket.send_json({'noimage': True})
+                if not metadata.get("image"):
+                    await websocket.send_json({"noimage": True})
                     await asyncio.sleep(5)
                     continue
 
-                metadata['imagebase64'] = base64.b64encode(metadata['image']).decode('utf-8')
-                del metadata['image']
+                metadata["imagebase64"] = base64.b64encode(metadata["image"]).decode("utf-8")
+                del metadata["image"]
                 try:
                     if websocket.closed:
                         break
                     await websocket.send_json(metadata)
                 except ConnectionResetError:
-                    logging.debug('Lost a client')
+                    logging.debug("Lost a client")
                     endloop = True
                 await asyncio.sleep(20)
             if not websocket.closed:
-                await websocket.send_json({'last': True})
+                await websocket.send_json({"last": True})
 
-        except Exception as error:  #pylint: disable=broad-except
-            logging.error('websocket gifwords streamer exception: %s', error)
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error("websocket gifwords streamer exception: %s", error)
         finally:
             await websocket.close()
             request.app[WS_KEY].discard(websocket)
         return websocket
 
     async def websocket_artistfanart_streamer(self, request: web.Request):
-        ''' handle continually streamed updates '''
+        """handle continually streamed updates"""
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
         request.app[WS_KEY].add(websocket)
         endloop = False
 
         try:
-            while (not nowplaying.utils.safe_stopevent_check(self.stopevent) and not endloop
-                   and not websocket.closed):
+            while (
+                not nowplaying.utils.safe_stopevent_check(self.stopevent)
+                and not endloop
+                and not websocket.closed
+            ):
                 metadata = await request.app[METADB_KEY].read_last_meta_async()
-                if not metadata or not metadata.get('artist'):
+                if not metadata or not metadata.get("artist"):
                     await asyncio.sleep(5)
                     continue
 
@@ -406,45 +228,49 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
                 with contextlib.suppress(KeyError):
                     imagedata = request.app[IC_KEY].random_image_fetch(
-                        identifier=metadata['imagecacheartist'], imagetype='artistfanart')
+                        identifier=metadata["imagecacheartist"], imagetype="artistfanart"
+                    )
 
                 if imagedata:
-                    metadata['artistfanartraw'] = imagedata
-                elif request.app[CONFIG_KEY].cparser.value('artistextras/coverfornofanart',
-                                                           type=bool):
-                    metadata['artistfanartraw'] = metadata.get('coverimageraw')
+                    metadata["artistfanartraw"] = imagedata
+                elif request.app[CONFIG_KEY].cparser.value(
+                    "artistextras/coverfornofanart", type=bool
+                ):
+                    metadata["artistfanartraw"] = metadata.get("coverimageraw")
                 else:
-                    metadata['artistfanartraw'] = nowplaying.utils.TRANSPARENT_PNG_BIN
+                    metadata["artistfanartraw"] = nowplaying.utils.TRANSPARENT_PNG_BIN
 
                 try:
                     if websocket.closed:
                         break
                     await websocket.send_json(self._transparentifier(metadata))
                 except ConnectionResetError:
-                    logging.debug('Lost a client')
+                    logging.debug("Lost a client")
                     endloop = True
-                delay = request.app[CONFIG_KEY].cparser.value('artistextras/fanartdelay', type=int)
+                delay = request.app[CONFIG_KEY].cparser.value("artistextras/fanartdelay", type=int)
                 await asyncio.sleep(delay)
             if not websocket.closed:
-                await websocket.send_json({'last': True})
-        except Exception as error:  #pylint: disable=broad-except
-            logging.error('websocket artistfanart streamer exception: %s', error)
+                await websocket.send_json({"last": True})
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error("websocket artistfanart streamer exception: %s", error)
         finally:
             await websocket.close()
             request.app[WS_KEY].discard(websocket)
         return websocket
 
-    async def websocket_lastjson_handler(self, request: web.Request,
-                                         websocket: web.WebSocketResponse):
-        ''' handle singular websocket request '''
+    async def websocket_lastjson_handler(
+        self, request: web.Request, websocket: web.WebSocketResponse
+    ):
+        """handle singular websocket request"""
         metadata = await request.app[METADB_KEY].read_last_meta_async()
         if metadata:
-            del metadata['dbid']
+            del metadata["dbid"]
             if not websocket.closed:
                 await websocket.send_json(self._base64ifier(metadata))
 
-    async def _wss_do_update(self, websocket: web.WebSocketResponse,
-                             database: nowplaying.db.MetadataDB):
+    async def _wss_do_update(
+        self, websocket: web.WebSocketResponse, database: nowplaying.db.MetadataDB
+    ):
         # early launch can be a bit weird so
         # pause a bit
         await asyncio.sleep(1)
@@ -455,13 +281,13 @@ class WebHandler():  # pylint: disable=too-many-public-methods
             metadata = await database.read_last_meta_async()
             await asyncio.sleep(1)
         if metadata:
-            del metadata['dbid']
+            del metadata["dbid"]
             if not websocket.closed:
                 await websocket.send_json(self._transparentifier(metadata))
         return time.time()
 
     async def websocket_streamer(self, request: web.Request):
-        ''' handle continually streamed updates '''
+        """handle continually streamed updates"""
 
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
@@ -469,25 +295,27 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
         try:
             mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
-            while (not nowplaying.utils.safe_stopevent_check(self.stopevent)
-                   and not websocket.closed):
-                while (mytime > request.app[WATCHER_KEY].updatetime
-                       and not nowplaying.utils.safe_stopevent_check(self.stopevent)):
+            while (
+                not nowplaying.utils.safe_stopevent_check(self.stopevent) and not websocket.closed
+            ):
+                while mytime > request.app[
+                    WATCHER_KEY
+                ].updatetime and not nowplaying.utils.safe_stopevent_check(self.stopevent):
                     await asyncio.sleep(1)
 
                 mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
                 await asyncio.sleep(1)
             if not websocket.closed:
-                await websocket.send_json({'last': True})
-        except Exception as error:  #pylint: disable=broad-except
-            logging.error('websocket streamer exception: %s', error)
+                await websocket.send_json({"last": True})
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error("websocket streamer exception: %s", error)
         finally:
             await websocket.close()
             request.app[WS_KEY].discard(websocket)
         return websocket
 
     async def websocket_handler(self, request: web.Request):
-        ''' handle inbound websockets '''
+        """handle inbound websockets"""
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
         request.app[WS_KEY].add(websocket)
@@ -496,17 +324,17 @@ class WebHandler():  # pylint: disable=too-many-public-methods
                 if websocket.closed:
                     break
                 if msg.type == aiohttp.WSMsgType.TEXT:
-                    if msg.data == 'close':
+                    if msg.data == "close":
                         await websocket.close()
-                    elif msg.data == 'last':
-                        logging.debug('got last')
+                    elif msg.data == "last":
+                        logging.debug("got last")
                         await self.websocket_lastjson_handler(request, websocket)
                     else:
-                        await websocket.send_str('some websocket message payload')
+                        await websocket.send_str("some websocket message payload")
                 elif msg.type == aiohttp.WSMsgType.ERROR:
-                    logging.error('ws connection closed with exception %s', websocket.exception())
-        except Exception as error:  #pylint: disable=broad-except
-            logging.error('Websocket handler error: %s', error)
+                    logging.error("ws connection closed with exception %s", websocket.exception())
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error("Websocket handler error: %s", error)
         finally:
             request.app[WS_KEY].discard(websocket)
 
@@ -514,7 +342,7 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
     @staticmethod
     async def internals(request: web.Request):
-        ''' internal data debugging '''
+        """internal data debugging"""
         data = {"dbfile": str(request.app[METADB_KEY].databasefile)}
         return web.json_response(data)
 
@@ -525,94 +353,101 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         config = request.app[CONFIG_KEY]
         jinja2_env = request.app[JINJA2_KEY]
         return await nowplaying.oauth2.OAuth2Client.handle_oauth_redirect(
-            request, oauth_config, config, jinja2_env)
+            request, oauth_config, config, jinja2_env
+        )
 
     async def kickredirect_handler(self, request: web.Request):  # pylint: disable=no-self-use
-        ''' handle oauth2 redirect callbacks for Kick '''
+        """handle oauth2 redirect callbacks for Kick"""
         return await self._handle_oauth_redirect(
-            request, {
-                'service_name': 'Kick OAuth2',
-                'oauth_class': nowplaying.kick.oauth2.KickOAuth2,
-                'config_prefix': 'kick',
-                'template_prefix': 'kick_oauth',
-                'redirect_path': 'kickredirect',
-                'token_keys': {
-                    'access': 'kick/accesstoken',
-                    'refresh': 'kick/refreshtoken'
-                }
-            })
+            request,
+            {
+                "service_name": "Kick OAuth2",
+                "oauth_class": nowplaying.kick.oauth2.KickOAuth2,
+                "config_prefix": "kick",
+                "template_prefix": "kick_oauth",
+                "redirect_path": "kickredirect",
+                "token_keys": {"access": "kick/accesstoken", "refresh": "kick/refreshtoken"},
+            },
+        )
 
     async def twitchredirect_handler(self, request: web.Request):  # pylint: disable=no-self-use
-        ''' handle oauth2 redirect callbacks for Twitch broadcaster tokens '''
+        """handle oauth2 redirect callbacks for Twitch broadcaster tokens"""
         return await self._handle_oauth_redirect(
-            request, {
-                'service_name': 'Twitch OAuth2',
-                'oauth_class': nowplaying.twitch.oauth2.TwitchOAuth2,
-                'config_prefix': 'twitchbot',
-                'template_prefix': 'twitch_oauth',
-                'redirect_path': 'twitchredirect',
-                'token_keys': {
-                    'access': 'twitchbot/accesstoken',
-                    'refresh': 'twitchbot/refreshtoken'
-                }
-            })
+            request,
+            {
+                "service_name": "Twitch OAuth2",
+                "oauth_class": nowplaying.twitch.oauth2.TwitchOAuth2,
+                "config_prefix": "twitchbot",
+                "template_prefix": "twitch_oauth",
+                "redirect_path": "twitchredirect",
+                "token_keys": {
+                    "access": "twitchbot/accesstoken",
+                    "refresh": "twitchbot/refreshtoken",
+                },
+            },
+        )
 
     async def twitchchatredirect_handler(self, request: web.Request):  # pylint: disable=no-self-use
-        ''' handle oauth2 redirect callbacks for Twitch chat tokens '''
+        """handle oauth2 redirect callbacks for Twitch chat tokens"""
         return await self._handle_oauth_redirect(
-            request, {
-                'service_name': 'Twitch Chat OAuth2',
-                'oauth_class': nowplaying.twitch.oauth2.TwitchOAuth2,
-                'config_prefix': 'twitchbot',
-                'template_prefix': 'twitch_oauth',
-                'redirect_path': 'twitchchatredirect',
-                'token_keys': {
-                    'access': 'twitchbot/chattoken',
-                    'refresh': 'twitchbot/chatrefreshtoken'
+            request,
+            {
+                "service_name": "Twitch Chat OAuth2",
+                "oauth_class": nowplaying.twitch.oauth2.TwitchOAuth2,
+                "config_prefix": "twitchbot",
+                "template_prefix": "twitch_oauth",
+                "redirect_path": "twitchchatredirect",
+                "token_keys": {
+                    "access": "twitchbot/chattoken",
+                    "refresh": "twitchbot/chatrefreshtoken",
                 },
-                'success_template': 'twitch_chat_oauth_success.htm'
-            })
+                "success_template": "twitch_chat_oauth_success.htm",
+            },
+        )
 
     def create_runner(self):
-        ''' setup http routing '''
-        threading.current_thread().name = 'WebServer-runner'
+        """setup http routing"""
+        threading.current_thread().name = "WebServer-runner"
         app = web.Application()
         app[WS_KEY] = weakref.WeakSet()
         app.on_startup.append(self.on_startup)
         app.on_cleanup.append(self.on_cleanup)
         app.on_shutdown.append(self.on_shutdown)
-        _ = app.add_routes([
-            web.get('/', self.index_htm_handler),
-            web.get('/v1/last', self.api_v1_last_handler),
-            web.post('/v1/remoteinput', self.api_v1_remoteinput_handler),
-            web.get('/cover.png', self.cover_handler),
-            web.get('/artistfanart.htm', self.artistfanartlaunch_htm_handler),
-            web.get('/artistbanner.png', self.artistbanner_handler),
-            web.get('/artistbanner.htm', self.artistbanner_htm_handler),
-            web.get('/artistlogo.png', self.artistlogo_handler),
-            web.get('/artistlogo.htm', self.artistlogo_htm_handler),
-            web.get('/artistthumb.png', self.artistthumbnail_handler),
-            web.get('/artistthumb.htm', self.artistthumbnail_htm_handler),
-            web.get('/favicon.ico', self.favicon_handler),
-            web.get('/gifwords.htm', self.gifwords_launch_htm_handler),
-            web.get('/index.htm', self.index_htm_handler),
-            web.get('/index.html', self.index_htm_handler),
-            web.get('/index.txt', self.indextxt_handler),
-            web.get('/kickredirect', self.kickredirect_handler),
-            web.get('/twitchredirect', self.twitchredirect_handler),
-            web.get('/twitchchatredirect', self.twitchchatredirect_handler),
-            web.get('/request.htm', self.requesterlaunch_htm_handler),
-            web.get('/internals', self.internals),
-            web.get('/ws', self.websocket_handler),
-            web.get('/wsstream', self.websocket_streamer),
-            web.get('/wsartistfanartstream', self.websocket_artistfanart_streamer),
-            web.get('/wsgifwordsstream', self.websocket_gifwords_streamer),
-            web.get(f'/{self.magicstopurl}', self.stop_server),
-        ])
+        _ = app.add_routes(
+            [
+                web.get("/", self.static_handler.index_htm_handler),
+                web.get("/v1/last", self.static_handler.api_v1_last_handler),
+                web.post("/v1/remoteinput", self.static_handler.api_v1_remoteinput_handler),
+                web.get("/cover.png", self.static_handler.cover_handler),
+                web.get("/artistfanart.htm", self.static_handler.artistfanartlaunch_htm_handler),
+                web.get("/artistbanner.png", self.static_handler.artistbanner_handler),
+                web.get("/artistbanner.htm", self.static_handler.artistbanner_htm_handler),
+                web.get("/artistlogo.png", self.static_handler.artistlogo_handler),
+                web.get("/artistlogo.htm", self.static_handler.artistlogo_htm_handler),
+                web.get("/artistthumb.png", self.static_handler.artistthumbnail_handler),
+                web.get("/artistthumb.htm", self.static_handler.artistthumbnail_htm_handler),
+                web.get("/favicon.ico", self.static_handler.favicon_handler),
+                web.get("/gifwords.htm", self.static_handler.gifwords_launch_htm_handler),
+                web.get("/index.htm", self.static_handler.index_htm_handler),
+                web.get("/index.html", self.static_handler.index_htm_handler),
+                web.get("/index.txt", self.static_handler.indextxt_handler),
+                web.get("/kickredirect", self.kickredirect_handler),
+                web.get("/twitchredirect", self.twitchredirect_handler),
+                web.get("/twitchchatredirect", self.twitchchatredirect_handler),
+                web.get("/request.htm", self.static_handler.requesterlaunch_htm_handler),
+                web.get("/internals", self.internals),
+                web.get("/ws", self.websocket_handler),
+                web.get("/wsstream", self.websocket_streamer),
+                web.get("/wsartistfanartstream", self.websocket_artistfanart_streamer),
+                web.get("/wsgifwordsstream", self.websocket_gifwords_streamer),
+                web.get("/v1/images/ws", self.images_ws_handler.websocket_images_handler),
+                web.get(f"/{self.magicstopurl}", self.stop_server),
+            ]
+        )
         return web.AppRunner(app)
 
     async def start_server(self, host: str = "127.0.0.1", port: int = 8899):
-        ''' start our server '''
+        """start our server"""
         runner = self.create_runner()
         await runner.setup()
         site = web.TCPSite(runner, host, port)
@@ -622,54 +457,54 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         await site.start()
 
     async def on_startup(self, app: web.Application):
-        ''' setup app connections '''
+        """setup app connections"""
         app[CONFIG_KEY] = nowplaying.config.ConfigFile(testmode=self.testmode)
-        staticdir = app[CONFIG_KEY].basedir.joinpath('httpstatic')
-        logging.debug('Verifying %s', staticdir)
+        staticdir = app[CONFIG_KEY].basedir.joinpath("httpstatic")
+        logging.debug("Verifying %s", staticdir)
         staticdir.mkdir(parents=True, exist_ok=True)
-        logging.debug('Verified %s', staticdir)
+        logging.debug("Verified %s", staticdir)
         app.router.add_static(
-            '/httpstatic/',
+            "/httpstatic/",
             path=staticdir,
         )
         app[METADB_KEY] = nowplaying.db.MetadataDB()
-        if not self.testmode:
-            app[IC_KEY] = nowplaying.imagecache.ImageCache()
+        app[IC_KEY] = nowplaying.imagecache.ImageCache()
         app[WATCHER_KEY] = app[METADB_KEY].watcher()
         app[WATCHER_KEY].start()
-        remotedb: str = app[CONFIG_KEY].cparser.value('remote/remotedb', type=str)
+        remotedb: str = app[CONFIG_KEY].cparser.value("remote/remotedb", type=str)
         app[REMOTEDB_KEY] = nowplaying.db.MetadataDB(databasefile=remotedb)
-        app['statedb'] = await aiosqlite.connect(self.databasefile)
-        app['statedb'].row_factory = aiosqlite.Row
-        cursor = await app['statedb'].cursor()
-        await cursor.execute('CREATE TABLE IF NOT EXISTS lastprocessed ('
-                             'source TEXT PRIMARY KEY, '
-                             'lastid INTEGER '
-                             ')')
-        await app['statedb'].commit()
+        app[METADATA_KEY] = nowplaying.metadata.MetadataProcessors(config=app[CONFIG_KEY])
+        app["statedb"] = await aiosqlite.connect(self.databasefile)
+        app["statedb"].row_factory = aiosqlite.Row
+        cursor = await app["statedb"].cursor()
+        await cursor.execute(
+            "CREATE TABLE IF NOT EXISTS lastprocessed (source TEXT PRIMARY KEY, lastid INTEGER )"
+        )
+        await app["statedb"].commit()
 
         # Set up Jinja2 environment for templates with proper autoescape (initialized once)
-        template_dir = app[CONFIG_KEY].getbundledir().joinpath('templates')
-        app[JINJA2_KEY] = jinja2.Environment(loader=jinja2.FileSystemLoader(str(template_dir)),
-                                             autoescape=jinja2.select_autoescape(
-                                                 ['htm', 'html', 'xml']),
-                                             trim_blocks=True,
-                                             undefined=jinja2.StrictUndefined)
+        template_dir = app[CONFIG_KEY].getbundledir().joinpath("templates")
+        app[JINJA2_KEY] = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(str(template_dir)),
+            autoescape=jinja2.select_autoescape(["htm", "html", "xml"]),
+            trim_blocks=True,
+            undefined=jinja2.StrictUndefined,
+        )
 
     @staticmethod
     async def on_shutdown(app: web.Application):
-        ''' handle shutdown '''
+        """handle shutdown"""
         for websocket in set(app[WS_KEY]):
-            await websocket.close(code=WSCloseCode.GOING_AWAY, message='Server shutdown')
+            await websocket.close(code=WSCloseCode.GOING_AWAY, message="Server shutdown")
 
     @staticmethod
     async def on_cleanup(app: web.Application):
-        ''' cleanup the app '''
-        await app['statedb'].close()
+        """cleanup the app"""
+        await app["statedb"].close()
         app[WATCHER_KEY].stop()
 
     async def stop_server(self, request: web.Request):
-        ''' stop our server '''
+        """stop our server"""
         self.stopevent.set()
         for task in self.tasks:
             task.cancel()
@@ -678,10 +513,10 @@ class WebHandler():  # pylint: disable=too-many-public-methods
         self.loop.stop()
 
     def forced_stop(self, signum=None, frame=None):  # pylint: disable=unused-argument
-        ''' caught an int signal so tell the world to stop '''
+        """caught an int signal so tell the world to stop"""
         try:
-            logging.debug('telling webserver to stop via http')
-            requests.get(f'http://localhost:{self.port}/{self.magicstopurl}', timeout=5)
+            logging.debug("telling webserver to stop via http")
+            requests.get(f"http://localhost:{self.port}/{self.magicstopurl}", timeout=5)
         except Exception as error:  # pylint: disable=broad-except
             logging.info(error)
         for task in self.tasks:
@@ -689,36 +524,35 @@ class WebHandler():  # pylint: disable=too-many-public-methods
 
 
 def stop(pid: int):
-    ''' stop the web server -- called from Tray '''
-    logging.info('sending INT to %s', pid)
+    """stop the web server -- called from Tray"""
+    logging.info("sending INT to %s", pid)
     with contextlib.suppress(ProcessLookupError):
         os.kill(pid, signal.SIGINT)
 
 
 def start(stopevent=None, bundledir: str | pathlib.Path | None = None, testmode: bool = False):
-    ''' multiprocessing start hook '''
-    threading.current_thread().name = 'WebServer'
+    """multiprocessing start hook"""
+    threading.current_thread().name = "WebServer"
 
     bundledir = nowplaying.frozen.frozen_init(bundledir)
 
     if testmode:
-        nowplaying.bootstrap.set_qt_names(appname='testsuite')
+        nowplaying.bootstrap.set_qt_names(appname="testsuite")
         testmode = True
     else:
         testmode = False
         nowplaying.bootstrap.set_qt_names()
-    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log', rotate=False)
+    logpath = nowplaying.bootstrap.setuplogging(logname="debug.log", rotate=False)
     config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=logpath, testmode=testmode)
 
-    logging.info('boot up')
+    logging.info("boot up")
 
     try:
         webserver = WebHandler(  # pylint: disable=unused-variable
-            config=config,
-            stopevent=stopevent,
-            testmode=testmode)
-    except Exception as error:  #pylint: disable=broad-except
-        logging.error('Webserver crashed: %s', error, exc_info=True)
+            config=config, stopevent=stopevent, testmode=testmode
+        )
+    except Exception as error:  # pylint: disable=broad-except
+        logging.error("Webserver crashed: %s", error, exc_info=True)
         sys.exit(1)
-    logging.info('shutting down webserver v%s', config.version)
+    logging.info("shutting down webserver v%s", config.version)
     sys.exit(0)
