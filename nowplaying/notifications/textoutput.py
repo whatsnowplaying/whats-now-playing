@@ -89,7 +89,7 @@ class Plugin(NotificationPlugin):
         if new_output_file != self.output_file:
             self.output_file = new_output_file
 
-        if self.txttemplatehandler and not new_template_file:
+        if not new_template_file:
             self.txttemplatehandler = nowplaying.utils.TemplateHandler(
                 rawtemplate="{{ artist }} - {{ title }}"
             )
