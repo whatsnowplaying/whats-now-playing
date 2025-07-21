@@ -211,7 +211,7 @@ async def test_trackpoll_notifications_loaded(trackpollbootstrap):  # pylint: di
                                                          config=config,
                                                          testmode=True)
     # Manually setup plugins to test the separated functionality
-    trackpoll._setup_notifications()
+    trackpoll._setup_notifications()   # pylint: disable=protected-access
 
     try:
         # Verify notification plugins are loaded
@@ -235,7 +235,7 @@ async def test_trackpoll_notify_plugins_called(trackpollbootstrap):  # pylint: d
                                                          config=config,
                                                          testmode=True)
     # Manually setup plugins to test the separated functionality
-    trackpoll._setup_notifications()
+    trackpoll._setup_notifications() # pylint: disable=protected-access
 
     try:
         trackpoll.currentmeta = {

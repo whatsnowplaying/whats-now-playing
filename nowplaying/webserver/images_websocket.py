@@ -143,7 +143,9 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
             return
 
         if not isinstance(parameters, dict):
-            await self._send_images_error(websocket, "MISSING_PARAMETERS", "parameters are required")
+            await self._send_images_error(
+                websocket, "MISSING_PARAMETERS", "parameters are required"
+            )
             return
 
         if data_type == "artist":
