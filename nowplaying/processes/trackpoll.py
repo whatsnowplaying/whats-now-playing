@@ -39,6 +39,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         config: nowplaying.config.ConfigFile | None = None,
         testmode: bool = False,
     ):
+        """Initialize core polling components only - use create_with_plugins() for full setup"""
         self.datestr = time.strftime("%Y%m%d-%H%M%S")
         self.stopevent = stopevent
         # we can't use asyncio's because it doesn't work on Windows
@@ -54,29 +55,56 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             self.loop = asyncio.new_event_loop()
         self._resetcurrent()
         self.testmode = testmode
+
+        # Core polling components
         self.input: nowplaying.inputs.InputPlugin | None = None
         self.previousinput: str | None = None
         self.inputname: str | None = None
-        self.plugins = nowplaying.pluginimporter.import_plugins(nowplaying.inputs)
-        self.notification_plugins = nowplaying.pluginimporter.import_plugins(
-            nowplaying.notifications
-        )
+        self.tasks = set()
+        self.metadataprocessors = nowplaying.metadata.MetadataProcessors(config=self.config)
+
+        # Plugin components - initialized separately
+        self.plugins: dict = {}
+        self.notification_plugins: dict = {}
         self.active_notifications: list = []
-        self.imagecache: nowplaying.imagecache.ImageCache = None
+        self.imagecache: nowplaying.imagecache.ImageCache | None = None
         self.icprocess = None
-        self.trackrequests = None
+        self.trackrequests: nowplaying.trackrequests.Requests | None = None
+
+    @classmethod
+    def create_with_plugins(
+        cls,
+        stopevent: asyncio.Event | None = None,
+        config: nowplaying.config.ConfigFile | None = None,
+        testmode: bool = False,
+    ) -> "TrackPoll":
+        """Factory method to create TrackPoll with full plugin initialization"""
+        instance = cls(stopevent, config, testmode)
+        instance._setup_plugins()
+        return instance
+
+    def _setup_plugins(self):
+        """Initialize all plugin subsystems"""
+        self._setup_input_plugins()
         self._setup_imagecache()
+        self._setup_trackrequests()
+        self._setup_notifications()
+
+        # Start the polling loop
+        self.create_tasks()
+        if not self.testmode:
+            self.loop.run_forever()
+
+    def _setup_input_plugins(self):
+        """Initialize input plugins"""
+        self.plugins = nowplaying.pluginimporter.import_plugins(nowplaying.inputs)
+
+    def _setup_trackrequests(self):
+        """Initialize track request system"""
         self.trackrequests = nowplaying.trackrequests.Requests(
             config=self.config, stopevent=self.stopevent
         )
-        self._setup_notifications()
         self.trackrequests.clear_roulette_artist_dupes()
-
-        self.tasks = set()
-        self.metadataprocessors = nowplaying.metadata.MetadataProcessors(config=self.config)
-        self.create_tasks()
-        if not testmode:
-            self.loop.run_forever()
 
     def _resetcurrent(self):
         """reset the currentmeta to blank"""
@@ -376,7 +404,10 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         await self._notify_plugins()
 
     def _setup_notifications(self):
-        """initialize notification plugins"""
+        """Initialize notification plugins"""
+        self.notification_plugins = nowplaying.pluginimporter.import_plugins(
+            nowplaying.notifications
+        )
         for plugin_name, plugin_class in self.notification_plugins.items():
             try:
                 plugin_instance = plugin_class.Plugin(config=self.config)
@@ -529,7 +560,7 @@ def start(stopevent, bundledir, testmode=False):  # pylint: disable=unused-argum
     logpath = nowplaying.bootstrap.setuplogging(logname="debug.log", rotate=False)
     config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=logpath, testmode=testmode)
     try:
-        TrackPoll(  # pylint: disable=unused-variable
+        TrackPoll.create_with_plugins(  # pylint: disable=unused-variable
             stopevent=stopevent, config=config, testmode=testmode
         )
     except Exception as error:  # pylint: disable=broad-except

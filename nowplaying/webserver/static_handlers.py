@@ -93,7 +93,7 @@ class StaticContentHandler:
         """handle static html files after checking metadata"""
         request.app[self.config_key].cparser.sync()
         template = request.app[self.config_key].cparser.value(cfgtemplate)
-        source = os.path.basename(template)
+        source = os.path.basename(template) if template else "unknown"
         htmloutput = ""
         request.app[self.config_key].get()
         metadata = await request.app[self.metadb_key].read_last_meta_async()
@@ -107,7 +107,23 @@ class StaticContentHandler:
         # |   x   |  same   |   x  |  -> send refresh
         # |       |   NA    |      |  -> send refresh because not ready or something broke
 
-        if not metadata or not metadata.get("dbid") or not template:
+        if not metadata or not metadata.get("dbid"):
+            logging.debug("No metadata available or missing dbid, sending refresh")
+            return web.Response(status=202, content_type="text/html", text=INDEXREFRESH)
+
+        if not template:
+            logging.warning(
+                "Template path missing or invalid for config key '%s', sending refresh", cfgtemplate
+            )
+            return web.Response(status=202, content_type="text/html", text=INDEXREFRESH)
+
+        # Check if template file actually exists for better debugging
+        if not os.path.exists(template):
+            logging.error(
+                "Template file does not exist: '%s' (from config key '%s'), sending refresh",
+                template,
+                cfgtemplate,
+            )
             return web.Response(status=202, content_type="text/html", text=INDEXREFRESH)
 
         if lastid == 0 or lastid != metadata["dbid"] or not once:

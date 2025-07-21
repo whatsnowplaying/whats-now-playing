@@ -107,7 +107,11 @@ class Plugin(NotificationPlugin):
             return
 
         # Clear text file on startup if configured
-        if self.config and self.config.cparser.value("textoutput/clearonstartup", type=bool):
+        if (
+            self.config
+            and self.config.cparser.value("textoutput/clearonstartup", type=bool)
+            and self.output_file
+        ):
             try:
                 with open(self.output_file, "w", encoding="utf-8") as textfh:
                     _ = textfh.write("")

@@ -47,6 +47,9 @@ class Plugin(NotificationPlugin):
             metadata: Track metadata including artist, title, etc.
             imagecache: Optional imagecache instance (unused by remote output)
         """
+
+        # get a fresh config
+        await self.start()
         if not self.enabled:
             return
 
@@ -55,11 +58,16 @@ class Plugin(NotificationPlugin):
         if self.key:
             remote_data["secret"] = self.key
 
+        # Prepare debug data without secret
+        debug_data = dict(remote_data)
+        if "secret" in debug_data:
+            debug_data["secret"] = "***REDACTED***"
+
         # Debug: write JSON to file to inspect
         try:
             debug_file = "/tmp/remote_debug.json"
             with open(debug_file, "w", encoding="utf-8") as fnout:
-                json.dump(remote_data, fnout, indent=2)
+                json.dump(debug_data, fnout, indent=2)
             logging.info("Debug: wrote remote data to %s", debug_file)
         except Exception:  # pylint: disable=broad-except
             logging.exception("Failed to write debug JSON")
@@ -117,6 +125,7 @@ class Plugin(NotificationPlugin):
 
     async def start(self) -> None:
         """Initialize the remote output notification plugin"""
+        oldenabled = self.enabled
         if self.config:
             self.enabled = self.config.cparser.value(
                 "remote/enabled", type=bool, defaultValue=False
@@ -127,7 +136,7 @@ class Plugin(NotificationPlugin):
             self.port = self.config.cparser.value("remote/remote_port", type=int, defaultValue=8899)
             self.key = self.config.cparser.value("remote/remote_key")
 
-        if self.enabled:
+        if self.enabled != oldenabled:
             logging.info("Remote output enabled for %s:%d", self.server, self.port)
 
     async def stop(self) -> None:

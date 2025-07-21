@@ -32,9 +32,9 @@ async def trackpollbootstrap(bootstrap, getroot, tmp_path):  # pylint: disable=r
     stopevent = threading.Event()
     logging.debug('output = %s', txtfile)
     config.cparser.sync()
-    trackpoll = nowplaying.processes.trackpoll.TrackPoll(stopevent=stopevent,
-                                                         config=config,
-                                                         testmode=True)
+    trackpoll = nowplaying.processes.trackpoll.TrackPoll.create_with_plugins(stopevent=stopevent,
+                                                                             config=config,
+                                                                             testmode=True)
     try:
         yield config
     finally:
@@ -210,6 +210,8 @@ async def test_trackpoll_notifications_loaded(trackpollbootstrap):  # pylint: di
     trackpoll = nowplaying.processes.trackpoll.TrackPoll(stopevent=threading.Event(),
                                                          config=config,
                                                          testmode=True)
+    # Manually setup plugins to test the separated functionality
+    trackpoll._setup_notifications()
 
     try:
         # Verify notification plugins are loaded
@@ -232,6 +234,8 @@ async def test_trackpoll_notify_plugins_called(trackpollbootstrap):  # pylint: d
     trackpoll = nowplaying.processes.trackpoll.TrackPoll(stopevent=threading.Event(),
                                                          config=config,
                                                          testmode=True)
+    # Manually setup plugins to test the separated functionality
+    trackpoll._setup_notifications()
 
     try:
         trackpoll.currentmeta = {
