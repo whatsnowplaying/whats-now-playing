@@ -300,7 +300,12 @@ class Plugin(ArtistExtrasPlugin):
 
     def providerinfo(self):  # pylint: disable=no-self-use
         """return list of what is provided by this plug-in"""
-        return ["artistlongbio", "artistthumbnailraw", "discogs-artistfanarturls", "artistwebsites"]
+        return [
+            "artistlongbio",
+            "artistthumbnailraw",
+            "discogs-artistfanarturls",
+            "artistwebsites",
+        ]
 
     def load_settingsui(self, qwidget):
         """draw the plugin's settings page"""

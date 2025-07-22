@@ -159,7 +159,7 @@ class MusicBrainzHelper:
             if riddata := await self.recordingid(variousartistrid):
                 riddata["musicbrainzartistid"] = mbartid
                 return riddata
-        logging.debug("Exitting pick a recording")
+        logging.debug("Exiting pick a recording")
         return riddata
 
     async def _lastditchrid(self, metadata):

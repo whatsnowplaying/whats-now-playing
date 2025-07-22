@@ -21,7 +21,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     """handler for NowPlaying"""
 
     def __init__(
-        self, config: "nowplaying.config.ConfigFile | None" = None, qsettings: QWidget | None = None
+        self,
+        config: "nowplaying.config.ConfigFile | None" = None,
+        qsettings: QWidget | None = None,
     ):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Remote"

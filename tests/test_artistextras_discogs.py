@@ -307,7 +307,10 @@ async def test_discogs_http_error_handling(bootstrap):
         def make_mock_http_error(status_code):
             async def mock_http_error(*args, **kwargs):  # pylint: disable=unused-argument
                 raise ClientResponseError(
-                    request_info=None, history=(), status=status_code, message=f"HTTP {status_code}"
+                    request_info=None,
+                    history=(),
+                    status=status_code,
+                    message=f"HTTP {status_code}",
                 )
 
             return mock_http_error
@@ -801,7 +804,11 @@ async def test_discogs_rapid_track_changes(bootstrap):
 
     # Simulate rapid track changes during a DJ set
     tracks = [
-        {"artist": "Daft Punk", "album": "Random Access Memories", "imagecacheartist": "daftpunk1"},
+        {
+            "artist": "Daft Punk",
+            "album": "Random Access Memories",
+            "imagecacheartist": "daftpunk1",
+        },
         {"artist": "Justice", "album": "Cross", "imagecacheartist": "justice1"},
         {"artist": "Moderat", "album": "II", "imagecacheartist": "moderat1"},
         {"artist": "Burial", "album": "Untrue", "imagecacheartist": "burial1"},
@@ -932,7 +939,11 @@ async def test_discogs_live_performance_timeout_recovery(bootstrap):
         try:
             # First call should timeout
             result1 = await plugin.download_async(
-                {"artist": "Test Artist", "album": "Test Album", "imagecacheartist": "testartist1"},
+                {
+                    "artist": "Test Artist",
+                    "album": "Test Album",
+                    "imagecacheartist": "testartist1",
+                },
                 imagecache=imagecaches["discogs"],
             )
 

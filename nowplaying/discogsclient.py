@@ -37,7 +37,13 @@ class DiscogsRelease:  # pylint: disable=too-few-public-methods
             else:
                 # Fallback: use the entire title as artist name if no dash
                 artist_name = title
-            artist_data = {"name": artist_name, "id": None, "profile": "", "urls": [], "images": []}
+            artist_data = {
+                "name": artist_name,
+                "id": None,
+                "profile": "",
+                "urls": [],
+                "images": [],
+            }
             self.artists = [DiscogsArtist(artist_data)]
 
     async def load_full_data(self):

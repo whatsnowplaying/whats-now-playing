@@ -1008,7 +1008,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             default_dir = QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
 
             file_path, _ = QFileDialog.getOpenFileName(
-                self.qtui, "Import Configuration", default_dir, "JSON Files (*.json);;All Files (*)"
+                self.qtui,
+                "Import Configuration",
+                default_dir,
+                "JSON Files (*.json);;All Files (*)",
             )
 
             if file_path:

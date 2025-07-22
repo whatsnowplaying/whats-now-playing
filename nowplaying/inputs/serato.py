@@ -375,7 +375,9 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
             logging.debug("Using fsevent observer")
 
         _ = self.observer.schedule(
-            self.event_handler, str(self.seratodir.joinpath("History", "Sessions")), recursive=False
+            self.event_handler,
+            str(self.seratodir.joinpath("History", "Sessions")),
+            recursive=False,
         )
         self.observer.start()
 
@@ -512,7 +514,8 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
         self.playingadat["updatedat"] = self.playingadat["starttime"]
 
         logging.debug(
-            "Find the current playing deck. Starting at time: %s", self.playingadat.get("starttime")
+            "Find the current playing deck. Starting at time: %s",
+            self.playingadat.get("starttime"),
         )
         for deck, adat in self.decks.items():
             if self.mixmode == "newest" and adat.get("starttime") > self.playingadat.get(

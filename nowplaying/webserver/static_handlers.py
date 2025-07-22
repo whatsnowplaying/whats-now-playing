@@ -113,7 +113,8 @@ class StaticContentHandler:
 
         if not template:
             logging.warning(
-                "Template path missing or invalid for config key '%s', sending refresh", cfgtemplate
+                "Template path missing or invalid for config key '%s', sending refresh",
+                cfgtemplate,
             )
             return web.Response(status=202, content_type="text/html", text=INDEXREFRESH)
 

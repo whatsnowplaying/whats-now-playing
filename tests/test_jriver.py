@@ -186,9 +186,7 @@ async def test_start_success(jriver_bootstrap):  # pylint: disable=redefined-out
         assert plugin.access_key == "testkey"
         assert plugin.base_url == "http://192.168.1.100:52199/MCWS/v1"
         assert plugin.session is not None  # Session should remain open on success
-        assert (
-            not plugin._connection_failed
-        )  # Should be False on success  # pylint: disable=protected-access
+        assert not plugin._connection_failed  # pylint: disable=protected-access
         mock_test.assert_called_once()
         mock_auth.assert_called_once()
 
@@ -627,7 +625,8 @@ async def test_getplayingtrack_without_token():
     with aioresponses() as mock_resp:
         # aioresponses matches the exact URL without query parameters
         mock_resp.get(
-            "http://localhost:52199/MCWS/v1/Playback/Info", body='<Response Status="OK"></Response>'
+            "http://localhost:52199/MCWS/v1/Playback/Info",
+            body='<Response Status="OK"></Response>',
         )
 
         await plugin.getplayingtrack()

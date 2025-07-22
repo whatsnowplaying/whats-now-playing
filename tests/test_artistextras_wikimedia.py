@@ -117,7 +117,7 @@ async def test_wikimedia_humantetris_de(bootstrap):
         },
         imagecache=None,
     )
-    assert "Human Tetris ist eine Band aus Moskau" in data.get("artistlongbio")
+    assert "Human Tetris ist eine Band aus Moskau" in data.get("artistlongbio")  # codespell:ignore
 
 
 # Error Handling and Network Resilience Tests

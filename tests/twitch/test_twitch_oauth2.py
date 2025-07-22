@@ -256,7 +256,12 @@ async def test_exchange_code_for_token_scenarios(  # pylint: disable=redefined-o
     [
         (False, 200, {"access_token": "new_token"}, False),  # No refresh token
         (True, 400, {}, False),  # HTTP error
-        (True, 200, {"access_token": "new_token", "refresh_token": "new_refresh"}, True),  # Success
+        (
+            True,
+            200,
+            {"access_token": "new_token", "refresh_token": "new_refresh"},
+            True,
+        ),  # Success
     ],
 )
 @pytest.mark.asyncio

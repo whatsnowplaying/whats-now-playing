@@ -25,7 +25,11 @@ def test_files(getroot) -> dict[str, list[str]]:
             audio_dir / "15_Ghosts_II_64kb_füllytâgged.m4a",
             audio_dir / "15_Ghosts_II_64kb_füllytâgged.aiff",
         ],
-        "multi_value": [audio_dir / "multi.mp3", audio_dir / "multi.flac", audio_dir / "multi.m4a"],
+        "multi_value": [
+            audio_dir / "multi.mp3",
+            audio_dir / "multi.flac",
+            audio_dir / "multi.m4a",
+        ],
         "multi_image": [audio_dir / "multiimage.m4a"],
         "discsubtitle": [
             audio_dir / "discsubtitle.mp3",

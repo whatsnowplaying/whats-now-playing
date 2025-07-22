@@ -343,7 +343,9 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
 
         if category != "cover":
             await self._send_images_error(
-                websocket, "UNSUPPORTED_CATEGORY", f'Category "{category}" not supported for albums'
+                websocket,
+                "UNSUPPORTED_CATEGORY",
+                f'Category "{category}" not supported for albums',
             )
             return
 

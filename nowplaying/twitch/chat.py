@@ -40,7 +40,11 @@ import nowplaying.twitch.oauth2
 import nowplaying.twitch.utils
 from nowplaying.types import TrackMetadata
 import nowplaying.utils
-from nowplaying.twitch.constants import TWITCHBOT_CHECKBOXES, TWITCH_MESSAGE_LIMIT, SPLITMESSAGETEXT
+from nowplaying.twitch.constants import (
+    TWITCHBOT_CHECKBOXES,
+    TWITCH_MESSAGE_LIMIT,
+    SPLITMESSAGETEXT,
+)
 
 LASTANNOUNCED = {"artist": None, "title": None}
 
@@ -544,7 +548,7 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
 
             anntemplpath = pathlib.Path(anntemplstr)
             if not anntemplpath.exists():
-                logging.error("Annoucement template %s does not exist.", anntemplstr)
+                logging.error("Announcement template %s does not exist.", anntemplstr)
                 return
 
             if not self.anndir or self.anndir != anntemplpath.parent:

@@ -219,7 +219,9 @@ class UpgradeTemplates:
     """Upgrade templates"""
 
     def __init__(
-        self, bundledir: str | pathlib.Path | None = None, testdir: str | pathlib.Path | None = None
+        self,
+        bundledir: str | pathlib.Path | None = None,
+        testdir: str | pathlib.Path | None = None,
     ):
         self.bundledir = pathlib.Path(bundledir)
         self.apptemplatedir = self.bundledir.joinpath("templates")

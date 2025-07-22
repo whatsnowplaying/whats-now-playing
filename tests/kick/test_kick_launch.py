@@ -64,7 +64,13 @@ def test_init_without_config():
         # Success case
         (
             200,
-            {"data": {"active": True, "client_id": "test_client", "scope": "user:read chat:write"}},
+            {
+                "data": {
+                    "active": True,
+                    "client_id": "test_client",
+                    "scope": "user:read chat:write",
+                }
+            },
             True,
         ),
         # Inactive token

@@ -136,7 +136,8 @@ def test_extreme_network_failure_resilience():
                 if nowplaying.hostmeta.IFACES:
                     # Mock netifaces module itself to fail internally
                     with unittest.mock.patch(
-                        "netifaces.gateways", side_effect=Exception("Mock netifaces module failure")
+                        "netifaces.gateways",
+                        side_effect=Exception("Mock netifaces module failure"),
                     ):
                         hostinfo = nowplaying.hostmeta.gethostmeta()
                 else:

@@ -121,7 +121,8 @@ async def test_cache_ttl_default(temp_api_cache):  # pylint: disable=redefined-o
     async with cache._lock:
         async with aiosqlite.connect(cache.db_file) as database_conn:
             cursor = await database_conn.execute(
-                "SELECT created_at, expires_at FROM api_responses WHERE cache_key = ?", (cache_key,)
+                "SELECT created_at, expires_at FROM api_responses WHERE cache_key = ?",
+                (cache_key,),
             )
             row = await cursor.fetchone()
             created_at, expires_at = row
@@ -147,7 +148,8 @@ async def test_cache_ttl_custom(temp_api_cache):  # pylint: disable=redefined-ou
     async with cache._lock:
         async with aiosqlite.connect(cache.db_file) as database_conn:
             cursor = await database_conn.execute(
-                "SELECT created_at, expires_at FROM api_responses WHERE cache_key = ?", (cache_key,)
+                "SELECT created_at, expires_at FROM api_responses WHERE cache_key = ?",
+                (cache_key,),
             )
             row = await cursor.fetchone()
             created_at, expires_at = row

@@ -27,7 +27,8 @@ async def test_startstopwebserver(getwebserver):  # pylint: disable=redefined-ou
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows SQLite file locking issues with multiprocess webserver"
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
 )
 @pytest.mark.asyncio
 async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-outer-name
@@ -98,7 +99,8 @@ async def test_webserver_htmtest(getwebserver):  # pylint: disable=redefined-out
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows SQLite file locking issues with multiprocess webserver"
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
 )
 @pytest.mark.asyncio
 async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-outer-name,too-many-statements
@@ -193,7 +195,8 @@ async def test_webserver_txttest(getwebserver):  # pylint: disable=redefined-out
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows SQLite file locking issues with multiprocess webserver"
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
 )
 @pytest.mark.xfail(sys.platform == "darwin", reason="timesout on macos")
 def test_webserver_gifwordstest(getwebserver):  # pylint: disable=redefined-outer-name
@@ -208,7 +211,8 @@ def test_webserver_gifwordstest(getwebserver):  # pylint: disable=redefined-oute
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows SQLite file locking issues with multiprocess webserver"
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
 )
 def test_webserver_coverpng(getwebserver):  # pylint: disable=redefined-outer-name
     """make sure coverpng works"""
@@ -222,7 +226,8 @@ def test_webserver_coverpng(getwebserver):  # pylint: disable=redefined-outer-na
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows SQLite file locking issues with multiprocess webserver"
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
 )
 def test_webserver_remote_input_no_secret(getwebserver):  # pylint: disable=redefined-outer-name
     """test remote input endpoint without secret"""
@@ -239,7 +244,8 @@ def test_webserver_remote_input_no_secret(getwebserver):  # pylint: disable=rede
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows SQLite file locking issues with multiprocess webserver"
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
 )
 def test_webserver_remote_input_with_secret(getwebserver):  # pylint: disable=redefined-outer-name
     """test remote input endpoint with secret authentication"""
@@ -266,7 +272,8 @@ def test_webserver_remote_input_with_secret(getwebserver):  # pylint: disable=re
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows SQLite file locking issues with multiprocess webserver"
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
 )
 def test_webserver_remote_input_invalid_secret(getwebserver):  # pylint: disable=redefined-outer-name
     """test remote input endpoint with invalid secret"""
@@ -293,7 +300,8 @@ def test_webserver_remote_input_invalid_secret(getwebserver):  # pylint: disable
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows SQLite file locking issues with multiprocess webserver"
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
 )
 def test_webserver_remote_input_missing_secret(getwebserver):  # pylint: disable=redefined-outer-name
     """test remote input endpoint with missing secret"""
@@ -320,7 +328,8 @@ def test_webserver_remote_input_missing_secret(getwebserver):  # pylint: disable
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows SQLite file locking issues with multiprocess webserver"
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
 )
 def test_webserver_remote_input_wrong_method(getwebserver):  # pylint: disable=redefined-outer-name
     """test remote input endpoint with wrong HTTP method"""
@@ -339,7 +348,8 @@ def test_webserver_remote_input_wrong_method(getwebserver):  # pylint: disable=r
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows SQLite file locking issues with multiprocess webserver"
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
 )
 def test_webserver_remote_input_invalid_json(getwebserver):  # pylint: disable=redefined-outer-name
     """test remote input endpoint with invalid JSON"""

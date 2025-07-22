@@ -18,11 +18,13 @@ from nowplaying.processes.discordbot import DiscordSupport, DiscordClients  # py
 
 # Skip decorators for integration tests requiring Discord credentials
 skip_no_discord_bot_token = pytest.mark.skipif(
-    not os.environ.get("DISCORD_BOT_TOKEN"), reason="DISCORD_BOT_TOKEN environment variable not set"
+    not os.environ.get("DISCORD_BOT_TOKEN"),
+    reason="DISCORD_BOT_TOKEN environment variable not set",
 )
 
 skip_no_discord_client_id = pytest.mark.skipif(
-    not os.environ.get("DISCORD_CLIENT_ID"), reason="DISCORD_CLIENT_ID environment variable not set"
+    not os.environ.get("DISCORD_CLIENT_ID"),
+    reason="DISCORD_CLIENT_ID environment variable not set",
 )
 
 
