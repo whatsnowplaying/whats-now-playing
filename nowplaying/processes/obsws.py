@@ -151,7 +151,9 @@ class OBSWebSocketHandler:  # pylint: disable=too-many-instance-attributes
             self.obswsport = obswsport
             self.obswshost = obswshost
             try:
-                parameters = simpleobsws.IdentificationParameters(ignoreNonFatalRequestChecks=False)
+                parameters = simpleobsws.IdentificationParameters(
+                    ignoreNonFatalRequestChecks=False
+                )
                 self.client = simpleobsws.WebSocketClient(
                     url=f"ws://{self.obswshost}:{self.obswsport}",
                     password=self.obswssecret,

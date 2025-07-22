@@ -54,7 +54,9 @@ def write_extvdj_remix(m3u):
     """create m3u file with VDJ"""
     with open(m3u, "w", encoding="utf-8") as m3ufn:
         m3ufn.write("#EXTVDJ:<time>21:39</time><lastplaytime>1674884385</lastplaytime>")
-        m3ufn.write("<artist>j. period</artist><title>Buddy [Remix]</title><remix>feat. De La Soul")
+        m3ufn.write(
+            "<artist>j. period</artist><title>Buddy [Remix]</title><remix>feat. De La Soul"
+        )
         m3ufn.write(f", Jungle Brothers, Q-Tip & Queen Latifah</remix>{os.linesep}")
         m3ufn.write(f"netsearch://dz715352532{os.linesep}")
 
@@ -63,7 +65,9 @@ def write_extvdj_m3u8(m3u):
     """create m3u file with VDJ"""
     with open(m3u, "w", encoding="utf-8") as m3ufn:
         m3ufn.write("#EXTVDJ:<time>21:39</time><lastplaytime>1674884385</lastplaytime>")
-        m3ufn.write("<artist>j. period</artist><title>Buddy [Remix]</title><remix>feat. De La Soul")
+        m3ufn.write(
+            "<artist>j. period</artist><title>Buddy [Remix]</title><remix>feat. De La Soul"
+        )
         m3ufn.write(f", Jungle Brothers, Q-Tip & Queen Latifah</remix>{os.linesep}")
         m3ufn.write(f"netsearch://dz715352532{os.linesep}")
         m3ufn.write("#EXTVDJ:<time>21:41</time><lastplaytime>1674884510</lastplaytime>")

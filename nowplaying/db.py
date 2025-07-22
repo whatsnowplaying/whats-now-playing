@@ -247,7 +247,9 @@ class MetadataDB:
 
         previouslist = []
         if records:
-            previouslist.extend({"artist": row["artist"], "title": row["title"]} for row in records)
+            previouslist.extend(
+                {"artist": row["artist"], "title": row["title"]} for row in records
+            )
 
         return previouslist
 
@@ -271,7 +273,9 @@ class MetadataDB:
 
         previouslist = []
         if records:
-            previouslist.extend({"artist": row["artist"], "title": row["title"]} for row in records)
+            previouslist.extend(
+                {"artist": row["artist"], "title": row["title"]} for row in records
+            )
 
         return previouslist
 

@@ -340,7 +340,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         except aiohttp.ClientConnectorError:
             if not self._connection_failed:
                 if self._should_log_error():
-                    logging.debug("JRiver is not running or not accessible for FileKey %s", filekey)
+                    logging.debug(
+                        "JRiver is not running or not accessible for FileKey %s", filekey
+                    )
                 self._connection_failed = True
         except (asyncio.TimeoutError, aiohttp.ServerTimeoutError):
             if not self._connection_failed:

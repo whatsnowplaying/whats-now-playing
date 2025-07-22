@@ -278,7 +278,9 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         if metadata.get("musicbrainzartistid"):
             logging.debug("got musicbrainzartistid: %s", metadata["musicbrainzartistid"])
             for mbid in metadata["musicbrainzartistid"]:
-                if newdata := await self.artistdatafrommbid_async(apikey, mbid, metadata["artist"]):
+                if newdata := await self.artistdatafrommbid_async(
+                    apikey, mbid, metadata["artist"]
+                ):
                     extradata.extend(
                         artist for artist in newdata["artists"] if self._check_artist(artist)
                     )

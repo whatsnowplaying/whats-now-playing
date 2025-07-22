@@ -286,7 +286,9 @@ def test_library_upgrade_impact_analysis(golden_manager, stable_test_files):  # 
             if "error" in current_data:
                 continue
 
-            comparison = golden_manager.compare_with_golden_master(library, test_file, current_data)
+            comparison = golden_manager.compare_with_golden_master(
+                library, test_file, current_data
+            )
 
             if comparison["status"] == "differences_found":
                 files_with_differences += 1

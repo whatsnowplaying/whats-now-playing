@@ -354,7 +354,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """this is totally wrong and will need to get dealt
         with as part of ui code redesign"""
         currentinput = self.config.cparser.value("settings/input")
-        if curbutton := self.widgets["source"].sourcelist.findItems(currentinput, Qt.MatchContains):
+        if curbutton := self.widgets["source"].sourcelist.findItems(
+            currentinput, Qt.MatchContains
+        ):
             self.widgets["source"].sourcelist.setCurrentItem(curbutton[0])
 
     def _upd_win_webserver(self):
@@ -384,7 +386,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.widgets["obsws"].host_lineedit.setText(self.config.cparser.value("obsws/host"))
         self.widgets["obsws"].port_lineedit.setText(str(self.config.cparser.value("obsws/port")))
         self.widgets["obsws"].secret_lineedit.setText(self.config.cparser.value("obsws/secret"))
-        self.widgets["obsws"].template_lineedit.setText(self.config.cparser.value("obsws/template"))
+        self.widgets["obsws"].template_lineedit.setText(
+            self.config.cparser.value("obsws/template")
+        )
 
     def _upd_win_discordbot(self):
         """update the obsws settings to match config"""

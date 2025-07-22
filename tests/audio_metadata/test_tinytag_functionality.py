@@ -160,7 +160,9 @@ def test_discsubtitle_extraction(test_files):  # pylint: disable=redefined-outer
                 break
 
         # TinyTag should find discsubtitle
-        assert tt_discsubtitle is not None, f"TinyTag did not find discsubtitle in {test_file.name}"
+        assert tt_discsubtitle is not None, (
+            f"TinyTag did not find discsubtitle in {test_file.name}"
+        )
 
 
 def test_format_support_matrix(test_files):  # pylint: disable=redefined-outer-name
@@ -370,7 +372,9 @@ def test_m4a_freeform_tags(test_files):  # pylint: disable=redefined-outer-name
             musicbrainz_fields = [key for key in tag.other.keys() if "musicbrainz" in key.lower()]
 
             if musicbrainz_fields:
-                print(f"TinyTag MusicBrainz freeform tags in {m4a_file.name}: {musicbrainz_fields}")
+                print(
+                    f"TinyTag MusicBrainz freeform tags in {m4a_file.name}: {musicbrainz_fields}"
+                )
 
 
 def test_aiff_metadata_support(test_files):  # pylint: disable=redefined-outer-name

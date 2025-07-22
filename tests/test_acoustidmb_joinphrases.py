@@ -38,9 +38,7 @@ async def test_join_phrases_multiartist(getacoustidmbplugin):  # pylint: disable
         mock_fingerprint = json.load(json_file)
 
     # Load mock AcoustID lookup response from external JSON file
-    joinphrases_file = (
-        pathlib.Path(__file__).parent / "resources" / "joinphrases.json"
-    )
+    joinphrases_file = pathlib.Path(__file__).parent / "resources" / "joinphrases.json"
     with open(joinphrases_file, "r", encoding="utf-8") as json_file:
         mock_acoustid_response = json.load(json_file)
 

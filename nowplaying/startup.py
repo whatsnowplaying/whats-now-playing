@@ -33,7 +33,9 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
         self.drag_position = None  # For window dragging
 
         self._failsafe_timeout_ms = kwargs.get("failsafe_timeout_ms", 30000)  # Default 30 seconds
-        self._failsafe_warning_ms = kwargs.get("failsafe_warning_ms", 5000)  # Warn 5 seconds before
+        self._failsafe_warning_ms = kwargs.get(
+            "failsafe_warning_ms", 5000
+        )  # Warn 5 seconds before
 
         self._setup_ui()
         self._center_window()

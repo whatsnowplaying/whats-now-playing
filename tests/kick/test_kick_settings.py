@@ -269,7 +269,9 @@ def test_kick_settings_update_oauth_status_scenarios(
         (200, {}, ValueError, False),  # JSON parsing error
     ],
 )
-def test_validate_token_sync_scenarios(status_code, response_data, exception_type, expected_result):
+def test_validate_token_sync_scenarios(
+    status_code, response_data, exception_type, expected_result
+):
     """Test sync token validation with various responses."""
     if exception_type:
         with patch("requests.post", side_effect=exception_type("Test error")):

@@ -519,7 +519,9 @@ def test_pkce_challenge_calculation_independent():
     )
 
     # Call the calculation logic directly from the base class
-    actual_challenge = nowplaying.twitch.oauth2.TwitchOAuth2.calculate_pkce_challenge(code_verifier)
+    actual_challenge = nowplaying.twitch.oauth2.TwitchOAuth2.calculate_pkce_challenge(
+        code_verifier
+    )
 
     assert actual_challenge == expected_challenge
 

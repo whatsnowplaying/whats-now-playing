@@ -139,7 +139,9 @@ class Plugin(M3UPlugin):
         startdir = self.qwidget.playlistdir_lineedit.text() or str(
             self.config.userdocs.joinpath("VirtualDJ")
         )
-        if filename := QFileDialog.getExistingDirectory(self.qwidget, "Select directory", startdir):
+        if filename := QFileDialog.getExistingDirectory(
+            self.qwidget, "Select directory", startdir
+        ):
             self.qwidget.playlistdir_lineedit.setText(filename[0])
 
     def on_history_dir_button(self):

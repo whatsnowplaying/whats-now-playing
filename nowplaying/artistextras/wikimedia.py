@@ -161,7 +161,9 @@ class Plugin(ArtistExtrasPlugin):
             # Safely handle artistwebsites - filter out None/empty values
             artist_websites = metadata.get("artistwebsites", [])
             wikidata_websites = [
-                url for url in artist_websites if url and isinstance(url, str) and "wikidata" in url
+                url
+                for url in artist_websites
+                if url and isinstance(url, str) and "wikidata" in url
             ]
             if not wikidata_websites:
                 logging.debug("no wikidata entity")
@@ -170,7 +172,9 @@ class Plugin(ArtistExtrasPlugin):
             lang = self.config.cparser.value("wikimedia/bio_iso", type=str) or "en"
             for website in wikidata_websites:
                 entity = website.split("/")[-1]
-                artist_name = metadata.get("artist", entity)  # Use entity as fallback for cache key
+                artist_name = metadata.get(
+                    "artist", entity
+                )  # Use entity as fallback for cache key
                 page = await self._get_page_cached(entity, lang, artist_name)
                 if not page or not page.data:
                     continue

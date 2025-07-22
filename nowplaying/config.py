@@ -221,7 +221,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("obsws/source", "")
         settings.setValue("obsws/template", str(self.templatedir.joinpath("basic-plain.txt")))
 
-        settings.setValue("weboutput/htmltemplate", str(self.templatedir.joinpath("basic-web.htm")))
+        settings.setValue(
+            "weboutput/htmltemplate", str(self.templatedir.joinpath("basic-web.htm"))
+        )
         settings.setValue(
             "weboutput/artistbannertemplate",
             str(self.templatedir.joinpath("ws-artistbanner-nofade.htm")),

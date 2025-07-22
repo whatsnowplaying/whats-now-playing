@@ -344,7 +344,9 @@ def test_remote_extract_edge_cases():  # pylint: disable=protected-access
     assert handler._remote_extract_by_js_id("no js data", empty_tree) is None
     assert nowplaying.inputs.serato.SeratoHandler._remote_extract_by_position(empty_tree) is None
     assert nowplaying.inputs.serato.SeratoHandler._remote_extract_by_pattern(empty_tree) is None
-    assert nowplaying.inputs.serato.SeratoHandler._remote_extract_by_text_search(empty_tree) is None
+    assert (
+        nowplaying.inputs.serato.SeratoHandler._remote_extract_by_text_search(empty_tree) is None
+    )
 
     # Test with content that has tracks but malformed
     malformed_html = """<html><div class="playlist-track">

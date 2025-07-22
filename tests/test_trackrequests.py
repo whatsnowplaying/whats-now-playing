@@ -261,7 +261,9 @@ async def test_trackrequest_getrequest_artist(trackrequestbootstrap):  # pylint:
     trackrequest.config.cparser.sync()
     trackrequest = trackrequestbootstrap
 
-    data = await trackrequest.user_track_request({"displayname": "test"}, "user", "Nine Inch Nails")
+    data = await trackrequest.user_track_request(
+        {"displayname": "test"}, "user", "Nine Inch Nails"
+    )
     logging.debug(data)
     assert data["requestartist"] == "Nine Inch Nails"
     assert not data["requesttitle"]

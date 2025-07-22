@@ -47,7 +47,9 @@ async def test_15ghosts2_mp3_orig(bootstrap, getroot):
     config = bootstrap
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {"filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_orig.mp3")}
+    metadatain = {
+        "filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_orig.mp3")
+    }
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
     )
@@ -116,7 +118,9 @@ async def test_15ghosts2_m4a_orig(bootstrap, getroot):
     config = bootstrap
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {"filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_orig.m4a")}
+    metadatain = {
+        "filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_orig.m4a")
+    }
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
     )

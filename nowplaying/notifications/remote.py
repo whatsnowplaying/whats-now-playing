@@ -92,7 +92,9 @@ class Plugin(NotificationPlugin):
                     else:
                         try:
                             error_text = await response.text()
-                            logging.error("Remote server error %d: %s", response.status, error_text)
+                            logging.error(
+                                "Remote server error %d: %s", response.status, error_text
+                            )
                         except Exception:  # pylint: disable=broad-except
                             logging.error("Remote server returned status %d", response.status)
         except aiohttp.ClientError as exc:
@@ -133,7 +135,9 @@ class Plugin(NotificationPlugin):
             self.server = self.config.cparser.value(
                 "remote/remote_server", defaultValue="remotehost"
             )
-            self.port = self.config.cparser.value("remote/remote_port", type=int, defaultValue=8899)
+            self.port = self.config.cparser.value(
+                "remote/remote_port", type=int, defaultValue=8899
+            )
             self.key = self.config.cparser.value("remote/remote_key")
 
         if self.enabled != oldenabled:

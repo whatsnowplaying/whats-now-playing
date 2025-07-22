@@ -152,7 +152,9 @@ class APIResponseCache:
             if obj.get("__type__") == "bytes" and "__data__" in obj:
                 return base64.b64decode(obj["__data__"])
             # Recursively process dictionary values
-            return {key: APIResponseCache._deserialize_handler(value) for key, value in obj.items()}
+            return {
+                key: APIResponseCache._deserialize_handler(value) for key, value in obj.items()
+            }
         if isinstance(obj, list):
             # Recursively process list items
             return [APIResponseCache._deserialize_handler(item) for item in obj]

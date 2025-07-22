@@ -723,7 +723,9 @@ class _OAuthRedirectHelper:  # pylint: disable=too-many-instance-attributes
             # Exchange code for tokens
             authorization_code = self.params.get("code")
             received_state = self.params.get("state")
-            token_response = await oauth.exchange_code_for_token(authorization_code, received_state)
+            token_response = await oauth.exchange_code_for_token(
+                authorization_code, received_state
+            )
 
             # Save tokens
             self._save_tokens(token_response)

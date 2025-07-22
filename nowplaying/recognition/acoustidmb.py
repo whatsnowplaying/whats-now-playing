@@ -89,7 +89,9 @@ class Plugin(RecognitionPlugin):
                 )
                 if "error" not in results or "rate limit" not in results["error"]["message"]:
                     break
-                logging.info("acoustid complaining about rate limiting. Sleeping then rying again.")
+                logging.info(
+                    "acoustid complaining about rate limiting. Sleeping then rying again."
+                )
                 time.sleep(0.5)
                 counter += 1
         except acoustid.NoBackendError:
@@ -410,7 +412,9 @@ class Plugin(RecognitionPlugin):
             self.config.cparser.value("musicbrainz/fallback", type=bool)
         )
 
-        qwidget.emailaddress_lineedit.setText(self.config.cparser.value("musicbrainz/emailaddress"))
+        qwidget.emailaddress_lineedit.setText(
+            self.config.cparser.value("musicbrainz/emailaddress")
+        )
 
         qwidget.apikey_lineedit.setText(self.config.cparser.value("acoustidmb/acoustidapikey"))
 

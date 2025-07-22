@@ -67,7 +67,9 @@ class KickOAuth2(nowplaying.oauth2.OAuth2Client):
         try:
             req = requests.post(url, headers=headers, timeout=10)
         except (requests.ConnectionError, requests.Timeout) as error:
-            logging.warning("Kick token validation network error (token status unknown): %s", error)
+            logging.warning(
+                "Kick token validation network error (token status unknown): %s", error
+            )
             return False
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Kick token validation unexpected error: %s", error)

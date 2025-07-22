@@ -51,7 +51,9 @@ async def attempt_token_refresh(config: nowplaying.config.ConfigFile) -> bool:
             except ValueError as error:
                 # Check if it's an invalid_grant error (expired/revoked refresh token)
                 if "401" in str(error) and "invalid_grant" in str(error):
-                    logging.warning("Kick refresh token is invalid/expired, clearing stored tokens")
+                    logging.warning(
+                        "Kick refresh token is invalid/expired, clearing stored tokens"
+                    )
                     oauth.clear_stored_tokens()
                     return False
                 # Re-raise other ValueError types

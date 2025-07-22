@@ -652,7 +652,9 @@ async def test_wikimedia_rapid_entity_lookups(bootstrap):
                 # Should return None or valid data, not crash
                 assert result is None or isinstance(result, dict)
 
-        logging.info("Wikimedia handled %d rapid entity lookups successfully", len(artist_entities))
+        logging.info(
+            "Wikimedia handled %d rapid entity lookups successfully", len(artist_entities)
+        )
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(

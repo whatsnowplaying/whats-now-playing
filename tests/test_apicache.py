@@ -733,7 +733,9 @@ async def test_cache_preserves_original_artist_name(temp_api_cache):  # pylint: 
         # (cache key normalization should work for lookup)
         normalized_artist = original_artist.lower().strip()
         if normalized_artist != original_artist:
-            cached_data_normalized = await cache.get("theaudiodb", normalized_artist, "artist_info")
+            cached_data_normalized = await cache.get(
+                "theaudiodb", normalized_artist, "artist_info"
+            )
             assert cached_data_normalized is not None, (
                 f"Normalized lookup failed for: {normalized_artist}"
             )

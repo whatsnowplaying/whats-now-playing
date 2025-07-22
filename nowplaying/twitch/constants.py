@@ -25,7 +25,9 @@ BROADCASTER_AUTH_SCOPES: list[AuthScope] = CHAT_BOT_AUTH_SCOPES + [
 ]
 
 # Build scope strings from enums using TwitchAPI helper
-BROADCASTER_SCOPE_STRINGS: list[str] = twitchAPI.helper.build_scope(BROADCASTER_AUTH_SCOPES).split()
+BROADCASTER_SCOPE_STRINGS: list[str] = twitchAPI.helper.build_scope(
+    BROADCASTER_AUTH_SCOPES
+).split()
 CHAT_BOT_SCOPE_STRINGS: list[str] = twitchAPI.helper.build_scope(CHAT_BOT_AUTH_SCOPES).split()
 
 # Chat constants

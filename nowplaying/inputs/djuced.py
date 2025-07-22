@@ -60,7 +60,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         self.djuceddir = djuceddir
         if not self.djuceddir:
-            logging.error("DJUCED Directory Path not configured/does not exist: %s", self.djuceddir)
+            logging.error(
+                "DJUCED Directory Path not configured/does not exist: %s", self.djuceddir
+            )
             await asyncio.sleep(1)
             return
 

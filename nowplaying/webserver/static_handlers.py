@@ -244,7 +244,9 @@ class StaticContentHandler:
         ):
             provided_secret = request_data.get("secret", "")
             if not provided_secret:
-                logging.warning("Remote metadata submission without secret from %s", request.remote)
+                logging.warning(
+                    "Remote metadata submission without secret from %s", request.remote
+                )
                 return web.json_response({"error": "Missing secret in request"}, status=403)
 
             # Use constant-time comparison to prevent timing attacks

@@ -152,7 +152,7 @@ ignore_patterns = [
 ]
 
 [tool.ruff]
-line-length = 100
+line-length = 99
 extend-exclude = [
   "nowplaying/version.py",
   "nowplaying/vendor/**",

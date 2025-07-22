@@ -731,7 +731,9 @@ class TwitchChatSettings:
     @Slot()
     def on_announce_button(self):
         """twitchbot announce button clicked action"""
-        self.uihelp.template_picker_lineedit(self.widget.announce_lineedit, limit="twitchbot_*.txt")
+        self.uihelp.template_picker_lineedit(
+            self.widget.announce_lineedit, limit="twitchbot_*.txt"
+        )
 
     def _twitchbot_command_load(self, command=None, **kwargs):
         if not command:

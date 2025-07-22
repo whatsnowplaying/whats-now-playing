@@ -31,7 +31,9 @@ class SubprocessManager:
                 "stopevent": self.manager.Event(),
             }
 
-    def start_all_processes(self, startup_window: "nowplaying.startup.StartupWindow | None" = None):
+    def start_all_processes(
+        self, startup_window: "nowplaying.startup.StartupWindow | None" = None
+    ):
         """start our various threads"""
 
         for key, module in self.processes.items():

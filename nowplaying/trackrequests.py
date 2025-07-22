@@ -889,7 +889,9 @@ class RequestSettings:
                 box = _typebox(kwargs.get("type"), self.enablegifwords)
                 widget.request_table.setCellWidget(row, column, box)
             elif kwargs.get(cbtype):
-                widget.request_table.setItem(row, column, QTableWidgetItem(str(kwargs.get(cbtype))))
+                widget.request_table.setItem(
+                    row, column, QTableWidgetItem(str(kwargs.get(cbtype)))
+                )
             else:
                 widget.request_table.setItem(row, column, QTableWidgetItem(""))
         widget.request_table.resizeColumnsToContents()

@@ -162,7 +162,9 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
                         )
                         return False
 
-                    logging.error("Failed to send message: %s - %s", response.status, response_text)
+                    logging.error(
+                        "Failed to send message: %s - %s", response.status, response_text
+                    )
                     return False
 
         except Exception as error:  # pylint: disable=broad-exception-caught

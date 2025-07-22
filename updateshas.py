@@ -33,7 +33,9 @@ def main():  # pylint: disable=too-many-statements
         logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     if not pathlib.Path(args.shafile).parent.exists():
-        logging.error("Directory for shafile does not exist: %s", pathlib.Path(args.shafile).parent)
+        logging.error(
+            "Directory for shafile does not exist: %s", pathlib.Path(args.shafile).parent
+        )
         sys.exit(1)
 
     # Load existing hashes
