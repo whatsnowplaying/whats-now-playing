@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """user interface to configure"""
 
+# pylint: disable=too-many-lines
+
 import contextlib
 import json
 import logging

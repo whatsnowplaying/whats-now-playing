@@ -133,7 +133,7 @@ def test_upgrade_old(upgrade_bootstrap, getroot):  # pylint: disable=redefined-o
     pathlib.Path(touchfile).touch()
     nowplaying.upgrade.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
     assert list(open(os.path.join(srcdir, "songquotes.txt"))) == list(  # pylint: disable=consider-using-with, unspecified-encoding
-        open(os.path.join(destdir, "songquotes.new"))
+        open(os.path.join(destdir, "songquotes.new"))  # pylint: disable=consider-using-with, unspecified-encoding
     )  # pylint: disable=consider-using-with, unspecified-encoding
     compare_content(srcdir, destdir, conflict=touchfile)
 

@@ -670,7 +670,7 @@ async def test_getplayingtrack_with_token_and_access_key():
     with aioresponses() as mock_resp:
         # aioresponses matches the exact URL including query parameters
         # Note: order of parameters in URL may vary, so we test the call was made correctly
-        url = "http://localhost:52199/MCWS/v1/Playback/Info?Token=mytoken123&AccessKey=myaccesskey123"
+        url = "http://localhost:52199/MCWS/v1/Playback/Info?Token=mytoken123&AccessKey=myaccesskey123"  # pylint: disable=line-too-long
         mock_resp.get(url, body='<Response Status="OK"></Response>')
 
         await plugin.getplayingtrack()

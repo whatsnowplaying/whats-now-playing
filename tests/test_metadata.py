@@ -772,7 +772,7 @@ async def test_preset_image(get_imagecache, getroot):  # pylint: disable=redefin
         # Valid base64 that decodes to JSON object missing 'key' field
         (
             "eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0=",  # pragma: allowlist secret
-            "eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0=",
+            "eyJhbGdvcml0aG0iOjk0LCJzb3VyY2UiOiJtaXhlZGlua2V5In0=",  # pragma: allowlist secret
         ),  # pragma: allowlist secret
         # Direct JSON without 'key' field
         ('{"algorithm":94,"source":"mixedinkey"}', '{"algorithm":94,"source":"mixedinkey"}'),
