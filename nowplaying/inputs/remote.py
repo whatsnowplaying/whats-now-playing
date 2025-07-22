@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     import nowplaying.config
     from PySide6.QtCore import QSettings
 
+
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     ''' handler for NowPlaying '''
 
@@ -26,8 +27,8 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.displayname = "Remote"
         # Set default path
         default_path = pathlib.Path(
-                QStandardPaths.standardLocations(
-                    QStandardPaths.CacheLocation)[0]).joinpath('remotedb').joinpath("remote.db")
+            QStandardPaths.standardLocations(
+                QStandardPaths.CacheLocation)[0]).joinpath('remotedb').joinpath("remote.db")
 
         # Use configured path if available, otherwise use default
         if self.config and self.config.cparser.value('remote/remotedb'):
