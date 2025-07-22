@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' test virtualdj '''
+"""test virtualdj"""
 
 import pytest
 
@@ -8,7 +8,7 @@ import nowplaying.utils  # pylint: disable=import-error
 
 
 def results(expected, metadata):
-    ''' take a metadata result and compare to expected '''
+    """take a metadata result and compare to expected"""
     for expkey in expected:
         assert expkey in metadata
         assert expected[expkey] == metadata[expkey]
@@ -19,20 +19,20 @@ def results(expected, metadata):
 
 @pytest.mark.asyncio
 async def test_read_collections(bootstrap, getroot):
-    ''' read the collections file '''
+    """read the collections file"""
     config = bootstrap
-    cml = getroot.joinpath('tests', 'playlists', 'traktor', 'collection.nml')
-    config.cparser.setValue('traktor/collections', str(cml))
+    cml = getroot.joinpath("tests", "playlists", "traktor", "collection.nml")
+    config.cparser.setValue("traktor/collections", str(cml))
     traktor = nowplaying.inputs.traktor.Traktor(config=config)
     traktor.initdb()
     plugin = nowplaying.inputs.traktor.Plugin(config=config)
-    track = await plugin.getrandomtrack(playlist='videos')
+    track = await plugin.getrandomtrack(playlist="videos")
     assert track
     data = await traktor.lookup(artist="Divine", title="Shoot Your Shot")
     assert data
-    assert data['artist'] == 'Divine'
-    assert data['title'] == 'Shoot Your Shot'
-    assert data['album'] == 'The Best of Divine'
+    assert data["artist"] == "Divine"
+    assert data["title"] == "Shoot Your Shot"
+    assert data["album"] == "The Best of Divine"
 
 
 # @pytest.mark.asyncio

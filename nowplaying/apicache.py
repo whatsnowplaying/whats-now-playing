@@ -28,11 +28,11 @@ class APIResponseCache:
 
     # Cache TTL settings (in seconds)
     DEFAULT_TTL = {
-        'discogs': 24 * 60 * 60,  # 24 hours for artist info
-        'theaudiodb': 7 * 24 * 60 * 60,  # 7 days for artist bios
-        'fanarttv': 7 * 24 * 60 * 60,  # 7 days for fanart URLs
-        'wikimedia': 24 * 60 * 60,  # 24 hours for wiki info
-        'default': 6 * 60 * 60  # 6 hours default
+        "discogs": 24 * 60 * 60,  # 24 hours for artist info
+        "theaudiodb": 7 * 24 * 60 * 60,  # 7 days for artist bios
+        "fanarttv": 7 * 24 * 60 * 60,  # 7 days for fanart URLs
+        "wikimedia": 24 * 60 * 60,  # 24 hours for wiki info
+        "default": 6 * 60 * 60,  # 6 hours default
     }
 
     CREATE_TABLE_SQL = """
@@ -53,7 +53,7 @@ class APIResponseCache:
     CREATE_INDICES_SQL = [
         "CREATE INDEX IF NOT EXISTS idx_provider_artist ON api_responses(provider, artist_name);",
         "CREATE INDEX IF NOT EXISTS idx_expires_at ON api_responses(expires_at);",
-        "CREATE INDEX IF NOT EXISTS idx_last_accessed ON api_responses(last_accessed);"
+        "CREATE INDEX IF NOT EXISTS idx_last_accessed ON api_responses(last_accessed);",
     ]
 
     def __init__(self, cache_dir: t.Optional[pathlib.Path] = None):
@@ -66,11 +66,11 @@ class APIResponseCache:
             self.cache_dir = pathlib.Path(cache_dir)
         else:
             self.cache_dir = pathlib.Path(
-                QStandardPaths.standardLocations(
-                    QStandardPaths.StandardLocation.CacheLocation)[0]).joinpath('api_cache')
+                QStandardPaths.standardLocations(QStandardPaths.StandardLocation.CacheLocation)[0]
+            ).joinpath("api_cache")
 
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.db_file = self.cache_dir / 'api_responses.db'
+        self.db_file = self.cache_dir / "api_responses.db"
         self._lock = asyncio.Lock()
 
         # Initialize database if needed
@@ -86,10 +86,9 @@ class APIResponseCache:
             logging.debug("API cache database initialized at %s", self.db_file)
 
     @staticmethod
-    def _make_cache_key(provider: str,
-                        artist_name: str,
-                        endpoint: str,
-                        params: t.Optional[dict] = None) -> str:
+    def _make_cache_key(
+        provider: str, artist_name: str, endpoint: str, params: t.Optional[dict] = None
+    ) -> str:
         """Generate a cache key for the request.
 
         Args:
@@ -106,14 +105,14 @@ class APIResponseCache:
 
         # Create deterministic string for hashing
         cache_data = {
-            'provider': provider.lower(),
-            'artist': normalized_artist,
-            'endpoint': endpoint,
-            'params': params or {}
+            "provider": provider.lower(),
+            "artist": normalized_artist,
+            "endpoint": endpoint,
+            "params": params or {},
         }
 
         cache_string = json.dumps(cache_data, sort_keys=True)
-        return hashlib.sha256(cache_string.encode('utf-8')).hexdigest()
+        return hashlib.sha256(cache_string.encode("utf-8")).hexdigest()
 
     @staticmethod
     def _serialize_handler(obj):
@@ -130,7 +129,7 @@ class APIResponseCache:
         """
         if isinstance(obj, bytes):
             # Encode bytes as base64 for proper round-trip serialization
-            return {'__type__': 'bytes', '__data__': base64.b64encode(obj).decode('ascii')}
+            return {"__type__": "bytes", "__data__": base64.b64encode(obj).decode("ascii")}
         if callable(obj):
             # Don't cache functions, methods, lambdas, etc.
             raise TypeError(f"Cannot cache callable object: {type(obj)}")
@@ -150,8 +149,8 @@ class APIResponseCache:
         """
         if isinstance(obj, dict):
             # Check if this is a specially encoded bytes object
-            if obj.get('__type__') == 'bytes' and '__data__' in obj:
-                return base64.b64decode(obj['__data__'])
+            if obj.get("__type__") == "bytes" and "__data__" in obj:
+                return base64.b64decode(obj["__data__"])
             # Recursively process dictionary values
             return {key: APIResponseCache._deserialize_handler(value) for key, value in obj.items()}
         if isinstance(obj, list):
@@ -162,25 +161,35 @@ class APIResponseCache:
 
     @staticmethod
     async def _process_cache_hit(  # pylint: disable=too-many-arguments
-            data: str, provider: str, artist_name: str, endpoint: str, expires_at: int,
-            current_time: int) -> t.Optional[dict]:
+        data: str,
+        provider: str,
+        artist_name: str,
+        endpoint: str,
+        expires_at: int,
+        current_time: int,
+    ) -> t.Optional[dict]:
         """Process a cache hit and return the deserialized data."""
         try:
             cached_data = json.loads(data)
             restored_data = APIResponseCache._deserialize_handler(cached_data)
-            logging.debug("Cache HIT for %s:%s:%s (expires in %ds)", provider, artist_name,
-                          endpoint, expires_at - current_time)
+            logging.debug(
+                "Cache HIT for %s:%s:%s (expires in %ds)",
+                provider,
+                artist_name,
+                endpoint,
+                expires_at - current_time,
+            )
             return restored_data
         except json.JSONDecodeError:
-            logging.warning("Invalid JSON in cache for key %s",
-                            APIResponseCache._make_cache_key(provider, artist_name, endpoint))
+            logging.warning(
+                "Invalid JSON in cache for key %s",
+                APIResponseCache._make_cache_key(provider, artist_name, endpoint),
+            )
             return None
 
-    async def get(self,
-                  provider: str,
-                  artist_name: str,
-                  endpoint: str,
-                  params: t.Optional[dict] = None) -> t.Optional[dict]:
+    async def get(
+        self, provider: str, artist_name: str, endpoint: str, params: t.Optional[dict] = None
+    ) -> t.Optional[dict]:
         """Retrieve cached API response if available and not expired.
 
         Args:
@@ -193,7 +202,7 @@ class APIResponseCache:
             Cached response data or None if not found/expired
         """
         # Ensure database is initialized before operations
-        if hasattr(self, '_init_task'):
+        if hasattr(self, "_init_task"):
             await self._init_task
 
         cache_key = APIResponseCache._make_cache_key(provider, artist_name, endpoint, params)
@@ -204,7 +213,9 @@ class APIResponseCache:
                 async with aiosqlite.connect(self.db_file) as connection:
                     cursor = await connection.execute(
                         "SELECT response_data, expires_at, access_count FROM api_responses "
-                        "WHERE cache_key = ? AND expires_at > ?", (cache_key, current_time))
+                        "WHERE cache_key = ? AND expires_at > ?",
+                        (cache_key, current_time),
+                    )
                     row = await cursor.fetchone()
 
                     if not row:
@@ -216,25 +227,28 @@ class APIResponseCache:
                     # Update access statistics
                     await connection.execute(
                         "UPDATE api_responses SET access_count = ?, last_accessed = ? "
-                        "WHERE cache_key = ?", (access_count + 1, current_time, cache_key))
+                        "WHERE cache_key = ?",
+                        (access_count + 1, current_time, cache_key),
+                    )
                     await connection.commit()
 
-                    return await APIResponseCache._process_cache_hit(data, provider, artist_name,
-                                                                     endpoint, expires_at,
-                                                                     current_time)
+                    return await APIResponseCache._process_cache_hit(
+                        data, provider, artist_name, endpoint, expires_at, current_time
+                    )
 
             except sqlite3.Error as error:
                 logging.error("Database error retrieving cache from %s: %s", self.db_file, error)
                 return None
 
     async def put(  # pylint: disable=too-many-arguments
-            self,
-            provider: str,
-            artist_name: str,
-            endpoint: str,
-            response_data: dict,
-            ttl_seconds: t.Optional[int] = None,
-            params: t.Optional[dict] = None):
+        self,
+        provider: str,
+        artist_name: str,
+        endpoint: str,
+        response_data: dict,
+        ttl_seconds: t.Optional[int] = None,
+        params: t.Optional[dict] = None,
+    ):
         """Store API response in cache.
 
         Args:
@@ -249,21 +263,21 @@ class APIResponseCache:
             return
 
         # Ensure database is initialized before operations
-        if hasattr(self, '_init_task'):
+        if hasattr(self, "_init_task"):
             await self._init_task
 
         cache_key = APIResponseCache._make_cache_key(provider, artist_name, endpoint, params)
         current_time = int(time.time())
 
         if ttl_seconds is None:
-            ttl_seconds = self.DEFAULT_TTL.get(provider.lower(), self.DEFAULT_TTL['default'])
+            ttl_seconds = self.DEFAULT_TTL.get(provider.lower(), self.DEFAULT_TTL["default"])
 
         expires_at = current_time + ttl_seconds
 
         try:
-            response_json = json.dumps(response_data,
-                                       ensure_ascii=False,
-                                       default=APIResponseCache._serialize_handler)
+            response_json = json.dumps(
+                response_data, ensure_ascii=False, default=APIResponseCache._serialize_handler
+            )
         except (TypeError, ValueError) as error:
             logging.warning("Cannot serialize response data for caching: %s", error)
             return
@@ -276,24 +290,35 @@ class APIResponseCache:
                         "(cache_key, provider, artist_name, endpoint, response_data, "
                         "created_at, expires_at, last_accessed) "
                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                        (cache_key, provider.lower(), artist_name.lower().strip(), endpoint,
-                         response_json, current_time, expires_at, current_time))
+                        (
+                            cache_key,
+                            provider.lower(),
+                            artist_name.lower().strip(),
+                            endpoint,
+                            response_json,
+                            current_time,
+                            expires_at,
+                            current_time,
+                        ),
+                    )
                     await connection.commit()
-                    logging.debug("Cached %s:%s:%s (TTL: %ds)", provider, artist_name, endpoint,
-                                  ttl_seconds)
+                    logging.debug(
+                        "Cached %s:%s:%s (TTL: %ds)", provider, artist_name, endpoint, ttl_seconds
+                    )
 
             except sqlite3.Error as error:
                 logging.error("Database error storing cache to %s: %s", self.db_file, error)
 
     @asynccontextmanager
     async def get_or_fetch(  # pylint: disable=too-many-arguments
-            self,
-            provider: str,
-            artist_name: str,
-            endpoint: str,
-            fetch_func: t.Callable[[], t.Awaitable[dict]],
-            ttl_seconds: t.Optional[int] = None,
-            params: t.Optional[dict] = None):
+        self,
+        provider: str,
+        artist_name: str,
+        endpoint: str,
+        fetch_func: t.Callable[[], t.Awaitable[dict]],
+        ttl_seconds: t.Optional[int] = None,
+        params: t.Optional[dict] = None,
+    ):
         """Get from cache or fetch and cache the result.
 
         This is a convenience method that handles the common pattern of
@@ -325,8 +350,9 @@ class APIResponseCache:
                 await self.put(provider, artist_name, endpoint, fresh_data, ttl_seconds, params)
             yield fresh_data
         except (sqlite3.Error, ValueError, TypeError) as error:
-            logging.error("Error fetching data for %s:%s:%s - %s", provider, artist_name, endpoint,
-                          error)
+            logging.error(
+                "Error fetching data for %s:%s:%s - %s", provider, artist_name, endpoint, error
+            )
             yield None
 
     async def cleanup_expired(self) -> int:
@@ -341,7 +367,8 @@ class APIResponseCache:
             try:
                 async with aiosqlite.connect(self.db_file) as connection:
                     cursor = await connection.execute(
-                        "DELETE FROM api_responses WHERE expires_at < ?", (current_time, ))
+                        "DELETE FROM api_responses WHERE expires_at < ?", (current_time,)
+                    )
                     removed_count = cursor.rowcount
                     await connection.commit()
 
@@ -371,14 +398,17 @@ class APIResponseCache:
 
                 # Valid (non-expired) entries
                 cursor = await connection.execute(
-                    "SELECT COUNT(*) FROM api_responses WHERE expires_at > ?", (current_time, ))
+                    "SELECT COUNT(*) FROM api_responses WHERE expires_at > ?", (current_time,)
+                )
                 result = await cursor.fetchone()
                 valid_entries = result[0] if result else 0
 
                 # Entries by provider
                 cursor = await connection.execute(
                     "SELECT provider, COUNT(*) FROM api_responses "
-                    "WHERE expires_at > ? GROUP BY provider", (current_time, ))
+                    "WHERE expires_at > ? GROUP BY provider",
+                    (current_time,),
+                )
                 provider_rows = await cursor.fetchall()
                 by_provider = {row[0]: row[1] for row in provider_rows}
 
@@ -386,16 +416,18 @@ class APIResponseCache:
                 cursor = await connection.execute(
                     "SELECT artist_name, SUM(access_count) as total_accesses "
                     "FROM api_responses WHERE expires_at > ? "
-                    "GROUP BY artist_name ORDER BY total_accesses DESC LIMIT 10", (current_time, ))
+                    "GROUP BY artist_name ORDER BY total_accesses DESC LIMIT 10",
+                    (current_time,),
+                )
                 top_artists = list(await cursor.fetchall())
 
                 return {
-                    'total_entries': total_entries,
-                    'valid_entries': valid_entries,
-                    'expired_entries': total_entries - valid_entries,
-                    'by_provider': by_provider,
-                    'top_artists': top_artists,
-                    'cache_hit_potential': f"{(valid_entries / max(total_entries, 1)) * 100:.1f}%"
+                    "total_entries": total_entries,
+                    "valid_entries": valid_entries,
+                    "expired_entries": total_entries - valid_entries,
+                    "by_provider": by_provider,
+                    "top_artists": top_artists,
+                    "cache_hit_potential": f"{(valid_entries / max(total_entries, 1)) * 100:.1f}%",
                 }
 
         except sqlite3.Error as error:
@@ -413,8 +445,9 @@ class APIResponseCache:
             try:
                 async with aiosqlite.connect(self.db_file) as connection:
                     if provider:
-                        await connection.execute("DELETE FROM api_responses WHERE provider = ?",
-                                                 (provider.lower(), ))
+                        await connection.execute(
+                            "DELETE FROM api_responses WHERE provider = ?", (provider.lower(),)
+                        )
                         logging.info("Cleared cache for provider: %s", provider)
                     else:
                         await connection.execute("DELETE FROM api_responses")
@@ -431,7 +464,7 @@ class APIResponseCache:
         warnings about closed event loops.
         """
         # Cancel the initialization task if it's still running
-        if hasattr(self, '_init_task') and not self._init_task.done():
+        if hasattr(self, "_init_task") and not self._init_task.done():
             self._init_task.cancel()
             try:
                 await self._init_task
@@ -467,8 +500,8 @@ class APIResponseCache:
         if db_file is None:
             # Use same path construction as APIResponseCache.__init__
             cache_dir = pathlib.Path(
-                QStandardPaths.standardLocations(
-                    QStandardPaths.StandardLocation.CacheLocation)[0]).joinpath('api_cache')
+                QStandardPaths.standardLocations(QStandardPaths.StandardLocation.CacheLocation)[0]
+            ).joinpath("api_cache")
             db_file = cache_dir / "api_responses.db"
 
         logging.debug("Checking API cache database at: %s", db_file)
@@ -505,11 +538,13 @@ def set_cache_instance(cache: APIResponseCache):
     _global_cache_instance = cache
 
 
-async def cached_fetch(provider: str,
-                       artist_name: str,
-                       endpoint: str,
-                       fetch_func: t.Callable[[], t.Awaitable[dict]],
-                       ttl_seconds: t.Optional[int] = None) -> t.Optional[dict]:
+async def cached_fetch(
+    provider: str,
+    artist_name: str,
+    endpoint: str,
+    fetch_func: t.Callable[[], t.Awaitable[dict]],
+    ttl_seconds: t.Optional[int] = None,
+) -> t.Optional[dict]:
     """Utility function for manual cache-or-fetch operations.
 
     Args:
@@ -542,6 +577,12 @@ async def cached_fetch(provider: str,
             await cache.put(provider, artist_name, endpoint, fresh_data, ttl_seconds)
         return fresh_data
     except (sqlite3.Error, ValueError, TypeError) as error:
-        logging.error("Error fetching data for %s:%s:%s - %s", provider, artist_name, endpoint,
-                      error, exc_info=True)
+        logging.error(
+            "Error fetching data for %s:%s:%s - %s",
+            provider,
+            artist_name,
+            endpoint,
+            error,
+            exc_info=True,
+        )
         return None

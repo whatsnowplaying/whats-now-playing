@@ -25,8 +25,8 @@ def mock_kick_widget():
     widget.redirecturi_label = MagicMock()
     widget.authenticate_button = MagicMock()
     widget.oauth_status_label = MagicMock()
-    widget.clientid_lineedit.text.return_value = 'test_client'
-    widget.secret_lineedit.text.return_value = 'test_secret'
+    widget.clientid_lineedit.text.return_value = "test_client"
+    widget.secret_lineedit.text.return_value = "test_secret"
     return widget
 
 
@@ -49,11 +49,11 @@ def mock_chat_widget():
 def configured_kick_config(bootstrap):
     """Create a bootstrap config with Kick settings pre-configured."""
     config = bootstrap
-    config.cparser.setValue('kick/enabled', True)
-    config.cparser.setValue('kick/channel', 'testchannel')
-    config.cparser.setValue('kick/clientid', 'test_client_id')
-    config.cparser.setValue('kick/secret', 'test_secret')
-    config.cparser.setValue('kick/redirecturi', 'http://localhost:8080/callback')
+    config.cparser.setValue("kick/enabled", True)
+    config.cparser.setValue("kick/channel", "testchannel")
+    config.cparser.setValue("kick/clientid", "test_client_id")
+    config.cparser.setValue("kick/secret", "test_secret")
+    config.cparser.setValue("kick/redirecturi", "http://localhost:8080/callback")
     return config
 
 
@@ -86,11 +86,12 @@ def test_kick_settings_load(configured_kick_config, mock_kick_widget):
 
     assert settings.widget == mock_kick_widget
     mock_kick_widget.enable_checkbox.setChecked.assert_called_with(True)
-    mock_kick_widget.channel_lineedit.setText.assert_called_with('testchannel')
-    mock_kick_widget.clientid_lineedit.setText.assert_called_with('test_client_id')
-    mock_kick_widget.secret_lineedit.setText.assert_called_with('test_secret')
+    mock_kick_widget.channel_lineedit.setText.assert_called_with("testchannel")
+    mock_kick_widget.clientid_lineedit.setText.assert_called_with("test_client_id")
+    mock_kick_widget.secret_lineedit.setText.assert_called_with("test_secret")
     mock_kick_widget.redirecturi_label.setText.assert_called_with(
-        'http://localhost:8899/kickredirect')
+        "http://localhost:8899/kickredirect"
+    )
     assert isinstance(settings.oauth, nowplaying.kick.oauth2.KickOAuth2)
 
 
@@ -101,24 +102,27 @@ def test_kick_settings_load_default_redirect_uri(bootstrap, mock_kick_widget):
     settings.load(bootstrap, mock_kick_widget)
 
     mock_kick_widget.redirecturi_label.setText.assert_called_with(
-        'http://localhost:8899/kickredirect')
+        "http://localhost:8899/kickredirect"
+    )
 
 
 @pytest.mark.parametrize(
     "webserver_port,expected_redirect_uri",
     [
-        ('8080', 'http://localhost:8080/kickredirect'),
-        ('3000', 'http://localhost:3000/kickredirect'),
-        ('9999', 'http://localhost:9999/kickredirect'),
-        ('80', 'http://localhost:80/kickredirect'),
-        (None, 'http://localhost:8899/kickredirect'),  # None defaults to 8899
-    ])
-def test_kick_settings_load_non_default_webserver_ports(bootstrap, mock_kick_widget, webserver_port,
-                                                        expected_redirect_uri):
+        ("8080", "http://localhost:8080/kickredirect"),
+        ("3000", "http://localhost:3000/kickredirect"),
+        ("9999", "http://localhost:9999/kickredirect"),
+        ("80", "http://localhost:80/kickredirect"),
+        (None, "http://localhost:8899/kickredirect"),  # None defaults to 8899
+    ],
+)
+def test_kick_settings_load_non_default_webserver_ports(
+    bootstrap, mock_kick_widget, webserver_port, expected_redirect_uri
+):
     """Test settings loading with non-default webserver ports to verify redirect URI logic."""
     config = bootstrap
     if webserver_port is not None:
-        config.cparser.setValue('weboutput/httpport', webserver_port)
+        config.cparser.setValue("weboutput/httpport", webserver_port)
 
     settings = nowplaying.kick.settings.KickSettings()
     settings.load(config, mock_kick_widget)
@@ -131,34 +135,35 @@ def test_kick_settings_load_non_default_webserver_ports(bootstrap, mock_kick_wid
     [
         (False, False),  # No changes - no restart
         (True, True),  # Changes - restart kickbot
-    ])
+    ],
+)
 def test_kick_settings_save_scenarios(bootstrap, mock_kick_widget, has_changes, should_restart):
     """Test settings saving with and without changes."""
     config = bootstrap
     if not has_changes:
         # Set initial values that match widget values
-        config.cparser.setValue('kick/channel', 'testchannel')
-        config.cparser.setValue('kick/clientid', 'testclient')
-        config.cparser.setValue('kick/secret', 'testsecret')
-        config.cparser.setValue('kick/redirecturi', 'testuri')
+        config.cparser.setValue("kick/channel", "testchannel")
+        config.cparser.setValue("kick/clientid", "testclient")
+        config.cparser.setValue("kick/secret", "testsecret")
+        config.cparser.setValue("kick/redirecturi", "testuri")
     else:
         # Set different initial values
-        config.cparser.setValue('kick/channel', 'oldchannel')
-        config.cparser.setValue('kick/clientid', 'oldclient')
-        config.cparser.setValue('kick/secret', 'oldsecret')
-        config.cparser.setValue('kick/redirecturi', 'olduri')
-        config.cparser.setValue('kick/accesstoken', 'old_token')
-        config.cparser.setValue('kick/refreshtoken', 'old_refresh')
+        config.cparser.setValue("kick/channel", "oldchannel")
+        config.cparser.setValue("kick/clientid", "oldclient")
+        config.cparser.setValue("kick/secret", "oldsecret")
+        config.cparser.setValue("kick/redirecturi", "olduri")
+        config.cparser.setValue("kick/accesstoken", "old_token")
+        config.cparser.setValue("kick/refreshtoken", "old_refresh")
 
     # Setup widget return values
     mock_kick_widget.enable_checkbox.isChecked.return_value = True
-    mock_kick_widget.channel_lineedit.text.return_value = 'testchannel'
-    mock_kick_widget.clientid_lineedit.text.return_value = 'testclient'
-    mock_kick_widget.secret_lineedit.text.return_value = 'testsecret'
+    mock_kick_widget.channel_lineedit.text.return_value = "testchannel"
+    mock_kick_widget.clientid_lineedit.text.return_value = "testclient"
+    mock_kick_widget.secret_lineedit.text.return_value = "testsecret"
 
     mock_subprocesses = MagicMock()
 
-    with patch('nowplaying.kick.settings.QTimer.singleShot') as mock_timer:
+    with patch("nowplaying.kick.settings.QTimer.singleShot") as mock_timer:
         # Configure the mock to immediately call the callback
         mock_timer.side_effect = lambda delay, callback: callback()
         nowplaying.kick.settings.KickSettings.save(config, mock_kick_widget, mock_subprocesses)
@@ -167,8 +172,8 @@ def test_kick_settings_save_scenarios(bootstrap, mock_kick_widget, has_changes, 
         mock_subprocesses.stop_kickbot.assert_called_once()
         mock_subprocesses.start_kickbot.assert_called_once()
         # Tokens should be cleared
-        assert config.cparser.value('kick/accesstoken') is None
-        assert config.cparser.value('kick/refreshtoken') is None
+        assert config.cparser.value("kick/accesstoken") is None
+        assert config.cparser.value("kick/refreshtoken") is None
     else:
         mock_subprocesses.stop_kickbot.assert_not_called()
         mock_subprocesses.start_kickbot.assert_not_called()
@@ -178,12 +183,13 @@ def test_kick_settings_save_scenarios(bootstrap, mock_kick_widget, has_changes, 
 @pytest.mark.parametrize(
     "enabled,client_id,secret,channel,expected_error",
     [
-        (False, '', '', '', None),  # Disabled - no validation
-        (True, '', 'secret', 'channel', 'Kick Client ID is required'),
-        (True, 'client', '', 'channel', 'Kick Client Secret is required'),
-        (True, 'client', 'secret', '', 'Kick Channel is required'),
-        (True, 'client', 'secret', 'channel', None),  # Valid
-    ])
+        (False, "", "", "", None),  # Disabled - no validation
+        (True, "", "secret", "channel", "Kick Client ID is required"),
+        (True, "client", "", "channel", "Kick Client Secret is required"),
+        (True, "client", "secret", "", "Kick Channel is required"),
+        (True, "client", "secret", "channel", None),  # Valid
+    ],
+)
 def test_kick_settings_verify_scenarios(enabled, client_id, secret, channel, expected_error):
     """Test verification with various input combinations."""
     mock_widget = MagicMock()
@@ -218,12 +224,14 @@ def test_kick_settings_authenticate_oauth(bootstrap, mock_kick_widget):
     "has_oauth,has_tokens,token_valid,expected_status",
     [
         (False, False, False, None),  # No OAuth - should not crash
-        (True, False, False, 'Not authenticated'),  # No tokens
-        (True, True, True, 'called'),  # Valid token - status will be set
-        (True, True, False, 'called'),  # Invalid token - status will be set
-    ])
-def test_kick_settings_update_oauth_status_scenarios(bootstrap, mock_kick_widget, has_oauth,
-                                                     has_tokens, token_valid, expected_status):
+        (True, False, False, "Not authenticated"),  # No tokens
+        (True, True, True, "called"),  # Valid token - status will be set
+        (True, True, False, "called"),  # Invalid token - status will be set
+    ],
+)
+def test_kick_settings_update_oauth_status_scenarios(
+    bootstrap, mock_kick_widget, has_oauth, has_tokens, token_valid, expected_status
+):
     """Test OAuth status update with various scenarios."""
     settings = nowplaying.kick.settings.KickSettings()
     settings.widget = mock_kick_widget
@@ -231,20 +239,21 @@ def test_kick_settings_update_oauth_status_scenarios(bootstrap, mock_kick_widget
     if has_oauth:
         mock_oauth = MagicMock()
         if has_tokens:
-            mock_oauth.get_stored_tokens.return_value = ('valid_token', 'refresh_token')
+            mock_oauth.get_stored_tokens.return_value = ("valid_token", "refresh_token")
         else:
             mock_oauth.get_stored_tokens.return_value = (None, None)
         settings.oauth = mock_oauth
-        with patch('nowplaying.kick.oauth2.KickOAuth2.validate_token_sync',
-                   return_value=token_valid):
+        with patch(
+            "nowplaying.kick.oauth2.KickOAuth2.validate_token_sync", return_value=token_valid
+        ):
             settings.update_oauth_status()
     else:
         settings.oauth = None
         settings.update_oauth_status()
 
-    if expected_status == 'Not authenticated':
-        mock_kick_widget.oauth_status_label.setText.assert_called_with('Not authenticated')
-    elif expected_status == 'called':
+    if expected_status == "Not authenticated":
+        mock_kick_widget.oauth_status_label.setText.assert_called_with("Not authenticated")
+    elif expected_status == "called":
         assert mock_kick_widget.oauth_status_label.setText.called
 
 
@@ -252,34 +261,26 @@ def test_kick_settings_update_oauth_status_scenarios(bootstrap, mock_kick_widget
 @pytest.mark.parametrize(
     "status_code,response_data,exception_type,expected_result",
     [
-        (200, {
-            'data': {
-                'active': True,
-                'client_id': 'test_client'
-            }
-        }, None, True),
-        (200, {
-            'data': {
-                'active': False
-            }
-        }, None, False),
+        (200, {"data": {"active": True, "client_id": "test_client"}}, None, True),
+        (200, {"data": {"active": False}}, None, False),
         (401, {}, None, False),
         (500, {}, None, False),
         (200, {}, requests.RequestException, False),  # Network error
         (200, {}, ValueError, False),  # JSON parsing error
-    ])
+    ],
+)
 def test_validate_token_sync_scenarios(status_code, response_data, exception_type, expected_result):
     """Test sync token validation with various responses."""
     if exception_type:
-        with patch('requests.post', side_effect=exception_type("Test error")):
-            result = nowplaying.kick.oauth2.KickOAuth2.validate_token_sync('test_token')
+        with patch("requests.post", side_effect=exception_type("Test error")):
+            result = nowplaying.kick.oauth2.KickOAuth2.validate_token_sync("test_token")
     else:
         mock_response = MagicMock()
         mock_response.status_code = status_code
         mock_response.json.return_value = response_data
 
-        with patch('requests.post', return_value=mock_response):
-            result = nowplaying.kick.oauth2.KickOAuth2.validate_token_sync('test_token')
+        with patch("requests.post", return_value=mock_response):
+            result = nowplaying.kick.oauth2.KickOAuth2.validate_token_sync("test_token")
 
     assert result == expected_result
 
@@ -305,7 +306,12 @@ def test_kick_chat_settings_init():
 
     assert settings.widget is None
     assert settings.KICKBOT_CHECKBOXES == [
-        'anyone', 'broadcaster', 'moderator', 'subscriber', 'founder', 'vip'
+        "anyone",
+        "broadcaster",
+        "moderator",
+        "subscriber",
+        "founder",
+        "vip",
     ]
 
 
@@ -332,48 +338,49 @@ def test_kick_chat_settings_connect_scenarios(mock_chat_widget, has_buttons):
         mock_chat_widget.del_button.clicked.connect.assert_called_once()
 
 
-@pytest.mark.parametrize("delay_field_type", ['spin', 'lineedit'])
+@pytest.mark.parametrize("delay_field_type", ["spin", "lineedit"])
 def test_kick_chat_settings_load_delay_field_types(bootstrap, mock_chat_widget, delay_field_type):
     """Test loading with different delay field types."""
     config = bootstrap
-    config.cparser.setValue('kick/chat', True)
-    config.cparser.setValue('kick/announce', 'test_template.txt')
-    config.cparser.setValue('kick/announcedelay', 2.5)
+    config.cparser.setValue("kick/chat", True)
+    config.cparser.setValue("kick/announce", "test_template.txt")
+    config.cparser.setValue("kick/announcedelay", 2.5)
 
     settings = nowplaying.kick.settings.KickChatSettings()
 
     # Setup delay field based on type
-    if delay_field_type == 'spin':
+    if delay_field_type == "spin":
         mock_chat_widget.announcedelay_spin = MagicMock()
-        delattr(mock_chat_widget, 'announce_delay_lineedit')
+        delattr(mock_chat_widget, "announce_delay_lineedit")
     else:
         mock_chat_widget.announce_delay_lineedit = MagicMock()
-        delattr(mock_chat_widget, 'announcedelay_spin')
+        delattr(mock_chat_widget, "announcedelay_spin")
 
     settings.load(config, mock_chat_widget)
 
     assert settings.widget == mock_chat_widget
     mock_chat_widget.enable_checkbox.setChecked.assert_called_with(True)
-    mock_chat_widget.announce_lineedit.setText.assert_called_with('test_template.txt')
+    mock_chat_widget.announce_lineedit.setText.assert_called_with("test_template.txt")
 
-    if delay_field_type == 'spin':
+    if delay_field_type == "spin":
         mock_chat_widget.announcedelay_spin.setValue.assert_called_with(2.5)
     else:
-        mock_chat_widget.announce_delay_lineedit.setText.assert_called_with('2.5')
+        mock_chat_widget.announce_delay_lineedit.setText.assert_called_with("2.5")
 
 
-@patch('nowplaying.kick.settings.QCheckBox')
-@patch('nowplaying.kick.settings.QTableWidgetItem')
-def test_kick_chat_settings_load_with_command_table(mock_table_widget_item, mock_qcheckbox,
-                                                    bootstrap, mock_chat_widget):
+@patch("nowplaying.kick.settings.QCheckBox")
+@patch("nowplaying.kick.settings.QTableWidgetItem")
+def test_kick_chat_settings_load_with_command_table(
+    mock_table_widget_item, mock_qcheckbox, bootstrap, mock_chat_widget
+):
     """Test loading with command permission table."""
     config = bootstrap
 
     # Create test command configuration
-    config.cparser.beginGroup('kickbot-command-track')
-    config.cparser.setValue('anyone', True)
-    config.cparser.setValue('broadcaster', True)
-    config.cparser.setValue('moderator', False)
+    config.cparser.beginGroup("kickbot-command-track")
+    config.cparser.setValue("anyone", True)
+    config.cparser.setValue("broadcaster", True)
+    config.cparser.setValue("moderator", False)
     config.cparser.endGroup()
 
     settings = nowplaying.kick.settings.KickChatSettings()
@@ -391,30 +398,32 @@ def test_kick_chat_settings_load_with_command_table(mock_table_widget_item, mock
 @pytest.mark.parametrize(
     "delay_field_type,delay_value,expected_delay",
     [
-        ('spin', 2.5, 2.5),
-        ('lineedit', '1.5', 1.5),
-        ('lineedit', 'invalid', 1.0),  # Invalid value defaults to 1.0
-    ])
-def test_kick_chat_settings_save_delay_scenarios(bootstrap, mock_chat_widget, delay_field_type,
-                                                 delay_value, expected_delay):
+        ("spin", 2.5, 2.5),
+        ("lineedit", "1.5", 1.5),
+        ("lineedit", "invalid", 1.0),  # Invalid value defaults to 1.0
+    ],
+)
+def test_kick_chat_settings_save_delay_scenarios(
+    bootstrap, mock_chat_widget, delay_field_type, delay_value, expected_delay
+):
     """Test saving with different delay field types and values."""
     config = bootstrap
     mock_chat_widget.enable_checkbox.isChecked.return_value = False
-    mock_chat_widget.announce_lineedit.text.return_value = ''
+    mock_chat_widget.announce_lineedit.text.return_value = ""
 
     # Setup delay field based on type
-    if delay_field_type == 'spin':
+    if delay_field_type == "spin":
         mock_chat_widget.announcedelay_spin.value.return_value = delay_value
-        delattr(mock_chat_widget, 'announce_delay_lineedit')
+        delattr(mock_chat_widget, "announce_delay_lineedit")
     else:
         mock_chat_widget.announce_delay_lineedit.text.return_value = delay_value
-        delattr(mock_chat_widget, 'announcedelay_spin')
+        delattr(mock_chat_widget, "announcedelay_spin")
 
     mock_subprocesses = MagicMock()
 
     nowplaying.kick.settings.KickChatSettings.save(config, mock_chat_widget, mock_subprocesses)
 
-    assert config.cparser.value('kick/announcedelay', type=float) == expected_delay
+    assert config.cparser.value("kick/announcedelay", type=float) == expected_delay
 
 
 def test_kick_chat_settings_save_kickbot_commands(bootstrap, mock_chat_widget):
@@ -422,15 +431,15 @@ def test_kick_chat_settings_save_kickbot_commands(bootstrap, mock_chat_widget):
     config = bootstrap
 
     # Create existing command to be removed
-    config.cparser.beginGroup('kickbot-command-oldcommand')
-    config.cparser.setValue('anyone', True)
+    config.cparser.beginGroup("kickbot-command-oldcommand")
+    config.cparser.setValue("anyone", True)
     config.cparser.endGroup()
 
     mock_chat_widget.command_perm_table.rowCount.return_value = 1
 
     # Mock table item
     mock_item = MagicMock()
-    mock_item.text.return_value = '!newcommand'
+    mock_item.text.return_value = "!newcommand"
     mock_chat_widget.command_perm_table.item.return_value = mock_item
 
     # Mock checkboxes
@@ -441,11 +450,11 @@ def test_kick_chat_settings_save_kickbot_commands(bootstrap, mock_chat_widget):
     nowplaying.kick.settings.KickChatSettings._save_kickbot_commands(config, mock_chat_widget)
 
     # Old command should be removed
-    assert 'kickbot-command-oldcommand' not in config.cparser.childGroups()
+    assert "kickbot-command-oldcommand" not in config.cparser.childGroups()
 
     # New command should be saved
-    config.cparser.beginGroup('kickbot-command-newcommand')
-    assert config.cparser.value('anyone', type=bool)
+    config.cparser.beginGroup("kickbot-command-newcommand")
+    assert config.cparser.value("anyone", type=bool)
     config.cparser.endGroup()
 
 
@@ -453,10 +462,11 @@ def test_kick_chat_settings_save_kickbot_commands(bootstrap, mock_chat_widget):
 @pytest.mark.parametrize(
     "enabled,template_path,expected_error",
     [
-        (False, '', None),  # Disabled - no validation
-        (True, '', 'Kick announcement template is required'),
-        (True, 'template.txt', None),  # Valid
-    ])
+        (False, "", None),  # Disabled - no validation
+        (True, "", "Kick announcement template is required"),
+        (True, "template.txt", None),  # Valid
+    ],
+)
 def test_kick_chat_settings_verify_scenarios(enabled, template_path, expected_error):
     """Test verification with various input combinations."""
     mock_widget = MagicMock()
@@ -476,22 +486,24 @@ def test_kick_chat_settings_verify_scenarios(enabled, template_path, expected_er
         (False, False),  # No template directory
         (True, False),  # Template directory but no kickbot templates
         (True, True),  # Template directory with kickbot templates
-    ])
-def test_kick_chat_settings_update_kickbot_commands_scenarios(bootstrap, template_dir_exists,
-                                                              has_templates):
+    ],
+)
+def test_kick_chat_settings_update_kickbot_commands_scenarios(
+    bootstrap, template_dir_exists, has_templates
+):
     """Test command update with various template directory scenarios."""
     config = bootstrap
 
     if not template_dir_exists:
         # Set non-existent template directory
-        config.templatedir = pathlib.Path('/non/existent/path')
+        config.templatedir = pathlib.Path("/non/existent/path")
     elif has_templates:
         # Create test template files in test directory
-        test_template_dir = config.testdir / 'templates'
+        test_template_dir = config.testdir / "templates"
         config.templatedir = test_template_dir
         test_template_dir.mkdir(parents=True, exist_ok=True)
-        (test_template_dir / 'kickbot_track.txt').write_text('Template content')
-        (test_template_dir / 'kickbot_artist.txt').write_text('Template content')
+        (test_template_dir / "kickbot_track.txt").write_text("Template content")
+        (test_template_dir / "kickbot_artist.txt").write_text("Template content")
 
     settings = nowplaying.kick.settings.KickChatSettings()
 
@@ -500,11 +512,11 @@ def test_kick_chat_settings_update_kickbot_commands_scenarios(bootstrap, templat
 
     if template_dir_exists and has_templates:
         # Should create command entries
-        assert 'kickbot-command-track' in config.cparser.childGroups()
-        assert 'kickbot-command-artist' in config.cparser.childGroups()
+        assert "kickbot-command-track" in config.cparser.childGroups()
+        assert "kickbot-command-artist" in config.cparser.childGroups()
 
         # Verify default permissions (all disabled)
-        config.cparser.beginGroup('kickbot-command-track')
+        config.cparser.beginGroup("kickbot-command-track")
         for checkbox_type in settings.KICKBOT_CHECKBOXES:
             assert not config.cparser.value(checkbox_type, type=bool)
         config.cparser.endGroup()
@@ -515,35 +527,35 @@ def test_kick_chat_settings_update_kickbot_commands_existing_command(bootstrap):
     config = bootstrap
 
     # Create existing command
-    config.cparser.beginGroup('kickbot-command-track')
-    config.cparser.setValue('anyone', True)
+    config.cparser.beginGroup("kickbot-command-track")
+    config.cparser.setValue("anyone", True)
     config.cparser.endGroup()
 
     # Create template file in test directory
-    test_template_dir = config.testdir / 'templates'
+    test_template_dir = config.testdir / "templates"
     config.templatedir = test_template_dir
     test_template_dir.mkdir(parents=True, exist_ok=True)
-    (test_template_dir / 'kickbot_track.txt').write_text('Template content')
+    (test_template_dir / "kickbot_track.txt").write_text("Template content")
 
     settings = nowplaying.kick.settings.KickChatSettings()
 
     settings.update_kickbot_commands(config)
 
     # Existing command should not be overwritten
-    config.cparser.beginGroup('kickbot-command-track')
-    assert config.cparser.value('anyone', type=bool) is True
+    config.cparser.beginGroup("kickbot-command-track")
+    assert config.cparser.value("anyone", type=bool) is True
     config.cparser.endGroup()
 
 
-@patch('nowplaying.kick.settings.QCheckBox')
-@patch('nowplaying.kick.settings.QTableWidgetItem')
+@patch("nowplaying.kick.settings.QCheckBox")
+@patch("nowplaying.kick.settings.QTableWidgetItem")
 def test_kick_chat_settings_add_kickbot_command_row(mock_table_widget_item, mock_qcheckbox):
     """Test adding a command row to the table."""
     mock_widget = MagicMock()
     mock_widget.command_perm_table.rowCount.return_value = 0
 
     settings = nowplaying.kick.settings.KickChatSettings()
-    settings._add_kickbot_command_row(mock_widget, '!test')
+    settings._add_kickbot_command_row(mock_widget, "!test")
 
     mock_widget.command_perm_table.insertRow.assert_called_with(0)
     mock_widget.command_perm_table.setItem.assert_called_once()

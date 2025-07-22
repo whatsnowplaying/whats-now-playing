@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-''' system tray '''
+"""system tray"""
 
 import logging
 import sqlite3
 
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
-    QApplication, QErrorMessage, QMenu, QMessageBox, QSystemTrayIcon)
+    QApplication,
+    QErrorMessage,
+    QMenu,
+    QMessageBox,
+    QSystemTrayIcon,
+)
 from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module
 from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=no-name-in-module
 
@@ -18,13 +23,13 @@ import nowplaying.subprocesses
 import nowplaying.twitch.chat
 import nowplaying.trackrequests
 
-LASTANNOUNCED: dict[str, str | None] = {'artist': None, 'title': None}
+LASTANNOUNCED: dict[str, str | None] = {"artist": None, "title": None}
 
 
 class Tray:  # pylint: disable=too-many-instance-attributes
-    ''' System Tray object '''
+    """System Tray object"""
 
-    def __init__(self, startup_window: 'nowplaying.startup.StartupWindow | None' = None) -> None:
+    def __init__(self, startup_window: "nowplaying.startup.StartupWindow | None" = None) -> None:
         self.startup_window = startup_window
 
         # Initialize attributes that will be set later
@@ -71,13 +76,13 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         """Setup the about window and action."""
         self._update_startup_progress("Loading about window...")
 
-        self.aboutwindow = nowplaying.settingsui.load_widget_ui(self.config, 'about')
+        self.aboutwindow = nowplaying.settingsui.load_widget_ui(self.config, "about")
         if not self.aboutwindow:
-            self._show_installation_error('about_ui.ui')
+            self._show_installation_error("about_ui.ui")
             return
 
         nowplaying.settingsui.about_version_text(self.config, self.aboutwindow)
-        self.about_action = QAction('About What\'s Now Playing')
+        self.about_action = QAction("About What's Now Playing")
         self.menu.addAction(self.about_action)
         self.about_action.setEnabled(True)
         self.about_action.triggered.connect(self.aboutwindow.show)
@@ -98,7 +103,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self)
         except (RuntimeError, OSError, ImportError) as error:
             logging.error("Failed to create settings window: %s", error, exc_info=True)
-            self._show_installation_error('settings UI files')
+            self._show_installation_error("settings UI files")
             self.settingswindow = None
 
     def _setup_tray_menu(self) -> None:
@@ -108,15 +113,15 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.settings_action.triggered.connect(self.settingswindow.show)
         self.menu.addAction(self.settings_action)
 
-        self.request_action = QAction('Requests')
+        self.request_action = QAction("Requests")
         self.request_action.triggered.connect(self._requestswindow)
         self.request_action.setEnabled(True)
         self.menu.addAction(self.request_action)
         self.menu.addSeparator()
 
         # Mix mode actions
-        self.action_newestmode = QAction('Newest')
-        self.action_oldestmode = QAction('Oldest')
+        self.action_newestmode = QAction("Newest")
+        self.action_oldestmode = QAction("Oldest")
         self.mixmode_actiongroup = QActionGroup(self.tray)
         self._configure_newold_menu()
         self.menu.addSeparator()
@@ -143,7 +148,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         # Final UI setup
         self._update_startup_progress("Finalizing setup...")
-        self.action_pause.setText('Pause')
+        self.action_pause.setText("Pause")
         self.action_pause.setEnabled(True)
         self.fix_mixmode_menu()
 
@@ -186,10 +191,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     @staticmethod
     def _show_installation_error(ui_file: str) -> None:
-        ''' Show error dialog for corrupt installation '''
+        """Show error dialog for corrupt installation"""
         msgbox = QErrorMessage()
-        msgbox.showMessage(f'Critical error: Failed to load {ui_file}. '
-                           'Installation appears corrupt. Please reinstall the application.')
+        msgbox.showMessage(
+            f"Critical error: Failed to load {ui_file}. "
+            "Installation appears corrupt. Please reinstall the application."
+        )
         msgbox.show()
         msgbox.exec()
         # Exit the application since we cannot continue without UI files
@@ -198,7 +205,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             app.exit(1)
 
     def _vacuum_databases_on_startup(self) -> None:
-        ''' Vacuum databases on startup to reclaim space from previous session '''
+        """Vacuum databases on startup to reclaim space from previous session"""
         logging.debug("Starting database vacuum operations on startup")
 
         # Vacuum API cache database
@@ -212,7 +219,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         # Vacuum requests database (will be created later, so check if available)
         try:
-            if hasattr(self, 'requestswindow') and self.requestswindow:
+            if hasattr(self, "requestswindow") and self.requestswindow:
                 self.requestswindow.vacuum_database()
                 logging.debug("Requests database vacuumed successfully")
         except (sqlite3.Error, AttributeError) as error:
@@ -221,7 +228,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         logging.debug("Database vacuum operations completed")
 
     def _requestswindow(self) -> None:
-        if self.config.cparser.value('settings/requests', type=bool) and self.requestswindow:
+        if self.config.cparser.value("settings/requests", type=bool) and self.requestswindow:
             self.requestswindow.raise_window()
 
     def _configure_newold_menu(self) -> None:
@@ -242,50 +249,50 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.action_pause.setEnabled(False)
 
     def webenable(self, status: bool) -> None:
-        ''' If the web server gets in trouble, we need to tell the user '''
+        """If the web server gets in trouble, we need to tell the user"""
         if not status:
             self.settingswindow.disable_web()
             self.settingswindow.show()
             self.pause()
 
     def obswsenable(self, status: bool) -> None:
-        ''' If the OBS WebSocket gets in trouble, we need to tell the user '''
+        """If the OBS WebSocket gets in trouble, we need to tell the user"""
         if not status:
             self.settingswindow.disable_obsws()
             self.settingswindow.show()
             self.pause()
 
     def unpause(self) -> None:
-        ''' unpause polling '''
+        """unpause polling"""
         self.config.unpause()
-        self.action_pause.setText('Pause')
+        self.action_pause.setText("Pause")
         self.action_pause.triggered.connect(self.pause)
 
     def pause(self) -> None:
-        ''' pause polling '''
+        """pause polling"""
         self.config.pause()
-        self.action_pause.setText('Resume')
+        self.action_pause.setText("Resume")
         self.action_pause.triggered.connect(self.unpause)
 
     def fix_mixmode_menu(self) -> None:
-        ''' update the mixmode based upon current rules '''
-        plugins = self.config.cparser.value('settings/input', defaultValue=None)
+        """update the mixmode based upon current rules"""
+        plugins = self.config.cparser.value("settings/input", defaultValue=None)
         if not plugins:
             return
 
         validmixmodes = self.config.validmixmodes()
 
-        if 'oldest' in validmixmodes:
+        if "oldest" in validmixmodes:
             self.action_oldestmode.setEnabled(True)
         else:
             self.action_oldestmode.setEnabled(False)
 
-        if 'newest' in validmixmodes:
+        if "newest" in validmixmodes:
             self.action_newestmode.setEnabled(True)
         else:
             self.action_newestmode.setEnabled(False)
 
-        if self.config.getmixmode() == 'newest':
+        if self.config.getmixmode() == "newest":
             self.action_newestmode.setChecked(True)
             self.action_oldestmode.setChecked(False)
         else:
@@ -293,17 +300,17 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self.action_newestmode.setChecked(False)
 
     def oldestmixmode(self) -> None:
-        ''' enable active mixing '''
-        self.config.setmixmode('oldest')
+        """enable active mixing"""
+        self.config.setmixmode("oldest")
         self.fix_mixmode_menu()
 
     def newestmixmode(self) -> None:
-        ''' enable passive mixing '''
-        self.config.setmixmode('newest')
+        """enable passive mixing"""
+        self.config.setmixmode("newest")
         self.fix_mixmode_menu()
 
     def tracknotify(self) -> None:
-        ''' signal handler to update the tooltip '''
+        """signal handler to update the tooltip"""
         global LASTANNOUNCED  # pylint: disable=global-statement, global-variable-not-assigned
 
         self.config.get()
@@ -314,29 +321,28 @@ class Tray:  # pylint: disable=too-many-instance-attributes
                 return
 
             # don't announce empty content
-            artist = metadata.get('artist', '')
-            title = metadata.get('title', '')
+            artist = metadata.get("artist", "")
+            title = metadata.get("title", "")
 
             if not artist and not title:
-                logging.warning('Both artist and title are empty; skipping notify')
+                logging.warning("Both artist and title are empty; skipping notify")
                 return
 
-            if artist == LASTANNOUNCED['artist'] and \
-               title == LASTANNOUNCED['title']:
+            if artist == LASTANNOUNCED["artist"] and title == LASTANNOUNCED["title"]:
                 return
 
-            LASTANNOUNCED['artist'] = artist
-            LASTANNOUNCED['title'] = title
+            LASTANNOUNCED["artist"] = artist
+            LASTANNOUNCED["title"] = title
 
-            tip = f'{artist} - {title}'
+            tip = f"{artist} - {title}"
             self.tray.setIcon(self.icon)
-            self.tray.showMessage('Now Playing ▶ ', tip, icon=QSystemTrayIcon.MessageIcon.NoIcon)
+            self.tray.showMessage("Now Playing ▶ ", tip, icon=QSystemTrayIcon.MessageIcon.NoIcon)
             self.tray.show()
 
     def exit_everything(self) -> None:
-        ''' quit app and cleanup '''
+        """quit app and cleanup"""
 
-        logging.debug('Starting shutdown')
+        logging.debug("Starting shutdown")
         if self.requestswindow:
             self.requestswindow.close_window()
 
@@ -354,7 +360,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # Database vacuum operations moved to startup for better performance
 
     def fresh_start_quit(self) -> None:
-        ''' wipe the current config '''
+        """wipe the current config"""
         self.exit_everything()
         self.config.initialized = False
         self.config.cparser.sync()
@@ -365,7 +371,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self._exit_app()
 
     def cleanquit(self) -> None:
-        ''' quit app and cleanup '''
+        """quit app and cleanup"""
 
         self.exit_everything()
         self.config.get()
@@ -376,45 +382,48 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self._exit_app()
 
     def _exit_app(self) -> None:
-        ''' actually exit '''
+        """actually exit"""
         app = QApplication.instance()
-        logging.info('shutting qapp down v%s', self.config.version)
+        logging.info("shutting qapp down v%s", self.config.version)
         if app:
             app.exit(0)
 
     def installer(self) -> None:
-        ''' make some guesses as to what the user needs '''
-        plugin: str | None = self.config.cparser.value('settings/input', defaultValue=None)
+        """make some guesses as to what the user needs"""
+        plugin: str | None = self.config.cparser.value("settings/input", defaultValue=None)
         if plugin and not self.config.validate_source(plugin):
-            self.config.cparser.remove('settings/input')
+            self.config.cparser.remove("settings/input")
             msgbox = QErrorMessage()
-            msgbox.showMessage(f'Configured source {plugin} is not supported. Reconfiguring.')
+            msgbox.showMessage(f"Configured source {plugin} is not supported. Reconfiguring.")
             msgbox.show()
             msgbox.exec()
         elif not plugin:
             msgbox = QMessageBox()
-            msgbox.setText('New installation! Thanks! '
-                           'Determining setup. This operation may take a bit!')
+            msgbox.setText(
+                "New installation! Thanks! Determining setup. This operation may take a bit!"
+            )
             msgbox.show()
             msgbox.exec()
         else:
             return
 
-        plugins = self.config.pluginobjs['inputs']
+        plugins = self.config.pluginobjs["inputs"]
 
         for plugin in plugins:
             if plugins[plugin].install():
-                self.config.cparser.setValue('settings/input', plugin.split('.')[-1])
+                self.config.cparser.setValue("settings/input", plugin.split(".")[-1])
                 break
 
         twitchchatsettings = nowplaying.twitch.chat.TwitchChatSettings()
         twitchchatsettings.update_twitchbot_commands(self.config)
 
         msgbox = QMessageBox()
-        msgbox.setText('Basic configuration hopefully in place. '
-                       'Bringing up the Settings windows. '
-                       ' Please check the Source is correct for'
-                       ' your DJ software.')
+        msgbox.setText(
+            "Basic configuration hopefully in place. "
+            "Bringing up the Settings windows. "
+            " Please check the Source is correct for"
+            " your DJ software."
+        )
         msgbox.show()
         msgbox.exec()
 

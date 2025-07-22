@@ -8,55 +8,53 @@ from pathlib import Path
 import pytest
 
 # Add project root to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
 @pytest.fixture(scope="session")
 def audio_test_config():
     """Configuration for audio metadata tests."""
     return {
-        'libraries': ['tinytag'],
-        'formats': ['.mp3', '.flac', '.m4a', '.aiff'],
-        'test_categories': ['basic', 'complex', 'multi_value', 'multi_image'],
-        'stable_test_timeout': 10.0,  # seconds
-        'performance_test_iterations': 10
+        "libraries": ["tinytag"],
+        "formats": [".mp3", ".flac", ".m4a", ".aiff"],
+        "test_categories": ["basic", "complex", "multi_value", "multi_image"],
+        "stable_test_timeout": 10.0,  # seconds
+        "performance_test_iterations": 10,
     }
 
 
 @pytest.fixture(scope="session")
 def audio_test_files(getroot):
     """Organized audio test files by category."""
-    audio_dir = Path(getroot) / 'tests' / 'audio'
+    audio_dir = Path(getroot) / "tests" / "audio"
 
     return {
-        'basic': {
-            'mp3': audio_dir / '15_Ghosts_II_64kb_orig.mp3',
-            'flac': audio_dir / '15_Ghosts_II_64kb_orig.flac',
-            'm4a': audio_dir / '15_Ghosts_II_64kb_orig.m4a',
-            'aiff': audio_dir / '15_Ghosts_II_64kb_orig.aiff'
+        "basic": {
+            "mp3": audio_dir / "15_Ghosts_II_64kb_orig.mp3",
+            "flac": audio_dir / "15_Ghosts_II_64kb_orig.flac",
+            "m4a": audio_dir / "15_Ghosts_II_64kb_orig.m4a",
+            "aiff": audio_dir / "15_Ghosts_II_64kb_orig.aiff",
         },
-        'complex': {
-            'mp3': audio_dir / '15_Ghosts_II_64kb_füllytâgged.mp3',
-            'flac': audio_dir / '15_Ghosts_II_64kb_füllytâgged.flac',
-            'm4a': audio_dir / '15_Ghosts_II_64kb_füllytâgged.m4a',
-            'aiff': audio_dir / '15_Ghosts_II_64kb_füllytâgged.aiff'
+        "complex": {
+            "mp3": audio_dir / "15_Ghosts_II_64kb_füllytâgged.mp3",
+            "flac": audio_dir / "15_Ghosts_II_64kb_füllytâgged.flac",
+            "m4a": audio_dir / "15_Ghosts_II_64kb_füllytâgged.m4a",
+            "aiff": audio_dir / "15_Ghosts_II_64kb_füllytâgged.aiff",
         },
-        'multi_value': {
-            'mp3': audio_dir / 'multi.mp3',
-            'flac': audio_dir / 'multi.flac',
-            'm4a': audio_dir / 'multi.m4a'
+        "multi_value": {
+            "mp3": audio_dir / "multi.mp3",
+            "flac": audio_dir / "multi.flac",
+            "m4a": audio_dir / "multi.m4a",
         },
-        'multi_image': {
-            'm4a': audio_dir / 'multiimage.m4a'
+        "multi_image": {"m4a": audio_dir / "multiimage.m4a"},
+        "edge_cases": {
+            "fake_origdate_mp3": audio_dir / "15_Ghosts_II_64kb_fake_origdate.mp3",
+            "fake_origdate_m4a": audio_dir / "15_Ghosts_II_64kb_fake_origdate.m4a",
+            "fake_origyear_mp3": audio_dir / "15_Ghosts_II_64kb_fake_origyear.mp3",
+            "fake_origyear_m4a": audio_dir / "15_Ghosts_II_64kb_fake_origyear.m4a",
+            "fake_ody_mp3": audio_dir / "15_Ghosts_II_64kb_fake_ody.mp3",
+            "fake_ody_m4a": audio_dir / "15_Ghosts_II_64kb_fake_ody.m4a",
         },
-        'edge_cases': {
-            'fake_origdate_mp3': audio_dir / '15_Ghosts_II_64kb_fake_origdate.mp3',
-            'fake_origdate_m4a': audio_dir / '15_Ghosts_II_64kb_fake_origdate.m4a',
-            'fake_origyear_mp3': audio_dir / '15_Ghosts_II_64kb_fake_origyear.mp3',
-            'fake_origyear_m4a': audio_dir / '15_Ghosts_II_64kb_fake_origyear.m4a',
-            'fake_ody_mp3': audio_dir / '15_Ghosts_II_64kb_fake_ody.mp3',
-            'fake_ody_m4a': audio_dir / '15_Ghosts_II_64kb_fake_ody.m4a'
-        }
     }
 
 
@@ -75,11 +73,11 @@ def skip_missing_files():
 def library_compatibility():
     """Fixture providing known library compatibility information."""
     return {
-        'tinytag': {
-            'supported_formats': ['.mp3', '.flac', '.m4a', '.aiff', '.wav', '.ogg'],
-            'image_support': True,
-            'multivalue_handling': 'extra_dict',
-            'known_limitations': []
+        "tinytag": {
+            "supported_formats": [".mp3", ".flac", ".m4a", ".aiff", ".wav", ".ogg"],
+            "image_support": True,
+            "multivalue_handling": "extra_dict",
+            "known_limitations": [],
         },
         # audio_metadata no longer available
     }
@@ -89,18 +87,28 @@ def library_compatibility():
 def expected_metadata_fields():
     """Fixture providing expected metadata fields for test validation."""
     return {
-        'basic_fields': ['artist', 'title', 'album'],
-        'common_optional': ['duration', 'bitrate', 'genre', 'date', 'track'],
-        'advanced_fields': [
-            'albumartist', 'composer', 'disc', 'track_total', 'disc_total', 'bpm', 'key', 'isrc',
-            'label', 'publisher'
+        "basic_fields": ["artist", "title", "album"],
+        "common_optional": ["duration", "bitrate", "genre", "date", "track"],
+        "advanced_fields": [
+            "albumartist",
+            "composer",
+            "disc",
+            "track_total",
+            "disc_total",
+            "bpm",
+            "key",
+            "isrc",
+            "label",
+            "publisher",
         ],
-        'musicbrainz_fields': [
-            'musicbrainz_artistid', 'musicbrainz_albumid', 'musicbrainz_trackid',
-            'musicbrainz_releasegroupid'
+        "musicbrainz_fields": [
+            "musicbrainz_artistid",
+            "musicbrainz_albumid",
+            "musicbrainz_trackid",
+            "musicbrainz_releasegroupid",
         ],
-        'image_fields': ['coverimageraw', 'front_cover', 'pictures'],
-        'multivalue_fields': ['isrc', 'musicbrainz_artistid', 'artistwebsites']
+        "image_fields": ["coverimageraw", "front_cover", "pictures"],
+        "multivalue_fields": ["isrc", "musicbrainz_artistid", "artistwebsites"],
     }
 
 
@@ -118,22 +126,22 @@ def metadata_extraction_helper():
             try:
                 return tinytag.TinyTag.get(str(filepath), image=include_images)
             except Exception as exc:  # pylint: disable=broad-exception-caught
-                return {'error': str(exc)}
+                return {"error": str(exc)}
 
         @staticmethod
         def normalize_field_names(data, library):
             """Normalize field names for consistent comparison."""
-            if library == 'tinytag':
+            if library == "tinytag":
                 # TinyTag uses direct attributes and other dict
                 normalized = {}
-                if hasattr(data, '__dict__'):
+                if hasattr(data, "__dict__"):
                     for key, value in data.__dict__.items():
-                        if value is not None and key != 'extra':
+                        if value is not None and key != "extra":
                             normalized[key] = value
 
-                    if hasattr(data, 'other') and data.other:
+                    if hasattr(data, "other") and data.other:
                         for key, value in data.other.items():
-                            normalized[f'other_{key}'] = value
+                            normalized[f"other_{key}"] = value
                 return normalized
 
             # Return empty dict for unsupported libraries
@@ -196,17 +204,18 @@ def test_data_validation():
                 else:
                     try:
                         # Try to read a few bytes to ensure file is accessible
-                        with open(file_path, 'rb') as file_handle:
+                        with open(file_path, "rb") as file_handle:
                             file_handle.read(1024)
                         accessible_files.append(f"{category}/{file_type}")
                     except Exception as exc:  # pylint: disable=broad-exception-caught
                         missing_files.append(
-                            f"{category}/{file_type}: {file_path} (read error: {exc})")
+                            f"{category}/{file_type}: {file_path} (read error: {exc})"
+                        )
 
         return {
-            'missing_files': missing_files,
-            'accessible_files': accessible_files,
-            'total_files': len(missing_files) + len(accessible_files)
+            "missing_files": missing_files,
+            "accessible_files": accessible_files,
+            "total_files": len(missing_files) + len(accessible_files),
         }
 
     return _validate_test_data
@@ -233,23 +242,23 @@ def pytest_collection_modifyitems(config, items):  # pylint: disable=unused-argu
             item.add_marker(pytest.mark.slow)
 
         # Add format-specific marker based on test name patterns
-        if any(fmt in item.name for fmt in ['mp3', 'flac', 'm4a', 'aiff']):
+        if any(fmt in item.name for fmt in ["mp3", "flac", "m4a", "aiff"]):
             item.add_marker(pytest.mark.format_specific)
 
 
 # Session-level reporting
 def pytest_sessionfinish(session, exitstatus):  # pylint: disable=unused-argument
     """Report session-level test results."""
-    if hasattr(session.config, 'getoption') and session.config.getoption('--tb') != 'no':
+    if hasattr(session.config, "getoption") and session.config.getoption("--tb") != "no":
         print("\n" + "=" * 60)
         print("Audio Metadata Testing Session Complete")
         print("=" * 60)
 
         # Count tests by marker
         total_tests = len(session.items)
-        matrix_tests = len([item for item in session.items if 'library_matrix' in item.keywords])
-        golden_tests = len([item for item in session.items if 'golden_master' in item.keywords])
-        format_tests = len([item for item in session.items if 'format_specific' in item.keywords])
+        matrix_tests = len([item for item in session.items if "library_matrix" in item.keywords])
+        golden_tests = len([item for item in session.items if "golden_master" in item.keywords])
+        format_tests = len([item for item in session.items if "format_specific" in item.keywords])
 
         print(f"Total audio metadata tests: {total_tests}")
         print(f"  Library matrix tests: {matrix_tests}")

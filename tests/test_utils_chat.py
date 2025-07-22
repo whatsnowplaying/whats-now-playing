@@ -11,7 +11,7 @@ import nowplaying.utils
 
 def test_ensure_nltk_data_already_available():
     """Test NLTK data initialization when punkt is already available"""
-    with patch('nltk.data.find') as mock_find:
+    with patch("nltk.data.find") as mock_find:
         # NLTK data already available
         mock_find.return_value = True
 
@@ -19,14 +19,12 @@ def test_ensure_nltk_data_already_available():
         nowplaying.utils.ensure_nltk_data()
 
         # Should check for punkt tokenizer
-        mock_find.assert_called_once_with('tokenizers/punkt')
+        mock_find.assert_called_once_with("tokenizers/punkt")
 
 
 def test_ensure_nltk_data_download_needed():
     """Test NLTK data initialization when download is needed"""
-    with patch('nltk.data.find') as mock_find, \
-         patch('nltk.download') as mock_download:
-
+    with patch("nltk.data.find") as mock_find, patch("nltk.download") as mock_download:
         # Simulate punkt not found
         mock_find.side_effect = LookupError("Resource punkt not found")
         mock_download.return_value = True
@@ -34,15 +32,13 @@ def test_ensure_nltk_data_download_needed():
         # Should download punkt data
         nowplaying.utils.ensure_nltk_data()
 
-        mock_find.assert_called_once_with('tokenizers/punkt')
-        mock_download.assert_called_once_with('punkt', quiet=True)
+        mock_find.assert_called_once_with("tokenizers/punkt")
+        mock_download.assert_called_once_with("punkt", quiet=True)
 
 
 def test_ensure_nltk_data_download_fails():
     """Test NLTK data initialization when download fails"""
-    with patch('nltk.data.find') as mock_find, \
-         patch('nltk.download') as mock_download:
-
+    with patch("nltk.data.find") as mock_find, patch("nltk.download") as mock_download:
         # Simulate punkt not found and download failure
         mock_find.side_effect = LookupError("Resource punkt not found")
         mock_download.side_effect = Exception("Download failed")
@@ -50,8 +46,8 @@ def test_ensure_nltk_data_download_fails():
         # Should not raise exception (graceful failure)
         nowplaying.utils.ensure_nltk_data()
 
-        mock_find.assert_called_once_with('tokenizers/punkt')
-        mock_download.assert_called_once_with('punkt', quiet=True)
+        mock_find.assert_called_once_with("tokenizers/punkt")
+        mock_download.assert_called_once_with("punkt", quiet=True)
 
 
 def test_smart_split_message_short_message():
@@ -76,8 +72,10 @@ def test_smart_split_message_sentence_boundaries():
 
 def test_smart_split_message_word_boundaries():
     """Test message splitting at word boundaries for long sentences"""
-    message = ("This is a very long sentence that exceeds the maximum "
-               "length limit and should be split at word boundaries")
+    message = (
+        "This is a very long sentence that exceeds the maximum "
+        "length limit and should be split at word boundaries"
+    )
     result = nowplaying.utils.smart_split_message(message, max_length=30)
 
     # Should split at word boundaries
@@ -85,9 +83,10 @@ def test_smart_split_message_word_boundaries():
     for part in result:
         assert len(part) <= 30
         # Check that words aren't broken (except for truncated words ending in ...)
-        if not part.endswith('...'):
-            assert ' ' not in part or part.count(
-                ' ') > 0  # Either single word or multiple complete words
+        if not part.endswith("..."):
+            assert (
+                " " not in part or part.count(" ") > 0
+            )  # Either single word or multiple complete words
 
 
 def test_smart_split_message_very_long_word():
@@ -97,15 +96,17 @@ def test_smart_split_message_very_long_word():
 
     # Should truncate long word
     assert len(result) == 1
-    assert result[0].endswith('...')
+    assert result[0].endswith("...")
     assert len(result[0]) == 10
 
 
 def test_smart_split_message_mixed_content():
     """Test message splitting with mixed sentence and word content"""
-    message = ("Short sentence. This is a much longer sentence that will "
-               "need to be split at word boundaries because it exceeds the "
-               "limit. Final short sentence.")
+    message = (
+        "Short sentence. This is a much longer sentence that will "
+        "need to be split at word boundaries because it exceeds the "
+        "limit. Final short sentence."
+    )
     result = nowplaying.utils.smart_split_message(message, max_length=40)
 
     # Should handle mixed content appropriately
@@ -117,9 +118,7 @@ def test_smart_split_message_mixed_content():
 
 def test_smart_split_message_nltk_failure_fallback():
     """Test message splitting fallback when NLTK fails"""
-    with patch('nowplaying.utils.ensure_nltk_data'), \
-         patch('nltk.sent_tokenize') as mock_tokenize:
-
+    with patch("nowplaying.utils.ensure_nltk_data"), patch("nltk.sent_tokenize") as mock_tokenize:
         # Simulate NLTK failure
         mock_tokenize.side_effect = Exception("NLTK error")
 
@@ -134,9 +133,7 @@ def test_smart_split_message_nltk_failure_fallback():
 
 def test_smart_split_message_empty_parts_removed():
     """Test that empty message parts are removed"""
-    with patch('nowplaying.utils.ensure_nltk_data'), \
-         patch('nltk.sent_tokenize') as mock_tokenize:
-
+    with patch("nowplaying.utils.ensure_nltk_data"), patch("nltk.sent_tokenize") as mock_tokenize:
         # Simulate tokenization that might create empty parts
         mock_tokenize.return_value = ["Valid sentence.", "", "   ", "Another sentence."]
 
@@ -154,7 +151,7 @@ def test_smart_split_message_preserve_content():
     result = nowplaying.utils.smart_split_message(message, max_length=20)
 
     # Reconstruct message from parts
-    reconstructed = ' '.join(result)
+    reconstructed = " ".join(result)
 
     # Should preserve most content (allowing for spacing differences)
     assert "First sentence" in reconstructed
@@ -164,9 +161,7 @@ def test_smart_split_message_preserve_content():
 
 def test_tokenize_sentences_success():
     """Test sentence tokenization with NLTK success"""
-    with patch('nowplaying.utils.ensure_nltk_data'), \
-         patch('nltk.sent_tokenize') as mock_tokenize:
-
+    with patch("nowplaying.utils.ensure_nltk_data"), patch("nltk.sent_tokenize") as mock_tokenize:
         mock_tokenize.return_value = ["First sentence.", "Second sentence!"]
 
         text = "First sentence. Second sentence!"
@@ -178,9 +173,7 @@ def test_tokenize_sentences_success():
 
 def test_tokenize_sentences_fallback():
     """Test sentence tokenization fallback when NLTK fails"""
-    with patch('nowplaying.utils.ensure_nltk_data'), \
-         patch('nltk.sent_tokenize') as mock_tokenize:
-
+    with patch("nowplaying.utils.ensure_nltk_data"), patch("nltk.sent_tokenize") as mock_tokenize:
         # Simulate NLTK failure
         mock_tokenize.side_effect = Exception("NLTK error")
 
@@ -208,14 +201,12 @@ def test_tokenize_sentences_single_sentence():
 
     # Should return list with one sentence
     assert len(result) >= 1
-    assert "single sentence" in ' '.join(result)
+    assert "single sentence" in " ".join(result)
 
 
 def test_tokenize_sentences_fallback_no_double_periods():
     """Test that fallback tokenization doesn't add extra periods to sentences with punctuation"""
-    with patch('nowplaying.utils.ensure_nltk_data'), \
-         patch('nltk.sent_tokenize') as mock_tokenize:
-
+    with patch("nowplaying.utils.ensure_nltk_data"), patch("nltk.sent_tokenize") as mock_tokenize:
         # Simulate NLTK failure
         mock_tokenize.side_effect = Exception("NLTK error")
 
@@ -224,19 +215,23 @@ def test_tokenize_sentences_fallback_no_double_periods():
 
         # Should not have double periods
         for sentence in result:
-            assert not sentence.endswith('..'), f"Double period found in: {sentence}"
-            assert not sentence.endswith('!.'), \
+            assert not sentence.endswith(".."), f"Double period found in: {sentence}"
+            assert not sentence.endswith("!."), (
                 f"Exclamation followed by period found in: {sentence}"
-            assert not sentence.endswith('?.'), \
+            )
+            assert not sentence.endswith("?."), (
                 f"Question mark followed by period found in: {sentence}"
+            )
 
 
 @pytest.mark.parametrize("max_length", [25, 50, 100, 500])
 def test_smart_split_message_various_limits(max_length):
     """Test message splitting with various length limits"""
-    message = ("This is a test message with multiple sentences. "
-               "Each sentence should be handled based on the length limit. "
-               "The splitting should work correctly.")
+    message = (
+        "This is a test message with multiple sentences. "
+        "Each sentence should be handled based on the length limit. "
+        "The splitting should work correctly."
+    )
 
     result = nowplaying.utils.smart_split_message(message, max_length=max_length)
 
@@ -262,8 +257,10 @@ def test_smart_split_message_default_limit():
 
 def test_smart_split_message_unicode_handling():
     """Test message splitting handles Unicode characters correctly"""
-    message = ("This message contains émojis 🎵 and spëcial characters. "
-               "Ït should be handled correctly! 中文 text as well.")
+    message = (
+        "This message contains émojis 🎵 and spëcial characters. "
+        "Ït should be handled correctly! 中文 text as well."
+    )
 
     result = nowplaying.utils.smart_split_message(message, max_length=50)
 
@@ -273,7 +270,7 @@ def test_smart_split_message_unicode_handling():
         assert len(part) <= 50
 
     # Verify Unicode content is preserved
-    combined = ' '.join(result)
-    assert '🎵' in combined
-    assert 'émojis' in combined
-    assert '中文' in combined
+    combined = " ".join(result)
+    assert "🎵" in combined
+    assert "émojis" in combined
+    assert "中文" in combined

@@ -14,24 +14,24 @@ def temp_config(bootstrap):
     config = bootstrap
 
     # Set some test values to export/import
-    config.cparser.setValue('settings/delay', '2.5')
-    config.cparser.setValue('settings/loglevel', 'INFO')
-    config.cparser.setValue('artistextras/enabled', True)
-    config.cparser.setValue('musicbrainz/enabled', False)
-    config.cparser.setValue('serato/libpath', '/test/path/to/serato')
-    config.cparser.setValue('textoutput/file', '/test/output.txt')
-    config.cparser.setValue('weboutput/httpport', '9000')
+    config.cparser.setValue("settings/delay", "2.5")
+    config.cparser.setValue("settings/loglevel", "INFO")
+    config.cparser.setValue("artistextras/enabled", True)
+    config.cparser.setValue("musicbrainz/enabled", False)
+    config.cparser.setValue("serato/libpath", "/test/path/to/serato")
+    config.cparser.setValue("textoutput/file", "/test/output.txt")
+    config.cparser.setValue("weboutput/httpport", "9000")
 
     # Set some sensitive data
-    config.cparser.setValue('discogs/apikey', 'discogs_key_12345')  # pragma: allowlist secret
+    config.cparser.setValue("discogs/apikey", "discogs_key_12345")  # pragma: allowlist secret
     # pragma: allowlist secret
-    config.cparser.setValue('twitchbot/chattoken', 'oauth:test_token_67890')
+    config.cparser.setValue("twitchbot/chattoken", "oauth:test_token_67890")
 
     # Set some runtime state that should be excluded
-    config.cparser.setValue('settings/initialized', True)
-    config.cparser.setValue('settings/lastsavedate', '20241214123456')
-    config.cparser.setValue('control/paused', False)
-    config.cparser.setValue('testmode/enabled', True)
+    config.cparser.setValue("settings/initialized", True)
+    config.cparser.setValue("settings/lastsavedate", "20241214123456")
+    config.cparser.setValue("control/paused", False)
+    config.cparser.setValue("testmode/enabled", True)
 
     config.cparser.sync()
     return config
@@ -51,24 +51,24 @@ def test_export_config_basic(temp_config):  # pylint: disable=redefined-outer-na
         exported_data = json.loads(export_path.read_text())
 
         # Check metadata
-        assert '_export_info' in exported_data
-        export_info = exported_data['_export_info']
-        assert 'version' in export_info
-        assert 'export_date' in export_info
-        assert 'warning' in export_info
+        assert "_export_info" in exported_data
+        export_info = exported_data["_export_info"]
+        assert "version" in export_info
+        assert "export_date" in export_info
+        assert "warning" in export_info
 
         # Check that user settings are included
-        assert exported_data['settings/delay'] == '2.5'
-        assert exported_data['settings/loglevel'] == 'INFO'
-        assert exported_data['artistextras/enabled'] is True
-        assert exported_data['serato/libpath'] == '/test/path/to/serato'
+        assert exported_data["settings/delay"] == "2.5"
+        assert exported_data["settings/loglevel"] == "INFO"
+        assert exported_data["artistextras/enabled"] is True
+        assert exported_data["serato/libpath"] == "/test/path/to/serato"
 
         # Check that sensitive data is included (as required for version upgrades)
-        assert exported_data['discogs/apikey'] == 'discogs_key_12345' # pragma: allowlist secret
-        assert exported_data['twitchbot/chattoken'] == 'oauth:test_token_67890'
+        assert exported_data["discogs/apikey"] == "discogs_key_12345"  # pragma: allowlist secret
+        assert exported_data["twitchbot/chattoken"] == "oauth:test_token_67890"
 
 
-def test_export_excludes_runtime_state(temp_config):    # pylint: disable=redefined-outer-name
+def test_export_excludes_runtime_state(temp_config):  # pylint: disable=redefined-outer-name
     """Test that runtime state is excluded from export"""
     with tempfile.TemporaryDirectory() as temp_dir:
         export_path = pathlib.Path(temp_dir) / "test_export.json"
@@ -79,13 +79,13 @@ def test_export_excludes_runtime_state(temp_config):    # pylint: disable=redefi
         exported_data = json.loads(export_path.read_text())
 
         # Check that runtime state is excluded
-        assert 'settings/initialized' not in exported_data
-        assert 'settings/lastsavedate' not in exported_data
-        assert 'control/paused' not in exported_data
-        assert 'testmode/enabled' not in exported_data
+        assert "settings/initialized" not in exported_data
+        assert "settings/lastsavedate" not in exported_data
+        assert "control/paused" not in exported_data
+        assert "testmode/enabled" not in exported_data
 
 
-def test_export_file_permissions(temp_config):   # pylint: disable=redefined-outer-name
+def test_export_file_permissions(temp_config):  # pylint: disable=redefined-outer-name
     """Test that exported file has restrictive permissions"""
     with tempfile.TemporaryDirectory() as temp_dir:
         export_path = pathlib.Path(temp_dir) / "test_export.json"
@@ -107,27 +107,27 @@ def test_export_file_permissions(temp_config):   # pylint: disable=redefined-out
             assert file_mode == 0o600
 
 
-def test_import_config_basic(temp_config):    # pylint: disable=redefined-outer-name
+def test_import_config_basic(temp_config):  # pylint: disable=redefined-outer-name
     """Test basic import functionality"""
     with tempfile.TemporaryDirectory() as temp_dir:
         export_path = pathlib.Path(temp_dir) / "test_config.json"
 
         # Create test import data
         import_data = {
-            '_export_info': {
-                'version': '4.2.0',
-                'export_date': '2024-12-14 12:34:56',
-                'application': 'NowPlaying',
-                'organization': 'WhatsNowPlaying',
-                'warning': 'Contains sensitive data'
+            "_export_info": {
+                "version": "4.2.0",
+                "export_date": "2024-12-14 12:34:56",
+                "application": "NowPlaying",
+                "organization": "WhatsNowPlaying",
+                "warning": "Contains sensitive data",
             },
-            'settings/delay': '3.0',
-            'settings/loglevel': 'WARNING',
-            'artistextras/enabled': False,
-            'musicbrainz/enabled': True,
-            'serato/libpath': '/imported/path/to/serato',
-            'discogs/apikey': 'imported_discogs_key',  # pragma: allowlist secret
-            'textoutput/file': '/imported/output.txt'
+            "settings/delay": "3.0",
+            "settings/loglevel": "WARNING",
+            "artistextras/enabled": False,
+            "musicbrainz/enabled": True,
+            "serato/libpath": "/imported/path/to/serato",
+            "discogs/apikey": "imported_discogs_key",  # pragma: allowlist secret
+            "textoutput/file": "/imported/output.txt",
         }
 
         # Write test data
@@ -139,23 +139,23 @@ def test_import_config_basic(temp_config):    # pylint: disable=redefined-outer-
 
         # Verify imported settings
         temp_config.cparser.sync()
-        assert temp_config.cparser.value('settings/delay') == '3.0'
-        assert temp_config.cparser.value('settings/loglevel') == 'WARNING'
-        assert temp_config.cparser.value('artistextras/enabled', type=bool) is False
-        assert temp_config.cparser.value('musicbrainz/enabled', type=bool) is True
-        assert temp_config.cparser.value('serato/libpath') == '/imported/path/to/serato'
+        assert temp_config.cparser.value("settings/delay") == "3.0"
+        assert temp_config.cparser.value("settings/loglevel") == "WARNING"
+        assert temp_config.cparser.value("artistextras/enabled", type=bool) is False
+        assert temp_config.cparser.value("musicbrainz/enabled", type=bool) is True
+        assert temp_config.cparser.value("serato/libpath") == "/imported/path/to/serato"
         # pragma: allowlist secret
-        assert temp_config.cparser.value('discogs/apikey') == 'imported_discogs_key'
+        assert temp_config.cparser.value("discogs/apikey") == "imported_discogs_key"
 
 
-def test_import_nonexistent_file(temp_config):    # pylint: disable=redefined-outer-name
+def test_import_nonexistent_file(temp_config):  # pylint: disable=redefined-outer-name
     """Test importing from a nonexistent file"""
     nonexistent_path = pathlib.Path("/nonexistent/config.json")
     result = temp_config.import_config(nonexistent_path)
     assert result is False
 
 
-def test_import_invalid_json(temp_config):    # pylint: disable=redefined-outer-name
+def test_import_invalid_json(temp_config):  # pylint: disable=redefined-outer-name
     """Test importing invalid JSON"""
     with tempfile.TemporaryDirectory() as temp_dir:
         invalid_json_path = pathlib.Path(temp_dir) / "invalid.json"
@@ -167,9 +167,9 @@ def test_import_invalid_json(temp_config):    # pylint: disable=redefined-outer-
 
 def test_export_import_roundtrip(temp_config):  # pylint: disable=redefined-outer-name
     """Test that export followed by import preserves settings"""
-    original_delay = temp_config.cparser.value('settings/delay')
-    original_loglevel = temp_config.cparser.value('settings/loglevel')
-    original_apikey = temp_config.cparser.value('discogs/apikey')  # pragma: allowlist secret
+    original_delay = temp_config.cparser.value("settings/delay")
+    original_loglevel = temp_config.cparser.value("settings/loglevel")
+    original_apikey = temp_config.cparser.value("discogs/apikey")  # pragma: allowlist secret
 
     with tempfile.TemporaryDirectory() as temp_dir:
         export_path = pathlib.Path(temp_dir) / "roundtrip.json"
@@ -179,9 +179,9 @@ def test_export_import_roundtrip(temp_config):  # pylint: disable=redefined-oute
         assert export_result is True
 
         # Change some settings
-        temp_config.cparser.setValue('settings/delay', '999')
-        temp_config.cparser.setValue('settings/loglevel', 'CRITICAL')
-        temp_config.cparser.setValue('discogs/apikey', 'changed_key')  # pragma: allowlist secret
+        temp_config.cparser.setValue("settings/delay", "999")
+        temp_config.cparser.setValue("settings/loglevel", "CRITICAL")
+        temp_config.cparser.setValue("discogs/apikey", "changed_key")  # pragma: allowlist secret
         temp_config.cparser.sync()
 
         # Import
@@ -190,27 +190,24 @@ def test_export_import_roundtrip(temp_config):  # pylint: disable=redefined-oute
 
         # Verify original settings are restored
         temp_config.cparser.sync()
-        assert temp_config.cparser.value('settings/delay') == original_delay
-        assert temp_config.cparser.value('settings/loglevel') == original_loglevel
+        assert temp_config.cparser.value("settings/delay") == original_delay
+        assert temp_config.cparser.value("settings/loglevel") == original_loglevel
         # pragma: allowlist secret
-        assert temp_config.cparser.value('discogs/apikey') == original_apikey
+        assert temp_config.cparser.value("discogs/apikey") == original_apikey
 
 
 def test_import_clears_cache_settings(temp_config):  # pylint: disable=redefined-outer-name
     """Test that import clears cache and runtime settings before importing"""
     # Set some cache/runtime settings
-    temp_config.cparser.setValue('settings/initialized', True)
-    temp_config.cparser.setValue('settings/lastsavedate', '20241214000000')
-    temp_config.cparser.setValue('control/paused', True)
+    temp_config.cparser.setValue("settings/initialized", True)
+    temp_config.cparser.setValue("settings/lastsavedate", "20241214000000")
+    temp_config.cparser.setValue("control/paused", True)
     temp_config.cparser.sync()
 
     with tempfile.TemporaryDirectory() as temp_dir:
         import_path = pathlib.Path(temp_dir) / "test_import.json"
 
-        import_data = {
-            '_export_info': {'version': '4.2.0'},
-            'settings/delay': '1.5'
-        }
+        import_data = {"_export_info": {"version": "4.2.0"}, "settings/delay": "1.5"}
 
         import_path.write_text(json.dumps(import_data))
 
@@ -221,21 +218,21 @@ def test_import_clears_cache_settings(temp_config):  # pylint: disable=redefined
         # Verify cache settings were cleared
         temp_config.cparser.sync()
         # Default value
-        assert temp_config.cparser.value('settings/initialized', type=bool) is False
-        assert temp_config.cparser.value('settings/lastsavedate') is None
+        assert temp_config.cparser.value("settings/initialized", type=bool) is False
+        assert temp_config.cparser.value("settings/lastsavedate") is None
         # Default value
-        assert temp_config.cparser.value('control/paused', type=bool) is False
+        assert temp_config.cparser.value("control/paused", type=bool) is False
 
 
 def test_export_handles_different_data_types(temp_config):  # pylint: disable=redefined-outer-name
     """Test that export properly handles different QSettings data types"""
     # Set various data types
-    temp_config.cparser.setValue('test/string', 'text_value')
-    temp_config.cparser.setValue('test/int', 42)
-    temp_config.cparser.setValue('test/float', 3.14)
-    temp_config.cparser.setValue('test/bool', True)
-    temp_config.cparser.setValue('test/list', ['item1', 'item2', 'item3'])
-    temp_config.cparser.setValue('test/none', None)
+    temp_config.cparser.setValue("test/string", "text_value")
+    temp_config.cparser.setValue("test/int", 42)
+    temp_config.cparser.setValue("test/float", 3.14)
+    temp_config.cparser.setValue("test/bool", True)
+    temp_config.cparser.setValue("test/list", ["item1", "item2", "item3"])
+    temp_config.cparser.setValue("test/none", None)
     temp_config.cparser.sync()
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -247,9 +244,9 @@ def test_export_handles_different_data_types(temp_config):  # pylint: disable=re
         exported_data = json.loads(export_path.read_text())
 
         # Verify data types are preserved or converted appropriately
-        assert exported_data['test/string'] == 'text_value'
-        assert exported_data['test/int'] == 42
-        assert exported_data['test/float'] == 3.14
-        assert exported_data['test/bool'] is True
-        assert exported_data['test/list'] == ['item1', 'item2', 'item3']
-        assert exported_data['test/none'] is None
+        assert exported_data["test/string"] == "text_value"
+        assert exported_data["test/int"] == 42
+        assert exported_data["test/float"] == 3.14
+        assert exported_data["test/bool"] is True
+        assert exported_data["test/list"] == ["item1", "item2", "item3"]
+        assert exported_data["test/none"] is None

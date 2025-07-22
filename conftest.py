@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' pytest fixtures '''
+"""pytest fixtures"""
 
 import contextlib
 import logging
@@ -26,7 +26,7 @@ import nowplaying.apicache
 
 # DO NOT CHANGE THIS TO BE com.github.whatsnowplaying
 # otherwise your actual bits will disappear!
-DOMAIN = 'com.github.whatsnowplaying.testsuite'
+DOMAIN = "com.github.whatsnowplaying.testsuite"
 
 try:
     from pytest_cov.embed import cleanup_on_sigterm
@@ -37,9 +37,9 @@ else:
 
 
 def reboot_macosx_prefs():
-    ''' work around Mac OS X's preference caching '''
-    if sys.platform == 'darwin':
-        os.system(f'defaults delete {DOMAIN}')
+    """work around Mac OS X's preference caching"""
+    if sys.platform == "darwin":
+        os.system(f"defaults delete {DOMAIN}")
         #
         # old method:
         #
@@ -55,34 +55,33 @@ def reboot_macosx_prefs():
 
 @pytest.fixture
 def getroot(pytestconfig):
-    ''' get the base of the source tree '''
+    """get the base of the source tree"""
     return pytestconfig.rootpath
 
 
 @pytest.fixture
 def bootstrap(getroot):  # pylint: disable=redefined-outer-name
-    ''' bootstrap a configuration '''
+    """bootstrap a configuration"""
     with contextlib.suppress(PermissionError):  # Windows blows
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as newpath:
-
-            dbinit_patch = unittest.mock.patch('nowplaying.db.MetadataDB.init_db_var')
+            dbinit_patch = unittest.mock.patch("nowplaying.db.MetadataDB.init_db_var")
             dbinit_mock = dbinit_patch.start()
-            dbdir = pathlib.Path(newpath).joinpath('mdb')
+            dbdir = pathlib.Path(newpath).joinpath("mdb")
             dbdir.mkdir()
-            dbfile = dbdir.joinpath('test.db')
+            dbfile = dbdir.joinpath("test.db")
             dbinit_mock.return_value = dbfile
 
-            with unittest.mock.patch.dict(os.environ, {
-                    "WNP_CONFIG_TEST_DIR": str(newpath),
-                    "WNP_METADB_TEST_FILE": str(dbfile)
-            }):
+            with unittest.mock.patch.dict(
+                os.environ,
+                {"WNP_CONFIG_TEST_DIR": str(newpath), "WNP_METADB_TEST_FILE": str(dbfile)},
+            ):
                 rmdir = newpath
-                bundledir = pathlib.Path(getroot).joinpath('nowplaying')
-                nowplaying.bootstrap.set_qt_names(domain=DOMAIN, appname='testsuite')
-                config = nowplaying.config.ConfigFile(bundledir=bundledir,
-                                                      logpath=newpath,
-                                                      testmode=True)
-                config.cparser.setValue('acoustidmb/enabled', False)
+                bundledir = pathlib.Path(getroot).joinpath("nowplaying")
+                nowplaying.bootstrap.set_qt_names(domain=DOMAIN, appname="testsuite")
+                config = nowplaying.config.ConfigFile(
+                    bundledir=bundledir, logpath=newpath, testmode=True
+                )
+                config.cparser.setValue("acoustidmb/enabled", False)
                 config.cparser.sync()
                 config.testdir = pathlib.Path(newpath)
 
@@ -99,25 +98,33 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
 #
 @pytest.fixture(autouse=True, scope="function")
 def clear_old_testsuite():
-    ''' clear out old testsuite configs '''
+    """clear out old testsuite configs"""
     if sys.platform == "win32":
         qsettingsformat = QSettings.IniFormat
     else:
         qsettingsformat = QSettings.NativeFormat
 
-    nowplaying.bootstrap.set_qt_names(appname='testsuite')
-    config = QSettings(qsettingsformat, QSettings.SystemScope, QCoreApplication.organizationName(),
-                       QCoreApplication.applicationName())
+    nowplaying.bootstrap.set_qt_names(appname="testsuite")
+    config = QSettings(
+        qsettingsformat,
+        QSettings.SystemScope,
+        QCoreApplication.organizationName(),
+        QCoreApplication.applicationName(),
+    )
     config.clear()
     config.sync()
 
     cachedir = pathlib.Path(QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0])
-    if 'testsuite' in cachedir.name and cachedir.exists():
-        logging.info('Removing %s', cachedir)
+    if "testsuite" in cachedir.name and cachedir.exists():
+        logging.info("Removing %s", cachedir)
         shutil.rmtree(cachedir)
 
-    config = QSettings(qsettingsformat, QSettings.UserScope, QCoreApplication.organizationName(),
-                       QCoreApplication.applicationName())
+    config = QSettings(
+        qsettingsformat,
+        QSettings.UserScope,
+        QCoreApplication.organizationName(),
+        QCoreApplication.applicationName(),
+    )
     config.clear()
     config.sync()
     filename = pathlib.Path(config.fileName())
@@ -129,7 +136,7 @@ def clear_old_testsuite():
         filename.unlink()
     reboot_macosx_prefs()
     if filename.exists():
-        logging.error('Still exists, wtf?')
+        logging.error("Still exists, wtf?")
     yield filename
     if filename.exists():
         filename.unlink()
@@ -151,7 +158,7 @@ async def temp_api_cache():
             yield cache
         finally:
             # Properly close the cache to prevent event loop warnings
-            if hasattr(cache, 'close'):
+            if hasattr(cache, "close"):
                 await cache.close()
 
 
@@ -159,7 +166,7 @@ async def temp_api_cache():
 def auto_temp_api_cache_for_artistextras(request, temp_api_cache):  # pylint: disable=redefined-outer-name
     """Automatically use temp API cache for artistextras tests to prevent random CI failures."""
     # Only auto-apply to artistextras tests, not apicache tests
-    if 'test_artistextras' in request.module.__name__:
+    if "test_artistextras" in request.module.__name__:
         original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
         nowplaying.apicache.set_cache_instance(temp_api_cache)
         try:

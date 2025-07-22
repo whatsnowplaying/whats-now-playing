@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Startup window for showing initialization progress """
+"""Startup window for showing initialization progress"""
 
 import contextlib
 import logging
@@ -10,7 +10,13 @@ from PySide6.QtCore import Qt, QTimer  # pylint: disable=import-error,no-name-in
 from PySide6.QtWidgets import QApplication  # pylint: disable=import-error,no-name-in-module
 from PySide6.QtGui import QFont, QIcon  # pylint: disable=import-error,no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=import-error,no-name-in-module
-    QDialog, QLabel, QProgressBar, QVBoxLayout, QHBoxLayout, QPushButton)
+    QDialog,
+    QLabel,
+    QProgressBar,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+)
 from PySide6.QtGui import QPixmap, QKeyEvent  # pylint: disable=import-error,no-name-in-module
 
 import nowplaying
@@ -26,8 +32,8 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
         self.max_steps = 10  # More detailed steps now
         self.drag_position = None  # For window dragging
 
-        self._failsafe_timeout_ms = kwargs.get('failsafe_timeout_ms', 30000)  # Default 30 seconds
-        self._failsafe_warning_ms = kwargs.get('failsafe_warning_ms', 5000)  # Warn 5 seconds before
+        self._failsafe_timeout_ms = kwargs.get("failsafe_timeout_ms", 30000)  # Default 30 seconds
+        self._failsafe_warning_ms = kwargs.get("failsafe_warning_ms", 5000)  # Warn 5 seconds before
 
         self._setup_ui()
         self._center_window()
@@ -53,8 +59,11 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
         self.setFixedSize(400, 240)  # Slightly taller for close button and warning label
 
         # Remove window decorations for splash-like appearance
-        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint
-                            | Qt.WindowType.WindowStaysOnTopHint)
+        self.setWindowFlags(
+            Qt.WindowType.Dialog
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+        )
 
         # Find icon file once
         iconfile = self._find_icon_file()
@@ -104,8 +113,12 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
             icon_label = QLabel()
             pixmap = QPixmap(str(iconfile))
             # Scale icon to reasonable size for splash screen
-            scaled_pixmap = pixmap.scaled(48, 48, Qt.AspectRatioMode.KeepAspectRatio,
-                                          Qt.TransformationMode.SmoothTransformation)
+            scaled_pixmap = pixmap.scaled(
+                48,
+                48,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
             icon_label.setPixmap(scaled_pixmap)
             icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(icon_label)
@@ -173,23 +186,23 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
 
         # Add bundledir if available
         if self.bundledir:
-            search_dirs.extend([self.bundledir, self.bundledir / 'resources'])
+            search_dirs.extend([self.bundledir, self.bundledir / "resources"])
 
         # Add standard nowplaying locations
         with contextlib.suppress(ImportError, AttributeError):
             nowplaying_dir = pathlib.Path(nowplaying.__file__).parent
-            search_dirs.extend([nowplaying_dir / 'resources', nowplaying_dir.parent / 'resources'])
+            search_dirs.extend([nowplaying_dir / "resources", nowplaying_dir.parent / "resources"])
         # Search for icon files
         for testdir in search_dirs:
             if not testdir.exists():
                 continue
-            for testfilename in ['icon.ico', 'windows.ico']:
+            for testfilename in ["icon.ico", "windows.ico"]:
                 testfile = testdir / testfilename
                 if testfile.exists():
-                    logging.debug('Found icon file at %s', testfile)
+                    logging.debug("Found icon file at %s", testfile)
                     return testfile
 
-        logging.debug('No icon file found')
+        logging.debug("No icon file found")
         return None
 
     def update_progress(self, step: str, progress: int | None = None) -> None:
@@ -252,22 +265,25 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
 
     def mouseMoveEvent(self, event) -> None:  # pylint: disable=invalid-name
         """Handle mouse move for window dragging."""
-        if (event.buttons() == Qt.MouseButton.LeftButton and self.drag_position is not None):
+        if event.buttons() == Qt.MouseButton.LeftButton and self.drag_position is not None:
             self.move(event.globalPosition().toPoint() - self.drag_position)
             event.accept()
 
     def _show_failsafe_warning(self) -> None:
         """Show warning that window will auto-close soon."""
         warning_seconds = self._failsafe_warning_ms // 1000
-        self.failsafe_warning_label.setText(f"Initialization is taking longer than expected. "
-                                            f"This window will close in {warning_seconds} seconds.")
-        logging.warning("Startup taking longer than expected, auto-closing in %d seconds",
-                        warning_seconds)
+        self.failsafe_warning_label.setText(
+            f"Initialization is taking longer than expected. "
+            f"This window will close in {warning_seconds} seconds."
+        )
+        logging.warning(
+            "Startup taking longer than expected, auto-closing in %d seconds", warning_seconds
+        )
 
     def closeEvent(self, event: Any) -> None:  # pylint: disable=invalid-name
         """Handle close event."""
         logging.debug("Startup window closed")
         self.failsafe_timer.stop()
-        if hasattr(self, 'failsafe_warning_timer'):
+        if hasattr(self, "failsafe_warning_timer"):
             self.failsafe_warning_timer.stop()
         super().closeEvent(event)

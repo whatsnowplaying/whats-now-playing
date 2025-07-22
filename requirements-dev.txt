@@ -5,4 +5,4 @@ basedpyright
 pip-upgrader
 pylint==2.17.5
 sourcery
-yapf
+ruff

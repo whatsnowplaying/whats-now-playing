@@ -8,6 +8,7 @@ Licensed under BSD-2-Clause license.
 This derivative work contains only the parsing functions needed by nowplaying
 and is optimized for async usage.
 """
+
 import xml.etree.ElementTree as ET
 from typing import Any
 
@@ -15,7 +16,7 @@ from typing import Any
 def parse_message(message: str | bytes) -> dict[str, Any]:
     """Parse a MusicBrainz XML response message"""
     if isinstance(message, str):
-        message = message.encode('utf-8')
+        message = message.encode("utf-8")
     try:
         root = ET.fromstring(message)
     except ET.ParseError as parse_error:
@@ -32,19 +33,19 @@ def parse_message(message: str | bytes) -> dict[str, Any]:
         "release-group": parse_release_group,
         "release-group-list": parse_release_group_list,
         "isrc": parse_isrc,
-        "message": parse_response_message
+        "message": parse_response_message,
     }
     # Parse root element and its children
     for child in root:
-        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+        tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
         if tag in parsers:
             result[tag] = parsers[tag](child)
             # Check for count and offset attributes on list elements
-            if tag.endswith('-list'):
-                if child.get('count'):
-                    result[f"{tag.replace('-list', '')}-count"] = int(child.get('count'))
-                if child.get('offset'):
-                    result[f"{tag.replace('-list', '')}-offset"] = int(child.get('offset'))
+            if tag.endswith("-list"):
+                if child.get("count"):
+                    result[f"{tag.replace('-list', '')}-count"] = int(child.get("count"))
+                if child.get("offset"):
+                    result[f"{tag.replace('-list', '')}-offset"] = int(child.get("offset"))
         elif tag == "count":
             result[f"{root.tag.split('}')[-1]}-count"] = int(child.text or 0)
         elif tag == "offset":
@@ -56,14 +57,14 @@ def parse_response_message(element: ET.Element) -> dict[str, Any]:
     """Parse error/response messages"""
     texts = []
     for child in element:
-        if child.tag.endswith('text') and child.text:
+        if child.tag.endswith("text") and child.text:
             texts.append(child.text)
     return {"text": texts}
 
 
 def parse_artist_list(element: ET.Element) -> list[dict[str, Any]]:
     """Parse artist-list element"""
-    return [parse_artist(artist) for artist in element if artist.tag.endswith('artist')]
+    return [parse_artist(artist) for artist in element if artist.tag.endswith("artist")]
 
 
 def parse_artist(element: ET.Element) -> dict[str, Any]:
@@ -76,7 +77,7 @@ def parse_artist(element: ET.Element) -> dict[str, Any]:
         artist["type"] = element.get("type")
     # Parse child elements
     for child in element:
-        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+        tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
         if tag == "name" and child.text:
             artist["name"] = child.text
         elif tag == "sort-name" and child.text:
@@ -95,7 +96,7 @@ def parse_artist(element: ET.Element) -> dict[str, Any]:
 def parse_recording_list(element: ET.Element) -> list[dict[str, Any]]:
     """Parse recording-list element"""
     return [
-        parse_recording(recording) for recording in element if recording.tag.endswith('recording')
+        parse_recording(recording) for recording in element if recording.tag.endswith("recording")
     ]
 
 
@@ -107,7 +108,7 @@ def parse_recording(element: ET.Element) -> dict[str, Any]:
         recording["id"] = element.get("id")
     # Parse child elements
     for child in element:
-        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+        tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
         if tag == "title" and child.text:
             recording["title"] = child.text
         elif tag == "disambiguation" and child.text:
@@ -131,7 +132,7 @@ def parse_recording(element: ET.Element) -> dict[str, Any]:
 
 def parse_release_list(element: ET.Element) -> list[dict[str, Any]]:
     """Parse release-list element"""
-    return [parse_release(release) for release in element if release.tag.endswith('release')]
+    return [parse_release(release) for release in element if release.tag.endswith("release")]
 
 
 def parse_release(element: ET.Element) -> dict[str, Any]:
@@ -142,7 +143,7 @@ def parse_release(element: ET.Element) -> dict[str, Any]:
         release["id"] = element.get("id")
     # Parse child elements
     for child in element:
-        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+        tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
         if tag == "title" and child.text:
             release["title"] = child.text
         elif tag == "disambiguation" and child.text:
@@ -168,7 +169,7 @@ def parse_release(element: ET.Element) -> dict[str, Any]:
 
 def parse_release_group_list(element: ET.Element) -> list[dict[str, Any]]:
     """Parse release-group-list element"""
-    return [parse_release_group(rg) for rg in element if rg.tag.endswith('release-group')]
+    return [parse_release_group(rg) for rg in element if rg.tag.endswith("release-group")]
 
 
 def parse_release_group(element: ET.Element) -> dict[str, Any]:
@@ -181,7 +182,7 @@ def parse_release_group(element: ET.Element) -> dict[str, Any]:
         release_group["type"] = element.get("type")
     # Parse child elements
     for child in element:
-        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+        tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
         if tag == "title" and child.text:
             release_group["title"] = child.text
         elif tag == "disambiguation" and child.text:
@@ -207,7 +208,7 @@ def parse_isrc(element: ET.Element) -> dict[str, Any]:
         isrc["id"] = element_id
     # Parse child elements
     for child in element:
-        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+        tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
         if tag == "recording-list":
             isrc["recording-list"] = parse_recording_list(child)
     return isrc
@@ -217,11 +218,11 @@ def parse_artist_credit(element: ET.Element) -> list[dict[str, Any] | str]:
     """Parse artist-credit element"""
     credit = []
     for child in element:
-        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+        tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
         if tag == "name-credit":
             name_credit = {}
             for nc_child in child:
-                nc_tag = nc_child.tag.split('}')[-1] if '}' in nc_child.tag else nc_child.tag
+                nc_tag = nc_child.tag.split("}")[-1] if "}" in nc_child.tag else nc_child.tag
                 if nc_tag == "name" and nc_child.text:
                     name_credit["name"] = nc_child.text
                 elif nc_tag == "artist":
@@ -255,7 +256,7 @@ def parse_lifespan(element: ET.Element) -> dict[str, Any]:
     """Parse life-span element"""
     lifespan = {}
     for child in element:
-        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+        tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
         if text := child.text:
             lifespan[tag] = text
     return lifespan
@@ -265,7 +266,7 @@ def parse_url_relation_list(element: ET.Element) -> list[dict[str, Any]]:
     """Parse url-relation-list element"""
     relations = []
     for child in element:
-        if child.tag.endswith('relation'):
+        if child.tag.endswith("relation"):
             relation = {}
             # Parse attributes (type, type-id)
             if child.get("type"):
@@ -273,7 +274,7 @@ def parse_url_relation_list(element: ET.Element) -> list[dict[str, Any]]:
             if child.get("type-id"):
                 relation["type-id"] = child.get("type-id")
             for rel_child in child:
-                rel_tag = rel_child.tag.split('}')[-1] if '}' in rel_child.tag else rel_child.tag
+                rel_tag = rel_child.tag.split("}")[-1] if "}" in rel_child.tag else rel_child.tag
                 if rel_tag == "target" and rel_child.text:
                     relation["target"] = rel_child.text
             relations.append(relation)
@@ -284,10 +285,10 @@ def parse_label_info_list(element: ET.Element) -> list[dict[str, Any]]:  # pylin
     """Parse label-info-list element"""
     labels = []
     for child in element:  # pylint: disable=too-many-nested-blocks
-        if child.tag.endswith('label-info'):
+        if child.tag.endswith("label-info"):
             label_info = {}
             for li_child in child:
-                li_tag = li_child.tag.split('}')[-1] if '}' in li_child.tag else li_child.tag
+                li_tag = li_child.tag.split("}")[-1] if "}" in li_child.tag else li_child.tag
                 if li_tag == "label":
                     label = {}
                     # Parse attributes (like type)
@@ -297,10 +298,15 @@ def parse_label_info_list(element: ET.Element) -> list[dict[str, Any]]:  # pylin
                         label["type"] = li_child.get("type")
                     # Parse child elements (like name)
                     for label_child in li_child:
-                        label_tag = (label_child.tag.split('}')[-1]
-                                     if '}' in label_child.tag else label_child.tag)
-                        if (label_tag in ["name", "sort-name", "disambiguation"]
-                                and label_child.text):
+                        label_tag = (
+                            label_child.tag.split("}")[-1]
+                            if "}" in label_child.tag
+                            else label_child.tag
+                        )
+                        if (
+                            label_tag in ["name", "sort-name", "disambiguation"]
+                            and label_child.text
+                        ):
                             label[label_tag] = label_child.text
                     label_info["label"] = label
             labels.append(label_info)
@@ -311,7 +317,7 @@ def parse_cover_art_archive(element: ET.Element) -> dict[str, Any]:
     """Parse cover-art-archive element"""
     caa = {}
     for child in element:
-        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+        tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
         if text := child.text:
             caa[tag] = text
     return caa
@@ -321,7 +327,7 @@ def parse_genre_list(element: ET.Element) -> list[dict[str, Any]]:  # pylint: di
     """Parse genre-list element"""
     genres = []
     for child in element:
-        if child.tag.endswith('genre'):
+        if child.tag.endswith("genre"):
             genre = {}
             # Parse attributes (count, id)
             if child.get("count"):
@@ -329,8 +335,9 @@ def parse_genre_list(element: ET.Element) -> list[dict[str, Any]]:  # pylint: di
             if child.get("id"):
                 genre["id"] = child.get("id")
             for genre_child in child:
-                genre_tag = (genre_child.tag.split('}')[-1]
-                             if '}' in genre_child.tag else genre_child.tag)
+                genre_tag = (
+                    genre_child.tag.split("}")[-1] if "}" in genre_child.tag else genre_child.tag
+                )
                 if genre_tag == "name" and genre_child.text:
                     genre["name"] = genre_child.text
             genres.append(genre)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' djuced support '''
+"""djuced support"""
 
 import asyncio
 import logging
@@ -19,9 +19,9 @@ import nowplaying.utils
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
-    ''' handler for NowPlaying '''
+    """handler for NowPlaying"""
 
-    metadata = {'artist': None, 'title': None, 'filename': None}
+    metadata = {"artist": None, "title": None, "filename": None}
     decktracker = {}
 
     def __init__(self, config=None, qsettings=None):
@@ -30,26 +30,26 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.mixmode = "newest"
         self.event_handler = None
         self.observer = None
-        self.djuceddir = ''
+        self.djuceddir = ""
         self._reset_meta()
         self.tasks = set()
 
     def install(self):
-        ''' locate Virtual DJ '''
-        djuceddir = self.config.userdocs.joinpath('DJUCED')
+        """locate Virtual DJ"""
+        djuceddir = self.config.userdocs.joinpath("DJUCED")
         if djuceddir.exists():
-            self.config.cparser.value('settings/input', 'djuced')
-            self.config.cparser.value('djuced/directory', str(djuceddir))
+            self.config.cparser.value("settings/input", "djuced")
+            self.config.cparser.value("djuced/directory", str(djuceddir))
             return True
         return False
 
     @staticmethod
     def _reset_meta():
-        Plugin.metadata = {'artist': None, 'title': None, 'filename': None}
+        Plugin.metadata = {"artist": None, "title": None, "filename": None}
 
-    async def setup_watcher(self, configkey='djuced/directory'):
-        ''' set up a custom watch on the m3u dir so meta info
-            can update on change'''
+    async def setup_watcher(self, configkey="djuced/directory"):
+        """set up a custom watch on the m3u dir so meta info
+        can update on change"""
 
         djuceddir = self.config.cparser.value(configkey)
         if not self.djuceddir or self.djuceddir != djuceddir:
@@ -60,41 +60,43 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         self.djuceddir = djuceddir
         if not self.djuceddir:
-            logging.error('DJUCED Directory Path not configured/does not exist: %s', self.djuceddir)
+            logging.error("DJUCED Directory Path not configured/does not exist: %s", self.djuceddir)
             await asyncio.sleep(1)
             return
 
-        logging.info('Watching for changes on %s', self.djuceddir)
-        self.event_handler = PatternMatchingEventHandler(patterns=['playing.txt'],
-                                                         ignore_patterns=['.DS_Store'],
-                                                         ignore_directories=True,
-                                                         case_sensitive=False)
+        logging.info("Watching for changes on %s", self.djuceddir)
+        self.event_handler = PatternMatchingEventHandler(
+            patterns=["playing.txt"],
+            ignore_patterns=[".DS_Store"],
+            ignore_directories=True,
+            case_sensitive=False,
+        )
         self.event_handler.on_modified = self._fs_event
         self.event_handler.on_created = self._fs_event
 
-        if self.config.cparser.value('quirks/pollingobserver', type=bool):
-            polling_interval = self.config.cparser.value('quirks/pollinginterval', type=float)
-            logging.debug('Using polling observer with %s second interval', polling_interval)
+        if self.config.cparser.value("quirks/pollingobserver", type=bool):
+            polling_interval = self.config.cparser.value("quirks/pollinginterval", type=float)
+            logging.debug("Using polling observer with %s second interval", polling_interval)
             self.observer = PollingObserver(timeout=polling_interval)
         else:
-            logging.debug('Using fsevent observer')
+            logging.debug("Using fsevent observer")
             self.observer = Observer()
         self.observer.schedule(self.event_handler, self.djuceddir, recursive=False)
         self.observer.start()
 
     def _fs_event(self, event):
-
         if event.is_directory:
             return
         filename = event.src_path
-        logging.debug('event type: %s, syn: %s, path: %s', event.event_type, event.is_synthetic,
-                      filename)
+        logging.debug(
+            "event type: %s, syn: %s, path: %s", event.event_type, event.is_synthetic, filename
+        )
 
         deck = self._read_playingtxt()
         if not deck:
             return
 
-        logging.debug('Looking at deck: %s', Plugin.decktracker[deck])
+        logging.debug("Looking at deck: %s", Plugin.decktracker[deck])
         try:
             loop = asyncio.get_running_loop()
             task = loop.create_task(self._get_metadata(deck))
@@ -105,39 +107,44 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             loop.run_until_complete(self._get_metadata(deck))
 
     def _read_playingtxt(self):
-        txtfile = pathlib.Path(self.djuceddir).joinpath('playing.txt')
-        with open(txtfile, encoding='utf-8') as fhin:
+        txtfile = pathlib.Path(self.djuceddir).joinpath("playing.txt")
+        with open(txtfile, encoding="utf-8") as fhin:
             while line := fhin.readline():
                 try:
-                    title, deck, artist, album = line.split(' | ')
+                    title, deck, artist, album = line.split(" | ")
                 except ValueError:
-                    logging.error('text file output is not formatted correctly')
+                    logging.error("text file output is not formatted correctly")
                     return None
                 album = album.rstrip()
-                if Plugin.decktracker.get(deck) and Plugin.decktracker[deck][
-                        'title'] == title and Plugin.decktracker[deck]['artist'] == artist:
+                if (
+                    Plugin.decktracker.get(deck)
+                    and Plugin.decktracker[deck]["title"] == title
+                    and Plugin.decktracker[deck]["artist"] == artist
+                ):
                     continue
                 Plugin.decktracker[deck] = {
-                    'title': title,
-                    'artist': artist,
-                    'album': album,
+                    "title": title,
+                    "artist": artist,
+                    "album": album,
                 }
                 return deck
         return None
 
     async def _try_db(self, deck):
         metadata = {}
-        dbfile = pathlib.Path(self.djuceddir).joinpath('DJUCED.db')
-        sql = ('SELECT  artist, comment, coverimage, title, bpm, tracknumber, length, absolutepath '
-               'FROM tracks WHERE album=? AND artist=? AND title=? '
-               'ORDER BY last_played')
+        dbfile = pathlib.Path(self.djuceddir).joinpath("DJUCED.db")
+        sql = (
+            "SELECT  artist, comment, coverimage, title, bpm, tracknumber, length, absolutepath "
+            "FROM tracks WHERE album=? AND artist=? AND title=? "
+            "ORDER BY last_played"
+        )
         async with aiosqlite.connect(dbfile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
             params = (
-                Plugin.decktracker[deck]['album'],
-                Plugin.decktracker[deck]['artist'],
-                Plugin.decktracker[deck]['title'],
+                Plugin.decktracker[deck]["album"],
+                Plugin.decktracker[deck]["artist"],
+                Plugin.decktracker[deck]["title"],
             )
             await cursor.execute(sql, params)
             row = await cursor.fetchone()
@@ -145,16 +152,16 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
             if row:
                 metadata = {
-                    'artist': str(row['artist']),
-                    'comment': str(row['comment']),
-                    'title': str(row['title']),
-                    'bpm': str(row['bpm']),
-                    'tracknumber': str(row['tracknumber']),
-                    'duration': str(row['length']),
-                    'filename': str(row['absolutepath']),
+                    "artist": str(row["artist"]),
+                    "comment": str(row["comment"]),
+                    "title": str(row["title"]),
+                    "bpm": str(row["bpm"]),
+                    "tracknumber": str(row["tracknumber"]),
+                    "duration": str(row["length"]),
+                    "filename": str(row["absolutepath"]),
                 }
-                if row['coverimage']:
-                    metadata['rawcoverimage'] = nowplaying.utils.image2png(row['coverimage'])
+                if row["coverimage"]:
+                    metadata["rawcoverimage"] = nowplaying.utils.image2png(row["coverimage"])
         return metadata
 
     # async def _try_songxml(self, deck):
@@ -175,7 +182,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     async def _get_metadata(self, deck):
         if metadata := await self._try_db(deck):
-            logging.debug('Adding data from db')
+            logging.debug("Adding data from db")
             Plugin.metadata = metadata
             return
 
@@ -183,37 +190,37 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         # if metadata := await self._try_songxml(deck):
         #     Plugin.metadata = metadata
         #     return
-        logging.debug('Setting to what we got from playing.txt')
+        logging.debug("Setting to what we got from playing.txt")
         Plugin.metadata = Plugin.decktracker[deck]
 
     async def start(self):
-        ''' setup the watcher to run in a separate thread '''
+        """setup the watcher to run in a separate thread"""
         await self.setup_watcher()
 
     async def getplayingtrack(self):
-        ''' wrapper to call getplayingtrack '''
+        """wrapper to call getplayingtrack"""
 
         # just in case called without calling start...
         await self.start()
         return Plugin.metadata
 
     async def getrandomtrack(self, playlist):
-        ''' get a random track '''
-        dbfile = pathlib.Path(self.djuceddir).joinpath('DJUCED.db')
-        sql = 'SELECT data FROM playlist2 WHERE name=? and type=3 ORDER BY random() LIMIT 1'
+        """get a random track"""
+        dbfile = pathlib.Path(self.djuceddir).joinpath("DJUCED.db")
+        sql = "SELECT data FROM playlist2 WHERE name=? and type=3 ORDER BY random() LIMIT 1"
         async with aiosqlite.connect(dbfile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
-            await cursor.execute(sql, (playlist, ))
+            await cursor.execute(sql, (playlist,))
             row = await cursor.fetchone()
             await connection.commit()
             if not row:
                 return None
 
-            return row['filename']
+            return row["filename"]
 
     async def stop(self):
-        ''' stop the m3u plugin '''
+        """stop the m3u plugin"""
         self._reset_meta()
         if self.observer:
             self.observer.stop()
@@ -221,39 +228,39 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             self.observer = None
 
     def on_djuced_dir_button(self):
-        ''' filename button clicked action'''
+        """filename button clicked action"""
         if self.qwidget.dir_lineedit.text():
             startdir = self.qwidget.dir_lineedit.text()
         else:
-            startdir = str(self.config.userdocs.joinpath('DJUCED'))
-        if dirname := QFileDialog.getExistingDirectory(self.qwidget, 'Select directory', startdir):
+            startdir = str(self.config.userdocs.joinpath("DJUCED"))
+        if dirname := QFileDialog.getExistingDirectory(self.qwidget, "Select directory", startdir):
             self.qwidget.dir_lineedit.setText(dirname)
 
     def defaults(self, qsettings):
-        ''' (re-)set the default configuration values for this plugin '''
-        djuced = self.config.userdocs.joinpath('DJUCED')
-        qsettings.setValue('djuced/directory', str(djuced))
+        """(re-)set the default configuration values for this plugin"""
+        djuced = self.config.userdocs.joinpath("DJUCED")
+        qsettings.setValue("djuced/directory", str(djuced))
 
     def connect_settingsui(self, qwidget, uihelp):
-        ''' connect m3u button to filename picker'''
+        """connect m3u button to filename picker"""
         self.qwidget = qwidget
         self.uihelp = uihelp
         qwidget.dir_button.clicked.connect(self.on_djuced_dir_button)
 
     def load_settingsui(self, qwidget):
-        ''' draw the plugin's settings page '''
-        qwidget.dir_lineedit.setText(self.config.cparser.value('djuced/directory'))
+        """draw the plugin's settings page"""
+        qwidget.dir_lineedit.setText(self.config.cparser.value("djuced/directory"))
 
     def verify_settingsui(self, qwidget):
-        ''' no verification to do '''
+        """no verification to do"""
         if not pathlib.Path(qwidget.dir_lineedit.text()).exists():
-            raise PluginVerifyError(r'djuced directory must exist.')
+            raise PluginVerifyError(r"djuced directory must exist.")
 
     def save_settingsui(self, qwidget):
-        ''' take the settings page and save it '''
+        """take the settings page and save it"""
         configdir = qwidget.dir_lineedit.text()
-        self.config.cparser.setValue('djuced/directory', configdir)
+        self.config.cparser.setValue("djuced/directory", configdir)
 
     def desc_settingsui(self, qwidget):
-        ''' description '''
-        qwidget.setText('DJUCED is DJ software built for the Hercules-series of controllers.')
+        """description"""
+        qwidget.setText("DJUCED is DJ software built for the Hercules-series of controllers.")

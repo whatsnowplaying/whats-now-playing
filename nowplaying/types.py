@@ -94,6 +94,7 @@ class TrackMetadata(TypedDict, total=False):
     cache_warmed: bool
     secret: str
 
+
 class PluginObjs(TypedDict):
     """Dictionary structure for plugin instances organized by type."""
 

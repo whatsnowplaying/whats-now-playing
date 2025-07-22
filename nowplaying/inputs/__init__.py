@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-''' Input Plugin definition '''
+"""Input Plugin definition"""
 
-#import logging
+# import logging
 from typing import TYPE_CHECKING
 
-#from nowplaying.exceptions import PluginVerifyError
+# from nowplaying.exceptions import PluginVerifyError
 from nowplaying.plugin import WNPBasePlugin
 from nowplaying.types import TrackMetadata
 
@@ -14,62 +14,63 @@ if TYPE_CHECKING:
 
 
 class InputPlugin(WNPBasePlugin):
-    ''' base class of input plugins '''
+    """base class of input plugins"""
 
-    def __init__(self,
-                 config: "nowplaying.config.ConfigFile | None" = None,
-                 qsettings: "QWidget | None" = None):
+    def __init__(
+        self,
+        config: "nowplaying.config.ConfigFile | None" = None,
+        qsettings: "QWidget | None" = None,
+    ):
         super().__init__(config=config, qsettings=qsettings)
-        self.plugintype: str = 'input'
+        self.plugintype: str = "input"
 
-#### Additional UI method
+    #### Additional UI method
 
     def desc_settingsui(self, qwidget: "QWidget") -> None:  # pylint: disable=no-self-use
-        ''' description of this input '''
-        qwidget.setText('No description available.')
+        """description of this input"""
+        qwidget.setText("No description available.")
 
-#### Autoinstallation methods ####
+    #### Autoinstallation methods ####
 
     def install(self) -> bool:  # pylint: disable=no-self-use
-        ''' if a fresh install, run this '''
+        """if a fresh install, run this"""
         return False
 
-#### Mix Mode menu item methods
+    #### Mix Mode menu item methods
 
     def validmixmodes(self) -> list[str]:  # pylint: disable=no-self-use
-        ''' tell ui valid mixmodes '''
-        #return ['newest', 'oldest']
-        return ['newest']
+        """tell ui valid mixmodes"""
+        # return ['newest', 'oldest']
+        return ["newest"]
 
     def setmixmode(self, mixmode: str) -> str:  # pylint: disable=no-self-use, unused-argument
-        ''' handle user switching the mix mode: TBD '''
-        return 'newest'
+        """handle user switching the mix mode: TBD"""
+        return "newest"
 
     def getmixmode(self) -> str:  # pylint: disable=no-self-use
-        ''' return what the current mixmode is set to '''
+        """return what the current mixmode is set to"""
 
         # mixmode may only be allowed to be in one state
         # depending upon other configuration that may be in
         # play
 
-        return 'newest'
+        return "newest"
 
-#### Data feed methods
+    #### Data feed methods
 
     async def getplayingtrack(self) -> TrackMetadata | None:
-        ''' Get the currently playing track '''
+        """Get the currently playing track"""
         raise NotImplementedError
 
     async def getrandomtrack(self, playlist: str) -> str | None:
-        ''' Get a file associated with a playlist, crate, whatever '''
+        """Get a file associated with a playlist, crate, whatever"""
         raise NotImplementedError
 
-
-#### Control methods
+    #### Control methods
 
     async def start(self) -> None:
-        ''' any initialization before actual polling starts '''
+        """any initialization before actual polling starts"""
 
     async def stop(self) -> None:
-        ''' stopping either the entire program or just this
-            input '''
+        """stopping either the entire program or just this
+        input"""

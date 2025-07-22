@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-''' Code to use the OBS Web Socket plugin
-    see https://github.com/Palakis/obs-websocket '''
+"""Code to use the OBS Web Socket plugin
+see https://github.com/Palakis/obs-websocket"""
 
 import asyncio
 import logging
@@ -10,12 +10,14 @@ import threading
 
 import simpleobsws
 
-logging.config.dictConfig({
-    'version': 1,
-    'disable_existing_loggers': True,
-})
+logging.config.dictConfig(
+    {
+        "version": 1,
+        "disable_existing_loggers": True,
+    }
+)
 
-#pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -24,10 +26,8 @@ import nowplaying.frozen
 import nowplaying.utils
 
 
-
-
-class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
-    ''' Talk to OBS directly via WebSocket '''
+class OBSWebSocketHandler:  # pylint: disable=too-many-instance-attributes
+    """Talk to OBS directly via WebSocket"""
 
     def __init__(self, config=None, stopevent=None, testmode=None):
         self.config = config
@@ -45,15 +45,15 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
         asyncio.run(self.webclient())
 
     def start(self):
-        ''' run our thread '''
+        """run our thread"""
 
-        if self.config.cparser.value('obsws/enabled', type=bool) and not self.watcher:
+        if self.config.cparser.value("obsws/enabled", type=bool) and not self.watcher:
             self.watcher = self.metadb.watcher()
             self.watcher.start(customhandler=self.process_update)
             self.process_update(None)
 
     async def webclient(self):
-        ''' run the web client '''
+        """run the web client"""
 
         lasttext = None
         while not nowplaying.utils.safe_stopevent_check(self.stopevent):
@@ -64,11 +64,11 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
             if nowplaying.utils.safe_stopevent_check(self.stopevent):
                 break
 
-            if not self.config.cparser.value('obsws/enabled', type=bool):
+            if not self.config.cparser.value("obsws/enabled", type=bool):
                 await asyncio.sleep(1)
                 continue
 
-            source = self.config.cparser.value('obsws/source')
+            source = self.config.cparser.value("obsws/source")
             if not source:
                 await asyncio.sleep(1)
                 continue
@@ -81,12 +81,13 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
                 continue
 
             try:
-                request = simpleobsws.Request('SetInputSettings', {
-                    'inputName': source,
-                    'inputSettings': {
-                        'text': self.text
+                request = simpleobsws.Request(
+                    "SetInputSettings",
+                    {
+                        "inputName": source,
+                        "inputSettings": {"text": self.text},
                     },
-                })
+                )
 
                 await self.client.call(request)
             except Exception as error:  # pylint: disable=broad-except
@@ -101,48 +102,48 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
             await self.client.disconnect()
 
     def process_update(self, event):  # pylint: disable=unused-argument
-        ''' watcher picked up an update, so execute on it '''
+        """watcher picked up an update, so execute on it"""
         self.text = self.generate_text()
         if self.text:
             self.updateevent.set()
 
     def generate_text(self, clear=False):
-        ''' convert template '''
+        """convert template"""
         metadata = self.metadb.read_last_meta()
         if not metadata:
             return None
 
-        template = self.config.cparser.value('obsws/template')
+        template = self.config.cparser.value("obsws/template")
         if templatehandler := nowplaying.utils.TemplateHandler(filename=template):
             return templatehandler.generate(metadatadict=metadata)
 
         if clear:
-            return ''
+            return ""
 
-        return ' {{ artist }} - {{ title }} '
+        return " {{ artist }} - {{ title }} "
 
     async def check_reconnect(self):
-        ''' check if our params have changed and if so reconnect '''
-        obswshost = self.config.cparser.value('obsws/host')
+        """check if our params have changed and if so reconnect"""
+        obswshost = self.config.cparser.value("obsws/host")
         try:
-            obswsport = self.config.cparser.value('obsws/port', type=int)
+            obswsport = self.config.cparser.value("obsws/port", type=int)
         except TypeError:
             self.stop()
             return
 
-        obswssecret = self.config.cparser.value('obsws/secret')
+        obswssecret = self.config.cparser.value("obsws/secret")
 
         reconnect = False
         if not self.obswshost or self.obswshost != obswshost:
-            logging.debug('reconnect')
+            logging.debug("reconnect")
             reconnect = True
 
         if not self.obswsport or self.obswsport != obswsport:
-            logging.debug('reconnect')
+            logging.debug("reconnect")
             reconnect = True
 
         if not self.obswssecret or self.obswssecret != obswssecret:
-            logging.debug('reconnect')
+            logging.debug("reconnect")
             reconnect = True
 
         if reconnect or not self.client or not self.client.is_identified():
@@ -152,9 +153,10 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
             try:
                 parameters = simpleobsws.IdentificationParameters(ignoreNonFatalRequestChecks=False)
                 self.client = simpleobsws.WebSocketClient(
-                    url=f'ws://{self.obswshost}:{self.obswsport}',
+                    url=f"ws://{self.obswshost}:{self.obswsport}",
                     password=self.obswssecret,
-                    identification_parameters=parameters)
+                    identification_parameters=parameters,
+                )
                 await self.client.connect()
                 await self.client.wait_until_identified()
             except Exception as error:  # pylint: disable=broad-except
@@ -164,36 +166,35 @@ class OBSWebSocketHandler:  #pylint: disable=too-many-instance-attributes
                 await asyncio.sleep(3)
 
     def stop(self):
-        ''' exit the thread '''
-        logging.debug('OBSWS asked to stop')
+        """exit the thread"""
+        logging.debug("OBSWS asked to stop")
         self.stopevent.set()
         self.updateevent.set()
         if self.watcher:
             self.watcher.stop()
 
     def __del__(self):
-        logging.debug('Stopping OBSWS')
+        logging.debug("Stopping OBSWS")
         self.stop()
 
 
-def start(stopevent, bundledir, testmode=False):  #pylint: disable=unused-argument
-    ''' multiprocessing start hook '''
-    threading.current_thread().name = 'obsws'
+def start(stopevent, bundledir, testmode=False):  # pylint: disable=unused-argument
+    """multiprocessing start hook"""
+    threading.current_thread().name = "obsws"
 
     bundledir = nowplaying.frozen.frozen_init(bundledir)
 
     if testmode:
-        nowplaying.bootstrap.set_qt_names(appname='testsuite')
+        nowplaying.bootstrap.set_qt_names(appname="testsuite")
     else:
         nowplaying.bootstrap.set_qt_names()
-    logpath = nowplaying.bootstrap.setuplogging(logname='debug.log', rotate=False)
+    logpath = nowplaying.bootstrap.setuplogging(logname="debug.log", rotate=False)
     config = nowplaying.config.ConfigFile(bundledir=bundledir, logpath=logpath, testmode=testmode)
     try:
         OBSWebSocketHandler(  # pylint: disable=unused-variable
-            stopevent=stopevent,
-            config=config,
-            testmode=testmode)
-    except Exception as error:  #pylint: disable=broad-except
-        logging.error('OBSWebSocket crashed: %s', error, exc_info=True)
+            stopevent=stopevent, config=config, testmode=testmode
+        )
+    except Exception as error:  # pylint: disable=broad-except
+        logging.error("OBSWebSocket crashed: %s", error, exc_info=True)
         sys.exit(1)
-    logging.info('shutting down OBSWebSocket v%s', config.version)
+    logging.info("shutting down OBSWebSocket v%s", config.version)

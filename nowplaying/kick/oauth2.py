@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' Kick OAuth2 authentication handler '''
+"""Kick OAuth2 authentication handler"""
 
 import asyncio
 import logging
@@ -14,92 +14,100 @@ import nowplaying.oauth2
 
 
 class KickOAuth2(nowplaying.oauth2.OAuth2Client):
-    ''' Handle Kick.com OAuth 2.1 authentication flow with PKCE '''
+    """Handle Kick.com OAuth 2.1 authentication flow with PKCE"""
 
     def __init__(self, config: nowplaying.config.ConfigFile | None = None) -> None:
         super().__init__(config, nowplaying.kick.constants.KICK_SERVICE_CONFIG)
 
     async def validate_token_async(self, token: str | None = None) -> dict[str, Any] | None:
-        ''' Async validate Kick OAuth token using Kick's introspection endpoint '''
+        """Async validate Kick OAuth token using Kick's introspection endpoint"""
         if not token:
-            token = self.access_token or self.config.cparser.value('kick/accesstoken')
+            token = self.access_token or self.config.cparser.value("kick/accesstoken")
 
         if not token:
             return None
 
         # Use Kick's token introspect endpoint (different from generic OAuth2)
         url = nowplaying.kick.constants.TOKEN_INTROSPECT_ENDPOINT
-        headers = {'Authorization': f'Bearer {token}'}
+        headers = {"Authorization": f"Bearer {token}"}
 
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers,
-                                    timeout=aiohttp.ClientTimeout(total=10)) as response:
+            async with session.post(
+                url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
+            ) as response:
                 if response.status == 200:
                     validation_response = await response.json()
-                    data = validation_response.get('data', {})
+                    data = validation_response.get("data", {})
 
                     # Check if token is active
-                    if data.get('active'):
-                        logging.debug('Kick token valid - client: %s, type: %s, scopes: %s',
-                                      data.get('client_id', 'Unknown'),
-                                      data.get('token_type', 'Unknown'),
-                                      data.get('scope', 'Unknown'))
+                    if data.get("active"):
+                        logging.debug(
+                            "Kick token valid - client: %s, type: %s, scopes: %s",
+                            data.get("client_id", "Unknown"),
+                            data.get("token_type", "Unknown"),
+                            data.get("scope", "Unknown"),
+                        )
                         return data
-                    logging.debug('Kick token is inactive')
+                    logging.debug("Kick token is inactive")
                 else:
-                    logging.warning('Kick token validation returned status %s', response.status)
+                    logging.warning("Kick token validation returned status %s", response.status)
 
                 return None
 
     @staticmethod
     def validate_token_sync(token: str | None) -> bool:
-        ''' Synchronously validate Kick OAuth token '''
+        """Synchronously validate Kick OAuth token"""
         if not token:
             return False
 
         # Use Kick's token introspect endpoint
         url = nowplaying.kick.constants.TOKEN_INTROSPECT_ENDPOINT
-        headers = {'Authorization': f'Bearer {token}'}
+        headers = {"Authorization": f"Bearer {token}"}
 
         try:
             req = requests.post(url, headers=headers, timeout=10)
         except (requests.ConnectionError, requests.Timeout) as error:
-            logging.warning('Kick token validation network error (token status unknown): %s', error)
+            logging.warning("Kick token validation network error (token status unknown): %s", error)
             return False
         except Exception as error:  # pylint: disable=broad-except
-            logging.error('Kick token validation unexpected error: %s', error)
+            logging.error("Kick token validation unexpected error: %s", error)
             return False
 
         if req.status_code != 200:
             if req.status_code == 401:
-                logging.debug('Kick token is invalid/expired')
+                logging.debug("Kick token is invalid/expired")
             else:
-                logging.warning('Kick token validation returned status %s', req.status_code)
+                logging.warning("Kick token validation returned status %s", req.status_code)
             return False
 
         try:
             response_data = req.json()
-            data = response_data.get('data', {})
+            data = response_data.get("data", {})
 
             # Check if token is active
-            if data.get('active'):
-                client_id = data.get('client_id', 'Unknown')
-                scopes = data.get('scope', 'Unknown')
-                token_type = data.get('token_type', 'Unknown')
-                logging.debug('Kick token valid - client: %s, type: %s, scopes: %s', client_id,
-                              token_type, scopes)
+            if data.get("active"):
+                client_id = data.get("client_id", "Unknown")
+                scopes = data.get("scope", "Unknown")
+                token_type = data.get("token_type", "Unknown")
+                logging.debug(
+                    "Kick token valid - client: %s, type: %s, scopes: %s",
+                    client_id,
+                    token_type,
+                    scopes,
+                )
                 return True
 
-            logging.debug('Kick token is inactive')
+            logging.debug("Kick token is inactive")
         except Exception as error:  # pylint: disable=broad-except
-            logging.error('Kick token validation/bad json: %s', error)
+            logging.error("Kick token validation/bad json: %s", error)
         return False
 
     async def revoke_token(self, token: str | None = None) -> None:
-        ''' Revoke an access or refresh token using Kick's endpoint '''
+        """Revoke an access or refresh token using Kick's endpoint"""
         if not token:
-            token = (self.access_token
-                     or self.config.cparser.value(f'{self.config_prefix}/accesstoken'))
+            token = self.access_token or self.config.cparser.value(
+                f"{self.config_prefix}/accesstoken"
+            )
 
         if not token:
             logging.warning("No token to revoke")
@@ -107,33 +115,32 @@ class KickOAuth2(nowplaying.oauth2.OAuth2Client):
 
         # Use Kick's revoke endpoint with query parameters
         revoke_url = f"{self.oauth_host}/oauth/revoke"
-        params = {'token': token, 'token_hint_type': 'access_token'}
+        params = {"token": token, "token_hint_type": "access_token"}
 
-        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
         async with aiohttp.ClientSession() as session:
-            async with session.post(revoke_url,
-                                    params=params,
-                                    headers=headers,
-                                    timeout=aiohttp.ClientTimeout(total=30)) as response:
+            async with session.post(
+                revoke_url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=30)
+            ) as response:
                 if response.status == 200:
-                    logging.info('Successfully revoked %s OAuth2 token', self.config_prefix)
+                    logging.info("Successfully revoked %s OAuth2 token", self.config_prefix)
 
                     # Clear tokens from config
                     if self.config:
-                        self.config.cparser.remove(f'{self.config_prefix}/accesstoken')
-                        self.config.cparser.remove(f'{self.config_prefix}/refreshtoken')
+                        self.config.cparser.remove(f"{self.config_prefix}/accesstoken")
+                        self.config.cparser.remove(f"{self.config_prefix}/refreshtoken")
                         self.config.save()
 
                     self.access_token = None
                     self.refresh_token = None
                 else:
                     error_text = await response.text()
-                    logging.error('Failed to revoke token: %s - %s', response.status, error_text)
+                    logging.error("Failed to revoke token: %s - %s", response.status, error_text)
 
 
 async def main() -> None:
-    ''' Example usage of KickOAuth2 '''
+    """Example usage of KickOAuth2"""
     # Initialize with config (will read kick/clientid, kick/secret from config)
     oauth = KickOAuth2()
 
@@ -146,12 +153,14 @@ async def main() -> None:
         return
 
     # Set redirect URI dynamically (required for authorization)
-    oauth.redirect_uri = 'http://localhost:8899/kickredirect'
+    oauth.redirect_uri = "http://localhost:8899/kickredirect"
 
     # Step 1: Open browser for authorization
     if oauth.open_browser_for_auth():
-        print("Please authorize the application and check the redirect URI "
-              "for the authorization code.")
+        print(
+            "Please authorize the application and check the redirect URI "
+            "for the authorization code."
+        )
         print("The redirect URI should be:", oauth.redirect_uri)
 
         # In a real application, you would capture the authorization code from the redirect

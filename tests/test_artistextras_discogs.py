@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' test artistextras discogs plugin '''
+"""test artistextras discogs plugin"""
 # pylint: disable=too-many-lines
 # Large file justified by comprehensive DJ-critical reliability testing
 
@@ -10,7 +10,7 @@ import os
 import pytest
 from aiohttp import ClientResponseError
 
-from utils_artistextras import (configureplugins, configuresettings, skip_no_discogs_key)
+from utils_artistextras import configureplugins, configuresettings, skip_no_discogs_key
 
 import nowplaying.metadata  # pylint: disable=import-error
 import nowplaying.apicache  # pylint: disable=import-error
@@ -20,97 +20,100 @@ import nowplaying.discogsclient  # pylint: disable=import-error
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_note_stripping(bootstrap):
-    ''' test note stripping in discogs bio '''
+    """test note stripping in discogs bio"""
 
     config = bootstrap
 
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)  # pylint: disable=unused-variable
 
-    logging.debug('Testing discogs')
-    data = await plugins['discogs'].download_async(
+    logging.debug("Testing discogs")
+    data = await plugins["discogs"].download_async(
         {
-            'title': 'Tiny Dancer',
-            'album': 'Diamonds',
-            'artist': 'Elton John',
-            'imagecacheartist': 'eltonjohn'
+            "title": "Tiny Dancer",
+            "album": "Diamonds",
+            "artist": "Elton John",
+            "imagecacheartist": "eltonjohn",
         },
-        imagecache=None)
-    assert data['artistlongbio']
+        imagecache=None,
+    )
+    assert data["artistlongbio"]
     mpproc = nowplaying.metadata.MetadataProcessors(config=config)
     mpproc.metadata = data
-    assert 'Note:' in mpproc.metadata['artistlongbio']
+    assert "Note:" in mpproc.metadata["artistlongbio"]
     mpproc._generate_short_bio()  # pylint: disable=protected-access
-    assert 'Note:' not in mpproc.metadata['artistshortbio']
+    assert "Note:" not in mpproc.metadata["artistshortbio"]
 
 
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_weblocation1(bootstrap):
-    ''' test discogs web location lookup '''
+    """test discogs web location lookup"""
 
     config = bootstrap
 
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)  # pylint: disable=unused-variable
 
-    logging.debug('Testing discogs')
-    data = await plugins['discogs'].download_async(
+    logging.debug("Testing discogs")
+    data = await plugins["discogs"].download_async(
         {
-            'title':
-            'Computer Blue',
-            'album':
-            'Purple Rain',
-            'artist':
-            'Prince and The Revolution',
-            'artistwebsites': [
-                'https://www.discogs.com/artist/271351', 'https://www.discogs.com/artist/28795',
-                'https://www.discogs.com/artist/293637', 'https://www.discogs.com/artist/342899',
-                'https://www.discogs.com/artist/79903', 'https://www.discogs.com/artist/571633',
-                'https://www.discogs.com/artist/96774'
+            "title": "Computer Blue",
+            "album": "Purple Rain",
+            "artist": "Prince and The Revolution",
+            "artistwebsites": [
+                "https://www.discogs.com/artist/271351",
+                "https://www.discogs.com/artist/28795",
+                "https://www.discogs.com/artist/293637",
+                "https://www.discogs.com/artist/342899",
+                "https://www.discogs.com/artist/79903",
+                "https://www.discogs.com/artist/571633",
+                "https://www.discogs.com/artist/96774",
             ],
-            'imagecacheartist':
-            'princeandtherevoluion'
+            "imagecacheartist": "princeandtherevoluion",
         },
-        imagecache=None)
-    assert 'NOTE: If The Revolution are credited without Prince' in data['artistlongbio']
+        imagecache=None,
+    )
+    assert "NOTE: If The Revolution are credited without Prince" in data["artistlongbio"]
 
 
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_apicache_usage(bootstrap):
-    ''' test that discogs plugin uses apicache for API calls '''
+    """test that discogs plugin uses apicache for API calls"""
 
     config = bootstrap
 
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Test with album search (discogs searches by album+artist)
     metadata_with_album = {
-        'album': 'The Downward Spiral',
-        'artist': 'Nine Inch Nails',
-        'imagecacheartist': 'nineinchnails'
+        "album": "The Downward Spiral",
+        "artist": "Nine Inch Nails",
+        "imagecacheartist": "nineinchnails",
     }
 
     # First call - should hit API and cache result
-    result1 = await plugin.download_async(metadata_with_album.copy(),
-                                          imagecache=imagecaches['discogs'])
+    result1 = await plugin.download_async(
+        metadata_with_album.copy(), imagecache=imagecaches["discogs"]
+    )
 
     # Second call - should use cached result
-    result2 = await plugin.download_async(metadata_with_album.copy(),
-                                          imagecache=imagecaches['discogs'])
+    result2 = await plugin.download_async(
+        metadata_with_album.copy(), imagecache=imagecaches["discogs"]
+    )
 
     # Both results should be consistent (either both None or both have data)
     assert (result1 is None) == (result2 is None)
 
     if result1:  # Only test if we got data back
-        logging.info('Discogs API call successful, caching verified')
+        logging.info("Discogs API call successful, caching verified")
         # Should return the same metadata structure
         assert result1 == result2
 
@@ -118,88 +121,95 @@ async def test_discogs_apicache_usage(bootstrap):
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_website_lookup_cache(bootstrap):
-    ''' test discogs website lookup path with caching (different from search path) '''
+    """test discogs website lookup path with caching (different from search path)"""
 
     config = bootstrap
 
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Test metadata with artistwebsites to trigger website lookup path
     metadata_with_websites = {
-        'album': 'Purple Rain',
-        'artist': 'Prince',
-        'imagecacheartist': 'prince',
-        'artistwebsites': ['https://www.discogs.com/artist/79903']  # Prince's Discogs page
+        "album": "Purple Rain",
+        "artist": "Prince",
+        "imagecacheartist": "prince",
+        "artistwebsites": ["https://www.discogs.com/artist/79903"],  # Prince's Discogs page
     }
 
     # First call - should hit API and cache result (website lookup path)
-    result1 = await plugin.download_async(metadata_with_websites.copy(),
-                                          imagecache=imagecaches['discogs'])
+    result1 = await plugin.download_async(
+        metadata_with_websites.copy(), imagecache=imagecaches["discogs"]
+    )
 
     # Second call - should use cached result (tests _artist_async_cached)
-    result2 = await plugin.download_async(metadata_with_websites.copy(),
-                                          imagecache=imagecaches['discogs'])
+    result2 = await plugin.download_async(
+        metadata_with_websites.copy(), imagecache=imagecaches["discogs"]
+    )
 
     # Both results should be consistent
     assert (result1 is None) == (result2 is None)
 
     if result1:  # Only test if we got data back
-        logging.info('Discogs website lookup caching verified')
+        logging.info("Discogs website lookup caching verified")
         # Should return the same metadata structure
         assert result1 == result2
     else:
-        logging.info('Discogs website lookup test completed - '
-                     'cache working regardless of data found')
+        logging.info(
+            "Discogs website lookup test completed - cache working regardless of data found"
+        )
 
 
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_artist_duplicates(bootstrap):
-    ''' test discogs handling of artists with duplicate names like "Madonna" '''
+    """test discogs handling of artists with duplicate names like "Madonna" """
 
     config = bootstrap
 
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Test different albums with same artist name to see if discogs can distinguish
     # Using more common artist names that definitely exist on Discogs
     metadata_madonna1 = {
-        'album': 'Like a Virgin',  # The famous Madonna
-        'artist': 'Madonna',
-        'imagecacheartist': 'madonna1'
+        "album": "Like a Virgin",  # The famous Madonna
+        "artist": "Madonna",
+        "imagecacheartist": "madonna1",
     }
 
     metadata_madonna2 = {
-        'album': 'Red',  # Different Madonna (less famous)
-        'artist': 'Madonna',
-        'imagecacheartist': 'madonna2'
+        "album": "Red",  # Different Madonna (less famous)
+        "artist": "Madonna",
+        "imagecacheartist": "madonna2",
     }
 
     # Test both Madonna combinations - first calls should hit API, second calls should use cache
 
     # Madonna 1: Like a Virgin - first call (API)
-    result1a = await plugin.download_async(metadata_madonna1.copy(),
-                                           imagecache=imagecaches['discogs'])
+    result1a = await plugin.download_async(
+        metadata_madonna1.copy(), imagecache=imagecaches["discogs"]
+    )
 
     # Madonna 2: Red - first call (API)
-    result2a = await plugin.download_async(metadata_madonna2.copy(),
-                                           imagecache=imagecaches['discogs'])
+    result2a = await plugin.download_async(
+        metadata_madonna2.copy(), imagecache=imagecaches["discogs"]
+    )
 
     # Madonna 1: Like a Virgin - second call (should use cache)
-    result1b = await plugin.download_async(metadata_madonna1.copy(),
-                                           imagecache=imagecaches['discogs'])
+    result1b = await plugin.download_async(
+        metadata_madonna1.copy(), imagecache=imagecaches["discogs"]
+    )
 
     # Madonna 2: Red - second call (should use cache)
-    result2b = await plugin.download_async(metadata_madonna2.copy(),
-                                           imagecache=imagecaches['discogs'])
+    result2b = await plugin.download_async(
+        metadata_madonna2.copy(), imagecache=imagecaches["discogs"]
+    )
 
     # Verify caching works for both artist+album combinations
     assert (result1a is None) == (result1b is None)
@@ -207,24 +217,27 @@ async def test_discogs_artist_duplicates(bootstrap):
 
     if result1a:
         assert result1a == result1b
-        logging.info('Cache verified for Madonna/Like a Virgin')
+        logging.info("Cache verified for Madonna/Like a Virgin")
 
     if result2a:
         assert result2a == result2b
-        logging.info('Cache verified for Madonna/Red')
+        logging.info("Cache verified for Madonna/Red")
 
     # If both found data, verify they're different artists (different bios)
     if result1a and result2a:
-        bio1 = result1a.get('artistlongbio', '')
-        bio2 = result2a.get('artistlongbio', '')
+        bio1 = result1a.get("artistlongbio", "")
+        bio2 = result2a.get("artistlongbio", "")
         if bio1 and bio2 and bio1 != bio2:
-            logging.info('Discogs successfully distinguished between different '
-                         '"Madonna" artists with caching')
+            logging.info(
+                "Discogs successfully distinguished between different "
+                '"Madonna" artists with caching'
+            )
         else:
-            logging.info('Both Madonna searches returned data but with same/empty bios')
+            logging.info("Both Madonna searches returned data but with same/empty bios")
     else:
-        logging.info('Discogs duplicate artist test completed - '
-                     'cache working regardless of data found')
+        logging.info(
+            "Discogs duplicate artist test completed - cache working regardless of data found"
+        )
 
     # Test passes if caching works correctly for both duplicate artist scenarios
 
@@ -235,14 +248,14 @@ async def test_discogs_artist_duplicates(bootstrap):
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_timeout_handling(bootstrap):
-    ''' test handling of API timeouts and network errors '''
+    """test handling of API timeouts and network errors"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Mock the client to simulate timeout
     original_search = plugin.client.search_async if plugin.client else None
@@ -256,16 +269,13 @@ async def test_discogs_timeout_handling(bootstrap):
         try:
             # Should handle timeout gracefully and return None
             result = await plugin.download_async(
-                {
-                    'album': 'Test Album',
-                    'artist': 'Test Artist',
-                    'imagecacheartist': 'testartist'
-                },
-                imagecache=imagecaches['discogs'])
+                {"album": "Test Album", "artist": "Test Artist", "imagecacheartist": "testartist"},
+                imagecache=imagecaches["discogs"],
+            )
 
             # Should return None on timeout, not raise exception
             assert result is None
-            logging.info('Discogs timeout handled gracefully')
+            logging.info("Discogs timeout handled gracefully")
 
         finally:
             # Restore original method
@@ -276,31 +286,29 @@ async def test_discogs_timeout_handling(bootstrap):
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_http_error_handling(bootstrap):
-    ''' test handling of various HTTP error codes '''
+    """test handling of various HTTP error codes"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Test various HTTP error scenarios
     error_codes = [401, 404, 429, 500, 503]
 
     for error_code in error_codes:
-        logging.debug('Testing HTTP error code: %d', error_code)
+        logging.debug("Testing HTTP error code: %d", error_code)
 
         # Mock the client to simulate HTTP errors
         original_search = plugin.client.search_async if plugin.client else None
 
         def make_mock_http_error(status_code):
-
             async def mock_http_error(*args, **kwargs):  # pylint: disable=unused-argument
-                raise ClientResponseError(request_info=None,
-                                          history=(),
-                                          status=status_code,
-                                          message=f"HTTP {status_code}")
+                raise ClientResponseError(
+                    request_info=None, history=(), status=status_code, message=f"HTTP {status_code}"
+                )
 
             return mock_http_error
 
@@ -311,15 +319,16 @@ async def test_discogs_http_error_handling(bootstrap):
                 # Should handle HTTP errors gracefully and return None
                 result = await plugin.download_async(
                     {
-                        'album': 'Test Album',
-                        'artist': 'Test Artist',
-                        'imagecacheartist': 'testartist'
+                        "album": "Test Album",
+                        "artist": "Test Artist",
+                        "imagecacheartist": "testartist",
                     },
-                    imagecache=imagecaches['discogs'])
+                    imagecache=imagecaches["discogs"],
+                )
 
                 # Should return None on HTTP error, not raise exception
                 assert result is None
-                logging.info('Discogs HTTP %d error handled gracefully', error_code)
+                logging.info("Discogs HTTP %d error handled gracefully", error_code)
 
             finally:
                 # Restore original method
@@ -330,14 +339,14 @@ async def test_discogs_http_error_handling(bootstrap):
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_malformed_json_handling(bootstrap):
-    ''' test handling of malformed JSON responses '''
+    """test handling of malformed JSON responses"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Mock the client to return malformed data
     original_search = plugin.client.search_async if plugin.client else None
@@ -365,16 +374,13 @@ async def test_discogs_malformed_json_handling(bootstrap):
         try:
             # Should handle malformed response gracefully
             result = await plugin.download_async(
-                {
-                    'album': 'Test Album',
-                    'artist': 'Test Artist',
-                    'imagecacheartist': 'testartist'
-                },
-                imagecache=imagecaches['discogs'])
+                {"album": "Test Album", "artist": "Test Artist", "imagecacheartist": "testartist"},
+                imagecache=imagecaches["discogs"],
+            )
 
             # Should return None on malformed response, not crash
             assert result is None
-            logging.info('Discogs malformed JSON response handled gracefully')
+            logging.info("Discogs malformed JSON response handled gracefully")
 
         finally:
             # Restore original method
@@ -385,150 +391,144 @@ async def test_discogs_malformed_json_handling(bootstrap):
 # Input Validation and Edge Case Tests
 
 
-@pytest.mark.parametrize("metadata,test_id", [
-    ({}, "empty-dict"),
-    ({
-        'artist': None,
-        'album': 'Test'
-    }, "none-values"),
-    ({
-        'artist': '',
-        'album': ''
-    }, "empty-strings"),
-    ({
-        'artist': 'A' * 1000,
-        'album': 'B' * 1000
-    }, "very-long-strings"),
-    ({
-        'artist': 'Test\x00Artist',
-        'album': 'Test\x00Album'
-    }, "null-bytes"),
-    ({
-        'artist': '<script>alert("xss")</script>',
-        'album': 'Test'
-    }, "xss-attempt"),
-    ({
-        'artist': 'Björk',
-        'album': 'Homogénic'
-    }, "unicode-characters"),
-    ({
-        'artist': 'AC/DC',
-        'album': 'Back in Black'
-    }, "special-characters"),
-])
+@pytest.mark.parametrize(
+    "metadata,test_id",
+    [
+        ({}, "empty-dict"),
+        ({"artist": None, "album": "Test"}, "none-values"),
+        ({"artist": "", "album": ""}, "empty-strings"),
+        ({"artist": "A" * 1000, "album": "B" * 1000}, "very-long-strings"),
+        ({"artist": "Test\x00Artist", "album": "Test\x00Album"}, "null-bytes"),
+        ({"artist": '<script>alert("xss")</script>', "album": "Test"}, "xss-attempt"),
+        ({"artist": "Björk", "album": "Homogénic"}, "unicode-characters"),
+        ({"artist": "AC/DC", "album": "Back in Black"}, "special-characters"),
+    ],
+)
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_malformed_metadata_input(bootstrap, metadata, test_id):
-    ''' test handling of malformed input metadata '''
+    """test handling of malformed input metadata"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
-    logging.debug('Testing malformed input (%s): %s', test_id, metadata)
+    logging.debug("Testing malformed input (%s): %s", test_id, metadata)
 
     try:
         # Should handle malformed input gracefully
-        result = await plugin.download_async(metadata, imagecache=imagecaches['discogs'])
+        result = await plugin.download_async(metadata, imagecache=imagecaches["discogs"])
 
         # Should return None or valid data, not crash
         assert result is None or isinstance(result, dict)
-        logging.info('Malformed input (%s) handled gracefully', test_id)
+        logging.info("Malformed input (%s) handled gracefully", test_id)
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        pytest.fail(f'Discogs plugin raised exception for malformed input ({test_id}): {exc}. '
-                    f'Plugins must handle all errors gracefully for live performance.')
+        pytest.fail(
+            f"Discogs plugin raised exception for malformed input ({test_id}): {exc}. "
+            f"Plugins must handle all errors gracefully for live performance."
+        )
 
 
-@pytest.mark.parametrize("artist_name,test_id",
-                         [('Madonna', 'basic-name'),
-                          ('Madonna feat. Justin Timberlake', 'featuring-feat'),
-                          ('Madonna featuring Justin Timberlake', 'featuring-full'),
-                          ('Madonna & Justin Timberlake', 'ampersand'),
-                          ('Madonna and Justin Timberlake', 'and-word'),
-                          ('Madonna (Artist)', 'parentheses'), ('madonna', 'lowercase'),
-                          ('MADONNA', 'uppercase'), ('The Beatles', 'with-article'),
-                          ('Beatles, The', 'inverted-article')])
+@pytest.mark.parametrize(
+    "artist_name,test_id",
+    [
+        ("Madonna", "basic-name"),
+        ("Madonna feat. Justin Timberlake", "featuring-feat"),
+        ("Madonna featuring Justin Timberlake", "featuring-full"),
+        ("Madonna & Justin Timberlake", "ampersand"),
+        ("Madonna and Justin Timberlake", "and-word"),
+        ("Madonna (Artist)", "parentheses"),
+        ("madonna", "lowercase"),
+        ("MADONNA", "uppercase"),
+        ("The Beatles", "with-article"),
+        ("Beatles, The", "inverted-article"),
+    ],
+)
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_artist_name_variations(bootstrap, artist_name, test_id):
-    ''' test artist name variation handling '''
+    """test artist name variation handling"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
-    logging.debug('Testing artist variation: %s', artist_name)
+    logging.debug("Testing artist variation: %s", artist_name)
 
     try:
         result = await plugin.download_async(
-            {
-                'artist': artist_name,
-                'album': 'Test Album',
-                'imagecacheartist': 'testartist'
-            },
-            imagecache=imagecaches['discogs'])
+            {"artist": artist_name, "album": "Test Album", "imagecacheartist": "testartist"},
+            imagecache=imagecaches["discogs"],
+        )
 
         # Should handle all variations without crashing
         assert result is None or isinstance(result, dict)
         if result:
-            logging.info('Successfully processed artist variation: %s (%s)', artist_name, test_id)
+            logging.info("Successfully processed artist variation: %s (%s)", artist_name, test_id)
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(
             f'Discogs plugin raised exception for artist variation "{artist_name}" '
-            f'({test_id}): {exc}. Plugins must handle all errors gracefully for live performance.')
+            f"({test_id}): {exc}. Plugins must handle all errors gracefully for live performance."
+        )
 
 
 @pytest.mark.parametrize(
     "test_urls,test_id",
-    [(['https://www.discogs.com/artist/'], 'missing-id'),
-     (['https://www.discogs.com/artist/abc'], 'non-numeric-id'),
-     (['https://discogs.com/artist/123456'], 'missing-www'),
-     (['http://www.discogs.com/artist/123456'], 'http-not-https'),
-     (['https://www.discogs.com/artist/123456?param=value'], 'with-query-params'),
-     (['https://www.discogs.com/artist/123456#fragment'], 'with-fragment'),
-     (['https://www.spotify.com/artist/123'], 'non-discogs-spotify'),
-     (['https://musicbrainz.org/artist/123'], 'non-discogs-musicbrainz'),
-     (['not-a-url'], 'invalid-url-format'), ([''], 'empty-url')])
+    [
+        (["https://www.discogs.com/artist/"], "missing-id"),
+        (["https://www.discogs.com/artist/abc"], "non-numeric-id"),
+        (["https://discogs.com/artist/123456"], "missing-www"),
+        (["http://www.discogs.com/artist/123456"], "http-not-https"),
+        (["https://www.discogs.com/artist/123456?param=value"], "with-query-params"),
+        (["https://www.discogs.com/artist/123456#fragment"], "with-fragment"),
+        (["https://www.spotify.com/artist/123"], "non-discogs-spotify"),
+        (["https://musicbrainz.org/artist/123"], "non-discogs-musicbrainz"),
+        (["not-a-url"], "invalid-url-format"),
+        ([""], "empty-url"),
+    ],
+)
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_website_url_parsing(bootstrap, test_urls, test_id):
-    ''' test website URL parsing edge cases '''
+    """test website URL parsing edge cases"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
-    logging.debug('Testing URLs: %s', test_urls)
+    logging.debug("Testing URLs: %s", test_urls)
 
     try:
         result = await plugin.download_async(
             {
-                'artist': 'Test Artist',
-                'album': 'Test Album',
-                'imagecacheartist': 'testartist',
-                'artistwebsites': test_urls
+                "artist": "Test Artist",
+                "album": "Test Album",
+                "imagecacheartist": "testartist",
+                "artistwebsites": test_urls,
             },
-            imagecache=imagecaches['discogs'])
+            imagecache=imagecaches["discogs"],
+        )
 
         # Should handle malformed URLs gracefully
         assert result is None or isinstance(result, dict)
-        logging.info('URL test case (%s) handled gracefully: %s', test_id, test_urls)
+        logging.info("URL test case (%s) handled gracefully: %s", test_id, test_urls)
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
         pytest.fail(
             f'Discogs plugin raised exception for URL test case "{test_urls}" ({test_id}): {exc}. '
-            f'Plugins must handle all errors gracefully for live performance.')
+            f"Plugins must handle all errors gracefully for live performance."
+        )
 
 
 # Configuration State Validation Tests
@@ -536,38 +536,38 @@ async def test_discogs_website_url_parsing(bootstrap, test_urls, test_id):
 
 @skip_no_discogs_key
 def test_discogs_invalid_api_key_format(bootstrap):
-    ''' test behavior with invalid API key formats '''
+    """test behavior with invalid API key formats"""
 
     config = bootstrap
 
     # Test various invalid API key formats
     invalid_keys = [
-        '',  # Empty string
+        "",  # Empty string
         None,  # None value
-        'invalid-key',  # Too short
-        'k' * 1000,  # Too long
-        'key with spaces',  # Contains spaces
-        'key\nwith\nnewlines',  # Contains newlines
+        "invalid-key",  # Too short
+        "k" * 1000,  # Too long
+        "key with spaces",  # Contains spaces
+        "key\nwith\nnewlines",  # Contains newlines
         '<script>alert("xss")</script>',  # XSS attempt
     ]
 
     for i, invalid_key in enumerate(invalid_keys):
-        logging.debug('Testing invalid API key %d: %s', i, repr(invalid_key))
+        logging.debug("Testing invalid API key %d: %s", i, repr(invalid_key))
 
-        configuresettings('discogs', config.cparser)
+        configuresettings("discogs", config.cparser)
         if invalid_key is not None:
-            config.cparser.setValue('discogs/apikey', invalid_key)
+            config.cparser.setValue("discogs/apikey", invalid_key)
         else:
             # Test None by not setting the key at all
-            config.cparser.remove('discogs/apikey')
+            config.cparser.remove("discogs/apikey")
 
         _, plugins = configureplugins(config)
 
-        plugin = plugins['discogs']
+        plugin = plugins["discogs"]
 
         # Should handle invalid API key gracefully
         apikey = plugin._get_apikey()  # pylint: disable=protected-access
-        if invalid_key == '' or invalid_key is None:
+        if invalid_key == "" or invalid_key is None:
             # Empty or None keys should be rejected
             assert apikey is None
             assert not plugin._setup_client()  # pylint: disable=protected-access
@@ -578,62 +578,50 @@ def test_discogs_invalid_api_key_format(bootstrap):
             # Client setup may succeed or fail, but shouldn't crash
             try:
                 setup_result = plugin._setup_client()  # pylint: disable=protected-access
-                logging.info('Invalid API key %d setup result: %s', i, setup_result)
+                logging.info("Invalid API key %d setup result: %s", i, setup_result)
             except Exception as exc:  # pylint: disable=broad-exception-caught
-                pytest.fail(f'Discogs plugin raised exception for invalid API key {i}: {exc}. '
-                            f'Plugins must handle all errors gracefully for live performance.')
+                pytest.fail(
+                    f"Discogs plugin raised exception for invalid API key {i}: {exc}. "
+                    f"Plugins must handle all errors gracefully for live performance."
+                )
 
-        logging.info('Invalid API key %d handled gracefully', i)
+        logging.info("Invalid API key %d handled gracefully", i)
 
 
-@pytest.mark.parametrize("features,test_id", [({
-    'bio': True,
-    'fanart': False,
-    'thumbnails': False
-}, 'bio-only'), ({
-    'bio': False,
-    'fanart': True,
-    'thumbnails': False
-}, 'fanart-only'), ({
-    'bio': False,
-    'fanart': False,
-    'thumbnails': True
-}, 'thumbnails-only'), ({
-    'bio': True,
-    'fanart': True,
-    'thumbnails': False
-}, 'bio-fanart'), ({
-    'bio': False,
-    'fanart': False,
-    'thumbnails': False
-}, 'nothing-enabled'), ({
-    'bio': True,
-    'fanart': True,
-    'thumbnails': True
-}, 'everything-enabled')])
+@pytest.mark.parametrize(
+    "features,test_id",
+    [
+        ({"bio": True, "fanart": False, "thumbnails": False}, "bio-only"),
+        ({"bio": False, "fanart": True, "thumbnails": False}, "fanart-only"),
+        ({"bio": False, "fanart": False, "thumbnails": True}, "thumbnails-only"),
+        ({"bio": True, "fanart": True, "thumbnails": False}, "bio-fanart"),
+        ({"bio": False, "fanart": False, "thumbnails": False}, "nothing-enabled"),
+        ({"bio": True, "fanart": True, "thumbnails": True}, "everything-enabled"),
+    ],
+)
 @skip_no_discogs_key
 def test_discogs_selective_feature_disabling(bootstrap, features, test_id):
-    ''' test plugin behavior when specific features are disabled '''
+    """test plugin behavior when specific features are disabled"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', 'test-key')
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", "test-key")
 
-    logging.debug('Testing feature combination (%s): %s', test_id, features)
+    logging.debug("Testing feature combination (%s): %s", test_id, features)
 
     # Set feature flags
-    config.cparser.setValue('discogs/bio', features['bio'])
-    config.cparser.setValue('discogs/fanart', features['fanart'])
-    config.cparser.setValue('discogs/thumbnails', features['thumbnails'])
+    config.cparser.setValue("discogs/bio", features["bio"])
+    config.cparser.setValue("discogs/fanart", features["fanart"])
+    config.cparser.setValue("discogs/thumbnails", features["thumbnails"])
 
     _, plugins = configureplugins(config)
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Client setup should still work regardless of feature flags
     if plugin._get_apikey():  # pylint: disable=protected-access
         setup_result = plugin._setup_client()  # pylint: disable=protected-access
         # Setup may fail with invalid test key, but shouldn't crash
-        logging.info('Feature combination (%s) setup result: %s', test_id, setup_result)
+        logging.info("Feature combination (%s) setup result: %s", test_id, setup_result)
 
 
 # Cache Failure Scenario Tests
@@ -642,21 +630,21 @@ def test_discogs_selective_feature_disabling(bootstrap, features, test_id):
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_cache_corruption_handling(bootstrap):
-    ''' test handling of corrupted cache data '''
+    """test handling of corrupted cache data"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Mock the cache to return corrupted data
     original_cached_fetch = nowplaying.apicache.cached_fetch
 
     async def mock_corrupted_cache(*args, **kwargs):  # pylint: disable=unused-argument
         # Return corrupted data that would break normal processing
-        return {'corrupted': 'data', 'invalid': True}
+        return {"corrupted": "data", "invalid": True}
 
     # Test with corrupted cache
     nowplaying.apicache.cached_fetch = mock_corrupted_cache
@@ -664,16 +652,13 @@ async def test_discogs_cache_corruption_handling(bootstrap):
     try:
         # Should handle corrupted cache gracefully
         result = await plugin.download_async(
-            {
-                'album': 'Test Album',
-                'artist': 'Test Artist',
-                'imagecacheartist': 'testartist'
-            },
-            imagecache=imagecaches['discogs'])
+            {"album": "Test Album", "artist": "Test Artist", "imagecacheartist": "testartist"},
+            imagecache=imagecaches["discogs"],
+        )
 
         # Should return None or valid data, not crash
         assert result is None or isinstance(result, dict)
-        logging.info('Discogs corrupted cache handled gracefully')
+        logging.info("Discogs corrupted cache handled gracefully")
 
     finally:
         # Restore original cache function
@@ -686,20 +671,19 @@ async def test_discogs_cache_corruption_handling(bootstrap):
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_empty_search_results(bootstrap):
-    ''' test handling of empty search results '''
+    """test handling of empty search results"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Mock the client to return empty search results
     original_search = plugin.client.search_async if plugin.client else None
 
     async def mock_empty_results(*args, **kwargs):  # pylint: disable=unused-argument
-
         class EmptySearchResult:  # pylint: disable=too-few-public-methods
             """Mock empty search result for testing."""
 
@@ -722,15 +706,16 @@ async def test_discogs_empty_search_results(bootstrap):
             # Should handle empty results gracefully
             result = await plugin.download_async(
                 {
-                    'album': 'Nonexistent Album',
-                    'artist': 'Nonexistent Artist',
-                    'imagecacheartist': 'nonexistent'
+                    "album": "Nonexistent Album",
+                    "artist": "Nonexistent Artist",
+                    "imagecacheartist": "nonexistent",
                 },
-                imagecache=imagecaches['discogs'])
+                imagecache=imagecaches["discogs"],
+            )
 
             # Should return None for empty results
             assert result is None
-            logging.info('Discogs empty search results handled gracefully')
+            logging.info("Discogs empty search results handled gracefully")
 
         finally:
             # Restore original method
@@ -741,14 +726,14 @@ async def test_discogs_empty_search_results(bootstrap):
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_missing_artist_data(bootstrap):
-    ''' test handling of releases without proper artist data '''
+    """test handling of releases without proper artist data"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Mock the client to return results with missing artist data
     original_search = plugin.client.search_async if plugin.client else None
@@ -762,9 +747,9 @@ async def test_discogs_missing_artist_data(bootstrap):
             def __init__(self):
                 # Create a release with missing/malformed artist data
                 release_data = {
-                    'id': 123456,
-                    'title': 'Test Album',
-                    'artists': []  # Empty artists list
+                    "id": 123456,
+                    "title": "Test Album",
+                    "artists": [],  # Empty artists list
                 }
                 release = models.Release(release_data)
                 release.artists = []  # Explicitly empty
@@ -785,16 +770,13 @@ async def test_discogs_missing_artist_data(bootstrap):
         try:
             # Should handle missing artist data gracefully
             result = await plugin.download_async(
-                {
-                    'album': 'Test Album',
-                    'artist': 'Test Artist',
-                    'imagecacheartist': 'testartist'
-                },
-                imagecache=imagecaches['discogs'])
+                {"album": "Test Album", "artist": "Test Artist", "imagecacheartist": "testartist"},
+                imagecache=imagecaches["discogs"],
+            )
 
             # Should return None or valid data, not crash
             assert result is None or isinstance(result, dict)
-            logging.info('Discogs missing artist data handled gracefully')
+            logging.info("Discogs missing artist data handled gracefully")
 
         finally:
             # Restore original method
@@ -808,48 +790,28 @@ async def test_discogs_missing_artist_data(bootstrap):
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_rapid_track_changes(bootstrap):
-    ''' test handling of rapid consecutive API calls (typical during DJ sets) '''
+    """test handling of rapid consecutive API calls (typical during DJ sets)"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Simulate rapid track changes during a DJ set
     tracks = [
-        {
-            'artist': 'Daft Punk',
-            'album': 'Random Access Memories',
-            'imagecacheartist': 'daftpunk1'
-        },
-        {
-            'artist': 'Justice',
-            'album': 'Cross',
-            'imagecacheartist': 'justice1'
-        },
-        {
-            'artist': 'Moderat',
-            'album': 'II',
-            'imagecacheartist': 'moderat1'
-        },
-        {
-            'artist': 'Burial',
-            'album': 'Untrue',
-            'imagecacheartist': 'burial1'
-        },
-        {
-            'artist': 'Four Tet',
-            'album': 'There Is Love In You',
-            'imagecacheartist': 'fourtet1'
-        },
+        {"artist": "Daft Punk", "album": "Random Access Memories", "imagecacheartist": "daftpunk1"},
+        {"artist": "Justice", "album": "Cross", "imagecacheartist": "justice1"},
+        {"artist": "Moderat", "album": "II", "imagecacheartist": "moderat1"},
+        {"artist": "Burial", "album": "Untrue", "imagecacheartist": "burial1"},
+        {"artist": "Four Tet", "album": "There Is Love In You", "imagecacheartist": "fourtet1"},
     ]
 
     # Simulate rapid-fire requests (common when DJs are mixing quickly)
     tasks = []
     for track in tracks:
-        task = asyncio.create_task(plugin.download_async(track, imagecache=imagecaches['discogs']))
+        task = asyncio.create_task(plugin.download_async(track, imagecache=imagecaches["discogs"]))
         tasks.append(task)
 
     try:
@@ -859,113 +821,94 @@ async def test_discogs_rapid_track_changes(bootstrap):
         # Verify no exceptions were raised
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logging.warning('Track %d raised exception: %s', i, result)
+                logging.warning("Track %d raised exception: %s", i, result)
             else:
                 # Should return None or valid data, not crash
                 assert result is None or isinstance(result, dict)
 
-        logging.info('Discogs handled %d rapid track changes successfully', len(tracks))
+        logging.info("Discogs handled %d rapid track changes successfully", len(tracks))
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        pytest.fail(f'Discogs plugin raised exception during rapid track changes: {exc}. '
-                    f'Plugins must handle all errors gracefully for live performance.')
+        pytest.fail(
+            f"Discogs plugin raised exception during rapid track changes: {exc}. "
+            f"Plugins must handle all errors gracefully for live performance."
+        )
 
 
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_common_dj_genres(bootstrap):
-    ''' test reliability with common DJ music genres and special characters '''
+    """test reliability with common DJ music genres and special characters"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Common DJ genres with challenging artist names
     dj_tracks = [
         # Electronic/EDM with special characters
         {
-            'artist': 'Aphex Twin',
-            'album': 'Selected Ambient Works',
-            'imagecacheartist': 'aphextwin'
+            "artist": "Aphex Twin",
+            "album": "Selected Ambient Works",
+            "imagecacheartist": "aphextwin",
         },
-        {
-            'artist': 'µ-Ziq',
-            'album': 'Lunatic Harness',
-            'imagecacheartist': 'uziq'
-        },
-        {
-            'artist': 'Squarepusher',
-            'album': 'Go Plastic',
-            'imagecacheartist': 'squarepusher'
-        },
-
+        {"artist": "µ-Ziq", "album": "Lunatic Harness", "imagecacheartist": "uziq"},
+        {"artist": "Squarepusher", "album": "Go Plastic", "imagecacheartist": "squarepusher"},
         # Hip-hop with featuring artists
         {
-            'artist': 'Kanye West feat. Jay-Z',
-            'album': 'Watch the Throne',
-            'imagecacheartist': 'kanyejay'
+            "artist": "Kanye West feat. Jay-Z",
+            "album": "Watch the Throne",
+            "imagecacheartist": "kanyejay",
         },
-        {
-            'artist': 'Wu-Tang Clan',
-            'album': 'Enter the Wu-Tang',
-            'imagecacheartist': 'wutang'
-        },
-
+        {"artist": "Wu-Tang Clan", "album": "Enter the Wu-Tang", "imagecacheartist": "wutang"},
         # House/Techno with numbers and symbols
         {
-            'artist': '2 Many DJs',
-            'album': 'As Heard on Radio Soulwax',
-            'imagecacheartist': '2manydjs'
+            "artist": "2 Many DJs",
+            "album": "As Heard on Radio Soulwax",
+            "imagecacheartist": "2manydjs",
         },
         {
-            'artist': 'LCD Soundsystem',
-            'album': 'Sound of Silver',
-            'imagecacheartist': 'lcdsoundsystem'
+            "artist": "LCD Soundsystem",
+            "album": "Sound of Silver",
+            "imagecacheartist": "lcdsoundsystem",
         },
-
         # International artists with accents
-        {
-            'artist': 'Röyksopp',
-            'album': 'Melody A.M.',
-            'imagecacheartist': 'royksopp'
-        },
-        {
-            'artist': 'Sigur Rós',
-            'album': 'Ágætis byrjun',
-            'imagecacheartist': 'sigurros'
-        },
+        {"artist": "Röyksopp", "album": "Melody A.M.", "imagecacheartist": "royksopp"},
+        {"artist": "Sigur Rós", "album": "Ágætis byrjun", "imagecacheartist": "sigurros"},
     ]
 
     for i, track in enumerate(dj_tracks):
-        logging.debug('Testing DJ track %d: %s - %s', i, track['artist'], track['album'])
+        logging.debug("Testing DJ track %d: %s - %s", i, track["artist"], track["album"])
 
         try:
-            result = await plugin.download_async(track, imagecache=imagecaches['discogs'])
+            result = await plugin.download_async(track, imagecache=imagecaches["discogs"])
 
             # Should handle all DJ music without crashing
             assert result is None or isinstance(result, dict)
             if result:
-                logging.info('Successfully processed DJ track: %s', track['artist'])
+                logging.info("Successfully processed DJ track: %s", track["artist"])
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            pytest.fail(f'Discogs plugin raised exception for DJ track "{track["artist"]}": {exc}. '
-                        f'Plugins must handle all errors gracefully for live performance.')
+            pytest.fail(
+                f'Discogs plugin raised exception for DJ track "{track["artist"]}": {exc}. '
+                f"Plugins must handle all errors gracefully for live performance."
+            )
 
 
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_live_performance_timeout_recovery(bootstrap):
-    ''' test timeout recovery during live performance (critical for DJs) '''
+    """test timeout recovery during live performance (critical for DJs)"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Mock intermittent timeouts (simulating network issues during live sets)
     original_search = plugin.client.search_async if plugin.client else None
@@ -989,12 +932,9 @@ async def test_discogs_live_performance_timeout_recovery(bootstrap):
         try:
             # First call should timeout
             result1 = await plugin.download_async(
-                {
-                    'artist': 'Test Artist',
-                    'album': 'Test Album',
-                    'imagecacheartist': 'testartist1'
-                },
-                imagecache=imagecaches['discogs'])
+                {"artist": "Test Artist", "album": "Test Album", "imagecacheartist": "testartist1"},
+                imagecache=imagecaches["discogs"],
+            )
 
             # Should handle timeout gracefully
             assert result1 is None
@@ -1002,15 +942,16 @@ async def test_discogs_live_performance_timeout_recovery(bootstrap):
             # Second call should work (network recovered)
             result2 = await plugin.download_async(
                 {
-                    'artist': 'Test Artist 2',
-                    'album': 'Test Album 2',
-                    'imagecacheartist': 'testartist2'
+                    "artist": "Test Artist 2",
+                    "album": "Test Album 2",
+                    "imagecacheartist": "testartist2",
                 },
-                imagecache=imagecaches['discogs'])
+                imagecache=imagecaches["discogs"],
+            )
 
             # Plugin should continue working after timeout recovery
             assert result2 is None or isinstance(result2, dict)
-            logging.info('Discogs recovered from timeout during live performance simulation')
+            logging.info("Discogs recovered from timeout during live performance simulation")
 
         finally:
             # Restore original method
@@ -1021,29 +962,20 @@ async def test_discogs_live_performance_timeout_recovery(bootstrap):
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_memory_usage_stability(bootstrap):
-    ''' test memory stability during extended DJ sets '''
+    """test memory stability during extended DJ sets"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Simulate a long DJ set with many track lookups
     base_tracks = [
-        {
-            'artist': 'Daft Punk',
-            'album': 'Discovery'
-        },
-        {
-            'artist': 'Justice',
-            'album': 'Cross'
-        },
-        {
-            'artist': 'Moderat',
-            'album': 'Moderat'
-        },
+        {"artist": "Daft Punk", "album": "Discovery"},
+        {"artist": "Justice", "album": "Cross"},
+        {"artist": "Moderat", "album": "Moderat"},
     ]
 
     # Create many variations to test memory usage
@@ -1051,14 +983,14 @@ async def test_discogs_memory_usage_stability(bootstrap):
     for i in range(20):  # Simulate 20 tracks in a set
         for base_track in base_tracks:
             track = base_track.copy()
-            track['imagecacheartist'] = f"{base_track['artist'].lower().replace(' ', '')}{i}"
+            track["imagecacheartist"] = f"{base_track['artist'].lower().replace(' ', '')}{i}"
             tracks.append(track)
 
     successful_lookups = 0
 
     for i, track in enumerate(tracks):
         try:
-            result = await plugin.download_async(track, imagecache=imagecaches['discogs'])
+            result = await plugin.download_async(track, imagecache=imagecaches["discogs"])
 
             # Should handle all requests without memory issues
             assert result is None or isinstance(result, dict)
@@ -1067,96 +999,79 @@ async def test_discogs_memory_usage_stability(bootstrap):
 
             # Log progress every 10 tracks
             if (i + 1) % 10 == 0:
-                logging.info('Processed %d tracks, %d successful lookups', i + 1,
-                             successful_lookups)
+                logging.info(
+                    "Processed %d tracks, %d successful lookups", i + 1, successful_lookups
+                )
 
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            pytest.fail(f'Discogs plugin raised exception for memory test track {i}: {exc}. '
-                        f'Plugins must handle all errors gracefully for live performance.')
+            pytest.fail(
+                f"Discogs plugin raised exception for memory test track {i}: {exc}. "
+                f"Plugins must handle all errors gracefully for live performance."
+            )
 
-    logging.info('Memory stability test completed: %d/%d tracks processed successfully',
-                 successful_lookups, len(tracks))
+    logging.info(
+        "Memory stability test completed: %d/%d tracks processed successfully",
+        successful_lookups,
+        len(tracks),
+    )
 
 
 @skip_no_discogs_key
 def test_discogs_configuration_validation_for_djs(bootstrap):
-    ''' test configuration scenarios important for DJ reliability '''
+    """test configuration scenarios important for DJ reliability"""
 
     config = bootstrap
 
     # Test scenarios DJs commonly encounter
     dj_config_scenarios = [
         # Minimal config (bio only for performance)
-        {
-            'bio': True,
-            'fanart': False,
-            'thumbnails': False,
-            'websites': False
-        },
-
+        {"bio": True, "fanart": False, "thumbnails": False, "websites": False},
         # Visual-heavy config (for streaming DJs)
-        {
-            'bio': False,
-            'fanart': True,
-            'thumbnails': True,
-            'websites': False
-        },
-
+        {"bio": False, "fanart": True, "thumbnails": True, "websites": False},
         # Balanced config (most common)
-        {
-            'bio': True,
-            'fanart': True,
-            'thumbnails': False,
-            'websites': True
-        },
-
+        {"bio": True, "fanart": True, "thumbnails": False, "websites": True},
         # Everything disabled (fallback mode)
-        {
-            'bio': False,
-            'fanart': False,
-            'thumbnails': False,
-            'websites': False
-        },
+        {"bio": False, "fanart": False, "thumbnails": False, "websites": False},
     ]
 
     for i, scenario in enumerate(dj_config_scenarios):
-        logging.debug('Testing DJ config scenario %d: %s', i, scenario)
+        logging.debug("Testing DJ config scenario %d: %s", i, scenario)
 
-        configuresettings('discogs', config.cparser)
-        config.cparser.setValue('discogs/apikey', 'test-key-for-validation')
+        configuresettings("discogs", config.cparser)
+        config.cparser.setValue("discogs/apikey", "test-key-for-validation")
 
         # Apply scenario settings
         for setting, value in scenario.items():
-            config.cparser.setValue(f'discogs/{setting}', value)
+            config.cparser.setValue(f"discogs/{setting}", value)
 
         _, plugins = configureplugins(config)
-        plugin = plugins['discogs']
+        plugin = plugins["discogs"]
 
         # Plugin should initialize successfully in all DJ scenarios
         assert plugin is not None
-        assert hasattr(plugin, '_get_apikey')
-        assert hasattr(plugin, '_setup_client')
+        assert hasattr(plugin, "_get_apikey")
+        assert hasattr(plugin, "_setup_client")
 
-        logging.info('DJ config scenario %d validated successfully', i)
+        logging.info("DJ config scenario %d validated successfully", i)
 
 
 @pytest.mark.asyncio
 @skip_no_discogs_key
 async def test_discogs_api_call_count(bootstrap):
-    ''' test that discogs plugin makes only one API call when cache is used '''
+    """test that discogs plugin makes only one API call when cache is used"""
 
     config = bootstrap
-    configuresettings('discogs', config.cparser)
-    config.cparser.setValue('discogs/apikey', os.environ['DISCOGS_API_KEY'])
+    configuresettings("discogs", config.cparser)
+    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     imagecaches, plugins = configureplugins(config)
 
-    plugin = plugins['discogs']
+    plugin = plugins["discogs"]
 
     # Test with known artist and album
     metadata = {
-        'artist': 'Daft Punk',
-        'album': 'Random Access Memories',
-        'imagecacheartist': 'daftpunk'
+        "artist": "Daft Punk",
+        "album": "Random Access Memories",
+        "imagecacheartist": "daftpunk",
     }
 
     # Mock the actual Discogs client API call to count calls
@@ -1166,7 +1081,7 @@ async def test_discogs_api_call_count(bootstrap):
     async def mock_search_async(*args, **kwargs):
         nonlocal api_call_count
         api_call_count += 1
-        logging.debug('Mock Discogs API call #%d', api_call_count)
+        logging.debug("Mock Discogs API call #%d", api_call_count)
         # Call the original method to get real data
         if original_search:
             return await original_search(*args, **kwargs)
@@ -1177,29 +1092,34 @@ async def test_discogs_api_call_count(bootstrap):
 
         try:
             # First call - should hit API and cache result
-            result1 = await plugin.download_async(metadata.copy(),
-                                                  imagecache=imagecaches['discogs'])
+            result1 = await plugin.download_async(
+                metadata.copy(), imagecache=imagecaches["discogs"]
+            )
 
             # Verify one API call was made
             assert api_call_count == 1, (
-                f'Expected 1 API call after first download, got {api_call_count}')
+                f"Expected 1 API call after first download, got {api_call_count}"
+            )
 
             # Second call - should use cached result, no additional API call
-            result2 = await plugin.download_async(metadata.copy(),
-                                                  imagecache=imagecaches['discogs'])
+            result2 = await plugin.download_async(
+                metadata.copy(), imagecache=imagecaches["discogs"]
+            )
 
             # Verify still only one API call was made (cache hit)
             assert api_call_count == 1, (
-                f'Expected 1 API call after second download (cache hit), got {api_call_count}')
+                f"Expected 1 API call after second download (cache hit), got {api_call_count}"
+            )
 
             # Both results should be consistent
             assert (result1 is None) == (result2 is None)
             if result1:  # Only test if we got data back
-                logging.info('Discogs API cache verified: 1 API call for 2 downloads')
+                logging.info("Discogs API cache verified: 1 API call for 2 downloads")
                 assert result1 == result2
             else:
-                logging.info('Discogs API cache test completed - '
-                             'cache working regardless of data found')
+                logging.info(
+                    "Discogs API cache test completed - cache working regardless of data found"
+                )
 
         finally:
             # Restore the original method

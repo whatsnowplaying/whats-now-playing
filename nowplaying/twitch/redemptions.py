@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' twitch request handling using EventSub WebSockets '''
+"""twitch request handling using EventSub WebSockets"""
 
 import asyncio
 import logging
@@ -22,19 +22,17 @@ if TYPE_CHECKING:
     import nowplaying.twitch.chat
 
 # Suppress noisy TwitchAPI websocket keepalive logging
-logging.getLogger('twitchAPI.eventsub.websocket').setLevel(logging.INFO)
+logging.getLogger("twitchAPI.eventsub.websocket").setLevel(logging.INFO)
 
 
+class TwitchRedemptions:  # pylint: disable=too-many-instance-attributes
+    """handle twitch redemptions using EventSub WebSockets
 
-
-class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
-    ''' handle twitch redemptions using EventSub WebSockets
-
-        Converted from deprecated PubSub to EventSub WebSockets.
-        Different methods are being called by different parts of the system
-        presently. Should probably split them out between UI/non-UI if possible,
-        since UI code can't call async code.
-    '''
+    Converted from deprecated PubSub to EventSub WebSockets.
+    Different methods are being called by different parts of the system
+    presently. Should probably split them out between UI/non-UI if possible,
+    since UI code can't call async code.
+    """
 
     def __init__(self, config: nowplaying.config.ConfigFile | None = None, stopevent=None):
         self.config = config
@@ -49,7 +47,7 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         self.user_id: str | None = None
 
     async def callback_redemption(self, data: ChannelPointsCustomRewardRedemptionAddEvent):
-        ''' handle the channel point redemption '''
+        """handle the channel point redemption"""
         redemptitle = data.event.reward.title
         user = data.event.user_name
         user_input = data.event.user_input or None
@@ -65,28 +63,28 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
             if access_token:
                 # Set the token in the OAuth client for API calls
                 oauth_client.access_token = access_token
-                setting['userimage'] = await nowplaying.twitch.utils.get_user_image(
-                    oauth_client, user)
+                setting["userimage"] = await nowplaying.twitch.utils.get_user_image(
+                    oauth_client, user
+                )
             else:
                 # No token available for user image lookup
-                setting['userimage'] = None
-                logging.warning('No OAuth token available for user image lookup')
+                setting["userimage"] = None
+                logging.warning("No OAuth token available for user image lookup")
 
-            if setting.get('type') == 'Generic':
+            if setting.get("type") == "Generic":
                 reqdata = await self.requests.user_track_request(setting, user, user_input)
-            elif setting.get('type') == 'Roulette':
+            elif setting.get("type") == "Roulette":
                 reqdata = await self.requests.user_roulette_request(setting, user, user_input)
-            elif setting.get('type') == 'Twofer':
+            elif setting.get("type") == "Twofer":
                 reqdata = await self.requests.twofer_request(setting, user, user_input)
-            elif setting.get('type') == 'GifWords':
+            elif setting.get("type") == "GifWords":
                 reqdata = await self.requests.gifwords_request(setting, user, user_input)
 
-            if self.chat and setting.get('command'):
-                await self.chat.redemption_to_chat_request_bridge(setting['command'], reqdata)
+            if self.chat and setting.get("command"):
+                await self.chat.redemption_to_chat_request_bridge(setting["command"], reqdata)
 
-    async def run_redemptions(self,
-                              chat: 'nowplaying.twitch.chat.TwitchChat | None'):
-        ''' twitch redemptions using EventSub WebSockets '''
+    async def run_redemptions(self, chat: "nowplaying.twitch.chat.TwitchChat | None"):
+        """twitch redemptions using EventSub WebSockets"""
         # Wait until both redemptions and requests are enabled
         await self._wait_for_redemptions_enabled()
 
@@ -101,10 +99,9 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
             if nowplaying.utils.safe_stopevent_check(self.stopevent):
                 break
 
-
             # Check if we were connected but lost connection
             if loggedin and self.eventsub and not self._is_eventsub_running():
-                logging.debug('Was logged in; but not connected to EventSub anymore')
+                logging.debug("Was logged in; but not connected to EventSub anymore")
                 await self.stop()
                 loggedin = False
 
@@ -121,28 +118,29 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
             except Exception:  # pylint: disable=broad-except
                 for line in traceback.format_exc().splitlines():
                     logging.error(line)
-                logging.error('EventSub failed to start')
+                logging.error("EventSub failed to start")
                 await asyncio.sleep(60)
                 continue
 
     async def _wait_for_redemptions_enabled(self):
-        ''' Wait until both redemptions and requests are enabled '''
+        """Wait until both redemptions and requests are enabled"""
         if not self.config:
             return
         while not nowplaying.utils.safe_stopevent_check(self.stopevent) and (
-                not self.config.cparser.value('twitchbot/redemptions', type=bool)
-                or not self.config.cparser.value('settings/requests', type=bool)):
+            not self.config.cparser.value("twitchbot/redemptions", type=bool)
+            or not self.config.cparser.value("settings/requests", type=bool)
+        ):
             await asyncio.sleep(1)
             self.config.get()
 
     def _is_eventsub_running(self) -> bool:
-        ''' Check if EventSub WebSocket is running '''
+        """Check if EventSub WebSocket is running"""
         if not self.eventsub:
             return False
         return self.eventsub._running  # pylint: disable=protected-access
 
     async def _setup_eventsub_connection(self) -> bool:
-        ''' Set up EventSub connection and authentication '''
+        """Set up EventSub connection and authentication"""
         # Create dedicated TwitchLogin for redemptions (broadcaster account only)
         redemption_login = nowplaying.twitch.utils.TwitchLogin(self.config)
         self.twitch = await redemption_login.api_login()
@@ -169,8 +167,9 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         return await self._setup_eventsub_websocket()
 
     async def _get_authenticated_user(
-            self, redemption_login: nowplaying.twitch.utils.TwitchLogin) -> TwitchUser | None:
-        ''' Get authenticated user info (must be broadcaster for channel points) '''
+        self, redemption_login: nowplaying.twitch.utils.TwitchLogin
+    ) -> TwitchUser | None:
+        """Get authenticated user info (must be broadcaster for channel points)"""
         try:
             # Get the authenticated user (token owner) instead of channel config
             if self.twitch:
@@ -179,73 +178,80 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         except Exception:  # pylint: disable=broad-except
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
-            logging.error('EventSub get authenticated user failed')
+            logging.error("EventSub get authenticated user failed")
             await redemption_login.cache_token_del()
         return None
 
     async def _check_custom_rewards(self, user: TwitchUser):
-        ''' Check what custom rewards exist and which ones we can access '''
+        """Check what custom rewards exist and which ones we can access"""
         if not self.twitch or not self.user_id:
             return
         try:
             # Get manageable rewards
-            rewards_response = await self.twitch.get_custom_reward(broadcaster_id=self.user_id,
-                                                                   only_manageable_rewards=True)
+            rewards_response = await self.twitch.get_custom_reward(
+                broadcaster_id=self.user_id, only_manageable_rewards=True
+            )
             manageable_rewards = await self._process_rewards_response(rewards_response)
 
             # Get all rewards
             all_rewards_response = await self.twitch.get_custom_reward(
-                broadcaster_id=self.user_id, only_manageable_rewards=False)
+                broadcaster_id=self.user_id, only_manageable_rewards=False
+            )
             all_rewards = await self._process_rewards_response(all_rewards_response)
 
             self._log_rewards_info(user, manageable_rewards, all_rewards)
         except Exception as reward_error:  # pylint: disable=broad-except
-            logging.warning('Could not check custom rewards: %s', reward_error)
+            logging.warning("Could not check custom rewards: %s", reward_error)
 
     @staticmethod
     async def _process_rewards_response(rewards_response: Any) -> list[Any]:
-        ''' Process rewards response (handle both async iterator and list) '''
-        if hasattr(rewards_response, '__aiter__'):
+        """Process rewards response (handle both async iterator and list)"""
+        if hasattr(rewards_response, "__aiter__"):
             return [reward async for reward in rewards_response]
         return list(rewards_response) if rewards_response else []
 
     @staticmethod
     def _log_rewards_info(user: TwitchUser, manageable_rewards: list[Any], all_rewards: list[Any]):
-        ''' Log information about available rewards '''
+        """Log information about available rewards"""
         logging.info('Channel point rewards check for user "%s":', user.login)
-        logging.info('  Total rewards: %d', len(all_rewards))
-        logging.info('  Manageable by our app: %d', len(manageable_rewards))
+        logging.info("  Total rewards: %d", len(all_rewards))
+        logging.info("  Manageable by our app: %d", len(manageable_rewards))
 
         if manageable_rewards:
-            logging.info('  Rewards we can monitor:')
+            logging.info("  Rewards we can monitor:")
             for reward in manageable_rewards:
                 logging.info('    - "%s" (ID: %s)', reward.title, reward.id)
         else:
-            logging.warning('  No rewards manageable by our OAuth app!')
+            logging.warning("  No rewards manageable by our OAuth app!")
             if all_rewards:
-                logging.warning('  Existing rewards (created by other apps):')
+                logging.warning("  Existing rewards (created by other apps):")
                 for reward in all_rewards:
                     logging.warning('    - "%s" (not accessible)', reward.title)
-            logging.warning('  To use channel points, create rewards through this app '
-                            'or use rewards created with the same OAuth client ID.')
+            logging.warning(
+                "  To use channel points, create rewards through this app "
+                "or use rewards created with the same OAuth client ID."
+            )
 
     async def _verify_channel_config(self, user: TwitchUser) -> bool:
-        ''' Verify the authenticated user matches the configured channel '''
+        """Verify the authenticated user matches the configured channel"""
         if not self.config:
             return False
-        configured_channel = self.config.cparser.value('twitchbot/channel')
+        configured_channel = self.config.cparser.value("twitchbot/channel")
         if configured_channel and user.login.lower() != configured_channel.lower():
             logging.error(
                 'EventSub auth mismatch: OAuth token is for user "%s" but channel is '
                 'set to "%s". For channel points redemptions, the OAuth token must be '
-                'for the broadcaster\'s account.', user.login, configured_channel)
+                "for the broadcaster's account.",
+                user.login,
+                configured_channel,
+            )
             # Don't immediately revoke token - just log and continue to next iteration
             await asyncio.sleep(60)
             return False
         return True
 
     async def _setup_eventsub_websocket(self) -> bool:
-        ''' Set up EventSub WebSocket connection and register callback '''
+        """Set up EventSub WebSocket connection and register callback"""
         if not self.twitch or not self.user_id:
             return False
         # Create EventSub WebSocket connection
@@ -258,29 +264,30 @@ class TwitchRedemptions:  #pylint: disable=too-many-instance-attributes
         await asyncio.sleep(2)
 
         if not self._is_eventsub_running():
-            logging.error('EventSub failed to connect')
+            logging.error("EventSub failed to connect")
             return False
 
         # Listen for channel points redemptions
         try:
             await self.eventsub.listen_channel_points_custom_reward_redemption_add(
-                self.user_id, self.callback_redemption)
-            logging.info('EventSub listening for channel points redemptions')
+                self.user_id, self.callback_redemption
+            )
+            logging.info("EventSub listening for channel points redemptions")
             return True
         except Exception as callback_error:  # pylint: disable=broad-except
-            logging.error('Failed to register EventSub callback: %s', callback_error)
+            logging.error("Failed to register EventSub callback: %s", callback_error)
             # Don't clear tokens for callback registration errors
             await asyncio.sleep(10)
             return False
 
     async def stop(self):
-        ''' stop the twitch redemption support '''
+        """stop the twitch redemption support"""
         if self.eventsub:
             try:
                 # Stop EventSub WebSocket
                 await self.eventsub.stop()
-                logging.debug('EventSub stopped')
+                logging.debug("EventSub stopped")
             except Exception as error:  # pylint: disable=broad-except
-                logging.error('Error stopping EventSub: %s', error)
+                logging.error("Error stopping EventSub: %s", error)
             finally:
                 self.eventsub = None
