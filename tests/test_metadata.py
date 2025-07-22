@@ -267,10 +267,9 @@ and Trent Reznor alike have refused to identify NIN as an industrial band.
 
     shortbio = (
         "Industrial rock band Nine Inch Nails (abbreviated as NIN and stylized as NIИ) was formed"
-        " in 1988 by Trent Reznor in Cleveland, Ohio. Reznor has served as the main producer, "
-        " singer, songwriter, instrumentalist, and sole member of Nine Inch Nails for 28 years. "
-        "This changed in December 2016 when Atticus Ross officially became the second member of "
-        "the band."
+        " in 1988 by Trent Reznor in Cleveland, Ohio. Reznor has served as the main producer, singer,"  # pylint: disable=line-too-long
+        " songwriter, instrumentalist, and sole member of Nine Inch Nails for 28 years. This changed"  # pylint: disable=line-too-long
+        " in December 2016 when Atticus Ross officially became the second member of the band."
     )
 
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
