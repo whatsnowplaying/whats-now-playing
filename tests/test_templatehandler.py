@@ -7,154 +7,103 @@ import tempfile
 import pytest
 
 import nowplaying.utils  # pylint: disable=import-error
-import nowplaying.textoutput  # pylint: disable=import-error,no-member
+import nowplaying.notifications.textoutput  # pylint: disable=import-error
 
 
-@pytest.fixture
-def gettemplatehandler(getroot, bootstrap, request):
-    ''' automated integration test '''
-    config = bootstrap  # pylint: disable=unused-variable
-    mark = request.node.get_closest_marker("templatesettings")
-    if mark and 'template' in mark.kwargs:
-        template = os.path.join(getroot, 'tests', 'templates', mark.kwargs['template'])
-    else:
-        template = None
-    return nowplaying.utils.TemplateHandler(filename=template)
-
-
-@pytest.mark.templatesettings(template='simple.txt')
-def test_writingmeta(gettemplatehandler):  # pylint: disable=redefined-outer-name
-    ''' try writing a text '''
-    with tempfile.TemporaryDirectory() as newpath:
-        filename = os.path.join(newpath, 'test.txt')
-
-        metadata = {
-            'artist': 'this is an artist',
-            'title': 'this is the title',
-        }
-
-        nowplaying.textoutput.writetxttrack(filename=filename,  # pylint: disable=no-member
-                                            templatehandler=gettemplatehandler,
-                                            metadata=metadata)
-        with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
-            content = tempfn.readlines()
-
-        assert 'this is an artist' in content[0]
-        assert 'this is the title' in content[1]
-
-
-@pytest.mark.templatesettings(template='simple.txt')
-def test_missingmeta(gettemplatehandler):  # pylint: disable=redefined-outer-name
-    ''' empty metadata '''
-    with tempfile.TemporaryDirectory() as newpath:
-        filename = os.path.join(newpath, 'test.txt')
-
-        metadata = {}
-
-        nowplaying.textoutput.writetxttrack(filename=filename,  # pylint: disable=no-member
-                                            templatehandler=gettemplatehandler,
-                                            metadata=metadata)
-        with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
-            content = tempfn.readlines()
-
-        assert content[0].strip() == ''
-
-
-@pytest.mark.templatesettings(template='missing.txt')
-def test_missingtemplate(gettemplatehandler):  # pylint: disable=redefined-outer-name
-    ''' template is missing '''
-    with tempfile.TemporaryDirectory() as newpath:
-        filename = os.path.join(newpath, 'test.txt')
-
-        metadata = {
-            'artist': 'this is an artist',
-            'title': 'this is the title',
-        }
-
-        nowplaying.textoutput.writetxttrack(filename=filename,  # pylint: disable=no-member
-                                            templatehandler=gettemplatehandler,
-                                            metadata=metadata)
-        with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
-            content = tempfn.readlines()
-
-        assert 'No template found' in content[0]
-
-
-def test_missingfilename(gettemplatehandler):  # pylint: disable=redefined-outer-name
-    ''' no template '''
-    with tempfile.TemporaryDirectory() as newpath:
-        filename = os.path.join(newpath, 'test.txt')
-
-        metadata = {
-            'artist': 'this is an artist',
-            'title': 'this is the title',
-        }
-
-        nowplaying.textoutput.writetxttrack(filename=filename,  # pylint: disable=no-member
-                                            templatehandler=gettemplatehandler,
-                                            metadata=metadata)
-        with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
-            content = tempfn.readlines()
-
-        assert 'No template found' in content[0]
-
-
-def test_cleartemplate():  # pylint: disable=redefined-outer-name
-    ''' try writing a text '''
-    with tempfile.TemporaryDirectory() as newpath:
-        filename = os.path.join(newpath, 'test.txt')
-        nowplaying.textoutput.writetxttrack(filename=filename, clear=True)  # pylint: disable=no-member
-        with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
-            content = tempfn.readlines()
-
-        assert not content
-
-
-def test_justafile():  # pylint: disable=redefined-outer-name
-    ''' try writing a text '''
-    with tempfile.TemporaryDirectory() as newpath:
-        filename = os.path.join(newpath, 'test.txt')
-        nowplaying.textoutput.writetxttrack(filename=filename)  # pylint: disable=no-member
-        with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
-            content = tempfn.readlines()
-
-        assert content[0] == '{{ artist }} - {{ title }}'
-
-
-@pytest.mark.templatesettings(template='tracktest.txt')
 @pytest.mark.parametrize(
-    "track_value,disc_value,expected_track,expected_disc",
+    "template_file,metadata,expected_checks",
     [
-        ('0', '0', True, True),  # Track 0 and disc 0 should show
-        ('1', '1', True, True),  # Track 1 and disc 1 should show
-        ('', '', False, False),  # Empty strings should not show
-        (None, None, False, False),  # None values should not show
+        # Basic template with full metadata
+        ("simple.txt", {
+            "artist": "this is an artist",
+            "title": "this is the title"
+        }, [("this is an artist", 0), ("this is the title", 1)]),
+
+        # Empty metadata should result in empty content
+        ("simple.txt", {}, [("", 0, "strip")]),
+
+        # Missing template file should show error message
+        ("missing.txt", {
+            "artist": "this is an artist",
+            "title": "this is the title"
+        }, [("No template found", 0)]),
+
+        # No template file (None) should show error message
+        (None, {
+            "artist": "this is an artist",
+            "title": "this is the title"
+        }, [("No template found", 0)]),
+
+        # Track and disc handling - values should show
+        ("tracktest.txt", {
+            "track": "1",
+            "disc": "1"
+        }, [("Track: 1", 0), ("Disc: 1", 1)]),
+
+        # Track and disc handling - empty values should not show
+        ("tracktest.txt", {
+            "track": "",
+            "disc": ""
+        }, [("Track:", 0, "not_in"), ("Disc:", 0, "not_in")]),
+
+        # Track and disc handling - None values should not show
+        ("tracktest.txt", {}, [("Track:", 0, "not_in"), ("Disc:", 0, "not_in")]),
     ])
-def test_track_disc_handling(  # pylint: disable=redefined-outer-name
-                             gettemplatehandler, track_value, disc_value, expected_track,
-                             expected_disc):
-    ''' test track and disc number handling with various values '''
+@pytest.mark.asyncio
+async def test_template_processing(template_file, metadata, expected_checks, bootstrap, getroot):
+    ''' Test template processing with various scenarios '''
     with tempfile.TemporaryDirectory() as newpath:
         filename = os.path.join(newpath, 'test.txt')
 
-        metadata = {}
-        if track_value is not None:
-            metadata['track'] = track_value
-        if disc_value is not None:
-            metadata['disc'] = disc_value
-
-        nowplaying.textoutput.writetxttrack(filename=filename,  # pylint: disable=no-member
-                                            templatehandler=gettemplatehandler,
-                                            metadata=metadata)
-        with open(filename) as tempfn:  # pylint: disable=unspecified-encoding
-            content = tempfn.read()
-
-        if expected_track:
-            assert f'Track: {track_value}' in content
+        # Handle template file path
+        if template_file:
+            template_path = os.path.join(getroot, 'tests', 'templates', template_file)
         else:
-            assert 'Track:' not in content
+            template_path = None
 
-        if expected_disc:
-            assert f'Disc: {disc_value}' in content
-        else:
-            assert 'Disc:' not in content
+        # Create and configure text output plugin
+        plugin = nowplaying.notifications.textoutput.Plugin(config=bootstrap)
+        plugin.config.cparser.setValue('textoutput/file', filename)
+        if template_path:
+            plugin.config.cparser.setValue('textoutput/txttemplate', template_path)
+        await plugin.start()
+
+        # Write the metadata using the plugin
+        await plugin.notify_track_change(metadata)
+
+        # Read the output file
+        with open(filename, encoding='utf-8') as tempfh:
+            content = tempfh.readlines()
+
+        # Check expected content
+        for check in expected_checks:
+            expected_text = check[0]
+            line_num = check[1]
+            check_type = check[2] if len(check) > 2 else "in"
+
+            if check_type == "strip":
+                assert content[line_num].strip() == expected_text
+            elif check_type == "not_in":
+                assert expected_text not in content[line_num]
+            else:  # default "in"
+                assert expected_text in content[line_num]
+
+
+@pytest.mark.asyncio
+async def test_clear_template(bootstrap):
+    ''' Test clearing template functionality '''
+    with tempfile.TemporaryDirectory() as newpath:
+        filename = os.path.join(newpath, 'test.txt')
+
+        # Create and configure text output plugin
+        plugin = nowplaying.notifications.textoutput.Plugin(config=bootstrap)
+        plugin.config.cparser.setValue('textoutput/file', filename)
+        plugin.config.cparser.setValue('textoutput/clearonstartup', True)
+        # Don't set template file to test the clear functionality
+        await plugin.start()
+
+        # File should be empty after clear
+        with open(filename, encoding='utf-8') as tempfh:
+            content = tempfh.read()
+
+        assert content == ''

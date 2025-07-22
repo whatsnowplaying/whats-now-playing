@@ -22,6 +22,7 @@ import nowplaying.twitch.compat
 
 import nowplaying.artistextras
 import nowplaying.inputs
+import nowplaying.notifications
 import nowplaying.pluginimporter
 import nowplaying.recognition
 import nowplaying.types
@@ -79,6 +80,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self.pluginobjs: nowplaying.types.PluginObjs = {
             'inputs': {},
             'artistextras': {},
+            'notifications': {},
             'recognition': {}
         }
 
@@ -156,6 +158,10 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self.plugins['artistextras'] = nowplaying.pluginimporter.import_plugins(
             nowplaying.artistextras)
         self.pluginobjs['artistextras'] = {}
+
+        self.plugins['notifications'] = nowplaying.pluginimporter.import_plugins(
+            nowplaying.notifications)
+        self.pluginobjs['notifications'] = {}
 
     @staticmethod
     def _defaults_artistextras(settings: QSettings) -> None:
