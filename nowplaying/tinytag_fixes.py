@@ -20,16 +20,18 @@ def _check_tinytag_compatibility():
     # Note: tinytag 2.1.1 doesn't expose __version__ in code, so we check for required methods
     try:
         # Verify the required internal structure exists for our patches
-        if not hasattr(tinytag.tinytag, '_MP4'):
+        if not hasattr(tinytag.tinytag, "_MP4"):
             logging.error("tinytag._MP4 class not found. Incompatible tinytag version.")
             return False
-        if not hasattr(tinytag.tinytag._MP4, '_parse_custom_field'):  # pylint: disable=protected-access
-            logging.error("tinytag._MP4._parse_custom_field method not found. "
-                          "Incompatible tinytag version.")
+        if not hasattr(tinytag.tinytag._MP4, "_parse_custom_field"):  # pylint: disable=protected-access
+            logging.error(
+                "tinytag._MP4._parse_custom_field method not found. Incompatible tinytag version."
+            )
             return False
-        if not hasattr(tinytag.tinytag.TinyTag, '_set_field'):
-            logging.error("tinytag.TinyTag._set_field method not found. "
-                          "Incompatible tinytag version.")
+        if not hasattr(tinytag.tinytag.TinyTag, "_set_field"):
+            logging.error(
+                "tinytag.TinyTag._set_field method not found. Incompatible tinytag version."
+            )
             return False
         return True
     except AttributeError as exc:
@@ -58,16 +60,17 @@ def _create_patched_methods():
         atom_header = file_handle.read(header_len)
 
         while len(atom_header) == header_len:
-            atom_size = unpack('>I', atom_header[:4])[0] - header_len
+            atom_size = unpack(">I", atom_header[:4])[0] - header_len
             atom_type = atom_header[4:]
 
-            if atom_type == b'name':
+            if atom_type == b"name":
                 atom_value = file_handle.read(atom_size)[4:].lower()
-                field_name = atom_value.decode('utf-8', 'replace')
+                field_name = atom_value.decode("utf-8", "replace")
                 # pylint: disable=protected-access
                 field_name = cls._CUSTOM_FIELD_NAME_MAPPING.get(  # pylint: disable=no-member
-                    field_name, tinytag.tinytag.TinyTag._OTHER_PREFIX + field_name)  # pylint: disable=protected-access,no-member
-            elif atom_type == b'data':
+                    field_name, tinytag.tinytag.TinyTag._OTHER_PREFIX + field_name
+                )  # pylint: disable=protected-access,no-member
+            elif atom_type == b"data":
                 data_atom = file_handle.read(atom_size)
                 data_atoms.append(data_atom)
             else:
@@ -95,17 +98,16 @@ def _create_patched_methods():
     # Also patch _set_field to handle list values properly
     _original_set_field = tinytag.tinytag.TinyTag._set_field  # pylint: disable=protected-access
 
-    def _set_field_fixed(self,
-                         fieldname: str,
-                         value: str | float | list,
-                         check_conflict: bool = True) -> None:
+    def _set_field_fixed(
+        self, fieldname: str, value: str | float | list, check_conflict: bool = True
+    ) -> None:
         """
         Fixed version of _set_field that properly handles list values for other.* fields.
         """
         if fieldname.startswith(self._OTHER_PREFIX):  # pylint: disable=protected-access,no-member
-            fieldname = fieldname[len(self._OTHER_PREFIX):]  # pylint: disable=protected-access,no-member
+            fieldname = fieldname[len(self._OTHER_PREFIX) :]  # pylint: disable=protected-access,no-member
             if check_conflict and fieldname in self.__dict__:
-                fieldname = '_' + fieldname
+                fieldname = "_" + fieldname
 
             # If value is a list, set it directly (for multi-value fields)
             if isinstance(value, list):
@@ -123,7 +125,7 @@ def _create_patched_methods():
         # For non-other fields, use original behavior but handle lists
         if isinstance(value, list):
             # For regular fields, just take the first value
-            value = value[0] if value else ''
+            value = value[0] if value else ""
 
         _original_set_field(self, fieldname, value, check_conflict)
 

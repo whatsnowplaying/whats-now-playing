@@ -20,7 +20,7 @@ import nowplaying.utils
 class WikiPage:  # pylint: disable=too-few-public-methods
     """Represents a Wikipedia page with its data."""
 
-    def __init__(self, entity: str, lang: str = 'en'):
+    def __init__(self, entity: str, lang: str = "en"):
         self.entity = entity
         self.lang = lang
         self.data: dict[str, Any] = {}
@@ -51,72 +51,72 @@ class AsyncWikiClient:
         if self.session:
             await self.session.close()
 
-    async def _get_wikidata_info(self,
-                                 entity: str,
-                                 lang: str,
-                                 include_sitelinks: bool = False) -> dict[str, Any]:
+    async def _get_wikidata_info(
+        self, entity: str, lang: str, include_sitelinks: bool = False
+    ) -> dict[str, Any]:
         """Get Wikidata entity information with optional sitelinks."""
         url = "https://www.wikidata.org/w/api.php"
-        props = 'claims|descriptions'
+        props = "claims|descriptions"
         if include_sitelinks:
-            props += '|sitelinks'
+            props += "|sitelinks"
 
-        params = {'action': 'wbgetentities', 'ids': entity, 'format': 'json', 'props': props}
+        params = {"action": "wbgetentities", "ids": entity, "format": "json", "props": props}
 
         if not self.session:
             return {}
         async with self.session.get(url, params=params) as response:
             data = await response.json()
 
-            if 'entities' not in data or entity not in data['entities']:
+            if "entities" not in data or entity not in data["entities"]:
                 return {}
 
-            entity_data = data['entities'][entity]
-            result = {'claims': {}}
+            entity_data = data["entities"][entity]
+            result = {"claims": {}}
 
             # Extract claims (P434 = MusicBrainz, P1953 = Discogs, P18 = Image)
-            if 'claims' in entity_data:
-                claims = entity_data['claims']
-                if 'P434' in claims:  # MusicBrainz Artist ID
-                    result['claims']['P434'] = [
-                        claim['mainsnak']['datavalue']['value'] for claim in claims['P434']
-                        if 'datavalue' in claim['mainsnak']
+            if "claims" in entity_data:
+                claims = entity_data["claims"]
+                if "P434" in claims:  # MusicBrainz Artist ID
+                    result["claims"]["P434"] = [
+                        claim["mainsnak"]["datavalue"]["value"]
+                        for claim in claims["P434"]
+                        if "datavalue" in claim["mainsnak"]
                     ]
-                if 'P1953' in claims:  # Discogs Artist ID
-                    result['claims']['P1953'] = [
-                        claim['mainsnak']['datavalue']['value'] for claim in claims['P1953']
-                        if 'datavalue' in claim['mainsnak']
+                if "P1953" in claims:  # Discogs Artist ID
+                    result["claims"]["P1953"] = [
+                        claim["mainsnak"]["datavalue"]["value"]
+                        for claim in claims["P1953"]
+                        if "datavalue" in claim["mainsnak"]
                     ]
-                if 'P18' in claims:  # Image
-                    result['claims']['P18'] = [
-                        claim['mainsnak']['datavalue']['value'] for claim in claims['P18']
-                        if 'datavalue' in claim['mainsnak']
+                if "P18" in claims:  # Image
+                    result["claims"]["P18"] = [
+                        claim["mainsnak"]["datavalue"]["value"]
+                        for claim in claims["P18"]
+                        if "datavalue" in claim["mainsnak"]
                     ]
 
             # Extract description
-            if 'descriptions' in entity_data and lang in entity_data['descriptions']:
-                result['description'] = entity_data['descriptions'][lang]['value']
+            if "descriptions" in entity_data and lang in entity_data["descriptions"]:
+                result["description"] = entity_data["descriptions"][lang]["value"]
 
             # Extract sitelinks if requested
-            if include_sitelinks and 'sitelinks' in entity_data:
-                result['sitelinks'] = entity_data['sitelinks']
+            if include_sitelinks and "sitelinks" in entity_data:
+                result["sitelinks"] = entity_data["sitelinks"]
 
             return result
 
     async def _get_wikipedia_extract(
-            self,
-            entity: str,
-            lang: str,
-            sitelinks: dict | None = None) -> str | None:
+        self, entity: str, lang: str, sitelinks: dict | None = None
+    ) -> str | None:
         """Get Wikipedia page extract using sitelinks (fetched separately if not provided)."""
         if sitelinks is None:
             # Fallback: fetch sitelinks separately if not provided
             url = "https://www.wikidata.org/w/api.php"
             params = {
-                'action': 'wbgetentities',
-                'ids': entity,
-                'format': 'json',
-                'props': 'sitelinks'
+                "action": "wbgetentities",
+                "ids": entity,
+                "format": "json",
+                "props": "sitelinks",
             }
 
             if not self.session:
@@ -124,29 +124,29 @@ class AsyncWikiClient:
             async with self.session.get(url, params=params) as response:
                 data = await response.json()
 
-                if 'entities' not in data or entity not in data['entities']:
+                if "entities" not in data or entity not in data["entities"]:
                     return None
 
-                entity_data = data['entities'][entity]
-                sitelinks = entity_data.get('sitelinks', {})
+                entity_data = data["entities"][entity]
+                sitelinks = entity_data.get("sitelinks", {})
 
         # Look for the Wikipedia page in the specified language
         wiki_key = f"{lang}wiki"
         if not sitelinks or wiki_key not in sitelinks:
             return None
 
-        page_title = sitelinks[wiki_key]['title']
+        page_title = sitelinks[wiki_key]["title"]
 
         # Now get the extract from Wikipedia
         wiki_url = f"https://{lang}.wikipedia.org/w/api.php"
         extract_params = {
-            'action': 'query',
-            'format': 'json',
-            'titles': page_title,
-            'prop': 'extracts',
-            'exintro': '1',
-            'explaintext': '1',
-            'exsectionformat': 'plain'
+            "action": "query",
+            "format": "json",
+            "titles": page_title,
+            "prop": "extracts",
+            "exintro": "1",
+            "explaintext": "1",
+            "exsectionformat": "plain",
         }
 
         if not self.session:
@@ -154,12 +154,14 @@ class AsyncWikiClient:
         async with self.session.get(wiki_url, params=extract_params) as response:
             data = await response.json()
 
-            if 'query' not in data or 'pages' not in data['query']:
+            if "query" not in data or "pages" not in data["query"]:
                 return None
 
-            pages = data['query']['pages']
-            return next((page_data['extract']
-                         for page_data in pages.values() if 'extract' in page_data), None)
+            pages = data["query"]["pages"]
+            return next(
+                (page_data["extract"] for page_data in pages.values() if "extract" in page_data),
+                None,
+            )
 
     async def _get_wikidata_images(self, entity: str) -> list[dict[str, str]]:
         """Get images directly from Wikidata entity with batch processing."""
@@ -167,25 +169,25 @@ class AsyncWikiClient:
 
         # Get Wikidata entity with claims
         url = "https://www.wikidata.org/w/api.php"
-        params = {'action': 'wbgetentities', 'ids': entity, 'format': 'json', 'props': 'claims'}
+        params = {"action": "wbgetentities", "ids": entity, "format": "json", "props": "claims"}
 
         if not self.session:
             return images
         async with self.session.get(url, params=params) as response:
             data = await response.json()
 
-            if 'entities' not in data or entity not in data['entities']:
+            if "entities" not in data or entity not in data["entities"]:
                 return images
 
-            entity_data = data['entities'][entity]
-            claims = entity_data.get('claims', {})
+            entity_data = data["entities"][entity]
+            claims = entity_data.get("claims", {})
 
             # Get P18 (image) claims
-            if 'P18' in claims:
+            if "P18" in claims:
                 filenames = []
-                for claim in claims['P18']:
-                    if 'mainsnak' in claim and 'datavalue' in claim['mainsnak']:
-                        filename = claim['mainsnak']['datavalue']['value']
+                for claim in claims["P18"]:
+                    if "mainsnak" in claim and "datavalue" in claim["mainsnak"]:
+                        filename = claim["mainsnak"]["datavalue"]["value"]
                         filenames.append(filename)
 
                 # Batch process all filenames at once for better performance
@@ -193,7 +195,7 @@ class AsyncWikiClient:
                     image_urls = await self._get_commons_image_urls_batch(filenames)
                     for img_url in image_urls:
                         if img_url:
-                            images.append({'kind': 'wikidata-image', 'url': img_url})
+                            images.append({"kind": "wikidata-image", "url": img_url})
 
         return images
 
@@ -203,36 +205,39 @@ class AsyncWikiClient:
             return []
 
         # Create pipe-separated list of file titles for batch query, URL-encoding each filename
-        titles = '|'.join(f'File:{quote(filename, safe="")}' for filename in filenames)
+        titles = "|".join(f"File:{quote(filename, safe='')}" for filename in filenames)
 
         commons_url = "https://commons.wikimedia.org/w/api.php"
         params = {
-            'action': 'query',
-            'format': 'json',
-            'titles': titles,
-            'prop': 'imageinfo',
-            'iiprop': 'url'
+            "action": "query",
+            "format": "json",
+            "titles": titles,
+            "prop": "imageinfo",
+            "iiprop": "url",
         }
 
         try:
             async with self.session.get(commons_url, params=params) as response:
                 data = await response.json()
 
-                if 'query' not in data or 'pages' not in data['query']:
+                if "query" not in data or "pages" not in data["query"]:
                     return []
 
-                pages = data['query']['pages']
+                pages = data["query"]["pages"]
                 results = []
 
                 # Maintain order by matching against original filenames
                 for filename in filenames:
-                    file_title = f'File:{filename}'
+                    file_title = f"File:{filename}"
                     url = None
 
                     for page_data in pages.values():
-                        if (page_data.get('title') == file_title and
-                            'imageinfo' in page_data and page_data['imageinfo']):
-                            url = page_data['imageinfo'][0].get('url')
+                        if (
+                            page_data.get("title") == file_title
+                            and "imageinfo" in page_data
+                            and page_data["imageinfo"]
+                        ):
+                            url = page_data["imageinfo"][0].get("url")
                             break
 
                     results.append(url)
@@ -249,19 +254,17 @@ class AsyncWikiClient:
         return results[0] if results else None
 
     async def _get_wikipedia_images(  # pylint: disable=too-many-locals
-            self,
-            entity: str,
-            lang: str,
-            sitelinks: dict | None = None) -> list[dict[str, str]]:
+        self, entity: str, lang: str, sitelinks: dict | None = None
+    ) -> list[dict[str, str]]:
         """Get images from Wikipedia page using sitelinks (fetched separately if not provided)."""
         if sitelinks is None:
             # Fallback: fetch sitelinks separately if not provided
             url = "https://www.wikidata.org/w/api.php"
             params = {
-                'action': 'wbgetentities',
-                'ids': entity,
-                'format': 'json',
-                'props': 'sitelinks'
+                "action": "wbgetentities",
+                "ids": entity,
+                "format": "json",
+                "props": "sitelinks",
             }
 
             if not self.session:
@@ -269,28 +272,28 @@ class AsyncWikiClient:
             async with self.session.get(url, params=params) as response:
                 data = await response.json()
 
-                if 'entities' not in data or entity not in data['entities']:
+                if "entities" not in data or entity not in data["entities"]:
                     return []
 
-                entity_data = data['entities'][entity]
-                sitelinks = entity_data.get('sitelinks', {})
+                entity_data = data["entities"][entity]
+                sitelinks = entity_data.get("sitelinks", {})
 
         wiki_key = f"{lang}wiki"
         if not sitelinks or wiki_key not in sitelinks:
             return []
 
-        page_title = sitelinks[wiki_key]['title']
+        page_title = sitelinks[wiki_key]["title"]
 
         # Get images from Wikipedia page using pageimages API (cleaner, no UI icons)
         wiki_url = f"https://{lang}.wikipedia.org/w/api.php"
         image_params = {
-            'action': 'query',
-            'format': 'json',
-            'titles': page_title,
-            'prop': 'pageimages',
-            'piprop': 'original|name',
-            'pithumbsize': 500,
-            'pilicense': 'any'  # Include both free and fair-use images
+            "action": "query",
+            "format": "json",
+            "titles": page_title,
+            "prop": "pageimages",
+            "piprop": "original|name",
+            "pithumbsize": 500,
+            "pilicense": "any",  # Include both free and fair-use images
         }
 
         images = []
@@ -300,35 +303,36 @@ class AsyncWikiClient:
         async with self.session.get(wiki_url, params=image_params) as response:
             data = await response.json()
 
-            if 'query' not in data or 'pages' not in data['query']:
+            if "query" not in data or "pages" not in data["query"]:
                 return images
 
-            pages = data['query']['pages']
+            pages = data["query"]["pages"]
             for page_data in pages.values():
                 # Add pageimage (main representative image) if available
-                if 'original' in page_data:
-                    images.append({
-                        'kind': 'wikidata-image',  # Keep same kind for compatibility
-                        'url': page_data['original']['source']
-                    })
+                if "original" in page_data:
+                    images.append(
+                        {
+                            "kind": "wikidata-image",  # Keep same kind for compatibility
+                            "url": page_data["original"]["source"],
+                        }
+                    )
 
                 # Add thumbnail if available and no original
-                elif 'thumbnail' in page_data:
-                    images.append({
-                        'kind': 'query-thumbnail',
-                        'url': page_data['thumbnail']['source']
-                    })
+                elif "thumbnail" in page_data:
+                    images.append(
+                        {"kind": "query-thumbnail", "url": page_data["thumbnail"]["source"]}
+                    )
 
         return images
 
-
     async def get_page(  # pylint: disable=too-many-arguments
-            self,
-            entity: str,
-            lang: str = 'en',
-            fetch_bio: bool = True,
-            fetch_images: bool = True,
-            max_images: int = 10) -> WikiPage:
+        self,
+        entity: str,
+        lang: str = "en",
+        fetch_bio: bool = True,
+        fetch_images: bool = True,
+        max_images: int = 10,
+    ) -> WikiPage:
         """Get a Wikipedia page by Wikidata entity ID with selective fetching."""
         wiki_page = WikiPage(entity, lang)
 
@@ -339,13 +343,13 @@ class AsyncWikiClient:
             wiki_page.data.update(wikidata_info)
 
             # Extract sitelinks for reuse
-            sitelinks = wikidata_info.get('sitelinks') if include_sitelinks else None
+            sitelinks = wikidata_info.get("sitelinks") if include_sitelinks else None
 
             # Only fetch bio if requested - reuse sitelinks to avoid extra API call
             if fetch_bio:
                 extract = await self._get_wikipedia_extract(entity, lang, sitelinks)
                 if extract:
-                    wiki_page.data['extext'] = extract
+                    wiki_page.data["extext"] = extract
 
             # Only fetch images if requested - reuse sitelinks to avoid extra API call
             if fetch_images:
@@ -362,12 +366,13 @@ class AsyncWikiClient:
 
 
 async def get_page_async(  # pylint: disable=too-many-arguments
-        entity: str,
-        lang: str = 'en',
-        timeout: int = 5,
-        need_bio: bool = True,
-        need_images: bool = True,
-        max_images: int = 5) -> WikiPage:
+    entity: str,
+    lang: str = "en",
+    timeout: int = 5,
+    need_bio: bool = True,
+    need_images: bool = True,
+    max_images: int = 5,
+) -> WikiPage:
     """
     Async function for nowplaying wikimedia plugin.
 

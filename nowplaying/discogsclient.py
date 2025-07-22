@@ -18,31 +18,42 @@ import nowplaying.utils
 class DiscogsRelease:  # pylint: disable=too-few-public-methods
     """Represents a Discogs release with its artists."""
 
-    def __init__(self, data: dict[str, Any], client: 'AsyncDiscogsClient | None' = None):
+    def __init__(self, data: dict[str, Any], client: "AsyncDiscogsClient | None" = None):
         self.data = data
-        self.discogs_id = data.get('id')
+        self.discogs_id = data.get("id")
         self.client = client
         self._artists_loaded = False
         self.artists = []
 
         # If we have full release data with artists, use it
-        if 'artists' in data and data['artists']:
-            self.artists = [DiscogsArtist(artist) for artist in data['artists']]
+        if "artists" in data and data["artists"]:
+            self.artists = [DiscogsArtist(artist) for artist in data["artists"]]
             self._artists_loaded = True
         else:
             # For search results, create minimal artist from title
-            title = data.get('title', '')
-            if ' - ' in title:
-                artist_name = title.split(' - ')[0]
+            title = data.get("title", "")
+            if " - " in title:
+                artist_name = title.split(" - ")[0]
             else:
                 # Fallback: use the entire title as artist name if no dash
                 artist_name = title
-            artist_data = {'name': artist_name, 'id': None, 'profile': '', 'urls': [], 'images': []}
+            artist_data = {
+                "name": artist_name,
+                "id": None,
+                "profile": "",
+                "urls": [],
+                "images": [],
+            }
             self.artists = [DiscogsArtist(artist_data)]
 
     async def load_full_data(self):
         """Load full release data including artist details."""
-        if self._artists_loaded or not self.discogs_id or not self.client or not self.client.session:  # pylint: disable=line-too-long
+        if (
+            self._artists_loaded
+            or not self.discogs_id
+            or not self.client
+            or not self.client.session
+        ):  # pylint: disable=line-too-long
             return
 
         # Get full release data
@@ -51,9 +62,9 @@ class DiscogsRelease:  # pylint: disable=too-few-public-methods
             async with self.client.session.get(url) as response:
                 if response.status == 200:
                     data = await response.json()
-                    if 'artists' in data and data['artists']:
+                    if "artists" in data and data["artists"]:
                         # Create artist objects with IDs for further lookup
-                        self.artists = [DiscogsArtist(artist) for artist in data['artists']]
+                        self.artists = [DiscogsArtist(artist) for artist in data["artists"]]
                         self._artists_loaded = True
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.debug("Error loading full release data: %s", error)
@@ -64,20 +75,20 @@ class DiscogsArtist:  # pylint: disable=too-few-public-methods
 
     def __init__(self, data: dict[str, Any]):
         self.data = data
-        self.discogs_id = data.get('id')
-        self.name = data.get('name', '')
-        self.profile_plaintext = data.get('profile', '')
-        self.urls = data.get('urls', [])
-        self.images = data.get('images', [])
+        self.discogs_id = data.get("id")
+        self.name = data.get("name", "")
+        self.profile_plaintext = data.get("profile", "")
+        self.urls = data.get("urls", [])
+        self.images = data.get("images", [])
 
 
 class DiscogsSearchResult:
     """Represents a page of search results."""
 
-    def __init__(self, results: list[dict[str, Any]], client: 'AsyncDiscogsClient | None' = None):
+    def __init__(self, results: list[dict[str, Any]], client: "AsyncDiscogsClient | None" = None):
         self.results = []
         for result in results:
-            if result.get('type') == 'release':
+            if result.get("type") == "release":
                 self.results.append(DiscogsRelease(result, client))
 
     def __iter__(self):
@@ -97,7 +108,8 @@ class DiscogsSearchResult:
                     full_artist = await release.client.artist(
                         release_artist.discogs_id,  # pylint: disable=protected-access
                         limit_images=5,
-                        include_bio=True)
+                        include_bio=True,
+                    )
                     if full_artist:
                         release.artists[i] = full_artist
                         loaded_count += 1
@@ -107,7 +119,7 @@ class DiscogsSearchResult:
 class AsyncDiscogsClient:
     """Async Discogs API client."""
 
-    BASE_URL = 'https://api.discogs.com'
+    BASE_URL = "https://api.discogs.com"
 
     def __init__(self, user_agent: str, user_token: str | None, timeout: int = 10):
         self.user_agent = user_agent
@@ -119,37 +131,38 @@ class AsyncDiscogsClient:
         self.ssl_context = ssl.create_default_context()
 
     async def __aenter__(self):
-        headers = {'User-Agent': self.user_agent}
+        headers = {"User-Agent": self.user_agent}
         # Only add Authorization header if user_token is not None
         if self.user_token is not None:
-            headers['Authorization'] = f'Discogs token={self.user_token}'
+            headers["Authorization"] = f"Discogs token={self.user_token}"
         connector = nowplaying.utils.create_http_connector(self.ssl_context)
-        self.session = aiohttp.ClientSession(timeout=self.timeout,
-                                             headers=headers,
-                                             connector=connector)
+        self.session = aiohttp.ClientSession(
+            timeout=self.timeout, headers=headers, connector=connector
+        )
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.session:
             await self.session.close()
 
-    async def search(   # pylint: disable=too-many-arguments
-            self,
-            query: str,
-            artist: str | None = None,
-            search_type: str = 'release',
-            page: int = 1,
-            per_page: int = 50,
-            load_full_artists: bool = True,
-            max_results: int | None = None) -> DiscogsSearchResult:
+    async def search(  # pylint: disable=too-many-arguments
+        self,
+        query: str,
+        artist: str | None = None,
+        search_type: str = "release",
+        page: int = 1,
+        per_page: int = 50,
+        load_full_artists: bool = True,
+        max_results: int | None = None,
+    ) -> DiscogsSearchResult:
         """Search for releases, artists, etc."""
         if not self.session:
             raise RuntimeError("Client not initialized - use async context manager")
 
-        params = {'q': query, 'type': search_type, 'page': page, 'per_page': per_page}
+        params = {"q": query, "type": search_type, "page": page, "per_page": per_page}
 
         if artist:
-            params['artist'] = artist
+            params["artist"] = artist
 
         url = f"{self.BASE_URL}/database/search"
 
@@ -159,7 +172,7 @@ class AsyncDiscogsClient:
             async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
                 if response.status == 200:
                     data = await response.json()
-                    results = data.get('results', [])
+                    results = data.get("results", [])
 
                     # Limit results for performance if specified
                     if max_results:
@@ -179,10 +192,9 @@ class AsyncDiscogsClient:
             logging.debug("Discogs search error: %s", error)
             return DiscogsSearchResult([], self)
 
-    async def artist(self,
-                     artist_id: int | str,
-                     limit_images: int | None = None,
-                     include_bio: bool = True) -> DiscogsArtist | None:
+    async def artist(
+        self, artist_id: int | str, limit_images: int | None = None, include_bio: bool = True
+    ) -> DiscogsArtist | None:
         """Get artist by ID with optional image limiting and bio control for performance."""
         if not self.session:
             raise RuntimeError("Client not initialized - use async context manager")
@@ -195,22 +207,22 @@ class AsyncDiscogsClient:
                     data = await response.json()
 
                     # Limit images for performance if specified
-                    if limit_images is not None and 'images' in data:
+                    if limit_images is not None and "images" in data:
                         if limit_images == 0:
-                            data['images'] = []
+                            data["images"] = []
                         else:
                             # Keep primary images first, then limit total
                             primary_images = [
-                                img for img in data['images'] if img.get('type') == 'primary'
+                                img for img in data["images"] if img.get("type") == "primary"
                             ]
                             other_images = [
-                                img for img in data['images'] if img.get('type') != 'primary'
+                                img for img in data["images"] if img.get("type") != "primary"
                             ]
-                            data['images'] = (primary_images + other_images)[:limit_images]
+                            data["images"] = (primary_images + other_images)[:limit_images]
 
                     # Remove bio data if not needed for performance
-                    if not include_bio and 'profile' in data:
-                        data['profile'] = ''
+                    if not include_bio and "profile" in data:
+                        data["profile"] = ""
 
                     return DiscogsArtist(data)
 
@@ -241,26 +253,24 @@ class AsyncDiscogsClientWrapper:
         limit_images = 5 if self._need_images else 0
         include_bio = self._need_bio
         async with AsyncDiscogsClient(self.user_agent, self.user_token, self.timeout) as client:
-            return await client.artist(artist_id,
-                                       limit_images=limit_images,
-                                       include_bio=include_bio)
+            return await client.artist(
+                artist_id, limit_images=limit_images, include_bio=include_bio
+            )
 
-    async def search_async(self,
-                           query: str,
-                           artist: str | None = None,
-                           search_type: str = 'release') -> DiscogsSearchResult:
+    async def search_async(
+        self, query: str, artist: str | None = None, search_type: str = "release"
+    ) -> DiscogsSearchResult:
         """Search for releases (async version)."""
         async with AsyncDiscogsClient(self.user_agent, self.user_token, self.timeout) as client:
-            return await client.search(query,
-                                       artist,
-                                       search_type,
-                                       max_results=10,
-                                       load_full_artists=True)
+            return await client.search(
+                query, artist, search_type, max_results=10, load_full_artists=True
+            )
 
 
 # Data models module
 class Models:  # pylint: disable=too-few-public-methods
     """Data models module for discogs objects."""
+
     Release = DiscogsRelease
     Artist = DiscogsArtist
 
@@ -270,11 +280,13 @@ def create_client(user_agent: str, user_token: str | None = None) -> AsyncDiscog
     return AsyncDiscogsClientWrapper(user_agent, user_token)
 
 
-def get_optimized_client_for_nowplaying(user_agent: str,
-                                        user_token: str | None,
-                                        need_bio: bool = True,
-                                        need_images: bool = True,
-                                        timeout: int = 5) -> AsyncDiscogsClientWrapper:
+def get_optimized_client_for_nowplaying(
+    user_agent: str,
+    user_token: str | None,
+    need_bio: bool = True,
+    need_images: bool = True,
+    timeout: int = 5,
+) -> AsyncDiscogsClientWrapper:
     """
     Get an optimized Discogs client specifically for nowplaying usage.
 

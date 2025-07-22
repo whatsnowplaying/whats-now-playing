@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' Twitch OAuth2 authentication handler '''
+"""Twitch OAuth2 authentication handler"""
 
 import asyncio
 import logging
@@ -9,24 +9,24 @@ import requests
 
 import nowplaying.config
 import nowplaying.oauth2
-from nowplaying.twitch.constants import (CHAT_BOT_SCOPE_STRINGS, TWITCH_SERVICE_CONFIG)
+from nowplaying.twitch.constants import CHAT_BOT_SCOPE_STRINGS, TWITCH_SERVICE_CONFIG
 
 
 class TwitchOAuth2(nowplaying.oauth2.OAuth2Client):
-    ''' Handle Twitch OAuth 2.1 authentication flow with PKCE '''
+    """Handle Twitch OAuth 2.1 authentication flow with PKCE"""
 
     def __init__(self, config: nowplaying.config.ConfigFile | None = None) -> None:
         super().__init__(config, TWITCH_SERVICE_CONFIG)
 
     def _get_additional_auth_params(self) -> dict[str, str]:
-        ''' Add Twitch-specific authorization parameters '''
-        return {'force_verify': 'false'}
+        """Add Twitch-specific authorization parameters"""
+        return {"force_verify": "false"}
 
     def get_oauth_status(self) -> dict[str, Any]:
-        ''' Get current OAuth authentication status for both broadcaster and chat tokens '''
+        """Get current OAuth authentication status for both broadcaster and chat tokens"""
         # Check stored tokens
         access_token, refresh_token = self.get_stored_tokens()
-        chat_token = self.config.cparser.value('twitchbot/chattoken')
+        chat_token = self.config.cparser.value("twitchbot/chattoken")
 
         # Validate tokens
         broadcaster_valid = bool(self.validate_token_sync(access_token, return_username=False))
@@ -42,73 +42,73 @@ class TwitchOAuth2(nowplaying.oauth2.OAuth2Client):
 
         # Determine status text
         if broadcaster_valid and chat_valid:
-            status_text = 'Broadcaster + Chat Bot authenticated'
+            status_text = "Broadcaster + Chat Bot authenticated"
         elif broadcaster_valid:
-            status_text = 'Broadcaster authenticated (handles chat too)'
+            status_text = "Broadcaster authenticated (handles chat too)"
         elif chat_valid:
-            status_text = 'Chat Bot authenticated (no broadcaster)'
+            status_text = "Chat Bot authenticated (no broadcaster)"
         elif access_token:
             # Token is expired - check if we can refresh
             if refresh_token:
-                status_text = 'Refreshing expired broadcaster token...'
+                status_text = "Refreshing expired broadcaster token..."
             else:
-                status_text = 'Broadcaster token expired - re-authentication needed'
+                status_text = "Broadcaster token expired - re-authentication needed"
         else:
-            status_text = 'Not authenticated'
+            status_text = "Not authenticated"
 
         return {
-            'broadcaster_valid': broadcaster_valid,
-            'chat_valid': chat_valid,
-            'broadcaster_username': broadcaster_username,
-            'chat_username': chat_username,
-            'status_text': status_text,
-            'has_refresh_token': bool(refresh_token)
+            "broadcaster_valid": broadcaster_valid,
+            "chat_valid": chat_valid,
+            "broadcaster_username": broadcaster_username,
+            "chat_username": chat_username,
+            "status_text": status_text,
+            "has_refresh_token": bool(refresh_token),
         }
 
-    def get_auth_url(self, token_type: str = 'broadcaster') -> str | None:
-        ''' Generate OAuth authentication URL for specified token type '''
+    def get_auth_url(self, token_type: str = "broadcaster") -> str | None:
+        """Generate OAuth authentication URL for specified token type"""
         # Validate configuration
         if not self.client_id or not self.client_secret:
-            logging.error('OAuth2 configuration incomplete')
+            logging.error("OAuth2 configuration incomplete")
             return None
 
         # Set appropriate redirect URI based on token type
-        port = self.config.cparser.value('webserver/port', type=int) or 8899
-        if token_type == 'chat':
-            self.redirect_uri = f'http://localhost:{port}/twitchchatredirect'
+        port = self.config.cparser.value("webserver/port", type=int) or 8899
+        if token_type == "chat":
+            self.redirect_uri = f"http://localhost:{port}/twitchchatredirect"
         else:
-            self.redirect_uri = f'http://localhost:{port}/twitchredirect'
+            self.redirect_uri = f"http://localhost:{port}/twitchredirect"
 
         try:
             # Generate the auth URL with appropriate scopes
-            if token_type == 'chat':
+            if token_type == "chat":
                 return self.get_authorization_url(CHAT_BOT_SCOPE_STRINGS)
             return self.get_authorization_url()  # Uses broadcaster scopes by default
         except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error('Failed to generate %s auth URL: %s', token_type, error)
+            logging.error("Failed to generate %s auth URL: %s", token_type, error)
             return None
 
     def clear_all_authentication(self) -> None:
-        ''' Clear all stored authentication tokens (OAuth2 and chat) '''
+        """Clear all stored authentication tokens (OAuth2 and chat)"""
         self.clear_stored_tokens()
         # Also clear chat tokens
-        self.config.cparser.remove('twitchbot/chattoken')
-        self.config.cparser.remove('twitchbot/chatrefreshtoken')
+        self.config.cparser.remove("twitchbot/chattoken")
+        self.config.cparser.remove("twitchbot/chatrefreshtoken")
         self.config.save()
-        logging.info('Cleared Twitch OAuth2 and chat authentication')
+        logging.info("Cleared Twitch OAuth2 and chat authentication")
 
-    def get_redirect_uri(self, token_type: str = 'broadcaster') -> str:
-        ''' Get the redirect URI for the specified token type '''
-        port = self.config.cparser.value('webserver/port', type=int) or 8899
-        if token_type == 'chat':
-            return f'http://localhost:{port}/twitchchatredirect'
-        return f'http://localhost:{port}/twitchredirect'
+    def get_redirect_uri(self, token_type: str = "broadcaster") -> str:
+        """Get the redirect URI for the specified token type"""
+        port = self.config.cparser.value("webserver/port", type=int) or 8899
+        if token_type == "chat":
+            return f"http://localhost:{port}/twitchchatredirect"
+        return f"http://localhost:{port}/twitchredirect"
 
     @staticmethod
     def validate_token_sync(  # pylint: disable=too-many-return-statements
-            token: str | None,
-            return_username: bool = False) -> str | bool | None:
-        ''' Synchronously validate Twitch OAuth token
+        token: str | None, return_username: bool = False
+    ) -> str | bool | None:
+        """Synchronously validate Twitch OAuth token
 
         Args:
             token: The OAuth token to validate
@@ -117,44 +117,44 @@ class TwitchOAuth2(nowplaying.oauth2.OAuth2Client):
         Returns:
             - If return_username=True: username string on success, None on failure
             - If return_username=False: True on success, False on failure
-        '''
+        """
         if not token:
             return None if return_username else False
 
-        url = 'https://id.twitch.tv/oauth2/validate'
-        headers = {'Authorization': f'Bearer {token}'}
+        url = "https://id.twitch.tv/oauth2/validate"
+        headers = {"Authorization": f"Bearer {token}"}
 
         try:
             req = requests.get(url, headers=headers, timeout=10)
-        except Exception as error:  #pylint: disable=broad-except
-            logging.error('Twitch token validation check failed: %s', error)
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error("Twitch token validation check failed: %s", error)
             return None if return_username else False
 
         if req.status_code != 200:
             if req.status_code == 401:
-                logging.debug('Twitch token is invalid/expired')
+                logging.debug("Twitch token is invalid/expired")
             else:
-                logging.warning('Twitch token validation returned status %s', req.status_code)
+                logging.warning("Twitch token validation returned status %s", req.status_code)
             return None if return_username else False
 
         try:
             response_data = req.json()
 
             # Check if token is valid (has required fields)
-            if response_data.get('client_id') and response_data.get('login'):
+            if response_data.get("client_id") and response_data.get("login"):
                 if return_username:
-                    return response_data.get('login')
+                    return response_data.get("login")
                 return True
 
-            logging.debug('Twitch token is invalid - missing required fields')
+            logging.debug("Twitch token is invalid - missing required fields")
             return None if return_username else False
-        except Exception as error:  #pylint: disable=broad-except
-            logging.error('Twitch token validation/bad json: %s', error)
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error("Twitch token validation/bad json: %s", error)
             return None if return_username else False
 
 
 async def main() -> None:
-    ''' Example usage of TwitchOAuth2 '''
+    """Example usage of TwitchOAuth2"""
     # Initialize with config (will read twitchbot/clientid, twitchbot/secret from config)
     oauth = TwitchOAuth2()
 
@@ -167,12 +167,14 @@ async def main() -> None:
         return
 
     # Set redirect URI dynamically (required for authorization)
-    oauth.redirect_uri = 'http://localhost:8899/twitchredirect'
+    oauth.redirect_uri = "http://localhost:8899/twitchredirect"
 
     # Step 1: Open browser for authorization
     if oauth.open_browser_for_auth():
-        print("Please authorize the application and check the redirect URI "
-              "for the authorization code.")
+        print(
+            "Please authorize the application and check the redirect URI "
+            "for the authorization code."
+        )
         print("The redirect URI should be:", oauth.redirect_uri)
 
         # In a real application, you would capture the authorization code from the redirect

@@ -13,17 +13,21 @@ import typing as t
 import pytest
 
 # Shared pytest.mark.skipif decorators for API key requirements
-skip_no_discogs_key = pytest.mark.skipif(not os.environ.get('DISCOGS_API_KEY'),
-                                         reason="Discogs API key not available")
+skip_no_discogs_key = pytest.mark.skipif(
+    not os.environ.get("DISCOGS_API_KEY"), reason="Discogs API key not available"
+)
 
-skip_no_fanarttv_key = pytest.mark.skipif(not os.environ.get('FANARTTV_API_KEY'),
-                                          reason="FanartTV API key not available")
+skip_no_fanarttv_key = pytest.mark.skipif(
+    not os.environ.get("FANARTTV_API_KEY"), reason="FanartTV API key not available"
+)
 
-skip_no_theaudiodb_key = pytest.mark.skipif(not os.environ.get('THEAUDIODB_API_KEY'),
-                                            reason="TheAudioDB API key not available")
+skip_no_theaudiodb_key = pytest.mark.skipif(
+    not os.environ.get("THEAUDIODB_API_KEY"), reason="TheAudioDB API key not available"
+)
 
-skip_no_acoustid_key = pytest.mark.skipif(not os.environ.get('ACOUSTID_TEST_APIKEY'),
-                                          reason="AcoustID test API key not available")
+skip_no_acoustid_key = pytest.mark.skipif(
+    not os.environ.get("ACOUSTID_TEST_APIKEY"), reason="AcoustID test API key not available"
+)
 
 
 class FakeImageCache:  # pylint: disable=too-few-public-methods
@@ -33,11 +37,12 @@ class FakeImageCache:  # pylint: disable=too-few-public-methods
         self.urls = {}
 
     def fill_queue(
-            self,
-            config=None,  # pylint: disable=unused-argument
-            identifier: str = None,
-            imagetype: str = None,
-            srclocationlist: t.List[str] = None):
+        self,
+        config=None,  # pylint: disable=unused-argument
+        identifier: str = None,
+        imagetype: str = None,
+        srclocationlist: t.List[str] = None,
+    ):
         """Just keep track of what was picked"""
         if not self.urls.get(identifier):
             self.urls[identifier] = {}
@@ -46,35 +51,36 @@ class FakeImageCache:  # pylint: disable=too-few-public-methods
 
 def configureplugins(config):
     """Configure plugins for testing"""
-    plugins = ['wikimedia']
-    if os.environ.get('DISCOGS_API_KEY'):
-        plugins.append('discogs')
-    if os.environ.get('FANARTTV_API_KEY'):
-        plugins.append('fanarttv')
-    if os.environ.get('THEAUDIODB_API_KEY'):
-        plugins.append('theaudiodb')
+    plugins = ["wikimedia"]
+    if os.environ.get("DISCOGS_API_KEY"):
+        plugins.append("discogs")
+    if os.environ.get("FANARTTV_API_KEY"):
+        plugins.append("fanarttv")
+    if os.environ.get("THEAUDIODB_API_KEY"):
+        plugins.append("theaudiodb")
 
     imagecaches = {}
     plugin_objects = {}
     for pluginname in plugins:
         imagecaches[pluginname] = FakeImageCache()
-        plugin_objects[pluginname] = config.pluginobjs['artistextras'][
-            f'nowplaying.artistextras.{pluginname}']
+        plugin_objects[pluginname] = config.pluginobjs["artistextras"][
+            f"nowplaying.artistextras.{pluginname}"
+        ]
     return imagecaches, plugin_objects
 
 
 def configuresettings(pluginname, cparser):
     """Configure each setting for a plugin"""
     for key in [
-            'banners',
-            'bio',
-            'enabled',
-            'fanart',
-            'logos',
-            'thumbnails',
-            'websites',
+        "banners",
+        "bio",
+        "enabled",
+        "fanart",
+        "logos",
+        "thumbnails",
+        "websites",
     ]:
-        cparser.setValue(f'{pluginname}/{key}', True)
+        cparser.setValue(f"{pluginname}/{key}", True)
 
 
 # Cache testing helpers
@@ -131,7 +137,7 @@ async def run_api_call_count_test(plugin, test_metadata, mock_method_name, image
     async def mock_method(*args, **kwargs):
         nonlocal api_call_count
         api_call_count += 1
-        logging.debug('Mock API call #%d', api_call_count)
+        logging.debug("Mock API call #%d", api_call_count)
         # Call the original method to get real data
         return await original_method(*args, **kwargs)
 
@@ -144,23 +150,25 @@ async def run_api_call_count_test(plugin, test_metadata, mock_method_name, image
 
         # Verify one API call was made
         assert api_call_count == 1, (
-            f'Expected 1 API call after first download, got {api_call_count}')
+            f"Expected 1 API call after first download, got {api_call_count}"
+        )
 
         # Second call - should use cached result, no additional API call
         result2 = await plugin.download_async(test_metadata.copy(), imagecache=imagecache)
 
         # Verify still only one API call was made (cache hit)
         assert api_call_count == 1, (
-            f'Expected 1 API call after second download (cache hit), got {api_call_count}')
+            f"Expected 1 API call after second download (cache hit), got {api_call_count}"
+        )
 
         # Both results should be consistent
         assert (result1 is None) == (result2 is None)
 
         if result1:  # Only test if we got data back
-            logging.info('API cache verified: 1 API call for 2 downloads')
+            logging.info("API cache verified: 1 API call for 2 downloads")
             assert result1 == result2
         else:
-            logging.info('API cache test completed - cache working regardless of data found')
+            logging.info("API cache test completed - cache working regardless of data found")
 
     finally:
         # Restore the original method
@@ -189,21 +197,21 @@ async def run_failure_cache_test(plugin, test_metadata, mock_method_name, imagec
     async def mock_method_with_failure(*args, **kwargs):  # pylint: disable=unused-argument
         nonlocal api_call_count
         api_call_count += 1
-        logging.debug('Mock API call #%d', api_call_count)
+        logging.debug("Mock API call #%d", api_call_count)
 
         if api_call_count == 1:
             # First call: simulate API failure
-            logging.debug('Simulating API failure on first call')
+            logging.debug("Simulating API failure on first call")
             return None
         if api_call_count == 2:
             # Second call: simulate successful response
-            logging.debug('Simulating successful API response on second call')
+            logging.debug("Simulating successful API response on second call")
             # Return a minimal success response - adapt based on plugin
-            return {'name': test_metadata.get('artist', 'Test Artist')}
+            return {"name": test_metadata.get("artist", "Test Artist")}
 
         # Subsequent calls: should not happen if caching works correctly
-        logging.debug('Unexpected additional API call')
-        return {'name': test_metadata.get('artist', 'Test Artist')}
+        logging.debug("Unexpected additional API call")
+        return {"name": test_metadata.get("artist", "Test Artist")}
 
     # Replace the method with our mock
     setattr(plugin, mock_method_name, mock_method_with_failure)
@@ -214,15 +222,16 @@ async def run_failure_cache_test(plugin, test_metadata, mock_method_name, imagec
 
         # Verify one API call was made and result is None (failure)
         assert api_call_count == 1, (
-            f'Expected 1 API call after first download, got {api_call_count}')
-        assert result1 is None, 'Expected None result from failed API call'
+            f"Expected 1 API call after first download, got {api_call_count}"
+        )
+        assert result1 is None, "Expected None result from failed API call"
 
         # Second call - should retry API (not use cached failure), API succeeds this time
         result2 = await plugin.download_async(test_metadata.copy(), imagecache=imagecache)
 
         # Verify second API call was made (failure wasn't cached)
         assert api_call_count == 2, (
-            f'Expected 2 API calls after second download (failure not cached), got {api_call_count}'
+            f"Expected 2 API calls after second download (failure not cached), got {api_call_count}"
         )
 
         # Third call - should use cached success result, no additional API call
@@ -230,13 +239,14 @@ async def run_failure_cache_test(plugin, test_metadata, mock_method_name, imagec
 
         # Verify still only two API calls (success result was cached)
         assert api_call_count == 2, (
-            f'Expected 2 API calls after third download (success cached), got {api_call_count}')
+            f"Expected 2 API calls after third download (success cached), got {api_call_count}"
+        )
 
         # Results should show the pattern: None (failure), data (success), data (cached success)
-        assert result1 is None, 'First result should be None (API failure)'
-        assert result2 == result3, 'Second and third results should be identical (cached success)'
+        assert result1 is None, "First result should be None (API failure)"
+        assert result2 == result3, "Second and third results should be identical (cached success)"
 
-        logging.info('API failure cache behavior verified: failures not cached, successes cached')
+        logging.info("API failure cache behavior verified: failures not cached, successes cached")
 
     finally:
         # Restore the original method

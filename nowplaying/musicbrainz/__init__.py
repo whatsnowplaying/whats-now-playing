@@ -11,4 +11,4 @@ This module provides MusicBrainz API integration including:
 from .helper import MusicBrainzHelper
 from .client import MusicBrainzClient
 
-__all__ = ['MusicBrainzHelper', 'MusicBrainzClient']
+__all__ = ["MusicBrainzHelper", "MusicBrainzClient"]

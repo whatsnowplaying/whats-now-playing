@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-''' NowPlaying as run via python -m '''
+"""NowPlaying as run via python -m"""
 
-#import faulthandler
+# import faulthandler
 import logging
 import multiprocessing
 import pathlib
@@ -27,17 +27,17 @@ import nowplaying.upgrade
 #
 
 
-def run_bootstrap(bundledir: str|None = None) -> pathlib.Path:  # pragma: no cover
-    ''' bootstrap the app '''
+def run_bootstrap(bundledir: str | None = None) -> pathlib.Path:  # pragma: no cover
+    """bootstrap the app"""
     # we are in a hurry to get results.  If it takes longer than
     # 5 seconds, consider it a failure and move on.  At some
     # point this should be configurable but this is good enough for now
     socket.setdefaulttimeout(5.0)
     logpath = nowplaying.bootstrap.setuplogging(rotate=True)
     plat = platform.platform()
-    logging.info('starting up v%s on %s', nowplaying.__version__, plat)
+    logging.info("starting up v%s on %s", nowplaying.__version__, plat)
     nowplaying.upgrade.upgrade(bundledir=bundledir)
-    logging.debug('ending upgrade')
+    logging.debug("ending upgrade")
 
     # fail early if metadatadb can't be configured
     metadb = nowplaying.db.MetadataDB()
@@ -45,12 +45,11 @@ def run_bootstrap(bundledir: str|None = None) -> pathlib.Path:  # pragma: no cov
     return logpath
 
 
-
 def actualmain():  # pragma: no cover
-    ''' main entrypoint '''
+    """main entrypoint"""
 
     multiprocessing.freeze_support()
-    #faulthandler.enable()
+    # faulthandler.enable()
 
     bundledir = nowplaying.frozen.frozen_init(None)
     exitval = 1
@@ -87,7 +86,7 @@ def actualmain():  # pragma: no cover
                 startup_window.complete_startup()
 
             exitval = qapp.exec_()
-            logging.info('shutting main down v%s', config.version)
+            logging.info("shutting main down v%s", config.version)
     except nowplaying.singleinstance.AlreadyRunningError:
         nowplaying.bootstrap.already_running()
 
@@ -95,9 +94,9 @@ def actualmain():  # pragma: no cover
 
 
 def main():  # pragma: no cover
-    ''' Normal mode '''
+    """Normal mode"""
     actualmain()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

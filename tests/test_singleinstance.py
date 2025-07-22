@@ -6,7 +6,7 @@ Unit tests for single instance enforcement using Qt's QLockFile.
 
 import pytest
 
-import nowplaying.singleinstance    # pylint: disable=import-error,no-name-in-module
+import nowplaying.singleinstance  # pylint: disable=import-error,no-name-in-module
 
 
 def test_single_instance_basic(qapp):  # pylint: disable=unused-argument

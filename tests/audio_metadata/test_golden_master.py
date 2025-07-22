@@ -35,7 +35,7 @@ class GoldenMasterManager:
 
         golden_file = self.golden_dir / f"{library}_{Path(test_file).stem}.json"
 
-        with open(golden_file, 'w', encoding='utf-8') as json_file:
+        with open(golden_file, "w", encoding="utf-8") as json_file:
             json.dump(sanitized_data, json_file, indent=2, sort_keys=True)
 
     def load_golden_master(self, library: str, test_file: str) -> dict[str, Any] | None:
@@ -45,26 +45,27 @@ class GoldenMasterManager:
         if not golden_file.exists():
             return None
 
-        with open(golden_file, 'r', encoding='utf-8') as json_file:
+        with open(golden_file, "r", encoding="utf-8") as json_file:
             return json.load(json_file)
 
-    def compare_with_golden_master(self, library: str, test_file: str,
-                                   current_data: dict[str, Any]) -> dict[str, Any]:
+    def compare_with_golden_master(
+        self, library: str, test_file: str, current_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Compare current data with golden master and return differences."""
         golden_data = self.load_golden_master(library, test_file)
 
         if golden_data is None:
-            return {'status': 'no_golden_master', 'current_data': current_data}
+            return {"status": "no_golden_master", "current_data": current_data}
 
         sanitized_current = self._sanitize_for_json(current_data)
 
         differences = self._find_differences(golden_data, sanitized_current)
 
         return {
-            'status': 'match' if not differences else 'differences_found',
-            'differences': differences,
-            'golden_data': golden_data,
-            'current_data': sanitized_current
+            "status": "match" if not differences else "differences_found",
+            "differences": differences,
+            "golden_data": golden_data,
+            "current_data": sanitized_current,
         }
 
     def _find_differences(self, golden: Any, current: Any, path: str = "") -> dict[str, Any]:
@@ -74,10 +75,10 @@ class GoldenMasterManager:
         # Handle different types
         if not isinstance(current, type(golden)):
             differences[f"{path}_type_change"] = {
-                'golden_type': type(golden).__name__,
-                'current_type': type(current).__name__,
-                'golden_value': golden,
-                'current_value': current
+                "golden_type": type(golden).__name__,
+                "current_type": type(current).__name__,
+                "golden_value": golden,
+                "current_value": current,
             }
             return differences
 
@@ -103,8 +104,8 @@ class GoldenMasterManager:
         elif isinstance(golden, list):
             if len(golden) != len(current):
                 differences[f"{path}_length_change"] = {
-                    'golden_length': len(golden),
-                    'current_length': len(current)
+                    "golden_length": len(golden),
+                    "current_length": len(current),
                 }
 
             # Compare list elements
@@ -117,8 +118,8 @@ class GoldenMasterManager:
             # Direct value comparison
             if golden != current:
                 differences[f"{path}_value_change"] = {
-                    'golden_value': golden,
-                    'current_value': current
+                    "golden_value": golden,
+                    "current_value": current,
                 }
 
         return differences
@@ -133,8 +134,21 @@ def extract_tinytag_data(filepath: str) -> dict[str, Any]:
 
         # Basic fields
         basic_fields = [
-            'album', 'albumartist', 'artist', 'bitrate', 'bpm', 'comment', 'disc', 'disc_total',
-            'duration', 'genre', 'samplerate', 'title', 'track', 'track_total', 'year'
+            "album",
+            "albumartist",
+            "artist",
+            "bitrate",
+            "bpm",
+            "comment",
+            "disc",
+            "disc_total",
+            "duration",
+            "genre",
+            "samplerate",
+            "title",
+            "track",
+            "track_total",
+            "year",
         ]
 
         for field in basic_fields:
@@ -148,37 +162,37 @@ def extract_tinytag_data(filepath: str) -> dict[str, Any]:
                         result[field] = value
 
         # Other fields (sorted for stability) - tinytag 2.1.1+ API
-        if hasattr(tag, 'other') and tag.other:
-            result['other'] = dict(sorted(tag.other.items()))
+        if hasattr(tag, "other") and tag.other:
+            result["other"] = dict(sorted(tag.other.items()))
 
         return result
 
     except (FileNotFoundError, tinytag.TinyTagException) as exc:
-        return {'error': str(exc)}
+        return {"error": str(exc)}
 
 
 def extract_audio_metadata_data(filepath: str) -> dict[str, Any]:  # pylint: disable=unused-argument
     """Placeholder for audio_metadata data extraction (no longer available)."""
-    return {'error': 'audio_metadata library not available'}
+    return {"error": "audio_metadata library not available"}
 
 
 @pytest.fixture
 def golden_manager() -> GoldenMasterManager:
     """Create golden master manager with test directory."""
     # In real use, you'd want this to be a permanent directory
-    golden_dir = Path(__file__).parent / 'golden_masters'
+    golden_dir = Path(__file__).parent / "golden_masters"
     return GoldenMasterManager(golden_dir)
 
 
 @pytest.fixture
 def stable_test_files(getroot) -> list[str]:
     """Get stable test files for golden master testing."""
-    audio_dir = Path(getroot) / 'tests' / 'audio'
+    audio_dir = Path(getroot) / "tests" / "audio"
     return [
-        str(audio_dir / '15_Ghosts_II_64kb_orig.mp3'),
-        str(audio_dir / '15_Ghosts_II_64kb_orig.flac'),
-        str(audio_dir / '15_Ghosts_II_64kb_füllytâgged.mp3'),
-        str(audio_dir / '15_Ghosts_II_64kb_füllytâgged.flac'),
+        str(audio_dir / "15_Ghosts_II_64kb_orig.mp3"),
+        str(audio_dir / "15_Ghosts_II_64kb_orig.flac"),
+        str(audio_dir / "15_Ghosts_II_64kb_füllytâgged.mp3"),
+        str(audio_dir / "15_Ghosts_II_64kb_füllytâgged.flac"),
     ]
 
 
@@ -213,44 +227,47 @@ def test_golden_master_regression(golden_manager, stable_test_files, library):  
             current_data = extract_audio_metadata_data(test_file)
 
         # Skip if library can't process the file
-        if 'error' in current_data:
-            if library == "audio_metadata" and test_file.endswith('.aiff'):
+        if "error" in current_data:
+            if library == "audio_metadata" and test_file.endswith(".aiff"):
                 pytest.skip(f"Known limitation: {library} doesn't support .aiff")
             else:
                 pytest.fail(f"{library} failed to process {test_file}: {current_data['error']}")
 
         comparison = golden_manager.compare_with_golden_master(library, test_file, current_data)
 
-        if comparison['status'] == 'no_golden_master':
+        if comparison["status"] == "no_golden_master":
             pytest.skip(f"No golden master for {library} + {os.path.basename(test_file)}")
 
-        elif comparison['status'] == 'differences_found':
-            differences = comparison['differences']
+        elif comparison["status"] == "differences_found":
+            differences = comparison["differences"]
 
             # Format difference report
             diff_report = []
             for key, diff in differences.items():
-                if key.endswith('_added_keys'):
+                if key.endswith("_added_keys"):
                     diff_report.append(f"Added keys: {diff}")
-                elif key.endswith('_removed_keys'):
+                elif key.endswith("_removed_keys"):
                     diff_report.append(f"Removed keys: {diff}")
-                elif key.endswith('_value_change'):
-                    diff_report.append(f"Changed {key[:-13]}: "
-                                       f"{diff['golden_value']} -> {diff['current_value']}")
-                elif key.endswith('_type_change'):
-                    diff_report.append(f"Type changed {key[:-12]}: "
-                                       f"{diff['golden_type']} -> {diff['current_type']}")
+                elif key.endswith("_value_change"):
+                    diff_report.append(
+                        f"Changed {key[:-13]}: {diff['golden_value']} -> {diff['current_value']}"
+                    )
+                elif key.endswith("_type_change"):
+                    diff_report.append(
+                        f"Type changed {key[:-12]}: {diff['golden_type']} -> {diff['current_type']}"
+                    )
 
             pytest.fail(
-                f"Golden master differences for {library} + {os.path.basename(test_file)}:\n" +
-                "\n".join(diff_report))
+                f"Golden master differences for {library} + {os.path.basename(test_file)}:\n"
+                + "\n".join(diff_report)
+            )
 
 
 def test_library_upgrade_impact_analysis(golden_manager, stable_test_files):  # pylint: disable=redefined-outer-name
     """Analyze the impact of library upgrades across all files."""
-    impact_report = {'tinytag': {}}
+    impact_report = {"tinytag": {}}
 
-    for library in ['tinytag']:
+    for library in ["tinytag"]:
         total_files = 0
         files_with_differences = 0
         total_differences = 0
@@ -266,24 +283,24 @@ def test_library_upgrade_impact_analysis(golden_manager, stable_test_files):  # 
             else:
                 current_data = extract_audio_metadata_data(test_file)
 
-            if 'error' in current_data:
+            if "error" in current_data:
                 continue
 
-            comparison = golden_manager.compare_with_golden_master(library, test_file, current_data)
+            comparison = golden_manager.compare_with_golden_master(
+                library, test_file, current_data
+            )
 
-            if comparison['status'] == 'differences_found':
+            if comparison["status"] == "differences_found":
                 files_with_differences += 1
-                total_differences += len(comparison['differences'])
+                total_differences += len(comparison["differences"])
 
         impact_report[library] = {
-            'total_files_tested':
-            total_files,
-            'files_with_differences':
-            files_with_differences,
-            'total_differences':
-            total_differences,
-            'stability_percentage':
-            ((total_files - files_with_differences) / total_files * 100) if total_files > 0 else 0
+            "total_files_tested": total_files,
+            "files_with_differences": files_with_differences,
+            "total_differences": total_differences,
+            "stability_percentage": ((total_files - files_with_differences) / total_files * 100)
+            if total_files > 0
+            else 0,
         }
 
     print("\\nLibrary Upgrade Impact Analysis:")

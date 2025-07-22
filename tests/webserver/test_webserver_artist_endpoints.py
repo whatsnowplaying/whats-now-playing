@@ -39,7 +39,8 @@ def getwebserver(shared_webserver_config):
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows SQLite file locking issues with multiprocess webserver"
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
 )
 def test_webserver_artistfanart_test(getwebserver):  # pylint: disable=redefined-outer-name
     """make sure artistfanart works"""
@@ -53,7 +54,8 @@ def test_webserver_artistfanart_test(getwebserver):  # pylint: disable=redefined
 
 
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows SQLite file locking issues with multiprocess webserver"
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
 )
 def test_webserver_banner_test(getwebserver):  # pylint: disable=redefined-outer-name
     """make sure banner works"""

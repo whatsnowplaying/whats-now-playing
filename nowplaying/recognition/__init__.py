@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-''' Input Plugin definition '''
+"""Input Plugin definition"""
 
 import sys
 from typing import TYPE_CHECKING
 
-#from nowplaying.exceptions import PluginVerifyError
+# from nowplaying.exceptions import PluginVerifyError
 from nowplaying.plugin import WNPBasePlugin
 from nowplaying.types import TrackMetadata
 
@@ -14,38 +14,40 @@ if TYPE_CHECKING:
 
 
 class RecognitionPlugin(WNPBasePlugin):
-    ''' base class of recognition plugins '''
+    """base class of recognition plugins"""
 
-    def __init__(self,
-                 config: "nowplaying.config.ConfigFile | None" = None,
-                 qsettings: "QWidget | None" = None):
+    def __init__(
+        self,
+        config: "nowplaying.config.ConfigFile | None" = None,
+        qsettings: "QWidget | None" = None,
+    ):
         super().__init__(config=config, qsettings=qsettings)
-        self.plugintype: str = 'recognition'
+        self.plugintype: str = "recognition"
 
-#### Recognition methods
+    #### Recognition methods
 
-    async def recognize(  #pylint: disable=no-self-use
-            self, metadata: TrackMetadata | None = None) -> TrackMetadata | None:
-        ''' return metadata '''
+    async def recognize(  # pylint: disable=no-self-use
+        self, metadata: TrackMetadata | None = None
+    ) -> TrackMetadata | None:
+        """return metadata"""
         raise NotImplementedError
 
     def providerinfo(self) -> dict[str, object]:
-        ''' return list of what is provided by this recognition system '''
+        """return list of what is provided by this recognition system"""
         raise NotImplementedError
 
-
-#### Utilities
+    #### Utilities
 
     def calculate_delay(self) -> float:
-        ''' determine a reasonable, minimal delay '''
+        """determine a reasonable, minimal delay"""
 
         try:
-            delay: float = self.config.cparser.value('settings/delay',
-                                                     type=float,
-                                                     defaultValue=10.0)
+            delay: float = self.config.cparser.value(
+                "settings/delay", type=float, defaultValue=10.0
+            )
         except ValueError:
             delay = 10.0
 
-        if sys.platform == 'win32':
+        if sys.platform == "win32":
             return max(delay / 2, 10)
         return max(delay / 2, 5)

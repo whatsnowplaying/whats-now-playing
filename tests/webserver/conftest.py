@@ -23,6 +23,7 @@ from nowplaying.oauth2 import OAuth2Client
 
 # pylint: disable=redefined-outer-name
 
+
 def is_port_in_use(port: int) -> bool:
     """check if a port is in use"""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:

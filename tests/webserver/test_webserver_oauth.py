@@ -15,7 +15,9 @@ def test_kickredirect_valid_state(reset_oauth_state):  # pylint: disable=redefin
     # Set up valid OAuth session state using new session-based format
     session_id = "testsession123"
     state_data = f"{session_id}:randomstate456"
-    encoded_state = base64.urlsafe_b64encode(state_data.encode("utf-8")).decode("utf-8").rstrip("=")
+    encoded_state = (
+        base64.urlsafe_b64encode(state_data.encode("utf-8")).decode("utf-8").rstrip("=")
+    )
 
     config.cparser.setValue(f"kick/temp_state_{session_id}", encoded_state)
     config.cparser.setValue(f"kick/temp_code_verifier_{session_id}", "test_verifier")
@@ -103,7 +105,9 @@ def test_kickredirect_no_stored_state_expired_session(reset_oauth_state):  # pyl
 
     # Create state with session ID that won't have stored PKCE params (simulating expired session)
     state_data = "nonexistentsession:randomstate789"
-    encoded_state = base64.urlsafe_b64encode(state_data.encode("utf-8")).decode("utf-8").rstrip("=")
+    encoded_state = (
+        base64.urlsafe_b64encode(state_data.encode("utf-8")).decode("utf-8").rstrip("=")
+    )
 
     # Test callback with state but no stored session
     port = config.cparser.value("weboutput/httpport", type=int)
@@ -125,7 +129,9 @@ def test_kickredirect_missing_authorization_code(reset_oauth_state):  # pylint: 
     # Set up valid OAuth session state using new session-based format
     session_id = "testsession123"
     state_data = f"{session_id}:randomstate456"
-    encoded_state = base64.urlsafe_b64encode(state_data.encode("utf-8")).decode("utf-8").rstrip("=")
+    encoded_state = (
+        base64.urlsafe_b64encode(state_data.encode("utf-8")).decode("utf-8").rstrip("=")
+    )
 
     config.cparser.setValue(f"kick/temp_state_{session_id}", encoded_state)
     config.cparser.setValue(f"kick/temp_code_verifier_{session_id}", "test_verifier")

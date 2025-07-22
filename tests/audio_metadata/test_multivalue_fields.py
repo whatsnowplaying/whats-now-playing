@@ -17,40 +17,41 @@ nowplaying.tinytag_fixes.apply_tinytag_patches()
 def _has_multiple_values(value) -> bool:
     """Check if a value contains multiple entries."""
     if isinstance(value, str):
-        return any(delim in value for delim in ['/', ';', ','])
+        return any(delim in value for delim in ["/", ";", ","])
     if isinstance(value, list):
         return len(value) > 1 or any(
-            isinstance(item, str) and any(delim in item for delim in ['/', ';', ','])
-            for item in value)
+            isinstance(item, str) and any(delim in item for delim in ["/", ";", ","])
+            for item in value
+        )
     return False
 
 
 def _extract_isrc_from_tag(tag):
     """Extract ISRC from tinytag with proper API handling."""
-    if hasattr(tag, 'other') and tag.other:
-        return tag.other.get('isrc')
+    if hasattr(tag, "other") and tag.other:
+        return tag.other.get("isrc")
     return None
 
 
 def _extract_artists_from_tag(tag):
     """Extract artist IDs from tinytag with proper API handling."""
-    if hasattr(tag, 'other') and tag.other:
-        return (tag.other.get('musicbrainz artist id') or tag.other.get('musicbrainz_artistid'))
+    if hasattr(tag, "other") and tag.other:
+        return tag.other.get("musicbrainz artist id") or tag.other.get("musicbrainz_artistid")
     return None
 
 
 @pytest.fixture
 def multivalue_files(getroot) -> dict[str, Path]:
     """Get test files with multi-value metadata."""
-    audio_dir = Path(getroot) / 'tests' / 'audio'
+    audio_dir = Path(getroot) / "tests" / "audio"
     return {
-        'multi_mp3': audio_dir / 'multi.mp3',
-        'multi_flac': audio_dir / 'multi.flac',
-        'multi_m4a': audio_dir / 'multi.m4a',
-        'complex_mp3': audio_dir / '15_Ghosts_II_64kb_füllytâgged.mp3',
-        'complex_flac': audio_dir / '15_Ghosts_II_64kb_füllytâgged.flac',
-        'complex_m4a': audio_dir / '15_Ghosts_II_64kb_füllytâgged.m4a',
-        'multiimage': audio_dir / 'multiimage.m4a'
+        "multi_mp3": audio_dir / "multi.mp3",
+        "multi_flac": audio_dir / "multi.flac",
+        "multi_m4a": audio_dir / "multi.m4a",
+        "complex_mp3": audio_dir / "15_Ghosts_II_64kb_füllytâgged.mp3",
+        "complex_flac": audio_dir / "15_Ghosts_II_64kb_füllytâgged.flac",
+        "complex_m4a": audio_dir / "15_Ghosts_II_64kb_füllytâgged.m4a",
+        "multiimage": audio_dir / "multiimage.m4a",
     }
 
 
@@ -72,22 +73,24 @@ def test_multiple_isrc_extraction(multivalue_files, file_key):  # pylint: disabl
     tt_has_multiple = _has_multiple_values(tt_isrc) if tt_isrc else False
 
     # For multi-value test files, we expect multiple ISRC codes
-    if 'multi_' in file_key:
+    if "multi_" in file_key:
         status = "[OK]" if tt_has_multiple else "[WARN]"
         detected = "detected" if tt_has_multiple else "did not detect"
         print(f"  {status}  TinyTag {detected} multiple ISRC codes in {file_key}")
 
     # Assert that multi-value files actually have multiple ISRC values
-    if file_key == 'multi_m4a':
+    if file_key == "multi_m4a":
         # With our monkey patch, M4A files should now extract multiple ISRCs
         # as separate list items
-        assert isinstance(tt_isrc, list) and len(tt_isrc) >= 2, \
+        assert isinstance(tt_isrc, list) and len(tt_isrc) >= 2, (
             f"M4A file should have multiple ISRC codes, got {tt_isrc}"
-    elif file_key == 'multi_mp3':
+        )
+    elif file_key == "multi_mp3":
         # MP3 files may store multiple values as delimited strings that
         # need splitting
-        assert tt_has_multiple, \
+        assert tt_has_multiple, (
             f"MP3 file should have multiple ISRC codes (possibly delimited), got {tt_isrc}"
+        )
 
 
 @pytest.mark.parametrize("file_key", ["multi_mp3", "multi_flac", "multi_m4a"])
@@ -107,7 +110,7 @@ def test_multiple_artists_extraction(multivalue_files, file_key):  # pylint: dis
     print(f"  TinyTag: {tt_artists} (type: {type(tt_artists)})")
 
     # Document multi-value artist ID detection capabilities
-    if 'multi_' in file_key:
+    if "multi_" in file_key:
         tt_has_multiple_artists = _has_multiple_values(tt_artists) if tt_artists else False
 
         status = "[OK]" if tt_has_multiple_artists else "[WARN]"
@@ -115,22 +118,23 @@ def test_multiple_artists_extraction(multivalue_files, file_key):  # pylint: dis
         print(f"  {status}  TinyTag {detected} multiple artist IDs in {file_key}")
 
         # Assert that multi-value files actually have multiple artist IDs
-        if file_key == 'multi_m4a':
+        if file_key == "multi_m4a":
             # With our monkey patch, M4A files should now extract multiple
             # artist IDs as separate list items
-            assert isinstance(tt_artists, list) and len(tt_artists) >= 2, \
+            assert isinstance(tt_artists, list) and len(tt_artists) >= 2, (
                 f"M4A file should have multiple artist IDs, got {tt_artists}"
-        elif file_key == 'multi_mp3':
+            )
+        elif file_key == "multi_mp3":
             # MP3 files may store multiple values as delimited strings that
             # need splitting
-            assert tt_has_multiple_artists, \
-                f"MP3 file should have multiple artist IDs (possibly delimited), " \
-                f"got {tt_artists}"
+            assert tt_has_multiple_artists, (
+                f"MP3 file should have multiple artist IDs (possibly delimited), got {tt_artists}"
+            )
 
 
 def test_multiple_images_extraction(multivalue_files):  # pylint: disable=redefined-outer-name
     """Test extraction of multiple embedded images with tinytag 2.1.1."""
-    test_file = multivalue_files['multiimage']
+    test_file = multivalue_files["multiimage"]
     if not test_file.exists():
         pytest.skip("Multi-image test file not found")
 
@@ -140,7 +144,7 @@ def test_multiple_images_extraction(multivalue_files):  # pylint: disable=redefi
     # Check TinyTag image extraction (tinytag 2.1.1+ API)
     tt_image_count = 0
     tt_image_sizes = []
-    if hasattr(tt_tag, 'images') and tt_tag.images:
+    if hasattr(tt_tag, "images") and tt_tag.images:
         # TinyTag 2.1.1 stores multiple covers under 'cover' key
         images_dict = tt_tag.images.as_dict()
 
@@ -154,8 +158,8 @@ def test_multiple_images_extraction(multivalue_files):  # pylint: disable=redefi
             image_hashes.add(hash(tt_tag.images.front_cover.data))
 
         # Add cover list images (avoiding duplicates)
-        if 'cover' in images_dict and images_dict['cover']:
-            for img in images_dict['cover']:
+        if "cover" in images_dict and images_dict["cover"]:
+            for img in images_dict["cover"]:
                 img_hash = hash(img.data)
                 if img_hash not in image_hashes:
                     all_images.append(img)
@@ -169,13 +173,12 @@ def test_multiple_images_extraction(multivalue_files):  # pylint: disable=redefi
     print(f"  TinyTag: {tt_image_count} images, sizes: {tt_image_sizes}")
 
     # TinyTag should detect multiple images with our enhanced processing
-    assert tt_image_count > 1, \
-        f"TinyTag should detect multiple images, got {tt_image_count}"
+    assert tt_image_count > 1, f"TinyTag should detect multiple images, got {tt_image_count}"
 
 
 def test_multivalue_field_consistency(multivalue_files):  # pylint: disable=redefined-outer-name
     """Test consistency in how tinytag 2.1.1 handles multi-value fields."""
-    test_files = ['multi_mp3', 'multi_flac', 'multi_m4a']
+    test_files = ["multi_mp3", "multi_flac", "multi_m4a"]
 
     field_handling_report = {}
 
@@ -191,19 +194,19 @@ def test_multivalue_field_consistency(multivalue_files):  # pylint: disable=rede
         tt_tag = tinytag.TinyTag.get(str(test_file))
 
         # Analyze multi-value field handling patterns
-        multivalue_fields = ['isrc', 'musicbrainz artist id', 'website', 'url']
+        multivalue_fields = ["isrc", "musicbrainz artist id", "website", "url"]
 
         for field in multivalue_fields:
             tt_value = None
 
             # Check TinyTag (tinytag 2.1.1+ API)
-            if hasattr(tt_tag, 'other') and tt_tag.other:
+            if hasattr(tt_tag, "other") and tt_tag.other:
                 tt_value = tt_tag.other.get(field)
 
             if tt_value is not None:
                 field_handling_report[file_format][field] = {
-                    'tinytag_type': type(tt_value).__name__,
-                    'tinytag_value': str(tt_value)[:100],
+                    "tinytag_type": type(tt_value).__name__,
+                    "tinytag_value": str(tt_value)[:100],
                 }
 
     # Print field handling patterns
@@ -226,23 +229,23 @@ def test_multivalue_parsing_edge_cases(multivalue_files, file_key):  # pylint: d
     tt_tag = tinytag.TinyTag.get(str(test_file))
 
     # Look for fields that might have different delimiter handling (tinytag 2.1.1+ API)
-    if hasattr(tt_tag, 'other') and tt_tag.other:
+    if hasattr(tt_tag, "other") and tt_tag.other:
         for key, value in tt_tag.other.items():
-            if isinstance(value, str) and any(delim in value for delim in ['/', ';', ',']):
+            if isinstance(value, str) and any(delim in value for delim in ["/", ";", ","]):
                 print(f"TinyTag delimiter pattern in {file_key}.{key}: {value}")
 
                 # Test that the application metadata processor would handle this correctly
-                if '/' in value:
-                    parsed = value.split('/')
+                if "/" in value:
+                    parsed = value.split("/")
                     assert len(parsed) > 1, f"Failed to parse slash-delimited value: {value}"
-                elif ';' in value:
-                    parsed = value.split(';')
+                elif ";" in value:
+                    parsed = value.split(";")
                     assert len(parsed) > 1, f"Failed to parse semicolon-delimited value: {value}"
 
 
 def test_multivalue_memory_efficiency(multivalue_files):  # pylint: disable=redefined-outer-name
     """Test memory efficiency with large multi-value fields using tinytag 2.1.1."""
-    test_file = multivalue_files['multiimage']
+    test_file = multivalue_files["multiimage"]
     if not test_file.exists():
         pytest.skip("Multi-image test file not found")
 
@@ -260,7 +263,7 @@ def test_multivalue_memory_efficiency(multivalue_files):  # pylint: disable=rede
     print(f"Memory impact of multi-image extraction: {mem_after - mem_before} bytes")
 
     # Verify images were actually extracted (tinytag 2.1.1+ API)
-    if hasattr(tt_tag, 'images') and tt_tag.images:
+    if hasattr(tt_tag, "images") and tt_tag.images:
         images_dict = tt_tag.images.as_dict()
 
         # Count total unique images from all sources
@@ -271,8 +274,8 @@ def test_multivalue_memory_efficiency(multivalue_files):  # pylint: disable=rede
             image_hashes.add(hash(tt_tag.images.front_cover.data))
             total_images += 1
 
-        if 'cover' in images_dict and images_dict['cover']:
-            for img in images_dict['cover']:
+        if "cover" in images_dict and images_dict["cover"]:
+            for img in images_dict["cover"]:
                 img_hash = hash(img.data)
                 if img_hash not in image_hashes:
                     image_hashes.add(img_hash)
@@ -292,18 +295,18 @@ def test_multivalue_field_order_consistency(multivalue_files, file_key):  # pyli
     isrc_extractions = []
     for _ in range(3):
         tt_tag = tinytag.TinyTag.get(str(test_file))
-        if hasattr(tt_tag, 'other') and tt_tag.other:
+        if hasattr(tt_tag, "other") and tt_tag.other:
             # Check consistency of ISRC field specifically
-            if 'isrc' in tt_tag.other and isinstance(tt_tag.other['isrc'], list):
-                isrc_extractions.append(tt_tag.other['isrc'])
+            if "isrc" in tt_tag.other and isinstance(tt_tag.other["isrc"], list):
+                isrc_extractions.append(tt_tag.other["isrc"])
 
     # Check that the same field extracts consistently
     if isrc_extractions:
         first_isrc = isrc_extractions[0]
         for isrc_extraction in isrc_extractions[1:]:
-            assert isrc_extraction == first_isrc, \
-                f"ISRC field order inconsistent in {file_key}: " \
-                f"{first_isrc} vs {isrc_extraction}"
+            assert isrc_extraction == first_isrc, (
+                f"ISRC field order inconsistent in {file_key}: {first_isrc} vs {isrc_extraction}"
+            )
 
 
 def test_tinytag_monkey_patch_functionality():
@@ -312,7 +315,8 @@ def test_tinytag_monkey_patch_functionality():
     # (already imported at module level)
     # Verify the monkey patch was applied by checking the method signature
     import tinytag.tinytag as tt  # pylint: disable=import-outside-toplevel
+
     # pylint: disable=protected-access
-    assert hasattr(tt._MP4, '_parse_custom_field'), "Monkey patch should be applied"  # pylint: disable=protected-access,no-member
+    assert hasattr(tt._MP4, "_parse_custom_field"), "Monkey patch should be applied"  # pylint: disable=protected-access,no-member
 
     print("[OK] TinyTag monkey patch successfully applied")

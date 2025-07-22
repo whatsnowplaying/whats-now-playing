@@ -22,10 +22,10 @@ async def simulate_api_call(artist_name: str, delay: float = 2.0) -> dict:
     print(f"  🔄 Making API call for {artist_name} (simulating {delay}s delay)...")
     await asyncio.sleep(delay)
     return {
-        'artist': artist_name,
-        'bio': f'This is the biography for {artist_name}',
-        'genres': ['Electronic', 'Dance'],
-        'formed_year': 2010
+        "artist": artist_name,
+        "bio": f"This is the biography for {artist_name}",
+        "genres": ["Electronic", "Dance"],
+        "formed_year": 2010,
     }
 
 
@@ -38,10 +38,10 @@ async def demo_basic_caching():
     # First lookup - cache miss
     print("\n1. First lookup (cache miss):")
     start_time = time.time()
-    data = await cache.get('demo', 'Daft Punk', 'artist_info')
+    data = await cache.get("demo", "Daft Punk", "artist_info")
     if data is None:
-        data = await simulate_api_call('Daft Punk')
-        await cache.put('demo', 'Daft Punk', 'artist_info', data)
+        data = await simulate_api_call("Daft Punk")
+        await cache.put("demo", "Daft Punk", "artist_info", data)
     elapsed = time.time() - start_time
     print(f"   ⏱️  Time: {elapsed:.2f}s")
     print(f"   📄 Data: {data}")
@@ -49,7 +49,7 @@ async def demo_basic_caching():
     # Second lookup - cache hit
     print("\n2. Second lookup (cache hit):")
     start_time = time.time()
-    data = await cache.get('demo', 'Daft Punk', 'artist_info')
+    data = await cache.get("demo", "Daft Punk", "artist_info")
     elapsed = time.time() - start_time
     print(f"   ⏱️  Time: {elapsed:.2f}s")
     print(f"   📄 Data: {data}")
@@ -65,11 +65,13 @@ async def demo_cached_fetch():
     # First call - cache miss
     print("\n1. First cached_fetch call (cache miss):")
     start_time = time.time()
-    data = await nowplaying.apicache.cached_fetch(provider='demo',
-                                                  artist_name='Deadmau5',
-                                                  endpoint='artist_bio',
-                                                  fetch_func=lambda: fetch_artist_bio('Deadmau5'),
-                                                  ttl_seconds=300)
+    data = await nowplaying.apicache.cached_fetch(
+        provider="demo",
+        artist_name="Deadmau5",
+        endpoint="artist_bio",
+        fetch_func=lambda: fetch_artist_bio("Deadmau5"),
+        ttl_seconds=300,
+    )
     elapsed = time.time() - start_time
     print(f"   ⏱️  Time: {elapsed:.2f}s")
     print(f"   📄 Data: {data}")
@@ -77,11 +79,13 @@ async def demo_cached_fetch():
     # Second call - cache hit
     print("\n2. Second cached_fetch call (cache hit):")
     start_time = time.time()
-    data = await nowplaying.apicache.cached_fetch(provider='demo',
-                                                  artist_name='Deadmau5',
-                                                  endpoint='artist_bio',
-                                                  fetch_func=lambda: fetch_artist_bio('Deadmau5'),
-                                                  ttl_seconds=300)
+    data = await nowplaying.apicache.cached_fetch(
+        provider="demo",
+        artist_name="Deadmau5",
+        endpoint="artist_bio",
+        fetch_func=lambda: fetch_artist_bio("Deadmau5"),
+        ttl_seconds=300,
+    )
     elapsed = time.time() - start_time
     print(f"   ⏱️  Time: {elapsed:.2f}s")
     print(f"   📄 Data: {data}")
@@ -92,12 +96,12 @@ async def demo_cache_stats():
     print("\n\n=== Cache Statistics Demo ===")
 
     cache = nowplaying.apicache.get_cache()
-    test_artists = ['Calvin Harris', 'Swedish House Mafia', 'Avicii']
+    test_artists = ["Calvin Harris", "Swedish House Mafia", "Avicii"]
 
     print(f"\n1. Adding test data for {len(test_artists)} artists...")
     for artist in test_artists:
         data = await simulate_api_call(artist, delay=0.1)  # Fast for demo
-        await cache.put('demo', artist, 'artist_info', data)
+        await cache.put("demo", artist, "artist_info", data)
 
     # Get statistics
     print("\n2. Cache statistics:")
@@ -108,14 +112,14 @@ async def demo_cache_stats():
     print(f"   🎯 Cache hit potential: {stats.get('cache_hit_potential', 'N/A')}")
 
     # Show by provider
-    by_provider = stats.get('by_provider', {})
+    by_provider = stats.get("by_provider", {})
     if by_provider:
         print("\n3. Entries by provider:")
         for provider, count in sorted(by_provider.items()):
             print(f"   {provider}: {count}")
 
     # Show top artists
-    top_artists = stats.get('top_artists', [])
+    top_artists = stats.get("top_artists", [])
     if top_artists:
         print("\n4. Most accessed artists:")
         for artist, access_count in top_artists[:5]:
@@ -132,7 +136,7 @@ async def demo_performance_comparison():
     print("\n\n=== Performance Comparison ===")
 
     cache = nowplaying.apicache.get_cache()
-    test_artists = ['Martin Garrix', 'Tiësto', 'Armin van Buuren', 'Above & Beyond']
+    test_artists = ["Martin Garrix", "Tiësto", "Armin van Buuren", "Above & Beyond"]
 
     # Without caching
     print("\n1. Without caching:")
@@ -146,10 +150,10 @@ async def demo_performance_comparison():
     print("\n2. With caching - first run (cache misses):")
     start_time = time.time()
     for artist in test_artists:
-        data = await cache.get('demo', artist, 'performance_test')
+        data = await cache.get("demo", artist, "performance_test")
         if data is None:
             data = await simulate_api_call(artist, delay=0.5)
-            await cache.put('demo', artist, 'performance_test', data)
+            await cache.put("demo", artist, "performance_test", data)
     first_cache_time = time.time() - start_time
     print(f"   ⏱️  Total time: {first_cache_time:.2f}s")
 
@@ -157,10 +161,10 @@ async def demo_performance_comparison():
     print("\n3. With caching - second run (cache hits):")
     start_time = time.time()
     for artist in test_artists:
-        data = await cache.get('demo', artist, 'performance_test')
+        data = await cache.get("demo", artist, "performance_test")
         if data is None:
             data = await simulate_api_call(artist, delay=0.5)
-            await cache.put('demo', artist, 'performance_test', data)
+            await cache.put("demo", artist, "performance_test", data)
     second_cache_time = time.time() - start_time
     print(f"   ⏱️  Total time: {second_cache_time:.2f}s")
 
@@ -193,5 +197,5 @@ async def main():
         traceback.print_exc()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())

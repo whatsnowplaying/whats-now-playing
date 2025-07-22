@@ -105,7 +105,9 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
         ):
             provided_secret = data.get("secret", "")
             if not provided_secret:
-                logging.warning("Remote metadata submission without secret from %s", request.remote)
+                logging.warning(
+                    "Remote metadata submission without secret from %s", request.remote
+                )
                 return web.json_response({"error": "Missing secret in request"}, status=403)
 
             # Use constant-time comparison to prevent timing attacks
@@ -343,7 +345,9 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
 
         if category != "cover":
             await self._send_images_error(
-                websocket, "UNSUPPORTED_CATEGORY", f'Category "{category}" not supported for albums'
+                websocket,
+                "UNSUPPORTED_CATEGORY",
+                f'Category "{category}" not supported for albums',
             )
             return
 
@@ -378,7 +382,9 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
             return False
 
         if not isinstance(parameters, dict):
-            await self._send_images_error(websocket, "MISSING_PARAMTERS", "parameters are required")
+            await self._send_images_error(
+                websocket, "MISSING_PARAMTERS", "parameters are required"
+            )
             return False
 
         return True

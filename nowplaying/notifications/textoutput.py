@@ -154,7 +154,9 @@ class Plugin(NotificationPlugin):
             self.config.cparser.setValue("textoutput/file", qwidget.file_lineedit.text())
 
         if hasattr(qwidget, "template_lineedit"):
-            self.config.cparser.setValue("textoutput/txttemplate", qwidget.template_lineedit.text())
+            self.config.cparser.setValue(
+                "textoutput/txttemplate", qwidget.template_lineedit.text()
+            )
 
     def verify_settingsui(self, qwidget: "QWidget") -> bool:
         """Verify settings"""

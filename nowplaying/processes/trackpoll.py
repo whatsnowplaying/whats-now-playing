@@ -514,7 +514,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             tryagain = False
 
             if not self.imagecache:
-                logging.debug("Artist Extras was enabled without restart; skipping image downloads")
+                logging.debug(
+                    "Artist Extras was enabled without restart; skipping image downloads"
+                )
                 return True
 
             for key in ["artistthumbnail", "artistlogo", "artistbanner"]:

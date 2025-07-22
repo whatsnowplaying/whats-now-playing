@@ -113,7 +113,8 @@ class StaticContentHandler:
 
         if not template:
             logging.warning(
-                "Template path missing or invalid for config key '%s', sending refresh", cfgtemplate
+                "Template path missing or invalid for config key '%s', sending refresh",
+                cfgtemplate,
             )
             return web.Response(status=202, content_type="text/html", text=INDEXREFRESH)
 
@@ -243,7 +244,9 @@ class StaticContentHandler:
         ):
             provided_secret = request_data.get("secret", "")
             if not provided_secret:
-                logging.warning("Remote metadata submission without secret from %s", request.remote)
+                logging.warning(
+                    "Remote metadata submission without secret from %s", request.remote
+                )
                 return web.json_response({"error": "Missing secret in request"}, status=403)
 
             # Use constant-time comparison to prevent timing attacks

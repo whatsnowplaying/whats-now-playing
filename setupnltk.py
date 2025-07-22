@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' setup nltk '''
+"""setup nltk"""
 
 import ssl
 import nltk
@@ -11,5 +11,5 @@ except AttributeError:
 else:
     ssl._create_default_https_context = _create_unverified_https_context  # pylint: disable=protected-access
 
-nltk.download('punkt')
-nltk.download('punkt_tab')
+nltk.download("punkt")
+nltk.download("punkt_tab")

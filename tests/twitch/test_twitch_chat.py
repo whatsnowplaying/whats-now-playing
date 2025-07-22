@@ -33,7 +33,7 @@ async def test_modernmeerkat_greeting_sent_once(bootstrap):
     stopevent = asyncio.Event()
 
     # Set up the chat channel for testing
-    config.cparser.setValue('twitchbot/channel', 'testchannel')
+    config.cparser.setValue("twitchbot/channel", "testchannel")
 
     # Create TwitchChat instance
     chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=stopevent)
@@ -43,13 +43,13 @@ async def test_modernmeerkat_greeting_sent_once(bootstrap):
     assert chat.modernmeerkat_greeted is False
 
     # modernmeerkat user sends message
-    modernmeerkat_user = MockUser('modernmeerkat')
+    modernmeerkat_user = MockUser("modernmeerkat")
     message = MockMessage(modernmeerkat_user)
 
     await chat.on_twitchchat_incoming_message(message)  # pylint: disable=no-member
 
     # Verify greeting was sent
-    chat.chat.send_message.assert_called_once_with('testchannel', 'hi @modernmeerkat')
+    chat.chat.send_message.assert_called_once_with("testchannel", "hi @modernmeerkat")
     assert chat.modernmeerkat_greeted is True
 
 
@@ -59,7 +59,7 @@ async def test_modernmeerkat_no_duplicate_greeting(bootstrap):
     config = bootstrap
     stopevent = asyncio.Event()
 
-    config.cparser.setValue('twitchbot/channel', 'testchannel')
+    config.cparser.setValue("twitchbot/channel", "testchannel")
 
     chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=stopevent)
     chat.chat = AsyncMock()
@@ -68,7 +68,7 @@ async def test_modernmeerkat_no_duplicate_greeting(bootstrap):
     chat.modernmeerkat_greeted = True
 
     # modernmeerkat user sends another message
-    modernmeerkat_user = MockUser('modernmeerkat')
+    modernmeerkat_user = MockUser("modernmeerkat")
     message = MockMessage(modernmeerkat_user)
 
     await chat.on_twitchchat_incoming_message(message)  # pylint: disable=no-member
@@ -83,11 +83,14 @@ async def test_modernmeerkat_case_insensitive(bootstrap):
     config = bootstrap
     stopevent = asyncio.Event()
 
-    config.cparser.setValue('twitchbot/channel', 'testchannel')
+    config.cparser.setValue("twitchbot/channel", "testchannel")
 
     test_cases = [
-        'ModernMeerkat', 'MODERNMEERKAT', 'modernmeerkat_fan', 'TheModernMeerkat',
-        'modernmeerkat123'
+        "ModernMeerkat",
+        "MODERNMEERKAT",
+        "modernmeerkat_fan",
+        "TheModernMeerkat",
+        "modernmeerkat123",
     ]
 
     for username in test_cases:
@@ -101,7 +104,7 @@ async def test_modernmeerkat_case_insensitive(bootstrap):
         await chat.on_twitchchat_incoming_message(message)  # pylint: disable=no-member
 
         # Verify greeting was sent
-        chat.chat.send_message.assert_called_once_with('testchannel', f'hi @{username}')
+        chat.chat.send_message.assert_called_once_with("testchannel", f"hi @{username}")
         assert chat.modernmeerkat_greeted is True
 
 
@@ -111,18 +114,18 @@ async def test_regular_users_no_greeting(bootstrap):
     config = bootstrap
     stopevent = asyncio.Event()
 
-    config.cparser.setValue('twitchbot/channel', 'testchannel')
+    config.cparser.setValue("twitchbot/channel", "testchannel")
 
     chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=stopevent)
     chat.chat = AsyncMock()
 
     regular_users = [
-        'someuser',
-        'viewer123',
-        'chatbot',
-        'moderator',
-        'meerkat',  # partial match shouldn't trigger
-        'modern',  # partial match shouldn't trigger
+        "someuser",
+        "viewer123",
+        "chatbot",
+        "moderator",
+        "meerkat",  # partial match shouldn't trigger
+        "modern",  # partial match shouldn't trigger
     ]
 
     for username in regular_users:
@@ -142,7 +145,7 @@ async def test_greeting_error_handling(bootstrap):
     config = bootstrap
     stopevent = asyncio.Event()
 
-    config.cparser.setValue('twitchbot/channel', 'testchannel')
+    config.cparser.setValue("twitchbot/channel", "testchannel")
 
     chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=stopevent)
     chat.chat = AsyncMock()
@@ -150,7 +153,7 @@ async def test_greeting_error_handling(bootstrap):
     # Configure mock to raise an exception
     chat.chat.send_message.side_effect = Exception("Network error")
 
-    modernmeerkat_user = MockUser('modernmeerkat')
+    modernmeerkat_user = MockUser("modernmeerkat")
     message = MockMessage(modernmeerkat_user)
 
     # Should not raise an exception
@@ -176,12 +179,12 @@ def test_twitch_chat_initialization(bootstrap):
 def setup_generic_commands(config):
     """Setup a bunch of default commands to test against."""
     for command in nowplaying.twitch.chat.TWITCHBOT_CHECKBOXES:
-        cmd = f'twitchbot-command-{command}'
+        cmd = f"twitchbot-command-{command}"
         for checkbox in nowplaying.twitch.chat.TWITCHBOT_CHECKBOXES:
             if command == checkbox:
-                config.cparser.setValue(f'{cmd}cmd/{checkbox}', True)
+                config.cparser.setValue(f"{cmd}cmd/{checkbox}", True)
             else:
-                config.cparser.setValue(f'{cmd}cmd/{checkbox}', False)
+                config.cparser.setValue(f"{cmd}cmd/{checkbox}", False)
 
 
 @pytest.mark.asyncio
@@ -194,16 +197,16 @@ async def test_command_permissions(bootstrap):
     config.cparser.sync()
     chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=stopevent)
 
-    streamerprofile = {'broadcaster': '1', 'subscriber': '9'}
-    moderatorprofile = {'moderator': '1', 'subscriber': '24'}
-    hypetrainprofile = {'vip': '1', 'subscriber': '3012', 'hype-train': '1'}
+    streamerprofile = {"broadcaster": "1", "subscriber": "9"}
+    moderatorprofile = {"moderator": "1", "subscriber": "24"}
+    hypetrainprofile = {"vip": "1", "subscriber": "3012", "hype-train": "1"}
 
     for profile in [streamerprofile, moderatorprofile, hypetrainprofile]:
         for box in nowplaying.twitch.chat.TWITCHBOT_CHECKBOXES:
-            if box == 'anyone' or profile.get(box):
-                assert chat.check_command_perms(profile, f'{box}cmd')
+            if box == "anyone" or profile.get(box):
+                assert chat.check_command_perms(profile, f"{box}cmd")
             else:
-                assert not chat.check_command_perms(profile, f'{box}cmd')
+                assert not chat.check_command_perms(profile, f"{box}cmd")
 
     stopevent.set()
 
@@ -221,15 +224,15 @@ def test_verify_command_character():
     mock_widget = MagicMock()
 
     # Test invalid characters
-    for invalid_char in ['/', '.']:
+    for invalid_char in ["/", "."]:
         mock_widget.commandchar_lineedit.text.return_value = invalid_char
 
         with pytest.raises(PluginVerifyError) as exc_info:
             nowplaying.twitch.chat.TwitchChatSettings.verify(mock_widget)
 
-        assert 'cannot start with / or .' in str(exc_info.value)
+        assert "cannot start with / or ." in str(exc_info.value)
 
     # Test valid character
-    mock_widget.commandchar_lineedit.text.return_value = '!'
+    mock_widget.commandchar_lineedit.text.return_value = "!"
     # Should not raise an exception
     nowplaying.twitch.chat.TwitchChatSettings.verify(mock_widget)

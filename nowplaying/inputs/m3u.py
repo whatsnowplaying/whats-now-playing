@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-''' Read m3u files '''
+"""Read m3u files"""
 
 import contextlib
 import logging
@@ -17,16 +17,16 @@ from nowplaying.inputs import InputPlugin
 from nowplaying.exceptions import PluginVerifyError
 import nowplaying.utils
 
-#VDJ Extension lines that matter
-EXTVDJ_TITLE_RE = re.compile(r'.*<title>(.+)</title>.*')
-EXTVDJ_ARTIST_RE = re.compile(r'.*<artist>(.+)</artist>.*')
-EXTVDJ_REMIX_RE = re.compile(r'.*<remix>(.+)</remix>.*')
+# VDJ Extension lines that matter
+EXTVDJ_TITLE_RE = re.compile(r".*<title>(.+)</title>.*")
+EXTVDJ_ARTIST_RE = re.compile(r".*<artist>(.+)</artist>.*")
+EXTVDJ_REMIX_RE = re.compile(r".*<remix>(.+)</remix>.*")
 
 # https://datatracker.ietf.org/doc/html/rfc8216
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
-    ''' handler for NowPlaying '''
+    """handler for NowPlaying"""
 
     def __init__(self, config=None, m3udir=None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
@@ -38,21 +38,21 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         self.mixmode = "newest"
         self.event_handler = None
-        self.metadata: dict[str, str | None] = {'artist': None, 'title': None, 'filename': None}
+        self.metadata: dict[str, str | None] = {"artist": None, "title": None, "filename": None}
         self.observer = None
         self._reset_meta()
 
     def install(self):
-        ''' locate Virtual DJ '''
+        """locate Virtual DJ"""
         return False
 
     def _reset_meta(self):
-        ''' reset the metadata '''
-        self.metadata = {'artist': None, 'title': None, 'filename': None}
+        """reset the metadata"""
+        self.metadata = {"artist": None, "title": None, "filename": None}
 
     async def setup_watcher(self, configkey):
-        ''' set up a custom watch on the m3u dir so meta info
-            can update on change'''
+        """set up a custom watch on the m3u dir so meta info
+        can update on change"""
 
         m3udir = self.config.cparser.value(configkey)
         if not self.m3udir or self.m3udir != m3udir:
@@ -63,44 +63,46 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         self.m3udir = m3udir
         if not self.m3udir:
-            logging.error('M3U Directory Path does not exist: %s', self.m3udir)
+            logging.error("M3U Directory Path does not exist: %s", self.m3udir)
             return
 
-        logging.info('Watching for changes on %s', self.m3udir)
-        #if len(os.listdir(self.m3udir)) < 1:
+        logging.info("Watching for changes on %s", self.m3udir)
+        # if len(os.listdir(self.m3udir)) < 1:
         #    pathlib.Path(os.path.join(self.m3udir, 'empty.m3u')).touch()
 
-        self.event_handler = PatternMatchingEventHandler(patterns=['*.m3u', '*.m3u8'],
-                                                         ignore_patterns=['.DS_Store'],
-                                                         ignore_directories=True,
-                                                         case_sensitive=False)
+        self.event_handler = PatternMatchingEventHandler(
+            patterns=["*.m3u", "*.m3u8"],
+            ignore_patterns=[".DS_Store"],
+            ignore_directories=True,
+            case_sensitive=False,
+        )
         self.event_handler.on_modified = self._read_track
         self.event_handler.on_created = self._read_track
 
-        if self.config.cparser.value('quirks/pollingobserver', type=bool):
-            polling_interval = self.config.cparser.value('quirks/pollinginterval', type=float)
-            logging.debug('Using polling observer with %s second interval', polling_interval)
+        if self.config.cparser.value("quirks/pollingobserver", type=bool):
+            polling_interval = self.config.cparser.value("quirks/pollinginterval", type=float)
+            logging.debug("Using polling observer with %s second interval", polling_interval)
             self.observer = PollingObserver(timeout=polling_interval)
         else:
-            logging.debug('Using fsevent observer')
+            logging.debug("Using fsevent observer")
             self.observer = Observer()
         self.observer.schedule(self.event_handler, self.m3udir, recursive=False)
         self.observer.start()
 
     def _verify_file(self, m3ufilename, filestring):
         found = None
-        if b'netsearch://' in filestring or b'http://' in filestring or b'https://' in filestring:
-            logging.debug('Remote resource; skipping filename decode')
+        if b"netsearch://" in filestring or b"http://" in filestring or b"https://" in filestring:
+            logging.debug("Remote resource; skipping filename decode")
             return None
-        for encoding in ['utf-8', 'ascii', 'cp1252', 'utf-16']:
+        for encoding in ["utf-8", "ascii", "cp1252", "utf-16"]:
             try:
                 location = filestring.decode(encoding)
             except UnicodeDecodeError:
-                logging.debug('Definitely not encoded as %s', encoding)
+                logging.debug("Definitely not encoded as %s", encoding)
                 continue
-            if location[0] == '#':
+            if location[0] == "#":
                 break
-            location = location.replace('file://', '')
+            location = location.replace("file://", "")
             location = nowplaying.utils.songpathsubst(self.config, location)
             if os.path.exists(location):
                 found = location
@@ -115,27 +117,27 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         return found
 
     def _parse_extvdj(self, inputline):
-        ''' read the #EXTVDJ comment extension '''
+        """read the #EXTVDJ comment extension"""
         metadata = {}
-        vdjline = inputline.replace('#EXTVDJ:', '')
+        vdjline = inputline.replace("#EXTVDJ:", "")
 
         with contextlib.suppress(AttributeError):
             if line := EXTVDJ_TITLE_RE.match(vdjline):
-                metadata['title'] = line.group(1)
+                metadata["title"] = line.group(1)
         with contextlib.suppress(AttributeError):
             if line := EXTVDJ_ARTIST_RE.match(vdjline):
-                metadata['artist'] = line.group(1)
-        if self.config.cparser.value('virtualdj/useremix', type=bool):
+                metadata["artist"] = line.group(1)
+        if self.config.cparser.value("virtualdj/useremix", type=bool):
             with contextlib.suppress(AttributeError):
                 remix = EXTVDJ_REMIX_RE.match(vdjline).group(1)
-                if metadata.get('title'):
-                    metadata['title'] += f' ({remix})'
+                if metadata.get("title"):
+                    metadata["title"] += f" ({remix})"
         return metadata
 
     def _read_full_file(self, filename):
-        ''' read the entire content of a file '''
+        """read the entire content of a file"""
         content = []
-        with open(filename, 'rb') as m3ufh:
+        with open(filename, "rb") as m3ufh:
             while True:
                 newline = m3ufh.readline()
                 if not newline:
@@ -148,37 +150,37 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         return content
 
     def _read_track(self, event):
-
         if event.is_directory:
             return
 
         filename = event.src_path
-        logging.debug('event type: %s, syn: %s, path: %s', event.event_type, event.is_synthetic,
-                      filename)
+        logging.debug(
+            "event type: %s, syn: %s, path: %s", event.event_type, event.is_synthetic, filename
+        )
 
         # file is empty so ignore it
         if os.stat(filename).st_size == 0:
-            logging.debug('%s is empty, ignoring for now.', filename)
+            logging.debug("%s is empty, ignoring for now.", filename)
             self._reset_meta()
             return
 
         trackfile = None
         trackextvdj = None
-        with open(filename, 'rb') as m3ufh:
+        with open(filename, "rb") as m3ufh:
             while True:
                 newline = m3ufh.readline()
                 if not newline:
                     break
                 newline = newline.rstrip()
                 with contextlib.suppress(Exception):
-                    if '#EXTVDJ' in newline.decode('utf-8'):
-                        trackextvdj = newline.decode('utf-8')
+                    if "#EXTVDJ" in newline.decode("utf-8"):
+                        trackextvdj = newline.decode("utf-8")
                         continue
-                if not newline or newline[0] == '#':
+                if not newline or newline[0] == "#":
                     continue
                 trackfile = newline
 
-        logging.debug('attempting to parse \'%s\' with various encodings', trackfile)
+        logging.debug("attempting to parse '%s' with various encodings", trackfile)
 
         audiofilename = None
         if trackfile:
@@ -186,7 +188,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         newmeta = {}
         if audiofilename:
-            newmeta['filename'] = audiofilename
+            newmeta["filename"] = audiofilename
         if trackextvdj:
             newmeta |= self._parse_extvdj(trackextvdj)
 
@@ -197,22 +199,22 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.metadata = newmeta
 
     async def start(self):
-        ''' setup the watcher to run in a separate thread '''
-        await self.setup_watcher('m3u/directory')
+        """setup the watcher to run in a separate thread"""
+        await self.setup_watcher("m3u/directory")
 
     async def getplayingtrack(self):
-        ''' wrapper to call getplayingtrack '''
+        """wrapper to call getplayingtrack"""
 
         # just in case called without calling start...
         await self.start()
         return self.metadata
 
     async def getrandomtrack(self, playlist):
-        ''' not supported '''
+        """not supported"""
         return None
 
     async def stop(self):
-        ''' stop the m3u plugin '''
+        """stop the m3u plugin"""
         self._reset_meta()
         if self.observer:
             self.observer.stop()
@@ -220,35 +222,37 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             self.observer = None
 
     def on_m3u_dir_button(self):
-        ''' filename button clicked action'''
+        """filename button clicked action"""
         if self.qwidget.dir_lineedit.text():
             startdir = self.qwidget.dir_lineedit.text()
         else:
             startdir = QDir.homePath()
-        if dirname := QFileDialog.getExistingDirectory(self.qwidget, 'Select directory', startdir):
+        if dirname := QFileDialog.getExistingDirectory(self.qwidget, "Select directory", startdir):
             self.qwidget.dir_lineedit.setText(dirname)
 
     def connect_settingsui(self, qwidget, uihelp):
-        ''' connect m3u button to filename picker'''
+        """connect m3u button to filename picker"""
         self.qwidget = qwidget
         self.uihelp = uihelp
         qwidget.dir_button.clicked.connect(self.on_m3u_dir_button)
 
     def load_settingsui(self, qwidget):
-        ''' draw the plugin's settings page '''
-        qwidget.dir_lineedit.setText(self.config.cparser.value('m3u/directory'))
+        """draw the plugin's settings page"""
+        qwidget.dir_lineedit.setText(self.config.cparser.value("m3u/directory"))
 
     def verify_settingsui(self, qwidget):
-        ''' no verification to do '''
+        """no verification to do"""
         if not os.path.exists(qwidget.dir_lineedit.text()):
-            raise PluginVerifyError(r'm3u directory must exist.')
+            raise PluginVerifyError(r"m3u directory must exist.")
 
     def save_settingsui(self, qwidget):
-        ''' take the settings page and save it '''
+        """take the settings page and save it"""
         configdir = qwidget.dir_lineedit.text()
-        self.config.cparser.setValue('m3u/directory', configdir)
+        self.config.cparser.setValue("m3u/directory", configdir)
 
     def desc_settingsui(self, qwidget):
-        ''' description '''
-        qwidget.setText('M3U is a generic playlist format that is supported '
-                        'by a wide variety of tools, including Virtual DJ.')
+        """description"""
+        qwidget.setText(
+            "M3U is a generic playlist format that is supported "
+            "by a wide variety of tools, including Virtual DJ."
+        )
