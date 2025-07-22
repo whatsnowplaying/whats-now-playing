@@ -37,68 +37,12 @@ async def test_join_phrases_multiartist(getacoustidmbplugin):  # pylint: disable
     with open(fingerprint_file, "r", encoding="utf-8") as json_file:
         mock_fingerprint = json.load(json_file)
 
-    # Mock AcoustID lookup response for "My Culture" by 1 Giant Leap
-    # feat. Robbie Williams & Maxi Jazz
-    mock_acoustid_response = {
-        "results": [
-            {
-                "id": "4ba8faaf-cc17-4a38-8e35-9b21889e4001",
-                "score": 0.99775845,
-                "recordings": [
-                    {
-                        "id": "b366689f-4b81-4f1f-974b-3dff361d45a1",
-                        "releases": [
-                            {
-                                "artists": [
-                                    {
-                                        "id": "3eff5a3a-b011-4da3-81fe-bc8d4a11b28c",
-                                        "name": "1 Giant Leap",
-                                    }
-                                ],
-                                "country": "XE",
-                                "date": {"year": 2001},
-                                "id": "b79afe7c-7f2c-4516-a8bf-e34efa290c54",
-                                "medium_count": 1,
-                                "mediums": [
-                                    {
-                                        "format": "CD",
-                                        "position": 1,
-                                        "track_count": 12,
-                                        "tracks": [
-                                            {
-                                                "artists": [
-                                                    {
-                                                        "id": "3eff5a3a-b011-4da3-81fe-bc8d4a11b28c",
-                                                        "joinphrase": " feat. ",
-                                                        "name": "1 Giant Leap",
-                                                    },
-                                                    {
-                                                        "id": "db4624cf-0e44-481e-a9dc-2142b833ec2f",
-                                                        "joinphrase": " & ",
-                                                        "name": "Robbie Williams",
-                                                    },
-                                                    {
-                                                        "id": "debd408d-72b3-4c14-a0eb-dd4fe526e240",
-                                                        "name": "Maxi Jazz",
-                                                    },
-                                                ],
-                                                "id": "c713d252-3ba9-445e-a70e-1dda9609029f",
-                                                "position": 2,
-                                                "title": "My Culture",
-                                            }
-                                        ],
-                                    }
-                                ],
-                                "releaseevents": [{"country": "XE", "date": {"year": 2001}}],
-                                "title": "1 Giant Leap",
-                                "track_count": 12,
-                            }
-                        ],
-                    }
-                ],
-            }
-        ]
-    }
+    # Load mock AcoustID lookup response from external JSON file
+    joinphrases_file = (
+        pathlib.Path(__file__).parent / "resources" / "joinphrases.json"
+    )
+    with open(joinphrases_file, "r", encoding="utf-8") as json_file:
+        mock_acoustid_response = json.load(json_file)
 
     # Mock both fpcalc and acoustid.lookup to return our test data
     with (
