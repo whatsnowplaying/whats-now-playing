@@ -118,6 +118,14 @@ class MockSettingsUI:
         """Show settings UI"""
         self.shown = True
 
+    def raise_(self):
+        """Raise settings window to front"""
+        # Mock implementation - no action needed
+
+    def activateWindow(self):  # pylint: disable=invalid-name
+        """Activate settings window"""
+        # Mock implementation - no action needed
+
     def post_tray_init(self):
         """Post tray initialization"""
         # No implementation needed for mock
