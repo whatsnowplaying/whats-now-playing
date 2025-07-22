@@ -150,7 +150,7 @@
      <x>10</x>
      <y>170</y>
      <width>611</width>
-     <height>261</height>
+     <height>230</height>
     </rect>
    </property>
    <property name="alternatingRowColors">
@@ -209,7 +209,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>440</y>
+     <y>410</y>
      <width>621</width>
      <height>32</height>
     </rect>

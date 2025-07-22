@@ -6,8 +6,15 @@ import pathlib
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=import-error, no-name-in-module
-from PySide6.QtWidgets import QMenu, QSystemTrayIcon  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtGui import (  # pylint: disable=import-error, no-name-in-module
+    QAction,
+    QActionGroup,
+    QIcon,
+)
+from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
+    QMenu,
+    QSystemTrayIcon,
+)
 
 import nowplaying.systemtray  # pylint: disable=import-error
 

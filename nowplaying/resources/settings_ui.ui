@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Settings</string>
   </property>
-  <widget class="QListWidget" name="settings_list">
+  <widget class="QTreeWidget" name="settings_tree">
    <property name="geometry">
     <rect>
      <x>0</x>
@@ -21,6 +21,12 @@
      <width>141</width>
      <height>501</height>
     </rect>
+   </property>
+   <property name="headerHidden">
+    <bool>true</bool>
+   </property>
+   <property name="rootIsDecorated">
+    <bool>true</bool>
    </property>
   </widget>
   <widget class="QStackedWidget" name="settings_stack">

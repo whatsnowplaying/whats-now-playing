@@ -17,9 +17,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>40</y>
+     <y>10</y>
      <width>361</width>
-     <height>23</height>
+     <height>20</height>
     </rect>
    </property>
    <property name="text">
@@ -32,10 +32,10 @@
   <widget class="QLabel" name="wikimedia_desclabel">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>240</y>
-     <width>591</width>
-     <height>101</height>
+     <x>10</x>
+     <y>135</y>
+     <width>611</width>
+     <height>80</height>
     </rect>
    </property>
    <property name="text">
@@ -48,10 +48,10 @@
   <widget class="QWidget" name="horizontalLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>120</y>
-     <width>541</width>
-     <height>80</height>
+     <x>10</x>
+     <y>40</y>
+     <width>611</width>
+     <height>30</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="checkbox_layout">
@@ -84,72 +84,98 @@
     </item>
    </layout>
   </widget>
-  <widget class="QLabel" name="bio_iso_label">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
+  <widget class="QLabel" name="bio_settings_label">
    <property name="geometry">
     <rect>
-     <x>150</x>
-     <y>80</y>
-     <width>121</width>
-     <height>26</height>
+     <x>10</x>
+     <y>75</y>
+     <width>150</width>
+     <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Language ISO Code</string>
+    <string>Biography Settings</string>
    </property>
   </widget>
-  <widget class="QCheckBox" name="bio_iso_en_checkbox">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
+  <widget class="QGroupBox" name="bio_groupbox">
    <property name="geometry">
     <rect>
-     <x>440</x>
-     <y>80</y>
-     <width>111</width>
-     <height>24</height>
+     <x>10</x>
+     <y>95</y>
+     <width>611</width>
+     <height>30</height>
     </rect>
    </property>
-   <property name="text">
-    <string>Fallback to EN</string>
+   <property name="title">
+    <string></string>
    </property>
-   <property name="checked">
-    <bool>false</bool>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="bio_checkbox">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>80</y>
-     <width>88</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Biography</string>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="bio_iso_lineedit">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>280</x>
-     <y>80</y>
-     <width>121</width>
-     <height>26</height>
-    </rect>
-   </property>
+   <widget class="QCheckBox" name="bio_checkbox">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>8</y>
+      <width>100</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Biography</string>
+    </property>
+    <property name="checked">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="bio_iso_label">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>125</x>
+      <y>8</y>
+      <width>121</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Language ISO Code</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="bio_iso_lineedit">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>255</x>
+      <y>8</y>
+      <width>100</width>
+      <height>20</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="bio_iso_en_checkbox">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>370</x>
+      <y>8</y>
+      <width>111</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Fallback to EN</string>
+    </property>
+    <property name="checked">
+     <bool>false</bool>
+    </property>
+   </widget>
   </widget>
  </widget>
  <resources/>
@@ -231,6 +257,22 @@
     <hint type="destinationlabel">
      <x>340</x>
      <y>92</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>bio_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>bio_iso_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>83</x>
+     <y>91</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>180</x>
+     <y>91</y>
     </hint>
    </hints>
   </connection>

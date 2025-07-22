@@ -139,8 +139,18 @@ p, li { white-space: pre-wrap; }
 hr { height: 1px; border-width: 0; }
 li.unchecked::marker { content: &quot;\2610&quot;; }
 li.checked::marker { content: &quot;\2612&quot;; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'.AppleSystemUIFont'; font-size:13pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;margin-top:0px; margin-bottom:8px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Discord Integration Setup:&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot;margin-top:0px; margin-bottom:4px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Client Mode&lt;/span&gt; - Updates your Discord user status with currently playing song:&lt;/p&gt;
+&lt;p style=&quot;margin-top:0px; margin-bottom:2px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;• Go to &lt;a href=&quot;https://discord.com/developers/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Discord Developers&lt;/span&gt;&lt;/a&gt; and create an application&lt;/p&gt;
+&lt;p style=&quot;margin-top:0px; margin-bottom:2px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;• Copy the Application ID to the &lt;span style=&quot; font-weight:600;&quot;&gt;Client ID&lt;/span&gt; field above&lt;/p&gt;
+&lt;p style=&quot;margin-top:0px; margin-bottom:8px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;• Restart What's Now Playing (Discord app must be running)&lt;/p&gt;
+&lt;p style=&quot;margin-top:0px; margin-bottom:4px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Bot Mode&lt;/span&gt; - Bot posts track updates to Discord channels:&lt;/p&gt;
+&lt;p style=&quot;margin-top:0px; margin-bottom:2px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;• In your Discord application, go to &quot;Bot&quot; section and create a bot&lt;/p&gt;
+&lt;p style=&quot;margin-top:0px; margin-bottom:2px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;• Copy the bot &lt;span style=&quot; font-weight:600;&quot;&gt;Token&lt;/span&gt; to the Token field above&lt;/p&gt;
+&lt;p style=&quot;margin-top:0px; margin-bottom:2px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;• Invite your bot to your Discord server&lt;/p&gt;
+&lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;• Restart What's Now Playing&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </widget>
  </widget>
