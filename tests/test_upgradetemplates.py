@@ -11,7 +11,7 @@ import pytest
 
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.config  # pylint: disable=import-error
-import nowplaying.upgrade  # pylint: disable=import-error
+import nowplaying.upgrades.templates  # pylint: disable=import-error
 
 
 @pytest.fixture
@@ -82,7 +82,7 @@ def test_upgrade_blank(upgrade_bootstrap):  # pylint: disable=redefined-outer-na
     """check a blank dir"""
     (testpath, config) = upgrade_bootstrap
     bundledir = config.getbundledir()
-    nowplaying.upgrade.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
+    nowplaying.upgrades.templates.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
     srcdir = os.path.join(bundledir, "templates")
     destdir = os.path.join(testpath, "testsuite", "templates")
     compare_content(srcdir, destdir)
@@ -98,7 +98,7 @@ def test_upgrade_conflict(upgrade_bootstrap):  # pylint: disable=redefined-outer
     pathlib.Path(destdir).mkdir(parents=True, exist_ok=True)
     touchfile = os.path.join(destdir, os.path.basename(srctemplates[0]))
     pathlib.Path(touchfile).touch()
-    nowplaying.upgrade.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
+    nowplaying.upgrades.templates.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
     compare_content(srcdir, destdir, touchfile)
 
 
@@ -114,7 +114,7 @@ def test_upgrade_same(upgrade_bootstrap):  # pylint: disable=redefined-outer-nam
         os.path.join(srcdir, srctemplates[1]),
         os.path.join(destdir, os.path.basename(srctemplates[1])),
     )
-    nowplaying.upgrade.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
+    nowplaying.upgrades.templates.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
     compare_content(srcdir, destdir)
 
 
@@ -131,7 +131,7 @@ def test_upgrade_old(upgrade_bootstrap, getroot):  # pylint: disable=redefined-o
     )
     touchfile = os.path.join(destdir, "songquotes.txt")
     pathlib.Path(touchfile).touch()
-    nowplaying.upgrade.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
+    nowplaying.upgrades.templates.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
     assert list(open(os.path.join(srcdir, "songquotes.txt"))) == list(  # pylint: disable=consider-using-with, unspecified-encoding
         open(os.path.join(destdir, "songquotes.new"))  # pylint: disable=consider-using-with, unspecified-encoding
     )  # pylint: disable=consider-using-with, unspecified-encoding
@@ -142,7 +142,7 @@ def test_upgrade_subdirectories(upgrade_bootstrap):  # pylint: disable=redefined
     """test that subdirectories are properly handled"""
     (testpath, config) = upgrade_bootstrap
     bundledir = config.getbundledir()
-    nowplaying.upgrade.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
+    nowplaying.upgrades.templates.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
 
     # Check that oauth subdirectory was created
     oauth_destdir = os.path.join(testpath, "testsuite", "templates", "oauth")

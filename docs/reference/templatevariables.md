@@ -70,8 +70,11 @@ data.
 | musicbrainzalbumid | MusicBrainz Album Id |
 | musicbrainzartistid | List of MusicBrainz Artist Ids |
 | musicbrainzrecordingid | MusicBrainz Recording Id |
+| now() | Current time in HH:MM:SS format (function call) |
 | previoustrack | See below for more details. |
+| timestamp() | Current date and time in YYYY-MM-DD HH:MM:SS format (function call) |
 | title | Title of the media |
+| today() | Current date in YYYY-MM-DD format (function call) |
 | track | Track number on the disc |
 | track_total | Total tracks on the disc |
 
@@ -131,3 +134,39 @@ To get the title of the track played 2 tracks ago:
 For a more complex example, see the
 `twitchbot_previoustrack.txt` file in the
 templates directory.
+
+## Time Functions
+
+**What's Now Playing** provides several time-related functions that can be called in
+templates to add timestamps. These are particularly useful for setlists and logging
+when tracks were played:
+
+| Function | Example Output | Description |
+|----------|----------------|-------------|
+| `now()` | `14:32:15` | Current time when the template is rendered |
+| `today()` | `2023-12-15` | Current date when the template is rendered |
+| `timestamp()` | `2023-12-15 14:32:15` | Current date and time when the template is rendered |
+
+### Examples
+
+To create a setlist with timestamps showing when each track started:
+
+``` jinja
+{{ now() }} - {{ artist }} - {{ title }}
+```
+
+To include both date and time:
+
+``` jinja
+{{ timestamp() }} | {{ artist }} - {{ title }}
+```
+
+To add the current date to each track entry:
+
+``` jinja
+{{ today() }}: {{ artist }} - {{ title }}
+```
+
+These functions are evaluated each time a template is rendered, so each track will get
+the timestamp from when it started playing. Note that templates are rendered once per
+track, so any content in the template will be repeated for every track.

@@ -107,19 +107,6 @@
     </rect>
    </property>
   </widget>
-  <widget class="QCheckBox" name="setlist_checkbox">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>180</y>
-     <width>111</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Enable setlists</string>
-   </property>
-  </widget>
   <widget class="QCheckBox" name="clear_checkbox">
    <property name="geometry">
     <rect>
@@ -150,22 +137,6 @@
    </property>
    <property name="text">
     <string>Append new tracks</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="setlis_label">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>160</y>
-     <width>261</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>**Setlists**</string>
-   </property>
-   <property name="textFormat">
-    <enum>Qt::MarkdownText</enum>
    </property>
   </widget>
  </widget>

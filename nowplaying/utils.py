@@ -17,7 +17,6 @@ import traceback
 
 import aiohttp
 import jinja2
-from jinja2.environment import Template
 import nltk
 import normality
 import PIL.Image
@@ -122,7 +121,12 @@ class TemplateHandler:  # pylint: disable=too-few-public-methods
 
             self.template = self.env.get_template(basename)
         else:
-            self.template = Template(source=rawtemplate)
+            # Create environment for raw template to get globals
+            temp_env = jinja2.Environment(finalize=self._finalize)
+            temp_env.globals["now"] = lambda: time.strftime("%H:%M:%S")
+            temp_env.globals["today"] = lambda: time.strftime("%Y-%m-%d")
+            temp_env.globals["timestamp"] = lambda: time.strftime("%Y-%m-%d %H:%M:%S")
+            self.template = temp_env.from_string(rawtemplate)
 
     @staticmethod
     def _finalize(variable: Any) -> str:
@@ -133,11 +137,16 @@ class TemplateHandler:  # pylint: disable=too-few-public-methods
 
     def setup_jinja2(self, directory: str) -> jinja2.Environment:
         """set up the environment"""
-        return jinja2.Environment(
+        env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(directory),
             finalize=self._finalize,
             autoescape=jinja2.select_autoescape(["htm", "html", "xml"]),
         )
+        # Add time-related global functions
+        env.globals["now"] = lambda: time.strftime("%H:%M:%S")
+        env.globals["today"] = lambda: time.strftime("%Y-%m-%d")
+        env.globals["timestamp"] = lambda: time.strftime("%Y-%m-%d %H:%M:%S")
+        return env
 
     def generate(self, metadatadict: "TrackMetadata | None" = None) -> str:
         """get the generated template"""

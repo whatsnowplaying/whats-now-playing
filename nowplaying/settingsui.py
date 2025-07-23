@@ -77,6 +77,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.tree_item_mapping = {}  # Maps tree items to widget keys
 
         self.uihelp = None
+        self.ui_populated = False  # Track if UI widgets are populated with config data
         self.load_qtui()
         if not self.config.iconfile:
             self.tray.cleanquit()
@@ -136,7 +137,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "source",
             "filter",
             "trackskip",
-            "textoutput",
             "webserver",
             "twitch",
             "twitchchat",
@@ -197,6 +197,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if about_items:
             self.qtui.settings_tree.setCurrentItem(about_items[0])
             self._on_tree_item_clicked(about_items[0], 0)
+
+        # Populate UI with config data during initialization to avoid delay on show()
+        self.upd_win()
+        self.ui_populated = True
 
     def _build_settings_tree(self):
         """Build the hierarchical tree structure for settings"""
@@ -333,11 +337,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         qobject.template_button.clicked.connect(self.on_html_template_button)
 
-    def _connect_textoutput_widget(self, qobject):
-        """connect the general buttons to non-built-ins"""
-        qobject.texttemplate_button.clicked.connect(self.on_text_template_button)
-        qobject.textoutput_button.clicked.connect(self.on_text_saveas_button)
-
     def _connect_discordbot_widget(self, qobject):
         """connect the artistextras buttons to non-built-ins"""
         qobject.template_button.clicked.connect(self.on_discordbot_template_button)
@@ -380,7 +379,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._upd_win_input()
         self._upd_win_plugins()
 
-        self._upd_win_textoutput()
         self._upd_win_artistextras()
         self._upd_win_filters()
         self._upd_win_trackskip()
@@ -396,22 +394,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "requests",
         ]:
             self.settingsclasses[key].load(self.config, self.widgets[key])
-
-    def _upd_win_textoutput(self):
-        """textoutput settings"""
-        self.widgets["textoutput"].textoutput_lineedit.setText(
-            self.config.cparser.value("textoutput/file")
-        )
-        self.widgets["textoutput"].texttemplate_lineedit.setText(self.config.txttemplate)
-        self.widgets["textoutput"].append_checkbox.setChecked(
-            self.config.cparser.value("textoutput/fileappend", type=bool)
-        )
-        self.widgets["textoutput"].clear_checkbox.setChecked(
-            self.config.cparser.value("textoutput/clearonstartup", type=bool)
-        )
-        self.widgets["textoutput"].setlist_checkbox.setChecked(
-            self.config.cparser.value("setlist/enabled", type=bool)
-        )
 
     def _upd_win_artistextras(self):
         self.widgets["artistextras"].coverart_combobox.clear()
@@ -565,7 +547,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def disable_web(self):
         """if the web server gets in trouble, this gets called"""
-        self.upd_win()
+        self.refresh_ui()
         self.widgets["webserver"].enable_checkbox.setChecked(False)
         self.upd_conf()
         if self.errormessage:
@@ -573,10 +555,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def disable_obsws(self):
         """if the OBS WebSocket gets in trouble, this gets called"""
-        self.upd_win()
+        self.refresh_ui()
         self.widgets["obsws"].enable_checkbox.setChecked(False)
         self.upd_conf()
-        self.upd_win()
+        self.refresh_ui()
         if self.errormessage:
             self.errormessage.showMessage(
                 "OBS WebServer settings are invalid. Bad port? Wrong password?"
@@ -601,7 +583,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         logging.getLogger().setLevel(loglevel)
 
         self._upd_conf_external_services()
-        self._upd_conf_textoutput()
         self._upd_conf_artistextras()
         self._upd_conf_filters()
         self._upd_conf_trackskip()
@@ -626,22 +607,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "requests",
         ]:
             self.settingsclasses[key].save(self.config, self.widgets[key], self.tray.subprocesses)
-
-    def _upd_conf_textoutput(self):
-        self.config.cparser.setValue(
-            "setlist/enabled", self.widgets["textoutput"].setlist_checkbox.isChecked()
-        )
-        self.config.txttemplate = self.widgets["textoutput"].texttemplate_lineedit.text()
-        self.config.cparser.setValue(
-            "textoutput/file", self.widgets["textoutput"].textoutput_lineedit.text()
-        )
-        self.config.cparser.setValue("textoutput/txttemplate", self.config.txttemplate)
-        self.config.cparser.setValue(
-            "textoutput/fileappend", self.widgets["textoutput"].append_checkbox.isChecked()
-        )
-        self.config.cparser.setValue(
-            "textoutput/clearonstartup", self.widgets["textoutput"].clear_checkbox.isChecked()
-        )
 
     def _upd_conf_trackskip(self):
         self.config.cparser.setValue(
@@ -848,16 +813,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.tray.fresh_start_quit()
 
     @Slot()
-    def on_text_saveas_button(self):
-        """file button clicked action"""
-        if startfile := self.widgets["textoutput"].textoutput_lineedit.text():
-            startdir = os.path.dirname(startfile)
-        else:
-            startdir = "."
-        if filename := QFileDialog.getSaveFileName(self, "Open file", startdir, "*.txt"):
-            self.widgets["textoutput"].textoutput_lineedit.setText(filename[0])
-
-    @Slot()
     def on_artistextras_clearcache_button(self):
         """clear the cache button was pushed"""
         # Clear image cache
@@ -876,12 +831,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if api_cache_file.exists():
             logging.debug("Deleting API cache: %s", api_cache_file)
             api_cache_file.unlink()
-
-    @Slot()
-    def on_text_template_button(self):
-        """file template button clicked action"""
-        if self.uihelp:
-            self.uihelp.template_picker_lineedit(self.widgets["textoutput"].texttemplate_lineedit)
 
     @Slot()
     def on_discordbot_template_button(self):
@@ -968,7 +917,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._cleanup_settings_classes()
         if self.tray:
             self.tray.settings_action.setEnabled(True)
-        self.upd_win()
+        self.refresh_ui()
         if self.qtui:
             self.qtui.close()
 
@@ -984,7 +933,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.config.reset()
         SettingsUI.httpenabled = self.config.cparser.value("weboutput/httpenabled", type=bool)
         SettingsUI.httpport = self.config.cparser.value("weboutput/httpport", type=int)
-        self.upd_win()
+        self.refresh_ui()
 
     @Slot()
     def on_save_button(self):
@@ -1041,8 +990,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if self.qtui:
             self.qtui.show()
             self.qtui.setFocus()
-        # Update window after showing to avoid blocking the UI
+        # UI is already populated during initialization, no need to update on show
+        # Only update if UI hasn't been populated yet (fallback)
+        if not self.ui_populated:
+            self.upd_win()
+            self.ui_populated = True
+
+    def refresh_ui(self):
+        """Refresh the UI when config has actually changed"""
         self.upd_win()
+        self.ui_populated = True
 
     def _cleanup_settings_classes(self):
         """Clean up resources from settings classes when UI is closed"""
@@ -1083,11 +1040,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             suggested_name = f"nowplaying_config_{self.config.version.replace('.', '_')}.json"
             default_dir = QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
 
-            file_path, _ = QFileDialog.getSaveFileName(
-                self.qtui,
-                "Export Configuration",
-                os.path.join(default_dir, suggested_name),
-                "JSON Files (*.json);;All Files (*)",
+            file_path = self.uihelp.save_file_picker(
+                title="Export Configuration",
+                startdir=os.path.join(default_dir, suggested_name),
+                filter_str="JSON Files (*.json);;All Files (*)",
             )
 
             if file_path:

@@ -10,7 +10,7 @@ from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
 from tests.upgrade.upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
 
 import nowplaying.bootstrap  # pylint: disable=import-error
-import nowplaying.upgrade  # pylint: disable=import-error
+import nowplaying.upgrades.config  # pylint: disable=import-error
 
 
 def test_noconfigfile():  # pylint: disable=redefined-outer-name
@@ -22,7 +22,7 @@ def test_noconfigfile():  # pylint: disable=redefined-outer-name
             qsettingsformat = QSettings.NativeFormat
         backupdir = os.path.join(newpath, "testsuite", "configbackup")
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
-        upgrade = nowplaying.upgrade.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
+        upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
         config = QSettings(
             qsettingsformat, QSettings.UserScope, "com.github.whatsnowplaying", "testsuite"
         )

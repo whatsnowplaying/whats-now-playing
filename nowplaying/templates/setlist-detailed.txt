@@ -1,0 +1,4 @@
+**{{ artist }}** - *{{ title }}*
+{% if album %}Album: {{ album }}{% endif %}
+{% if duration_hhmmss %}Duration: {{ duration_hhmmss }}{% endif %}
+---

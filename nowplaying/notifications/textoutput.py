@@ -5,6 +5,7 @@ import logging
 import pathlib
 from typing import TYPE_CHECKING
 
+
 import nowplaying.utils
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.types import TrackMetadata
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
     import nowplaying.config
     import nowplaying.imagecache
     from PySide6.QtWidgets import QWidget
-    from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
+    from PySide6.QtCore import QSettings
     from nowplaying.utils import TemplateHandler
 
 
@@ -132,52 +133,59 @@ class Plugin(NotificationPlugin):
 
     def load_settingsui(self, qwidget: "QWidget"):
         """Load settings into UI"""
-        if hasattr(qwidget, "enable_checkbox"):
-            # Check if text output is effectively enabled
-            output_file = self.config.cparser.value("textoutput/file", defaultValue="")
-            template_file = self.config.cparser.value("textoutput/txttemplate", defaultValue="")
-            qwidget.enable_checkbox.setChecked(bool(output_file and template_file))
-
-        if hasattr(qwidget, "file_lineedit"):
-            qwidget.file_lineedit.setText(
-                self.config.cparser.value("textoutput/file", defaultValue="")
-            )
-
-        if hasattr(qwidget, "template_lineedit"):
-            qwidget.template_lineedit.setText(
-                self.config.cparser.value("textoutput/txttemplate", defaultValue="")
-            )
+        qwidget.textoutput_lineedit.setText(
+            self.config.cparser.value("textoutput/file", defaultValue="")
+        )
+        qwidget.texttemplate_lineedit.setText(
+            self.config.cparser.value("textoutput/txttemplate", defaultValue="")
+        )
+        qwidget.append_checkbox.setChecked(
+            self.config.cparser.value("textoutput/fileappend", type=bool)
+        )
+        qwidget.clear_checkbox.setChecked(
+            self.config.cparser.value("textoutput/clearonstartup", type=bool)
+        )
 
     def save_settingsui(self, qwidget: "QWidget"):
         """Save settings from UI"""
-        if hasattr(qwidget, "file_lineedit"):
-            self.config.cparser.setValue("textoutput/file", qwidget.file_lineedit.text())
-
-        if hasattr(qwidget, "template_lineedit"):
-            self.config.cparser.setValue(
-                "textoutput/txttemplate", qwidget.template_lineedit.text()
-            )
+        self.config.cparser.setValue("textoutput/file", qwidget.textoutput_lineedit.text())
+        self.config.cparser.setValue(
+            "textoutput/txttemplate", qwidget.texttemplate_lineedit.text()
+        )
+        self.config.cparser.setValue("textoutput/fileappend", qwidget.append_checkbox.isChecked())
+        self.config.cparser.setValue(
+            "textoutput/clearonstartup", qwidget.clear_checkbox.isChecked()
+        )
 
     def verify_settingsui(self, qwidget: "QWidget") -> bool:
         """Verify settings"""
-        if hasattr(qwidget, "enable_checkbox") and qwidget.enable_checkbox.isChecked():
-            if hasattr(qwidget, "file_lineedit") and not qwidget.file_lineedit.text().strip():
-                raise PluginVerifyError("Output file path is required when text output is enabled")
+        # Only validate if both file and template are provided (indicating intent to use)
+        output_file = qwidget.textoutput_lineedit.text().strip()
+        template_file = qwidget.texttemplate_lineedit.text().strip()
 
-            if (
-                hasattr(qwidget, "template_lineedit")
-                and not qwidget.template_lineedit.text().strip()
-            ):
-                raise PluginVerifyError(
-                    "Template file path is required when text output is enabled"
-                )
-
-            # Verify template file exists
-            if hasattr(qwidget, "template_lineedit"):
-                template_path = qwidget.template_lineedit.text().strip()
-                if template_path and not pathlib.Path(template_path).exists():
-                    raise PluginVerifyError(f"Template file does not exist: {template_path}")
+        if output_file or template_file:
+            if not output_file:
+                raise PluginVerifyError("Output file path is required when using text output")
+            if not template_file:
+                raise PluginVerifyError("Template file path is required when using text output")
+            if not pathlib.Path(template_file).exists():
+                raise PluginVerifyError(f"Template file does not exist: {template_file}")
         return True
+
+    def connect_settingsui(self, qwidget: "QWidget", uihelp):
+        """Connect UI elements to their handlers"""
+        qwidget.texttemplate_button.clicked.connect(
+            lambda: uihelp.template_picker_lineedit(qwidget.texttemplate_lineedit)
+        )
+        qwidget.textoutput_button.clicked.connect(
+            lambda: self._on_file_save_button(qwidget, uihelp)
+        )
+
+    def _on_file_save_button(self, qwidget: "QWidget", uihelp):  # pylint: disable=no-self-use
+        """Handle file save button click"""
+        uihelp.save_file_picker_lineedit(
+            qwidget.textoutput_lineedit, title="Save text output file", filter_str="*.txt"
+        )
 
     def desc_settingsui(self, qwidget: "QWidget"):
         """Description for settings UI"""
