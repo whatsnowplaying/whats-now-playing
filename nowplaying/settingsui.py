@@ -13,7 +13,14 @@ from typing import TYPE_CHECKING
 
 # pylint: disable=no-name-in-module
 from PySide6.QtCore import Slot, QFile, Qt, QStandardPaths
-from PySide6.QtWidgets import QErrorMessage, QFileDialog, QWidget, QListWidgetItem, QMessageBox
+from PySide6.QtWidgets import (
+    QErrorMessage,
+    QFileDialog,
+    QWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QTreeWidgetItem,
+)
 from PySide6.QtGui import QIcon
 from PySide6.QtUiTools import QUiLoader
 import PySide6.QtXml  # pylint: disable=unused-import, import-error
@@ -21,6 +28,8 @@ import PySide6.QtXml  # pylint: disable=unused-import, import-error
 import nowplaying.config
 import nowplaying.hostmeta
 from nowplaying.exceptions import PluginVerifyError
+import nowplaying.settings.categories
+import nowplaying.settings.tabs
 
 try:
     import nowplaying.qtrc  # pylint: disable=import-error, no-name-in-module
@@ -62,6 +71,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "requests": nowplaying.trackrequests.RequestSettings(),
         }
 
+        # New tree structure managers
+        self.category_manager = nowplaying.settings.categories.SettingsCategoryManager()
+        self.tab_manager = nowplaying.settings.tabs.TabWidgetManager()
+        self.tree_item_mapping = {}  # Maps tree items to widget keys
+
         self.uihelp = None
         self.load_qtui()
         if not self.config.iconfile:
@@ -100,7 +114,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Error during OAuth2 token validation: %s", error)
 
-    def _setup_widgets(self, uiname, displayname=None):
+    def _setup_widgets(self, uiname):
         self.widgets[uiname] = load_widget_ui(self.config, f"{uiname}")
         if not self.widgets[uiname]:
             return
@@ -109,7 +123,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             qobject_connector = getattr(self, f"_connect_{uiname}_widget")
             qobject_connector(self.widgets[uiname])
         self.qtui.settings_stack.addWidget(self.widgets[uiname])
-        self._load_list_item(f"{uiname}", self.widgets[uiname], displayname)
+        # Note: Tree structure will be built later in _build_settings_tree()
 
     def load_qtui(self):  # pylint: disable=too-many-branches, too-many-statements
         """load the base UI and wire it up"""
@@ -153,9 +167,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     self.widgets["source"].sourcelist.currentRowChanged.connect(
                         self._set_source_description
                     )
-                self._setup_widgets(
-                    f"{plugintype}_{pkey}", self.config.pluginobjs[plugintype][key].displayname
-                )
+                self._setup_widgets(f"{plugintype}_{pkey}")
 
         self._setup_widgets("destroy")
         self._setup_widgets("about")
@@ -171,27 +183,135 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
 
         self._connect_plugins()
+        self._build_settings_tree()
 
-        self.qtui.settings_list.currentRowChanged.connect(self._set_stacked_display)
+        self.qtui.settings_tree.itemClicked.connect(self._on_tree_item_clicked)
+        self.qtui.settings_tree.currentItemChanged.connect(self._on_tree_selection_changed)
         self.qtui.cancel_button.clicked.connect(self.on_cancel_button)
         self.qtui.reset_button.clicked.connect(self.on_reset_button)
         self.qtui.save_button.clicked.connect(self.on_save_button)
         self.errormessage = QErrorMessage(self.qtui)
-        if curbutton := self.qtui.settings_list.findItems("general", Qt.MatchContains):
-            self.qtui.settings_list.setCurrentItem(curbutton[0])
 
-    def _load_list_item(self, name, qobject, displayname):
-        if not displayname:
-            displayname = qobject.property("displayName")
-            if not displayname:  # sourcery skip: hoist-if-from-if
-                if "_" in name:
-                    displayname = name.split("_")[1].capitalize()
-                else:
-                    displayname = name.capitalize()
-        self.qtui.settings_list.addItem(displayname)
+        # Select "About" as the default
+        about_items = self.qtui.settings_tree.findItems("About", Qt.MatchRecursive)
+        if about_items:
+            self.qtui.settings_tree.setCurrentItem(about_items[0])
+            self._on_tree_item_clicked(about_items[0], 0)
 
-    def _set_stacked_display(self, index):
-        self.qtui.settings_stack.setCurrentIndex(index)
+    def _build_settings_tree(self):
+        """Build the hierarchical tree structure for settings"""
+        self.qtui.settings_tree.clear()
+        self.tree_item_mapping = {}
+
+        # Add "About" as a standalone top-level item first
+        if "about" in self.widgets and self.widgets["about"]:
+            about_item = QTreeWidgetItem(["About"])
+            self.qtui.settings_tree.addTopLevelItem(about_item)
+            self.tree_item_mapping[about_item] = "about"
+
+        # Add plugins to appropriate categories first
+        for plugintype, pluginlist in self.config.plugins.items():
+            for key in pluginlist:
+                pkey = key.replace(f"nowplaying.{plugintype}.", "")
+                display_name = self.config.pluginobjs[plugintype][key].displayname
+                self.category_manager.add_plugin_item(plugintype, pkey)
+
+        # Create tree structure for categories
+        for category in self.category_manager.categories:
+            category_item = QTreeWidgetItem([category.display_name])
+            category.tree_item = category_item
+            self.qtui.settings_tree.addTopLevelItem(category_item)
+
+            if category.name == "streaming":
+                # Handle streaming category with tab groups
+                self._build_streaming_category(category_item)
+            else:
+                # Handle regular categories
+                for item_name in category.items:
+                    if item_name in self.widgets:
+                        item_widget = self.widgets[item_name]
+                        if item_widget:  # Only add if widget exists
+                            display_name = self._get_display_name(item_name, item_widget)
+                            child_item = QTreeWidgetItem([display_name])
+                            category_item.addChild(child_item)
+                            self.tree_item_mapping[child_item] = item_name
+                        else:
+                            logging.debug("Widget '%s' is None, skipping", item_name)
+
+    def _build_streaming_category(self, category_item):
+        """Build the streaming category with tab groups"""
+
+        # Add tab groups (Twitch, Kick)
+        for tab_group in self.category_manager.tab_groups:
+            group_item = QTreeWidgetItem([tab_group.display_name])
+            category_item.addChild(group_item)
+
+            # Create tab widget for this group
+            tab_widget = self.tab_manager.create_tab_widget(tab_group.name)
+
+            # Add tabs to the widget
+            for tab_key, tab_display in tab_group.tabs.items():
+                if tab_key in self.widgets:
+                    tab_widget.add_settings_tab(tab_key, self.widgets[tab_key], tab_display)
+
+            # Only add tab widget to stack if it has tabs
+            if tab_widget.count() > 0:
+                # Map the group item to the tab widget
+                self.tree_item_mapping[group_item] = tab_group.name
+                # Add tab widget to stack
+                self.qtui.settings_stack.addWidget(tab_widget)
+            else:
+                logging.debug("Tab widget '%s' is empty, skipping", tab_group.name)
+
+        # Add standalone items in streaming category
+        for item_name in ["requests", "discordbot"]:
+            if item_name in self.widgets and self.widgets[item_name]:
+                display_name = self._get_display_name(item_name, self.widgets[item_name])
+                child_item = QTreeWidgetItem([display_name])
+                category_item.addChild(child_item)
+                self.tree_item_mapping[child_item] = item_name
+
+    @staticmethod
+    def _get_display_name(item_name, widget):
+        """Get display name for an item"""
+        display_name = None
+        if widget:
+            display_name = widget.property("displayName")
+
+        if not display_name:
+            if "_" in item_name:
+                display_name = item_name.split("_")[1].capitalize()
+            else:
+                display_name = item_name.capitalize()
+        return display_name
+
+    def _on_tree_item_clicked(self, item, _column):
+        """Handle tree item clicks"""
+        self._navigate_to_item(item)
+
+    def _on_tree_selection_changed(self, current, _previous):
+        """Handle tree selection changes (keyboard navigation, programmatic selection)"""
+        if current:
+            self._navigate_to_item(current)
+
+    def _navigate_to_item(self, item):
+        """Navigate to the content for the given tree item"""
+        if item not in self.tree_item_mapping:
+            return
+        mapped_value = self.tree_item_mapping[item]
+
+        # Check if it's a tab group
+        if mapped_value in [tg.name for tg in self.category_manager.tab_groups]:
+            if tab_widget := self.tab_manager.get_tab_widget(mapped_value):
+                # Find the index in the stack
+                stack_index = self.qtui.settings_stack.indexOf(tab_widget)
+                if stack_index >= 0:
+                    self.qtui.settings_stack.setCurrentIndex(stack_index)
+        elif mapped_value in self.widgets:
+            widget = self.widgets[mapped_value]
+            stack_index = self.qtui.settings_stack.indexOf(widget)
+            if stack_index >= 0:
+                self.qtui.settings_stack.setCurrentIndex(stack_index)
 
     def _connect_destroy_widget(self, qobject):
         qobject.startover_button.clicked.connect(self.fresh_start)
@@ -200,10 +320,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """connect the export/import buttons"""
         qobject.export_config_button.clicked.connect(self.on_export_config_button)
         qobject.import_config_button.clicked.connect(self.on_import_config_button)
-
-    def _connect_remotestatus_widget(self, qobject):
-        """refresh the status"""
-        qobject.refresh_button.clicked.connect(self.on_remotestatus_refresh_button)
 
     def _connect_webserver_widget(self, qobject):
         """file in the hostname/ip and connect the template button"""
@@ -922,10 +1038,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """show the system tray"""
         if self.tray:
             self.tray.settings_action.setEnabled(False)
-        self.upd_win()
         if self.qtui:
             self.qtui.show()
             self.qtui.setFocus()
+        # Update window after showing to avoid blocking the UI
+        self.upd_win()
 
     def _cleanup_settings_classes(self):
         """Clean up resources from settings classes when UI is closed"""

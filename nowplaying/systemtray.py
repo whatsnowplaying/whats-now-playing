@@ -106,11 +106,17 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self._show_installation_error("settings UI files")
             self.settingswindow = None
 
+    def _show_settings(self) -> None:
+        """Show settings window and bring it to the front."""
+        self.settingswindow.show()
+        self.settingswindow.raise_()
+        self.settingswindow.activateWindow()
+
     def _setup_tray_menu(self) -> None:
         """Setup all tray menu actions and structure."""
         # Settings and Requests actions
         self.settings_action = QAction("Settings")
-        self.settings_action.triggered.connect(self.settingswindow.show)
+        self.settings_action.triggered.connect(self._show_settings)
         self.menu.addAction(self.settings_action)
 
         self.request_action = QAction("Requests")
@@ -252,14 +258,14 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         """If the web server gets in trouble, we need to tell the user"""
         if not status:
             self.settingswindow.disable_web()
-            self.settingswindow.show()
+            self._show_settings()
             self.pause()
 
     def obswsenable(self, status: bool) -> None:
         """If the OBS WebSocket gets in trouble, we need to tell the user"""
         if not status:
             self.settingswindow.disable_obsws()
-            self.settingswindow.show()
+            self._show_settings()
             self.pause()
 
     def unpause(self) -> None:
@@ -427,4 +433,4 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         msgbox.show()
         msgbox.exec()
 
-        self.settingswindow.show()
+        self._show_settings()

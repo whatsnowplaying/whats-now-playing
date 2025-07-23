@@ -19,10 +19,10 @@
   <widget class="QCheckBox" name="artistextras_checkbox">
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>30</y>
+     <x>10</x>
+     <y>10</y>
      <width>82</width>
-     <height>24</height>
+     <height>20</height>
     </rect>
    </property>
    <property name="text">
@@ -32,17 +32,17 @@
   <widget class="QWidget" name="formLayoutWidget_2">
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>130</y>
-     <width>591</width>
-     <height>231</height>
+     <x>10</x>
+     <y>150</y>
+     <width>611</width>
+     <height>180</height>
     </rect>
    </property>
    <layout class="QFormLayout" name="artistextras_layout">
     <item row="0" column="0">
-     <widget class="QLabel" name="banenrs_label">
+     <widget class="QLabel" name="banners_label">
       <property name="text">
-       <string>Maximum artist banners </string>
+       <string>Maximum artist banners</string>
       </property>
      </widget>
     </item>
@@ -160,10 +160,10 @@
   <widget class="QLabel" name="artistextras_desc_label">
    <property name="geometry">
     <rect>
-     <x>50</x>
-     <y>50</y>
-     <width>511</width>
-     <height>81</height>
+     <x>10</x>
+     <y>40</y>
+     <width>611</width>
+     <height>100</height>
     </rect>
    </property>
    <property name="text">
@@ -176,8 +176,8 @@
   <widget class="QCheckBox" name="missingfanart_checkbox">
    <property name="geometry">
     <rect>
-     <x>260</x>
-     <y>390</y>
+     <x>220</x>
+     <y>348</y>
      <width>71</width>
      <height>24</height>
     </rect>
@@ -192,8 +192,8 @@
   <widget class="QCheckBox" name="missinglogos_checkbox">
    <property name="geometry">
     <rect>
-     <x>360</x>
-     <y>390</y>
+     <x>300</x>
+     <y>348</y>
      <width>71</width>
      <height>24</height>
     </rect>
@@ -208,8 +208,8 @@
   <widget class="QLabel" name="missingcoverart_label">
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>390</y>
+     <x>10</x>
+     <y>350</y>
      <width>201</width>
      <height>18</height>
     </rect>
@@ -221,8 +221,8 @@
   <widget class="QCheckBox" name="missingthumbs_checkbox">
    <property name="geometry">
     <rect>
-     <x>450</x>
-     <y>390</y>
+     <x>380</x>
+     <y>348</y>
      <width>101</width>
      <height>24</height>
     </rect>
@@ -237,10 +237,10 @@
   <widget class="QPushButton" name="clearcache_button">
    <property name="geometry">
     <rect>
-     <x>330</x>
-     <y>30</y>
+     <x>520</x>
+     <y>10</y>
      <width>101</width>
-     <height>26</height>
+     <height>25</height>
     </rect>
    </property>
    <property name="text">
@@ -250,8 +250,8 @@
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>420</y>
+     <x>10</x>
+     <y>380</y>
      <width>191</width>
      <height>18</height>
     </rect>
@@ -264,7 +264,7 @@
    <property name="geometry">
     <rect>
      <x>210</x>
-     <y>420</y>
+     <y>378</y>
      <width>181</width>
      <height>26</height>
     </rect>

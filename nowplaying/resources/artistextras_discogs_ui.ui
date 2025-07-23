@@ -20,7 +20,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>90</y>
+     <y>40</y>
      <width>311</width>
      <height>16</height>
     </rect>
@@ -36,9 +36,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>120</y>
+     <y>60</y>
      <width>611</width>
-     <height>51</height>
+     <height>30</height>
     </rect>
    </property>
    <layout class="QFormLayout" name="discogs_auth_layout">
@@ -80,9 +80,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>40</y>
+     <y>10</y>
      <width>361</width>
-     <height>23</height>
+     <height>20</height>
     </rect>
    </property>
    <property name="text">
@@ -92,10 +92,10 @@
   <widget class="QLabel" name="discogs_desclabel">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>360</y>
-     <width>591</width>
-     <height>101</height>
+     <x>10</x>
+     <y>190</y>
+     <width>611</width>
+     <height>80</height>
     </rect>
    </property>
    <property name="text">
@@ -108,10 +108,10 @@
   <widget class="QWidget" name="horizontalLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>240</y>
-     <width>541</width>
-     <height>80</height>
+     <x>10</x>
+     <y>130</y>
+     <width>611</width>
+     <height>50</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="checkbox_layout">
@@ -153,10 +153,10 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>200</y>
+     <x>10</x>
+     <y>100</y>
      <width>88</width>
-     <height>24</height>
+     <height>20</height>
     </rect>
    </property>
    <property name="text">

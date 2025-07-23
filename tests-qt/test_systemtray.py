@@ -6,8 +6,15 @@ import pathlib
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=import-error, no-name-in-module
-from PySide6.QtWidgets import QMenu, QSystemTrayIcon  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtGui import (  # pylint: disable=import-error, no-name-in-module
+    QAction,
+    QActionGroup,
+    QIcon,
+)
+from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
+    QMenu,
+    QSystemTrayIcon,
+)
 
 import nowplaying.systemtray  # pylint: disable=import-error
 
@@ -110,6 +117,14 @@ class MockSettingsUI:
     def show(self):
         """Show settings UI"""
         self.shown = True
+
+    def raise_(self):
+        """Raise settings window to front"""
+        # Mock implementation - no action needed
+
+    def activateWindow(self):  # pylint: disable=invalid-name
+        """Activate settings window"""
+        # Mock implementation - no action needed
 
     def post_tray_init(self):
         """Post tray initialization"""
