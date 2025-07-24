@@ -163,13 +163,13 @@ class Plugin(NotificationPlugin):
         output_file = qwidget.textoutput_lineedit.text().strip()
         template_file = qwidget.texttemplate_lineedit.text().strip()
 
-        if output_file or template_file:
-            if not output_file:
-                raise PluginVerifyError("Output file path is required when using text output")
+        if output_file:
             if not template_file:
                 raise PluginVerifyError("Template file path is required when using text output")
             if not pathlib.Path(template_file).exists():
                 raise PluginVerifyError(f"Template file does not exist: {template_file}")
+        elif template_file:
+            raise PluginVerifyError("Output file path is required when using text output")
         return True
 
     def connect_settingsui(self, qwidget: "QWidget", uihelp):
