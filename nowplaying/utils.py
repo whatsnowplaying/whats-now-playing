@@ -154,7 +154,11 @@ class TemplateHandler:  # pylint: disable=too-few-public-methods
 
         rendertext = "Template has syntax errors"
         try:
-            if not self.filename or not os.path.exists(self.filename) or not self.template:
+            # Check if we have a valid template (either from file or raw template)
+            if not self.template:
+                return " No template found; check Now Playing settings."
+            # For file-based templates, also check if file exists
+            if self.filename and not os.path.exists(self.filename):
                 return " No template found; check Now Playing settings."
             if metadatadict:
                 rendertext = self.template.render(**metadatadict)

@@ -2,6 +2,7 @@
 """test templatehandler"""
 
 import os
+import re
 import tempfile
 
 import pytest
@@ -103,3 +104,79 @@ async def test_clear_template(bootstrap):
             content = tempfh.read()
 
         assert content == ""
+
+
+def test_templatehandler_global_functions():
+    """Test that TemplateHandler provides now(), today(), and timestamp() global functions"""
+
+    # Test raw template with date/time functions
+    raw_template = """
+Current time: {{ now() }}
+Today's date: {{ today() }}
+Full timestamp: {{ timestamp() }}
+Artist: {{ artist }}
+""".strip()
+
+    handler = nowplaying.utils.TemplateHandler(rawtemplate=raw_template)
+    metadata = {"artist": "Test Artist"}
+
+    result = handler.generate(metadata)
+    lines = result.strip().split("\n")
+
+    # Verify time format: HH:MM:SS
+    time_line = lines[0]
+    assert time_line.startswith("Current time: ")
+    time_part = time_line.replace("Current time: ", "")
+    assert re.match(r"^\d{2}:\d{2}:\d{2}$", time_part), f"Invalid time format: {time_part}"
+
+    # Verify date format: YYYY-MM-DD
+    date_line = lines[1]
+    assert date_line.startswith("Today's date: ")
+    date_part = date_line.replace("Today's date: ", "")
+    assert re.match(r"^\d{4}-\d{2}-\d{2}$", date_part), f"Invalid date format: {date_part}"
+
+    # Verify timestamp format: YYYY-MM-DD HH:MM:SS
+    timestamp_line = lines[2]
+    assert timestamp_line.startswith("Full timestamp: ")
+    timestamp_part = timestamp_line.replace("Full timestamp: ", "")
+    assert re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", timestamp_part), (
+        f"Invalid timestamp format: {timestamp_part}"
+    )
+
+    # Verify regular template variables still work
+    artist_line = lines[3]
+    assert artist_line == "Artist: Test Artist"
+
+
+def test_templatehandler_global_functions_from_file():
+    """Test that TemplateHandler provides global functions when loading from file"""
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create a template file with date/time functions
+        template_file = os.path.join(temp_dir, "datetime_template.txt")
+        with open(template_file, "w", encoding="utf-8") as template_fh:
+            template_content = (
+                "Time: {{ now() }}\n"
+                "Date: {{ today() }}\n"
+                "Timestamp: {{ timestamp() }}\n"
+                "Title: {{ title }}"
+            )
+            template_fh.write(template_content)
+
+        handler = nowplaying.utils.TemplateHandler(filename=template_file)
+        metadata = {"title": "Test Title"}
+
+        result = handler.generate(metadata)
+        lines = result.strip().split("\n")
+
+        # Verify all three functions work from file-based templates
+        assert lines[0].startswith("Time: ")
+        assert re.match(r"^Time: \d{2}:\d{2}:\d{2}$", lines[0])
+
+        assert lines[1].startswith("Date: ")
+        assert re.match(r"^Date: \d{4}-\d{2}-\d{2}$", lines[1])
+
+        assert lines[2].startswith("Timestamp: ")
+        assert re.match(r"^Timestamp: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", lines[2])
+
+        assert lines[3] == "Title: Test Title"
