@@ -75,6 +75,9 @@ class TrackMetadata(TypedDict, total=False):
     hostfqdn: str
     hostip: str
     ipaddress: str
+    twitchchannel: str
+    kickchannel: str
+    discordguild: str
 
     # Request system
     requester: str

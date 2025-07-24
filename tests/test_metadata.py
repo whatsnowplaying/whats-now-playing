@@ -378,6 +378,44 @@ async def test_year_not_date(bootstrap):
 
 
 @pytest.mark.asyncio
+async def test_streaming_channel_metadata(bootstrap):
+    """test that streaming channel information gets added to metadata"""
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+    config.cparser.setValue("twitchbot/channel", "teststreamer")
+    config.cparser.setValue("kick/channel", "kickstreamer")
+    config.cparser.setValue("discord/guild", "My Discord Server")
+
+    metadatain = {"artist": "Test Artist", "title": "Test Title"}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+        metadata=metadatain
+    )
+
+    assert metadataout["twitchchannel"] == "teststreamer"
+    assert metadataout["kickchannel"] == "kickstreamer"
+    assert metadataout["discordguild"] == "My Discord Server"
+
+
+@pytest.mark.asyncio
+async def test_streaming_channel_metadata_missing(bootstrap):
+    """test that missing streaming channel configs don't add empty fields"""
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+    # Don't set any streaming channel configs
+
+    metadatain = {"artist": "Test Artist", "title": "Test Title"}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+        metadata=metadatain
+    )
+
+    assert "twitchchannel" not in metadataout
+    assert "kickchannel" not in metadataout
+    assert "discordguild" not in metadataout
+
+
+@pytest.mark.asyncio
 async def test_url_dedupe1(bootstrap):
     """automated integration test"""
     config = bootstrap

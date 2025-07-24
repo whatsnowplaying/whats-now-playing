@@ -222,6 +222,15 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         for key, value in hostmeta.items():
             self.metadata[key] = value
 
+        # Add streaming platform channel information
+        if twitchchannel := self.config.cparser.value("twitchbot/channel"):
+            self.metadata["twitchchannel"] = twitchchannel
+        if kickchannel := self.config.cparser.value("kick/channel"):
+            self.metadata["kickchannel"] = kickchannel
+        # Discord guild (server) information - captured dynamically by bot
+        if discordguild := self.config.cparser.value("discord/guild"):
+            self.metadata["discordguild"] = discordguild
+
     def _process_tinytag(self) -> None:
         try:
             tempdata = TinyTagRunner(imagecache=self.imagecache).process(

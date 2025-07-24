@@ -83,6 +83,13 @@ class DiscordSupport:
             await asyncio.sleep(1)
         logging.debug("bot setup")
 
+        # Capture Discord guild information now that bot is ready
+        if self.clients.bot.guilds and self.config:
+            guild = self.clients.bot.guilds[0]  # Get the first guild the bot is in
+            logging.info("Discord bot connected to guild: %s", guild.name)
+            self.config.cparser.setValue("discord/guild", guild.name)
+            self.config.cparser.sync()
+
     async def _setup_ipc_client(self) -> None:  # pylint: disable=too-many-return-statements
         if not self.config:
             return
