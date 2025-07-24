@@ -1536,6 +1536,30 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#time-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Time Functions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Time Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1804,12 +1828,24 @@ data.</p>
 <td>MusicBrainz Recording Id</td>
 </tr>
 <tr>
+<td>now()</td>
+<td>Current time in HH:MM:SS format (function call)</td>
+</tr>
+<tr>
 <td>previoustrack</td>
 <td>See below for more details.</td>
 </tr>
 <tr>
+<td>timestamp()</td>
+<td>Current date and time in YYYY-MM-DD HH:MM:SS format (function call)</td>
+</tr>
+<tr>
 <td>title</td>
 <td>Title of the media</td>
+</tr>
+<tr>
+<td>today()</td>
+<td>Current date in YYYY-MM-DD format (function call)</td>
 </tr>
 <tr>
 <td>track</td>
@@ -1855,6 +1891,49 @@ title of the track. Some examples:</p>
 <p>For a more complex example, see the
 <code>twitchbot_previoustrack.txt</code> file in the
 templates directory.</p>
+<h2 id="time-functions">Time Functions<a class="headerlink" href="#time-functions" title="Permanent link">&para;</a></h2>
+<p><strong>What's Now Playing</strong> provides several time-related functions that can be called in
+templates to add timestamps. These are particularly useful for setlists and logging
+when tracks were played:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Example Output</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>now()</code></td>
+<td><code>14:32:15</code></td>
+<td>Current time when the template is rendered</td>
+</tr>
+<tr>
+<td><code>today()</code></td>
+<td><code>2023-12-15</code></td>
+<td>Current date when the template is rendered</td>
+</tr>
+<tr>
+<td><code>timestamp()</code></td>
+<td><code>2023-12-15 14:32:15</code></td>
+<td>Current date and time when the template is rendered</td>
+</tr>
+</tbody>
+</table>
+<h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
+<p>To create a setlist with timestamps showing when each track started:</p>
+<div class="highlight"><pre><span></span><code><span class="cp">{{</span> <span class="nv">now</span><span class="o">()</span> <span class="cp">}}</span><span class="x"> - </span><span class="cp">{{</span> <span class="nv">artist</span> <span class="cp">}}</span><span class="x"> - </span><span class="cp">{{</span> <span class="nv">title</span> <span class="cp">}}</span>
+</code></pre></div>
+<p>To include both date and time:</p>
+<div class="highlight"><pre><span></span><code><span class="cp">{{</span> <span class="nv">timestamp</span><span class="o">()</span> <span class="cp">}}</span><span class="x"> | </span><span class="cp">{{</span> <span class="nv">artist</span> <span class="cp">}}</span><span class="x"> - </span><span class="cp">{{</span> <span class="nv">title</span> <span class="cp">}}</span>
+</code></pre></div>
+<p>To add the current date to each track entry:</p>
+<div class="highlight"><pre><span></span><code><span class="cp">{{</span> <span class="nv">today</span><span class="o">()</span> <span class="cp">}}</span><span class="x">: </span><span class="cp">{{</span> <span class="nv">artist</span> <span class="cp">}}</span><span class="x"> - </span><span class="cp">{{</span> <span class="nv">title</span> <span class="cp">}}</span>
+</code></pre></div>
+<p>These functions are evaluated each time a template is rendered, so each track will get
+the timestamp from when it started playing. Note that templates are rendered once per
+track, so any content in the template will be repeated for every track.</p>
 
 
 
