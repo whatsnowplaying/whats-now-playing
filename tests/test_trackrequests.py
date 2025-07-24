@@ -4,6 +4,7 @@
 import asyncio
 import logging
 import pathlib
+import unittest.mock
 
 import pytest  # pylint: disable=import-error
 import pytest_asyncio  # pylint: disable=import-error
@@ -294,6 +295,311 @@ async def test_trackrequest_getrequest_title(trackrequestbootstrap):  # pylint: 
     assert data["requester"] == "user"
     assert data["requestdisplayname"] == "test"
     assert data["requesterimageraw"]
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_artist_typo(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test fuzzy matching with artist typo that normalization won't fix"""
+
+    trackrequest = trackrequestbootstrap
+    trackrequest.clear_roulette_artist_dupes()
+    trackrequest.config.cparser.setValue("settings/requests", True)
+    trackrequest.config.cparser.sync()
+
+    # Add request with correct spelling
+    data = await trackrequest.user_track_request(
+        {"displayname": "test"}, "user", "Radiohead - Creep"
+    )
+    assert data["requestartist"] == "Radiohead"
+    assert data["requesttitle"] == "Creep"
+
+    # Try to match with typo in artist name - should work via fuzzy matching
+    data = await trackrequest.get_request({"artist": "Radioheed", "title": "Creep"})
+    assert data["requester"] == "user"
+    assert data["requestdisplayname"] == "test"
+    assert data["requesterimageraw"]
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_title_typo(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test fuzzy matching with title typo that normalization won't fix"""
+
+    trackrequest = trackrequestbootstrap
+    trackrequest.clear_roulette_artist_dupes()
+    trackrequest.config.cparser.setValue("settings/requests", True)
+    trackrequest.config.cparser.sync()
+
+    # Add request with correct spelling
+    data = await trackrequest.user_track_request(
+        {"displayname": "test"}, "user", "Beatles - Yesterday"
+    )
+    assert data["requestartist"] == "Beatles"
+    assert data["requesttitle"] == "Yesterday"
+
+    # Try to match with typo in title - should work via fuzzy matching
+    data = await trackrequest.get_request({"artist": "Beatles", "title": "Yestrday"})
+    assert data["requester"] == "user"
+    assert data["requestdisplayname"] == "test"
+    assert data["requesterimageraw"]
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_both_typos(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test fuzzy matching with typos in both artist and title"""
+
+    trackrequest = trackrequestbootstrap
+    trackrequest.clear_roulette_artist_dupes()
+    trackrequest.config.cparser.setValue("settings/requests", True)
+    trackrequest.config.cparser.sync()
+
+    # Add request with correct spelling
+    data = await trackrequest.user_track_request(
+        {"displayname": "test"}, "user", "Led Zeppelin - Stairway to Heaven"
+    )
+    assert data["requestartist"] == "Led Zeppelin"
+    assert data["requesttitle"] == "Stairway to Heaven"
+
+    # Try to match with typos in both - should work via fuzzy matching
+    data = await trackrequest.get_request({"artist": "Led Zeplin", "title": "Stairway to Heavan"})
+    assert data["requester"] == "user"
+    assert data["requestdisplayname"] == "test"
+    assert data["requesterimageraw"]
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_no_match_too_different(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test that fuzzy matching doesn't match when strings are too different"""
+
+    trackrequest = trackrequestbootstrap
+    trackrequest.clear_roulette_artist_dupes()
+    trackrequest.config.cparser.setValue("settings/requests", True)
+    trackrequest.config.cparser.sync()
+
+    # Add request
+    data = await trackrequest.user_track_request(
+        {"displayname": "test"}, "user", "Pink Floyd - Comfortably Numb"
+    )
+    assert data["requestartist"] == "Pink Floyd"
+    assert data["requesttitle"] == "Comfortably Numb"
+
+    # Try to match with completely different artist/title - should NOT match
+    data = await trackrequest.get_request({"artist": "Madonna", "title": "Like a Virgin"})
+    assert data is None
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_artist_only(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test fuzzy matching with artist-only request"""
+
+    trackrequest = trackrequestbootstrap
+    trackrequest.clear_roulette_artist_dupes()
+    trackrequest.config.cparser.setValue("settings/requests", True)
+    trackrequest.config.cparser.sync()
+
+    # Add artist-only request
+    data = await trackrequest.user_track_request({"displayname": "test"}, "user", "Nirvana")
+    assert data["requestartist"] == "Nirvana"
+    assert not data["requesttitle"]
+
+    # Try to match with typo in artist name - should work via fuzzy matching
+    data = await trackrequest.get_request(
+        {"artist": "Nirvanna", "title": "Smells Like Teen Spirit"}
+    )
+    assert data["requester"] == "user"
+    assert data["requestdisplayname"] == "test"
+    assert data["requesterimageraw"]
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_with_filler_words(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test fuzzy matching with filler words like 'play anything by ... please'"""
+
+    trackrequest = trackrequestbootstrap
+    trackrequest.clear_roulette_artist_dupes()
+    trackrequest.config.cparser.setValue("settings/requests", True)
+    trackrequest.config.cparser.sync()
+
+    # Add request with normal format
+    data = await trackrequest.user_track_request(
+        {"displayname": "test"}, "user", "Nine Inch Nails"
+    )
+    assert data["requestartist"] == "Nine Inch Nails"
+    assert not data["requesttitle"]
+
+    # Try to match with filler words and typo - should work via fuzzy matching
+    data = await trackrequest.get_request(
+        {"artist": "play anything by nine inche nails please", "title": "Head Like a Hole"}
+    )
+    assert data["requester"] == "user"
+    assert data["requestdisplayname"] == "test"
+    assert data["requesterimageraw"]
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_thank_you_song(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test that songs with filler words in title still match (e.g., Dido - Thank You)"""
+
+    trackrequest = trackrequestbootstrap
+    trackrequest.clear_roulette_artist_dupes()
+    trackrequest.config.cparser.setValue("settings/requests", True)
+    trackrequest.config.cparser.sync()
+
+    # Add request with "Thank You" in the title
+    data = await trackrequest.user_track_request(
+        {"displayname": "test"}, "user", "Dido - Thank You"
+    )
+    assert data["requestartist"] == "Dido"
+    assert data["requesttitle"] == "Thank You"
+
+    # Should match exactly despite "Thank You" being a filler phrase
+    data = await trackrequest.get_request({"artist": "Dido", "title": "Thank You"})
+    assert data["requester"] == "user"
+    assert data["requestdisplayname"] == "test"
+    assert data["requesterimageraw"]
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_threshold_prevents_bad_matches(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test that fuzzy matching threshold prevents very poor matches"""
+
+    trackrequest = trackrequestbootstrap
+    trackrequest.clear_roulette_artist_dupes()
+    trackrequest.config.cparser.setValue("settings/requests", True)
+    trackrequest.config.cparser.sync()
+
+    # Add request for specific artist/title
+    data = await trackrequest.user_track_request(
+        {"displayname": "test"}, "user", "Beatles - Yesterday"
+    )
+    assert data["requestartist"] == "Beatles"
+    assert data["requesttitle"] == "Yesterday"
+
+    # Try to match with completely different content - should NOT match
+    data = await trackrequest.get_request(
+        {"artist": "Death Metal Band", "title": "Screaming Agony"}
+    )
+    assert data is None
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_multiple_requests_picks_best(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test that fuzzy matching picks the best match when multiple requests exist"""
+
+    trackrequest = trackrequestbootstrap
+    trackrequest.clear_roulette_artist_dupes()
+    trackrequest.config.cparser.setValue("settings/requests", True)
+    trackrequest.config.cparser.sync()
+
+    # Add multiple requests with similar but different names
+    await trackrequest.user_track_request(
+        {"displayname": "test1"}, "user1", "Red Hot Chili Peppers"
+    )
+    await trackrequest.user_track_request(
+        {"displayname": "test2"},
+        "user2",
+        "Red Hot Chilli Papers",  # deliberate typos
+    )
+
+    # Should match the first one (better match) not the second
+    data = await trackrequest.get_request(
+        {"artist": "Red Hot Chili Peppers", "title": "Under the Bridge"}
+    )
+    assert data["requester"] == "user1"  # Should match the exact spelling, not the typo version
+    assert data["requestdisplayname"] == "test1"
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_doesnt_match_partial_words(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test that fuzzy matching doesn't match when only partial words are similar"""
+
+    trackrequest = trackrequestbootstrap
+    trackrequest.clear_roulette_artist_dupes()
+    trackrequest.config.cparser.setValue("settings/requests", True)
+    trackrequest.config.cparser.sync()
+
+    # Add request for "Pink Floyd"
+    data = await trackrequest.user_track_request({"displayname": "test"}, "user", "Pink Floyd")
+    assert data["requestartist"] == "Pink Floyd"
+
+    # Try to match with just "Pink" - should NOT match (too different)
+    data = await trackrequest.get_request({"artist": "Pink", "title": "So What"})
+    assert data is None
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_filler_words_dont_match_real_content(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test that cleaning filler words doesn't accidentally match unrelated content"""
+
+    trackrequest = trackrequestbootstrap
+    trackrequest.clear_roulette_artist_dupes()
+    trackrequest.config.cparser.setValue("settings/requests", True)
+    trackrequest.config.cparser.sync()
+
+    # Add request for specific artist
+    data = await trackrequest.user_track_request({"displayname": "test"}, "user", "Madonna")
+    assert data["requestartist"] == "Madonna"
+
+    # Try with lots of filler words but wrong artist - should NOT match
+    data = await trackrequest.get_request(
+        {"artist": "please play anything by Taylor Swift thanks", "title": "Shake It Off"}
+    )
+    assert data is None
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_empty_cleaned_text_fallback(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test behavior when cleaned text becomes empty after removing filler words"""
+
+    trackrequest = trackrequestbootstrap
+    trackrequest.clear_roulette_artist_dupes()
+    trackrequest.config.cparser.setValue("settings/requests", True)
+    trackrequest.config.cparser.sync()
+
+    # Add request
+    data = await trackrequest.user_track_request({"displayname": "test"}, "user", "The Beatles")
+    assert data["requestartist"] == "The Beatles"
+
+    # Try to match with text that becomes empty after cleaning - should use original
+    # This tests the fallback when clean_current_artist becomes empty
+    data = await trackrequest.get_request(
+        {"artist": "please play anything thanks", "title": "Something"}
+    )
+    assert data is None  # Should not match because no meaningful content remains
+
+
+@pytest.mark.asyncio
+async def test_trackrequest_fuzzy_disabled_fallback(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """Test that system works correctly when rapidfuzz is not available"""
+
+    # Mock rapidfuzz as unavailable using unittest.mock.patch context manager
+    with unittest.mock.patch("nowplaying.trackrequests.RAPIDFUZZ_AVAILABLE", False):
+        trackrequest = trackrequestbootstrap
+        trackrequest.clear_roulette_artist_dupes()
+        trackrequest.config.cparser.setValue("settings/requests", True)
+        trackrequest.config.cparser.sync()
+
+        # Add request
+        data = await trackrequest.user_track_request(
+            {"displayname": "test"}, "user", "Beatles - Yesterday"
+        )
+        assert data["requestartist"] == "Beatles"
+        assert data["requesttitle"] == "Yesterday"
+
+        # Exact match should still work
+        data = await trackrequest.get_request({"artist": "Beatles", "title": "Yesterday"})
+        assert data["requester"] == "user"
+        assert data["requestdisplayname"] == "test"
+        assert data["requesterimageraw"]
+
+        # Add another request to test fuzzy fallback doesn't happen
+        data2 = await trackrequest.user_track_request(
+            {"displayname": "test2"}, "user2", "Pink Floyd"
+        )
+        assert data2["requestartist"] == "Pink Floyd"
+
+        # Fuzzy match should NOT work (would work with rapidfuzz but should fail without it)
+        data = await trackrequest.get_request({"artist": "Beatle", "title": "Yesterdy"})  # typos
+        assert data is None  # Should not match due to no fuzzy matching
 
 
 @pytest.mark.asyncio

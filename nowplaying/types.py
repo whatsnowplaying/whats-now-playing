@@ -105,3 +105,60 @@ class PluginObjs(TypedDict):
     artistextras: dict[str, "nowplaying.artistextras.ArtistExtrasPlugin"]
     notifications: dict[str, "nowplaying.notifications.NotificationPlugin"]
     recognition: dict[str, "nowplaying.recognition.RecognitionPlugin"]
+
+
+class BaseTrackRequest(TypedDict, total=False):
+    """all DB answers have these fields"""
+
+    reqid: int
+    timestamp: str
+
+
+class UserTrackRequest(BaseTrackRequest, total=False):
+    """TypedDict for userrequest database records"""
+
+    # Text fields
+    artist: str | None
+    title: str | None
+    displayname: str | None
+    type: str
+    playlist: str | None
+    username: str
+    filename: str | None
+    user_input: str
+    normalizedartist: str
+    normalizedtitle: str
+
+    # Blob fields
+    userimage: bytes | None
+
+
+class GifWordsTrackRequest(BaseTrackRequest, total=False):
+    """TypedDict for gifwords database records"""
+
+    # Text fields
+    keywords: str
+    requester: str
+    requestdisplayname: str | None
+    imageurl: str | None
+
+    # Blob fields
+    image: bytes | None
+
+
+class TrackRequestResult(TypedDict, total=False):
+    """TypedDict for request lookup results returned to caller"""
+
+    requester: str
+    requestdisplayname: str | None
+    requesterimageraw: bytes | None
+    requestartist: str | None
+    requesttitle: str | None
+
+
+class TrackRequestSetting(TypedDict, total=False):
+    """TypedDict for request settings/configuration"""
+
+    displayname: str
+    playlist: str
+    userimage: bytes
