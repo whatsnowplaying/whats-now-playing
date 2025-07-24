@@ -13,7 +13,7 @@ from PySide6.QtCore import QCoreApplication, QSettings  # pylint: disable=no-nam
 from tests.upgrade.upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
 
 import nowplaying.bootstrap  # pylint: disable=import-error
-import nowplaying.upgrade  # pylint: disable=import-error
+import nowplaying.upgrades.config  # pylint: disable=import-error
 
 
 def make_fake_300_config(fakestr):
@@ -66,7 +66,7 @@ def test_version_300rc1_to_current():  # pylint: disable=redefined-outer-name
         assert not os.path.exists(os.path.join(backupdir))
         reboot_macosx_prefs()
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
-        upgrade = nowplaying.upgrade.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
+        upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
         config = QSettings(
             qsettingsformat,
             QSettings.UserScope,

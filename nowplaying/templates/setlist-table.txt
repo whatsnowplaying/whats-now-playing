@@ -1,0 +1,1 @@
+| {{ artist | truncate(30) | ljust(30) }} | {{ title | truncate(40) | ljust(40) }} |

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>realtimesetlist_ui</class>
+ <widget class="QWidget" name="realtimesetlist_ui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>400</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Real-time Setlist</string>
+  </property>
+  <property name="displayName" stdset="0">
+   <string>Real-time Setlist</string>
+  </property>
+  
+  <widget class="QCheckBox" name="enable_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>200</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enable Real-time Setlist</string>
+   </property>
+  </widget>
+
+  <widget class="QLabel" name="template_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>45</y>
+     <width>111</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Template File</string>
+   </property>
+  </widget>
+  
+  <widget class="QPushButton" name="template_button">
+   <property name="geometry">
+    <rect>
+     <x>140</x>
+     <y>42</y>
+     <width>161</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Browse for File ...</string>
+   </property>
+  </widget>
+  
+  <widget class="QLineEdit" name="template_lineedit">
+   <property name="geometry">
+    <rect>
+     <x>310</x>
+     <y>42</y>
+     <width>311</width>
+     <height>25</height>
+    </rect>
+   </property>
+  </widget>
+
+  <widget class="QLabel" name="filepattern_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>85</y>
+     <width>111</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>File Pattern</string>
+   </property>
+  </widget>
+  
+  <widget class="QLineEdit" name="filepattern_lineedit">
+   <property name="geometry">
+    <rect>
+     <x>140</x>
+     <y>82</y>
+     <width>481</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Filename pattern using strftime format. Examples: setlist-%Y%m%d.txt, show-%Y%m%d-%H%M%S.txt</string>
+   </property>
+  </widget>
+
+  <widget class="QLabel" name="help_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>120</y>
+     <width>611</width>
+     <height>80</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>**File Pattern Help:**
+%Y = 4-digit year, %m = month, %d = day, %H = hour, %M = minute, %S = second
+Examples: setlist-%Y%m%d.txt → setlist-20231215.txt
+          show-%Y%m%d-%H%M%S.txt → show-20231215-143022.txt
+
+Files are saved to the NowPlaying/setlists directory.</string>
+   </property>
+   <property name="textFormat">
+    <enum>Qt::MarkdownText</enum>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+  </widget>
+
+  <widget class="QLabel" name="description_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>220</y>
+     <width>611</width>
+     <height>60</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Real-time setlist appends each track to a file as it plays, using your custom template.
+This creates a live setlist during your session, unlike the traditional setlist which is 
+generated only at the end. Perfect for streaming or live events where you want real-time updates.</string>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+  </widget>
+
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -9,6 +9,7 @@ import pytest
 import pytest_asyncio
 
 import nowplaying.config
+import nowplaying.exceptions
 import nowplaying.notifications.textoutput
 
 
@@ -184,21 +185,25 @@ def test_textoutput_plugin_load_settingsui():
     config = nowplaying.config.ConfigFile(testmode=True)
     config.cparser.setValue("textoutput/file", "/path/to/output.txt")
     config.cparser.setValue("textoutput/txttemplate", "/path/to/template.txt")
+    config.cparser.setValue("textoutput/fileappend", True)
+    config.cparser.setValue("textoutput/clearonstartup", False)
 
     plugin = nowplaying.notifications.textoutput.Plugin(config=config)
 
-    # Mock UI widget
+    # Mock UI widget with correct attribute names
     mock_widget = unittest.mock.Mock()
-    mock_widget.enable_checkbox = unittest.mock.Mock()
-    mock_widget.file_lineedit = unittest.mock.Mock()
-    mock_widget.template_lineedit = unittest.mock.Mock()
+    mock_widget.textoutput_lineedit = unittest.mock.Mock()
+    mock_widget.texttemplate_lineedit = unittest.mock.Mock()
+    mock_widget.append_checkbox = unittest.mock.Mock()
+    mock_widget.clear_checkbox = unittest.mock.Mock()
 
     plugin.load_settingsui(mock_widget)
 
-    # Should check enabled state and load file paths
-    mock_widget.enable_checkbox.setChecked.assert_called_once_with(True)
-    mock_widget.file_lineedit.setText.assert_called_once_with("/path/to/output.txt")
-    mock_widget.template_lineedit.setText.assert_called_once_with("/path/to/template.txt")
+    # Should load file paths and checkbox states
+    mock_widget.textoutput_lineedit.setText.assert_called_once_with("/path/to/output.txt")
+    mock_widget.texttemplate_lineedit.setText.assert_called_once_with("/path/to/template.txt")
+    mock_widget.append_checkbox.setChecked.assert_called_once_with(True)
+    mock_widget.clear_checkbox.setChecked.assert_called_once_with(False)
 
 
 def test_textoutput_plugin_save_settingsui():
@@ -206,18 +211,24 @@ def test_textoutput_plugin_save_settingsui():
     config = nowplaying.config.ConfigFile(testmode=True)
     plugin = nowplaying.notifications.textoutput.Plugin(config=config)
 
-    # Mock UI widget
+    # Mock UI widget with correct attribute names
     mock_widget = unittest.mock.Mock()
-    mock_widget.file_lineedit = unittest.mock.Mock()
-    mock_widget.file_lineedit.text.return_value = "/new/output.txt"
-    mock_widget.template_lineedit = unittest.mock.Mock()
-    mock_widget.template_lineedit.text.return_value = "/new/template.txt"
+    mock_widget.textoutput_lineedit = unittest.mock.Mock()
+    mock_widget.textoutput_lineedit.text.return_value = "/new/output.txt"
+    mock_widget.texttemplate_lineedit = unittest.mock.Mock()
+    mock_widget.texttemplate_lineedit.text.return_value = "/new/template.txt"
+    mock_widget.append_checkbox = unittest.mock.Mock()
+    mock_widget.append_checkbox.isChecked.return_value = True
+    mock_widget.clear_checkbox = unittest.mock.Mock()
+    mock_widget.clear_checkbox.isChecked.return_value = False
 
     plugin.save_settingsui(mock_widget)
 
-    # Should save file paths to config
+    # Should save file paths and checkbox states to config
     assert config.cparser.value("textoutput/file") == "/new/output.txt"
     assert config.cparser.value("textoutput/txttemplate") == "/new/template.txt"
+    assert config.cparser.value("textoutput/fileappend", type=bool) is True
+    assert config.cparser.value("textoutput/clearonstartup", type=bool) is False
 
 
 def test_textoutput_plugin_verify_settingsui_missing_file():
@@ -225,12 +236,12 @@ def test_textoutput_plugin_verify_settingsui_missing_file():
     config = nowplaying.config.ConfigFile(testmode=True)
     plugin = nowplaying.notifications.textoutput.Plugin(config=config)
 
-    # Mock UI widget with enabled checkbox but no file
+    # Mock UI widget with template but no output file
     mock_widget = unittest.mock.Mock()
-    mock_widget.enable_checkbox = unittest.mock.Mock()
-    mock_widget.enable_checkbox.isChecked.return_value = True
-    mock_widget.file_lineedit = unittest.mock.Mock()
-    mock_widget.file_lineedit.text.return_value = ""
+    mock_widget.textoutput_lineedit = unittest.mock.Mock()
+    mock_widget.textoutput_lineedit.text.return_value = ""
+    mock_widget.texttemplate_lineedit = unittest.mock.Mock()
+    mock_widget.texttemplate_lineedit.text.return_value = "/path/to/template.txt"
 
     with pytest.raises(
         nowplaying.exceptions.PluginVerifyError, match="Output file path is required"
@@ -243,14 +254,12 @@ def test_textoutput_plugin_verify_settingsui_missing_template():
     config = nowplaying.config.ConfigFile(testmode=True)
     plugin = nowplaying.notifications.textoutput.Plugin(config=config)
 
-    # Mock UI widget with enabled checkbox and file but no template
+    # Mock UI widget with output file but no template
     mock_widget = unittest.mock.Mock()
-    mock_widget.enable_checkbox = unittest.mock.Mock()
-    mock_widget.enable_checkbox.isChecked.return_value = True
-    mock_widget.file_lineedit = unittest.mock.Mock()
-    mock_widget.file_lineedit.text.return_value = "/path/to/output.txt"
-    mock_widget.template_lineedit = unittest.mock.Mock()
-    mock_widget.template_lineedit.text.return_value = ""
+    mock_widget.textoutput_lineedit = unittest.mock.Mock()
+    mock_widget.textoutput_lineedit.text.return_value = "/path/to/output.txt"
+    mock_widget.texttemplate_lineedit = unittest.mock.Mock()
+    mock_widget.texttemplate_lineedit.text.return_value = ""
 
     with pytest.raises(
         nowplaying.exceptions.PluginVerifyError, match="Template file path is required"
@@ -265,12 +274,10 @@ def test_textoutput_plugin_verify_settingsui_nonexistent_template():
 
     # Mock UI widget with valid file but nonexistent template
     mock_widget = unittest.mock.Mock()
-    mock_widget.enable_checkbox = unittest.mock.Mock()
-    mock_widget.enable_checkbox.isChecked.return_value = True
-    mock_widget.file_lineedit = unittest.mock.Mock()
-    mock_widget.file_lineedit.text.return_value = "/path/to/output.txt"
-    mock_widget.template_lineedit = unittest.mock.Mock()
-    mock_widget.template_lineedit.text.return_value = "/nonexistent/template.txt"
+    mock_widget.textoutput_lineedit = unittest.mock.Mock()
+    mock_widget.textoutput_lineedit.text.return_value = "/path/to/output.txt"
+    mock_widget.texttemplate_lineedit = unittest.mock.Mock()
+    mock_widget.texttemplate_lineedit.text.return_value = "/nonexistent/template.txt"
 
     with pytest.raises(
         nowplaying.exceptions.PluginVerifyError, match="Template file does not exist"
@@ -290,12 +297,10 @@ def test_textoutput_plugin_verify_settingsui_valid():
 
         # Mock UI widget with valid configuration
         mock_widget = unittest.mock.Mock()
-        mock_widget.enable_checkbox = unittest.mock.Mock()
-        mock_widget.enable_checkbox.isChecked.return_value = True
-        mock_widget.file_lineedit = unittest.mock.Mock()
-        mock_widget.file_lineedit.text.return_value = "/path/to/output.txt"
-        mock_widget.template_lineedit = unittest.mock.Mock()
-        mock_widget.template_lineedit.text.return_value = template_file
+        mock_widget.textoutput_lineedit = unittest.mock.Mock()
+        mock_widget.textoutput_lineedit.text.return_value = "/path/to/output.txt"
+        mock_widget.texttemplate_lineedit = unittest.mock.Mock()
+        mock_widget.texttemplate_lineedit.text.return_value = template_file
 
         # Should not raise any exception
         plugin.verify_settingsui(mock_widget)
