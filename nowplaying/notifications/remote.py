@@ -106,7 +106,7 @@ class Plugin(NotificationPlugin):
 
     @staticmethod
     def _strip_blobs_metadata(metadata: TrackMetadata) -> TrackMetadata:
-        """Strip binary blob data for remote transmission"""
+        """Strip binary blob data and local system metadata for remote transmission"""
         remote_data = metadata.copy()
 
         # Remove all blob fields
@@ -119,9 +119,19 @@ class Plugin(NotificationPlugin):
             logging.error("%s was dropped from remote_data (bytes)", key)
             remote_data.pop(key, None)
 
-        # Remove dbid if present
-        if remote_data.get("dbid"):
-            del remote_data["dbid"]
+        # Remove local system metadata that shouldn't be sent to remote systems
+        local_system_fields = [
+            "httpport",
+            "hostname",
+            "hostfqdn",
+            "hostip",
+            "ipaddress",
+            "previoustrack",
+            "dbid",
+            "cache_warmed",
+        ]
+        for key in local_system_fields:
+            remote_data.pop(key, None)
 
         return remote_data
 

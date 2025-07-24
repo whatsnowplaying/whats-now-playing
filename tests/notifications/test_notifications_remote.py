@@ -123,7 +123,7 @@ async def test_remote_plugin_server_error(remote_plugin):  # pylint: disable=red
 
 @pytest.mark.asyncio
 async def test_remote_plugin_strips_blobs(remote_plugin):  # pylint: disable=redefined-outer-name
-    """test that remote plugin strips binary blob data"""
+    """test that remote plugin strips binary blob data and local system data"""
     remote_plugin.config.cparser.setValue("remote/enabled", True)
     remote_plugin.config.cparser.setValue("remote/remote_server", "localhost")
     remote_plugin.config.cparser.setValue("remote/remote_port", 8899)
@@ -135,6 +135,16 @@ async def test_remote_plugin_strips_blobs(remote_plugin):  # pylint: disable=red
         "coverimageraw": b"binary_image_data",  # Should be stripped
         "artistthumbnailraw": b"binary_thumb_data",  # Should be stripped
         "dbid": 999,  # Should be removed
+        "httpport": 8080,  # Should be stripped
+        "hostname": "local-system",  # Should be stripped
+        "hostfqdn": "local-system.local",  # Should be stripped
+        "hostip": "192.168.1.100",  # Should be stripped
+        "ipaddress": "192.168.1.100",  # Should be stripped
+        "previoustrack": [{"artist": "Previous", "title": "Track"}],  # Should be stripped
+        "cache_warmed": True,  # Should be stripped
+        "twitchchannel": "teststreamer",  # Should be kept
+        "kickchannel": "kickstreamer",  # Should be kept
+        "discordguild": "My Discord Server",  # Should be kept
     }
 
     with aioresponses() as mock_resp:
@@ -142,15 +152,33 @@ async def test_remote_plugin_strips_blobs(remote_plugin):  # pylint: disable=red
 
         await remote_plugin.notify_track_change(metadata)
 
-        # Verify blob data was stripped
+        # Verify blob data and local system data was stripped
         first_key = list(mock_resp.requests.keys())[0]
         request = mock_resp.requests[first_key][0]
         payload = request.kwargs["json"]
+
+        # Binary blob fields should be stripped
         assert "coverimageraw" not in payload
         assert "artistthumbnailraw" not in payload
+
+        # Local system fields should be stripped
         assert "dbid" not in payload
+        assert "httpport" not in payload
+        assert "hostname" not in payload
+        assert "hostfqdn" not in payload
+        assert "hostip" not in payload
+        assert "ipaddress" not in payload
+        assert "previoustrack" not in payload
+        assert "cache_warmed" not in payload
+
+        # Track data should remain
         assert payload["artist"] == "Test Artist"
         assert payload["title"] == "Test Title"
+
+        # Streaming channel data should be kept (not stripped)
+        assert payload["twitchchannel"] == "teststreamer"
+        assert payload["kickchannel"] == "kickstreamer"
+        assert payload["discordguild"] == "My Discord Server"
 
 
 def test_remote_plugin_strip_blobs_static():

@@ -63,6 +63,9 @@ data.
 | hostfqdn | Fully qualified hostname of the machine running **What's Now Playing** |
 | hostname | Short hostname of the machine running **What's Now Playing** |
 | httpport | Port number that is running the web server |
+| twitchchannel | Twitch channel name (if configured) |
+| kickchannel | Kick channel name (if configured) |
+| discordguild | Discord guild/server name (if bot is connected) |
 | isrc | List of [International Standard Recording Code](https://isrc.ifpi.org/en/) |
 | key | Key of the song |
 | label | Label of the media. |
