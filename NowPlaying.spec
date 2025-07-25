@@ -18,9 +18,36 @@ import pyinstaller_versionfile
 NUMERICDATE = datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")
 WINVERSFILE = os.path.join('bincomponents', 'winvers.bin')
 
-ARTEXTRAS_MODULES = collect_submodules('nowplaying.artistextras')
-INPUT_MODULES = collect_submodules('nowplaying.inputs')
-RECOGNITION_MODULES = collect_submodules('nowplaying.recognition')
+def collect_all_nowplaying_modules():
+    """Automatically discover and collect all nowplaying plugin modules"""
+    # Get the nowplaying package directory relative to the current working directory
+    nowplaying_dir = os.path.join(os.getcwd(), 'nowplaying')
+
+    # Find all subdirectories that contain an __init__.py (are Python packages)
+    plugin_packages = []
+    if os.path.exists(nowplaying_dir):
+        for item in os.listdir(nowplaying_dir):
+            subdir_path = os.path.join(nowplaying_dir, item)
+            init_file = os.path.join(subdir_path, '__init__.py')
+
+            if os.path.isdir(subdir_path) and os.path.exists(init_file):
+                # Skip vendor directory and other non-plugin directories
+                if item not in ['vendor', '__pycache__', 'htmlcov']:
+                    plugin_packages.append(f'nowplaying.{item}')
+
+    # Collect all submodules from discovered packages
+    all_modules = []
+    for package in plugin_packages:
+        try:
+            modules = collect_submodules(package)
+            all_modules.extend(modules)
+            print(f'Auto-collected {len(modules)} modules from {package}')
+        except Exception as e:
+            print(f'Warning: Could not collect modules from {package}: {e}')
+
+    return all_modules
+
+ALL_PLUGIN_MODULES = collect_all_nowplaying_modules()
 
 
 def geticon():
@@ -116,7 +143,7 @@ for execname, execpy in executables.items():
                  binaries=[],
                  datas=[('nowplaying/resources/*', 'resources/'),
                         ('nowplaying/templates/*', 'templates/')],
-                 hiddenimports=ARTEXTRAS_MODULES + INPUT_MODULES + RECOGNITION_MODULES,
+                 hiddenimports=ALL_PLUGIN_MODULES,
                  hookspath=[('nowplaying/__pyinstaller')],
                  runtime_hooks=[],
                  excludes=[],
