@@ -1,0 +1,1 @@
+{{ cmdchar }}{{ cmdname }} shows the currently playing track (artist and title). No parameters needed - just type {{ cmdchar }}{{ cmdname }} to see what's playing now!

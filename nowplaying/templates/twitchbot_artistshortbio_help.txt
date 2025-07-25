@@ -1,0 +1,1 @@
+{{ cmdchar }}{{ cmdname }} shows a short biography of the currently playing artist. No parameters needed - just type {{ cmdchar }}{{ cmdname }} and get artist info!

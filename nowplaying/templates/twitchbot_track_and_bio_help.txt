@@ -1,0 +1,1 @@
+{{ cmdchar }}{{ cmdname }} shows the current track plus artist biography and website links (Bandcamp, Discogs, MusicBrainz). No parameters needed - get full artist info with one command!
