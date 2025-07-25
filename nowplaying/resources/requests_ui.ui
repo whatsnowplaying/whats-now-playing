@@ -141,7 +141,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Sans'; font-size:10pt;&quot;&gt;See Twitch configuration for authentication requirements.&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Sans'; font-size:10pt;&quot;&gt;Redemption text must be an exact match: upper/lowercase, punctuation, spacing.  Roulette mode requires a supported playlist.  See the documentation for supported user input for non-roulette.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Sans'; font-size:10pt;&quot;&gt;Redemption text must be an exact match: upper/lowercase, punctuation, spacing.  Roulette mode requires a supported playlist.  See the documentation for supported user input for non-roulette.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Sans'; font-size:10pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Sans'; font-size:10pt;&quot;&gt;Request matching uses fuzzy search to handle typos and extra words (e.g., &quot;play anything by nine inche nails please&quot; matches &quot;Nine Inch Nails&quot;). Adjust the fuzzy match threshold to control sensitivity - higher values require closer matches.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </widget>
   <widget class="QCheckBox" name="enable_checkbox">
@@ -155,6 +157,44 @@ li.checked::marker { content: &quot;\2612&quot;; }
    </property>
    <property name="text">
     <string>Enable Requests support</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="fuzzy_threshold_label">
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>20</y>
+     <width>160</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Fuzzy Match Threshold:</string>
+   </property>
+  </widget>
+  <widget class="QSpinBox" name="fuzzy_threshold_spinbox">
+   <property name="geometry">
+    <rect>
+     <x>570</x>
+     <y>20</y>
+     <width>60</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>50</number>
+   </property>
+   <property name="maximum">
+    <number>100</number>
+   </property>
+   <property name="value">
+    <number>85</number>
+   </property>
+   <property name="suffix">
+    <string>%</string>
+   </property>
+   <property name="toolTip">
+    <string>Minimum similarity score for fuzzy matching (50-100%). Higher values require closer matches.</string>
    </property>
   </widget>
  </widget>
@@ -189,6 +229,38 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <hint type="destinationlabel">
      <x>200</x>
      <y>61</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>fuzzy_threshold_spinbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>100</x>
+     <y>31</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>600</x>
+     <y>31</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>fuzzy_threshold_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>100</x>
+     <y>31</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>480</x>
+     <y>31</y>
     </hint>
    </hints>
   </connection>

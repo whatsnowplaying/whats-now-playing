@@ -11,34 +11,35 @@ import pathlib
 import re
 from typing import TYPE_CHECKING
 
+import PySide6.QtXml  # pylint: disable=unused-import, import-error
+
 # pylint: disable=no-name-in-module
-from PySide6.QtCore import Slot, QFile, Qt, QStandardPaths
+from PySide6.QtCore import QFile, QStandardPaths, Qt, Slot
+from PySide6.QtGui import QIcon
+from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
     QErrorMessage,
     QFileDialog,
-    QWidget,
     QListWidgetItem,
     QMessageBox,
     QTreeWidgetItem,
+    QWidget,
 )
-from PySide6.QtGui import QIcon
-from PySide6.QtUiTools import QUiLoader
-import PySide6.QtXml  # pylint: disable=unused-import, import-error
 
 import nowplaying.config
 import nowplaying.hostmeta
-from nowplaying.exceptions import PluginVerifyError
 import nowplaying.settings.categories
 import nowplaying.settings.tabs
+from nowplaying.exceptions import PluginVerifyError
 
 try:
     import nowplaying.qtrc  # pylint: disable=import-error, no-name-in-module
 except ModuleNotFoundError:
     pass
-import nowplaying.twitch.settings
-import nowplaying.twitch.chat
 import nowplaying.kick.settings
 import nowplaying.trackrequests
+import nowplaying.twitch.chat
+import nowplaying.twitch.settings
 import nowplaying.uihelp
 import nowplaying.utils
 
@@ -68,7 +69,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "twitchchat": nowplaying.twitch.chat.TwitchChatSettings(),
             "kick": nowplaying.kick.settings.KickSettings(),
             "kickchat": nowplaying.kick.settings.KickChatSettings(),
-            "requests": nowplaying.trackrequests.RequestSettings(),
+            "requests": nowplaying.trackrequests.TrackRequestSettings(),
         }
 
         # New tree structure managers

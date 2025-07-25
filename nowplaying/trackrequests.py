@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """request handling"""
+# pylint: disable=too-many-lines
 
 import asyncio
 import logging
@@ -7,20 +8,51 @@ import pathlib
 import re
 import sqlite3
 import time
-import traceback
 import typing as t
+from typing import TYPE_CHECKING, Iterable
 
 import aiohttp
-import aiosqlite  # pylint: disable=import-error
+import aiosqlite
 
-from PySide6.QtCore import Slot, QFile, QFileSystemWatcher, QStandardPaths  # pylint: disable=import-error, no-name-in-module
-from PySide6.QtWidgets import QComboBox, QHeaderView, QTableWidgetItem  # pylint: disable=import-error, no-name-in-module
+# Optional rapidfuzz import - gracefully handle missing vcredist on Windows
+try:
+    import rapidfuzz
+
+    RAPIDFUZZ_AVAILABLE = True
+except ImportError:
+    RAPIDFUZZ_AVAILABLE = False
+
+from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
+    QFile,
+    QFileSystemWatcher,
+    QSettings,
+    QStandardPaths,
+    Slot,
+)
 from PySide6.QtUiTools import QUiLoader  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
+    QComboBox,
+    QHeaderView,
+    QTableWidgetItem,
+    QWidget,
+)
 
 import nowplaying.db
 import nowplaying.metadata
-from nowplaying.exceptions import PluginVerifyError
 import nowplaying.utils
+from nowplaying.exceptions import PluginVerifyError
+from nowplaying.types import (  # pylint: disable=import-error
+    GifWordsTrackRequest,
+    TrackMetadata,
+    TrackRequestResult,
+    TrackRequestSetting,
+    UserTrackRequest,
+)
+
+if TYPE_CHECKING:
+    import nowplaying.config
+    import nowplaying.uihelp
+
 
 USERREQUEST_TEXT = [
     "artist",
@@ -97,7 +129,13 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
 
     """
 
-    def __init__(self, config=None, stopevent=None, testmode=False, upgrade=False):
+    def __init__(
+        self,
+        config: "nowplaying.config.ConfigFile|None" = None,
+        stopevent: asyncio.Event | None = None,
+        testmode: bool = False,
+        upgrade: bool = False,
+    ):
         self.config = config
         self.stopevent = stopevent
         self.testmode = testmode
@@ -109,6 +147,8 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         self.watcher = None
         if not self.databasefile.exists() or upgrade:
             self.setupdb()
+        if not RAPIDFUZZ_AVAILABLE:
+            logging.warning("rapidfuzz not available - fuzzy matching disabled")
 
     def setupdb(self):
         """setup the database file for keeping track of requests"""
@@ -119,7 +159,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 try:
                     self.databasefile.unlink()
                     break
-                except (OSError, PermissionError) as error:
+                except OSError as error:
                     if attempt < 2:  # Don't sleep on the last attempt
                         time.sleep(0.5 * (attempt + 1))  # 0.5s, then 1.0s
                         continue
@@ -194,7 +234,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             except sqlite3.OperationalError as error:
                 logging.error(error)
 
-    async def add_roulette_dupelist(self, artist, playlist):
+    async def add_roulette_dupelist(self, artist: str, playlist: str):
         """add a record to the dupe list"""
         if not self.databasefile.exists():
             logging.error("%s does not exist, refusing to add.", self.databasefile)
@@ -209,7 +249,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             await cursor.execute(sql, datatuple)
             await connection.commit()
 
-    async def get_roulette_dupe_list(self, playlist=None):
+    async def get_roulette_dupe_list(self, playlist: str | None = None) -> Iterable[str] | None:
         """get the artist dupelist"""
         if not self.databasefile.exists():
             logging.error("%s does not exist, refusing to add.", self.databasefile)
@@ -237,13 +277,47 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         return dataset
 
     @staticmethod
-    def _normalize(text: t.Optional[str]) -> str:
+    def _normalize(text: str | None) -> str:
         """db normalize"""
         if text := nowplaying.utils.normalize(text, sizecheck=0, nospaces=True):
             return text
         return ""
 
-    async def add_to_db(self, data):
+    @staticmethod
+    async def _retry_async_sqlite_operation(operation_func, max_retries=3, base_delay=0.1):
+        """Retry async SQLite operations with exponential backoff for database lock issues"""
+        for attempt in range(max_retries):
+            try:
+                return await operation_func()
+            except sqlite3.OperationalError as error:
+                if "database is locked" in str(error).lower() and attempt < max_retries - 1:
+                    delay = base_delay * (2**attempt)  # exponential backoff: 0.1s, 0.2s, 0.4s
+                    logging.debug(
+                        "Database locked, retry %d/%d after %fs", attempt + 1, max_retries, delay
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                logging.exception("SQLite operation failed after retries")
+                raise
+
+    @staticmethod
+    def _retry_sync_sqlite_operation(operation_func, max_retries=3, base_delay=0.1):
+        """Retry sync SQLite operations with exponential backoff for database lock issues"""
+        for attempt in range(max_retries):
+            try:
+                return operation_func()
+            except sqlite3.OperationalError as error:
+                if "database is locked" in str(error).lower() and attempt < max_retries - 1:
+                    delay = base_delay * (2**attempt)  # exponential backoff: 0.1s, 0.2s, 0.4s
+                    logging.debug(
+                        "Database locked, retry %d/%d after %fs", attempt + 1, max_retries, delay
+                    )
+                    time.sleep(delay)
+                    continue
+                logging.exception("SQLite operation failed after retries")
+                raise
+
+    async def add_to_db(self, data: UserTrackRequest):
         """add an entry to the db"""
         if not self.databasefile.exists():
             logging.error("%s does not exist, refusing to add.", self.databasefile)
@@ -268,7 +342,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             sql += "?," * (len(data.keys()) - 1) + "?)"
             datatuple = tuple(list(data.values()))
 
-        try:
+        async def _do_add_to_db():
             logging.debug(
                 "Request artist: >%s< / title: >%s< has made it to the requestdb",
                 data.get("artist"),
@@ -280,10 +354,12 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 await cursor.execute(sql, datatuple)
                 await connection.commit()
 
-        except sqlite3.OperationalError as error:
-            logging.error(error)
+        try:
+            await self._retry_async_sqlite_operation(_do_add_to_db)
+        except sqlite3.OperationalError:
+            logging.exception("Failed to add to database after retries")
 
-    async def add_to_gifwordsdb(self, data):
+    async def add_to_gifwordsdb(self, data: GifWordsTrackRequest):
         """add an entry to the db"""
         if not self.databasefile.exists():
             logging.error("%s does not exist, refusing to add.", self.databasefile)
@@ -307,9 +383,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 await connection.commit()
 
         except sqlite3.OperationalError as error:
-            logging.error(error)
+            logging.exception(error)
 
-    def respin_a_reqid(self, reqid):
+    def respin_a_reqid(self, reqid: int):
         """given a reqid, set to respin"""
         if not self.databasefile.exists():
             logging.error("%s does not exist, refusing to respin.", self.databasefile)
@@ -326,23 +402,25 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             except sqlite3.OperationalError as error:
                 logging.error(error)
 
-    def erase_id(self, reqid):
+    def erase_id(self, reqid: int):
         """remove entry from requests"""
         if not self.databasefile.exists():
             logging.error("%s does not exist, refusing to erase.", self.databasefile)
             return
 
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = connection.cursor()
-            try:
+        def _do_erase():
+            with sqlite3.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = connection.cursor()
                 cursor.execute("DELETE FROM userrequest WHERE reqid=?;", (reqid,))
                 connection.commit()
-            except sqlite3.OperationalError as error:
-                logging.error(error)
-                return
 
-    async def erase_gifwords_id(self, reqid):
+        try:
+            self._retry_sync_sqlite_operation(_do_erase)
+        except sqlite3.OperationalError:
+            logging.exception("Failed to erase request ID %s after retries", reqid)
+
+    async def erase_gifwords_id(self, reqid: int):
         """remove entry from gifwords"""
         if not self.databasefile.exists():
             logging.error("%s does not exist, refusing to erase.", self.databasefile)
@@ -355,10 +433,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 await cursor.execute("DELETE FROM gifwords WHERE reqid=?;", (reqid,))
                 await connection.commit()
             except sqlite3.OperationalError as error:
-                logging.error(error)
-                return
+                logging.exception(error)
 
-    async def _find_good_request(self, setting):
+    async def _find_good_request(self, setting: TrackRequestSetting) -> TrackMetadata | None:
         artistdupes = await self.get_roulette_dupe_list(playlist=setting["playlist"])
         plugin = self.config.cparser.value("settings/input")
         tryagain = True
@@ -386,11 +463,13 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 logging.debug("Duped on %s. Retrying.", metadata["artist"])
         return metadata
 
-    async def user_roulette_request(self, setting, user, user_input, reqid=None):
+    async def user_roulette_request(
+        self, setting: TrackRequestSetting, user: str, user_input: str, reqid: int | None = None
+    ) -> TrackRequestResult | None:
         """roulette request"""
         if not setting.get("playlist"):
             logging.error("%s does not have a playlist defined", setting.get("displayname"))
-            return
+            return None
 
         logging.debug("%s requested roulette %s | %s", user, setting["playlist"], user_input)
 
@@ -412,50 +491,267 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         await self.add_to_db(data)
         return {"requester": user, "requestdisplayname": setting.get("displayname")}
 
-    async def _get_and_del_request_lookup(self, sql, datatuple):
+    async def _get_and_del_request_lookup(
+        self, sql: str, datatuple: tuple
+    ) -> TrackRequestResult | None:
         """run sql for request"""
         if not self.databasefile.exists():
             logging.error("%s does not exist, refusing to lookup.", self.databasefile)
             return None
 
-        try:
+        async def _do_lookup():
+            row_to_delete: int | None = None
+            row_to_add_to_dupelist: list[str] | None = None
+            result: TrackRequestResult | None = None
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
                 await cursor.execute(sql, datatuple)
                 row = await cursor.fetchone()
                 if row:
+                    row_to_delete = row["reqid"]
                     if row["type"] == "Roulette":
-                        await self.add_roulette_dupelist(row["artist"], row["playlist"])
-                    self.erase_id(row["reqid"])
-                    return {
+                        row_to_add_to_dupelist = [
+                            row["artist"],
+                            row["playlist"],
+                        ]
+                    result = {
                         "requester": row["username"],
                         "requesterimageraw": row["userimage"],
                         "requestdisplayname": row["displayname"],
                     }
+            return result, row_to_delete, row_to_add_to_dupelist
+
+        try:
+            (
+                result,
+                row_to_delete,
+                row_to_add_to_dupelist,
+            ) = await self._retry_async_sqlite_operation(_do_lookup)
+
+            # Delete the row after closing the async connection to avoid database locks
+            if row_to_delete is not None:
+                self.erase_id(row_to_delete)
+            if row_to_add_to_dupelist is not None:
+                await self.add_roulette_dupelist(
+                    row_to_add_to_dupelist[0], row_to_add_to_dupelist[1]
+                )
+
+            return result
         except Exception as error:  # pylint: disable=broad-except
-            logging.error(error)
+            logging.exception(error)
         return None
 
-    async def _request_lookup_by_artist_title(self, artist="", title=""):
-        """perform lookups in the request DB"""
+    async def _request_lookup_by_artist_title(
+        self, artist: str = "", title: str = ""
+    ) -> TrackRequestResult | None:
+        """perform lookups in the request DB using exact, normalized, and fuzzy matching"""
         logging.debug("trying artist >%s< / title >%s<", artist, title)
+
+        # Try exact matching first
         sql = "SELECT * FROM userrequest WHERE artist=? AND title=?"
         datatuple = artist, title
-        logging.debug("request db lookup: %s", datatuple)
+        logging.debug("request db lookup (exact): %s", datatuple)
         newdata = await self._get_and_del_request_lookup(sql, datatuple)
 
         if not newdata:
-            artist = self._normalize(artist)
-            title = self._normalize(title)
-            logging.debug("trying normalized artist >%s< / title >%s<", artist, title)
+            # Try normalized matching
+            normalized_artist = self._normalize(artist)
+            normalized_title = self._normalize(title)
+            logging.debug(
+                "trying normalized artist >%s< / title >%s<", normalized_artist, normalized_title
+            )
             sql = "SELECT * FROM userrequest WHERE normalizedartist=? AND normalizedtitle=?"
-            datatuple = artist, title
-            logging.debug("request db lookup: %s", datatuple)
+            datatuple = normalized_artist, normalized_title
+            logging.debug("request db lookup (normalized): %s", datatuple)
             newdata = await self._get_and_del_request_lookup(sql, datatuple)
+
+        if not newdata and RAPIDFUZZ_AVAILABLE:
+            # Try fuzzy matching as final fallback (only if rapidfuzz is available)
+            newdata = await self._fuzzy_request_lookup(artist, title)
+
         return newdata
 
-    async def get_request(self, metadata):
+    async def _fuzzy_request_lookup(
+        self, artist: str = "", title: str = ""
+    ) -> TrackRequestResult | None:
+        """perform fuzzy matching on request database using rapidfuzz"""
+        if not RAPIDFUZZ_AVAILABLE:
+            logging.debug("rapidfuzz not available - skipping fuzzy matching")
+            return None
+        if not self.databasefile.exists():
+            logging.error("%s does not exist, refusing to fuzzy lookup.", self.databasefile)
+            return None
+
+        try:
+            # Get all requests from database for fuzzy matching
+            async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = await connection.cursor()
+                await cursor.execute("SELECT * FROM userrequest")
+                all_requests = await cursor.fetchall()
+        except sqlite3.OperationalError as error:
+            logging.exception(error)
+
+        if not all_requests:
+            return None
+
+        # Configuration for fuzzy matching thresholds - user configurable
+        fuzzy_threshold = self.config.cparser.value(
+            "requests/fuzzythreshold", type=int, defaultValue=85
+        )
+        best_match = None
+        best_score = 0
+
+        for request in all_requests:
+            score = self._calculate_fuzzy_score(
+                artist, title, request["artist"] or "", request["title"] or ""
+            )
+
+            if score > best_score and score >= fuzzy_threshold:
+                best_score = score
+                best_match = request
+
+        if best_match:
+            logging.debug(
+                "fuzzy match found (score: %d): artist >%s< / title >%s< matched to >%s< / >%s<",
+                best_score,
+                artist,
+                title,
+                best_match["artist"] or "",
+                best_match["title"] or "",
+            )
+
+            # Handle roulette duplicate tracking before deleting
+            if best_match["type"] == "Roulette":
+                await self.add_roulette_dupelist(best_match["artist"], best_match["playlist"])
+
+            # Remove the matched request and return metadata
+            self.erase_id(best_match["reqid"])
+
+            return {
+                "requester": best_match["username"],
+                "requesterimageraw": best_match["userimage"],
+                "requestdisplayname": best_match["displayname"],
+            }
+
+        logging.debug("no fuzzy match found for artist >%s< / title >%s<", artist, title)
+        return None
+
+    @staticmethod
+    def _extract_core_text(text: str | None) -> str | None:
+        """Extract core artist/title text by removing common filler words"""
+        if not text:
+            return text
+
+        # Common phrases that people add to requests
+        filler_patterns = [
+            r"\bplay\b",
+            r"\banything\s+by\b",
+            r"\bsomething\s+by\b",
+            r"\bplease\b",
+            r"\bthanks?\b",
+            r"\bty\b",
+            r"\bthank\s+you\b",
+            r"\bcan\s+you\s+play\b",
+            r"\bcould\s+you\s+play\b",
+            r"\bwould\s+you\s+play\b",
+            r"\bi\s+want\b",
+            r"\bi\s+would\s+like\b",
+            r"\bi\s+request\b",
+            r"\brequest\s+for\b",
+            r"\bhow\s+about\b",
+        ]
+
+        cleaned = text.lower()
+
+        # Remove filler patterns
+        for pattern in filler_patterns:
+            cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
+
+        # Clean up extra whitespace
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+        return cleaned if cleaned else text
+
+    @staticmethod
+    def _calculate_similarity_with_length_penalty(text1: str, text2: str) -> int:
+        """Calculate similarity with penalty for very different lengths"""
+        if not RAPIDFUZZ_AVAILABLE or not text1 or not text2:
+            return 0
+
+        # Get base similarity score
+        base_score = rapidfuzz.fuzz.WRatio(text1, text2)
+
+        # Apply length penalty for very short matches
+        len1, len2 = len(text1.strip()), len(text2.strip())
+        min_len, max_len = min(len1, len2), max(len1, len2)
+
+        # If one string is very short compared to the other, apply penalty
+        if min_len > 0 and max_len / min_len > 2:
+            # Reduce score for very different length strings
+            length_penalty = min_len / max_len
+            base_score = int(base_score * length_penalty)
+
+        return base_score
+
+    def _calculate_fuzzy_score(
+        self, current_artist: str, current_title: str, request_artist: str, request_title: str
+    ) -> int:
+        """calculate combined fuzzy score for artist and title matching"""
+        # Handle empty values
+        if (not current_artist and not current_title) or (
+            not request_artist and not request_title
+        ):
+            return 0
+
+        # Extract core text to remove filler words from current track metadata
+        clean_current_artist = self._extract_core_text(current_artist)
+        clean_current_title = self._extract_core_text(current_title)
+
+        artist_score = 0
+        title_score = 0
+
+        # Calculate artist similarity if both are provided
+        # Try both original and cleaned text, take the higher score
+        if current_artist and request_artist:
+            artist_score = self._calc_raw_fuzzy_scores(
+                current_artist, request_artist, clean_current_artist
+            )
+        # Calculate title similarity if both are provided
+        # Try both original and cleaned text, take the higher score
+        if current_title and request_title:
+            title_score = self._calc_raw_fuzzy_scores(
+                current_title, request_title, clean_current_title
+            )
+        # Determine what information is available for comparison
+        has_both_current = current_artist and current_title
+        has_both_request = request_artist and request_title
+
+        if has_both_current and has_both_request:
+            # Both artist and title available - weighted average (artist 40%, title 60%)
+            return int(artist_score * 0.4 + title_score * 0.6)
+
+        if current_artist and request_artist:
+            # Only artist comparison possible
+            return int(artist_score)
+
+        if current_title and request_title:
+            # Only title comparison possible
+            return int(title_score)
+        # No valid comparison possible
+        return 0
+
+    def _calc_raw_fuzzy_scores(self, arg0: str, arg1: str, arg2: str) -> int:
+        original_score = self._calculate_similarity_with_length_penalty(arg0.lower(), arg1.lower())
+        cleaned_score = (
+            self._calculate_similarity_with_length_penalty(arg2.lower(), arg1.lower())
+            if arg2
+            else 0
+        )
+        return max(original_score, cleaned_score)
+
+    async def get_request(self, metadata: TrackMetadata):
         """if a track gets played, finish out the request"""
         if not self.config.cparser.value("settings/requests"):
             return None
@@ -487,7 +783,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
 
         return newdata
 
-    async def watch_for_respin(self, stopevent):
+    async def watch_for_respin(self, stopevent: asyncio.Event):
         """startup a watcher to handle respins"""
         datatuple = (RESPIN_TEXT,)
         while not nowplaying.utils.safe_stopevent_check(stopevent):
@@ -510,15 +806,16 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                             row["playlist"],
                             row["reqid"],
                         )
-                        await self.user_roulette_request(
-                            {"playlist": row["playlist"]}, row["username"], "", row["reqid"]
-                        )
+                # need to this outside of the aiosqlite call to avoid DB locks
+                await self.user_roulette_request(
+                    {"playlist": row["playlist"]}, row["username"], "", row["reqid"]
+                )
             except Exception as error:  # pylint: disable=broad-except
-                logging.error(error)
+                logging.exception(error)
 
-    async def check_for_gifwords(self):
+    async def check_for_gifwords(self) -> GifWordsTrackRequest:
         """check if a gifword has been requested"""
-        content = {"reqeuster": None, "image": None, "keywords": None}
+        content: GifWordsTrackRequest = {"requester": None, "image": None, "keywords": None}
         try:
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
@@ -531,15 +828,14 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                         "keywords": row["keywords"],
                     }
                     reqid = row["reqid"]
-                    await self.erase_gifwords_id(reqid)
-        except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
+            await self.erase_gifwords_id(reqid)
+        except Exception as err:  # pylint: disable=broad-except
+            logging.exception("check for gifwords exception: %s", err)
         return content
 
-    async def find_command(self, command):
+    async def find_command(self, command: str | None) -> TrackRequestSetting:
         """locate request information based upon a command"""
-        setting = {}
+        setting: TrackRequestSetting = {}
         if not command:
             return setting
 
@@ -552,9 +848,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                     break
         return setting
 
-    async def find_twitchtext(self, twitchtext):
+    async def find_twitchtext(self, twitchtext: str | None) -> TrackRequestSetting:
         """locate request information based upon twitchtext"""
-        setting = {}
+        setting: TrackRequestSetting = {}
         if not twitchtext:
             return setting
 
@@ -567,7 +863,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                     break
         return setting
 
-    async def user_track_request(self, setting, user, user_input):
+    async def user_track_request(
+        self, setting: TrackRequestSetting, user: str, user_input: str
+    ) -> TrackRequestResult:
         """generic request"""
         logging.debug("%s generic requested %s", user, user_input)
         artist = None
@@ -579,19 +877,19 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         if user_input := WEIRDAL_RE.sub("Weird Al", user_input):
             weirdal = True
         if user_input[0] != '"' and (atmatch := ARTIST_TITLE_RE.search(user_input)):
-            artist = atmatch.group(1)
-            title = atmatch.group(2)
+            artist = atmatch.group(1).strip()
+            title = atmatch.group(2).strip()
         elif tmatch := TITLE_ARTIST_RE.search(user_input):
-            title = tmatch.group(1)
-            artist = tmatch.group(2)
+            title = tmatch.group(1).strip()
+            artist = tmatch.group(2).strip()
         elif tmatch := TITLE_RE.search(user_input):
-            title = tmatch.group(1)
+            title = tmatch.group(1).strip()
         else:
-            artist = user_input
+            artist = user_input.strip()
 
         if weirdal and artist:
             artist = artist.replace("Weird Al", '"Weird Al"')
-        data = {
+        data: UserTrackRequest = {
             "username": user,
             "artist": artist,
             "title": title,
@@ -602,7 +900,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         }
 
         await self.add_to_db(data)
-        newdata = {
+        newdata: TrackRequestResult = {
             "requester": user,
             "requestartist": artist,
             "requesttitle": title,
@@ -613,10 +911,10 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
 
         return newdata
 
-    async def _tenor_request(self, search_terms):
+    async def _tenor_request(self, search_terms: str) -> GifWordsTrackRequest:
         """get an image from tenor for a given set of terms"""
 
-        content = {
+        content: GifWordsTrackRequest = {
             "imageurl": None,
             "image": nowplaying.utils.TRANSPARENT_PNG_BIN,
             "keywords": search_terms,
@@ -655,7 +953,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
 
         return content
 
-    async def gifwords_request(self, setting, user, user_input):
+    async def gifwords_request(
+        self, setting: TrackRequestSetting, user: str, user_input: str
+    ) -> GifWordsTrackRequest:
         """gifword request"""
         logging.debug("%s gifwords requested %s", user, user_input)
         if not user_input and self.testmode:
@@ -670,7 +970,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         await self.add_to_gifwordsdb(content)
         return content
 
-    async def twofer_request(self, setting, user, user_input):
+    async def twofer_request(
+        self, setting: TrackRequestSetting, user: str, user_input: str
+    ) -> TrackRequestResult:
         """twofer request"""
 
         metadb = nowplaying.db.MetadataDB()
@@ -690,7 +992,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         else:
             title = None
 
-        data = {
+        data: UserTrackRequest = {
             "username": user,
             "artist": artist,
             "title": title,
@@ -701,7 +1003,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         }
 
         await self.add_to_db(data)
-        newdata = {
+        newdata: TrackRequestResult = {
             "requester": user,
             "requestartist": artist,
             "requesttitle": title,
@@ -751,7 +1053,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             except Exception as error:  # pylint: disable=broad-except
                 logging.error(error)
 
-    async def get_all_generator(self):
+    async def get_all_generator(self) -> t.AsyncGenerator[UserTrackRequest, None]:
         """get all records, but use a generator"""
 
         def dict_factory(cursor, row):
@@ -763,30 +1065,33 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             cursor = await connection.cursor()
             try:
                 await cursor.execute("""SELECT * FROM userrequest""")
-            except sqlite3.OperationalError:
-                return
+            except sqlite3.OperationalError as error:
+                logging.exception(error)
 
             while dataset := await cursor.fetchone():
                 yield dataset
 
-    def get_dataset(self):
+    def get_dataset(self) -> list[UserTrackRequest] | None:
         """get the current request list for display"""
         if not self.databasefile.exists():
             logging.error("%s does not exist, refusing to get_dataset.", self.databasefile)
             return None
 
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = connection.cursor()
-            try:
+        def _do_get_dataset():
+            with sqlite3.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = connection.cursor()
                 cursor.execute("""SELECT * FROM userrequest""")
-            except sqlite3.OperationalError:
-                return None
+                dataset = cursor.fetchall()
+                if not dataset:
+                    return None
+                return dataset
 
-            dataset = cursor.fetchall()
-            if not dataset:
-                return None
-        return dataset
+        try:
+            return self._retry_sync_sqlite_operation(_do_get_dataset)
+        except sqlite3.OperationalError:
+            logging.exception("Failed to get dataset after retries")
+            return None
 
     def _request_window_load(self, **kwargs):
         """fill in a row on the request window"""
@@ -856,20 +1161,20 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             self.widgets.close()
 
 
-class RequestSettings:
+class TrackRequestSettings:
     """for settings UI"""
 
     def __init__(self):
         self.widget = None
         self.enablegifwords = False
 
-    def connect(self, uihelp, widget):  # pylint: disable=unused-argument
+    def connect(self, uihelp: "nowplaying.uihelp.UIHelp", widget: QWidget):  # pylint: disable=unused-argument
         """connect buttons"""
         self.widget = widget
         widget.add_button.clicked.connect(self.on_add_button)
         widget.del_button.clicked.connect(self.on_del_button)
 
-    def _row_load(self, widget, **kwargs):
+    def _row_load(self, widget: QWidget, **kwargs):
         def _typebox(current, enablegifwords=False):
             box = QComboBox()
             reqtypes = ["Generic", "Roulette", "Twofer"]
@@ -896,7 +1201,7 @@ class RequestSettings:
                 widget.request_table.setItem(row, column, QTableWidgetItem(""))
         widget.request_table.resizeColumnsToContents()
 
-    def load(self, config, widget):
+    def load(self, config: "nowplaying.config.ConfigFile", widget: QWidget):
         """load the settings window"""
 
         def clear_table(widget):
@@ -926,11 +1231,15 @@ class RequestSettings:
         )
         widget.enable_checkbox.setChecked(config.cparser.value("settings/requests", type=bool))
 
+        # Load fuzzy matching threshold setting
+        threshold = config.cparser.value("requests/fuzzythreshold", type=int, defaultValue=85)
+        widget.fuzzy_threshold_spinbox.setValue(threshold)
+
     @staticmethod
-    def save(config, widget, subprocesses):  # pylint: disable=unused-argument
+    def save(config: "nowplaying.config.ConfigFile", widget: QWidget, subprocesses):  # pylint: disable=unused-argument
         """update the twitch settings"""
 
-        def reset_commands(widget, config):
+        def reset_commands(widget: QWidget, config: QSettings):
             for configitem in config.allKeys():
                 if "request-" in configitem:
                     config.remove(configitem)
@@ -953,10 +1262,14 @@ class RequestSettings:
         )
         config.cparser.setValue("twitchbot/chatrequests", widget.enable_chat_checkbox.isChecked())
         config.cparser.setValue("settings/requests", widget.enable_checkbox.isChecked())
+
+        # Save fuzzy matching threshold setting
+        config.cparser.setValue("requests/fuzzythreshold", widget.fuzzy_threshold_spinbox.value())
+
         reset_commands(widget.request_table, config.cparser)
 
     @staticmethod
-    def verify(widget):
+    def verify(widget: QWidget):
         """verify the settings are good"""
 
         count = widget.request_table.rowCount()
