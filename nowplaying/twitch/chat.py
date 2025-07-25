@@ -14,37 +14,43 @@ from typing import Any
 
 import aiohttp  # pylint: disable=import-error
 import aiohttp.client_exceptions
-
 import jinja2  # pylint: disable=import-error
-
-from twitchAPI.twitch import Twitch  # pylint: disable=import-error
-from twitchAPI.type import AuthScope  # pylint: disable=import-error
-from twitchAPI.chat import Chat, ChatEvent, ChatCommand, ChatMessage  # pylint: disable=import-error
-from twitchAPI.oauth import validate_token  # pylint: disable=import-error
-
-from PySide6.QtCore import QCoreApplication, QStandardPaths, Slot  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
+    QCoreApplication,
+    QStandardPaths,
+    Slot,
+)
 from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
     QCheckBox,
     QDialog,
     QDialogButtonBox,
-    QVBoxLayout,
     QLabel,
     QTableWidgetItem,
+    QVBoxLayout,
 )
+from twitchAPI.chat import (  # pylint: disable=import-error
+    Chat,
+    ChatCommand,
+    ChatEvent,
+    ChatMessage,
+)
+from twitchAPI.oauth import validate_token  # pylint: disable=import-error
+from twitchAPI.twitch import Twitch  # pylint: disable=import-error
+from twitchAPI.type import AuthScope  # pylint: disable=import-error
 
 import nowplaying.config
 import nowplaying.db
-from nowplaying.exceptions import PluginVerifyError
 import nowplaying.trackrequests
 import nowplaying.twitch.oauth2
 import nowplaying.twitch.utils
-from nowplaying.types import TrackMetadata
 import nowplaying.utils
+from nowplaying.exceptions import PluginVerifyError
 from nowplaying.twitch.constants import (
-    TWITCHBOT_CHECKBOXES,
-    TWITCH_MESSAGE_LIMIT,
     SPLITMESSAGETEXT,
+    TWITCH_MESSAGE_LIMIT,
+    TWITCHBOT_CHECKBOXES,
 )
+from nowplaying.types import TrackMetadata
 
 LASTANNOUNCED = {"artist": None, "title": None}
 
@@ -344,7 +350,7 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
     async def on_twitchchat_incoming_message(self, msg: ChatMessage):
         """handle incoming chat messages for special responses"""
         # Check for modernmeerkat greeting (once per program launch)
-        if not self.modernmeerkat_greeted and "modernmeerkat" in msg.user.display_name.lower():
+        if not self.modernmeerkat_greeted and msg.user.display_name.lower() == "modernmeerkat":
             self.modernmeerkat_greeted = True
             try:
                 await self.chat.send_message(
@@ -411,8 +417,10 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
     async def do_command(self, msg: ChatMessage):  # pylint: disable=unused-argument
         """process a command"""
 
-        metadata = {"cmduser": msg.user.display_name}
+        commandchar = self.config.cparser.value("twitchbot/commandchar") or "!"
+        metadata = {"cmduser": msg.user.display_name, "cmdchar": commandchar}
         commandlist = msg.text[1:].split()
+        metadata["cmdname"] = commandlist[0] if commandlist else ""
         metadata["cmdtarget"] = []
         if len(commandlist) > 1:
             for usercheck in commandlist[1:]:
@@ -421,7 +429,11 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
                 else:
                     metadata["cmdtarget"].append(usercheck)
 
-        cmdfile = f"twitchbot_{commandlist[0]}.txt"
+        # Check if this is a help request: first and only parameter is "help"
+        if len(commandlist) == 2 and commandlist[1].lower() == "help":
+            cmdfile = f"twitchbot_{commandlist[0]}_help.txt"
+        else:
+            cmdfile = f"twitchbot_{commandlist[0]}.txt"
 
         if not self.check_command_perms(msg.user.badges, commandlist[0]):
             return

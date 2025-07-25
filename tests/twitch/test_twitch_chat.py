@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Unit tests for Twitch chat functionality."""
+# pylint: disable=protected-access
 
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
@@ -79,21 +80,20 @@ async def test_modernmeerkat_no_duplicate_greeting(bootstrap):
 
 @pytest.mark.asyncio
 async def test_modernmeerkat_case_insensitive(bootstrap):
-    """Test that modernmeerkat matching is case insensitive."""
+    """Test that modernmeerkat matching is case insensitive but exact."""
     config = bootstrap
     stopevent = asyncio.Event()
 
     config.cparser.setValue("twitchbot/channel", "testchannel")
 
-    test_cases = [
+    # Only exact matches should trigger greeting (case insensitive)
+    valid_cases = [
+        "modernmeerkat",
         "ModernMeerkat",
         "MODERNMEERKAT",
-        "modernmeerkat_fan",
-        "TheModernMeerkat",
-        "modernmeerkat123",
     ]
 
-    for username in test_cases:
+    for username in valid_cases:
         # Create fresh chat instance for each test
         chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=stopevent)
         chat.chat = AsyncMock()
@@ -126,6 +126,10 @@ async def test_regular_users_no_greeting(bootstrap):
         "moderator",
         "meerkat",  # partial match shouldn't trigger
         "modern",  # partial match shouldn't trigger
+        "modernmeerkatbot",  # should not trigger (was bug)
+        "modernmeerkat_fan",  # should not trigger
+        "TheModernMeerkat",  # should not trigger (prefix)
+        "modernmeerkat123",  # should not trigger (suffix)
     ]
 
     for username in regular_users:
@@ -236,3 +240,165 @@ def test_verify_command_character():
     mock_widget.commandchar_lineedit.text.return_value = "!"
     # Should not raise an exception
     nowplaying.twitch.chat.TwitchChatSettings.verify(mock_widget)
+
+
+@pytest.mark.asyncio
+async def test_help_command_detection(bootstrap):
+    """Test that help parameter triggers help template."""
+    config = bootstrap
+    stopevent = asyncio.Event()
+
+    config.cparser.setValue("twitchbot/commandchar", "!")
+
+    chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=stopevent)
+    chat._post_template = AsyncMock()
+    chat.check_command_perms = MagicMock(return_value=True)
+
+    user = MockUser("testuser")
+    message = MockMessage(user, "!track help")
+
+    await chat.do_command(message)
+
+    # Should call _post_template with help template
+    chat._post_template.assert_called_once()
+    _, kwargs = chat._post_template.call_args
+    assert kwargs["templatein"] == "twitchbot_track_help.txt"
+
+    stopevent.set()
+
+
+@pytest.mark.asyncio
+async def test_help_command_case_insensitive(bootstrap):
+    """Test that help detection is case insensitive."""
+    config = bootstrap
+    stopevent = asyncio.Event()
+
+    config.cparser.setValue("twitchbot/commandchar", "!")
+
+    chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=stopevent)
+    chat._post_template = AsyncMock()
+    chat.check_command_perms = MagicMock(return_value=True)
+
+    user = MockUser("testuser")
+
+    for help_text in ["help", "HELP", "Help", "hElP"]:
+        message = MockMessage(user, f"!track {help_text}")
+
+        await chat.do_command(message)
+
+        # Should call _post_template with help template
+        chat._post_template.assert_called_with(
+            msg=message,
+            templatein="twitchbot_track_help.txt",
+            moremetadata={
+                "cmduser": "testuser",
+                "cmdchar": "!",
+                "cmdname": "track",
+                "cmdtarget": [help_text],
+            },
+        )
+        chat._post_template.reset_mock()
+
+    stopevent.set()
+
+
+@pytest.mark.asyncio
+async def test_help_must_be_only_parameter(bootstrap):
+    """Test that help must be the first and only parameter."""
+    config = bootstrap
+    stopevent = asyncio.Event()
+
+    config.cparser.setValue("twitchbot/commandchar", "!")
+
+    chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=stopevent)
+    chat._post_template = AsyncMock()
+    chat.check_command_perms = MagicMock(return_value=True)
+
+    user = MockUser("testuser")
+
+    # These should NOT trigger help
+    test_cases = [
+        "!track help me",  # Extra parameter
+        "!track something help",  # Help not first
+        "!track",  # No parameters
+    ]
+
+    for command_text in test_cases:
+        message = MockMessage(user, command_text)
+
+        await chat.do_command(message)
+
+        # Should use normal template, not help
+        chat._post_template.assert_called_once()
+        _, kwargs = chat._post_template.call_args
+        assert kwargs["templatein"] == "twitchbot_track.txt"
+        chat._post_template.reset_mock()
+
+    stopevent.set()
+
+
+@pytest.mark.asyncio
+async def test_different_commands_help(bootstrap):
+    """Test help works with different command names."""
+    config = bootstrap
+    stopevent = asyncio.Event()
+
+    config.cparser.setValue("twitchbot/commandchar", "!")
+
+    chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=stopevent)
+    chat._post_template = AsyncMock()
+    chat.check_command_perms = MagicMock(return_value=True)
+
+    user = MockUser("testuser")
+
+    test_cases = [
+        ("!request help", "twitchbot_request_help.txt"),
+        ("!artistshortbio help", "twitchbot_artistshortbio_help.txt"),
+        ("!previoustrack help", "twitchbot_previoustrack_help.txt"),
+        ("!trackdetail help", "twitchbot_trackdetail_help.txt"),
+    ]
+
+    for command_text, expected_template in test_cases:
+        message = MockMessage(user, command_text)
+
+        await chat.do_command(message)
+
+        chat._post_template.assert_called_once()
+        _, kwargs = chat._post_template.call_args
+        assert kwargs["templatein"] == expected_template
+        chat._post_template.reset_mock()
+
+    stopevent.set()
+
+
+@pytest.mark.asyncio
+async def test_command_metadata_variables(bootstrap):
+    """Test that cmdchar and cmdname are set correctly in metadata."""
+    config = bootstrap
+    stopevent = asyncio.Event()
+
+    config.cparser.setValue("twitchbot/commandchar", "?")
+
+    chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=stopevent)
+    chat._post_template = AsyncMock()
+    chat.check_command_perms = MagicMock(return_value=True)
+
+    user = MockUser("testuser")
+    message = MockMessage(user, "?song help")
+
+    await chat.do_command(message)
+
+    chat._post_template.assert_called_once()
+    _, kwargs = chat._post_template.call_args
+
+    # Check template
+    assert kwargs["templatein"] == "twitchbot_song_help.txt"
+
+    # Check metadata
+    metadata = kwargs["moremetadata"]
+    assert metadata["cmdchar"] == "?"
+    assert metadata["cmdname"] == "song"
+    assert metadata["cmduser"] == "testuser"
+    assert metadata["cmdtarget"] == ["help"]
+
+    stopevent.set()

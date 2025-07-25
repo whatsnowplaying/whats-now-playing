@@ -1,0 +1,1 @@
+{{ cmdchar }}{{ cmdname }} shows detailed track metadata: track #, album, disc, language, genre, BPM, key, composer, label, date. Optional: {{ cmdchar }}{{ cmdname }} @username to mention someone.
