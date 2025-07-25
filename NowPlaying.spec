@@ -20,8 +20,8 @@ WINVERSFILE = os.path.join('bincomponents', 'winvers.bin')
 
 def collect_all_nowplaying_modules():
     """Automatically discover and collect all nowplaying plugin modules"""
-    # Get the nowplaying package directory relative to this spec file
-    nowplaying_dir = os.path.join(os.path.dirname(__file__), 'nowplaying')
+    # Get the nowplaying package directory relative to the current working directory
+    nowplaying_dir = os.path.join(os.getcwd(), 'nowplaying')
 
     # Find all subdirectories that contain an __init__.py (are Python packages)
     plugin_packages = []
