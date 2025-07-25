@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """NowPlaying as run via python -m"""
 
+
+import contextlib
 # import faulthandler
 import logging
 import multiprocessing
@@ -12,6 +14,13 @@ import sys
 from PySide6.QtCore import QCoreApplication, Qt  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtGui import QIcon  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtWidgets import QApplication  # pylint: disable=import-error, no-name-in-module
+
+# PyInstaller splash screen support
+try:
+    import pyi_splash  # pylint: disable=import-error
+except ImportError:
+    pyi_splash = None
+
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -45,12 +54,16 @@ def run_bootstrap(bundledir: str | None = None) -> pathlib.Path:  # pragma: no c
     return logpath
 
 
-def actualmain():  # pragma: no cover
+def actualmain():    # pragma: no cover
     """main entrypoint"""
 
     multiprocessing.freeze_support()
     # faulthandler.enable()
 
+    # Update splash screen if running from PyInstaller
+    if pyi_splash and pyi_splash.is_alive():
+        with contextlib.suppress(ConnectionError, RuntimeError):
+            pyi_splash.update_text("Starting NowPlaying...")
     bundledir = nowplaying.frozen.frozen_init(None)
     exitval = 1
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
@@ -59,11 +72,19 @@ def actualmain():  # pragma: no cover
     nowplaying.bootstrap.set_qt_names()
     try:
         with nowplaying.singleinstance.SingleInstance():
+            if pyi_splash and pyi_splash.is_alive():
+                with contextlib.suppress(ConnectionError, RuntimeError):
+                    pyi_splash.update_text("Initializing...")
             logpath = run_bootstrap(bundledir=bundledir)
 
             if not nowplaying.bootstrap.verify_python_version():
                 sys.exit(1)
 
+            # Close PyInstaller splash before showing custom startup window
+            if pyi_splash and pyi_splash.is_alive():
+                with contextlib.suppress(ConnectionError, RuntimeError):
+                    pyi_splash.update_text("Loading interface...")
+                    pyi_splash.close()
             # Show startup window AFTER bootstrap but BEFORE heavy initialization
             startup_window = nowplaying.startup.StartupWindow(bundledir=bundledir)
             startup_window.show()
@@ -80,6 +101,8 @@ def actualmain():  # pragma: no cover
             tray = nowplaying.systemtray.Tray(startup_window=startup_window)  # pylint: disable=unused-variable
             icon = QIcon(str(config.iconfile))
             qapp.setWindowIcon(icon)
+
+            # PyInstaller splash already closed earlier
 
             # Close startup window if it still exists
             if startup_window and startup_window.isVisible():
