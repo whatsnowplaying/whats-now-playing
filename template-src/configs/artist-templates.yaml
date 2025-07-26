@@ -1,0 +1,56 @@
+---
+template_families:
+  artist_images:
+    base: websocket-base
+    description: "Artist artwork displays (logo, banner, thumbnail, fanart)"
+    common_css:
+      - obs-compatibility
+      - image-display
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-artistlogo-nofade:
+        title: "covercard"
+        description: "Artist Logo Display"
+        body_layout: single-image-layout
+        display_js: single-image-display
+        image_field: artistlogo
+
+      ws-artistbanner-nofade:
+        title: "artistbanner"
+        description: "Artist Banner Display"
+        body_layout: single-image-layout
+        display_js: single-image-display
+        image_field: artistbanner
+
+      ws-artistthumb-nofade:
+        title: "thumbnail"
+        description: "Artist Thumbnail Display"
+        body_layout: single-image-layout
+        display_js: single-image-display
+        image_field: artistthumbnail
+
+      ws-justthecover:
+        title: "covercard"
+        description: "Just The Cover Image"
+        body_layout: single-image-layout
+        display_js: single-image-display
+        image_field: coverimage
+
+  artist_fanart:
+    base: websocket-base
+    description: "Artist fanart with special streaming endpoint"
+    common_css:
+      - obs-compatibility
+      - image-display
+    common_websocket:
+      - fanart-streamer
+
+    templates:
+      ws-artistfanart-nofade:
+        title: "covercard"
+        description: "Artist Fanart Display"
+        body_layout: single-image-layout
+        display_js: single-image-display
+        image_field: artistfanart

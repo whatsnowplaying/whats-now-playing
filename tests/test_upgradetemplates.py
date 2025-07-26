@@ -38,6 +38,44 @@ def compare_content(srcdir, destdir, conflict=None):
     _compare_directory_recursive(srcdir, destdir, conflict)
 
 
+def _is_binary_file(filepath):
+    """Check if a file is binary by examining its extension or content"""
+    binary_extensions = {
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".eot",
+        ".ico",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+    }
+    if any(filepath.lower().endswith(ext) for ext in binary_extensions):
+        return True
+    return False
+
+
+def _compare_files(srcfn, destfn):
+    """Compare two files, handling both text and binary files"""
+    if _is_binary_file(srcfn):
+        # Binary comparison
+        with open(srcfn, "rb") as src, open(destfn, "rb") as dest:
+            return src.read() == dest.read()
+    else:
+        # Text comparison with UTF-8 encoding
+        try:
+            with (
+                open(srcfn, "r", encoding="utf-8") as src,
+                open(destfn, "r", encoding="utf-8") as dest,
+            ):
+                return list(src) == list(dest)
+        except UnicodeDecodeError:
+            # Fallback to binary comparison if UTF-8 fails
+            with open(srcfn, "rb") as src, open(destfn, "rb") as dest:
+                return src.read() == dest.read()
+
+
 def _compare_directory_recursive(srcdir, destdir, conflict=None):
     """recursively compare directories
 
@@ -72,10 +110,10 @@ def _compare_directory_recursive(srcdir, destdir, conflict=None):
             newname = filename.replace(".txt", ".new")
             newname = newname.replace(".htm", ".new")
             newdestfn = os.path.join(destdir, newname)
-            assert filename and list(open(srcfn)) != list(open(destfn))  # pylint: disable=consider-using-with, unspecified-encoding
-            assert filename and list(open(srcfn)) == list(open(newdestfn))  # pylint: disable=consider-using-with, unspecified-encoding
+            assert filename and not _compare_files(srcfn, destfn)
+            assert filename and _compare_files(srcfn, newdestfn)
         else:
-            assert filename and list(open(srcfn)) == list(open(destfn))  # pylint: disable=consider-using-with, unspecified-encoding
+            assert filename and _compare_files(srcfn, destfn)
 
 
 def test_upgrade_blank(upgrade_bootstrap):  # pylint: disable=redefined-outer-name
@@ -132,9 +170,9 @@ def test_upgrade_old(upgrade_bootstrap, getroot):  # pylint: disable=redefined-o
     touchfile = os.path.join(destdir, "songquotes.txt")
     pathlib.Path(touchfile).touch()
     nowplaying.upgrades.templates.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
-    assert list(open(os.path.join(srcdir, "songquotes.txt"))) == list(  # pylint: disable=consider-using-with, unspecified-encoding
-        open(os.path.join(destdir, "songquotes.new"))  # pylint: disable=consider-using-with, unspecified-encoding
-    )  # pylint: disable=consider-using-with, unspecified-encoding
+    assert _compare_files(
+        os.path.join(srcdir, "songquotes.txt"), os.path.join(destdir, "songquotes.new")
+    )
     compare_content(srcdir, destdir, conflict=touchfile)
 
 

@@ -1,0 +1,24 @@
+---
+template_families:
+  basic_websocket:
+    base: websocket-base
+    description: "Basic WebSocket templates with real-time updates"
+    common_css:
+      - obs-compatibility
+      - basic-text
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-basic-web:
+        title: "Titlecard"
+        description: "Basic WebSocket Display"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+
+
+      ws-cover-title-artist:
+        title: "Now Playing"
+        description: "Cover, Title, Artist WebSocket Display"
+        body_layout: basic-text-layout
+        display_js: basic-text-display

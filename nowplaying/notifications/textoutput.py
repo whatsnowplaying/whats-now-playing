@@ -164,9 +164,7 @@ class Plugin(NotificationPlugin):
         template_file = qwidget.texttemplate_lineedit.text().strip()
 
         if output_file:
-            if not template_file:
-                raise PluginVerifyError("Template file path is required when using text output")
-            if not pathlib.Path(template_file).exists():
+            if template_file and not pathlib.Path(template_file).exists():
                 raise PluginVerifyError(f"Template file does not exist: {template_file}")
         elif template_file:
             raise PluginVerifyError("Output file path is required when using text output")

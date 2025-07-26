@@ -1,0 +1,31 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>{{template_title}}</title>
+    {%- if font_link %}
+    <link href="{{font_link}}" rel="stylesheet" type="text/css" />
+    {%- endif %}
+    {%- if external_imports %}
+    {{external_imports}}
+    {%- endif %}
+    <style>
+        {{css_content}}
+    </style>
+    {%- if refresh_rate %}
+    <meta http-equiv="refresh" content="{{refresh_rate}}">
+    {%- endif %}
+</head>
+
+<body>
+    {{body_content}}
+
+    {%- if js_content %}
+    <script type="text/javascript">
+        {{js_content}}
+    </script>
+    {%- endif %}
+</body>
+
+</html>

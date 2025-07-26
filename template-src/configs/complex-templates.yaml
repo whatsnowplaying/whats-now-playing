@@ -1,0 +1,15 @@
+---
+template_families:
+  complex_websocket:
+    base: websocket-base
+    description: "Complex WebSocket templates with multiple endpoints"
+    common_css:
+      - obs-compatibility
+
+    templates:
+      ws-coverslideshow:
+        title: "Cover Slideshow"
+        description: "Cover slideshow using multiple WebSocket endpoints"
+        body_layout: coverslideshow-layout
+        display_js: coverslideshow-complex
+        custom_css: [coverslideshow]

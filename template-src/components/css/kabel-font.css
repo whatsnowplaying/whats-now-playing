@@ -1,0 +1,8 @@
+/* Kabel Font Face Declaration */
+@font-face {
+    font-family: "Kabel";
+    src: url("vendor/kabel.woff2") format("woff2"),
+         url("vendor/kabel.woff") format("woff");
+    font-weight: normal;
+    font-style: normal;
+}

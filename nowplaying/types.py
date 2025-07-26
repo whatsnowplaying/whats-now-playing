@@ -112,6 +112,7 @@ class BaseTrackRequest(TypedDict, total=False):
 
     reqid: int
     timestamp: str
+    type: str
 
 
 class UserTrackRequest(BaseTrackRequest, total=False):
@@ -121,7 +122,6 @@ class UserTrackRequest(BaseTrackRequest, total=False):
     artist: str | None
     title: str | None
     displayname: str | None
-    type: str
     playlist: str | None
     username: str
     filename: str | None

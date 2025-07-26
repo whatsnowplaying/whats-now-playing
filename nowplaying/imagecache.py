@@ -21,6 +21,7 @@ from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.bootstrap
 import nowplaying.utils
+import nowplaying.utils.sqlite
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
 if TYPE_CHECKING:
@@ -388,15 +389,16 @@ ORDER BY TIMESTAMP DESC""")
             self.cache[cachekey] = image
 
         normalidentifier = nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True)
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = connection.cursor()
 
-            sql = """
+        def _do_put():
+            with sqlite3.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = connection.cursor()
+
+                sql = """
 INSERT OR REPLACE INTO
  identifiersha(srclocation, identifier, cachekey, imagetype) VALUES(?, ?, ?, ?);
 """
-            try:
                 cursor.execute(
                     sql,
                     (
@@ -406,10 +408,14 @@ INSERT OR REPLACE INTO
                         imagetype,
                     ),
                 )
-            except sqlite3.OperationalError as error:
-                self._log_sqlite_error(error)
-                return False
-        return True
+                connection.commit()
+
+        try:
+            nowplaying.utils.sqlite.retry_sqlite_operation(_do_put)
+            return True
+        except sqlite3.OperationalError:
+            logging.exception("Failed to put cachekey after retries: %s", srclocation)
+            return False
 
     @staticmethod
     def _log_sqlite_error(error: sqlite3.Error) -> None:
@@ -428,16 +434,16 @@ INSERT OR REPLACE INTO
             logging.error("imagecache does not exist yet?")
             return
 
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = connection.cursor()
+        def _do_put_srclocation():
+            with sqlite3.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = connection.cursor()
 
-            sql = """
+                sql = """
 INSERT INTO
 identifiersha(srclocation, identifier, imagetype)
 VALUES (?,?,?);
 """
-            try:
                 cursor.execute(
                     sql,
                     (
@@ -446,13 +452,17 @@ VALUES (?,?,?);
                         imagetype,
                     ),
                 )
-            except sqlite3.IntegrityError as error:
-                if "UNIQUE" in str(error):
-                    logging.debug("Duplicate srclocation (%s), ignoring", srclocation)
-                else:
-                    logging.error(error)
-            except sqlite3.OperationalError as error:
+                connection.commit()
+
+        try:
+            nowplaying.utils.sqlite.retry_sqlite_operation(_do_put_srclocation)
+        except sqlite3.IntegrityError as error:
+            if "UNIQUE" in str(error):
+                logging.debug("Duplicate srclocation (%s), ignoring", srclocation)
+            else:
                 logging.error(error)
+        except sqlite3.OperationalError:
+            logging.exception("Failed to put srclocation %s after retries", srclocation)
 
     def erase_srclocation(self, srclocation: str) -> None:
         """remove source location from database"""
@@ -462,13 +472,18 @@ VALUES (?,?,?);
             return
 
         logging.debug("Erasing %s", srclocation)
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = connection.cursor()
-            try:
+
+        def _do_erase():
+            with sqlite3.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = connection.cursor()
                 cursor.execute("DELETE FROM identifiersha WHERE srclocation=?;", (srclocation,))
-            except sqlite3.OperationalError:
-                return
+                connection.commit()
+
+        try:
+            nowplaying.utils.sqlite.retry_sqlite_operation(_do_erase)
+        except sqlite3.OperationalError:
+            logging.exception("Failed to erase srclocation %s after retries", srclocation)
 
     def erase_cachekey(self, cachekey: str) -> None:
         """remove cache key from database and requeue source"""
@@ -610,12 +625,21 @@ VALUES (?,?,?);
                 batch = self._get_next_queue_batch(recently_processed)
 
                 if not batch:
-                    time.sleep(2)
+                    # Clean up old entries from tracking when no work available
+                    self._cleanup_queue_tracking(recently_processed)
+                    time.sleep(5)  # Wait longer when nothing to process
                     continue
 
                 # Filter out stop signal and process remaining items
                 items_to_process = [item for item in batch if item["srclocation"] != "STOPWNP"]
                 should_stop = len(items_to_process) != len(batch)  # STOPWNP was found
+
+                # If no items to process after filtering, clean up and wait longer
+                if not items_to_process and not should_stop:
+                    # Clean up old entries from tracking
+                    self._cleanup_queue_tracking(recently_processed)
+                    time.sleep(5)  # Wait longer when nothing to process
+                    continue
 
                 # Submit batch for processing if there are items
                 if items_to_process:

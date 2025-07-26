@@ -1,3 +1,4 @@
+# yamllint disable rule:line-length
 ---
 name: Static Linting
 
@@ -27,6 +28,7 @@ jobs:
           basedir: ./src
           patchdir: ./out
           githubtoken: ${{ secrets.GITHUB_TOKEN }}
+          plugins: 'all,-asflicense,-author,-findbugs,-gitlab,-jira,-jshint,-shelldocs'
       - name: Artifact output
         if: ${{ always() }}
         uses: actions/upload-artifact@v4

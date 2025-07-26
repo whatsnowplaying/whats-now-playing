@@ -237,3 +237,8 @@ pyrightconfig.json.bak
 .pytest_tmp/
 test-reports/
 
+# Template build system - generated files should not be in source control
+nowplaying/templates/*.htm
+nowplaying/templates/vendor/
+template-src/vendor/
+

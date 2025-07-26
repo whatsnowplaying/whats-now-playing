@@ -1,0 +1,121 @@
+/* Typing effects styling for Typed.js template */
+
+body {
+    background-color: #000;
+    font-family: 'Courier New', monospace;
+    margin: 0;
+    padding: 20px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.typing-container {
+    text-align: center;
+    max-width: 90%;
+    color: #00ff00;
+    font-size: 2em;
+    line-height: 1.4;
+}
+
+.typed-cursor {
+    opacity: 1;
+    animation: blink 1s infinite;
+    color: #00ff00;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+.artist-line {
+    margin-bottom: 10px;
+    min-height: 1.4em;
+}
+
+.title-line {
+    margin-bottom: 10px;
+    min-height: 1.4em;
+}
+
+.album-line {
+    margin-bottom: 10px;
+    min-height: 1.4em;
+    font-style: italic;
+    opacity: 0.8;
+}
+
+/* Different typing speeds for visual variety */
+.fast-typing {
+    --typing-speed: 50ms;
+}
+
+.normal-typing {
+    --typing-speed: 80ms;
+}
+
+.slow-typing {
+    --typing-speed: 120ms;
+}
+
+/* Error styling for mistakes */
+.error-text {
+    color: #ff4444;
+    text-decoration: line-through;
+}
+
+/* Retro terminal styling option */
+.terminal-style {
+    background-color: #001100;
+    color: #00ff00;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    text-shadow: 0 0 5px #00ff00;
+}
+
+.terminal-style::before {
+    content: '> ';
+    color: #00aa00;
+}
+
+/* Typewriter styling option */
+.typewriter-style {
+    background-color: #f5f5dc;
+    color: #333;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+/* Matrix-style green on black */
+.matrix-style {
+    background-color: #000;
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 10px #00ff41;
+}
+
+/* Amber terminal */
+.amber-style {
+    background-color: #000;
+    color: #ffb000;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 5px #ffb000;
+}
+
+/* Debug info styling */
+.debug-info {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 12px;
+    border-radius: 5px;
+    max-width: 300px;
+    z-index: 1000;
+}
