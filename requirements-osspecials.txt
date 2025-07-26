@@ -1,4 +1,4 @@
 pyicu==2.15.2 ; sys_platform == 'linux' or sys_platform == 'darwin'
-dbus-fast==2.44.1 ; sys_platform == 'linux'
+dbus-fast==2.44.2 ; sys_platform == 'linux'
 winrt-windows-storage-streams ; sys_platform == 'win32'
 winrt-windows-media-control ; sys_platform == 'win32'
