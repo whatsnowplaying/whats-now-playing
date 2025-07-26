@@ -402,3 +402,40 @@ async def test_command_metadata_variables(bootstrap):
     assert metadata["cmdtarget"] == ["help"]
 
     stopevent.set()
+
+
+@pytest.mark.asyncio
+async def test_configurable_help_keyword(bootstrap):
+    """Test that help keyword can be configured for different languages."""
+    config = bootstrap
+    stopevent = asyncio.Event()
+
+    # Set custom help keyword (e.g., French "aide")
+    config.cparser.setValue("twitchbot/commandchar", "!")
+    config.cparser.setValue("twitchbot/helpkeyword", "aide")
+
+    chat = nowplaying.twitch.chat.TwitchChat(config=config, stopevent=stopevent)
+    chat._post_template = AsyncMock()
+    chat.check_command_perms = MagicMock(return_value=True)
+
+    user = MockUser("testuser")
+
+    # Test with configured keyword
+    message = MockMessage(user, "!track aide")
+    await chat.do_command(message)
+
+    chat._post_template.assert_called_once()
+    _, kwargs = chat._post_template.call_args
+    assert kwargs["templatein"] == "twitchbot_track_aide.txt"
+
+    chat._post_template.reset_mock()
+
+    # Test that "help" no longer works
+    message = MockMessage(user, "!track help")
+    await chat.do_command(message)
+
+    chat._post_template.assert_called_once()
+    _, kwargs = chat._post_template.call_args
+    assert kwargs["templatein"] == "twitchbot_track.txt"  # Normal template, not help
+
+    stopevent.set()

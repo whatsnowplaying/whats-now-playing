@@ -22,7 +22,7 @@
      <x>10</x>
      <y>30</y>
      <width>624</width>
-     <height>71</height>
+     <height>101</height>
     </rect>
    </property>
    <layout class="QFormLayout" name="settings_layout">
@@ -78,6 +78,35 @@
       </property>
      </widget>
     </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="helpkeyword_label">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Help Keyword</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QLineEdit" name="helpkeyword_lineedit">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>496</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="text">
+       <string>help</string>
+      </property>
+      <property name="toolTip">
+       <string>Keyword to trigger help for commands (e.g., !track help). Localize this for non-English streams.</string>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QCheckBox" name="enable_checkbox">
@@ -100,7 +129,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>100</y>
+     <y>113</y>
      <width>103</width>
      <height>25</height>
     </rect>
@@ -116,7 +145,7 @@
    <property name="geometry">
     <rect>
      <x>240</x>
-     <y>100</y>
+     <y>113</y>
      <width>381</width>
      <height>25</height>
     </rect>
@@ -135,7 +164,7 @@
    <property name="geometry">
     <rect>
      <x>140</x>
-     <y>100</y>
+     <y>113</y>
      <width>83</width>
      <height>25</height>
     </rect>
@@ -148,9 +177,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>170</y>
+     <y>178</y>
      <width>611</width>
-     <height>230</height>
+     <height>227</height>
     </rect>
    </property>
    <property name="alternatingRowColors">
@@ -209,7 +238,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>410</y>
+     <y>415</y>
      <width>621</width>
      <height>32</height>
     </rect>
@@ -235,7 +264,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>140</y>
+     <y>148</y>
      <width>321</width>
      <height>20</height>
     </rect>
@@ -375,6 +404,38 @@
     <hint type="destinationlabel">
      <x>180</x>
      <y>149</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>helpkeyword_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>80</x>
+     <y>61</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>76</x>
+     <y>287</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>helpkeyword_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>80</x>
+     <y>61</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>388</x>
+     <y>287</y>
     </hint>
    </hints>
   </connection>

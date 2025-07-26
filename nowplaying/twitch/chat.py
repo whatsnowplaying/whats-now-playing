@@ -429,9 +429,13 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
                 else:
                     metadata["cmdtarget"].append(usercheck)
 
-        # Check if this is a help request: first and only parameter is "help"
-        if len(commandlist) == 2 and commandlist[1].lower() == "help":
-            cmdfile = f"twitchbot_{commandlist[0]}_help.txt"
+        # Check if this is a help request: first and only parameter matches help keyword
+        help_keyword: str = self.config.cparser.value(
+            "twitchbot/helpkeyword", defaultValue="help", type=str
+        )
+        help_keyword = help_keyword.lower()
+        if len(commandlist) == 2 and commandlist[1].lower() == help_keyword:
+            cmdfile = f"twitchbot_{commandlist[0]}_{help_keyword}.txt"
         else:
             cmdfile = f"twitchbot_{commandlist[0]}.txt"
 
@@ -813,6 +817,9 @@ class TwitchChatSettings:
         widget.announce_lineedit.setText(config.cparser.value("twitchbot/announce"))
         widget.commandchar_lineedit.setText(config.cparser.value("twitchbot/commandchar"))
         widget.announce_delay_lineedit.setText(config.cparser.value("twitchbot/announcedelay"))
+        widget.helpkeyword_lineedit.setText(
+            config.cparser.value("twitchbot/helpkeyword", defaultValue="help")
+        )
         widget.replies_checkbox.setChecked(config.cparser.value("twitchbot/usereplies", type=bool))
 
     @staticmethod
@@ -843,6 +850,7 @@ class TwitchChatSettings:
         config.cparser.setValue("twitchbot/commandchar", widget.commandchar_lineedit.text())
 
         config.cparser.setValue("twitchbot/announcedelay", widget.announce_delay_lineedit.text())
+        config.cparser.setValue("twitchbot/helpkeyword", widget.helpkeyword_lineedit.text())
         config.cparser.setValue("twitchbot/usereplies", widget.replies_checkbox.isChecked())
 
         reset_commands(widget.command_perm_table, config.cparser)
