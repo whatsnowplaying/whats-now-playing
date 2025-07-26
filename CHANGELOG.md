@@ -3,12 +3,17 @@
 
 ## Version 5.0.0 - in-progress
 
-* Twitch:
-  * Replaced PubSub with EventSub WebSocket for Twitch Redemptions
-  * User friendly ways to authenticate the app
-
 * Major New Features:
-  * New startup window system - modal progress tracking with failsafe timers
+  * New startup window system shows progress tracking with failsafe timers
+  * Fuzzy matching for track requests now handles some typos and natural language input
+  * Configurable fuzzy match threshold (50-100%) in requests UI
+  * Several new template variables
+  * New notifications plugin system with remote server support
+    * Text Output was moved here!
+  * Twitch:
+    * Replaced PubSub with EventSub WebSocket for Twitch Redemptions
+    * User friendly ways to authenticate the app
+    * Added contextual help system for chat commands (e.g., !track help)
 
 * Important Upgrades
   * Completely revamped documentation website to make it easy to pick your version
@@ -18,6 +23,11 @@
   * Python 3.11 is now the base version
   * WinMedia is now using the winrt set of modules
   * Python types are slowly getting added
+  * Added comprehensive TypedDict definitions for track requests
+  * Improved requests database reliability with retry logic for Windows
+  * Enhanced PyInstaller build system with automatic module discovery
+  * Switched to `ruff` code formatter
+  * Switched to `mkdocs` for website
 
 ## Version 4.2.0 - 2025-06-30
 
