@@ -25,6 +25,7 @@ import jinja2
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 from nowplaying.webserver.images_websocket import ImagesWebSocketHandler
+from nowplaying.webserver.gifwords_websocket import GifwordsWebSocketHandler
 from nowplaying.webserver.static_handlers import StaticContentHandler
 
 #
@@ -93,7 +94,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         self._init_webdb()
         self.stopevent = stopevent
 
-        # Initialize WebSocket handler
+        # Initialize WebSocket handlers
         self.images_ws_handler = ImagesWebSocketHandler(
             stopevent=self.stopevent,
             ws_key=WS_KEY,
@@ -101,6 +102,11 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             metadb_key=METADB_KEY,
             config_key=CONFIG_KEY,
             metadata_key=METADATA_KEY,
+        )
+
+        self.gifwords_ws_handler = GifwordsWebSocketHandler(
+            stopevent=self.stopevent,
+            config_key=CONFIG_KEY,
         )
 
         # Initialize static content handler
@@ -146,6 +152,17 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             await asyncio.sleep(0.5)
         await self.forced_stop()
 
+    async def config_refresh_task(self, app: web.Application):
+        """Background task to periodically refresh config from main process"""
+        while not nowplaying.utils.safe_stopevent_check(self.stopevent):
+            try:
+                await asyncio.sleep(30)  # Refresh every 30 seconds
+                if not nowplaying.utils.safe_stopevent_check(self.stopevent):
+                    app[CONFIG_KEY].get()
+                    logging.debug("Webserver config refreshed")
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error("Config refresh task error: %s", error)
+
     @staticmethod
     def _base64ifier(metadata: TrackMetadata):
         """replace all the binary data with base64 data"""
@@ -165,53 +182,19 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 metadata[key] = nowplaying.utils.TRANSPARENT_PNG_BIN
         return self._base64ifier(metadata)
 
-    async def websocket_gifwords_streamer(self, request: web.Request):
-        """handle continually streamed updates"""
-        websocket = web.WebSocketResponse()
-        await websocket.prepare(request)
-        request.app[WS_KEY].add(websocket)
-        endloop = False
-
-        trackrequest = nowplaying.trackrequests.Requests(request.app[CONFIG_KEY])
-
-        try:
-            while (
-                not nowplaying.utils.safe_stopevent_check(self.stopevent)
-                and not endloop
-                and not websocket.closed
-            ):
-                metadata = await trackrequest.check_for_gifwords()
-                if not metadata.get("image"):
-                    await websocket.send_json({"noimage": True})
-                    await asyncio.sleep(5)
-                    continue
-
-                metadata["imagebase64"] = base64.b64encode(metadata["image"]).decode("utf-8")
-                del metadata["image"]
-                try:
-                    if websocket.closed:
-                        break
-                    await websocket.send_json(metadata)
-                except ConnectionResetError:
-                    logging.debug("Lost a client")
-                    endloop = True
-                await asyncio.sleep(20)
-            if not websocket.closed:
-                await websocket.send_json({"last": True})
-
-        except Exception as error:  # pylint: disable=broad-except
-            logging.error("websocket gifwords streamer exception: %s", error)
-        finally:
-            await websocket.close()
-            request.app[WS_KEY].discard(websocket)
-        return websocket
-
     async def websocket_artistfanart_streamer(self, request: web.Request):
         """handle continually streamed updates"""
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
         request.app[WS_KEY].add(websocket)
         endloop = False
+        config_refresh_counter = 0
+
+        # Get session ID from query parameters
+        session_id = request.query.get("session_id", "unknown")
+        logging.info(
+            "Session %s: Artistfanart streamer connected from %s", session_id, request.remote
+        )
 
         try:
             while (
@@ -247,13 +230,23 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 except ConnectionResetError:
                     logging.debug("Lost a client")
                     endloop = True
+
+                # Refresh config every 10 iterations to pick up setting changes
+                config_refresh_counter += 1
+                if config_refresh_counter >= 10:
+                    request.app[CONFIG_KEY].get()
+                    config_refresh_counter = 0
+
                 delay = request.app[CONFIG_KEY].cparser.value("artistextras/fanartdelay", type=int)
                 await asyncio.sleep(delay)
             if not websocket.closed:
                 await websocket.send_json({"last": True})
         except Exception as error:  # pylint: disable=broad-except
-            logging.error("websocket artistfanart streamer exception: %s", error)
+            logging.error(
+                "Session %s: websocket artistfanart streamer exception: %s", session_id, error
+            )
         finally:
+            logging.info("Session %s: Artistfanart streamer disconnected", session_id)
             await websocket.close()
             request.app[WS_KEY].discard(websocket)
         return websocket
@@ -293,6 +286,12 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         await websocket.prepare(request)
         request.app[WS_KEY].add(websocket)
 
+        # Get session ID from query parameters
+        session_id = request.query.get("session_id", "unknown")
+        logging.info(
+            "Session %s: WebSocket streamer connected from %s", session_id, request.remote
+        )
+
         try:
             mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
             while (
@@ -308,8 +307,9 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             if not websocket.closed:
                 await websocket.send_json({"last": True})
         except Exception as error:  # pylint: disable=broad-except
-            logging.error("websocket streamer exception: %s", error)
+            logging.error("Session %s: websocket streamer exception: %s", session_id, error)
         finally:
+            logging.info("Session %s: WebSocket streamer disconnected", session_id)
             await websocket.close()
             request.app[WS_KEY].discard(websocket)
         return websocket
@@ -439,8 +439,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get("/ws", self.websocket_handler),
                 web.get("/wsstream", self.websocket_streamer),
                 web.get("/wsartistfanartstream", self.websocket_artistfanart_streamer),
-                web.get("/wsgifwordsstream", self.websocket_gifwords_streamer),
+                web.get("/wsgifwordsstream", self.gifwords_ws_handler.websocket_gifwords_streamer),
                 web.get("/v1/images/ws", self.images_ws_handler.websocket_images_handler),
+                web.get("/nowplaying-websocket.js", self.static_handler.nowplaying_js_handler),
+                web.get(r"/{template_name:.+\.htm}", self.static_handler.template_handler),
                 web.get(f"/{self.magicstopurl}", self.stop_server),
             ]
         )
@@ -451,9 +453,22 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         runner = self.create_runner()
         await runner.setup()
         site = web.TCPSite(runner, host, port)
-        task = asyncio.create_task(self.stopeventtask())
-        self.tasks.add(task)
-        task.add_done_callback(self.tasks.discard)
+
+        # Start background tasks
+        stop_task = asyncio.create_task(self.stopeventtask())
+        self.tasks.add(stop_task)
+        stop_task.add_done_callback(self.tasks.discard)
+
+        config_task = asyncio.create_task(self.config_refresh_task(runner.app))
+        self.tasks.add(config_task)
+        config_task.add_done_callback(self.tasks.discard)
+
+        gifwords_task = asyncio.create_task(
+            self.gifwords_ws_handler.gifwords_broadcast_task(runner.app)
+        )
+        self.tasks.add(gifwords_task)
+        gifwords_task.add_done_callback(self.tasks.discard)
+
         await site.start()
 
     async def on_startup(self, app: web.Application):
@@ -467,6 +482,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             "/httpstatic/",
             path=staticdir,
         )
+
+        # Add static file serving for vendor files only
+        template_dir = app[CONFIG_KEY].getbundledir().joinpath("templates")
+        app.router.add_static("/vendor/", path=template_dir / "vendor", name="vendor")
         app[METADB_KEY] = nowplaying.db.MetadataDB()
         app[IC_KEY] = nowplaying.imagecache.ImageCache()
         app[WATCHER_KEY] = app[METADB_KEY].watcher()

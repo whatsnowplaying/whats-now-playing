@@ -1,0 +1,17 @@
+/* Basic Text Template Styles */
+.container {
+    margin: 1px;
+    float: left;
+    text-transform: uppercase;
+    line-height: 50%;
+}
+
+.title {
+    font-size: 36px;
+    font-family: "Helvetica";
+}
+
+.artist {
+    font-size: 24px;
+    font-family: "Helvetica";
+}

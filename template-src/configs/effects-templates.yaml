@@ -1,0 +1,122 @@
+---
+template_families:
+  explode_effects:
+    base: websocket-base
+    description: "Text displays with explode effects using anime.js"
+    external_js:
+      - "vendor/anime.min.js"
+    common_css:
+      - obs-compatibility
+      - basic-text
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-explodeblack:
+        title: "Titlecard"
+        description: "Black Text with Explode Effect"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        effects: [explode-effects]
+        color: black
+
+      ws-explodewhite:
+        title: "Titlecard"
+        description: "White Text with Explode Effect"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        effects: [explode-effects]
+        color: white
+
+  spin_effects:
+    base: websocket-base
+    description: "Text displays with spin effects using anime.js"
+    external_js:
+      - "vendor/anime.min.js"
+    common_css:
+      - obs-compatibility
+      - basic-text
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-spinblack:
+        title: "Titlecard"
+        description: "Black Text with Spin Effect"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        effects: [spin-effects]
+        color: black
+
+      ws-spinwhite:
+        title: "Titlecard"
+        description: "White Text with Spin Effect"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        effects: [spin-effects]
+        color: white
+
+  slide_effects:
+    base: websocket-base
+    description: "Text displays with slide down/up effects"
+    common_css:
+      - obs-compatibility
+      - basic-text
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-slidedownup-black:
+        title: "Titlecard"
+        description: "Black Text with Slide Effects"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        effects: [slidedown-effects]
+        color: black
+
+      ws-slidedownup-white:
+        title: "Titlecard"
+        description: "White Text with Slide Effects"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        effects: [slidedown-effects]
+        color: white
+
+  typing_effects:
+    base: websocket-base
+    description: "Typewriter effects with realistic mistakes using Typed.js"
+    external_js:
+      - "vendor/typed.min.js"
+    common_css:
+      - obs-compatibility
+      - typing_effects
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-typing-terminal:
+        title: "Typewriter Terminal"
+        description: "Terminal-style typing effect with mistakes"
+        body_layout: typing_layout
+        display_js: typed_effects
+
+      ws-typing-matrix:
+        title: "Typewriter Matrix"
+        description: "Matrix-style green typing effect"
+        body_layout: typing_layout
+        display_js: typed_effects
+        body_class: matrix-style
+
+      ws-typing-amber:
+        title: "Typewriter Amber"
+        description: "Amber terminal typing effect"
+        body_layout: typing_layout
+        display_js: typed_effects
+        body_class: amber-style
+
+      ws-typing-classic:
+        title: "Typewriter Classic"
+        description: "Classic typewriter effect on paper"
+        body_layout: typing_layout
+        display_js: typed_effects
+        body_class: typewriter-style

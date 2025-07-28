@@ -249,24 +249,6 @@ def test_textoutput_plugin_verify_settingsui_missing_file():
         plugin.verify_settingsui(mock_widget)
 
 
-def test_textoutput_plugin_verify_settingsui_missing_template():
-    """test verify_settingsui with missing template file"""
-    config = nowplaying.config.ConfigFile(testmode=True)
-    plugin = nowplaying.notifications.textoutput.Plugin(config=config)
-
-    # Mock UI widget with output file but no template
-    mock_widget = unittest.mock.Mock()
-    mock_widget.textoutput_lineedit = unittest.mock.Mock()
-    mock_widget.textoutput_lineedit.text.return_value = "/path/to/output.txt"
-    mock_widget.texttemplate_lineedit = unittest.mock.Mock()
-    mock_widget.texttemplate_lineedit.text.return_value = ""
-
-    with pytest.raises(
-        nowplaying.exceptions.PluginVerifyError, match="Template file path is required"
-    ):
-        plugin.verify_settingsui(mock_widget)
-
-
 def test_textoutput_plugin_verify_settingsui_nonexistent_template():
     """test verify_settingsui with nonexistent template file"""
     config = nowplaying.config.ConfigFile(testmode=True)

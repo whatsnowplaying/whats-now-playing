@@ -1,0 +1,33 @@
+---
+template_families:
+  gifwords:
+    base: websocket-base
+    description: "GIF word displays with fade effects"
+    common_css:
+      - obs-compatibility
+      - gifwords-display
+    common_websocket:
+      - gifwords-streamer
+
+    templates:
+      ws-gifwords-fade:
+        title: "gifwords"
+        description: "GIF Words with Fade"
+        body_layout: gifwords-layout
+        display_js: gifwords-display
+        effects: [gifwords-fade-effects]
+
+  special_layouts:
+    base: websocket-base
+    description: "Special purpose templates"
+    common_css:
+      - obs-compatibility
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-requests:
+        title: "Request Display"
+        description: "Track Request Display"
+        body_layout: basic-text-layout
+        display_js: basic-text-display

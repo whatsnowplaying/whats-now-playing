@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 import tinytag
 import url_normalize
 
+import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.hostmeta
 import nowplaying.musicbrainz
@@ -721,6 +722,12 @@ def recognition_replacement(
 
 def main() -> None:
     """entry point as a standalone app"""
+    if len(sys.argv) < 2:
+        print("Usage:")
+        print("  python -m nowplaying.metadata <filename>")
+        print("  python -m nowplaying.metadata <artist> <title>")
+        sys.exit(1)
+
     logging.basicConfig(
         format="%(asctime)s %(process)d %(threadName)s %(module)s:%(funcName)s:%(lineno)d "
         + "%(levelname)s %(message)s",
@@ -728,9 +735,28 @@ def main() -> None:
         level=logging.DEBUG,
     )
     logging.captureWarnings(True)
+
+    # Bootstrap Qt for proper configuration
+    nowplaying.bootstrap.set_qt_names()
+
     bundledir = os.path.abspath(os.path.dirname(__file__))
     config = nowplaying.config.ConfigFile(bundledir=bundledir)
-    testmeta = {"filename": sys.argv[1]}
+
+    testmeta: TrackMetadata = {}
+    # Handle either filename or artist + title
+    if len(sys.argv) == 2:
+        # Single argument - treat as filename
+        testmeta = {"filename": sys.argv[1]}
+    elif len(sys.argv) == 3:
+        # Two arguments - treat as artist and title
+        testmeta = {"artist": sys.argv[1], "title": sys.argv[2]}
+    else:
+        print("Error: Too many arguments")
+        print("Usage:")
+        print("  python -m nowplaying.metadata <filename>")
+        print("  python -m nowplaying.metadata <artist> <title>")
+        sys.exit(1)
+
     myclass = MetadataProcessors(config=config)
     testdata = asyncio.run(myclass.getmoremetadata(metadata=testmeta))
     if "coverimageraw" in testdata:

@@ -104,6 +104,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def on_m3u_dir_button(self):
         """filename button clicked action"""
 
+    @staticmethod
+    def settingsui():
+        """Remote input plugin has no settings UI"""
+
     def connect_settingsui(self, qwidget: "QWidget", uihelp):
         """connect m3u button to filename picker"""
         self.qwidget = qwidget

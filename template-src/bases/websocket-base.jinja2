@@ -1,0 +1,28 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>{{template_title}}</title>
+    {%- if font_link %}
+    <link href="{{font_link}}" rel="stylesheet" type="text/css" />
+    {%- endif %}
+    {%- if external_imports %}
+    {{external_imports}}
+    {%- endif %}
+    <style>
+        {{css_content}}
+    </style>
+    <script src="vendor/jquery.min.js"></script>
+    <script src="/nowplaying-websocket.js"></script>
+</head>
+
+<body>
+    {{body_content}}
+
+    <script type="text/javascript">
+        {{js_content}}
+    </script>
+</body>
+
+</html>

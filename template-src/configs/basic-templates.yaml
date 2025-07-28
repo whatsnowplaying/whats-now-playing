@@ -1,0 +1,70 @@
+# yamllint disable rule:line-length
+---
+template_families:
+  basic_text:
+    base: websocket-base
+    description: "Simple text displays in various colors"
+    common_css:
+      - obs-compatibility
+      - basic-text
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-basicblack:
+        title: "Titlecard"
+        description: "Basic Black Text"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        color: black
+
+      ws-basicblue:
+        title: "Titlecard"
+        description: "Basic Blue Text"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        color: blue
+
+      ws-basicwhite:
+        title: "Titlecard"
+        description: "Basic White Text"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        color: white
+
+      ws-basicyellow:
+        title: "Titlecard"
+        description: "Basic Yellow Text"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        color: yellow
+
+  generic_dj_tryhard:
+    base: websocket-base
+    description: "The same boring titlecard every DJ uses because they lack creativity"
+    common_css:
+      - obs-compatibility
+      - generic-dj-layout
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-unoriginal-dj-clone:
+        title: "Unoriginal DJ Clone"
+        description: "Congrats, you look exactly like every other DJ now"
+        body_layout: generic-dj-layout
+        display_js: generic-dj-display
+
+      ws-basic-bro-vibes:
+        title: "Basic Bro Vibes"
+        description: "For when you want to blend into the crowd of indistinguishable DJs"
+        body_layout: generic-dj-layout
+        display_js: generic-dj-display
+        css: generic-dj-layout-transparent
+
+      ws-cookie-cutter-dj:
+        title: "Cookie Cutter DJ"
+        description: "Mass-produced DJ aesthetic - now with 100% less personality! (Blue Edition)"
+        body_layout: generic-dj-layout
+        display_js: generic-dj-display
+        css: generic-dj-layout-blue

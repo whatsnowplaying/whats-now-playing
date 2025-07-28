@@ -1,0 +1,37 @@
+---
+template_families:
+  anime_effects:
+    base: websocket-base
+    description: "Templates using anime.js animations"
+    external_js:
+      - "vendor/anime.min.js"
+    common_css:
+      - obs-compatibility
+      - anime-styles
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-anime-elastic:
+        title: "Anime Elastic"
+        description: "Elastic scale animation with anime.js"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        effects: [anime-effects]
+        color: "#FF6B6B"
+
+      ws-anime-bounce:
+        title: "Anime Bounce"
+        description: "Bouncy animation with anime.js"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        effects: [anime-bounce]
+        color: "#4ECDC4"
+
+      ws-anime-stagger:
+        title: "Anime Stagger"
+        description: "Advanced staggered animations with anime.js"
+        body_layout: basic-text-layout
+        display_js: basic-text-display
+        effects: [anime-advanced]
+        color: "#A8E6CF"

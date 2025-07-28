@@ -45,10 +45,13 @@ jobs:
           python3.12 -m venv /tmp/venv
           source /tmp/venv/bin/activate
           python3.12 -m pip install --upgrade pip
-          pip install ".[test,osspecials]"
-          pip uninstall -y nowplaying
+          pip install -e ".[test,osspecials,dev]"
+      - name: special dependencies
+        run: |
+          source /tmp/venv/bin/activate
           versioningit --write
-          python3.12 setupnltk.py
+          /tmp/venv/bin/python tools/setupnltk.py
+          /tmp/venv/bin/python tools/build_templates.py
       - name: tests
         shell: bash
         run: |
@@ -109,10 +112,12 @@ jobs:
         run: |
           python fix_win_ver.py
           python -m pip install --upgrade pip
-          pip install ".[test,osspecials]"
-          pip uninstall -y nowplaying
+          pip install -e ".[test,osspecials,dev]"
+      - name: special dependencies
+        run: |
           versioningit --write
-          python setupnltk.py
+          python tools/setupnltk.py
+          python tools/build_templates.py
       - name: tests
         shell: bash
         run: |
@@ -208,10 +213,13 @@ jobs:
           python3 -m venv /tmp/venv
           source /tmp/venv/bin/activate
           python3 -m pip install --upgrade pip
-          pip install ".[test,osspecials]"
-          pip uninstall -y nowplaying
+          pip install -e ".[test,osspecials,dev]"
+      - name: special dependencies
+        run: |
+          source /tmp/venv/bin/activate
           versioningit --write
-          python setupnltk.py
+          /tmp/venv/bin/python tools/setupnltk.py
+          /tmp/venv/bin/python tools/build_templates.py
       - name: tests
         shell: bash
         run: |
@@ -270,7 +278,7 @@ jobs:
           python3 -m venv /tmp/venv
           source /tmp/venv/bin/activate
           python3 -m pip install --upgrade pip
-          pip install ".[test]"
+          pip install -e ".[test]"
       - name: download coverage files
         uses: actions/download-artifact@v4
         with:

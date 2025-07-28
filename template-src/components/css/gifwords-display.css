@@ -1,0 +1,19 @@
+/* Gifwords Image Display Styles - Optimized for animated GIFs */
+.image-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+/* Optimize animated GIFs to fill viewport while staying in bounds */
+img {
+    max-width: 100vw;
+    max-height: 100vh;
+    width: 100vw;
+    height: 100vh;
+    object-fit: contain;
+    object-position: center;
+}

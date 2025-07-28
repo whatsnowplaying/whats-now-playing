@@ -42,7 +42,7 @@ the OBS source wherever you would like.
 
 | URL | Description |
 |----|----|
-| /index.md (or /index.htm or just /) | This URL generates either a title card based upon the preconfigured template or a refresh document. The title card will be given exactly once upon connection with the refresh document being returned in subsequent connections until a new track has been detected. This process allows for using fades and other HTML tricks. |
+| /index.md (or /index.htm or just /) | This URL generates either a title card based upon the preconfigured template. |
 | /index.txt | Same output as the text output in the General settings. |
 | /cover.png | This URL will return the cover image, if available. |
 | /httpstatic/ | Any content in\`Documents/NowPlaying/httpstatic\` will get served under this URL. |

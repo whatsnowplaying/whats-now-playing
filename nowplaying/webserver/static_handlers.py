@@ -5,6 +5,7 @@ import base64
 import logging
 import os
 import secrets
+import uuid
 from typing import TYPE_CHECKING
 
 from aiohttp import web
@@ -69,6 +70,47 @@ class StaticContentHandler:
     async def requesterlaunch_htm_handler(self, request: web.Request):
         """handle web output"""
         return await self._metacheck_htm_handler(request, "weboutput/requestertemplate")
+
+    async def template_handler(self, request: web.Request):
+        """handle direct template file requests"""
+        template_name = request.match_info.get("template_name")
+        if not template_name or not template_name.endswith(".htm"):
+            return web.Response(status=404, text="Template not found")
+
+        # Security: prevent directory traversal
+        if "/" in template_name or "\\" in template_name or ".." in template_name:
+            return web.Response(status=403, text="Invalid template name")
+
+        config = request.app[self.config_key]
+        template_path = config.getbundledir().joinpath("templates", template_name)
+
+        if not template_path.exists():
+            return web.Response(status=404, text="Template not found")
+
+        try:
+            # Generate unique session ID for this template request
+            session_id = str(uuid.uuid4())[:8]  # Short session ID
+            logging.info(
+                "Session %s: Template request for %s from %s",
+                session_id,
+                template_name,
+                request.remote,
+            )
+
+            metadata = await request.app[self.metadb_key].read_last_meta_async()
+            if not metadata:
+                metadata = nowplaying.hostmeta.gethostmeta()
+                metadata["httpport"] = config.cparser.value("weboutput/httpport", type=int)
+
+            # Add session ID to metadata for template use
+            metadata["session_id"] = session_id
+
+            templatehandler = nowplaying.utils.TemplateHandler(filename=str(template_path))
+            htmloutput = templatehandler.generate(metadata)
+            return web.Response(content_type="text/html", text=htmloutput)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            logging.exception("template_handler error for %s: %s", template_name, err)
+            return web.Response(status=500, text="Template error")
 
     async def _htm_handler(
         self, request: web.Request, template: str, metadata: TrackMetadata | None = None
@@ -172,6 +214,69 @@ class StaticContentHandler:
                 txtoutput = ""
         return web.Response(text=txtoutput)
 
+    async def nowplaying_js_handler(self, request: web.Request):
+        """serve the nowplaying WebSocket JavaScript library"""
+        config = request.app[self.config_key]
+        js_path = config.getbundledir().joinpath("templates", "nowplaying-websocket.js")
+
+        if js_path.exists():
+            with open(js_path, "r", encoding="utf-8") as fhin:
+                js_content = fhin.read()
+            return web.Response(text=js_content, content_type="application/javascript")
+
+        return web.Response(status=404, text="Library not found")
+
+    async def vendor_handler(self, request: web.Request):
+        """serve vendor files (JavaScript and fonts)"""
+        vendor_file = request.match_info.get("vendor_file")
+        if not vendor_file:
+            return web.Response(status=404, text="Vendor file not found")
+
+        # Allow specific file extensions (case-insensitive)
+        allowed_extensions = (".js", ".woff", ".woff2", ".ttf", ".eot")
+        if not vendor_file.lower().endswith(allowed_extensions):
+            return web.Response(status=404, text="Vendor file type not supported")
+
+        # Security: prevent directory traversal
+        if "/" in vendor_file or "\\" in vendor_file or ".." in vendor_file:
+            return web.Response(status=403, text="Invalid vendor file name")
+
+        config = request.app[self.config_key]
+        vendor_path = config.getbundledir().joinpath("templates", "vendor", vendor_file)
+
+        if not vendor_path.exists():
+            return web.Response(status=404, text="Vendor file not found")
+
+        content_type: str | None = None
+        content: str | bytes | None = None
+        # Determine content type based on file extension
+        if vendor_file.endswith(".js"):
+            content_type = "application/javascript"
+            with open(vendor_path, "r", encoding="utf-8") as fhin:
+                content = fhin.read()
+
+        if vendor_file.endswith(".woff"):
+            content_type = "font/woff"
+            with open(vendor_path, "rb") as fhin:
+                content = fhin.read()
+
+        if vendor_file.endswith(".woff2"):
+            content_type = "font/woff2"
+            with open(vendor_path, "rb") as fhin:
+                content = fhin.read()
+
+        if vendor_file.endswith(".ttf"):
+            content_type = "font/ttf"
+            with open(vendor_path, "rb") as fhin:
+                content = fhin.read()
+
+        if vendor_file.endswith(".eot"):
+            content_type = "application/vnd.ms-fontobject"
+            with open(vendor_path, "rb") as fhin:
+                content = fhin.read()
+
+        return web.Response(body=content, content_type=content_type)
+
     async def favicon_handler(self, request: web.Request):
         """handle favicon.ico"""
         return web.FileResponse(path=request.app[self.config_key].iconfile)
@@ -185,7 +290,7 @@ class StaticContentHandler:
         try:
             metadata = await request.app[self.metadb_key].read_last_meta_async()
             if metadata and metadata.get(imgtype):
-                image = metadata[imgtype]
+                image: bytes = metadata[imgtype]
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.exception("_image_handler: %s", err)
         return web.Response(content_type="image/png", body=image)

@@ -40,6 +40,7 @@ from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-modu
 import nowplaying.db
 import nowplaying.metadata
 import nowplaying.utils
+import nowplaying.utils.sqlite
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.types import (  # pylint: disable=import-error
     GifWordsTrackRequest,
@@ -283,40 +284,6 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             return text
         return ""
 
-    @staticmethod
-    async def _retry_async_sqlite_operation(operation_func, max_retries=3, base_delay=0.1):
-        """Retry async SQLite operations with exponential backoff for database lock issues"""
-        for attempt in range(max_retries):
-            try:
-                return await operation_func()
-            except sqlite3.OperationalError as error:
-                if "database is locked" in str(error).lower() and attempt < max_retries - 1:
-                    delay = base_delay * (2**attempt)  # exponential backoff: 0.1s, 0.2s, 0.4s
-                    logging.debug(
-                        "Database locked, retry %d/%d after %fs", attempt + 1, max_retries, delay
-                    )
-                    await asyncio.sleep(delay)
-                    continue
-                logging.exception("SQLite operation failed after retries")
-                raise
-
-    @staticmethod
-    def _retry_sync_sqlite_operation(operation_func, max_retries=3, base_delay=0.1):
-        """Retry sync SQLite operations with exponential backoff for database lock issues"""
-        for attempt in range(max_retries):
-            try:
-                return operation_func()
-            except sqlite3.OperationalError as error:
-                if "database is locked" in str(error).lower() and attempt < max_retries - 1:
-                    delay = base_delay * (2**attempt)  # exponential backoff: 0.1s, 0.2s, 0.4s
-                    logging.debug(
-                        "Database locked, retry %d/%d after %fs", attempt + 1, max_retries, delay
-                    )
-                    time.sleep(delay)
-                    continue
-                logging.exception("SQLite operation failed after retries")
-                raise
-
     async def add_to_db(self, data: UserTrackRequest):
         """add an entry to the db"""
         if not self.databasefile.exists():
@@ -355,7 +322,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 await connection.commit()
 
         try:
-            await self._retry_async_sqlite_operation(_do_add_to_db)
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_add_to_db)
         except sqlite3.OperationalError:
             logging.exception("Failed to add to database after retries")
 
@@ -416,7 +383,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 connection.commit()
 
         try:
-            self._retry_sync_sqlite_operation(_do_erase)
+            nowplaying.utils.sqlite.retry_sqlite_operation(_do_erase)
         except sqlite3.OperationalError:
             logging.exception("Failed to erase request ID %s after retries", reqid)
 
@@ -527,7 +494,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 result,
                 row_to_delete,
                 row_to_add_to_dupelist,
-            ) = await self._retry_async_sqlite_operation(_do_lookup)
+            ) = await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_lookup)
 
             # Delete the row after closing the async connection to avoid database locks
             if row_to_delete is not None:
@@ -799,6 +766,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                         "SELECT * from userrequest WHERE filename=? ORDER BY timestamp DESC",
                         datatuple,
                     )
+                    rows_to_process = []
                     while row := await cursor.fetchone():
                         logging.debug(
                             "calling user_roulette_request: %s %s %s",
@@ -806,16 +774,23 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                             row["playlist"],
                             row["reqid"],
                         )
-                # need to this outside of the aiosqlite call to avoid DB locks
-                await self.user_roulette_request(
-                    {"playlist": row["playlist"]}, row["username"], "", row["reqid"]
-                )
+                        rows_to_process.append(dict(row))
+
+                # need to do this outside of the aiosqlite call to avoid DB locks
+                for row_data in rows_to_process:
+                    await self.user_roulette_request(
+                        {"playlist": row_data["playlist"]},
+                        row_data["username"],
+                        "",
+                        row_data["reqid"],
+                    )
             except Exception as error:  # pylint: disable=broad-except
                 logging.exception(error)
 
     async def check_for_gifwords(self) -> GifWordsTrackRequest:
         """check if a gifword has been requested"""
         content: GifWordsTrackRequest = {"requester": None, "image": None, "keywords": None}
+        reqid = None
         try:
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
@@ -828,7 +803,8 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                         "keywords": row["keywords"],
                     }
                     reqid = row["reqid"]
-            await self.erase_gifwords_id(reqid)
+            if reqid is not None:
+                await self.erase_gifwords_id(reqid)
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("check for gifwords exception: %s", err)
         return content
@@ -1088,7 +1064,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 return dataset
 
         try:
-            return self._retry_sync_sqlite_operation(_do_get_dataset)
+            return nowplaying.utils.sqlite.retry_sqlite_operation(_do_get_dataset)
         except sqlite3.OperationalError:
             logging.exception("Failed to get dataset after retries")
             return None

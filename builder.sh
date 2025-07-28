@@ -90,7 +90,13 @@ echo "*****"
 echo "* Setting up NLTK"
 echo "****"
 
-"${PYTHONBIN}"  setupnltk.py
+"${PYTHONBIN}"  tools/setupnltk.py
+
+echo "*****"
+echo "* Update templates"
+echo "****"
+
+"${PYTHONBIN}" tools/build_templates.py
 
 echo "*****"
 echo "* Compiling Qt resources"
