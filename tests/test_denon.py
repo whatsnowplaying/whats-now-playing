@@ -5,6 +5,8 @@
 import pytest
 
 import nowplaying.inputs.denon
+from nowplaying.denon import StagelinqError
+from nowplaying.denon.protocol import StagelinqProtocol
 
 
 @pytest.fixture
@@ -37,7 +39,7 @@ async def test_token_generation():
     """Test token generation follows StagelinQ protocol requirements"""
     # Generate multiple tokens to test MSb constraint
     for _ in range(100):
-        token = nowplaying.inputs.denon.Plugin._generate_token()
+        token = StagelinqProtocol.generate_token()
         assert len(token) == 16
         assert token[0] & 0x80 == 0  # MSb must be 0
 
@@ -91,26 +93,26 @@ async def test_extract_numeric_value(denon_plugin):
     """Test numeric value extraction from StagelinQ data"""
     # Test with valid data field
     data = {"data": 0.75}
-    result = denon_plugin._extract_numeric_value(data)
+    result = denon_plugin.metadata_processor._extract_numeric_value(data)
     assert result == 0.75
 
     # Test with value field
     data = {"value": 0.5}
-    result = denon_plugin._extract_numeric_value(data)
+    result = denon_plugin.metadata_processor._extract_numeric_value(data)
     assert result == 0.5
 
     # Test with no valid fields
     data = {"other": "invalid"}
-    result = denon_plugin._extract_numeric_value(data, default=0.25)
+    result = denon_plugin.metadata_processor._extract_numeric_value(data, default=0.25)
     assert result == 0.25
 
     # Test with non-dict input
-    result = denon_plugin._extract_numeric_value("not_dict", default=0.1)
+    result = denon_plugin.metadata_processor._extract_numeric_value("not_dict", default=0.1)
     assert result == 0.1
 
     # Test with invalid numeric value
     data = {"data": "not_a_number"}
-    result = denon_plugin._extract_numeric_value(data, default=0.3)
+    result = denon_plugin.metadata_processor._extract_numeric_value(data, default=0.3)
     assert result == 0.3
 
 
@@ -118,13 +120,13 @@ async def test_extract_numeric_value(denon_plugin):
 async def test_get_crossfader_position(denon_plugin):
     """Test crossfader position retrieval"""
     # Test with no crossfader data (should default to center)
-    denon_plugin.current_metadata = {}
-    result = denon_plugin._get_crossfader_position()
+    denon_plugin.metadata_processor.current_metadata = {}
+    result = denon_plugin.metadata_processor._get_crossfader_position()
     assert result == 0.5
 
     # Test with crossfader data
-    denon_plugin.current_metadata = {"/Mixer/CrossfaderPosition": {"data": 0.8}}
-    result = denon_plugin._get_crossfader_position()
+    denon_plugin.metadata_processor.current_metadata = {"/Mixer/CrossfaderPosition": {"data": 0.8}}
+    result = denon_plugin.metadata_processor._get_crossfader_position()
     assert result == 0.8
 
 
@@ -133,7 +135,7 @@ async def test_calculate_effective_volume_fader_zero(denon_plugin):
     """Test effective volume calculation with zero fader"""
     # Any deck with fader at 0 should have 0 effective volume
     for deck in [1, 2, 3, 4]:
-        result = denon_plugin._calculate_effective_volume(deck, 0.0, 0.5)
+        result = denon_plugin.metadata_processor._calculate_effective_volume(deck, 0.0, 0.5)
         assert result == 0.0
 
 
@@ -143,21 +145,21 @@ async def test_calculate_effective_volume_left_decks(denon_plugin):
     fader_pos = 0.8
 
     # Crossfader full left - left decks should be audible
-    result = denon_plugin._calculate_effective_volume(1, fader_pos, 0.0)
+    result = denon_plugin.metadata_processor._calculate_effective_volume(1, fader_pos, 0.0)
     assert result == fader_pos
 
-    result = denon_plugin._calculate_effective_volume(3, fader_pos, 0.0)
+    result = denon_plugin.metadata_processor._calculate_effective_volume(3, fader_pos, 0.0)
     assert result == fader_pos
 
     # Crossfader full right - left decks should be silent
-    result = denon_plugin._calculate_effective_volume(1, fader_pos, 1.0)
+    result = denon_plugin.metadata_processor._calculate_effective_volume(1, fader_pos, 1.0)
     assert result == 0.0
 
-    result = denon_plugin._calculate_effective_volume(3, fader_pos, 1.0)
+    result = denon_plugin.metadata_processor._calculate_effective_volume(3, fader_pos, 1.0)
     assert result == 0.0
 
     # Crossfader center - left decks should be audible
-    result = denon_plugin._calculate_effective_volume(1, fader_pos, 0.5)
+    result = denon_plugin.metadata_processor._calculate_effective_volume(1, fader_pos, 0.5)
     assert result == fader_pos
 
 
@@ -167,21 +169,21 @@ async def test_calculate_effective_volume_right_decks(denon_plugin):
     fader_pos = 0.8
 
     # Crossfader full right - right decks should be audible
-    result = denon_plugin._calculate_effective_volume(2, fader_pos, 1.0)
+    result = denon_plugin.metadata_processor._calculate_effective_volume(2, fader_pos, 1.0)
     assert result == fader_pos
 
-    result = denon_plugin._calculate_effective_volume(4, fader_pos, 1.0)
+    result = denon_plugin.metadata_processor._calculate_effective_volume(4, fader_pos, 1.0)
     assert result == fader_pos
 
     # Crossfader full left - right decks should be silent
-    result = denon_plugin._calculate_effective_volume(2, fader_pos, 0.0)
+    result = denon_plugin.metadata_processor._calculate_effective_volume(2, fader_pos, 0.0)
     assert result == 0.0
 
-    result = denon_plugin._calculate_effective_volume(4, fader_pos, 0.0)
+    result = denon_plugin.metadata_processor._calculate_effective_volume(4, fader_pos, 0.0)
     assert result == 0.0
 
     # Crossfader center - right decks should be audible
-    result = denon_plugin._calculate_effective_volume(2, fader_pos, 0.5)
+    result = denon_plugin.metadata_processor._calculate_effective_volume(2, fader_pos, 0.5)
     assert result == fader_pos
 
 
@@ -192,13 +194,13 @@ async def test_calculate_effective_volume_crossfader_transition(denon_plugin):
 
     # Test transition zone for left deck (0.5 < pos <= 0.8)
     # At crossfader 0.65, left deck should be partially audible
-    result = denon_plugin._calculate_effective_volume(1, fader_pos, 0.65)
+    result = denon_plugin.metadata_processor._calculate_effective_volume(1, fader_pos, 0.65)
     expected = fader_pos * (1.0 - ((0.65 - 0.5) / 0.3))  # Should be 0.5
     assert abs(result - expected) < 0.01
 
     # Test transition zone for right deck (0.2 <= pos < 0.5)
     # At crossfader 0.35, right deck should be partially audible
-    result = denon_plugin._calculate_effective_volume(2, fader_pos, 0.35)
+    result = denon_plugin.metadata_processor._calculate_effective_volume(2, fader_pos, 0.35)
     expected = fader_pos * ((0.35 - 0.2) / 0.3)  # Should be 0.5
     assert abs(result - expected) < 0.01
 
@@ -207,7 +209,7 @@ async def test_calculate_effective_volume_crossfader_transition(denon_plugin):
 async def test_getplayingtrack_single_audible_deck(denon_plugin):
     """Test track selection with single audible deck"""
     # Set up metadata for one playing, audible track
-    denon_plugin.current_metadata = {
+    denon_plugin.metadata_processor.current_metadata = {
         "/Engine/Deck1/Play": {"state": True},
         "/Engine/Deck1/Track/ArtistName": {"string": "Test Artist"},
         "/Engine/Deck1/Track/SongName": {"string": "Test Song"},
@@ -225,7 +227,7 @@ async def test_getplayingtrack_single_audible_deck(denon_plugin):
 async def test_getplayingtrack_inaudible_deck(denon_plugin):
     """Test that tracks with low effective volume are filtered out"""
     # Set up metadata for playing track but with fader down
-    denon_plugin.current_metadata = {
+    denon_plugin.metadata_processor.current_metadata = {
         "/Engine/Deck1/Play": {"state": True},
         "/Engine/Deck1/Track/ArtistName": {"string": "Test Artist"},
         "/Engine/Deck1/Track/SongName": {"string": "Test Song"},
@@ -241,7 +243,7 @@ async def test_getplayingtrack_inaudible_deck(denon_plugin):
 async def test_getplayingtrack_multiple_decks_volume_priority(denon_plugin):
     """Test track selection prioritizes louder tracks"""
     # Set up two playing tracks with different volumes
-    denon_plugin.current_metadata = {
+    denon_plugin.metadata_processor.current_metadata = {
         # Deck 1 - quieter
         "/Engine/Deck1/Play": {"state": True},
         "/Engine/Deck1/Track/ArtistName": {"string": "Quiet Artist"},
@@ -268,7 +270,7 @@ async def test_getplayingtrack_deck_skip_functionality(denon_plugin):
     # Configure deck skip
     denon_plugin.config.cparser.setValue("denon/deckskip", ["1"])
 
-    denon_plugin.current_metadata = {
+    denon_plugin.metadata_processor.current_metadata = {
         # Deck 1 - should be skipped
         "/Engine/Deck1/Play": {"state": True},
         "/Engine/Deck1/Track/ArtistName": {"string": "Skipped Artist"},
@@ -291,7 +293,7 @@ async def test_getplayingtrack_deck_skip_functionality(denon_plugin):
 @pytest.mark.asyncio
 async def test_getplayingtrack_crossfader_filtering(denon_plugin):
     """Test crossfader position affects track selection"""
-    denon_plugin.current_metadata = {
+    denon_plugin.metadata_processor.current_metadata = {
         # Left deck (should be audible when crossfader left)
         "/Engine/Deck1/Play": {"state": True},
         "/Engine/Deck1/Track/ArtistName": {"string": "Left Artist"},
@@ -313,7 +315,7 @@ async def test_getplayingtrack_crossfader_filtering(denon_plugin):
 
 def test_pack_utf16_string():
     """Test UTF-16 string packing"""
-    result = nowplaying.inputs.denon._pack_utf16_string("Test")
+    result = StagelinqProtocol.pack_utf16_string("Test")
     # Should be 4 bytes length + UTF-16 BE encoded "Test"
     assert len(result) >= 4
     # First 4 bytes should be length in big endian
@@ -325,18 +327,18 @@ def test_unpack_utf16_string():
     """Test UTF-16 string unpacking"""
     # Create a packed string
     test_string = "Hello"
-    packed = nowplaying.inputs.denon._pack_utf16_string(test_string)
+    packed = StagelinqProtocol.pack_utf16_string(test_string)
 
     # Unpack it
-    unpacked, offset = nowplaying.inputs.denon._unpack_utf16_string(packed)
+    unpacked, offset = StagelinqProtocol.unpack_utf16_string(packed)
     assert unpacked == test_string
     assert offset == len(packed)
 
 
 def test_unpack_utf16_string_insufficient_data():
     """Test unpacking with insufficient data raises error"""
-    with pytest.raises(nowplaying.inputs.denon.StagelinqError):
-        nowplaying.inputs.denon._unpack_utf16_string(b"abc")  # Too short
+    with pytest.raises(StagelinqError):
+        StagelinqProtocol.unpack_utf16_string(b"abc")  # Too short
 
 
 @pytest.mark.asyncio

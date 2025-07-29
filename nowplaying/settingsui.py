@@ -168,10 +168,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     display_name = self.config.pluginobjs[plugintype][key].displayname
                     self.input_display_to_module[display_name.lower()] = pkey
                     self.widgets["source"].sourcelist.addItem(display_name)
-                    self.widgets["source"].sourcelist.currentRowChanged.connect(
-                        self._set_source_description
-                    )
                 self._setup_widgets(f"{plugintype}_{pkey}")
+
+        # Connect the source list signal once after all items are added
+        self.widgets["source"].sourcelist.currentRowChanged.connect(self._set_source_description)
 
         self._setup_widgets("destroy")
         self._setup_widgets("about")
