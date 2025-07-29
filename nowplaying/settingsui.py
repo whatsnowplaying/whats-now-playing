@@ -155,6 +155,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         pluginuis = {}
         pluginuinames = []
+        # Create mapping from display names to module names for inputs
+        self.input_display_to_module = {}
+
         for plugintype, pluginlist in self.config.plugins.items():
             pluginuis[plugintype] = []
             for key in pluginlist:
@@ -162,9 +165,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 pluginuis[plugintype].append(pkey)
                 pluginuinames.append(f"{plugintype}_{pkey}")
                 if plugintype == "inputs":
-                    self.widgets["source"].sourcelist.addItem(
-                        self.config.pluginobjs[plugintype][key].displayname
-                    )
+                    display_name = self.config.pluginobjs[plugintype][key].displayname
+                    self.input_display_to_module[display_name.lower()] = pkey
+                    self.widgets["source"].sourcelist.addItem(display_name)
                     self.widgets["source"].sourcelist.currentRowChanged.connect(
                         self._set_source_description
                     )
@@ -363,7 +366,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _set_source_description(self, index):
         item = self.widgets["source"].sourcelist.item(index)
-        plugin = item.text().lower()
+        display_name = item.text().lower()
+        plugin = self.input_display_to_module.get(display_name, display_name)
         self.config.plugins_description("inputs", plugin, self.widgets["source"].description)
 
     def upd_win(self):
@@ -455,9 +459,20 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """this is totally wrong and will need to get dealt
         with as part of ui code redesign"""
         currentinput = self.config.cparser.value("settings/input")
-        if curbutton := self.widgets["source"].sourcelist.findItems(
-            currentinput, Qt.MatchContains
-        ):
+
+        target_display_name = next(
+            (
+                display_name
+                for display_name, module_name in self.input_display_to_module.items()
+                if module_name == currentinput
+            ),
+            None,
+        )
+        # Fallback: if no mapping found, try to find by the stored
+        # value directly (for backward compatibility)
+        search_term = target_display_name or currentinput
+
+        if curbutton := self.widgets["source"].sourcelist.findItems(search_term, Qt.MatchContains):
             self.widgets["source"].sourcelist.setCurrentItem(curbutton[0])
 
     def _upd_win_webserver(self):
@@ -656,8 +671,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     def _upd_conf_input(self):
         """find the text of the currently selected handler"""
         if curbutton := self.widgets["source"].sourcelist.currentItem():
-            inputtext = curbutton.text().lower()
-            self.config.cparser.setValue("settings/input", inputtext)
+            display_name = curbutton.text().lower()
+            module_name = self.input_display_to_module.get(display_name, display_name)
+            self.config.cparser.setValue("settings/input", module_name)
 
     def _upd_conf_plugins(self):
         """tell config to trigger plugins to update"""
