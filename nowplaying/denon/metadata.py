@@ -12,6 +12,9 @@ from typing import Any
 
 from nowplaying.types import TrackMetadata
 
+# Minimum effective volume considered "audible" (0.0-1.0 scale)
+AUDIBLE_VOLUME_THRESHOLD = 0.1
+
 from .types import DenonState
 
 
@@ -30,7 +33,7 @@ class MetadataProcessor:
 
     def set_mixmode(self, mixmode: str) -> str:
         """Set the mix mode"""
-        if mixmode in ["newest", "oldest"]:
+        if mixmode in {"newest", "oldest"}:
             self._mixmode = mixmode
         return self._mixmode
 
@@ -99,7 +102,7 @@ class MetadataProcessor:
         fader_pos = self._extract_numeric_value(fader_data)
         effective_volume = self._calculate_effective_volume(deck_num, fader_pos, crossfader_pos)
 
-        if effective_volume <= 0.1:  # Not audible enough
+        if effective_volume <= AUDIBLE_VOLUME_THRESHOLD:  # Not audible enough
             return None
 
         # Track is playing and audible
@@ -125,7 +128,7 @@ class MetadataProcessor:
         ]
 
     def _select_deck_by_mix_mode(self, playing_decks: list[dict]) -> dict:
-        """Select which deck to use based on mix mode and volume"""
+        """Select which deck to use based on mix mode and volume, with deterministic tie-breaking"""
         if len(playing_decks) == 1:
             return playing_decks[0]
 
@@ -134,9 +137,17 @@ class MetadataProcessor:
         loudest_decks = [d for d in playing_decks if d["effective_volume"] >= max_volume * 0.8]
 
         if self._mixmode == "newest":
-            return max(loudest_decks, key=lambda d: d["start_time"])
-        # oldest
-        return min(loudest_decks, key=lambda d: d["start_time"])
+            # Find decks with the latest start_time
+            max_start_time = max(d["start_time"] for d in loudest_decks)
+            newest_decks = [d for d in loudest_decks if d["start_time"] == max_start_time]
+            # Tie-breaker: lowest deck number
+            return min(newest_decks, key=lambda d: d["deck"])
+        else:
+            # Find decks with the earliest start_time
+            min_start_time = min(d["start_time"] for d in loudest_decks)
+            oldest_decks = [d for d in loudest_decks if d["start_time"] == min_start_time]
+            # Tie-breaker: lowest deck number
+            return min(oldest_decks, key=lambda d: d["deck"])
 
     def _build_track_metadata(self, selected_deck: dict) -> TrackMetadata:
         """Build the final track metadata dictionary"""

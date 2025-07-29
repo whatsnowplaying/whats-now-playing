@@ -315,6 +315,7 @@ async def test_getplayingtrack_crossfader_filtering(denon_plugin):
 
 def test_pack_utf16_string():
     """Test UTF-16 string packing"""
+    # ASCII
     result = StagelinqProtocol.pack_utf16_string("Test")
     # Should be 4 bytes length + UTF-16 BE encoded "Test"
     assert len(result) >= 4
@@ -322,17 +323,46 @@ def test_pack_utf16_string():
     length = int.from_bytes(result[:4], "big")
     assert length == len(result) - 4
 
+    # Non-ASCII: accented letter
+    s_accented = "Café"
+    result_accented = StagelinqProtocol.pack_utf16_string(s_accented)
+    length_accented = int.from_bytes(result_accented[:4], "big")
+    assert length_accented == len(result_accented) - 4
+    # Decode and check
+    decoded_accented = result_accented[4:].decode("utf-16-be")
+    assert decoded_accented == s_accented
+
+    # Non-ASCII: emoji
+    s_emoji = "Test 🎵"
+    result_emoji = StagelinqProtocol.pack_utf16_string(s_emoji)
+    length_emoji = int.from_bytes(result_emoji[:4], "big")
+    assert length_emoji == len(result_emoji) - 4
+    decoded_emoji = result_emoji[4:].decode("utf-16-be")
+    assert decoded_emoji == s_emoji
+
 
 def test_unpack_utf16_string():
     """Test UTF-16 string unpacking"""
-    # Create a packed string
+    # ASCII
     test_string = "Hello"
     packed = StagelinqProtocol.pack_utf16_string(test_string)
-
-    # Unpack it
     unpacked, offset = StagelinqProtocol.unpack_utf16_string(packed)
     assert unpacked == test_string
     assert offset == len(packed)
+
+    # Non-ASCII: accented letter
+    s_accented = "Café"
+    packed_accented = StagelinqProtocol.pack_utf16_string(s_accented)
+    unpacked_accented, offset_accented = StagelinqProtocol.unpack_utf16_string(packed_accented)
+    assert unpacked_accented == s_accented
+    assert offset_accented == len(packed_accented)
+
+    # Non-ASCII: emoji
+    s_emoji = "Test 🎵"
+    packed_emoji = StagelinqProtocol.pack_utf16_string(s_emoji)
+    unpacked_emoji, offset_emoji = StagelinqProtocol.unpack_utf16_string(packed_emoji)
+    assert unpacked_emoji == s_emoji
+    assert offset_emoji == len(packed_emoji)
 
 
 def test_unpack_utf16_string_insufficient_data():

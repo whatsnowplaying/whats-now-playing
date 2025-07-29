@@ -93,50 +93,66 @@ class ConnectionManager:
     async def connect_to_device(self, device: DenonDevice) -> list[DenonService]:
         """Connect to device and get available services"""
         reader, writer = await asyncio.open_connection(device.ipaddr, device.port)
-        self.connections.append(writer)
 
-        # Start reference message task
-        ref_task = asyncio.create_task(self._send_reference_messages(writer, device.token))
-        self.tasks.append(ref_task)
+        try:
+            self.connections.append(writer)
 
-        # Send services request
-        services_msg = StagelinqProtocol.create_services_request(self.token)
-        writer.write(services_msg)
-        await writer.drain()
+            # Start reference message task
+            ref_task = asyncio.create_task(self._send_reference_messages(writer, device.token))
+            self.tasks.append(ref_task)
 
-        # Read services
-        services = []
-        while True:
-            try:
-                # Read message ID
-                msg_id_data = await reader.readexactly(4)
-                msg_id = int.from_bytes(msg_id_data, "big")
+            # Send services request
+            services_msg = StagelinqProtocol.create_services_request(self.token)
+            writer.write(services_msg)
+            await writer.drain()
 
-                if msg_id == MSG_SERVICE_ANNOUNCEMENT:
-                    # Read service announcement
-                    await reader.readexactly(16)  # Skip token
+            # Read services
+            services = []
+            while True:
+                try:
+                    # Read message ID
+                    msg_id_data = await reader.readexactly(4)
+                    msg_id = int.from_bytes(msg_id_data, "big")
 
-                    # Read service name
-                    str_len_data = await reader.readexactly(4)
-                    str_len = int.from_bytes(str_len_data, "big")
-                    str_data = await reader.readexactly(str_len)
-                    service_name = str_data.decode("utf-16be")
+                    if msg_id == MSG_SERVICE_ANNOUNCEMENT:
+                        # Read the full message first
+                        token_data = await reader.readexactly(16)  # Token
 
-                    # Read port
-                    port_data = await reader.readexactly(2)
-                    port = int.from_bytes(port_data, "big")
+                        # Read service name length and data
+                        str_len_data = await reader.readexactly(4)
+                        str_len = int.from_bytes(str_len_data, "big")
+                        str_data = await reader.readexactly(str_len)
 
-                    services.append(DenonService(name=service_name, port=port))
+                        # Read port
+                        port_data = await reader.readexactly(2)
 
-                elif msg_id == MSG_REFERENCE:
-                    # End of service list
-                    await reader.readexactly(40)  # Skip reference message data
+                        # Reconstruct the service announcement data for parsing
+                        service_data = token_data + str_len_data + str_data + port_data
+
+                        # Use the protocol parser
+                        service, _ = StagelinqProtocol.parse_service_announcement(service_data)
+                        if service:
+                            services.append(service)
+
+                    elif msg_id == MSG_REFERENCE:
+                        # End of service list
+                        await reader.readexactly(40)  # Skip reference message data
+                        break
+
+                except asyncio.IncompleteReadError:
                     break
 
-            except asyncio.IncompleteReadError:
-                break
+            return services
 
-        return services
+        except Exception:
+            # Ensure writer is closed on any failure
+            with contextlib.suppress(Exception):
+                writer.close()
+                await writer.wait_closed()
+            # Remove from connections list if it was added
+            if writer in self.connections:
+                self.connections.remove(writer)
+            raise
 
     async def monitor_state_changes(  # pylint: disable=too-many-locals
         self,

@@ -472,8 +472,18 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         # value directly (for backward compatibility)
         search_term = target_display_name or currentinput
 
-        if curbutton := self.widgets["source"].sourcelist.findItems(search_term, Qt.MatchContains):
+        curbutton = self.widgets["source"].sourcelist.findItems(search_term, Qt.MatchContains)
+        if curbutton:
             self.widgets["source"].sourcelist.setCurrentItem(curbutton[0])
+        else:
+            logging.warning(
+                "Could not find a matching display name or module name for input '%s'. "
+                "UI selection will not be set. Display names: %s, Module names: %s",
+                currentinput,
+                list(self.input_display_to_module.keys()),
+                list(self.input_display_to_module.values()),
+            )
+            self.widgets["source"].sourcelist.setCurrentItem(None)
 
     def _upd_win_webserver(self):
         """update the webserver settings to match config"""
