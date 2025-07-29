@@ -12,7 +12,7 @@ import logging
 import socket
 from typing import Callable
 
-import nowplaying.version
+import nowplaying.version # pylint: disable=no-member,import-error
 
 from .protocol import StagelinqProtocol
 from .types import (
@@ -90,7 +90,8 @@ class ConnectionManager:
 
         return devices
 
-    async def connect_to_device(self, device: DenonDevice) -> list[DenonService]:
+    async def connect_to_device( # plyint: disable=too-many-locals
+        self, device: DenonDevice) -> list[DenonService]:
         """Connect to device and get available services"""
         reader, writer = await asyncio.open_connection(device.ipaddr, device.port)
 

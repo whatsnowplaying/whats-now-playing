@@ -12,10 +12,11 @@ from typing import Any
 
 from nowplaying.types import TrackMetadata
 
+from .types import DenonState
+
 # Minimum effective volume considered "audible" (0.0-1.0 scale)
 AUDIBLE_VOLUME_THRESHOLD = 0.1
 
-from .types import DenonState
 
 
 class MetadataProcessor:
@@ -142,12 +143,11 @@ class MetadataProcessor:
             newest_decks = [d for d in loudest_decks if d["start_time"] == max_start_time]
             # Tie-breaker: lowest deck number
             return min(newest_decks, key=lambda d: d["deck"])
-        else:
-            # Find decks with the earliest start_time
-            min_start_time = min(d["start_time"] for d in loudest_decks)
-            oldest_decks = [d for d in loudest_decks if d["start_time"] == min_start_time]
-            # Tie-breaker: lowest deck number
-            return min(oldest_decks, key=lambda d: d["deck"])
+        # Find decks with the earliest start_time
+        min_start_time = min(d["start_time"] for d in loudest_decks)
+        oldest_decks = [d for d in loudest_decks if d["start_time"] == min_start_time]
+        # Tie-breaker: lowest deck number
+        return min(oldest_decks, key=lambda d: d["deck"])
 
     def _build_track_metadata(self, selected_deck: dict) -> TrackMetadata:
         """Build the final track metadata dictionary"""
