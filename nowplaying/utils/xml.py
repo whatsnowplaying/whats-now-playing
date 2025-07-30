@@ -6,7 +6,7 @@ import logging
 import pathlib
 import sqlite3
 import time
-import xml.sax
+import defusedxml.sax
 from typing import Protocol
 
 
@@ -128,10 +128,10 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
 
             # Use streaming SAX parser
             handler = self.handler_class(cursor)
-            parser = xml.sax.make_parser()
+            parser = defusedxml.sax.make_parser()
             parser.setContentHandler(handler)
 
-            with open(xml_file, "r", encoding="utf-8") as xmlfile:
+            with open(xml_file, "rb") as xmlfile:
                 parser.parse(xmlfile)
 
             connection.commit()
