@@ -6,8 +6,9 @@ import logging
 import pathlib
 import sqlite3
 import time
-import defusedxml.sax
 from typing import Protocol
+
+import defusedxml.sax
 
 
 # pylint: disable=missing-function-docstring,invalid-name
