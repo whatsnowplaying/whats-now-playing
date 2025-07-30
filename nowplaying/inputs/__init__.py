@@ -62,9 +62,14 @@ class InputPlugin(WNPBasePlugin):
         """Get the currently playing track"""
         raise NotImplementedError
 
-    async def getrandomtrack(self, playlist: str) -> str | None:
+    async def getrandomtrack(self, playlist: str) -> str | None:  # pylint: disable=no-self-use, unused-argument
         """Get a file associated with a playlist, crate, whatever"""
-        raise NotImplementedError
+        return None
+
+    async def has_tracks_by_artist(self, artist_name: str) -> bool:  # pylint: disable=no-self-use, unused-argument
+        """Check if DJ has any tracks by the specified artist"""
+        # Default implementation - can be overridden by plugins with database access
+        return False
 
     #### Control methods
 

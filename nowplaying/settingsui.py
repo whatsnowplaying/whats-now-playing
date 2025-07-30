@@ -683,6 +683,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if curbutton := self.widgets["source"].sourcelist.currentItem():
             display_name = curbutton.text().lower()
             module_name = self.input_display_to_module.get(display_name, display_name)
+            logging.debug(
+                "Input selection: display_name='%s', module_name='%s', mapping=%s",
+                display_name,
+                module_name,
+                self.input_display_to_module,
+            )
             self.config.cparser.setValue("settings/input", module_name)
 
     def _upd_conf_plugins(self):
