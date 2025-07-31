@@ -59,13 +59,82 @@
     </item>
    </layout>
   </widget>
+  <widget class="QLabel" name="artist_query_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>250</y>
+     <width>200</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Artist Query Scope</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="virtualdj_artist_scope_combo">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>250</y>
+     <width>150</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>Entire Library</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>Selected Playlists</string>
+    </property>
+   </item>
+  </widget>
+  <widget class="QLabel" name="playlists_label">
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>250</y>
+     <width>200</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Selected Playlists</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="virtualdj_playlists_lineedit">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>280</y>
+     <width>560</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="placeholderText">
+    <string>Comma-separated playlist names (e.g., House, Techno, Favorites)</string>
+   </property>
+  </widget>
   <widget class="QTextBrowser" name="info_text">
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>280</y>
+     <y>320</y>
      <width>551</width>
-     <height>141</height>
+     <height>101</height>
     </rect>
    </property>
    <property name="html">
@@ -79,11 +148,48 @@ li.checked::marker { content: &quot;\2612&quot;; }
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Sans'; font-size:10pt;&quot;&gt;Virtual DJ must be launched at least once with a track playing long enough for the History directory to exist.  Additionally, the History options in Virtual DJ default to 45 seconds before writing an entry.  Depending upon play style, it is generally recommended to shorten that time considerably to, for example, 10 seconds.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </widget>
+  <widget class="QLabel" name="max_age_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>180</y>
+     <width>180</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Auto-refresh after (days)</string>
+   </property>
+  </widget>
+  <widget class="QSpinBox" name="virtualdj_max_age_spinbox">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>180</y>
+     <width>73</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>1</number>
+   </property>
+   <property name="maximum">
+    <number>365</number>
+   </property>
+   <property name="value">
+    <number>7</number>
+   </property>
+  </widget>
   <widget class="QPushButton" name="playlist_reread_button">
    <property name="geometry">
     <rect>
      <x>180</x>
-     <y>200</y>
+     <y>220</y>
      <width>181</width>
      <height>26</height>
     </rect>

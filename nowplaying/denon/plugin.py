@@ -151,46 +151,55 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             announce_task = asyncio.create_task(self.connection_manager.send_announcements())
             self.connection_manager.tasks.append(announce_task)
 
-            # Try to connect to a device
-            await self._find_and_connect()
+            # Start device discovery and connection task
+            connect_task = asyncio.create_task(self._find_and_connect())
+            self.connection_manager.tasks.append(connect_task)
 
         except Exception as err:  # pylint: disable=broad-exception-caught
             logging.error("Failed to start Denon plugin: %s", err)
 
     async def _find_and_connect(self):
         """Find devices and connect to the first available one"""
-        while True:
-            try:
-                self._discovery_timeout = self.config.cparser.value(
-                    "denon/discovery_timeout", type=float, defaultValue=5.0
-                )
+        try:  # pylint: disable=too-many-nested-blocks
+            while True:
+                try:
+                    self._discovery_timeout = self.config.cparser.value(
+                        "denon/discovery_timeout", type=float, defaultValue=5.0
+                    )
 
-                # Discover devices
-                devices = await self.connection_manager.discover_devices(self._discovery_timeout)
+                    # Discover devices
+                    devices = await self.connection_manager.discover_devices(
+                        self._discovery_timeout
+                    )
 
-                if devices:
-                    logging.info("Found %d Denon device(s)", len(devices))
+                    if devices:
+                        logging.info("Found %d Denon device(s)", len(devices))
 
-                    # Give devices time to receive multiple announcements before connecting
-                    # The devices need to know who we are first
-                    logging.debug("Waiting for devices to receive our announcements...")
-                    await asyncio.sleep(3.0)  # Wait longer for devices to trust us
+                        # Give devices time to receive multiple announcements before connecting
+                        # The devices need to know who we are first
+                        logging.debug("Waiting for devices to receive our announcements...")
+                        await asyncio.sleep(3.0)  # Wait longer for devices to trust us
 
-                    # Try each device until we find one with StateMap
-                    for device in devices:
-                        logging.debug("Trying device: %s (%s)", device.name, device.software_name)
-                        success = await self._connect_and_monitor_device(device)
-                        if success:
-                            # Successfully connected, exit the retry loop
-                            return
+                        # Try each device until we find one with StateMap
+                        for device in devices:
+                            logging.debug(
+                                "Trying device: %s (%s)", device.name, device.software_name
+                            )
+                            success = await self._connect_and_monitor_device(device)
+                            if success:
+                                # Successfully connected, exit the retry loop
+                                return
 
-                # No devices found or connection failed, wait before trying again
-                logging.debug("No devices found, retrying in 10 seconds...")
-                await asyncio.sleep(10.0)
+                    # No devices found or connection failed, wait before trying again
+                    logging.debug("No devices found, retrying in 10 seconds...")
+                    await asyncio.sleep(10.0)
 
-            except Exception as err:  # pylint: disable=broad-exception-caught
-                logging.error("Error in device discovery: %s", err)
-                await asyncio.sleep(10.0)
+                except Exception as err:  # pylint: disable=broad-exception-caught
+                    logging.error("Error in device discovery: %s", err)
+                    await asyncio.sleep(10.0)
+        except asyncio.CancelledError:
+            logging.debug("Device discovery cancelled")
+            raise
 
     async def _connect_and_monitor_device(self, device: DenonDevice) -> bool:
         """Connect to a device and start monitoring. Returns True on success."""

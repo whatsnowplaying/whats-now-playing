@@ -8,7 +8,9 @@ import sqlite3
 import time
 from typing import Protocol
 
+import xml.sax
 import defusedxml.sax
+import defusedxml.common
 
 
 # pylint: disable=missing-function-docstring,invalid-name
@@ -42,6 +44,7 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
         self.table_schemas = table_schemas
         self.config_key = config_key
         self.config = config
+        self._shutdown_event = asyncio.Event()
 
     def db_age_days(self) -> float | None:
         """Return age of database in days, or None if doesn't exist"""
@@ -56,32 +59,50 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
         return age is None or age > max_age_days
 
     async def background_refresh_loop(self) -> None:
-        """Background refresh polling loop"""
-        while True:
-            self.config.cparser.sync()
-            if not self.config.cparser.value(f"{self.config_key}/rebuild_db", type=bool):
-                # Check if DB needs refresh based on age
-                max_age_days = self.config.cparser.value(
-                    f"{self.config_key}/max_age_days", type=int, defaultValue=7
-                )
-                if self.needs_refresh(max_age_days):
-                    self.config.cparser.setValue(f"{self.config_key}/rebuild_db", True)
-                else:
-                    await asyncio.sleep(60 * 5)
-                    continue
+        """Background refresh polling loop with cancellation support"""
+        try:
+            while not self._shutdown_event.is_set():
+                self.config.cparser.sync()
+                if not self.config.cparser.value(f"{self.config_key}/rebuild_db", type=bool):
+                    # Check if DB needs refresh based on age
+                    max_age_days = self.config.cparser.value(
+                        f"{self.config_key}/max_age_days", type=int, defaultValue=7
+                    )
+                    if self.needs_refresh(max_age_days):
+                        self.config.cparser.setValue(f"{self.config_key}/rebuild_db", True)
+                    else:
+                        # Wait with cancellation support
+                        try:
+                            await asyncio.wait_for(self._shutdown_event.wait(), timeout=60 * 5)
+                            break  # Shutdown requested
+                        except asyncio.TimeoutError:
+                            continue  # Normal timeout, continue loop
 
-            xml_file = self.xml_file_getter()
-            if not xml_file or not xml_file.exists():
-                logging.error("XML file not found: %s", xml_file)
-                self.config.cparser.setValue(f"{self.config_key}/rebuild_db", False)
-                await asyncio.sleep(60 * 5)
-                continue
+                xml_file = self.xml_file_getter()
+                if not xml_file or not xml_file.exists():
+                    logging.error("XML file not found: %s", xml_file)
+                    self.config.cparser.setValue(f"{self.config_key}/rebuild_db", False)
+                    # Wait with cancellation support
+                    try:
+                        await asyncio.wait_for(self._shutdown_event.wait(), timeout=60 * 5)
+                        break  # Shutdown requested
+                    except asyncio.TimeoutError:
+                        continue  # Normal timeout, continue loop
 
-            success = await self.background_refresh(xml_file, self.table_schemas)
-            if success:
-                self.config.cparser.setValue(f"{self.config_key}/rebuild_db", False)
+                success = await self.background_refresh(xml_file, self.table_schemas)
+                if success:
+                    self.config.cparser.setValue(f"{self.config_key}/rebuild_db", False)
 
-            await asyncio.sleep(60 * 5)
+                # Wait with cancellation support
+                try:
+                    await asyncio.wait_for(self._shutdown_event.wait(), timeout=60 * 5)
+                    break  # Shutdown requested
+                except asyncio.TimeoutError:
+                    continue  # Normal timeout, continue loop
+
+        except asyncio.CancelledError:
+            logging.info("Background refresh loop cancelled")
+            raise  # Re-raise to properly handle cancellation
 
     async def background_refresh(self, xml_file: pathlib.Path, table_schemas: list[str]) -> bool:
         """Background refresh with temp database and atomic swap"""
@@ -109,12 +130,29 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
             logging.error("Temp database was not created")
             return False
 
-        except Exception as err:  # pylint: disable=broad-exception-caught
+        except (
+            OSError,
+            sqlite3.Error,
+            xml.sax.SAXException,
+            defusedxml.common.DefusedXmlException,
+        ) as err:
             logging.error("Background XML refresh failed: %s", err)
             # Clean up temp file on error
             if self.temp_database_path.exists():
                 self.temp_database_path.unlink()
             return False
+        except asyncio.CancelledError:
+            logging.info("Background XML refresh cancelled")
+            # Clean up temp file on cancellation
+            if self.temp_database_path.exists():
+                self.temp_database_path.unlink()
+            raise  # Re-raise to properly handle cancellation
+        except Exception as err:
+            logging.error("Unexpected error during XML refresh: %s", err, exc_info=True)
+            # Clean up temp file on error
+            if self.temp_database_path.exists():
+                self.temp_database_path.unlink()
+            raise  # Re-raise unexpected errors
 
     def _build_temp_database(self, xml_file: pathlib.Path, table_schemas: list[str]) -> None:
         """Build temporary database using streaming parser"""
@@ -151,3 +189,7 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
         # Clean up backup after successful swap
         if self.backup_database_path.exists():
             self.backup_database_path.unlink()
+
+    def shutdown(self) -> None:
+        """Signal the background refresh loop to exit cleanly"""
+        self._shutdown_event.set()

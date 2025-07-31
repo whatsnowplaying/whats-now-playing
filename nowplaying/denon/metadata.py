@@ -18,7 +18,6 @@ from .types import DenonState
 AUDIBLE_VOLUME_THRESHOLD = 0.1
 
 
-
 class MetadataProcessor:
     """Processes StagelinQ state data to determine currently playing track"""
 
