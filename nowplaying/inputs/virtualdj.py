@@ -296,7 +296,8 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
         metadata = {data: row[data] for data in METADATALIST}
         for key in LISTFIELDS:
-            if metadata.get(key):
+            # Only process LISTFIELDS that actually exist in the row
+            if key in row and row[key]:
                 metadata[key] = [row[key]]
         return metadata
 
@@ -443,9 +444,9 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
                     placeholders = ",".join("?" * len(playlist_names))
                     sql = f"""
-                        SELECT COUNT(*) as count 
-                        FROM playlists p 
-                        JOIN songs s ON p.filename = s.filename 
+                        SELECT COUNT(*) as count
+                        FROM playlists p
+                        JOIN songs s ON p.filename = s.filename
                         WHERE LOWER(s.artist) = LOWER(?) AND p.name IN ({placeholders})
                     """
                     params = [artist_name] + playlist_names
