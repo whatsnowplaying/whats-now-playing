@@ -83,13 +83,119 @@
     <string>8000</string>
    </property>
   </widget>
+  <widget class="QLabel" name="max_age_label">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>150</y>
+     <width>180</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Auto-refresh after (days)</string>
+   </property>
+  </widget>
+  <widget class="QSpinBox" name="traktor_max_age_spinbox">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>150</y>
+     <width>73</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>1</number>
+   </property>
+   <property name="maximum">
+    <number>365</number>
+   </property>
+   <property name="value">
+    <number>7</number>
+   </property>
+  </widget>
+  <widget class="QLabel" name="artist_query_label">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>190</y>
+     <width>200</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Artist Query Scope</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="traktor_artist_scope_combo">
+   <property name="geometry">
+    <rect>
+     <x>250</x>
+     <y>190</y>
+     <width>150</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>Entire Library</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>Selected Playlists</string>
+    </property>
+   </item>
+  </widget>
+  <widget class="QLabel" name="playlists_label">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>220</y>
+     <width>200</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Selected Playlists (comma-separated)</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="traktor_playlists_lineedit">
+   <property name="geometry">
+    <rect>
+     <x>250</x>
+     <y>220</y>
+     <width>340</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="placeholderText">
+    <string>e.g., House, Techno, Favorites</string>
+   </property>
+  </widget>
   <widget class="QTextBrowser" name="info_text">
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>180</y>
+     <y>260</y>
      <width>551</width>
-     <height>211</height>
+     <height>151</height>
     </rect>
    </property>
    <property name="html">
