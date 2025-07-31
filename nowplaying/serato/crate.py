@@ -88,6 +88,6 @@ class SeratoCrateReader(SeratoBaseReader):
                     continue
                 for filepart in subtag[1:]:
                     if current_index == index:
-                        return f"{anchor}{filepart}"
+                        return str(pathlib.Path(anchor) / filepart)
                     current_index += 1
         return None
