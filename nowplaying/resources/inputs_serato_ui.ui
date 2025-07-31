@@ -145,6 +145,66 @@
     </rect>
    </property>
   </widget>
+  <widget class="QLabel" name="artist_query_label">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>270</y>
+     <width>150</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Artist Query Scope</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="serato_artist_scope_combo">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>170</x>
+     <y>270</y>
+     <width>130</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>Entire Library</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>Selected Playlists</string>
+    </property>
+   </item>
+  </widget>
+  <widget class="QLineEdit" name="serato_playlists_lineedit">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>310</x>
+     <y>270</y>
+     <width>310</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="placeholderText">
+    <string>Comma-separated crate names (e.g., House, Techno)</string>
+   </property>
+  </widget>
   <widget class="QLabel" name="remoteconfig_label">
    <property name="enabled">
     <bool>false</bool>
@@ -152,7 +212,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>280</y>
+     <y>310</y>
      <width>311</width>
      <height>16</height>
     </rect>
@@ -168,7 +228,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>320</y>
+     <y>350</y>
      <width>611</width>
      <height>80</height>
     </rect>
@@ -502,6 +562,54 @@
     <hint type="destinationlabel">
      <x>68</x>
      <y>235</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>artist_query_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>85</x>
+     <y>270</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>serato_artist_scope_combo</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>235</x>
+     <y>270</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>serato_playlists_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>465</x>
+     <y>270</y>
     </hint>
    </hints>
   </connection>

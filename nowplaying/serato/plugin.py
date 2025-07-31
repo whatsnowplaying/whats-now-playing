@@ -7,16 +7,16 @@ It handles the plugin lifecycle, UI integration, and track polling for both loca
 Serato libraries and Serato Live playlists.
 """
 
+import asyncio
 import logging
 import os
 import pathlib
 import random
 import struct
-import time
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QStandardPaths
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
@@ -160,7 +160,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         else:
             interval = self.config.cparser.value("settings/interval", type=float)
 
-        time.sleep(interval)
+        await asyncio.sleep(interval)
 
         if self.serato:
             deckskip = self.config.cparser.value("serato/deckskip")

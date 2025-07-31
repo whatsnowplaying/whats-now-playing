@@ -75,73 +75,21 @@ class SeratoSmartCrateReader(SeratoRuleMatchingMixin, SeratoBaseReader):
             logging.error("smart crate has not been loaded")
             return None
 
-        # Try to use Serato database V2 for accurate filtering
+        # Use Serato database V2 for accurate filtering
         try:
             db_reader = SeratoDatabaseV2Reader(self.serato_lib_path)
             await db_reader.loaddatabase()
 
             if db_reader.tracks:
-                # Use database for accurate smart crate filtering
                 return db_reader.apply_smart_crate_rules(self.rules)
-            logging.warning(
-                "No tracks loaded from Serato database, falling back to directory scan"
+            logging.error(
+                "No tracks loaded from Serato database - Serato DJ installation may be corrupted"
             )
-            return await self._scan_music_directory()
+            return None
 
         except Exception as err:  # pylint: disable=broad-exception-caught
-            logging.warning(
-                "Failed to load Serato database V2: %s, falling back to directory scan", err
+            logging.error(
+                "Failed to load Serato database V2: %s - Serato DJ installation may be corrupted",
+                err,
             )
-            return await self._scan_music_directory()
-
-    async def _scan_music_directory(self) -> list[str]:
-        """Scan music directory for files matching smart crate rules"""
-        if not self.rules:
-            return []
-
-        # Get music directory (parent of _Serato_ folder)
-        music_dir = self.serato_lib_path.parent
-
-        # Get all audio files first
-        all_files = []
-        for ext in ["*.mp3", "*.m4a", "*.flac", "*.wav", "*.aiff"]:
-            all_files.extend(music_dir.rglob(ext))
-
-        # Filter files based on rules
-        matching_files = []
-        matching_files.extend(
-            str(file_path) for file_path in all_files if self._file_matches_rules(file_path)
-        )
-        return matching_files
-
-    def _file_matches_rules(self, file_path: pathlib.Path) -> bool:
-        """Check if a file path matches all smart crate rules"""
-        # For directory-based matching, we primarily match on filename/path content
-        file_str = str(file_path).lower()
-        file_name = file_path.stem.lower()
-
-        return all(self._rule_matches_file(rule, file_str, file_name) for rule in self.rules)
-
-    def _rule_matches_file(self, rule: dict[str, t.Any], file_str: str, file_name: str) -> bool:
-        """Check if a single rule matches the file"""
-        field = rule["field"]
-        operator = rule["operator"]
-        value = rule["value"].lower() if isinstance(rule["value"], str) else rule["value"]
-        field_type = rule["field_type"]
-
-        # Get field content to check against
-        if field in ["artist", "song", "title", "album", "genre"]:
-            # For directory-based matching, search in the full path
-            search_content = file_str
-        elif field == "filename":
-            search_content = file_name
-        else:
-            # For fields we can't extract from filename, skip the rule
-            return True
-
-        # Apply operator based on field type
-        if field_type == "text":
-            return self._apply_text_operator(operator, search_content, value)
-        # For numeric fields, we can't easily extract from filenames
-        # so we'll be permissive and return True
-        return True
+            return None

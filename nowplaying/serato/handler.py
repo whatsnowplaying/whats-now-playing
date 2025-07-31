@@ -25,9 +25,6 @@ from watchdog.events import PatternMatchingEventHandler
 # Import the base classes from the same module
 from .session import SeratoSessionReader
 
-# Constants that were global in original
-LASTPROCESSED: int = 0
-PARSEDSESSIONS = []
 
 TIDAL_FORMAT = re.compile(r"^_(.*).tdl")
 
@@ -53,7 +50,6 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
         testmode: bool = False,
         polling_interval: float = 1.0,
     ):
-        global LASTPROCESSED, PARSEDSESSIONS  # pylint: disable=global-statement
         self.pollingobserver = pollingobserver
         self.polling_interval = polling_interval
         self.tasks = set()
@@ -62,15 +58,15 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
         self.testmode = testmode
         self.decks = {}
         self.playingadat: dict[str, t.Any] = {}
-        PARSEDSESSIONS = []
-        LASTPROCESSED = 0
+        self.parsed_sessions = []
+        self.last_processed = 0
         self.lastfetched = 0
         self.url: str | None = None  # Explicitly clear URL in local mode
         # Prefer local mode over remote mode when both are configured
         if seratodir:
             self.seratodir = pathlib.Path(seratodir)
             self.watchdeck = None
-            PARSEDSESSIONS = []
+            self.parsed_sessions = []
             self.mode = "local"
             self.mixmode = mixmode
             self.url = None  # Explicitly clear URL in local mode
@@ -145,7 +141,6 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
 
     async def _async_process_sessions(self):
         """read and process all of the relevant session files"""
-        global LASTPROCESSED, PARSEDSESSIONS  # pylint: disable=global-statement
 
         if self.mode == "remote":
             return
@@ -176,9 +171,9 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
         session.condense()
 
         sessiondata = list(session.getadat())
-        LASTPROCESSED = round(time.time())
-        PARSEDSESSIONS = copy.copy(sessiondata)
-        # logging.debug(PARSEDSESSIONS)
+        self.last_processed = round(time.time())
+        self.parsed_sessions = copy.copy(sessiondata)
+        # logging.debug(self.parsed_sessions)
         logging.debug("finished processing")
 
     def computedecks(self, deckskiplist=None):
@@ -192,7 +187,7 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
 
         self.decks = {}
 
-        for adat in reversed(PARSEDSESSIONS):
+        for adat in reversed(self.parsed_sessions):
             if not adat.get("deck"):
                 # broken record
                 continue
@@ -294,8 +289,8 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
             logging.debug("in remote mode; skipping")
             return None, None
 
-        if not self.lastfetched or LASTPROCESSED >= self.lastfetched:
-            self.lastfetched = LASTPROCESSED + 1
+        if not self.lastfetched or self.last_processed >= self.lastfetched:
+            self.lastfetched = self.last_processed + 1
             self.computedecks(deckskiplist=deckskiplist)
             self.computeplaying()
 
@@ -315,8 +310,7 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
         track_xpath = (
             f'//div[@id="track_{current_track_id}"]//div[@class="playlist-trackname"]/text()'  # pylint: disable=line-too-long
         )
-        result = tree.xpath(track_xpath)
-        if result:
+        if result := tree.xpath(track_xpath):
             # Only log when track changes to reduce spam
             track_text = result[0]
             if track_text != self.last_extracted_track:
@@ -328,8 +322,7 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
     @staticmethod
     def _remote_extract_by_position(tree) -> str | None:
         """Extract track using positional XPath (fallback)"""
-        result = tree.xpath('(//div[@class="playlist-trackname"]/text())[1]')
-        if result:
+        if result := tree.xpath('(//div[@class="playlist-trackname"]/text())[1]'):
             logging.debug("Method 2 success: Positional XPath")
             return result[0]
         return None
@@ -556,12 +549,11 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
 
     def stop(self):
         """stop serato handler"""
-        global LASTPROCESSED, PARSEDSESSIONS  # pylint: disable=global-statement
 
         self.decks = {}
-        PARSEDSESSIONS = []
+        self.parsed_sessions = []
         self.playingadat = {}
-        LASTPROCESSED = 0
+        self.last_processed = 0
         self.lastfetched = 0
         if self.observer:
             self.observer.stop()

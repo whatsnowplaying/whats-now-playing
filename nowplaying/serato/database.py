@@ -74,7 +74,7 @@ class SeratoDatabaseV2Reader(SeratoRuleMatchingMixin, SeratoBaseReader):
                 continue
 
             if processor := tag_processors.get(tag):
-                track.update(processor(value))
+                track |= processor(value)
 
         # Only return tracks with essential metadata
         return track if track.get("filepath") else None
