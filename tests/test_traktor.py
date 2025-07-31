@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """test virtualdj"""
 
+import asyncio
 import pytest
 
 import nowplaying.inputs.traktor  # pylint: disable=import-error
@@ -23,16 +24,23 @@ async def test_read_collections(bootstrap, getroot):
     config = bootstrap
     cml = getroot.joinpath("tests", "playlists", "traktor", "collection.nml")
     config.cparser.setValue("traktor/collections", str(cml))
-    traktor = nowplaying.inputs.traktor.Traktor(config=config)
-    traktor.initdb()
     plugin = nowplaying.inputs.traktor.Plugin(config=config)
+    await plugin.start()
+
+    # Wait for background XML processing to complete
+    await asyncio.sleep(2)
+
     track = await plugin.getrandomtrack(playlist="videos")
     assert track
+
+    traktor = plugin.extradb
     data = await traktor.lookup(artist="Divine", title="Shoot Your Shot")
     assert data
     assert data["artist"] == "Divine"
     assert data["title"] == "Shoot Your Shot"
     assert data["album"] == "The Best of Divine"
+
+    await plugin.stop()
 
 
 # @pytest.mark.asyncio

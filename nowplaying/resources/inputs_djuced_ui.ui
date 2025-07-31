@@ -42,13 +42,82 @@
     </item>
    </layout>
   </widget>
+  <widget class="QLabel" name="artist_query_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>190</y>
+     <width>200</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Artist Query Scope</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="djuced_artist_scope_combo">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>190</y>
+     <width>150</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>Entire Library</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>Selected Playlists</string>
+    </property>
+   </item>
+  </widget>
+  <widget class="QLabel" name="playlists_label">
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>190</y>
+     <width>200</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Selected Playlists</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="djuced_playlists_lineedit">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>220</y>
+     <width>600</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="placeholderText">
+    <string>Comma-separated playlist names (e.g., House, Techno, Favorites)</string>
+   </property>
+  </widget>
   <widget class="QLabel" name="help_label">
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>210</y>
+     <y>260</y>
      <width>601</width>
-     <height>231</height>
+     <height>181</height>
     </rect>
    </property>
    <property name="text">
