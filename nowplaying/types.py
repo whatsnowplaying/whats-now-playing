@@ -37,6 +37,7 @@ class TrackMetadata(TypedDict, total=False):
     key: str
     lang: str
     label: str
+    lyricist: str
     publisher: str
 
     # Technical metadata
