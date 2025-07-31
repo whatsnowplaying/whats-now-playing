@@ -67,7 +67,14 @@ class SeratoSmartCrateReader(SeratoRuleMatchingMixin, SeratoBaseReader):
                 operator_code = struct.unpack(">I", value)[0] if len(value) >= 4 else 0
                 rule["operator"] = self._get_operator_name(operator_code)
 
-        return rule if rule["field"] and rule["value"] and rule["operator"] else None
+        if rule["field"] and rule["value"] and rule["operator"]:
+            return rule
+        else:
+            missing = [k for k in ("field", "value", "operator") if not rule[k]]
+            logging.warning(
+                "Ignoring malformed smart crate rule due to missing: %s", ", ".join(missing)
+            )
+            return None
 
     async def getfilenames(self) -> list[str] | None:
         """Get filenames by executing smart crate rules against Serato database"""

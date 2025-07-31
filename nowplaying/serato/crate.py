@@ -43,7 +43,9 @@ class SeratoCrateReader(SeratoBaseReader):
             for subtag in otrk:
                 if subtag[0] != "ptrk":
                     continue
-                filelist.extend(f"{anchor}{filepart}" for filepart in subtag[1:])
+                for filepart in subtag[1:]:
+                    filename = str(pathlib.Path(anchor) / filepart)
+                    filelist.append(filename)
         return filelist
 
     def count_files(self) -> int:
