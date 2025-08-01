@@ -82,7 +82,8 @@ def test_kick_settings_load(configured_kick_config, mock_kick_widget):
     """Test settings loading."""
     settings = nowplaying.kick.settings.KickSettings()
 
-    settings.load(configured_kick_config, mock_kick_widget)
+    mock_uihelp = MagicMock()
+    settings.load(configured_kick_config, mock_kick_widget, mock_uihelp)
 
     assert settings.widget == mock_kick_widget
     mock_kick_widget.enable_checkbox.setChecked.assert_called_with(True)
@@ -99,7 +100,8 @@ def test_kick_settings_load_default_redirect_uri(bootstrap, mock_kick_widget):
     """Test settings loading with default redirect URI."""
     settings = nowplaying.kick.settings.KickSettings()
 
-    settings.load(bootstrap, mock_kick_widget)
+    mock_uihelp = MagicMock()
+    settings.load(bootstrap, mock_kick_widget, mock_uihelp)
 
     mock_kick_widget.redirecturi_label.setText.assert_called_with(
         "http://localhost:8899/kickredirect"
@@ -125,7 +127,8 @@ def test_kick_settings_load_non_default_webserver_ports(
         config.cparser.setValue("weboutput/httpport", webserver_port)
 
     settings = nowplaying.kick.settings.KickSettings()
-    settings.load(config, mock_kick_widget)
+    mock_uihelp = MagicMock()
+    settings.load(config, mock_kick_widget, mock_uihelp)
 
     mock_kick_widget.redirecturi_label.setText.assert_called_with(expected_redirect_uri)
 
@@ -358,7 +361,8 @@ def test_kick_chat_settings_load_delay_field_types(bootstrap, mock_chat_widget, 
         mock_chat_widget.announce_delay_lineedit = MagicMock()
         delattr(mock_chat_widget, "announcedelay_spin")
 
-    settings.load(config, mock_chat_widget)
+    mock_uihelp = MagicMock()
+    settings.load(config, mock_chat_widget, mock_uihelp)
 
     assert settings.widget == mock_chat_widget
     mock_chat_widget.enable_checkbox.setChecked.assert_called_with(True)
@@ -391,7 +395,8 @@ def test_kick_chat_settings_load_with_command_table(
     mock_chat_widget.command_perm_table.setRowCount = MagicMock()
     mock_chat_widget.command_perm_table.rowCount.return_value = 1
 
-    settings.load(config, mock_chat_widget)
+    mock_uihelp = MagicMock()
+    settings.load(config, mock_chat_widget, mock_uihelp)
 
     # Verify table was reset
     mock_chat_widget.command_perm_table.setRowCount.assert_called_with(0)

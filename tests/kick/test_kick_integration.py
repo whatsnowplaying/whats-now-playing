@@ -181,13 +181,15 @@ def test_settings_integration_scenarios(kick_integration_config, settings_type):
         mock_widget.secret_lineedit.text.return_value = "test_secret"
         mock_widget.channel_lineedit.text.return_value = "testchannel"
 
-        settings.load(config, mock_widget)
+        mock_uihelp = MagicMock()
+        settings.load(config, mock_widget, mock_uihelp)
         assert isinstance(settings.oauth, nowplaying.kick.oauth2.KickOAuth2)  # pylint: disable=no-member
     else:
         chat_settings = nowplaying.kick.settings.KickChatSettings()  # pylint: disable=no-member
         mock_chat_widget = MagicMock()
 
-        chat_settings.load(config, mock_chat_widget)
+        mock_uihelp = MagicMock()
+        chat_settings.load(config, mock_chat_widget, mock_uihelp)
         assert chat_settings.widget == mock_chat_widget
 
 

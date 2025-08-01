@@ -439,7 +439,8 @@ def test_kickchat_settings_load(bootstrap):
     settings = nowplaying.kick.settings.KickChatSettings()  # pylint: disable=no-member
     mock_widget = MagicMock()
 
-    settings.load(config, mock_widget)
+    mock_uihelp = MagicMock()
+    settings.load(config, mock_widget, mock_uihelp)
 
     assert settings.widget == mock_widget
     mock_widget.enable_checkbox.setChecked.assert_called_with(True)

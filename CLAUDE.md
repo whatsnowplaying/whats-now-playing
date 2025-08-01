@@ -184,7 +184,6 @@ Key files with comprehensive coverage examples:
 - `tests/test_artistextras_theaudiodb.py` (includes critical fallback testing)
 - `tests/test_musicbrainz.py` (25+ tests for complex artist scenarios)
 
-
 ### Performance Requirements
 
 This application handles time-sensitive data retrieval and display that must be
