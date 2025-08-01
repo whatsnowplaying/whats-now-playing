@@ -47,41 +47,48 @@ def traktor_database():
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as temp_file:
         db_path = temp_file.name
 
-    with sqlite3.connect(db_path) as connection:
-        connection.execute("""
-            CREATE TABLE songs (
-                id INTEGER PRIMARY KEY,
-                artist TEXT,
-                title TEXT,
-                album TEXT,
-                filename TEXT
-            )
-        """)
-        connection.execute("""
-            CREATE TABLE playlists (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                filename TEXT
-            )
-        """)
+    def _create_database():
+        with sqlite3.connect(db_path, timeout=30.0) as connection:
+            connection.execute("""
+                CREATE TABLE songs (
+                    id INTEGER PRIMARY KEY,
+                    artist TEXT,
+                    title TEXT,
+                    album TEXT,
+                    filename TEXT
+                )
+            """)
+            connection.execute("""
+                CREATE TABLE playlists (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT,
+                    filename TEXT
+                )
+            """)
 
-        # Insert test data
-        for artist, title, album, filename in TEST_TRACKS:
-            connection.execute(
-                "INSERT INTO songs (artist, title, album, filename) VALUES (?, ?, ?, ?)",
-                (artist, title, album, filename),
-            )
+            # Insert test data
+            for artist, title, album, filename in TEST_TRACKS:
+                connection.execute(
+                    "INSERT INTO songs (artist, title, album, filename) VALUES (?, ?, ?, ?)",
+                    (artist, title, album, filename),
+                )
 
-        for playlist_name, filename in TEST_PLAYLISTS:
-            connection.execute(
-                "INSERT INTO playlists (name, filename) VALUES (?, ?)",
-                (playlist_name, filename),
-            )
+            for playlist_name, filename in TEST_PLAYLISTS:
+                connection.execute(
+                    "INSERT INTO playlists (name, filename) VALUES (?, ?)",
+                    (playlist_name, filename),
+                )
 
-        connection.commit()
+            connection.commit()
+
+    nowplaying.utils.sqlite.retry_sqlite_operation(_create_database)
 
     yield db_path
-    Path(db_path).unlink(missing_ok=True)
+
+    def _cleanup_database():
+        Path(db_path).unlink(missing_ok=True)
+
+    nowplaying.utils.sqlite.retry_sqlite_operation(_cleanup_database)
 
 
 @pytest.fixture
@@ -90,50 +97,57 @@ def djuced_database():
     with tempfile.NamedTemporaryFile(suffix="-DJUCED.db", delete=False) as djuced_file:
         djuced_db_path = djuced_file.name
 
-    with sqlite3.connect(djuced_db_path) as connection:
-        connection.execute("""
-            CREATE TABLE tracks (
-                id INTEGER PRIMARY KEY,
-                artist TEXT,
-                title TEXT,
-                album TEXT,
-                absolutepath TEXT,
-                comment TEXT,
-                bpm REAL,
-                tracknumber INTEGER,
-                length INTEGER,
-                coverimage BLOB
-            )
-        """)
+    def _create_database():
+        with sqlite3.connect(djuced_db_path, timeout=30.0) as connection:
+            connection.execute("""
+                CREATE TABLE tracks (
+                    id INTEGER PRIMARY KEY,
+                    artist TEXT,
+                    title TEXT,
+                    album TEXT,
+                    absolutepath TEXT,
+                    comment TEXT,
+                    bpm REAL,
+                    tracknumber INTEGER,
+                    length INTEGER,
+                    coverimage BLOB
+                )
+            """)
 
-        connection.execute("""
-            CREATE TABLE playlists2 (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                data TEXT,
-                type INTEGER,
-                order_in_list INTEGER,
-                path TEXT
-            )
-        """)
+            connection.execute("""
+                CREATE TABLE playlists2 (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT,
+                    data TEXT,
+                    type INTEGER,
+                    order_in_list INTEGER,
+                    path TEXT
+                )
+            """)
 
-        for artist, title, album, absolutepath in TEST_TRACKS:
-            connection.execute(
-                "INSERT INTO tracks (artist, title, album, absolutepath, comment, bpm, tracknumber, length) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (artist, title, album, absolutepath, "", 120.0, 1, 240),
-            )
+            for artist, title, album, absolutepath in TEST_TRACKS:
+                connection.execute(
+                    "INSERT INTO tracks (artist, title, album, absolutepath, comment, bpm, tracknumber, length) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (artist, title, album, absolutepath, "", 120.0, 1, 240),
+                )
 
-        # Add static playlist entries (type=3)
-        for playlist_name, absolutepath in TEST_PLAYLISTS:
-            connection.execute(
-                "INSERT INTO playlists2 (name, data, type) VALUES (?, ?, ?)",
-                (playlist_name, absolutepath, 3),
-            )
+            # Add static playlist entries (type=3)
+            for playlist_name, absolutepath in TEST_PLAYLISTS:
+                connection.execute(
+                    "INSERT INTO playlists2 (name, data, type) VALUES (?, ?, ?)",
+                    (playlist_name, absolutepath, 3),
+                )
 
-        connection.commit()
+            connection.commit()
+
+    nowplaying.utils.sqlite.retry_sqlite_operation(_create_database)
 
     yield djuced_db_path
-    Path(djuced_db_path).unlink(missing_ok=True)
+
+    def _cleanup_database():
+        Path(djuced_db_path).unlink(missing_ok=True)
+
+    nowplaying.utils.sqlite.retry_sqlite_operation(_cleanup_database)
 
 
 @pytest.fixture
@@ -147,45 +161,56 @@ def virtualdj_databases():
     with tempfile.NamedTemporaryFile(suffix="-playlists.db", delete=False) as playlists_file:
         playlists_db_path = playlists_file.name
 
-    # Setup songs database
-    with sqlite3.connect(songs_db_path) as connection:
-        connection.execute("""
-            CREATE TABLE songs (
-                id INTEGER PRIMARY KEY,
-                artist TEXT,
-                title TEXT,
-                album TEXT,
-                filename TEXT
-            )
-        """)
+    def _create_songs_database():
+        with sqlite3.connect(songs_db_path, timeout=30.0) as connection:
+            connection.execute("""
+                CREATE TABLE songs (
+                    id INTEGER PRIMARY KEY,
+                    artist TEXT,
+                    title TEXT,
+                    album TEXT,
+                    filename TEXT
+                )
+            """)
 
-        for artist, title, album, filename in TEST_TRACKS:
-            connection.execute(
-                "INSERT INTO songs (artist, title, album, filename) VALUES (?, ?, ?, ?)",
-                (artist, title, album, filename),
-            )
-        connection.commit()
+            for artist, title, album, filename in TEST_TRACKS:
+                connection.execute(
+                    "INSERT INTO songs (artist, title, album, filename) VALUES (?, ?, ?, ?)",
+                    (artist, title, album, filename),
+                )
+            connection.commit()
 
-    # Setup playlists database
-    with sqlite3.connect(playlists_db_path) as connection:
-        connection.execute("""
-            CREATE TABLE playlists (
-                id INTEGER PRIMARY KEY,
-                name TEXT,
-                filename TEXT
-            )
-        """)
+    def _create_playlists_database():
+        with sqlite3.connect(playlists_db_path, timeout=30.0) as connection:
+            connection.execute("""
+                CREATE TABLE playlists (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT,
+                    filename TEXT
+                )
+            """)
 
-        for playlist_name, filename in TEST_PLAYLISTS:
-            connection.execute(
-                "INSERT INTO playlists (name, filename) VALUES (?, ?)",
-                (playlist_name, filename),
-            )
-        connection.commit()
+            for playlist_name, filename in TEST_PLAYLISTS:
+                connection.execute(
+                    "INSERT INTO playlists (name, filename) VALUES (?, ?)",
+                    (playlist_name, filename),
+                )
+            connection.commit()
+
+    # Setup both databases with retry logic
+    nowplaying.utils.sqlite.retry_sqlite_operation(_create_songs_database)
+    nowplaying.utils.sqlite.retry_sqlite_operation(_create_playlists_database)
 
     yield {"songs_db": songs_db_path, "playlists_db": playlists_db_path}
-    Path(songs_db_path).unlink(missing_ok=True)
-    Path(playlists_db_path).unlink(missing_ok=True)
+
+    def _cleanup_songs_database():
+        Path(songs_db_path).unlink(missing_ok=True)
+
+    def _cleanup_playlists_database():
+        Path(playlists_db_path).unlink(missing_ok=True)
+
+    nowplaying.utils.sqlite.retry_sqlite_operation(_cleanup_songs_database)
+    nowplaying.utils.sqlite.retry_sqlite_operation(_cleanup_playlists_database)
 
 
 def _setup_djuced_plugin(plugin, db_path):
