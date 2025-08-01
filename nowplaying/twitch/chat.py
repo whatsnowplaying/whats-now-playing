@@ -40,6 +40,8 @@ from twitchAPI.type import AuthScope  # pylint: disable=import-error
 
 import nowplaying.config
 import nowplaying.db
+import nowplaying.inputs
+import nowplaying.pluginimporter
 import nowplaying.trackrequests
 import nowplaying.twitch.oauth2
 import nowplaying.twitch.utils
@@ -79,6 +81,40 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         self.starttime = datetime.datetime.now(datetime.timezone.utc)
         self.timeout = aiohttp.ClientTimeout(total=60)
         self.modernmeerkat_greeted = False
+
+        self.input: nowplaying.inputs.InputPlugin | None = None
+        self.previousinput: str | None = None
+        self.plugins: dict = {}
+
+    def _setup_input_plugins(self):
+        """Initialize input plugins (without starting them) - called lazily"""
+        if not self.plugins:
+            self.plugins = nowplaying.pluginimporter.import_plugins(nowplaying.inputs)
+
+    async def switch_input_plugin(self):
+        """Handle user switching source input while running (without starting the plugin)"""
+        # Lazy initialization - only setup plugins when actually needed
+        self._setup_input_plugins()
+
+        if not self.previousinput or self.previousinput != self.config.cparser.value(
+            "settings/input"
+        ):
+            if self.input:
+                logging.debug("Switching from %s input plugin", self.previousinput)
+
+            self.previousinput: str | None = self.config.cparser.value("settings/input")
+            if not self.previousinput:
+                self.input = None
+                return False
+
+            self.input = self.plugins[f"nowplaying.inputs.{self.previousinput}"].Plugin(
+                config=self.config
+            )
+            logging.debug("Switched to %s input plugin (not started)", self.previousinput)
+            if not self.input:
+                return False
+
+        return True
 
     async def _token_validation(self):
         """check for separate chat token (for bot accounts)"""
@@ -473,10 +509,14 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         if commandlist:
             logging.debug("got commandlist: %s", commandlist)
         if setting := await self.requests.find_command(command):
-            logging.debug(setting)
-            setting["userimage"] = await nowplaying.twitch.utils.get_user_image(
-                self.twitch, username
-            )
+            logging.debug("Found setting for command %s: %s", command, setting)
+            try:
+                setting["userimage"] = await nowplaying.twitch.utils.get_user_image(
+                    self.twitch, username
+                )
+            except Exception as err:  # pylint: disable=broad-except
+                logging.debug("Failed to get user image for %s: %s", username, err)
+                setting["userimage"] = None
             if setting.get("type") == "Generic":
                 reply = await self.requests.user_track_request(setting, username, commandlist)
             elif setting.get("type") == "Roulette":
@@ -485,6 +525,9 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
                 )
             elif setting.get("type") == "GifWords":
                 reply = await self.requests.gifwords_request(setting, username, commandlist)
+            elif setting.get("type") == "ArtistQuery":
+                logging.debug("Calling artist_query_request for %s", commandlist)
+                reply = await self.requests.artist_query_request(setting, username, commandlist)
         return reply
 
     @staticmethod
@@ -876,6 +919,10 @@ class TwitchChatSettings:
 
         for file in filelist:
             if not fnmatch.fnmatch(file, "twitchbot_*.txt"):
+                continue
+
+            # Skip help template files
+            if "_help.txt" in file:
                 continue
 
             command = file.replace("twitchbot_", "").replace(".txt", "")

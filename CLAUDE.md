@@ -7,6 +7,7 @@ code in this repository.
 
 ### Testing
 
+- tests should be methods not classes
 - `pytest` - Run all tests (both tests-qt and tests directories)
 - `pytest tests/` - Run only non-Qt tests
 - `pytest tests-qt/` - Run only Qt-based tests
@@ -15,15 +16,9 @@ code in this repository.
 
 ### Code Quality
 
-- `pylint nowplaying/` - Run linting on the main package
+- `ruff format` - Apply code formatting
+- `pylint` - Run linting
 - `pyright` - Type checking (configured in pyproject.toml)
-- `yapf --diff .` - Check code formatting
-- `yapf -i .` - Apply code formatting
-
-### Build and Distribution
-
-- `python -m nowplaying` - Run the application from source
-- `pyinstaller nowplaying.pyproject` - Build standalone executable
 
 ### Git and Pull Requests
 

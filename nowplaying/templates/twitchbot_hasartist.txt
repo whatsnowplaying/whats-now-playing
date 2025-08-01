@@ -1,0 +1,1 @@
+{{ hasartist_result }}

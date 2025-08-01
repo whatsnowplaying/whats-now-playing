@@ -338,6 +338,64 @@
     </item>
    </layout>
   </widget>
+  <widget class="QGroupBox" name="additional_libs_groupbox">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>390</y>
+     <width>621</width>
+     <height>120</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Additional Library Paths</string>
+   </property>
+   <widget class="QTextEdit" name="additional_libs_textedit">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>25</y>
+      <width>501</width>
+      <height>60</height>
+     </rect>
+    </property>
+    <property name="toolTip">
+     <string>Additional Serato library paths (one per line). Used for external drives and multiple music collections.</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="add_additional_lib_button">
+    <property name="geometry">
+     <rect>
+      <x>520</x>
+      <y>25</y>
+      <width>90</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Add Path...</string>
+    </property>
+    <property name="toolTip">
+     <string>Browse for additional Serato library directory</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="additional_libs_help_label">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>90</y>
+      <width>600</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Enter additional _Serato_ folder paths (one per line) for external drives or multiple libraries.</string>
+    </property>
+    <property name="styleSheet">
+     <string>color: #666;</string>
+    </property>
+   </widget>
+  </widget>
  </widget>
  <resources/>
  <connections>

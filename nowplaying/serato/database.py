@@ -40,10 +40,20 @@ class SeratoDatabaseV2Reader(SeratoRuleMatchingMixin, SeratoBaseReader):
             return
 
         self.tracks = []
+        track_count = 0
+        parsed_count = 0
         for tag, value in self.database:
             if tag == "otrk":  # Track entry
+                track_count += 1
                 if track := self._parse_track_data(value):
+                    parsed_count += 1
                     self.tracks.append(track)
+
+        logging.debug(
+            "Serato database parsing: found %d otrk entries, successfully parsed %d tracks",
+            track_count,
+            parsed_count,
+        )
 
     @staticmethod
     def _parse_track_data(track_data: list[tuple[str, t.Any]]) -> dict[str, t.Any] | None:
@@ -58,7 +68,7 @@ class SeratoDatabaseV2Reader(SeratoRuleMatchingMixin, SeratoBaseReader):
             "talb": lambda v: {"album": v},
             "tgen": lambda v: {"genre": v},
             "tcom": lambda v: {"composer": v},
-            "tbpm": lambda v: {"bpm": struct.unpack(">f", v)[0] if len(v) >= 4 else None},
+            "tbpm": lambda v: {"bpm": v},
             "tkey": lambda v: {"key": v},
             "ttim": lambda v: {"length": struct.unpack(">I", v)[0] if len(v) >= 4 else None},
             "tadded": lambda v: {"added": struct.unpack(">I", v)[0] if len(v) >= 4 else None},
