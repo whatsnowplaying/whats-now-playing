@@ -8,8 +8,10 @@ Refactored version using parameterization to reduce duplication.
 """
 
 import asyncio
+import gc
 import sqlite3
 import tempfile
+import time
 import unittest.mock
 from pathlib import Path
 
@@ -86,7 +88,19 @@ def traktor_database():
     yield db_path
 
     def _cleanup_database():
-        Path(db_path).unlink(missing_ok=True)
+        # Force garbage collection to ensure connections are closed
+        gc.collect()
+
+        # Small delay for Windows file handle cleanup
+        time.sleep(0.1)
+
+        # Try to remove the file
+        try:
+            Path(db_path).unlink(missing_ok=True)
+        except PermissionError:
+            # On Windows, retry after a longer delay
+            time.sleep(1.0)
+            Path(db_path).unlink(missing_ok=True)
 
     nowplaying.utils.sqlite.retry_sqlite_operation(_cleanup_database)
 
@@ -145,7 +159,19 @@ def djuced_database():
     yield djuced_db_path
 
     def _cleanup_database():
-        Path(djuced_db_path).unlink(missing_ok=True)
+        # Force garbage collection to ensure connections are closed
+        gc.collect()
+
+        # Small delay for Windows file handle cleanup
+        time.sleep(0.1)
+
+        # Try to remove the file
+        try:
+            Path(djuced_db_path).unlink(missing_ok=True)
+        except PermissionError:
+            # On Windows, retry after a longer delay
+            time.sleep(1.0)
+            Path(djuced_db_path).unlink(missing_ok=True)
 
     nowplaying.utils.sqlite.retry_sqlite_operation(_cleanup_database)
 
@@ -204,10 +230,34 @@ def virtualdj_databases():
     yield {"songs_db": songs_db_path, "playlists_db": playlists_db_path}
 
     def _cleanup_songs_database():
-        Path(songs_db_path).unlink(missing_ok=True)
+        # Force garbage collection to ensure connections are closed
+        gc.collect()
+
+        # Small delay for Windows file handle cleanup
+        time.sleep(0.1)
+
+        # Try to remove the file
+        try:
+            Path(songs_db_path).unlink(missing_ok=True)
+        except PermissionError:
+            # On Windows, retry after a longer delay
+            time.sleep(1.0)
+            Path(songs_db_path).unlink(missing_ok=True)
 
     def _cleanup_playlists_database():
-        Path(playlists_db_path).unlink(missing_ok=True)
+        # Force garbage collection to ensure connections are closed
+        gc.collect()
+
+        # Small delay for Windows file handle cleanup
+        time.sleep(0.1)
+
+        # Try to remove the file
+        try:
+            Path(playlists_db_path).unlink(missing_ok=True)
+        except PermissionError:
+            # On Windows, retry after a longer delay
+            time.sleep(1.0)
+            Path(playlists_db_path).unlink(missing_ok=True)
 
     nowplaying.utils.sqlite.retry_sqlite_operation(_cleanup_songs_database)
     nowplaying.utils.sqlite.retry_sqlite_operation(_cleanup_playlists_database)
