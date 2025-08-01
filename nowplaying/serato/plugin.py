@@ -442,7 +442,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             # Find connection tab by iterating tabs
             for i in range(qwidget.count()):
                 tab = qwidget.widget(i)
-                if hasattr(tab, 'local_button'):  # Connection tab identifier
+                if hasattr(tab, "local_button"):  # Connection tab identifier
                     return tab
             raise AttributeError("Connection tab not found in QTabWidget")
         return qwidget
@@ -453,7 +453,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             # Find library tab by iterating tabs
             for i in range(qwidget.count()):
                 tab = qwidget.widget(i)
-                if hasattr(tab, 'deck1_checkbox'):  # Library tab identifier
+                if hasattr(tab, "deck1_checkbox"):  # Library tab identifier
                     return tab
             raise AttributeError("Library tab not found in QTabWidget")
         return qwidget
@@ -464,7 +464,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             # Find query tab by iterating tabs
             for i in range(qwidget.count()):
                 tab = qwidget.widget(i)
-                if hasattr(tab, 'serato_artist_scope_combo'):  # Query tab identifier
+                if hasattr(tab, "serato_artist_scope_combo"):  # Query tab identifier
                     return tab
             raise AttributeError("Query tab not found in QTabWidget")
         return qwidget
@@ -479,7 +479,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         connection_widgets.local_dir_button.clicked.connect(self.on_serato_lib_button)
 
         library_widgets = self._get_library_widgets(qwidget)
-        library_widgets.add_additional_lib_button.clicked.connect(self.on_add_additional_lib_button)
+        library_widgets.add_additional_lib_button.clicked.connect(
+            self.on_add_additional_lib_button
+        )
 
     def load_settingsui(self, qwidget: "QWidget"):
         """draw the plugin's settings page"""
@@ -507,7 +509,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         # Set connection values
         connection_widgets.local_dir_lineedit.setText(self.config.cparser.value("serato/libpath"))
         connection_widgets.remote_url_lineedit.setText(self.config.cparser.value("serato/url"))
-        connection_widgets.remote_poll_lineedit.setText(str(self.config.cparser.value("serato/interval")))
+        connection_widgets.remote_poll_lineedit.setText(
+            str(self.config.cparser.value("serato/interval"))
+        )
 
     def _load_library_settings(self, qwidget: "QWidget"):
         """Load library tab settings including deck skip checkboxes"""
@@ -544,7 +548,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         query_widgets = self._get_query_widgets(qwidget)
 
         # Set artist query scope
-        scope = self.config.cparser.value("serato/artist_query_scope", defaultValue="entire_library")
+        scope = self.config.cparser.value(
+            "serato/artist_query_scope", defaultValue="entire_library"
+        )
         if scope == "selected_playlists":
             query_widgets.serato_artist_scope_combo.setCurrentText("Selected Playlists")
         else:
@@ -561,15 +567,19 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         library_widgets = self._get_library_widgets(qwidget)
 
         # Validate remote URL if remote mode is selected
-        if (connection_widgets.remote_button.isChecked() and
-            ("https://serato.com/playlists" not in connection_widgets.remote_url_lineedit.text() and
-             "https://www.serato.com/playlists" not in connection_widgets.remote_url_lineedit.text() or
-             len(connection_widgets.remote_url_lineedit.text()) < 30)):
+        if connection_widgets.remote_button.isChecked() and (
+            "https://serato.com/playlists" not in connection_widgets.remote_url_lineedit.text()
+            and "https://www.serato.com/playlists"
+            not in connection_widgets.remote_url_lineedit.text()
+            or len(connection_widgets.remote_url_lineedit.text()) < 30
+        ):
             raise PluginVerifyError("Serato Live Playlist URL is invalid")
 
         # Validate local directory if local mode is selected
-        if (connection_widgets.local_button.isChecked() and
-            "_Serato_" not in connection_widgets.local_dir_lineedit.text()):
+        if (
+            connection_widgets.local_button.isChecked()
+            and "_Serato_" not in connection_widgets.local_dir_lineedit.text()
+        ):
             raise PluginVerifyError(
                 r'Serato Library Path is required.  Should point to "\_Serato\_" folder'
             )
@@ -599,10 +609,14 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """Save connection tab settings"""
         connection_widgets = self._get_connection_widgets(qwidget)
 
-        self.config.cparser.setValue("serato/libpath", connection_widgets.local_dir_lineedit.text())
+        self.config.cparser.setValue(
+            "serato/libpath", connection_widgets.local_dir_lineedit.text()
+        )
         self.config.cparser.setValue("serato/local", connection_widgets.local_button.isChecked())
         self.config.cparser.setValue("serato/url", connection_widgets.remote_url_lineedit.text())
-        self.config.cparser.setValue("serato/interval", connection_widgets.remote_poll_lineedit.text())
+        self.config.cparser.setValue(
+            "serato/interval", connection_widgets.remote_poll_lineedit.text()
+        )
 
     def _save_library_settings(self, qwidget: "QWidget"):
         """Save library tab settings including deck skip checkboxes"""
