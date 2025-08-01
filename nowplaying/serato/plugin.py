@@ -16,7 +16,7 @@ import struct
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QFileDialog, QTabWidget  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
@@ -416,14 +416,14 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def on_serato_lib_button(self):
         """lib button clicked action"""
-        connection_widgets = self._get_connection_widgets(self.qwidget)
+        connection_widgets = self.uihelp.find_tab_by_identifier(self.qwidget, "local_button")
         startdir = connection_widgets.local_dir_lineedit.text() or str(pathlib.Path.home())
         if libdir := QFileDialog.getExistingDirectory(self.qwidget, "Select directory", startdir):
             connection_widgets.local_dir_lineedit.setText(libdir)
 
     def on_add_additional_lib_button(self):
         """add additional library button clicked action"""
-        library_widgets = self._get_library_widgets(self.qwidget)
+        library_widgets = self.uihelp.find_tab_by_identifier(self.qwidget, "deck1_checkbox")
         startdir = str(pathlib.Path.home())
         if libdir := QFileDialog.getExistingDirectory(
             self.qwidget, "Select additional Serato library directory", startdir
@@ -436,49 +436,16 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 new_text = libdir
             library_widgets.additional_libs_textedit.setPlainText(new_text)
 
-    def _get_connection_widgets(self, qwidget: "QWidget"):
-        """Get connection tab widgets with explicit access"""
-        if isinstance(qwidget, QTabWidget):
-            # Find connection tab by iterating tabs
-            for i in range(qwidget.count()):
-                tab = qwidget.widget(i)
-                if hasattr(tab, "local_button"):  # Connection tab identifier
-                    return tab
-            raise AttributeError("Connection tab not found in QTabWidget")
-        return qwidget
-
-    def _get_library_widgets(self, qwidget: "QWidget"):
-        """Get library tab widgets with explicit access"""
-        if isinstance(qwidget, QTabWidget):
-            # Find library tab by iterating tabs
-            for i in range(qwidget.count()):
-                tab = qwidget.widget(i)
-                if hasattr(tab, "deck1_checkbox"):  # Library tab identifier
-                    return tab
-            raise AttributeError("Library tab not found in QTabWidget")
-        return qwidget
-
-    def _get_query_widgets(self, qwidget: "QWidget"):
-        """Get query tab widgets with explicit access"""
-        if isinstance(qwidget, QTabWidget):
-            # Find query tab by iterating tabs
-            for i in range(qwidget.count()):
-                tab = qwidget.widget(i)
-                if hasattr(tab, "serato_artist_scope_combo"):  # Query tab identifier
-                    return tab
-            raise AttributeError("Query tab not found in QTabWidget")
-        return qwidget
-
     def connect_settingsui(self, qwidget: "QWidget", uihelp: "nowplaying.uihelp.UIHelp"):
         """connect serato local dir button"""
         self.qwidget = qwidget
         self.uihelp = uihelp
 
         # Connect buttons from specific tabs
-        connection_widgets = self._get_connection_widgets(qwidget)
+        connection_widgets = self.uihelp.find_tab_by_identifier(qwidget, "local_button")
         connection_widgets.local_dir_button.clicked.connect(self.on_serato_lib_button)
 
-        library_widgets = self._get_library_widgets(qwidget)
+        library_widgets = self.uihelp.find_tab_by_identifier(qwidget, "deck1_checkbox")
         library_widgets.add_additional_lib_button.clicked.connect(
             self.on_add_additional_lib_button
         )
@@ -496,7 +463,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def _load_connection_settings(self, qwidget: "QWidget"):
         """Load connection tab settings"""
-        connection_widgets = self._get_connection_widgets(qwidget)
+        connection_widgets = self.uihelp.find_tab_by_identifier(qwidget, "local_button")
 
         # Set radio buttons based on local/remote mode
         if self.config.cparser.value("serato/local", type=bool):
@@ -515,7 +482,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def _load_library_settings(self, qwidget: "QWidget"):
         """Load library tab settings including deck skip checkboxes"""
-        library_widgets = self._get_library_widgets(qwidget)
+        library_widgets = self.uihelp.find_tab_by_identifier(qwidget, "deck1_checkbox")
 
         # Handle deck skip checkboxes
         deckskip = self.config.cparser.value("serato/deckskip")
@@ -545,7 +512,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def _load_query_settings(self, qwidget: "QWidget"):
         """Load query tab settings"""
-        query_widgets = self._get_query_widgets(qwidget)
+        query_widgets = self.uihelp.find_tab_by_identifier(qwidget, "serato_artist_scope_combo")
 
         # Set artist query scope
         scope = self.config.cparser.value(
@@ -563,8 +530,8 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def verify_settingsui(self, qwidget: "QWidget"):
         """Verify settings are valid"""
-        connection_widgets = self._get_connection_widgets(qwidget)
-        library_widgets = self._get_library_widgets(qwidget)
+        connection_widgets = self.uihelp.find_tab_by_identifier(qwidget, "local_button")
+        library_widgets = self.uihelp.find_tab_by_identifier(qwidget, "deck1_checkbox")
 
         # Validate remote URL if remote mode is selected
         if connection_widgets.remote_button.isChecked() and (
@@ -607,7 +574,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def _save_connection_settings(self, qwidget: "QWidget"):
         """Save connection tab settings"""
-        connection_widgets = self._get_connection_widgets(qwidget)
+        connection_widgets = self.uihelp.find_tab_by_identifier(qwidget, "local_button")
 
         self.config.cparser.setValue(
             "serato/libpath", connection_widgets.local_dir_lineedit.text()
@@ -620,7 +587,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def _save_library_settings(self, qwidget: "QWidget"):
         """Save library tab settings including deck skip checkboxes"""
-        library_widgets = self._get_library_widgets(qwidget)
+        library_widgets = self.uihelp.find_tab_by_identifier(qwidget, "deck1_checkbox")
 
         # Save deck skip settings
         deckskip = []
@@ -641,7 +608,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
     def _save_query_settings(self, qwidget: "QWidget"):
         """Save query tab settings"""
-        query_widgets = self._get_query_widgets(qwidget)
+        query_widgets = self.uihelp.find_tab_by_identifier(qwidget, "serato_artist_scope_combo")
 
         # Save artist query scope
         scope = (

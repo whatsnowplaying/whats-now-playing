@@ -34,7 +34,6 @@ from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-modu
     QComboBox,
     QHeaderView,
     QTableWidgetItem,
-    QTabWidget,
     QWidget,
 )
 
@@ -1192,37 +1191,22 @@ class TrackRequestSettings:
     def __init__(self):
         self.widget = None
         self.enablegifwords = False
+        self.uihelp = None
 
-    def _find_widget_in_tabs(self, widget_container: QWidget, widget_name: str):  # pylint: disable=no-self-use
-        """Find a widget by name across tabs or in a single widget"""
-
-        # If the container is a QTabWidget, search across all tabs
-        if isinstance(widget_container, QTabWidget):
-            for i in range(widget_container.count()):
-                tab_widget = widget_container.widget(i)
-                if hasattr(tab_widget, widget_name):
-                    return getattr(tab_widget, widget_name)
-            return None
-
-        # If it's a regular widget, search directly
-        if hasattr(widget_container, widget_name):
-            return getattr(widget_container, widget_name)
-
-        return None
-
-    def connect(self, uihelp: "nowplaying.uihelp.UIHelp", widget: QWidget):  # pylint: disable=unused-argument
+    def connect(self, uihelp: "nowplaying.uihelp.UIHelp", widget: QWidget):
         """connect buttons"""
         self.widget = widget
+        self.uihelp = uihelp
 
-        add_button = self._find_widget_in_tabs(widget, "add_button")
+        add_button = uihelp.find_widget_in_tabs(widget, "add_button")
         if add_button:
             add_button.clicked.connect(self.on_add_button)
 
-        del_button = self._find_widget_in_tabs(widget, "del_button")
+        del_button = uihelp.find_widget_in_tabs(widget, "del_button")
         if del_button:
             del_button.clicked.connect(self.on_del_button)
 
-    def _row_load(self, widget: QWidget, **kwargs):
+    def _row_load(self, widget: QWidget, uihelp: "nowplaying.uihelp.UIHelp", **kwargs):
         def _typebox(current, enablegifwords=False):
             box = QComboBox()
             reqtypes = ["Generic", "Roulette", "Twofer", "ArtistQuery"]
@@ -1234,7 +1218,7 @@ class TrackRequestSettings:
                     box.setCurrentIndex(box.count() - 1)
             return box
 
-        request_table = self._find_widget_in_tabs(widget, "request_table")
+        request_table = uihelp.find_widget_in_tabs(widget, "request_table")
         if not request_table:
             return
 
@@ -1251,7 +1235,12 @@ class TrackRequestSettings:
                 request_table.setItem(row, column, QTableWidgetItem(""))
         request_table.resizeColumnsToContents()
 
-    def load(self, config: "nowplaying.config.ConfigFile", widget: QWidget):
+    def load(  # pylint: disable=too-many-locals
+        self,
+        config: "nowplaying.config.ConfigFile",
+        widget: QWidget,
+        uihelp: "nowplaying.uihelp.UIHelp",
+    ):
         """load the settings window"""
 
         def clear_table(table_widget):
@@ -1261,14 +1250,14 @@ class TrackRequestSettings:
                 table_widget.removeRow(row)
 
         # Find widgets across tabs
-        request_table = self._find_widget_in_tabs(widget, "request_table")
-        enable_chat_checkbox = self._find_widget_in_tabs(widget, "enable_chat_checkbox")
-        enable_redemptions_checkbox = self._find_widget_in_tabs(
+        request_table = uihelp.find_widget_in_tabs(widget, "request_table")
+        enable_chat_checkbox = uihelp.find_widget_in_tabs(widget, "enable_chat_checkbox")
+        enable_redemptions_checkbox = uihelp.find_widget_in_tabs(
             widget, "enable_redemptions_checkbox"
         )
-        enable_checkbox = self._find_widget_in_tabs(widget, "enable_checkbox")
-        fuzzy_threshold_spinbox = self._find_widget_in_tabs(widget, "fuzzy_threshold_spinbox")
-        tenor_key_lineedit = self._find_widget_in_tabs(widget, "tenor_key_lineedit")
+        enable_checkbox = uihelp.find_widget_in_tabs(widget, "enable_checkbox")
+        fuzzy_threshold_spinbox = uihelp.find_widget_in_tabs(widget, "fuzzy_threshold_spinbox")
+        tenor_key_lineedit = uihelp.find_widget_in_tabs(widget, "tenor_key_lineedit")
 
         if request_table:
             clear_table(request_table)
@@ -1281,7 +1270,7 @@ class TrackRequestSettings:
             if "request-" in configitem:
                 for key in nowplaying.trackrequests.REQUEST_SETTING_MAPPING:
                     setting[key] = config.cparser.value(f"{configitem}/{key}")
-                self._row_load(widget, **setting)
+                self._row_load(widget, uihelp, **setting)
 
         if request_table:
             request_table.resizeColumnsToContents()
@@ -1331,14 +1320,16 @@ class TrackRequestSettings:
                     config.setValue(f"request-{row}/{cbtype}", value)
 
         # Find widgets across tabs
-        enable_redemptions_checkbox = self._find_widget_in_tabs(
+        enable_redemptions_checkbox = self.uihelp.find_widget_in_tabs(
             widget, "enable_redemptions_checkbox"
         )
-        enable_chat_checkbox = self._find_widget_in_tabs(widget, "enable_chat_checkbox")
-        enable_checkbox = self._find_widget_in_tabs(widget, "enable_checkbox")
-        fuzzy_threshold_spinbox = self._find_widget_in_tabs(widget, "fuzzy_threshold_spinbox")
-        tenor_key_lineedit = self._find_widget_in_tabs(widget, "tenor_key_lineedit")
-        request_table = self._find_widget_in_tabs(widget, "request_table")
+        enable_chat_checkbox = self.uihelp.find_widget_in_tabs(widget, "enable_chat_checkbox")
+        enable_checkbox = self.uihelp.find_widget_in_tabs(widget, "enable_checkbox")
+        fuzzy_threshold_spinbox = self.uihelp.find_widget_in_tabs(
+            widget, "fuzzy_threshold_spinbox"
+        )
+        tenor_key_lineedit = self.uihelp.find_widget_in_tabs(widget, "tenor_key_lineedit")
+        request_table = self.uihelp.find_widget_in_tabs(widget, "request_table")
 
         if enable_redemptions_checkbox:
             config.cparser.setValue(
@@ -1365,7 +1356,7 @@ class TrackRequestSettings:
     def verify(self, widget: QWidget):
         """verify the settings are good"""
 
-        request_table = self._find_widget_in_tabs(widget, "request_table")
+        request_table = self.uihelp.find_widget_in_tabs(widget, "request_table")
         if not request_table:
             return
 
@@ -1385,11 +1376,11 @@ class TrackRequestSettings:
     @Slot()
     def on_add_button(self):
         """add button clicked action"""
-        self._row_load(self.widget)
+        self._row_load(self.widget, self.uihelp)
 
     @Slot()
     def on_del_button(self):
         """del button clicked action"""
-        request_table = self._find_widget_in_tabs(self.widget, "request_table")
+        request_table = self.uihelp.find_widget_in_tabs(self.widget, "request_table")
         if request_table and (items := request_table.selectedIndexes()):
             request_table.removeRow(items[0].row())

@@ -836,7 +836,7 @@ class TwitchChatSettings:
         if items := self.widget.command_perm_table.selectedIndexes():
             self.widget.command_perm_table.removeRow(items[0].row())
 
-    def load(self, config, widget):
+    def load(self, config, widget, uihelp):  # pylint: disable=unused-argument
         """load the settings window"""
 
         self.widget = widget

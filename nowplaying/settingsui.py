@@ -185,7 +185,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "kickchat",
             "requests",
         ]:
-            self.settingsclasses[key].load(self.config, self.widgets[key])
+            self.settingsclasses[key].load(self.config, self.widgets[key], self.uihelp)
             self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
 
         self._connect_plugins()
@@ -400,7 +400,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "kick",
             "requests",
         ]:
-            self.settingsclasses[key].load(self.config, self.widgets[key])
+            self.settingsclasses[key].load(self.config, self.widgets[key], self.uihelp)
 
     def _upd_win_artistextras(self):
         self.widgets["artistextras"].coverart_combobox.clear()
@@ -1226,8 +1226,7 @@ def _load_tabbed_ui_files(tab_files, name):
         ui_file = QFile(filepath)
         ui_file.open(QFile.ReadOnly)
         try:
-            tab_content = loader.load(ui_file)
-            if tab_content:
+            if tab_content := loader.load(ui_file):
                 # Use the tab name from filename, but could be overridden by windowTitle in XML
                 display_name = (
                     tab_content.windowTitle()

@@ -30,7 +30,12 @@ class KickSettings:
         widget.clientid_lineedit.editingFinished.connect(self.update_oauth_status)
         widget.secret_lineedit.editingFinished.connect(self.update_oauth_status)
 
-    def load(self, config: nowplaying.config.ConfigFile, widget: Any) -> None:
+    def load(
+        self,
+        config: nowplaying.config.ConfigFile,
+        widget: Any,
+        uihelp: "nowplaying.uihelp.UIHelp",  # pylint: disable=unused-argument
+    ) -> None:
         """load the settings window"""
         self.widget = widget
         widget.enable_checkbox.setChecked(config.cparser.value("kick/enabled", type=bool))
@@ -247,7 +252,12 @@ class KickChatSettings:
         if items := self.widget.command_perm_table.selectedIndexes():
             self.widget.command_perm_table.removeRow(items[0].row())
 
-    def load(self, config: nowplaying.config.ConfigFile, widget: Any) -> None:
+    def load(
+        self,
+        config: nowplaying.config.ConfigFile,
+        widget: Any,
+        uihelp: "nowplaying.uihelp.UIHelp",  # pylint: disable=unused-argument
+    ) -> None:
         """load kick chat settings"""
         self.widget = widget
         widget.enable_checkbox.setChecked(config.cparser.value("kick/chat", type=bool))
