@@ -3,20 +3,73 @@
 
 ## Version 5.0.0 - in-progress
 
-* Major New Features:
-  * New startup window system shows progress tracking with failsafe timers
-  * Fuzzy matching for track requests now handles some typos and natural language input
-  * Configurable fuzzy match threshold (50-100%) in requests UI
-  * Several new template variables
-  * New notifications plugin system with remote server support
-    * Text Output was moved here!
-  * Twitch:
-    * Replaced PubSub with EventSub WebSocket for Twitch Redemptions
-    * User friendly ways to authenticate the app
+* New Features:
+  * Many UI element upgrades
+    * Major overhaul of the UI with many pages getting some clean up
+    * Tree-structure to help organize various categories
+    * Many preferences are now in tabs to make them less crowded
+    * New startup window system shows progress tracking
+  * New Output System
+    * Remote server support to send results to a central computer
+      to consolidate one or more DJs into one set of outputs
+    * Text Output was moved here
+    * Set lists are now built in real-time and can be customized
+  * Twitch
+    * Switched from deprecated PubSub to WS-EventSub
+    * Twitch Redemptions and Requests are back
+    * Authentication system now simplified and self-contained
     * Added contextual help system for chat commands (e.g., !track help)
+  * Requests Overhaul
+    * Fuzzy matching with customizable threshold for track requests now
+      handles some typos and natural language input
+    * !hasartist chat command to search either entire
+      DB or specific crates/playlists
+    * Support for animated gifs/memes based upon text from Tenor
+  * Web Server changes
+    * Removed bundled templates that did not use websockets
+    * Revamped old templates to remove some sizing and background issues with OBS
+    * New templates that mirror the boring templates everyone else uses
+    * New templates with new special effects
+    * ws-gifwords-fade.htm to show GifWords requests
+    * ws-justthecover.htm to cycle through all of the front covers
+    * Bundled copies of some common libraries available via the `/vendor` endpoint
 
-* Important Upgrades
+  * Several new template variables
+    * discordguild
+    * kickchannel
+    * lyricist
+    * now
+    * timestamp
+    * today
+    * twitchchannel
   * Completely revamped documentation website to make it easy to pick your version
+
+* Bug fixes
+  * Icecast-based systems (butt, Traktor, etc) got some protocol fixes
+  * M3U-based systems (Virtual DJ) file watching fixes
+
+* Removed
+  * The non-websocket templates have been removed
+
+* Denon
+  * Many Denon devices using Stagelinq should now be supported
+
+* DJUCED
+  * Revamped database support
+  * hasartist support
+  * Smart playlists should now be supported
+
+* Serato
+  * Smart crates are now supported
+  * hasartist support for crates, smart crates, or the full database
+
+* Traktor
+  * Revamped database support, including automatic database refresh running in the background
+  * hasartist support
+
+* Virtual DJ
+  * Revamped database support, including automatic database refresh running in the background
+  * hasartist support
 
 * Important Internal Changes
   * Windows build server is now running on Server 2022
@@ -28,6 +81,10 @@
   * Enhanced PyInstaller build system with automatic module discovery
   * Switched to `ruff` code formatter
   * Switched to `mkdocs` for website
+  * New build system for web templates
+  * Settings UI now has a new generic tab loading system
+  * Major reorganization of core code in lots of places, with many
+    classes and modules getting broken up
 
 ## Version 4.2.0 - 2025-06-30
 

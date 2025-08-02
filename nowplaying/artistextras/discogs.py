@@ -78,7 +78,7 @@ class Plugin(ArtistExtrasPlugin):
             artist_name=artist_name,
             endpoint=f"search_{search_type}_{album_title}",
             fetch_func=fetch_func,
-            ttl_seconds=24 * 60 * 60,  # 24 hours for Discogs data per CLAUDE.md
+            ttl_seconds=None,  # Use provider default from apicache.py
         )
 
         # Reconstruct objects from cached JSON data if needed
@@ -128,7 +128,7 @@ class Plugin(ArtistExtrasPlugin):
             artist_name=artist_name,
             endpoint=f"artist_{artist_id}",
             fetch_func=fetch_func,
-            ttl_seconds=24 * 60 * 60,  # 24 hours for Discogs data per CLAUDE.md
+            ttl_seconds=None,  # Use provider default from apicache.py
         )
 
         # Reconstruct artist object from cached JSON data if needed

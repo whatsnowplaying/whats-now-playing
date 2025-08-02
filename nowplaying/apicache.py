@@ -28,11 +28,11 @@ class APIResponseCache:
 
     # Cache TTL settings (in seconds)
     DEFAULT_TTL = {
-        "discogs": 24 * 60 * 60,  # 24 hours for artist info
+        "discogs": 7 * 24 * 60 * 60,  # 7 days for artist info
         "theaudiodb": 7 * 24 * 60 * 60,  # 7 days for artist bios
         "fanarttv": 7 * 24 * 60 * 60,  # 7 days for fanart URLs
         "wikimedia": 24 * 60 * 60,  # 24 hours for wiki info
-        "default": 6 * 60 * 60,  # 6 hours default
+        "default": 24 * 60 * 60,  # 24 hours default
     }
 
     CREATE_TABLE_SQL = """

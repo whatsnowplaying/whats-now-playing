@@ -218,7 +218,7 @@ developing:
 - Configuration-aware selective fetching (only fetches bio/images if enabled)
 - Combined API requests to reduce call count by 40-60%
 - Reduced timeouts (5s) and image limits (5 max) for live performance
-- Uses existing `apicache.py` system (24-hour TTL) for response caching
+- Uses existing `apicache.py` system for response caching
 - Provides both async interface and sync compatibility wrapper
 - SSL certificate handling for reliability across environments
 
@@ -299,8 +299,7 @@ developing:
   aiosqlite
 - Comprehensive caching integration across all artistextras plugins
 - Provides `cached_fetch()` unified interface for consistent caching patterns
-- Provider-specific TTL settings: Discogs (24h), TheAudioDB/FanartTV (7d),
-  Wikimedia (24h)
+- Provider-specific TTL settings configured in `apicache.py`
 - Advanced duplicate artist handling with unique cache key strategies:
 
   - **Discogs**: Artist+album combination caching with object reconstruction

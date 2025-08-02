@@ -282,9 +282,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("request-1/displayname", "Artist Library Check")
         settings.setValue("request-1/playlist", "")
 
-        # Default permissions for hasartist command
-        settings.setValue("twitchbot-command-hasartist/anyone", True)
-
     def _defaults_plugins(self, settings: QSettings) -> None:
         """configure the defaults for plugins"""
         self.pluginobjs = {}
