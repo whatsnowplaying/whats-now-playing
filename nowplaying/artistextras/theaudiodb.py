@@ -60,7 +60,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             artist_name=artist_name,
             endpoint=api.split(".")[0],  # Use the first part of API call as endpoint
             fetch_func=fetch_func,
-            ttl_seconds=7 * 24 * 60 * 60,  # 7 days for TheAudioDB data
+            ttl_seconds=None,  # Use provider default from apicache.py
         )
 
     def _check_artist(self, artdata):
@@ -252,7 +252,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             artist_name=artist_name,
             endpoint=f"artist_{artist_data['idArtist']}",
             fetch_func=fetch_func,
-            ttl_seconds=7 * 24 * 60 * 60,  # 7 days for TheAudioDB data
+            ttl_seconds=None,  # Use provider default from apicache.py
         )
 
     async def download_async(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches

@@ -53,7 +53,7 @@ class Plugin(ArtistExtrasPlugin):
             artist_name=artist_name,
             endpoint=f"music/{artistid}",  # Use the API endpoint path
             fetch_func=fetch_func,
-            ttl_seconds=7 * 24 * 60 * 60,  # 7 days for FanartTV data per CLAUDE.md
+            ttl_seconds=None,  # Use provider default from apicache.py
         )
 
     async def download_async(self, metadata=None, imagecache=None):

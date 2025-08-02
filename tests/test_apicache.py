@@ -431,11 +431,11 @@ async def test_cache_provider_ttl_settings():
 
         # Test each provider's default TTL
         providers_and_ttls = [
-            ("discogs", 24 * 60 * 60),  # 24 hours
+            ("discogs", 7 * 24 * 60 * 60),  # 7 days
             ("theaudiodb", 7 * 24 * 60 * 60),  # 7 days
             ("fanarttv", 7 * 24 * 60 * 60),  # 7 days
             ("wikimedia", 24 * 60 * 60),  # 24 hours
-            ("unknown_provider", 6 * 60 * 60),  # 6 hours default
+            ("unknown_provider", 24 * 60 * 60),  # 24 hours default
         ]
 
         for provider, expected_ttl in providers_and_ttls:

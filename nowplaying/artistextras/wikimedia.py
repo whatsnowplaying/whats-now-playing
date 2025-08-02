@@ -65,7 +65,7 @@ class Plugin(ArtistExtrasPlugin):
             artist_name=artist_name,
             endpoint=f"{entity}_{lang}",  # Unique per entity + language combination
             fetch_func=fetch_func,
-            ttl_seconds=24 * 60 * 60,  # 24 hours for Wikimedia data per CLAUDE.md
+            ttl_seconds=None,  # Use provider default from apicache.py
         )
 
         # Reconstruct WikiPage object from cached JSON data if needed
