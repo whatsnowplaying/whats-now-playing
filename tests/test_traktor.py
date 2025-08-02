@@ -2,6 +2,7 @@
 """test virtualdj"""
 
 import asyncio
+import os
 import pytest
 
 import nowplaying.inputs.traktor  # pylint: disable=import-error
@@ -18,6 +19,7 @@ def results(expected, metadata):
     assert metadata == {}
 
 
+@pytest.mark.xfail(os.name == 'nt', reason="Windows file locking issues with background XML processing")
 @pytest.mark.asyncio
 async def test_read_collections(bootstrap, getroot):
     """read the collections file"""
