@@ -126,7 +126,8 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
 
             # Atomic swap: rename temp to live
             if self.temp_database_path.exists():
-                await asyncio.to_thread(self._atomic_swap)
+                # Use retry logic for Windows file locking issues
+                await asyncio.to_thread(nowplaying.utils.sqlite.retry_sqlite_operation, self._atomic_swap_inner)
                 logging.info("XML database refreshed successfully: %s", self.database_path)
                 return True
             logging.error("Temp database was not created")
@@ -177,25 +178,20 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
 
             connection.commit()
 
-    def _atomic_swap(self) -> None:
-        """Atomically swap temp database with live database"""
-
-        def _perform_swap():
-            if self.database_path.exists():
-                # Create backup first
-                if self.backup_database_path.exists():
-                    self.backup_database_path.unlink()
-                self.database_path.rename(self.backup_database_path)
-
-            # Atomic rename
-            self.temp_database_path.rename(self.database_path)
-
-            # Clean up backup after successful swap
+    def _atomic_swap_inner(self) -> None:
+        """Inner atomic swap operation for retry logic"""
+        if self.database_path.exists():
+            # Create backup first
             if self.backup_database_path.exists():
                 self.backup_database_path.unlink()
+            self.database_path.rename(self.backup_database_path)
 
-        # Use retry logic for Windows file locking issues
-        nowplaying.utils.sqlite.retry_sqlite_operation(_perform_swap)
+        # Atomic rename
+        self.temp_database_path.rename(self.database_path)
+
+        # Clean up backup after successful swap
+        if self.backup_database_path.exists():
+            self.backup_database_path.unlink()
 
     def shutdown(self) -> None:
         """Signal the background refresh loop to exit cleanly"""
