@@ -210,8 +210,7 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
                 logging.info("Successfully authenticated with Kick. Channel: %s", channel_name)
 
                 test_message = (
-                    f"🤖 whatsnowplaying v{self.config.version} by @modernmeerkat "
-                    "connected!"
+                    f"🤖 whatsnowplaying v{self.config.version} by @modernmeerkat connected!"
                 )
                 test_sent = await self._send_message(test_message)
                 if test_sent:
