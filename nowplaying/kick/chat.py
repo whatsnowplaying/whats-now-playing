@@ -5,7 +5,6 @@ import asyncio
 import datetime
 import logging
 import pathlib
-import platform
 from typing import Any
 
 import aiohttp
@@ -210,13 +209,8 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
 
                 logging.info("Successfully authenticated with Kick. Channel: %s", channel_name)
 
-                # Send connection message with version info (like Twitch !whatsnowplayingversion)
-                inputsource = self.config.cparser.value("settings/input")
-                plat = platform.platform()
-
                 test_message = (
-                    f"🤖 whatsnowplaying v{self.config.version} by @modernmeerkat "
-                    f"connected! Using {inputsource} on {plat}."
+                    f"🤖 whatsnowplaying v{self.config.version} by @modernmeerkat connected!"
                 )
                 test_sent = await self._send_message(test_message)
                 if test_sent:
