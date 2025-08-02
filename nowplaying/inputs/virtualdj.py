@@ -139,56 +139,29 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
         try:
             while not self._playlists_shutdown_event.is_set():
                 self.config.cparser.sync()
-                if not self.config.cparser.value("virtualdj/rebuild_playlists_db", type=bool):
-                    # Check if playlists DB needs refresh based on age
-                    max_age_days = self.config.cparser.value(
-                        "virtualdj/max_age_days", type=int, defaultValue=7
-                    )
-                    if self.playlists_needs_refresh(max_age_days):
-                        self.config.cparser.setValue("virtualdj/rebuild_playlists_db", True)
-                    else:
-                        # Wait with cancellation support
-                        try:
-                            await asyncio.wait_for(
-                                self._playlists_shutdown_event.wait(), timeout=60 * 5
-                            )
-                            break  # Shutdown requested
-                        except asyncio.TimeoutError:
-                            continue  # Normal timeout, continue loop
 
-                playlistdir = self.config.cparser.value("virtualdj/playlists")
-                if not playlistdir:
-                    logging.error("VirtualDJ playlists directory not configured")
-                    self.config.cparser.setValue("virtualdj/rebuild_playlists_db", False)
-                    # Wait with cancellation support
-                    try:
-                        await asyncio.wait_for(
-                            self._playlists_shutdown_event.wait(), timeout=60 * 5
-                        )
-                        break  # Shutdown requested
-                    except asyncio.TimeoutError:
-                        continue  # Normal timeout, continue loop
+                rebuild_requested: bool = self.config.cparser.value(
+                    "virtualdj/rebuild_playlists_db", type=bool
+                )
 
-                playlistdirpath = pathlib.Path(playlistdir)
-                if not playlistdirpath.exists():
-                    logging.error("VirtualDJ playlists directory does not exist: %s", playlistdir)
-                    self.config.cparser.setValue("virtualdj/rebuild_playlists_db", False)
-                    # Wait with cancellation support
-                    try:
-                        await asyncio.wait_for(
-                            self._playlists_shutdown_event.wait(), timeout=60 * 5
-                        )
-                        break  # Shutdown requested
-                    except asyncio.TimeoutError:
-                        continue  # Normal timeout, continue loop
+                # Check if playlists DB needs refresh based on age
+                max_age_days = self.config.cparser.value(
+                    "virtualdj/max_age_days", type=int, defaultValue=7
+                )
 
-                success = await self.background_playlists_refresh(playlistdirpath)
-                if success:
-                    self.config.cparser.setValue("virtualdj/rebuild_playlists_db", False)
+                if self.playlists_needs_refresh(max_age_days):
+                    rebuild_requested = True
+
+                if rebuild_requested:
+                    if playlistdir := self.config.cparser.value("virtualdj/playlists", type=str):
+                        playlistdirpath = pathlib.Path(playlistdir)
+                        success = await self.background_playlists_refresh(playlistdirpath)
+                        if success:
+                            self.config.cparser.setValue("virtualdj/rebuild_playlists_db", False)
 
                 # Wait with cancellation support
                 try:
-                    await asyncio.wait_for(self._playlists_shutdown_event.wait(), timeout=60 * 5)
+                    await asyncio.wait_for(self._playlists_shutdown_event.wait(), timeout=5)
                     break  # Shutdown requested
                 except asyncio.TimeoutError:
                     continue  # Normal timeout, continue loop
@@ -352,9 +325,16 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
         return False
 
-    async def start(self):
+    async def start(self) -> None:
         """setup the watcher to run in a separate thread"""
+        # Prevent multiple background tasks
+        if self.tasks:
+            logging.debug("VirtualDJ background tasks already running, skipping start()")
+            return
+
         # Start XML songs background refresh task
+        # Reset shutdown event if it was set from a previous instance
+        self.xml_processor.reset_shutdown_event()
         xml_task = asyncio.create_task(self.xml_processor.background_refresh_loop())
         self.tasks.add(xml_task)
         xml_task.add_done_callback(self.tasks.discard)
@@ -368,9 +348,6 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
     async def getplayingtrack(self):
         """wrapper to call getplayingtrack"""
-
-        # just in case called without calling start...
-        await self.start()
         return self.metadata
 
     async def getrandomtrack(self, playlist):
@@ -511,7 +488,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
         if filename := QFileDialog.getExistingDirectory(
             self.qwidget, "Select directory", startdir
         ):
-            self.qwidget.playlistdir_lineedit.setText(filename[0])
+            self.qwidget.playlistdir_lineedit.setText(filename)
 
     def on_history_dir_button(self):
         """filename button clicked action"""

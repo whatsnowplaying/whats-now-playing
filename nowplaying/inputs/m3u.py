@@ -28,13 +28,12 @@ EXTVDJ_REMIX_RE = re.compile(r".*<remix>(.+)</remix>.*")
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     """handler for NowPlaying"""
 
-    def __init__(self, config=None, m3udir=None, qsettings=None):
+    def __init__(self, config=None, m3udir: str | None = None, qsettings=None):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "M3U"
+        self.m3udir: str | None = None
         if m3udir and os.path.exists(m3udir):
             self.m3udir = m3udir
-        else:
-            self.m3udir = None
 
         self.mixmode = "newest"
         self.event_handler = None
@@ -55,8 +54,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         can update on change"""
 
         m3udir = self.config.cparser.value(configkey)
-        if not self.m3udir or self.m3udir != m3udir:
-            await self.stop()
+        if self.observer and self.m3udir != m3udir:
+            self.observer.stop()
+            self.observer = None
 
         if self.observer:
             return

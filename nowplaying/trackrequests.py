@@ -991,7 +991,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 "hasartist_found": False,
             }
         except Exception as err:  # pylint: disable=broad-except
-            logging.error("Artist query failed for %s: %s", artist_name, err)
+            logging.error("Artist query failed for %s: %s", artist_name, err, exc_info=True)
             return {"hasartist_result": f"Error checking for {artist_name}"}
 
     async def twofer_request(

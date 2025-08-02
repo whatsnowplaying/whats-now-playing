@@ -276,9 +276,7 @@ PLUGIN_TEST_DATA = [
     pytest.param(
         nowplaying.inputs.traktor.Plugin,
         "traktor/artist_query_scope",
-        lambda plugin, db_path: setattr(
-            plugin, "extradb", unittest.mock.MagicMock(databasefile=db_path)
-        ),
+        lambda plugin, db_path: setattr(plugin, "databasefile", db_path),
         "traktor_database",
         None,  # No cleanup needed
         id="traktor",
@@ -432,8 +430,7 @@ async def test_plugin_database_error_handling(bootstrap, plugin_class, scope_key
 
     # Set invalid database paths for each plugin type
     if plugin_class == nowplaying.inputs.traktor.Plugin:
-        plugin.extradb = unittest.mock.MagicMock()
-        plugin.extradb.databasefile = "/nonexistent/database.db"
+        plugin.databasefile = "/nonexistent/database.db"
     elif plugin_class == nowplaying.inputs.virtualdj.Plugin:
         plugin.songs_databasefile = "/nonexistent/songs.db"
         plugin.playlists_databasefile = "/nonexistent/playlists.db"
@@ -536,8 +533,7 @@ async def test_edge_case_artist_names(bootstrap, traktor_database, edge_case_art
     bootstrap.cparser.setValue("traktor/artist_query_scope", "entire_library")
 
     plugin = nowplaying.inputs.traktor.Plugin(config=bootstrap)
-    plugin.extradb = unittest.mock.MagicMock()
-    plugin.extradb.databasefile = traktor_database
+    plugin.databasefile = traktor_database
 
     try:
         result = await plugin.has_tracks_by_artist(edge_case_artist)
@@ -558,8 +554,7 @@ async def test_traktor_selected_playlists_scope(bootstrap, traktor_database):
     bootstrap.cparser.setValue("traktor/selected_playlists", "House,Techno")
 
     plugin = nowplaying.inputs.traktor.Plugin(config=bootstrap)
-    plugin.extradb = unittest.mock.MagicMock()
-    plugin.extradb.databasefile = traktor_database
+    plugin.databasefile = traktor_database
 
     # This would normally check playlist membership, but for this test
     # we're just ensuring the scoped query path doesn't crash
@@ -601,8 +596,7 @@ async def test_no_exceptions_during_rapid_queries(bootstrap):
     bootstrap.cparser.setValue("traktor/artist_query_scope", "entire_library")
 
     plugin = nowplaying.inputs.traktor.Plugin(config=bootstrap)
-    plugin.extradb = unittest.mock.MagicMock()
-    plugin.extradb.databasefile = "/nonexistent/database.db"
+    plugin.databasefile = "/nonexistent/database.db"
 
     # Simulate rapid track changes during live performance
     artists = ["Artist 1", "Artist 2", "Artist 3", "Artist 4", "Artist 5"]
@@ -654,8 +648,7 @@ async def test_memory_efficiency_large_queries(bootstrap):
     bootstrap.cparser.setValue("traktor/artist_query_scope", "entire_library")
 
     plugin = nowplaying.inputs.traktor.Plugin(config=bootstrap)
-    plugin.extradb = unittest.mock.MagicMock()
-    plugin.extradb.databasefile = "/nonexistent/database.db"
+    plugin.databasefile = "/nonexistent/database.db"
 
     # Simulate many queries during a long DJ set
     for i in range(100):

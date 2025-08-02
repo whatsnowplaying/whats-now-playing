@@ -130,67 +130,6 @@ class TraktorSAXHandler(xml.sax.ContentHandler):
                 self.current_playlist = None
 
 
-class Traktor:
-    """data from the traktor collections.nml file"""
-
-    def __init__(self, config=None):
-        self.databasefile = pathlib.Path(
-            QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
-        ).joinpath("traktor", "traktor.db")
-        self.database = None
-        self.config = config
-
-    def initdb(self):
-        """initialize the db"""
-        if not self.databasefile.exists():
-            self.config.cparser.setValue("traktor/rebuild_db", True)
-
-    async def lookup(self, artist=None, title=None):
-        """lookup the metadata"""
-        async with aiosqlite.connect(self.databasefile) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = await connection.cursor()
-            try:
-                await cursor.execute(
-                    """SELECT * FROM songs WHERE artist=? AND title=? ORDER BY id DESC LIMIT 1""",
-                    (
-                        artist,
-                        title,
-                    ),
-                )
-            except sqlite3.OperationalError:
-                return None
-
-            row = await cursor.fetchone()
-            if not row:
-                return None
-
-        metadata = {data: row[data] for data in METADATALIST}
-        for key in LISTFIELDS:
-            if metadata.get(key):
-                metadata[key] = [row[key]]
-        return metadata
-
-    async def getrandomtrack(self, playlist):
-        """return the contents of a playlist"""
-        async with aiosqlite.connect(self.databasefile) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = await connection.cursor()
-            try:
-                await cursor.execute(
-                    """SELECT filename FROM playlists WHERE name=? ORDER BY random() LIMIT 1""",
-                    (playlist,),
-                )
-            except sqlite3.OperationalError:
-                return None
-
-            row = await cursor.fetchone()
-            if not row:
-                return None
-
-            return str(row["filename"])
-
-
 class Plugin(IcecastPlugin):
     """base class of input plugins"""
 
@@ -198,7 +137,10 @@ class Plugin(IcecastPlugin):
         """no custom init"""
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Traktor"
-        self.extradb = None
+        self.databasefile = pathlib.Path(
+            QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
+        ).joinpath("traktor", "traktor.db")
+        self.xml_processor = None
         self.tasks = set()
 
     def install(self):
@@ -310,6 +252,37 @@ class Plugin(IcecastPlugin):
         """provide a description for the plugins page"""
         qwidget.setText("Support for Native Instruments Traktor.")
 
+    def initdb(self):
+        """initialize the db"""
+        if not self.databasefile.exists():
+            self.config.cparser.setValue("traktor/rebuild_db", True)
+
+    async def lookup(self, artist: str | None = None, title: str | None = None):
+        """lookup the metadata"""
+        async with aiosqlite.connect(self.databasefile) as connection:
+            connection.row_factory = sqlite3.Row
+            cursor = await connection.cursor()
+            try:
+                await cursor.execute(
+                    """SELECT * FROM songs WHERE artist=? AND title=? ORDER BY id DESC LIMIT 1""",
+                    (
+                        artist,
+                        title,
+                    ),
+                )
+            except sqlite3.OperationalError:
+                return None
+
+            row = await cursor.fetchone()
+            if not row:
+                return None
+
+        metadata = {data: row[data] for data in METADATALIST}
+        for key in LISTFIELDS:
+            if metadata.get(key):
+                metadata[key] = [row[key]]
+        return metadata
+
     #### Data feed methods
 
     async def getplayingtrack(self):
@@ -321,25 +294,31 @@ class Plugin(IcecastPlugin):
             return self.lastmetadata
 
         metadata = None
-        if not self.extradb:
-            self.extradb = Traktor(config=self.config)
-
         if icmetadata.get("artist") and icmetadata.get("title"):
-            metadata = await self.extradb.lookup(
-                artist=icmetadata["artist"], title=icmetadata["title"]
-            )
+            metadata = await self.lookup(artist=icmetadata["artist"], title=icmetadata["title"])
         if not metadata:
             metadata = icmetadata
         self.lastmetadata = metadata
         return metadata
 
-    async def getrandomtrack(self, playlist):
-        if not self.extradb:
-            self.extradb = Traktor(config=self.config)
+    async def getrandomtrack(self, playlist: str):
+        """return the contents of a playlist"""
+        async with aiosqlite.connect(self.databasefile) as connection:
+            connection.row_factory = sqlite3.Row
+            cursor = await connection.cursor()
+            try:
+                await cursor.execute(
+                    """SELECT filename FROM playlists WHERE name=? ORDER BY random() LIMIT 1""",
+                    (playlist,),
+                )
+            except sqlite3.OperationalError:
+                return None
 
-        if self.extradb:
-            return await self.extradb.getrandomtrack(playlist)
-        return None
+            row = await cursor.fetchone()
+            if not row:
+                return None
+
+            return str(row["filename"])
 
     #### Control methods
 
@@ -351,9 +330,6 @@ class Plugin(IcecastPlugin):
             return
 
         # Start background XML refresh task
-        if not self.extradb:
-            self.extradb = Traktor(config=self.config)
-
         def get_traktor_xml():
             collectionsfile = self.config.cparser.value("traktor/collections")
             return pathlib.Path(collectionsfile) if collectionsfile else None
@@ -367,8 +343,8 @@ class Plugin(IcecastPlugin):
             " id INTEGER PRIMARY KEY AUTOINCREMENT)",
         ]
 
-        xml_processor = nowplaying.utils.xml.BackgroundXMLProcessor(
-            self.extradb.databasefile,
+        self.xml_processor = nowplaying.utils.xml.BackgroundXMLProcessor(
+            self.databasefile,
             TraktorSAXHandler,
             get_traktor_xml,
             table_schemas,
@@ -376,7 +352,10 @@ class Plugin(IcecastPlugin):
             self.config,
         )
 
-        task = asyncio.create_task(xml_processor.background_refresh_loop())
+        # Reset shutdown event if it was set from a previous instance
+        self.xml_processor.reset_shutdown_event()
+
+        task = asyncio.create_task(self.xml_processor.background_refresh_loop())
         self.tasks.add(task)
         task.add_done_callback(self.tasks.discard)
 
@@ -386,6 +365,11 @@ class Plugin(IcecastPlugin):
     async def stop(self):
         """stop the traktor plugin"""
         await super().stop()
+
+        # Signal XML processor shutdown
+        if self.xml_processor:
+            self.xml_processor.shutdown()
+
         if self.tasks:
             for task in self.tasks:
                 task.cancel()
@@ -399,7 +383,7 @@ class Plugin(IcecastPlugin):
                 "traktor/artist_query_scope", defaultValue="entire_library"
             )
 
-            async with aiosqlite.connect(self.extradb.databasefile) as connection:
+            async with aiosqlite.connect(self.databasefile) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
 

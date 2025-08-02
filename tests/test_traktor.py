@@ -38,10 +38,8 @@ async def test_read_collections(bootstrap, getroot):
     waited = 0
 
     while waited < max_wait:
-        if (
-            plugin.extradb
-            and plugin.extradb.databasefile.exists()
-            and not config.cparser.value("traktor/rebuild_db", type=bool)
+        if plugin.databasefile.exists() and not config.cparser.value(
+            "traktor/rebuild_db", type=bool
         ):
             # Database exists and rebuild flag is cleared - processing complete
             break
@@ -54,8 +52,7 @@ async def test_read_collections(bootstrap, getroot):
     track = await plugin.getrandomtrack(playlist="videos")
     assert track
 
-    traktor = plugin.extradb
-    data = await traktor.lookup(artist="Divine", title="Shoot Your Shot")
+    data = await plugin.lookup(artist="Divine", title="Shoot Your Shot")
     assert data
     assert data["artist"] == "Divine"
     assert data["title"] == "Shoot Your Shot"
