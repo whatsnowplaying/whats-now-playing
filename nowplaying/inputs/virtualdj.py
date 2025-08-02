@@ -316,12 +316,24 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
     def install(self):
         """locate Virtual DJ"""
-        vdjdir = self.config.userdocs.joinpath("VirtualDJ")
-        if vdjdir.exists():
-            self.config.cparser.value("settings/input", "virtualdj")
-            self.config.cparser.value("virtualdj/history", str(vdjdir.joinpath("History")))
-            self.config.cparser.value("virtualdj/playlists", str(vdjdir.joinpath("Playlists")))
-            return True
+        # Check multiple possible VirtualDJ locations
+        possible_locations = [
+            # Traditional Documents/VirtualDJ location
+            self.config.userdocs.joinpath("VirtualDJ"),
+            # Windows 11 AppData\Local\VirtualDJ location
+            pathlib.Path(
+                QStandardPaths.standardLocations(QStandardPaths.AppLocalDataLocation)[0]
+            ).parent.joinpath("VirtualDJ"),
+        ]
+
+        for vdjdir in possible_locations:
+            if vdjdir.exists():
+                self.config.cparser.setValue("settings/input", "virtualdj")
+                self.config.cparser.setValue("virtualdj/history", str(vdjdir.joinpath("History")))
+                self.config.cparser.setValue(
+                    "virtualdj/playlists", str(vdjdir.joinpath("Playlists"))
+                )
+                return True
 
         return False
 

@@ -34,8 +34,14 @@ jobs:
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/}
-            mike deploy --push --update-aliases $VERSION latest
-            mike set-default --push latest
+            if [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              # Stable release (e.g., 5.0.0) - deploy as latest
+              mike deploy --push --update-aliases $VERSION latest
+              mike set-default --push latest
+            else
+              # Preview/pre-release (e.g., 5.0.0-preview1) - deploy version only
+              mike deploy --push $VERSION
+            fi
           else
             mike deploy --push dev
           fi
