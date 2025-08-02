@@ -1,183 +1,183 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/index.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/contact.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/contact/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/gallery.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/gallery/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/quickstart.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/quickstart/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/requests.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/requests/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/upgrading.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/upgrading/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/usage.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/usage/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/extras/index.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/extras/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/extras/discogs.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/extras/discogs/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/extras/fanarttv.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/extras/fanarttv/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/extras/theaudiodb.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/extras/theaudiodb/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/help/index.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/help/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/help/accuracy.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/help/accuracy/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/help/bugreports.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/help/bugreports/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/help/developers.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/help/developers/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/help/howdoi.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/help/howdoi/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/help/opensource.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/help/opensource/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/help/troubleshooting.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/help/troubleshooting/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/input/index.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/input/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/input/denon.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/input/denon/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/input/djuced.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/input/djuced/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/input/icecast.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/input/icecast/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/input/jriver.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/input/jriver/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/input/m3u.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/input/m3u/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/input/mpris2.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/input/mpris2/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/input/remote.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/input/remote/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/input/serato.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/input/serato/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/input/traktor.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/input/traktor/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/input/virtualdj.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/input/virtualdj/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/input/winmedia.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/input/winmedia/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/output/index.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/output/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/output/discord.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/output/discord/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/output/kickbot.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/output/kickbot/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/output/obswebsocket.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/output/obswebsocket/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/output/textoutput.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/output/textoutput/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/output/twitchbot.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/output/twitchbot/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/output/webserver.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/output/webserver/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/recognition/index.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/recognition/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/recognition/acoustidmb.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/recognition/acoustidmb/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/reference/index.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/reference/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/reference/comparisons.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/reference/comparisons/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/reference/templatevariables.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/reference/templatevariables/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/settings/index.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/settings/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/settings/filter.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/settings/filter/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
     <url>
-         <loc>https://whatsnowplaying.github.io/dev/settings/quirks.html</loc>
+         <loc>https://whatsnowplaying.github.io/dev/settings/quirks/</loc>
          <lastmod>2025-08-02</lastmod>
     </url>
 </urlset>
