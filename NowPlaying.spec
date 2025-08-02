@@ -204,17 +204,25 @@ for execname, execpy in executables.items():
         exe = EXE(  # pylint: disable=undefined-variable
             pyz,
             a.scripts,
-            a.binaries,
-            a.zipfiles,
-            a.datas, [],
+            splash,  # Include splash screen
+            [],
+            exclude_binaries=True,
             name=execname,
             debug=False,
             bootloader_ignore_signals=False,
             strip=False,
             upx=True,
-            upx_exclude=[],
-            runtime_tmpdir=None,
             console=False,
             version=WINVERSFILE,
             icon=f'bincomponents/{geticon()}')
+        coll = COLLECT(  # pylint: disable=undefined-variable
+            exe,
+            a.binaries,
+            a.zipfiles,
+            a.datas,
+            splash.binaries,  # Include splash screen binaries
+            strip=False,
+            upx=True,
+            upx_exclude=[],
+            name=execname)
         os.unlink(WINVERSFILE)
