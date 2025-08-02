@@ -946,6 +946,54 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         await self.add_to_gifwordsdb(content)
         return content
 
+    async def artist_query_request(  # pylint: disable=unused-argument,too-many-return-statements
+        self, setting: TrackRequestSetting, user: str, user_input: str
+    ) -> TrackRequestResult:
+        """artist query request"""
+        logging.debug("%s artist query requested %s", user, user_input)
+
+        # Refresh config to get current input plugin
+        self.config.get()
+        current_input = self.config.cparser.value("settings/input")
+        logging.debug("Artist query using %s input plugin", current_input)
+
+        if not user_input:
+            return {"hasartist_result": "Please specify an artist name"}
+
+        artist_name = user_input.strip()
+        if not artist_name:
+            return {"hasartist_result": "Please specify an artist name"}
+
+        if not current_input:
+            return {"hasartist_result": "No input plugin configured"}
+
+        # Create input plugin instance (without starting it)
+        try:
+            input_plugin = self.config.plugins["inputs"][
+                f"nowplaying.inputs.{current_input}"
+            ].Plugin(config=self.config)
+        except KeyError:
+            return {"hasartist_result": f"Input plugin {current_input} not available"}
+
+        # Check if input plugin supports artist queries
+        if not hasattr(input_plugin, "has_tracks_by_artist"):
+            return {"hasartist_result": f"Artist queries not supported by {current_input}"}
+
+        try:
+            has_tracks = await input_plugin.has_tracks_by_artist(artist_name)
+            if has_tracks:
+                return {
+                    "hasartist_result": f"Yes, {artist_name} was found in the library",
+                    "hasartist_found": True,
+                }
+            return {
+                "hasartist_result": f"No, {artist_name} was not found in the library",
+                "hasartist_found": False,
+            }
+        except Exception as err:  # pylint: disable=broad-except
+            logging.error("Artist query failed for %s: %s", artist_name, err)
+            return {"hasartist_result": f"Error checking for {artist_name}"}
+
     async def twofer_request(
         self, setting: TrackRequestSetting, user: str, user_input: str
     ) -> TrackRequestResult:
@@ -1143,17 +1191,25 @@ class TrackRequestSettings:
     def __init__(self):
         self.widget = None
         self.enablegifwords = False
+        self.uihelp = None
 
-    def connect(self, uihelp: "nowplaying.uihelp.UIHelp", widget: QWidget):  # pylint: disable=unused-argument
+    def connect(self, uihelp: "nowplaying.uihelp.UIHelp", widget: QWidget):
         """connect buttons"""
         self.widget = widget
-        widget.add_button.clicked.connect(self.on_add_button)
-        widget.del_button.clicked.connect(self.on_del_button)
+        self.uihelp = uihelp
 
-    def _row_load(self, widget: QWidget, **kwargs):
+        add_button = uihelp.find_widget_in_tabs(widget, "add_button")
+        if add_button:
+            add_button.clicked.connect(self.on_add_button)
+
+        del_button = uihelp.find_widget_in_tabs(widget, "del_button")
+        if del_button:
+            del_button.clicked.connect(self.on_del_button)
+
+    def _row_load(self, widget: QWidget, uihelp: "nowplaying.uihelp.UIHelp", **kwargs):
         def _typebox(current, enablegifwords=False):
             box = QComboBox()
-            reqtypes = ["Generic", "Roulette", "Twofer"]
+            reqtypes = ["Generic", "Roulette", "Twofer", "ArtistQuery"]
             if enablegifwords:
                 reqtypes.append("GifWords")
             for reqtype in reqtypes:
@@ -1162,31 +1218,49 @@ class TrackRequestSettings:
                     box.setCurrentIndex(box.count() - 1)
             return box
 
-        row = widget.request_table.rowCount()
-        widget.request_table.insertRow(row)
+        request_table = uihelp.find_widget_in_tabs(widget, "request_table")
+        if not request_table:
+            return
+
+        row = request_table.rowCount()
+        request_table.insertRow(row)
 
         for column, cbtype in enumerate(nowplaying.trackrequests.REQUEST_SETTING_MAPPING):
             if cbtype == "type":
                 box = _typebox(kwargs.get("type"), self.enablegifwords)
-                widget.request_table.setCellWidget(row, column, box)
+                request_table.setCellWidget(row, column, box)
             elif kwargs.get(cbtype):
-                widget.request_table.setItem(
-                    row, column, QTableWidgetItem(str(kwargs.get(cbtype)))
-                )
+                request_table.setItem(row, column, QTableWidgetItem(str(kwargs.get(cbtype))))
             else:
-                widget.request_table.setItem(row, column, QTableWidgetItem(""))
-        widget.request_table.resizeColumnsToContents()
+                request_table.setItem(row, column, QTableWidgetItem(""))
+        request_table.resizeColumnsToContents()
 
-    def load(self, config: "nowplaying.config.ConfigFile", widget: QWidget):
+    def load(  # pylint: disable=too-many-locals
+        self,
+        config: "nowplaying.config.ConfigFile",
+        widget: QWidget,
+        uihelp: "nowplaying.uihelp.UIHelp",
+    ):
         """load the settings window"""
 
-        def clear_table(widget):
-            widget.clearContents()
-            rows = widget.rowCount()
+        def clear_table(table_widget):
+            table_widget.clearContents()
+            rows = table_widget.rowCount()
             for row in range(rows, -1, -1):
-                widget.removeRow(row)
+                table_widget.removeRow(row)
 
-        clear_table(widget.request_table)
+        # Find widgets across tabs
+        request_table = uihelp.find_widget_in_tabs(widget, "request_table")
+        enable_chat_checkbox = uihelp.find_widget_in_tabs(widget, "enable_chat_checkbox")
+        enable_redemptions_checkbox = uihelp.find_widget_in_tabs(
+            widget, "enable_redemptions_checkbox"
+        )
+        enable_checkbox = uihelp.find_widget_in_tabs(widget, "enable_checkbox")
+        fuzzy_threshold_spinbox = uihelp.find_widget_in_tabs(widget, "fuzzy_threshold_spinbox")
+        tenor_key_lineedit = uihelp.find_widget_in_tabs(widget, "tenor_key_lineedit")
+
+        if request_table:
+            clear_table(request_table)
 
         if config.cparser.value("gifwords/tenorkey"):
             self.enablegifwords = True
@@ -1196,78 +1270,117 @@ class TrackRequestSettings:
             if "request-" in configitem:
                 for key in nowplaying.trackrequests.REQUEST_SETTING_MAPPING:
                     setting[key] = config.cparser.value(f"{configitem}/{key}")
-                self._row_load(widget, **setting)
+                self._row_load(widget, uihelp, **setting)
 
-        widget.request_table.resizeColumnsToContents()
-        widget.enable_chat_checkbox.setChecked(
-            config.cparser.value("twitchbot/chatrequests", type=bool)
-        )
-        widget.enable_redemptions_checkbox.setChecked(
-            config.cparser.value("twitchbot/redemptions", type=bool)
-        )
-        widget.enable_checkbox.setChecked(config.cparser.value("settings/requests", type=bool))
+        if request_table:
+            request_table.resizeColumnsToContents()
+
+        if enable_chat_checkbox:
+            enable_chat_checkbox.setChecked(
+                config.cparser.value("twitchbot/chatrequests", type=bool)
+            )
+
+        if enable_redemptions_checkbox:
+            enable_redemptions_checkbox.setChecked(
+                config.cparser.value("twitchbot/redemptions", type=bool)
+            )
+
+        if enable_checkbox:
+            enable_checkbox.setChecked(config.cparser.value("settings/requests", type=bool))
 
         # Load fuzzy matching threshold setting
-        threshold = config.cparser.value("requests/fuzzythreshold", type=int, defaultValue=85)
-        widget.fuzzy_threshold_spinbox.setValue(threshold)
+        if fuzzy_threshold_spinbox:
+            threshold = config.cparser.value("requests/fuzzythreshold", type=int, defaultValue=85)
+            fuzzy_threshold_spinbox.setValue(threshold)
 
-    @staticmethod
-    def save(config: "nowplaying.config.ConfigFile", widget: QWidget, subprocesses):  # pylint: disable=unused-argument
+        # Load Tenor API key
+        if tenor_key_lineedit:
+            tenor_key = config.cparser.value("gifwords/tenorkey", defaultValue="")
+            tenor_key_lineedit.setText(tenor_key)
+
+    def save(self, config: "nowplaying.config.ConfigFile", widget: QWidget, subprocesses):  # pylint: disable=unused-argument
         """update the twitch settings"""
 
-        def reset_commands(widget: QWidget, config: QSettings):
+        def reset_commands(table_widget: QWidget, config: QSettings):
             for configitem in config.allKeys():
                 if "request-" in configitem:
                     config.remove(configitem)
 
-            rowcount = widget.rowCount()
+            rowcount = table_widget.rowCount()
             for row in range(rowcount):
                 for column, cbtype in enumerate(nowplaying.trackrequests.REQUEST_SETTING_MAPPING):
                     if cbtype == "type":
-                        item = widget.cellWidget(row, column)
+                        item = table_widget.cellWidget(row, column)
                         value = item.currentText()
                     else:
-                        item = widget.item(row, column)
+                        item = table_widget.item(row, column)
                         if not item:
                             continue
                         value = item.text()
                     config.setValue(f"request-{row}/{cbtype}", value)
 
-        config.cparser.setValue(
-            "twitchbot/redemptions", widget.enable_redemptions_checkbox.isChecked()
+        # Find widgets across tabs
+        enable_redemptions_checkbox = self.uihelp.find_widget_in_tabs(
+            widget, "enable_redemptions_checkbox"
         )
-        config.cparser.setValue("twitchbot/chatrequests", widget.enable_chat_checkbox.isChecked())
-        config.cparser.setValue("settings/requests", widget.enable_checkbox.isChecked())
+        enable_chat_checkbox = self.uihelp.find_widget_in_tabs(widget, "enable_chat_checkbox")
+        enable_checkbox = self.uihelp.find_widget_in_tabs(widget, "enable_checkbox")
+        fuzzy_threshold_spinbox = self.uihelp.find_widget_in_tabs(
+            widget, "fuzzy_threshold_spinbox"
+        )
+        tenor_key_lineedit = self.uihelp.find_widget_in_tabs(widget, "tenor_key_lineedit")
+        request_table = self.uihelp.find_widget_in_tabs(widget, "request_table")
+
+        if enable_redemptions_checkbox:
+            config.cparser.setValue(
+                "twitchbot/redemptions", enable_redemptions_checkbox.isChecked()
+            )
+
+        if enable_chat_checkbox:
+            config.cparser.setValue("twitchbot/chatrequests", enable_chat_checkbox.isChecked())
+
+        if enable_checkbox:
+            config.cparser.setValue("settings/requests", enable_checkbox.isChecked())
 
         # Save fuzzy matching threshold setting
-        config.cparser.setValue("requests/fuzzythreshold", widget.fuzzy_threshold_spinbox.value())
+        if fuzzy_threshold_spinbox:
+            config.cparser.setValue("requests/fuzzythreshold", fuzzy_threshold_spinbox.value())
 
-        reset_commands(widget.request_table, config.cparser)
+        # Save Tenor API key
+        if tenor_key_lineedit:
+            config.cparser.setValue("gifwords/tenorkey", tenor_key_lineedit.text())
 
-    @staticmethod
-    def verify(widget: QWidget):
+        if request_table:
+            reset_commands(request_table, config.cparser)
+
+    def verify(self, widget: QWidget):
         """verify the settings are good"""
 
-        count = widget.request_table.rowCount()
+        request_table = self.uihelp.find_widget_in_tabs(widget, "request_table")
+        if not request_table:
+            return
+
+        count = request_table.rowCount()
         for row in range(count):
-            item0 = widget.request_table.item(row, 0)
-            item1 = widget.request_table.item(row, 1)
-            item2 = widget.request_table.cellWidget(row, 2)
+            item0 = request_table.item(row, 0)
+            item1 = request_table.item(row, 1)
+            item2 = request_table.cellWidget(row, 2)
             if not item0.text() and not item1.text():
                 raise PluginVerifyError("Request must have either a command or redemption text.")
 
             if item2.currentText() in "Roulette":
-                playlistitem = widget.request_table.item(row, 4)
+                playlistitem = request_table.item(row, 4)
                 if not playlistitem.text():
                     raise PluginVerifyError("Roulette request has an empty playlist")
 
     @Slot()
     def on_add_button(self):
         """add button clicked action"""
-        self._row_load(self.widget)
+        self._row_load(self.widget, self.uihelp)
 
     @Slot()
     def on_del_button(self):
         """del button clicked action"""
-        if items := self.widget.request_table.selectedIndexes():
-            self.widget.request_table.removeRow(items[0].row())
+        request_table = self.uihelp.find_widget_in_tabs(self.widget, "request_table")
+        if request_table and (items := request_table.selectedIndexes()):
+            request_table.removeRow(items[0].row())

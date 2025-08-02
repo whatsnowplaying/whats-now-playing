@@ -43,7 +43,7 @@ class TwitchSettings:
         if hasattr(widget, "redirecturi_lineedit"):
             widget.redirecturi_lineedit.editingFinished.connect(self.update_oauth_status)
 
-    def load(self, config, widget):
+    def load(self, config, widget, uihelp):  # pylint: disable=unused-argument
         """load the settings window"""
         self.widget = widget
         widget.enable_checkbox.setChecked(config.cparser.value("twitchbot/enabled", type=bool))

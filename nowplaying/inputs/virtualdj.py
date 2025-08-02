@@ -433,6 +433,8 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
                 if not playlist_names:
                     return False
 
+                # First get filenames from selected playlists
+                playlist_filenames = set()
                 async with aiosqlite.connect(self.playlists_databasefile) as connection:
                     connection.row_factory = sqlite3.Row
                     cursor = await connection.cursor()
@@ -443,13 +445,27 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
                         playlist_names = playlist_names[:50]
 
                     placeholders = ",".join("?" * len(playlist_names))
+                    sql = f"SELECT DISTINCT filename FROM playlists WHERE name IN ({placeholders})"
+                    await cursor.execute(sql, playlist_names)
+                    rows = await cursor.fetchall()
+                    playlist_filenames = {row["filename"] for row in rows}
+
+                if not playlist_filenames:
+                    return False
+
+                # Then check if any of those files have the specified artist in songs database
+                async with aiosqlite.connect(self.songs_databasefile) as connection:
+                    connection.row_factory = sqlite3.Row
+                    cursor = await connection.cursor()
+
+                    # Create placeholders for filenames
+                    filename_placeholders = ",".join("?" * len(playlist_filenames))
                     sql = f"""
                         SELECT COUNT(*) as count
-                        FROM playlists p
-                        JOIN songs s ON p.filename = s.filename
-                        WHERE LOWER(s.artist) = LOWER(?) AND p.name IN ({placeholders})
+                        FROM songs
+                        WHERE LOWER(artist) = LOWER(?) AND filename IN ({filename_placeholders})
                     """
-                    params = [artist_name] + playlist_names
+                    params = [artist_name] + list(playlist_filenames)
                     await cursor.execute(sql, params)
                     row = await cursor.fetchone()
                     return row["count"] > 0 if row else False

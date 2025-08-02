@@ -4,6 +4,7 @@
 # pylint: disable=too-many-lines
 
 import contextlib
+import glob
 import json
 import logging
 import os
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QListWidgetItem,
     QMessageBox,
+    QTabWidget,
     QTreeWidgetItem,
     QWidget,
 )
@@ -183,7 +185,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "kickchat",
             "requests",
         ]:
-            self.settingsclasses[key].load(self.config, self.widgets[key])
+            self.settingsclasses[key].load(self.config, self.widgets[key], self.uihelp)
             self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
 
         self._connect_plugins()
@@ -398,7 +400,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "kick",
             "requests",
         ]:
-            self.settingsclasses[key].load(self.config, self.widgets[key])
+            self.settingsclasses[key].load(self.config, self.widgets[key], self.uihelp)
 
     def _upd_win_artistextras(self):
         self.widgets["artistextras"].coverart_combobox.clear()
@@ -1157,12 +1159,25 @@ def about_version_text(config, qwidget):
 
 
 def load_widget_ui(config, name):
-    """load a UI file into a widget"""
-    loader = QUiLoader()
-    path = config.uidir.joinpath(f"{name}_ui.ui")
-    if not path.exists():
-        return None
+    """load a UI file into a widget, supporting both single files and tabbed interfaces"""
 
+    # First try to load single UI file (existing behavior)
+    single_path = config.uidir.joinpath(f"{name}_ui.ui")
+    if single_path.exists():
+        return _load_single_ui_file(single_path, name)
+
+    # If single file doesn't exist, try to find tabbed UI files
+    tab_files = _find_tab_ui_files(config.uidir, name)
+    if tab_files:
+        return _load_tabbed_ui_files(tab_files, name)
+
+    # Neither single nor tabbed files found
+    return None
+
+
+def _load_single_ui_file(path, name):
+    """Load a single UI file"""
+    loader = QUiLoader()
     ui_file = QFile(str(path))
     ui_file.open(QFile.ReadOnly)
     try:
@@ -1172,3 +1187,62 @@ def load_widget_ui(config, name):
         return None
     ui_file.close()
     return qwidget
+
+
+def _find_tab_ui_files(uidir, name):
+    """Find all tab UI files for a given plugin name"""
+
+    pattern = str(uidir.joinpath(f"{name}_*_ui.ui"))
+    tab_files = glob.glob(pattern)
+
+    if not tab_files:
+        return []
+
+    # Sort by filename to ensure consistent tab order
+    tab_files.sort()
+
+    # Extract tab names from filenames for logging
+    tab_names = []
+    for filepath in tab_files:
+        filename = pathlib.Path(filepath).stem  # e.g., "inputs_serato_connection_ui"
+        # Extract tab name: inputs_serato_connection_ui -> connection
+        parts = filename.split("_")
+        if len(parts) >= 3 and parts[-1] == "ui":
+            tab_name = "_".join(parts[2:-1])  # Everything between plugin name and 'ui'
+            tab_names.append(tab_name)
+        else:
+            tab_names.append(f"tab_{len(tab_names)}")
+
+    logging.debug("Found tab UI files for %s: %s", name, tab_names)
+    return list(zip(tab_files, tab_names))
+
+
+def _load_tabbed_ui_files(tab_files, name):
+    """Load multiple tab UI files into a QTabWidget"""
+    tab_widget = QTabWidget()
+    loader = QUiLoader()
+
+    for filepath, tab_name in tab_files:
+        ui_file = QFile(filepath)
+        ui_file.open(QFile.ReadOnly)
+        try:
+            if tab_content := loader.load(ui_file):
+                # Use the tab name from filename, but could be overridden by windowTitle in XML
+                display_name = (
+                    tab_content.windowTitle()
+                    if hasattr(tab_content, "windowTitle") and tab_content.windowTitle()
+                    else tab_name.replace("_", " ").title()
+                )
+                tab_widget.addTab(tab_content, display_name)
+                logging.debug("Added tab '%s' for %s from %s", display_name, name, filepath)
+        except RuntimeError as error:
+            logging.warning("Unable to load tab UI file %s for %s: %s", filepath, name, error)
+        finally:
+            ui_file.close()
+
+    if tab_widget.count() == 0:
+        logging.warning("No valid tab UI files loaded for %s", name)
+        return None
+
+    logging.info("Loaded %d tabs for %s", tab_widget.count(), name)
+    return tab_widget

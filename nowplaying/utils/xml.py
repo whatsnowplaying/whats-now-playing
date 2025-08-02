@@ -12,6 +12,8 @@ import xml.sax
 import defusedxml.sax
 import defusedxml.common
 
+import nowplaying.utils.sqlite
+
 
 # pylint: disable=missing-function-docstring,invalid-name
 class XMLHandler(Protocol):
@@ -124,7 +126,10 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
 
             # Atomic swap: rename temp to live
             if self.temp_database_path.exists():
-                await asyncio.to_thread(self._atomic_swap)
+                # Use retry logic for Windows file locking issues
+                await asyncio.to_thread(
+                    nowplaying.utils.sqlite.retry_file_operation, self._atomic_swap_inner
+                )
                 logging.info("XML database refreshed successfully: %s", self.database_path)
                 return True
             logging.error("Temp database was not created")
@@ -136,16 +141,16 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
             xml.sax.SAXException,
             defusedxml.common.DefusedXmlException,
         ) as err:
-            logging.error("Background XML refresh failed: %s", err)
+            logging.exception("Background XML refresh failed with exception: %s", err)
             # Clean up temp file on error
             if self.temp_database_path.exists():
                 self.temp_database_path.unlink()
             return False
         except asyncio.CancelledError:
             logging.info("Background XML refresh cancelled")
-            # Clean up temp file on cancellation
-            if self.temp_database_path.exists():
-                self.temp_database_path.unlink()
+            # Don't clean up temp file if atomic swap might be in progress
+            # The retry logic will handle cleanup appropriately
+            logging.info("Skipping temp file cleanup during cancellation to avoid race condition")
             raise  # Re-raise to properly handle cancellation
         except Exception as err:
             logging.error("Unexpected error during XML refresh: %s", err, exc_info=True)
@@ -175,8 +180,16 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
 
             connection.commit()
 
-    def _atomic_swap(self) -> None:
-        """Atomically swap temp database with live database"""
+    def _atomic_swap_inner(self) -> None:
+        """Inner atomic swap operation for retry logic"""
+        # Check if swap already completed
+        if not self.temp_database_path.exists() and self.database_path.exists():
+            logging.debug("Atomic swap appears to have already completed successfully")
+            return
+
+        if not self.temp_database_path.exists():
+            raise FileNotFoundError(f"Temp database file missing: {self.temp_database_path}")
+
         if self.database_path.exists():
             # Create backup first
             if self.backup_database_path.exists():

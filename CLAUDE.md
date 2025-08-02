@@ -7,6 +7,9 @@ code in this repository.
 
 ### Testing
 
+- tests should be methods not classes
+- tests should be parameterized when possible
+- tests should be aware of the fixtures in conftest.py to bootstrap the config
 - `pytest` - Run all tests (both tests-qt and tests directories)
 - `pytest tests/` - Run only non-Qt tests
 - `pytest tests-qt/` - Run only Qt-based tests
@@ -15,15 +18,9 @@ code in this repository.
 
 ### Code Quality
 
-- `pylint nowplaying/` - Run linting on the main package
+- `ruff format` - Apply code formatting
+- `pylint` - Run linting
 - `pyright` - Type checking (configured in pyproject.toml)
-- `yapf --diff .` - Check code formatting
-- `yapf -i .` - Apply code formatting
-
-### Build and Distribution
-
-- `python -m nowplaying` - Run the application from source
-- `pyinstaller nowplaying.pyproject` - Build standalone executable
 
 ### Git and Pull Requests
 
@@ -72,6 +69,32 @@ playing" information from various DJ software.
 - Track request system for audience interaction
 - Async Wikipedia/Wikidata client (`wikiclient.py`) optimized for live
   performance
+
+### Development Notes
+
+- Qt6/PySide6 is used for the GUI framework
+- We control the UI files. No need for hasattr/getattr patterns.
+- Configuration uses Qt's QSettings with cross-platform support
+- Plugins are dynamically loaded and follow a common interface pattern
+- The application uses multiprocessing for background tasks
+- Vendor dependencies are managed in `nowplaying/vendor/` to avoid conflicts
+
+**Python Version and Type Annotations:**
+
+- Target Python 3.10 as the base version
+- Use Python 3.10+ union syntax (`X | Y`) instead of `Union[X, Y]`
+- Use Python 3.10+ optional syntax (`X | None`) instead of `Optional[X]`
+- Use built-in generics (`dict`, `list`) instead of `typing.Dict`, `typing.List`
+
+**Import Style Guidelines:**
+
+- For non-vendored code, prefer explicit module imports over `from` imports
+- Example: Use `import nowplaying.wikiclient` instead of
+  `from nowplaying import wikiclient`
+- This improves code clarity and reduces namespace pollution
+- **CRITICAL**: NEVER import modules in the middle of functions! Always add
+  imports at the top of the file. Check existing imports before adding new ones
+  to avoid duplicates.
 
 ### Testing Setup
 
@@ -160,31 +183,6 @@ Key files with comprehensive coverage examples:
 - `tests/test_artistextras_wikimedia.py` (20+ tests covering edge cases)
 - `tests/test_artistextras_theaudiodb.py` (includes critical fallback testing)
 - `tests/test_musicbrainz.py` (25+ tests for complex artist scenarios)
-
-### Development Notes
-
-- Qt6/PySide6 is used for the GUI framework
-- Configuration uses Qt's QSettings with cross-platform support
-- Plugins are dynamically loaded and follow a common interface pattern
-- The application uses multiprocessing for background tasks
-- Vendor dependencies are managed in `nowplaying/vendor/` to avoid conflicts
-
-**Python Version and Type Annotations:**
-
-- Target Python 3.10 as the base version
-- Use Python 3.10+ union syntax (`X | Y`) instead of `Union[X, Y]`
-- Use Python 3.10+ optional syntax (`X | None`) instead of `Optional[X]`
-- Use built-in generics (`dict`, `list`) instead of `typing.Dict`, `typing.List`
-
-**Import Style Guidelines:**
-
-- For non-vendored code, prefer explicit module imports over `from` imports
-- Example: Use `import nowplaying.wikiclient` instead of
-  `from nowplaying import wikiclient`
-- This improves code clarity and reduces namespace pollution
-- **CRITICAL**: NEVER import modules in the middle of functions! Always add
-  imports at the top of the file. Check existing imports before adding new ones
-  to avoid duplicates.
 
 ### Performance Requirements
 

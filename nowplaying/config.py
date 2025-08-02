@@ -153,6 +153,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         self._defaults_output(settings)
         self._defaults_chat_services(settings)
         self._defaults_quirks(settings)
+        self._defaults_requests(settings)
         self._defaults_plugins(settings)
 
     def _initial_plugins(self) -> None:
@@ -265,6 +266,24 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         settings.setValue("quirks/pollinginterval", 5.0)
         settings.setValue("quirks/filesubst", False)
         settings.setValue("quirks/slashmode", "nochange")
+
+    @staticmethod
+    def _defaults_requests(settings: QSettings) -> None:
+        """default values for requests"""
+        settings.setValue("request-0/command", "request")
+        settings.setValue("request-0/twitchtext", "")
+        settings.setValue("request-0/type", "Generic")
+        settings.setValue("request-0/displayname", "Song Request")
+        settings.setValue("request-0/playlist", "")
+
+        settings.setValue("request-1/command", "hasartist")
+        settings.setValue("request-1/twitchtext", "")
+        settings.setValue("request-1/type", "ArtistQuery")
+        settings.setValue("request-1/displayname", "Artist Library Check")
+        settings.setValue("request-1/playlist", "")
+
+        # Default permissions for hasartist command
+        settings.setValue("twitchbot-command-hasartist/anyone", True)
 
     def _defaults_plugins(self, settings: QSettings) -> None:
         """configure the defaults for plugins"""

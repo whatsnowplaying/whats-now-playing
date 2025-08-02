@@ -1,0 +1,1 @@
+Usage: {{ cmdchar }}hasartist <artist name> - Check if the DJ has tracks by the specified artist in their library

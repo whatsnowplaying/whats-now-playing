@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>serato_library_ui</class>
+ <widget class="QWidget" name="serato_library_ui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Library Management</string>
+  </property>
+  <widget class="QWidget" name="horizontalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>601</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="ignoredecks_layout">
+    <item>
+     <widget class="QLabel" name="ignoredeck_label">
+      <property name="text">
+       <string>Ignore Deck(s)</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="deck1_checkbox">
+      <property name="text">
+       <string>1</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="deck2_checkbox">
+      <property name="text">
+       <string>2</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="deck3_checkbox">
+      <property name="text">
+       <string>3</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="deck4_checkbox">
+      <property name="text">
+       <string>4</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QGroupBox" name="additional_libs_groupbox">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>80</y>
+     <width>621</width>
+     <height>120</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Additional Library Paths</string>
+   </property>
+   <widget class="QTextEdit" name="additional_libs_textedit">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>25</y>
+      <width>501</width>
+      <height>60</height>
+     </rect>
+    </property>
+    <property name="toolTip">
+     <string>Additional Serato library paths (one per line). Used for external drives and multiple music collections.</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="add_additional_lib_button">
+    <property name="geometry">
+     <rect>
+      <x>520</x>
+      <y>25</y>
+      <width>90</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Add Path...</string>
+    </property>
+    <property name="toolTip">
+     <string>Browse for additional Serato library directory</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="additional_libs_help_label">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>90</y>
+      <width>600</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Enter additional _Serato_ folder paths (one per line) for external drives or multiple libraries.</string>
+    </property>
+    <property name="styleSheet">
+     <string>color: #666;</string>
+    </property>
+   </widget>
+  </widget>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>deck1_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>189</x>
+     <y>35</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>deck2_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>310</x>
+     <y>35</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>deck3_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>431</x>
+     <y>35</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>deck4_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>552</x>
+     <y>35</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>ignoredeck_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>68</x>
+     <y>35</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

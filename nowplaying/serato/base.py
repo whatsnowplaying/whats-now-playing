@@ -138,10 +138,10 @@ class SeratoBaseReader:  # pylint: disable=too-few-public-methods
         self.decode_func_first: dict[str, Callable[[bytes], t.Any]] = {
             "b": lambda x: struct.unpack("?", x)[0],
             "o": self._decode_struct_sync,
-            "p": lambda x: (x[1:] + b"\00").decode("utf-16"),
+            "p": lambda x: x.decode("utf-16-be", errors="replace"),
             "r": self._decode_struct_sync,
             "s": lambda x: struct.unpack(">H", x)[0],
-            "t": lambda x: (x[1:] + b"\00").decode("utf-16"),
+            "t": lambda x: x.decode("utf-16-be", errors="replace"),
             "u": self._decode_unsigned,  # Keep our error handling
         }
 
