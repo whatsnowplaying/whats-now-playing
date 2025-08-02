@@ -76,10 +76,12 @@ def retry_file_operation(
             return operation_func()
         except (OSError, PermissionError) as error:
             # Check for Windows file locking errors
-            if (os.name == 'nt' and 
-                hasattr(error, 'winerror') and 
-                error.winerror == 32 and  # ERROR_SHARING_VIOLATION
-                attempt < max_retries - 1):
+            if (
+                os.name == "nt"
+                and hasattr(error, "winerror")
+                and error.winerror == 32  # ERROR_SHARING_VIOLATION  # pylint: disable=no-member
+                and attempt < max_retries - 1
+            ):
                 delay = base_delay * (2**attempt)
                 delay += random.uniform(0, jitter)
                 logging.debug(

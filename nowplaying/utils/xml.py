@@ -127,7 +127,9 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
             # Atomic swap: rename temp to live
             if self.temp_database_path.exists():
                 # Use retry logic for Windows file locking issues
-                await asyncio.to_thread(nowplaying.utils.sqlite.retry_file_operation, self._atomic_swap_inner)
+                await asyncio.to_thread(
+                    nowplaying.utils.sqlite.retry_file_operation, self._atomic_swap_inner
+                )
                 logging.info("XML database refreshed successfully: %s", self.database_path)
                 return True
             logging.error("Temp database was not created")
@@ -180,38 +182,26 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
 
     def _atomic_swap_inner(self) -> None:
         """Inner atomic swap operation for retry logic"""
-        logging.info("Starting atomic swap: %s -> %s", self.temp_database_path, self.database_path)
-        logging.info("Temp file exists: %s", self.temp_database_path.exists())
-        logging.info("Target file exists: %s", self.database_path.exists())
-        
         # Check if swap already completed
         if not self.temp_database_path.exists() and self.database_path.exists():
-            logging.info("Atomic swap appears to have already completed successfully")
+            logging.debug("Atomic swap appears to have already completed successfully")
             return
-        
+
         if not self.temp_database_path.exists():
             raise FileNotFoundError(f"Temp database file missing: {self.temp_database_path}")
-        
+
         if self.database_path.exists():
-            logging.info("Database exists, creating backup: %s -> %s", self.database_path, self.backup_database_path)
             # Create backup first
             if self.backup_database_path.exists():
-                logging.info("Removing existing backup: %s", self.backup_database_path)
                 self.backup_database_path.unlink()
             self.database_path.rename(self.backup_database_path)
-            logging.info("Backup created successfully")
 
         # Atomic rename
-        logging.info("Performing atomic rename: %s -> %s", self.temp_database_path, self.database_path)
         self.temp_database_path.rename(self.database_path)
-        logging.info("Atomic rename completed")
 
         # Clean up backup after successful swap
         if self.backup_database_path.exists():
-            logging.info("Cleaning up backup: %s", self.backup_database_path)
             self.backup_database_path.unlink()
-        
-        logging.info("Atomic swap completed successfully")
 
     def shutdown(self) -> None:
         """Signal the background refresh loop to exit cleanly"""
