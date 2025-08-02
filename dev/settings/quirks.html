@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/index.html">
+        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/settings/quirks.html">
       
       
+        <link rel="prev" href="filter.html">
+      
+      
+        <link rel="next" href="../input/djuced.html">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Output Destinations - What's Now Playing</title>
+        <title>Quirks - What's Now Playing</title>
       
     
     
@@ -72,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#output-destinations" class="md-skip">
+        <a href="#quirks" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Output Destinations
+              Quirks
             
           </span>
         </div>
@@ -352,18 +356,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -379,7 +385,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             Settings
@@ -393,7 +399,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../settings/index.html" class="md-nav__link">
+      <a href="index.html" class="md-nav__link">
         
   
   
@@ -416,7 +422,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../settings/filter.html" class="md-nav__link">
+      <a href="filter.html" class="md-nav__link">
         
   
   
@@ -436,10 +442,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../settings/quirks.html" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Quirks
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="quirks.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -450,6 +478,44 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#file-system-notification-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      File System Notification Method
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#song-path-substitution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Song Path Substitution
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -782,7 +848,7 @@
   
   
     <li class="md-nav__item">
-      <a href="discord.html" class="md-nav__link">
+      <a href="../output/discord.html" class="md-nav__link">
         
   
   
@@ -805,7 +871,7 @@
   
   
     <li class="md-nav__item">
-      <a href="kickbot.html" class="md-nav__link">
+      <a href="../output/kickbot.html" class="md-nav__link">
         
   
   
@@ -828,7 +894,7 @@
   
   
     <li class="md-nav__item">
-      <a href="obswebsocket.html" class="md-nav__link">
+      <a href="../output/obswebsocket.html" class="md-nav__link">
         
   
   
@@ -874,7 +940,7 @@
   
   
     <li class="md-nav__item">
-      <a href="textoutput.html" class="md-nav__link">
+      <a href="../output/textoutput.html" class="md-nav__link">
         
   
   
@@ -897,7 +963,7 @@
   
   
     <li class="md-nav__item">
-      <a href="twitchbot.html" class="md-nav__link">
+      <a href="../output/twitchbot.html" class="md-nav__link">
         
   
   
@@ -920,7 +986,7 @@
   
   
     <li class="md-nav__item">
-      <a href="webserver.html" class="md-nav__link">
+      <a href="../output/webserver.html" class="md-nav__link">
         
   
   
@@ -1530,18 +1596,71 @@
   
 
 
-<h1 id="output-destinations">Output Destinations<a class="headerlink" href="#output-destinations" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> can send song details to a variety of different systems, including just plain file output.</p>
-<h2 id="available-output-destinations">Available Output Destinations<a class="headerlink" href="#available-output-destinations" title="Permanent link">&para;</a></h2>
+<h1 id="quirks">Quirks<a class="headerlink" href="#quirks" title="Permanent link">&para;</a></h1>
+<p>Under some very specialized circumstances, it may be necessary to
+'nudge' <strong>What's Now Playing</strong> to do something particularly special in
+order to get the desired impact. The options under quirks allow one to
+do just that. In general, however, users should stick with the defaults
+for optimal performance.</p>
+<p><a href="images/quirks.png"><img alt="Quirks Settings" src="images/quirks.png" /></a></p>
+<h2 id="file-system-notification-method">File System Notification Method<a class="headerlink" href="#file-system-notification-method" title="Permanent link">&para;</a></h2>
+<p>By default, <strong>What's Now Playing</strong> uses operating system facilities to
+know when input files have changed. If <strong>What's Now Playing</strong> is running on a
+different host than the DJ software and <strong>What's Now Playing</strong> have
+been configured to read the DJ software's directory over a network mount
+(such as SMB) <strong>What's Now Playing</strong> may not get notified that a
+file has changed. Selecting the `poll` option will force the
+application to perform a manual file system check. The drawbacks to this
+method are that more CPU and disk IO is performed and being on delay to
+get updates. However, the software will not miss events.</p>
+<blockquote>
+<p>NOTE: Changing this value REQUIRES a restart of the <strong>What's Now
+Playing</strong> software.</p>
+</blockquote>
+<h2 id="song-path-substitution">Song Path Substitution<a class="headerlink" href="#song-path-substitution" title="Permanent link">&para;</a></h2>
+<p>Like the previous issue, the DJ software's files may reference a file
+path unlike what <strong>What's Now Playing</strong> has access to on the machine
+where it is running. Setting these values will allow you to do a 'search
+and replace' of any referenced song files.</p>
+<p>For example:</p>
+<blockquote>
 <ul>
-<li><strong><a href="obswebsocket.html">OBS WebSocket</a></strong> - Direct integration with OBS Studio</li>
-<li><strong><a href="webserver.html">Web Server</a></strong> - Built-in web server for browser sources</li>
-<li><strong><a href="textoutput.html">Text Output</a></strong> - Simple text file output</li>
-<li><strong><a href="twitchbot.html">Twitch Bot</a></strong> - Twitch chat bot integration</li>
-<li><strong><a href="kickbot.html">Kick Bot</a></strong> - Kick streaming platform bot</li>
-<li><strong><a href="discord.html">Discord</a></strong> - Discord rich presence integration</li>
+<li>Starting File Path is set to <code>/Volumes/Music/</code></li>
+<li>Replacement File Path is set to <code>/Macintosh HD/Music/</code></li>
 </ul>
-<p>Click on any output destination above to see detailed configuration instructions.</p>
+</blockquote>
+<p>The DJ software says that it read
+<code>/Volumes/Music/Blondie/Heart_of_Glass.mp3</code>. <strong>What's Now Playing</strong> will
+instead interpret that the filename is actually
+<code>/Macintosh HD/Music/Blondie/Heart_of_Glass.mp3</code> when reading extra
+tags, performing recognition, etc.</p>
+<p>The Slash Handling setting allows you to switch the direction of all
+slashes in the filenames. This setting is beneficial when substituting
+filenames from Windows to other operating systems and vice-versa. The
+slash changes happen before path substitution, so keep that in mind. For
+example,</p>
+<blockquote>
+<ul>
+<li>Slash Handling: <code>\ to /</code> is set</li>
+<li>Starting File Path: <code>Z:/av</code></li>
+<li>Replacement File Path: <code>/av</code></li>
+</ul>
+</blockquote>
+<p>If the original file was <code>Z:\av\Music\Band\Cool Song.mp3</code>, the above
+settings will change that to <code>/av/Music/Band/Cool Song.mp3</code>. Another
+example:</p>
+<blockquote>
+<ul>
+<li>Slash Handling: <code>/ to \</code> is set</li>
+<li>Starting File Path: <code>\av</code></li>
+<li>Replacement File Path: <code>Z:\av</code></li>
+</ul>
+</blockquote>
+<p>will do the reverse, from <code>/av/Music/Band/Cool Song.mp3</code> to
+<code>Z:\av\Music\Band\Cool Song.mp3</code></p>
+<blockquote>
+<p>NOTE: This quirk is not supported with MPRIS2.</p>
+</blockquote>
 
 
 

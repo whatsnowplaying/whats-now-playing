@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/index.html">
+        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/twitchbot.html">
       
       
+        <link rel="prev" href="textoutput.html">
+      
+      
+        <link rel="next" href="webserver.html">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Output Destinations - What's Now Playing</title>
+        <title>Twitch Bot - What's Now Playing</title>
       
     
     
@@ -72,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#output-destinations" class="md-skip">
+        <a href="#twitchbot" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Output Destinations
+              Twitch Bot
             
           </span>
         </div>
@@ -741,18 +745,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
@@ -768,7 +774,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Output Destinations
@@ -894,10 +900,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="twitchbot.html" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Twitch Bot
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="twitchbot.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -908,6 +936,173 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#twitch-chat-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Twitch Chat Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#twitch-channel-point-redemptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Twitch Channel Point Redemptions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      Authentication
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Authentication">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      Setup Process
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauth2-vs-legacy-authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      OAuth2 vs Legacy Authentication
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#additional-setup-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Additional Setup Considerations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#legacy-token-authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      Legacy Token Authentication
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#twitch-chat-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Twitch Chat Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Twitch Chat Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setting-permissions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Setting Permissions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-new-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding New Commands
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#built-in-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Built-in Commands
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Troubleshooting
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#additional-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Additional Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiple-targets" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multiple Targets
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#announcing-websites" class="md-nav__link">
+    <span class="md-ellipsis">
+      Announcing Websites
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1530,18 +1725,253 @@
   
 
 
-<h1 id="output-destinations">Output Destinations<a class="headerlink" href="#output-destinations" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> can send song details to a variety of different systems, including just plain file output.</p>
-<h2 id="available-output-destinations">Available Output Destinations<a class="headerlink" href="#available-output-destinations" title="Permanent link">&para;</a></h2>
+<h1 id="twitchbot">TwitchBot<a class="headerlink" href="#twitchbot" title="Permanent link">&para;</a></h1>
+<p><strong>What's Now Playing</strong> integrates with Twitch with channel point
+redemptions and chat. They may be run independently or run both at
+the same time.</p>
+<h2 id="twitch-chat-support">Twitch Chat Support<a class="headerlink" href="#twitch-chat-support" title="Permanent link">&para;</a></h2>
+<p>The chat bot support includes track announcement as well as interactive
+features.</p>
+<p>For example, in chat, if the user types:</p>
+<pre><code>!track
+</code></pre>
+<p><strong>What's Now Playing</strong> will read a file called <code>twitchbot_track.txt</code> and
+expand any template values in it. The Twitchbot settings section sets
+permissions for commands.</p>
+<p>Additionally, the Twitchbot can send an announcement template to chat
+when <strong>What's Now Playing</strong> detects a song change or when a track
+Request has been fulfilled.</p>
+<h2 id="twitch-channel-point-redemptions">Twitch Channel Point Redemptions<a class="headerlink" href="#twitch-channel-point-redemptions" title="Permanent link">&para;</a></h2>
+<p>Currently, channel point redemptions allow for users to request songs,
+either by artist/title or picking a random song in a 'roulette' mode
+when that redemption is tied to a supported DJ's software
+crate/playlist. For more information see <a href="../requests.html">Requests</a>.</p>
+<h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
+<p><strong>What's Now Playing</strong> uses OAuth2 authentication for secure integration with Twitch.  For redemptions,
+you will need to authenticate against your own account.  For the chat bot, you can either use your
+account or create and use another account.</p>
+<h3 id="setup-process">Setup Process<a class="headerlink" href="#setup-process" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Create Bot Account</strong> (Optional but recommended)</p>
+</li>
+<li>
+<p>Follow the Twitch process for creating a new account.</p>
+</li>
+<li>
+<p>On the new account, be sure to enable:</p>
 <ul>
-<li><strong><a href="obswebsocket.html">OBS WebSocket</a></strong> - Direct integration with OBS Studio</li>
-<li><strong><a href="webserver.html">Web Server</a></strong> - Built-in web server for browser sources</li>
-<li><strong><a href="textoutput.html">Text Output</a></strong> - Simple text file output</li>
-<li><strong><a href="twitchbot.html">Twitch Bot</a></strong> - Twitch chat bot integration</li>
-<li><strong><a href="kickbot.html">Kick Bot</a></strong> - Kick streaming platform bot</li>
-<li><strong><a href="discord.html">Discord</a></strong> - Discord rich presence integration</li>
+<li>Multiple logins per email</li>
+<li>Two-factor authentication (2FA)</li>
 </ul>
-<p>Click on any output destination above to see detailed configuration instructions.</p>
+</li>
+</ol>
+<p><img alt="Account Settings for bots" src="images/twitchbot-account-settings.png" /></p>
+<ol>
+<li>
+<p><strong>Register Application on Twitch</strong></p>
+</li>
+<li>
+<p>Go to <a href="https://dev.twitch.tv/console">Twitch Developer Console</a></p>
+</li>
+<li>Click Login in the upper right</li>
+<li>Click on "Your Console" in the upper right</li>
+<li>Click on "Applications"</li>
+<li>Click on "Register Your Application"</li>
+<li><strong>Name</strong>: Choose a descriptive name (e.g., "YourChannel Now Playing Bot")</li>
+<li><strong>OAuth Redirect URLs</strong>: Enter <strong>both</strong> redirect URIs as shown in <strong>What's Now Playing</strong>'s Twitch settings:<ul>
+<li><code>http://localhost:8899/twitchredirect</code></li>
+<li><code>http://localhost:8899/twitchchatredirect</code></li>
+</ul>
+</li>
+<li><strong>Category</strong>: Chat Bot</li>
+<li>Click "Create"</li>
+<li>Click on "Manage" and save a copy of the <strong>Client ID</strong></li>
+<li>
+<p>Click on "New Secret" and save a copy of the <strong>Client Secret</strong></p>
+</li>
+<li>
+<p><strong>Configure What's Now Playing</strong></p>
+</li>
+<li>
+<p>Open Settings from the <strong>What's Now Playing</strong> icon</p>
+</li>
+<li>Select "Twitch" from the list of settings available</li>
+<li>
+<p>Fill in the required information:</p>
+<ul>
+<li><strong>Channel</strong>: Your Twitch channel name (where you want to monitor/send messages)</li>
+<li><strong>Client ID</strong>: From your Twitch application</li>
+<li><strong>Client Secret</strong>: From your Twitch application</li>
+<li><strong>Redirect URI</strong>: Will be automatically populated based on your webserver port</li>
+</ul>
+</li>
+<li>
+<p>Click "Save" to store the configuration</p>
+</li>
+<li>Click "<strong>Authenticate with Twitch</strong>" to complete OAuth2 setup</li>
+<li>A browser will open - log in and authorize the application</li>
+<li>You should see "Authentication Successful" when complete</li>
+</ol>
+<h3 id="oauth2-vs-legacy-authentication">OAuth2 vs Legacy Authentication<a class="headerlink" href="#oauth2-vs-legacy-authentication" title="Permanent link">&para;</a></h3>
+<p><strong>What's Now Playing</strong> now uses modern OAuth2 authentication instead of manual token generation. This provides:</p>
+<ul>
+<li><strong>Enhanced Security</strong>: No need to manually copy/paste tokens</li>
+<li><strong>Automatic Token Refresh</strong>: Tokens are refreshed automatically when they expire</li>
+<li><strong>Streamlined Setup</strong>: One-click authentication through your browser</li>
+<li><strong>PKCE Security</strong>: Uses Proof Key for Code Exchange for additional protection</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Legacy Bot Token authentication is still supported for backward compatibility, but OAuth2 is recommended for new setups.</p>
+</div>
+<p><img alt="What's Now Playing's Twitch auth panel" src="images/twitchbot_auth.png" /></p>
+<h3 id="additional-setup-considerations">Additional Setup Considerations<a class="headerlink" href="#additional-setup-considerations" title="Permanent link">&para;</a></h3>
+<ul>
+<li>
+<p><strong>Bot Moderator Status</strong>: Consider making your bot account a moderator on your channel to avoid rate limits,
+  URL filters, and other restrictions.</p>
+</li>
+<li>
+<p><strong>Browser Authentication</strong>: When you click "Authenticate with Twitch", a browser will open asking for permission.
+  Make sure you're logged into the correct Twitch account:</p>
+</li>
+<li>
+<p>For <strong>channel point redemptions</strong>: Log in as your <strong>main streaming account</strong> (the channel owner)</p>
+</li>
+<li>
+<p>For <strong>chat functionality</strong>: Log in as your <strong>bot account</strong> (if using a separate bot account)</p>
+</li>
+<li>
+<p><strong>Required Permissions</strong>: Accept the requested permissions (<code>chat:read</code> and <code>chat:edit</code>) to allow the bot to
+  monitor and send messages.</p>
+</li>
+</ul>
+<h3 id="legacy-token-authentication">Legacy Token Authentication<a class="headerlink" href="#legacy-token-authentication" title="Permanent link">&para;</a></h3>
+<p>For users who prefer manual token management or have existing setups, the legacy "Bot Token" field is still
+supported. However, OAuth2 authentication is recommended for new installations as it provides better security
+and automatic token management.</p>
+<h2 id="twitch-chat-configuration">Twitch Chat Configuration<a class="headerlink" href="#twitch-chat-configuration" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
+<li>Select Twitch Chat from the list of settings available.</li>
+</ol>
+<p><a href="images/twitchbot_chat.png"><img alt="Twitch Chat Settings" src="images/twitchbot_chat.png" /></a></p>
+<ol>
+<li>Check Enable</li>
+<li>To have the bot announce new tracks in chat, select the template.</li>
+</ol>
+<p>By default, the bot will respond to user commands in the form of Twitch
+Replies. If you would prefer the bot just post a message, uncheck the
+Replies option.</p>
+<p>You are now ready to set permissions on user interactive commands.</p>
+<h3 id="setting-permissions">Setting Permissions<a class="headerlink" href="#setting-permissions" title="Permanent link">&para;</a></h3>
+<p>Upon launch, <strong>What's Now Playing</strong> will create an entry for every
+<code>twitchbot_*.txt</code> file in the template
+directory. These entries will all be set to completely disabled. In
+order to enable them, you will need to check the appropriate field.</p>
+<p>Twitchbot template files added while <strong>What's Now Playing</strong> is running
+will let anyone use them until the next run. At the next run, it will
+again change them back to no permissions granted.</p>
+<p>Once the permissions are set and Save is clicked, those permissions will
+be preserved on every restart.</p>
+<h3 id="adding-new-commands">Adding New Commands<a class="headerlink" href="#adding-new-commands" title="Permanent link">&para;</a></h3>
+<p>Create a new file in <strong>What's Now Playing</strong>'s<code>templates</code> directory
+(<code>Documents/Now Playing/template</code>) called <code>twitchbot_yourcommand.txt</code>
+where <code>yourcommand</code> is the actual command that will be executed by users
+that have the appropriate template code inside it. Note that all text
+will be smashed together as a single line when sent to Twitch, so be
+mindful of where to put spaces.</p>
+<h3 id="built-in-commands">Built-in Commands<a class="headerlink" href="#built-in-commands" title="Permanent link">&para;</a></h3>
+<p>Post-v3.0.2, the Twitchbot will always respond to the command
+'whatsnowplayingversion' . It will report the version that is running.</p>
+<h3 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h3>
+<ul>
+<li>
+<p>To test if the chat bot is working, you should be able to use the
+  '!whatsnowplayingversion' command. <strong>What's Now Playing</strong> only needs
+  to be running. You do not have to be live streaming to test chat.</p>
+</li>
+<li>
+<p>If the bot never connects, try getting a new OAuth token.</p>
+</li>
+<li>
+<p>Be aware that the bot may have trouble connecting if you restart
+  <strong>What's Now Playing</strong> too quickly. It should eventually rejoin, but
+  it may take several minutes.</p>
+</li>
+</ul>
+<h3 id="additional-variables">Additional Variables<a class="headerlink" href="#additional-variables" title="Permanent link">&para;</a></h3>
+<p>The TwitchBot adds the following additional values for templating purposes:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cmduser</td>
+<td>Person, bot, etc that typed the command</td>
+</tr>
+<tr>
+<td>cmdtarget[x]</td>
+<td>The x'th target on the command, starting with 0. For example, if the command was <code>!so modernmeerkat</code>, then <code>{% raw %}{{ cmdtarget[0] }}{% endraw %}</code> will have <code>modernmeerkat</code> in it. See below for an example.</td>
+</tr>
+<tr>
+<td>startnewmessage</td>
+<td>Split the text at this location and start a new message to send to chat.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Token Selection</p>
+<p>The system automatically uses the most appropriate token for sending messages.
+If you have both broadcaster and chat bot tokens authenticated, chat messages
+will be sent from the bot account for cleaner presentation.</p>
+</div>
+<h3 id="multiple-targets">Multiple Targets<a class="headerlink" href="#multiple-targets" title="Permanent link">&para;</a></h3>
+<p>One of the more advanced capabilities that the TwitchBot supports is a
+variable number of targets. This feature allows for your users to use
+one command to perform actions on, for example, multiple users.</p>
+<p>A simple example. Given this template file:</p>
+<pre><code>@{{ cmduser }} hugs @{{ cmdtarget[0] }}
+</code></pre>
+<p>a user typing:</p>
+<pre><code>modernmeerkat: !hug twitch
+</code></pre>
+<p>Would result in:</p>
+<pre><code>bot: @modernmeerkat hugs @twitch
+</code></pre>
+<p>But this can be expanded to do multiple users at once:</p>
+<pre><code>@{{ cmduser }} sends hugs to {% for people in cmdtarget %}@{{ people }} {% endfor %}
+</code></pre>
+<p>such that:</p>
+<pre><code>modernmeerkat: !hug person1 person2 person3
+</code></pre>
+<p>results in:</p>
+<pre><code>bot: @modernmeerkat sends hugs to @person1 @person2 @person3
+</code></pre>
+<h3 id="announcing-websites">Announcing Websites<a class="headerlink" href="#announcing-websites" title="Permanent link">&para;</a></h3>
+<p>You may want to add support for announcing the website data as part of
+the Twitchbot track announcement. You can pick and choose which websites
+are printed by taking the following code snippet and modifying as
+necessary:</p>
+<p _="%" endif="endif">{% if artistwebsites %}
+  {% for website in artistwebsites %}
+  {% if 'bandcamp' in website %} |Bandcamp: {{ website }}
+  {% elif 'discogs' in website %} | Discogs: {{ website }}
+  {% elif 'facebook' in website %} | Facebook: {{ website }}
+  {% elif 'instagram' in website %} | IG: {{ website }}
+  {% elif 'last.fm' in website %} | last.fm: {{ website }}
+  {% elif 'musicbrainz' in website %} | MusicBrainz: {{ website }}
+  {% elif 'twitter' in website %} | Twitter: {{ website }}
+  {% elif 'wikipedia' in website %} | Wikipedia: {{ website }}
+  {% elif 'youtube' in website %} | YouTube: {{ website }}
+  {% else %} | Official homepage: {{ website }}
+  {% endif %}
+  {% endfor %}</p>
 
 
 

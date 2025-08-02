@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/index.html">
+        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/extras/fanarttv.html">
       
       
+        <link rel="prev" href="discogs.html">
+      
+      
+        <link rel="next" href="theaudiodb.html">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Output Destinations - What's Now Playing</title>
+        <title>FanArt.TV - What's Now Playing</title>
       
     
     
@@ -72,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#output-destinations" class="md-skip">
+        <a href="#fanarttv" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Output Destinations
+              FanArt.TV
             
           </span>
         </div>
@@ -782,7 +786,7 @@
   
   
     <li class="md-nav__item">
-      <a href="discord.html" class="md-nav__link">
+      <a href="../output/discord.html" class="md-nav__link">
         
   
   
@@ -805,7 +809,7 @@
   
   
     <li class="md-nav__item">
-      <a href="kickbot.html" class="md-nav__link">
+      <a href="../output/kickbot.html" class="md-nav__link">
         
   
   
@@ -828,7 +832,7 @@
   
   
     <li class="md-nav__item">
-      <a href="obswebsocket.html" class="md-nav__link">
+      <a href="../output/obswebsocket.html" class="md-nav__link">
         
   
   
@@ -874,7 +878,7 @@
   
   
     <li class="md-nav__item">
-      <a href="textoutput.html" class="md-nav__link">
+      <a href="../output/textoutput.html" class="md-nav__link">
         
   
   
@@ -897,7 +901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="twitchbot.html" class="md-nav__link">
+      <a href="../output/twitchbot.html" class="md-nav__link">
         
   
   
@@ -920,7 +924,7 @@
   
   
     <li class="md-nav__item">
-      <a href="webserver.html" class="md-nav__link">
+      <a href="../output/webserver.html" class="md-nav__link">
         
   
   
@@ -1038,18 +1042,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
         
           
           <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
@@ -1065,7 +1071,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             Artist Extras
@@ -1079,7 +1085,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../extras/index.html" class="md-nav__link">
+      <a href="index.html" class="md-nav__link">
         
   
   
@@ -1102,7 +1108,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../extras/discogs.html" class="md-nav__link">
+      <a href="discogs.html" class="md-nav__link">
         
   
   
@@ -1122,10 +1128,19 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../extras/fanarttv.html" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="fanarttv.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1136,6 +1151,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -1148,7 +1164,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../extras/theaudiodb.html" class="md-nav__link">
+      <a href="theaudiodb.html" class="md-nav__link">
         
   
   
@@ -1530,18 +1546,15 @@
   
 
 
-<h1 id="output-destinations">Output Destinations<a class="headerlink" href="#output-destinations" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> can send song details to a variety of different systems, including just plain file output.</p>
-<h2 id="available-output-destinations">Available Output Destinations<a class="headerlink" href="#available-output-destinations" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong><a href="obswebsocket.html">OBS WebSocket</a></strong> - Direct integration with OBS Studio</li>
-<li><strong><a href="webserver.html">Web Server</a></strong> - Built-in web server for browser sources</li>
-<li><strong><a href="textoutput.html">Text Output</a></strong> - Simple text file output</li>
-<li><strong><a href="twitchbot.html">Twitch Bot</a></strong> - Twitch chat bot integration</li>
-<li><strong><a href="kickbot.html">Kick Bot</a></strong> - Kick streaming platform bot</li>
-<li><strong><a href="discord.html">Discord</a></strong> - Discord rich presence integration</li>
-</ul>
-<p>Click on any output destination above to see detailed configuration instructions.</p>
+<h1 id="fanarttv">fanart.tv<a class="headerlink" href="#fanarttv" title="Permanent link">&para;</a></h1>
+<p><a href="images/fanarttv.png"><img alt="fanart.tv Settings" src="images/fanarttv.png" /></a></p>
+<p>Provides: Banners, Fan art, Logos, and Thumbnails</p>
+<p>Media tags required: MusicBrainz Artist ID</p>
+<p><a href="https://www.fanart.tv">fanart.tv</a> is a community project to provide
+high quality artwork for music and other media. It requires music be
+tagged with <a href="https://www.musicbrainz.org">MusicBrainz</a> artist ids. You
+will need a <a href="https://fanart.tv/get-an-api-key/">Fanart API Key</a> in order
+to use this service.</p>
 
 
 

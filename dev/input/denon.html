@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/index.html">
+        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/input/denon.html">
       
       
       
@@ -20,7 +20,7 @@
     
     
       
-        <title>Output Destinations - What's Now Playing</title>
+        <title>Denon DJ - What's Now Playing</title>
       
     
     
@@ -72,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#output-destinations" class="md-skip">
+        <a href="#denon-dj" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Output Destinations
+              Denon DJ
             
           </span>
         </div>
@@ -507,7 +507,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../input/djuced.html" class="md-nav__link">
+      <a href="djuced.html" class="md-nav__link">
         
   
   
@@ -530,7 +530,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../input/icecast.html" class="md-nav__link">
+      <a href="icecast.html" class="md-nav__link">
         
   
   
@@ -553,7 +553,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../input/jriver.html" class="md-nav__link">
+      <a href="jriver.html" class="md-nav__link">
         
   
   
@@ -576,7 +576,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../input/m3u.html" class="md-nav__link">
+      <a href="m3u.html" class="md-nav__link">
         
   
   
@@ -599,7 +599,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../input/mpris2.html" class="md-nav__link">
+      <a href="mpris2.html" class="md-nav__link">
         
   
   
@@ -622,7 +622,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../input/remote.html" class="md-nav__link">
+      <a href="remote.html" class="md-nav__link">
         
   
   
@@ -645,7 +645,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../input/serato.html" class="md-nav__link">
+      <a href="serato.html" class="md-nav__link">
         
   
   
@@ -668,7 +668,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../input/traktor.html" class="md-nav__link">
+      <a href="traktor.html" class="md-nav__link">
         
   
   
@@ -691,7 +691,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../input/virtualdj.html" class="md-nav__link">
+      <a href="virtualdj.html" class="md-nav__link">
         
   
   
@@ -714,7 +714,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../input/winmedia.html" class="md-nav__link">
+      <a href="winmedia.html" class="md-nav__link">
         
   
   
@@ -782,7 +782,7 @@
   
   
     <li class="md-nav__item">
-      <a href="discord.html" class="md-nav__link">
+      <a href="../output/discord.html" class="md-nav__link">
         
   
   
@@ -805,7 +805,7 @@
   
   
     <li class="md-nav__item">
-      <a href="kickbot.html" class="md-nav__link">
+      <a href="../output/kickbot.html" class="md-nav__link">
         
   
   
@@ -828,7 +828,7 @@
   
   
     <li class="md-nav__item">
-      <a href="obswebsocket.html" class="md-nav__link">
+      <a href="../output/obswebsocket.html" class="md-nav__link">
         
   
   
@@ -851,7 +851,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../input/remote.html" class="md-nav__link">
+      <a href="remote.html" class="md-nav__link">
         
   
   
@@ -874,7 +874,7 @@
   
   
     <li class="md-nav__item">
-      <a href="textoutput.html" class="md-nav__link">
+      <a href="../output/textoutput.html" class="md-nav__link">
         
   
   
@@ -897,7 +897,7 @@
   
   
     <li class="md-nav__item">
-      <a href="twitchbot.html" class="md-nav__link">
+      <a href="../output/twitchbot.html" class="md-nav__link">
         
   
   
@@ -920,7 +920,7 @@
   
   
     <li class="md-nav__item">
-      <a href="webserver.html" class="md-nav__link">
+      <a href="../output/webserver.html" class="md-nav__link">
         
   
   
@@ -1530,18 +1530,99 @@
   
 
 
-<h1 id="output-destinations">Output Destinations<a class="headerlink" href="#output-destinations" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> can send song details to a variety of different systems, including just plain file output.</p>
-<h2 id="available-output-destinations">Available Output Destinations<a class="headerlink" href="#available-output-destinations" title="Permanent link">&para;</a></h2>
+<h1 id="denon-dj">Denon DJ<a class="headerlink" href="#denon-dj" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>NOTE: Both Newest and Oldest mix modes are supported.</p>
+</blockquote>
+<p>The Denon DJ input source uses the StagelinQ protocol to connect directly
+to Denon DJ equipment over your local network. This provides real-time
+track information and playback status from compatible Denon DJ mixers and players.</p>
+<p>StagelinQ is Denon's proprietary network protocol that allows DJ software
+and hardware to communicate track metadata, mixer state, and timing information.
+<strong>What's Now Playing</strong> connects as a StagelinQ client to monitor your Denon DJ
+equipment and automatically detect which track is currently playing based on
+fader positions and playback state.</p>
+<h2 id="supported-equipment">Supported Equipment<a class="headerlink" href="#supported-equipment" title="Permanent link">&para;</a></h2>
+<p>This input source works with Denon DJ hardware that supports the StagelinQ protocol, including:</p>
 <ul>
-<li><strong><a href="obswebsocket.html">OBS WebSocket</a></strong> - Direct integration with OBS Studio</li>
-<li><strong><a href="webserver.html">Web Server</a></strong> - Built-in web server for browser sources</li>
-<li><strong><a href="textoutput.html">Text Output</a></strong> - Simple text file output</li>
-<li><strong><a href="twitchbot.html">Twitch Bot</a></strong> - Twitch chat bot integration</li>
-<li><strong><a href="kickbot.html">Kick Bot</a></strong> - Kick streaming platform bot</li>
-<li><strong><a href="discord.html">Discord</a></strong> - Discord rich presence integration</li>
+<li>Denon DJ Prime series mixers (Prime 2, Prime 4, Prime Go/Go+)</li>
+<li>Denon DJ standalone players (SC5000, SC6000)</li>
+<li>Potentially other StagelinQ-compatible Denon DJ equipment</li>
 </ul>
-<p>Click on any output destination above to see detailed configuration instructions.</p>
+<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Real-time Track Detection</strong>: Monitors all decks simultaneously and selects
+the currently audible track based on fader positions and crossfader state</li>
+<li><strong>Intelligent Fader Logic</strong>: Considers both channel faders and crossfader
+position to determine which track is actually audible to the audience</li>
+<li><strong>Deck Filtering</strong>: Option to ignore specific decks (useful for pre-cueing or inactive decks)</li>
+<li><strong>Mix Mode Support</strong>: Choose between "newest" (most recently started) or "oldest" (earliest started)
+when multiple tracks are audible</li>
+</ul>
+<h2 id="instructions">Instructions<a class="headerlink" href="#instructions" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Ensure your Denon DJ equipment and computer running <strong>What's Now Playing</strong> are connected to the same network</li>
+<li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
+<li>Select Core Settings-&gt;Source from the left-hand column</li>
+<li>Select Denon DJ from the list of available input sources</li>
+<li>Select Input Sources-&gt;Denon from the left-hand column</li>
+<li>Select Denon DJ from the left-hand column to configure settings</li>
+<li>Adjust Discovery Timeout if needed (default 5 seconds is usually sufficient)</li>
+<li>Configure deck skip options if desired</li>
+<li>Click Save</li>
+</ol>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<h3 id="discovery-timeout">Discovery Timeout<a class="headerlink" href="#discovery-timeout" title="Permanent link">&para;</a></h3>
+<p>The Discovery Timeout setting controls how long <strong>What's Now Playing</strong> waits to
+discover Denon DJ devices on the network during startup. The default value
+of 5 seconds works well for most network configurations. You may need to increase
+this value on slower networks or if devices take longer to respond.</p>
+<h3 id="deck-skip-settings">Deck Skip Settings<a class="headerlink" href="#deck-skip-settings" title="Permanent link">&para;</a></h3>
+<p>Use the deck skip checkboxes to ignore specific decks during track detection. This is useful when:</p>
+<ul>
+<li>Using certain decks only for pre-cueing or effects</li>
+<li>Running backing tracks on specific decks that shouldn't be announced</li>
+<li>Working with a multi-deck setup where only certain decks contain music for the audience</li>
+</ul>
+<p>Checked decks will be completely ignored by <strong>What's Now Playing</strong>, even if they are playing and audible.</p>
+<h2 id="how-track-selection-works">How Track Selection Works<a class="headerlink" href="#how-track-selection-works" title="Permanent link">&para;</a></h2>
+<p><strong>What's Now Playing</strong> uses advanced logic to determine which track is "now playing" by analyzing:</p>
+<ol>
+<li><strong>Play State</strong>: Only considers decks that are actively playing</li>
+<li><strong>Channel Fader Position</strong>: Tracks with very low fader levels (below 10% effective volume) are filtered out</li>
+<li><strong>Crossfader Position</strong>: Considers how the crossfader affects the audibility of
+left-side decks (1 &amp; 3) vs right-side decks (2 &amp; 4)</li>
+<li><strong>Volume Priority</strong>: When multiple tracks are audible, prioritizes the loudest track</li>
+<li><strong>Mix Mode</strong>: Among tracks of similar volume, selects either the newest or oldest based on your mix mode setting</li>
+</ol>
+<p>This intelligent selection ensures that <strong>What's Now Playing</strong> accurately reflects
+what your audience is actually hearing, not just what decks happen to be playing.</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="no-devices-found">No Devices Found<a class="headerlink" href="#no-devices-found" title="Permanent link">&para;</a></h3>
+<p>If <strong>What's Now Playing</strong> cannot discover your Denon DJ equipment:</p>
+<ol>
+<li>Verify both devices are on the same network</li>
+<li>Check that your Denon DJ equipment has StagelinQ enabled (usually enabled by default)</li>
+<li>Try increasing the Discovery Timeout setting</li>
+<li>Restart <strong>What's Now Playing</strong> to retry device discovery</li>
+<li>Check your network firewall settings</li>
+</ol>
+<h3 id="incorrect-track-detection">Incorrect Track Detection<a class="headerlink" href="#incorrect-track-detection" title="Permanent link">&para;</a></h3>
+<p>If the wrong track is being detected as "now playing":</p>
+<ol>
+<li>Check your deck skip settings to make sure you haven't accidentally skipped the deck you want to monitor</li>
+<li>Verify your fader positions as tracks with very low faders are filtered out</li>
+<li>Review your crossfader position as it significantly affects which decks are considered audible</li>
+<li>Try switching between "newest" and "oldest" mix modes to see which works better for your style</li>
+</ol>
+<h3 id="connection-drops">Connection Drops<a class="headerlink" href="#connection-drops" title="Permanent link">&para;</a></h3>
+<p>If the connection to your Denon DJ equipment drops frequently:</p>
+<ol>
+<li>Use a wired network connection if possible</li>
+<li>Check for network congestion or interference</li>
+<li>Ensure your Denon DJ equipment has the latest firmware</li>
+<li><strong>What's Now Playing</strong> will automatically attempt to reconnect when connections are lost</li>
+</ol>
 
 
 
