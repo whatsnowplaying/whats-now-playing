@@ -7,6 +7,7 @@ import pathlib
 import sqlite3
 import time
 from typing import Protocol
+from collections.abc import Callable
 
 import xml.sax
 import defusedxml.sax
@@ -33,7 +34,7 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
         self,
         database_path: pathlib.Path,
         handler_class: type[XMLHandler],
-        xml_file_getter: callable,
+        xml_file_getter: Callable[[], pathlib.Path | None],
         table_schemas: list[str],
         config_key: str,
         config,
@@ -60,44 +61,41 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
         age = self.db_age_days()
         return age is None or age > max_age_days
 
+    async def _check_and_perform_refresh(self) -> None:
+        """Check if refresh is needed and perform it"""
+        rebuild_requested: bool = self.config.cparser.value(
+            f"{self.config_key}/rebuild_db", type=bool
+        )
+
+        # Check if DB needs refresh based on age
+        max_age_days = self.config.cparser.value(
+            f"{self.config_key}/max_age_days", type=int, defaultValue=7
+        )
+
+        if self.needs_refresh(max_age_days):
+            rebuild_requested = True
+
+        if not rebuild_requested:
+            return
+
+        xml_file = self.xml_file_getter()
+        if not xml_file or not xml_file.exists():
+            return
+
+        success = await self.background_refresh(xml_file, self.table_schemas)
+        if success:
+            self.config.cparser.setValue(f"{self.config_key}/rebuild_db", False)
+
     async def background_refresh_loop(self) -> None:
         """Background refresh polling loop with cancellation support"""
         try:
             while not self._shutdown_event.is_set():
                 self.config.cparser.sync()
-                if not self.config.cparser.value(f"{self.config_key}/rebuild_db", type=bool):
-                    # Check if DB needs refresh based on age
-                    max_age_days = self.config.cparser.value(
-                        f"{self.config_key}/max_age_days", type=int, defaultValue=7
-                    )
-                    if self.needs_refresh(max_age_days):
-                        self.config.cparser.setValue(f"{self.config_key}/rebuild_db", True)
-                    else:
-                        # Wait with cancellation support
-                        try:
-                            await asyncio.wait_for(self._shutdown_event.wait(), timeout=60 * 5)
-                            break  # Shutdown requested
-                        except asyncio.TimeoutError:
-                            continue  # Normal timeout, continue loop
-
-                xml_file = self.xml_file_getter()
-                if not xml_file or not xml_file.exists():
-                    logging.error("XML file not found: %s", xml_file)
-                    self.config.cparser.setValue(f"{self.config_key}/rebuild_db", False)
-                    # Wait with cancellation support
-                    try:
-                        await asyncio.wait_for(self._shutdown_event.wait(), timeout=60 * 5)
-                        break  # Shutdown requested
-                    except asyncio.TimeoutError:
-                        continue  # Normal timeout, continue loop
-
-                success = await self.background_refresh(xml_file, self.table_schemas)
-                if success:
-                    self.config.cparser.setValue(f"{self.config_key}/rebuild_db", False)
+                await self._check_and_perform_refresh()
 
                 # Wait with cancellation support
                 try:
-                    await asyncio.wait_for(self._shutdown_event.wait(), timeout=60 * 5)
+                    await asyncio.wait_for(self._shutdown_event.wait(), timeout=5)
                     break  # Shutdown requested
                 except asyncio.TimeoutError:
                     continue  # Normal timeout, continue loop
@@ -206,3 +204,7 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
     def shutdown(self) -> None:
         """Signal the background refresh loop to exit cleanly"""
         self._shutdown_event.set()
+
+    def reset_shutdown_event(self) -> None:
+        """Reset the shutdown event for reuse"""
+        self._shutdown_event.clear()

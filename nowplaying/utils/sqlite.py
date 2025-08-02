@@ -7,7 +7,8 @@ import os
 import random
 import sqlite3
 import time
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 
 def retry_sqlite_operation(
