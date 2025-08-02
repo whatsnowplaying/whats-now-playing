@@ -144,17 +144,27 @@ class Plugin(IcecastPlugin):
         self.tasks = set()
 
     def install(self):
-        """auto-install for Icecast"""
-        nidir = self.config.userdocs.joinpath("Native Instruments")
-        if nidir.exists():
-            for entry in os.scandir(nidir):
-                if entry.is_dir() and "Traktor" in entry.name:
-                    cmlpath = pathlib.Path(entry).joinpath("collection.nml")
-                    if cmlpath.exists():
-                        self.config.cparser.value("traktor/collections", str(cmlpath))
-                        self.config.cparser.value("settings/input", "traktor")
-                        self.config.cparser.value("traktor/port", 8000)
-                        return True
+        """auto-install for Traktor"""
+        # Check multiple possible Native Instruments locations
+        possible_locations = [
+            # Traditional Documents/Native Instruments location
+            self.config.userdocs.joinpath("Native Instruments"),
+            # Windows 11 AppData\Local\Native Instruments location
+            pathlib.Path(
+                QStandardPaths.standardLocations(QStandardPaths.AppLocalDataLocation)[0]
+            ).parent.joinpath("Native Instruments"),
+        ]
+
+        for nidir in possible_locations:
+            if nidir.exists():
+                for entry in os.scandir(nidir):
+                    if entry.is_dir() and "Traktor" in entry.name:
+                        cmlpath = pathlib.Path(entry).joinpath("collection.nml")
+                        if cmlpath.exists():
+                            self.config.cparser.setValue("traktor/collections", str(cmlpath))
+                            self.config.cparser.setValue("settings/input", "traktor")
+                            self.config.cparser.setValue("traktor/port", 8000)
+                            return True
 
         return False
 
@@ -164,11 +174,22 @@ class Plugin(IcecastPlugin):
         qsettings.setValue("traktor/max_age_days", 7)
         qsettings.setValue("traktor/artist_query_scope", "entire_library")
         qsettings.setValue("traktor/selected_playlists", "")
-        nidir = self.config.userdocs.joinpath("Native Instruments")
-        if nidir.exists():
-            if collist := list(nidir.glob("**/collection.nml")):
-                collist.sort(key=lambda x: x.stat().st_mtime)
-                qsettings.setValue("traktor/collections", str(collist[-1]))
+        # Check multiple possible Native Instruments locations for defaults
+        possible_locations = [
+            self.config.userdocs.joinpath("Native Instruments"),
+            pathlib.Path(
+                QStandardPaths.standardLocations(QStandardPaths.AppLocalDataLocation)[0]
+            ).parent.joinpath("Native Instruments"),
+        ]
+
+        all_collections = []
+        for nidir in possible_locations:
+            if nidir.exists():
+                all_collections.extend(list(nidir.glob("**/collection.nml")))
+
+        if all_collections:
+            all_collections.sort(key=lambda x: x.stat().st_mtime)
+            qsettings.setValue("traktor/collections", str(all_collections[-1]))
 
     def connect_settingsui(self, qwidget, uihelp):
         """connect any UI elements such as buttons"""
