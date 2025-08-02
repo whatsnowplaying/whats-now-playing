@@ -152,13 +152,14 @@ for execname, execpy in executables.items():
                  cipher=block_cipher,
                  noarchive=False)
 
-    if sys.platform != 'darwin':
-        splash = Splash('docs/images/meerkatdj_256x256.png',
-                        binaries=a.binaries,
-                        datas=a.datas,
-                        text_pos=(10, 50),
-                        text_size=12,
-                        text_color='black')
+    # Splash screen disabled for folder mode
+    # if sys.platform != 'darwin':
+    #     splash = Splash('docs/images/meerkatdj_256x256.png',
+    #                     binaries=a.binaries,
+    #                     datas=a.datas,
+    #                     text_pos=(10, 50),
+    #                     text_size=12,
+    #                     text_color='black')
 
     pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)  # pylint: disable=undefined-variable
 
@@ -204,17 +205,23 @@ for execname, execpy in executables.items():
         exe = EXE(  # pylint: disable=undefined-variable
             pyz,
             a.scripts,
-            a.binaries,
-            a.zipfiles,
-            a.datas, [],
+            [],
+            exclude_binaries=True,
             name=execname,
             debug=False,
             bootloader_ignore_signals=False,
             strip=False,
             upx=True,
-            upx_exclude=[],
-            runtime_tmpdir=None,
             console=False,
             version=WINVERSFILE,
             icon=f'bincomponents/{geticon()}')
+        coll = COLLECT(  # pylint: disable=undefined-variable
+            exe,
+            a.binaries,
+            a.zipfiles,
+            a.datas,
+            strip=False,
+            upx=True,
+            upx_exclude=[],
+            name=execname)
         os.unlink(WINVERSFILE)
