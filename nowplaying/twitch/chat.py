@@ -390,7 +390,7 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
             self.modernmeerkat_greeted = True
             try:
                 await self.chat.send_message(
-                    self.config.cparser.value("twitchbot/channel"), f"hi @{msg.user.display_name}"
+                    self.config.cparser.value("twitchbot/channel"), f"Hello @{msg.user.display_name}"
                 )
                 logging.info("Greeted modernmeerkat user: %s", msg.user.display_name)
             except Exception as error:  # pylint: disable=broad-except

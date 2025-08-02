@@ -216,7 +216,7 @@ class KickChat:  # pylint: disable=too-many-instance-attributes
 
                 test_message = (
                     f"🤖 whatsnowplaying v{self.config.version} by @modernmeerkat "
-                    f"connected! Using {inputsource} on {plat}."
+                    "connected!"
                 )
                 test_sent = await self._send_message(test_message)
                 if test_sent:
