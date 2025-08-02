@@ -152,13 +152,14 @@ for execname, execpy in executables.items():
                  cipher=block_cipher,
                  noarchive=False)
 
-    if sys.platform != 'darwin':
-        splash = Splash('docs/images/meerkatdj_256x256.png',
-                        binaries=a.binaries,
-                        datas=a.datas,
-                        text_pos=(10, 50),
-                        text_size=12,
-                        text_color='black')
+    # Splash screen disabled for folder mode
+    # if sys.platform != 'darwin':
+    #     splash = Splash('docs/images/meerkatdj_256x256.png',
+    #                     binaries=a.binaries,
+    #                     datas=a.datas,
+    #                     text_pos=(10, 50),
+    #                     text_size=12,
+    #                     text_color='black')
 
     pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)  # pylint: disable=undefined-variable
 
@@ -204,7 +205,6 @@ for execname, execpy in executables.items():
         exe = EXE(  # pylint: disable=undefined-variable
             pyz,
             a.scripts,
-            splash,  # Include splash screen
             [],
             exclude_binaries=True,
             name=execname,
@@ -220,7 +220,6 @@ for execname, execpy in executables.items():
             a.binaries,
             a.zipfiles,
             a.datas,
-            splash.binaries,  # Include splash screen binaries
             strip=False,
             upx=True,
             upx_exclude=[],
