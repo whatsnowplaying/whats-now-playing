@@ -2,7 +2,6 @@
 """Remote Output Notification Plugin"""
 
 import contextlib
-import json
 import logging
 from typing import TYPE_CHECKING
 
@@ -64,13 +63,13 @@ class Plugin(NotificationPlugin):
             debug_data["secret"] = "***REDACTED***"
 
         # Debug: write JSON to file to inspect
-        try:
-            debug_file = "/tmp/remote_debug.json"
-            with open(debug_file, "w", encoding="utf-8") as fnout:
-                json.dump(debug_data, fnout, indent=2)
-            logging.info("Debug: wrote remote data to %s", debug_file)
-        except Exception:  # pylint: disable=broad-except
-            logging.exception("Failed to write debug JSON")
+        # try:
+        #     debug_file = "/tmp/remote_debug.json"
+        #     with open(debug_file, "w", encoding="utf-8") as fnout:
+        #         json.dump(debug_data, fnout, indent=2)
+        #     logging.info("Debug: wrote remote data to %s", debug_file)
+        # except Exception:  # pylint: disable=broad-except
+        #     logging.exception("Failed to write debug JSON")
 
         try:
             async with aiohttp.ClientSession() as session:

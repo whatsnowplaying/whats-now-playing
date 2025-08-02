@@ -50,7 +50,6 @@ import nowplaying.kick.oauth2
 import nowplaying.metadata
 import nowplaying.oauth2
 import nowplaying.twitch.oauth2
-import nowplaying.trackrequests
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
 
@@ -159,7 +158,6 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 await asyncio.sleep(30)  # Refresh every 30 seconds
                 if not nowplaying.utils.safe_stopevent_check(self.stopevent):
                     app[CONFIG_KEY].get()
-                    logging.debug("Webserver config refreshed")
             except Exception as error:  # pylint: disable=broad-except
                 logging.error("Config refresh task error: %s", error)
 
