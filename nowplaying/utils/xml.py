@@ -12,6 +12,8 @@ import xml.sax
 import defusedxml.sax
 import defusedxml.common
 
+import nowplaying.utils.sqlite
+
 
 # pylint: disable=missing-function-docstring,invalid-name
 class XMLHandler(Protocol):
@@ -177,18 +179,23 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
 
     def _atomic_swap(self) -> None:
         """Atomically swap temp database with live database"""
-        if self.database_path.exists():
-            # Create backup first
+
+        def _perform_swap():
+            if self.database_path.exists():
+                # Create backup first
+                if self.backup_database_path.exists():
+                    self.backup_database_path.unlink()
+                self.database_path.rename(self.backup_database_path)
+
+            # Atomic rename
+            self.temp_database_path.rename(self.database_path)
+
+            # Clean up backup after successful swap
             if self.backup_database_path.exists():
                 self.backup_database_path.unlink()
-            self.database_path.rename(self.backup_database_path)
 
-        # Atomic rename
-        self.temp_database_path.rename(self.database_path)
-
-        # Clean up backup after successful swap
-        if self.backup_database_path.exists():
-            self.backup_database_path.unlink()
+        # Use retry logic for Windows file locking issues
+        nowplaying.utils.sqlite.retry_sqlite_operation(_perform_swap)
 
     def shutdown(self) -> None:
         """Signal the background refresh loop to exit cleanly"""
