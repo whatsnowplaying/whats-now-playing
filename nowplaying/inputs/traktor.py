@@ -93,7 +93,14 @@ class TraktorSAXHandler(xml.sax.ContentHandler):
                 if key and isinstance(key, str):
                     filepathcomps = key.split("/:")
                     if len(filepathcomps) > 1:
-                        filename = str(pathlib.Path("/").joinpath(*filepathcomps[1:]))
+                        # Create absolute path using pathlib for cross-platform compatibility
+                        # Skip the volume name (first component) and join the rest as absolute path
+                        if os.name == "nt":
+                            # On Windows, assume C: drive if no explicit drive letter
+                            filename = str(pathlib.Path("C:").joinpath(*filepathcomps[1:]))
+                        else:
+                            # On Unix-like systems, use root
+                            filename = str(pathlib.Path("/").joinpath(*filepathcomps[1:]))
                         sql = "INSERT INTO playlists (name,filename) VALUES (?,?)"
                         self.sqlcursor.execute(sql, (self.current_playlist, filename))
             except (AttributeError, TypeError, ValueError, sqlite3.Error) as err:
