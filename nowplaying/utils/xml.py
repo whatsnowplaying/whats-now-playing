@@ -127,7 +127,7 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
             # Atomic swap: rename temp to live
             if self.temp_database_path.exists():
                 # Use retry logic for Windows file locking issues
-                await asyncio.to_thread(nowplaying.utils.sqlite.retry_sqlite_operation, self._atomic_swap_inner)
+                await asyncio.to_thread(nowplaying.utils.sqlite.retry_file_operation, self._atomic_swap_inner)
                 logging.info("XML database refreshed successfully: %s", self.database_path)
                 return True
             logging.error("Temp database was not created")

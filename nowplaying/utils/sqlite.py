@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import os
 import random
 import sqlite3
 import time
@@ -46,6 +47,51 @@ def retry_sqlite_operation(
                 time.sleep(delay)
                 continue
             logging.exception("SQLite operation failed after retries")
+            raise
+
+
+def retry_file_operation(
+    operation_func: Callable[[], Any],
+    max_retries: int = 10,
+    base_delay: float = 0.1,
+    jitter: float = 0.05,
+) -> Any:
+    """
+    Retry file operations with exponential backoff for Windows file locking issues.
+
+    Args:
+        operation_func: The function to execute.
+        max_retries: Maximum number of retries (default: 10).
+        base_delay: Base delay in seconds (default: 0.1).
+        jitter: Maximum jitter in seconds to add to delay (default: 0.05).
+
+    Returns:
+        The result of operation_func() if successful.
+
+    Raises:
+        OSError: If all retries are exhausted.
+    """
+    for attempt in range(max_retries):
+        try:
+            return operation_func()
+        except (OSError, PermissionError) as error:
+            # Check for Windows file locking errors
+            if (os.name == 'nt' and 
+                hasattr(error, 'winerror') and 
+                error.winerror == 32 and  # ERROR_SHARING_VIOLATION
+                attempt < max_retries - 1):
+                delay = base_delay * (2**attempt)
+                delay += random.uniform(0, jitter)
+                logging.debug(
+                    "Windows file locked, retry %d/%d after %.3fs (with jitter): %s",
+                    attempt + 1,
+                    max_retries,
+                    delay,
+                    error,
+                )
+                time.sleep(delay)
+                continue
+            logging.exception("File operation failed after retries")
             raise
 
 
