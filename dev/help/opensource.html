@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/index.html">
+        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/help/opensource.html">
       
       
+        <link rel="prev" href="bugreports.html">
+      
+      
+        <link rel="next" href="developers.html">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Output Destinations - What's Now Playing</title>
+        <title>Open Source - What's Now Playing</title>
       
     
     
@@ -72,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#output-destinations" class="md-skip">
+        <a href="#open-source" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Output Destinations
+              Open Source
             
           </span>
         </div>
@@ -782,7 +786,7 @@
   
   
     <li class="md-nav__item">
-      <a href="discord.html" class="md-nav__link">
+      <a href="../output/discord.html" class="md-nav__link">
         
   
   
@@ -805,7 +809,7 @@
   
   
     <li class="md-nav__item">
-      <a href="kickbot.html" class="md-nav__link">
+      <a href="../output/kickbot.html" class="md-nav__link">
         
   
   
@@ -828,7 +832,7 @@
   
   
     <li class="md-nav__item">
-      <a href="obswebsocket.html" class="md-nav__link">
+      <a href="../output/obswebsocket.html" class="md-nav__link">
         
   
   
@@ -874,7 +878,7 @@
   
   
     <li class="md-nav__item">
-      <a href="textoutput.html" class="md-nav__link">
+      <a href="../output/textoutput.html" class="md-nav__link">
         
   
   
@@ -897,7 +901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="twitchbot.html" class="md-nav__link">
+      <a href="../output/twitchbot.html" class="md-nav__link">
         
   
   
@@ -920,7 +924,7 @@
   
   
     <li class="md-nav__item">
-      <a href="webserver.html" class="md-nav__link">
+      <a href="../output/webserver.html" class="md-nav__link">
         
   
   
@@ -1197,18 +1201,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" checked>
         
           
           <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
@@ -1224,7 +1230,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_11">
             <span class="md-nav__icon md-icon"></span>
             Help
@@ -1238,7 +1244,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../help/howdoi.html" class="md-nav__link">
+      <a href="howdoi.html" class="md-nav__link">
         
   
   
@@ -1261,7 +1267,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../help/accuracy.html" class="md-nav__link">
+      <a href="accuracy.html" class="md-nav__link">
         
   
   
@@ -1284,7 +1290,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../help/troubleshooting.html" class="md-nav__link">
+      <a href="troubleshooting.html" class="md-nav__link">
         
   
   
@@ -1307,7 +1313,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../help/bugreports.html" class="md-nav__link">
+      <a href="bugreports.html" class="md-nav__link">
         
   
   
@@ -1327,10 +1333,19 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../help/opensource.html" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="opensource.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1341,6 +1356,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -1353,7 +1369,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../help/developers.html" class="md-nav__link">
+      <a href="developers.html" class="md-nav__link">
         
   
   
@@ -1530,18 +1546,12 @@
   
 
 
-<h1 id="output-destinations">Output Destinations<a class="headerlink" href="#output-destinations" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> can send song details to a variety of different systems, including just plain file output.</p>
-<h2 id="available-output-destinations">Available Output Destinations<a class="headerlink" href="#available-output-destinations" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong><a href="obswebsocket.html">OBS WebSocket</a></strong> - Direct integration with OBS Studio</li>
-<li><strong><a href="webserver.html">Web Server</a></strong> - Built-in web server for browser sources</li>
-<li><strong><a href="textoutput.html">Text Output</a></strong> - Simple text file output</li>
-<li><strong><a href="twitchbot.html">Twitch Bot</a></strong> - Twitch chat bot integration</li>
-<li><strong><a href="kickbot.html">Kick Bot</a></strong> - Kick streaming platform bot</li>
-<li><strong><a href="discord.html">Discord</a></strong> - Discord rich presence integration</li>
-</ul>
-<p>Click on any output destination above to see detailed configuration instructions.</p>
+<h1 id="open-source">Open Source<a class="headerlink" href="#open-source" title="Permanent link">&para;</a></h1>
+<p>Keep in mind this software is done by volunteers in their spare time! It
+is also open source, so if you see something that should be fixed,
+wrong, or even just general feedback, you are part of the community as
+soon as you participate. Every contribution, no matter how small you
+might think it is, helps everyone out. We appreciate you!</p>
 
 
 

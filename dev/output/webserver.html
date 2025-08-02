@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/index.html">
+        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/webserver.html">
       
       
+        <link rel="prev" href="twitchbot.html">
+      
+      
+        <link rel="next" href="../recognition/index.html">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Output Destinations - What's Now Playing</title>
+        <title>Web Server - What's Now Playing</title>
       
     
     
@@ -72,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#output-destinations" class="md-skip">
+        <a href="#webserver" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Output Destinations
+              Web Server
             
           </span>
         </div>
@@ -741,18 +745,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
@@ -768,7 +774,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Output Destinations
@@ -917,10 +923,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="webserver.html" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Web Server
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="webserver.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -931,6 +959,80 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      Settings
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#obs-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      OBS Settings
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-urls" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported URLs
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rest-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      REST API
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#websockets" class="md-nav__link">
+    <span class="md-ellipsis">
+      WebSockets
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1530,18 +1632,94 @@
   
 
 
-<h1 id="output-destinations">Output Destinations<a class="headerlink" href="#output-destinations" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> can send song details to a variety of different systems, including just plain file output.</p>
-<h2 id="available-output-destinations">Available Output Destinations<a class="headerlink" href="#available-output-destinations" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong><a href="obswebsocket.html">OBS WebSocket</a></strong> - Direct integration with OBS Studio</li>
-<li><strong><a href="webserver.html">Web Server</a></strong> - Built-in web server for browser sources</li>
-<li><strong><a href="textoutput.html">Text Output</a></strong> - Simple text file output</li>
-<li><strong><a href="twitchbot.html">Twitch Bot</a></strong> - Twitch chat bot integration</li>
-<li><strong><a href="kickbot.html">Kick Bot</a></strong> - Kick streaming platform bot</li>
-<li><strong><a href="discord.html">Discord</a></strong> - Discord rich presence integration</li>
-</ul>
-<p>Click on any output destination above to see detailed configuration instructions.</p>
+<h1 id="webserver">Webserver<a class="headerlink" href="#webserver" title="Permanent link">&para;</a></h1>
+<p><strong>What's Now Playing</strong> has a built-in web server that allows for a wide
+variety of customization and deployments, including complex ones
+involving multiple hosts. Treat the files in<code>templates</code> as examples; copy them to new
+names and modify them until you are happy. Change the font, change the
+output order, do whatever it is you need to do.</p>
+<p>Using one of the WebSocket examples as your starting point is
+recommended as they are generally more predictable. They update when the
+song updates vs. the others that use a timer to check for updates. See
+more about WebSockets below.</p>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
+<li>Select OBS WebSocket from the list of available input sources.</li>
+<li>Check Enable</li>
+<li>Change any settings as desired. See below.</li>
+<li>Click Save</li>
+</ol>
+<h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">&para;</a></h2>
+<p><a href="images/webserver.png"><img alt="Webserver settings screen" src="images/webserver.png" /></a></p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Port</td>
+<td>The HTTP server's TCP port. A firewall should protect this port for security reasons to limit which hosts will be permitted to connect. <strong>What's Now Playing</strong> does not limit what systems may connect to it.</td>
+</tr>
+<tr>
+<td>HTML Template</td>
+<td>The <a href="https://jinja.palletsprojects.com/en/3.1.x/templates/">Jinja2 template</a> file to use when fetching index.md. See <a href="../reference/templatevariables.html">Templates</a> for more information.</td>
+</tr>
+<tr>
+<td>Once</td>
+<td>Only give index.md once per title, then return an empty refresh page until the next song change. This setting is handy for providing a simple way to do fade-in and fade-out using simple HTML.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="obs-settings">OBS Settings<a class="headerlink" href="#obs-settings" title="Permanent link">&para;</a></h2>
+<p>Once the webserver is enabled, hop into OBS and configure a Browser
+source. Set the size to match the HTML template you are using. (Check
+the <code>width</code> and <code>height</code> values in the bundled templates). Then place
+the OBS source wherever you would like.</p>
+<p><a href="images/obs-browser-settings.png"><img alt="OBS webserver settings screen" src="images/obs-browser-settings.png" /></a></p>
+<h2 id="supported-urls">Supported URLs<a class="headerlink" href="#supported-urls" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>URL</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/index.md (or /index.htm or just /)</td>
+<td>This URL generates either a title card based upon the preconfigured template.</td>
+</tr>
+<tr>
+<td>/index.txt</td>
+<td>Same output as the text output in the General settings.</td>
+</tr>
+<tr>
+<td>/cover.png</td>
+<td>This URL will return the cover image, if available.</td>
+</tr>
+<tr>
+<td>/httpstatic/</td>
+<td>Any content in`Documents/NowPlaying/httpstatic` will get served under this URL.</td>
+</tr>
+</tbody>
+</table>
+<p>See also <a href="../extras/index.html">Artist Extras</a> for other URLs when that
+set of features is enabled.</p>
+<h2 id="rest-api">REST API<a class="headerlink" href="#rest-api" title="Permanent link">&para;</a></h2>
+<p>Currently, only a very rudimentary REST API is implemented. <code>/v1/last</code>
+will return a JSON-formatted string of the currently playing track.</p>
+<h2 id="websockets">WebSockets<a class="headerlink" href="#websockets" title="Permanent link">&para;</a></h2>
+<p>New with version 3.0.0 is a continual feed via WebSockets. The feed is a
+JSON-formatted stream that will get an update on every title change. To
+connect, use the URL <code>ws://hostname:port/wsstream</code>. The files that begin
+with <code>ws-</code> in the <code>templates</code> directory use WebSockets.</p>
+<p>Variables set should match what is on the
+<a href="../reference/templatevariables.html">Templates</a> page. Be aware that
+values may be null.</p>
 
 
 

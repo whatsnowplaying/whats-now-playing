@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/index.html">
+        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/kickbot.html">
       
       
+        <link rel="prev" href="discord.html">
+      
+      
+        <link rel="next" href="obswebsocket.html">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Output Destinations - What's Now Playing</title>
+        <title>Kick Bot - What's Now Playing</title>
       
     
     
@@ -72,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#output-destinations" class="md-skip">
+        <a href="#kickbot" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Output Destinations
+              Kick Bot
             
           </span>
         </div>
@@ -741,18 +745,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
@@ -768,7 +774,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Output Destinations
@@ -802,10 +808,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="kickbot.html" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Kick Bot
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="kickbot.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -816,6 +844,71 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#kick-chat-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Kick Chat Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      Authentication
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#template-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Template Features
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Current Limitations
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1530,18 +1623,95 @@
   
 
 
-<h1 id="output-destinations">Output Destinations<a class="headerlink" href="#output-destinations" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> can send song details to a variety of different systems, including just plain file output.</p>
-<h2 id="available-output-destinations">Available Output Destinations<a class="headerlink" href="#available-output-destinations" title="Permanent link">&para;</a></h2>
+<h1 id="kickbot">KickBot<a class="headerlink" href="#kickbot" title="Permanent link">&para;</a></h1>
+<p><strong>What's Now Playing</strong> integrates with Kick.com to provide chat bot
+functionality with track announcements.</p>
+<h2 id="kick-chat-support">Kick Chat Support<a class="headerlink" href="#kick-chat-support" title="Permanent link">&para;</a></h2>
+<p>The current Kick integration supports:</p>
 <ul>
-<li><strong><a href="obswebsocket.html">OBS WebSocket</a></strong> - Direct integration with OBS Studio</li>
-<li><strong><a href="webserver.html">Web Server</a></strong> - Built-in web server for browser sources</li>
-<li><strong><a href="textoutput.html">Text Output</a></strong> - Simple text file output</li>
-<li><strong><a href="twitchbot.html">Twitch Bot</a></strong> - Twitch chat bot integration</li>
-<li><strong><a href="kickbot.html">Kick Bot</a></strong> - Kick streaming platform bot</li>
-<li><strong><a href="discord.html">Discord</a></strong> - Discord rich presence integration</li>
+<li><strong>Track Announcements</strong>: Automatic announcements when tracks change</li>
+<li><strong>Template-based Messages</strong>: Rich formatting with metadata variables</li>
+<li><strong>Smart Message Splitting</strong>: Intelligent splitting of long messages</li>
 </ul>
-<p>Click on any output destination above to see detailed configuration instructions.</p>
+<p><strong>Coming Soon</strong>:</p>
+<blockquote>
+<ul>
+<li>Interactive chat commands and user input processing.</li>
+<li>Point Redemptions</li>
+</ul>
+</blockquote>
+<h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
+<p>To use Kick.com integration, you'll need to set up OAuth2 authentication
+with your Kick account.</p>
+<p><a href="images/kickbot-developer-screen.png"><img alt="Kick.com Developer tab in settings" src="images/kickbot-developer-screen.png" /></a></p>
+<ol>
+<li>Go to your Kick streamer settings and navigate to the <strong>Developer</strong>
+   tab to create an application.</li>
+<li>Create a new OAuth2 application with these important settings:</li>
+<li><strong>Application Type</strong>: Set to <strong>Bot</strong> (required for chat
+     functionality)</li>
+<li><strong>Application Name</strong>: This will be the name displayed in chat when
+     the bot sends messages</li>
+<li>Note down your Client ID and Client Secret</li>
+<li>Set Redirect URI to <code>http://localhost:8899/kickredirect</code> (port
+     must match your webserver settings, default is 8899)</li>
+</ol>
+<p><a href="images/kickbot-edit-app-screen.png"><img alt="Kick.com Edit App Screen" src="images/kickbot-edit-app-screen.png" /></a></p>
+<ol>
+<li>Click on the Edit button to make a few more changes</li>
+<li>Scopes Requested should include the following for current and future
+   features:</li>
+<li>Read user information (including email address) - <code>user:read</code></li>
+<li>Write to chat feed - <code>chat:write</code></li>
+<li>Subscribe to events (read chat feed, follows, subscribes, gifts) -
+     events:subscribe`</li>
+<li>You should also make sure to select the option to make it a bot
+   account.</li>
+</ol>
+<p><a href="images/kickbot-account-settings.png"><img alt="What's Now Playing Kick settings" src="images/kickbot-account-settings.png" /></a></p>
+<ol>
+<li>In <strong>What's Now Playing</strong> settings:<ul>
+<li>Enter your Client ID and Client Secret</li>
+<li>Set your Kick channel name</li>
+<li>Click "Authenticate with Kick" to complete OAuth2 setup</li>
+</ul>
+</li>
+</ol>
+<h2 id="template-features">Template Features<a class="headerlink" href="#template-features" title="Permanent link">&para;</a></h2>
+<p>Kick templates support powerful formatting features:</p>
+<ul>
+<li><strong>Template Variables</strong>: All standard metadata variables
+  (<code>{{ artist }}</code>, <code>{{ title }}</code>, etc.)</li>
+<li><strong>Message Splitting</strong>: Use <code>{{ startnewmessage }}</code> to split long
+  announcements across multiple messages</li>
+<li><strong>Smart Splitting</strong>: Messages longer than 500 characters are
+  automatically split at sentence or word boundaries using NLTK</li>
+</ul>
+<p>Example announcement template:</p>
+<pre><code>{% if artist %}{{ artist }} - {% endif %}"{{ title }}"
+{% if album %} from {{ album }}{% endif %}
+{{ startnewmessage }}
+{% if artistshortbio %}{{ artistshortbio }}{% endif %}
+</code></pre>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Enable Kick chat in the Kick settings tab</li>
+<li>Configure your OAuth2 credentials</li>
+<li>Set up your announcement template</li>
+<li>Configure announcement delay if needed</li>
+<li>Test the connection with the "Authenticate with Kick" button</li>
+</ol>
+<h2 id="current-limitations">Current Limitations<a class="headerlink" href="#current-limitations" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Chat Commands</strong>: Interactive commands are not yet implemented
+  (coming soon)</li>
+<li><strong>Permissions</strong>: User permission system will be added with command
+  support</li>
+</ul>
+<p>The Kick integration uses the same intelligent message splitting
+technology as the enhanced Twitch integration, ensuring that long
+messages with rich metadata are delivered in full while respecting
+platform limits.</p>
 
 
 

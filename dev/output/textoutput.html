@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/index.html">
+        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/textoutput.html">
       
       
+        <link rel="prev" href="../input/remote.html">
+      
+      
+        <link rel="next" href="twitchbot.html">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Output Destinations - What's Now Playing</title>
+        <title>Text Output - What's Now Playing</title>
       
     
     
@@ -72,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#output-destinations" class="md-skip">
+        <a href="#text-output" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Output Destinations
+              Text Output
             
           </span>
         </div>
@@ -741,18 +745,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
@@ -768,7 +774,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Output Destinations
@@ -871,10 +877,19 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="textoutput.html" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="textoutput.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -885,6 +900,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -1530,18 +1546,27 @@
   
 
 
-<h1 id="output-destinations">Output Destinations<a class="headerlink" href="#output-destinations" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> can send song details to a variety of different systems, including just plain file output.</p>
-<h2 id="available-output-destinations">Available Output Destinations<a class="headerlink" href="#available-output-destinations" title="Permanent link">&para;</a></h2>
+<h1 id="text-output">Text Output<a class="headerlink" href="#text-output" title="Permanent link">&para;</a></h1>
+<p><a href="images/textoutput.png"><img alt="Account Settings for text files" src="images/textoutput.png" /></a></p>
+<p>A simple output method that just writes a template to a file and writes
+the entire setlist on exit.</p>
 <ul>
-<li><strong><a href="obswebsocket.html">OBS WebSocket</a></strong> - Direct integration with OBS Studio</li>
-<li><strong><a href="webserver.html">Web Server</a></strong> - Built-in web server for browser sources</li>
-<li><strong><a href="textoutput.html">Text Output</a></strong> - Simple text file output</li>
-<li><strong><a href="twitchbot.html">Twitch Bot</a></strong> - Twitch chat bot integration</li>
-<li><strong><a href="kickbot.html">Kick Bot</a></strong> - Kick streaming platform bot</li>
-<li><strong><a href="discord.html">Discord</a></strong> - Discord rich presence integration</li>
+<li><strong>Text Template</strong> - The <a href="https://jinja.palletsprojects.com/en/3.1.x/templates/">Jinja2
+  template</a> file
+  that will be used when the song updates. See
+  <a href="../reference/templatevariables.html">Templates</a> for more information.</li>
+<li><strong>File to write</strong> - Name of the file where the app will write the
+  track information. You can either pick a pre-existing file or the name
+  of a new file.</li>
+<li><strong>Clear file on startup</strong> - Empty the file when <strong>What's Now Playing</strong>
+  is launched.</li>
+<li><strong>Append new track</strong> - Keep adding new tracks to the file rather than
+  replace the content.</li>
+<li><strong>Enable setlists</strong> - Setting this option will create a file in the
+  NowPlaying/setlists directory when <strong>What's Now Playing</strong> is shutdown
+  of all of the tracks that were played as GitHub-flavored markdown
+  table.</li>
 </ul>
-<p>Click on any output destination above to see detailed configuration instructions.</p>
 
 
 

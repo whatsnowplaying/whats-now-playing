@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/output/index.html">
+        <link rel="canonical" href="https://whatsnowplaying.github.io/dev/reference/comparisons.html">
       
       
+        <link rel="prev" href="templatevariables.html">
+      
+      
+        <link rel="next" href="../gallery.html">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Output Destinations - What's Now Playing</title>
+        <title>Comparisons - What's Now Playing</title>
       
     
     
@@ -72,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#output-destinations" class="md-skip">
+        <a href="#versus-comparisons" class="md-skip">
           Skip to content
         </a>
       
@@ -112,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Output Destinations
+              Comparisons
             
           </span>
         </div>
@@ -782,7 +786,7 @@
   
   
     <li class="md-nav__item">
-      <a href="discord.html" class="md-nav__link">
+      <a href="../output/discord.html" class="md-nav__link">
         
   
   
@@ -805,7 +809,7 @@
   
   
     <li class="md-nav__item">
-      <a href="kickbot.html" class="md-nav__link">
+      <a href="../output/kickbot.html" class="md-nav__link">
         
   
   
@@ -828,7 +832,7 @@
   
   
     <li class="md-nav__item">
-      <a href="obswebsocket.html" class="md-nav__link">
+      <a href="../output/obswebsocket.html" class="md-nav__link">
         
   
   
@@ -874,7 +878,7 @@
   
   
     <li class="md-nav__item">
-      <a href="textoutput.html" class="md-nav__link">
+      <a href="../output/textoutput.html" class="md-nav__link">
         
   
   
@@ -897,7 +901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="twitchbot.html" class="md-nav__link">
+      <a href="../output/twitchbot.html" class="md-nav__link">
         
   
   
@@ -920,7 +924,7 @@
   
   
     <li class="md-nav__item">
-      <a href="webserver.html" class="md-nav__link">
+      <a href="../output/webserver.html" class="md-nav__link">
         
   
   
@@ -1380,18 +1384,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" checked>
         
           
           <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
@@ -1407,7 +1413,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_12">
             <span class="md-nav__icon md-icon"></span>
             Reference
@@ -1421,7 +1427,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/templatevariables.html" class="md-nav__link">
+      <a href="templatevariables.html" class="md-nav__link">
         
   
   
@@ -1441,10 +1447,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../reference/comparisons.html" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Comparisons
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="comparisons.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1455,6 +1483,35 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#seratos-now-playing-twitch-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      Serato's Now Playing Twitch Extension
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1530,18 +1587,82 @@
   
 
 
-<h1 id="output-destinations">Output Destinations<a class="headerlink" href="#output-destinations" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> can send song details to a variety of different systems, including just plain file output.</p>
-<h2 id="available-output-destinations">Available Output Destinations<a class="headerlink" href="#available-output-destinations" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong><a href="obswebsocket.html">OBS WebSocket</a></strong> - Direct integration with OBS Studio</li>
-<li><strong><a href="webserver.html">Web Server</a></strong> - Built-in web server for browser sources</li>
-<li><strong><a href="textoutput.html">Text Output</a></strong> - Simple text file output</li>
-<li><strong><a href="twitchbot.html">Twitch Bot</a></strong> - Twitch chat bot integration</li>
-<li><strong><a href="kickbot.html">Kick Bot</a></strong> - Kick streaming platform bot</li>
-<li><strong><a href="discord.html">Discord</a></strong> - Discord rich presence integration</li>
-</ul>
-<p>Click on any output destination above to see detailed configuration instructions.</p>
+<h1 id="versus-comparisons">Versus Comparisons<a class="headerlink" href="#versus-comparisons" title="Permanent link">&para;</a></h1>
+<p>There are a lot of different solutions to provide titling for your
+stream. Here are some comparisons of other projects related to what this
+software offers.</p>
+<h2 id="seratos-now-playing-twitch-extension">Serato's Now Playing Twitch Extension<a class="headerlink" href="#seratos-now-playing-twitch-extension" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Description</th>
+<th>This App</th>
+<th>Serato Extension</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Works locally</td>
+<td>✅</td>
+<td>🚫</td>
+</tr>
+<tr>
+<td>Works with Live Playlists</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Cover art</td>
+<td>✅</td>
+<td>🚫</td>
+</tr>
+<tr>
+<td>Multi-DJ on one stream friendly</td>
+<td>✅</td>
+<td>🚫</td>
+</tr>
+<tr>
+<td>Album name can be displayed</td>
+<td>✅</td>
+<td>🚫</td>
+</tr>
+<tr>
+<td>Label/Publisher can be displayed</td>
+<td>✅</td>
+<td>🚫</td>
+</tr>
+<tr>
+<td>High degree of customization via templates</td>
+<td>✅</td>
+<td>🚫</td>
+</tr>
+<tr>
+<td>Open source</td>
+<td>✅</td>
+<td>🚫</td>
+</tr>
+<tr>
+<td>Supports multi-deck</td>
+<td>✅</td>
+<td>🚫</td>
+</tr>
+<tr>
+<td>Ability to give data to other programs to manipulate</td>
+<td>✅</td>
+<td>🚫</td>
+</tr>
+<tr>
+<td>Supports 2-computer streaming</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Supports Chat Announcements</td>
+<td>✅</td>
+<td>🚫</td>
+</tr>
+</tbody>
+</table>
 
 
 
