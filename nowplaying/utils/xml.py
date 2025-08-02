@@ -146,9 +146,9 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
             return False
         except asyncio.CancelledError:
             logging.info("Background XML refresh cancelled")
-            # Clean up temp file on cancellation
-            if self.temp_database_path.exists():
-                self.temp_database_path.unlink()
+            # Don't clean up temp file if atomic swap might be in progress
+            # The retry logic will handle cleanup appropriately
+            logging.info("Skipping temp file cleanup during cancellation to avoid race condition")
             raise  # Re-raise to properly handle cancellation
         except Exception as err:
             logging.error("Unexpected error during XML refresh: %s", err, exc_info=True)
@@ -181,6 +181,16 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
     def _atomic_swap_inner(self) -> None:
         """Inner atomic swap operation for retry logic"""
         logging.info("Starting atomic swap: %s -> %s", self.temp_database_path, self.database_path)
+        logging.info("Temp file exists: %s", self.temp_database_path.exists())
+        logging.info("Target file exists: %s", self.database_path.exists())
+        
+        # Check if swap already completed
+        if not self.temp_database_path.exists() and self.database_path.exists():
+            logging.info("Atomic swap appears to have already completed successfully")
+            return
+        
+        if not self.temp_database_path.exists():
+            raise FileNotFoundError(f"Temp database file missing: {self.temp_database_path}")
         
         if self.database_path.exists():
             logging.info("Database exists, creating backup: %s -> %s", self.database_path, self.backup_database_path)
