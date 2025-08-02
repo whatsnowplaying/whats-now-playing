@@ -139,7 +139,7 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
             xml.sax.SAXException,
             defusedxml.common.DefusedXmlException,
         ) as err:
-            logging.error("Background XML refresh failed: %s", err)
+            logging.exception("Background XML refresh failed with exception: %s", err)
             # Clean up temp file on error
             if self.temp_database_path.exists():
                 self.temp_database_path.unlink()
@@ -180,18 +180,28 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
 
     def _atomic_swap_inner(self) -> None:
         """Inner atomic swap operation for retry logic"""
+        logging.info("Starting atomic swap: %s -> %s", self.temp_database_path, self.database_path)
+        
         if self.database_path.exists():
+            logging.info("Database exists, creating backup: %s -> %s", self.database_path, self.backup_database_path)
             # Create backup first
             if self.backup_database_path.exists():
+                logging.info("Removing existing backup: %s", self.backup_database_path)
                 self.backup_database_path.unlink()
             self.database_path.rename(self.backup_database_path)
+            logging.info("Backup created successfully")
 
         # Atomic rename
+        logging.info("Performing atomic rename: %s -> %s", self.temp_database_path, self.database_path)
         self.temp_database_path.rename(self.database_path)
+        logging.info("Atomic rename completed")
 
         # Clean up backup after successful swap
         if self.backup_database_path.exists():
+            logging.info("Cleaning up backup: %s", self.backup_database_path)
             self.backup_database_path.unlink()
+        
+        logging.info("Atomic swap completed successfully")
 
     def shutdown(self) -> None:
         """Signal the background refresh loop to exit cleanly"""
