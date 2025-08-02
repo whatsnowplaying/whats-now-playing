@@ -104,7 +104,7 @@ async def test_modernmeerkat_case_insensitive(bootstrap):
         await chat.on_twitchchat_incoming_message(message)  # pylint: disable=no-member
 
         # Verify greeting was sent
-        chat.chat.send_message.assert_called_once_with("testchannel", f"hi @{username}")
+        chat.chat.send_message.assert_called_once_with("testchannel", f"Hello @{username}")
         assert chat.modernmeerkat_greeted is True
 
 
