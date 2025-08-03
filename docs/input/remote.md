@@ -33,6 +33,106 @@ output to anything configured such as Twitch.
 
 > NOTE: Some content, such as cover art, will not be sent to the remote server.
 
+## Advanced API Usage
+
+The remote server exposes a REST API endpoint at `/v1/remoteinput` that can
+accept metadata submissions from external sources beyond the built-in Remote Output plugin.
+
+### Endpoint: `/v1/remoteinput`
+
+**Methods:** `GET`, `POST`
+
+**Authentication:** Optional secret key (configured via `remote/remote_key` setting)
+
+#### Request Format
+
+**POST (JSON):**
+
+```json
+{
+  "artist": "Artist Name",
+  "title": "Track Title",
+  "album": "Album Name",
+  "filename": "/path/to/file.mp3",
+  "secret": "your_secret_key"
+}
+```
+
+**GET (Query Parameters):**
+
+```
+/v1/remoteinput?artist=Artist%20Name&title=Track%20Title&album=Album%20Name&secret=your_secret_key
+```
+
+#### Response Format
+
+**Success (200):**
+
+```json
+{
+  "dbid": 12345,
+  "processed_metadata": {
+    "artist": "Artist Name",
+    "title": "Track Title",
+    "album": "Album Name",
+    "artistlongbio": "Artist biography...",
+    "coverurl": "cover.png",
+    "date": "2023",
+    "genre": "Electronic"
+  }
+}
+```
+
+**Error Responses:**
+
+* `400`: Invalid JSON or query parameters
+* `403`: Missing or invalid secret key
+* `408`: Metadata processing timeout (30 seconds)
+* `500`: Server error during processing
+
+#### Input Validation & Processing
+
+The API includes several validation and processing features:
+
+1. **Field Length Limits:** String fields are truncated to 1000 characters
+2. **Null Byte Stripping:** Removes null bytes (`\x00`) from string values
+3. **Field Whitelisting:** Filters out system fields like `hostname`, `dbid`, binary data
+4. **Full Metadata Processing:** Runs complete metadata enrichment including:
+   * MusicBrainz lookups
+   * Artist extras (biography, images)
+   * Recognition services
+   * Image processing
+
+#### Supported Fields
+
+The API accepts any metadata fields that the Remote Output plugin sends, including:
+
+* Basic track info: `artist`, `title`, `album`, `filename`
+* Identifiers: `isrc`, `musicbrainzartistid`, `musicbrainzrecordingid`
+* Additional: `genre`, `date`, `composer`, `lyricist`, `bpm`, `key`
+* And many others (see Remote Output plugin for complete list)
+
+Fields like `coverimageraw`, `hostname`, `httpport`, and other system/binary data are automatically filtered out.
+
+#### DJ Software Integration Examples
+
+> **Configuration Notes:**
+> Replace `localhost:8899` with your server's hostname and webserver port
+> If a secret is configured, add `&secret=your_secret_key` to the URL
+> The `filename` parameter is included for future compatibility but currently cannot be processed when sent from remote sources
+
+**MegaSeg (Logging → Send track info to server):**
+
+```url
+http://localhost:8899/v1/remoteinput?title=%Title%&artist=%Artist%&album=%Album%&year=%Year%&duration=%LengthSeconds%&bpm=%BPM%&composer=%Composer%&lyricist=%Lyricist%&publisher=%Publisher%&filename=%Path%
+```
+
+**Radiologik (Publishing → Network & Serial → GET URL):**
+
+```url
+http://localhost:8899/v1/remoteinput?title=<t>&artist=<a>&album=<l>&isrc=<i>&composer=<comp>&publisher=<p>&year=<y>&duration=<s>&comment=<c>
+```
+
 ## Other Settings
 
 It should be noted that there is no protection against multiple Twitch chat bots,

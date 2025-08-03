@@ -10,6 +10,7 @@ import copy
 import io
 import logging
 import os
+import pathlib
 import re
 import ssl
 import time
@@ -224,35 +225,39 @@ def songpathsubst(config: "nowplaying.config.ConfigFile", filename: str) -> str:
     """if needed, change the pathing of a file"""
 
     origfilename = filename
+    newname = filename
 
-    if not config.cparser.value("quirks/filesubst", type=bool):
-        return filename
+    # Apply user-configured quirks if enabled
+    if config.cparser.value("quirks/filesubst", type=bool):
+        slashmode = config.cparser.value("quirks/slashmode")
 
-    slashmode = config.cparser.value("quirks/slashmode")
+        if slashmode == "toforward":
+            newname = filename.replace("\\", "/")
+        elif slashmode == "toback":
+            newname = filename.replace("/", "\\")
 
-    if slashmode == "toforward":
-        newname = filename.replace("\\", "/")
-        filename = newname
-    elif slashmode == "toback":
-        newname = filename.replace("/", "\\")
-        filename = newname
-    else:
-        newname = filename
+        if songin := config.cparser.value("quirks/filesubstin"):
+            songout = config.cparser.value("quirks/filesubstout") or ""
 
-    if songin := config.cparser.value("quirks/filesubstin"):
-        songout = config.cparser.value("quirks/filesubstout") or ""
+            try:
+                newname = newname.replace(songin, songout)
+            except Exception as error:  # pylint: disable=broad-exception-caught
+                logging.error(
+                    "Unable to do path replacement (%s -> %s on %s): %s",
+                    songin,
+                    songout,
+                    newname,
+                    error,
+                )
+                # Continue with current newname if replacement fails
 
-        try:
-            newname = filename.replace(songin, songout)
-        except Exception as error:  # pylint: disable=broad-exception-caught
-            logging.error(
-                "Unable to do path replacement (%s -> %s on %s): %s",
-                songin,
-                songout,
-                filename,
-                error,
-            )
-            return filename
+    # Always normalize path format using pathlib
+    try:
+        normalized_path = pathlib.Path(newname)
+        newname = str(normalized_path)
+    except (ValueError, OSError) as error:
+        logging.debug("Cannot normalize path format for %s: %s", newname, error)
+        # Continue with newname if normalization fails
 
     logging.debug("filename substitution: %s -> %s", origfilename, newname)
     return newname

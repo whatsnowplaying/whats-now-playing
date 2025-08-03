@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Static content handlers for webserver"""
 
+import asyncio
 import base64
 import logging
 import os
@@ -17,6 +18,8 @@ from nowplaying.types import TrackMetadata
 
 if TYPE_CHECKING:
     import nowplaying.config
+    import nowplaying.metadata
+    import nowplaying.imagecache
 
 # Import constants from main webserver module
 INDEXREFRESH = (
@@ -24,20 +27,25 @@ INDEXREFRESH = (
     '<head><meta http-equiv="refresh" content="5" ></head>'
     "<body></body></html>\n"
 )
+MAX_FIELD_LENGTH = 1000
 
 
 class StaticContentHandler:
     """Handler for static content endpoints"""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         config_key: web.AppKey["nowplaying.config.ConfigFile"],
-        metadb_key: web.AppKey["nowplaying.db.MetadataDB"],
+        ic_key: web.AppKey["nowplaying.imagecache.ImageCache"],
+        metadb_key: web.AppKey[nowplaying.db.MetadataDB],
         remotedb_key: web.AppKey[nowplaying.db.MetadataDB],
+        metadata_key: web.AppKey["nowplaying.metadata.MetadataProcessors"],
     ):
         self.config_key = config_key
+        self.ic_key = ic_key
         self.metadb_key = metadb_key
         self.remotedb_key = remotedb_key
+        self.metadata_key = metadata_key
 
     async def index_htm_handler(self, request: web.Request):
         """handle web output"""
@@ -319,6 +327,31 @@ class StaticContentHandler:
                 metadata[key] = base64.b64encode(metadata[key]).decode("utf-8")
         return metadata
 
+    @staticmethod
+    def _strip_null_bytes(metadata: TrackMetadata) -> TrackMetadata:
+        """strip null bytes from string values"""
+        for key, value in metadata.items():
+            if isinstance(value, str):
+                metadata[key] = value.rstrip("\x00")
+        return metadata
+
+    @staticmethod
+    def _filter_excluded_fields(metadata: TrackMetadata) -> TrackMetadata:
+        """filter out fields that should be excluded from remote submissions"""
+        excluded_fields = set(nowplaying.db.METADATABLOBLIST) | {
+            "httpport",
+            "hostname",
+            "hostfqdn",
+            "hostip",
+            "ipaddress",
+            "previoustrack",
+            "dbid",
+            "cache_warmed",
+            "secret",
+            "filename",  # Security: Never accept filenames from remote sources
+        }
+        return {k: v for k, v in metadata.items() if k not in excluded_fields}
+
     async def api_v1_last_handler(self, request: web.Request):
         """v1/last just returns the metadata"""
         data = {}
@@ -330,24 +363,16 @@ class StaticContentHandler:
                 logging.exception("api_v1_last_handler: %s", err)
         return web.json_response(data)
 
-    async def api_v1_remoteinput_handler(self, request: web.Request):
-        """POST: receive metadata from remote source and store in remote database"""
-        # Only allow POST requests
-        if request.method != "POST":
-            return web.json_response({"error": "Method not allowed"}, status=405)
-
-        try:
-            # Parse JSON request body
-            request_data = await request.json()
-        except Exception:  # pylint: disable=broad-exception-caught
-            return web.json_response({"error": "Invalid JSON in request body"}, status=400)
-
+    async def _process_remote_metadata(
+        self, request: web.Request, metadata: dict, source: str = "remote"
+    ):
+        """Common processing for remote metadata submissions"""
         # Refresh config to get latest settings (important for testing)
         request.app[self.config_key].get()
         if required_secret := request.app[self.config_key].cparser.value(
             "remote/remote_key", type=str, defaultValue=""
         ):
-            provided_secret = request_data.get("secret", "")
+            provided_secret = metadata.get("secret", "")
             if not provided_secret:
                 logging.warning(
                     "Remote metadata submission without secret from %s", request.remote
@@ -361,18 +386,62 @@ class StaticContentHandler:
                 )
                 return web.json_response({"error": "Invalid secret"}, status=403)
 
-        # Remove secret from metadata before storing
-        metadata = request_data.copy()
-        metadata.pop("secret", "")
+        logging.info("Got %s raw metadata from %s: %s ", source, request.host, metadata)
 
-        logging.info("Got metadata from %s", request.host)
+        # Start with a copy of the metadata
+        clean_metadata: TrackMetadata = metadata.copy()
+
+        # Field length limits to prevent oversized fields
+        for key, value in clean_metadata.items():
+            if isinstance(value, str) and len(value) > MAX_FIELD_LENGTH:
+                clean_metadata[key] = value[:MAX_FIELD_LENGTH]
+                logging.warning("Truncated oversized field '%s' from %s", key, request.remote)
+
+        # Field whitelist - based on what remote.py actually sends
+        clean_metadata = self._filter_excluded_fields(clean_metadata)
+
+        # Strip null bytes from all string fields (radiologik and other sources may send them)
+        for key, value in clean_metadata.items():
+            if isinstance(value, str) and "\x00" in value:
+                clean_metadata[key] = value.rstrip("\x00")
+
+        logging.info("Got %s metadata from %s ", source, request.host)
         # Store metadata in remote database
         try:
-            await request.app[self.remotedb_key].write_to_metadb(metadata=metadata)
+            # Processing timeout to prevent hanging on network calls
+            processed_metadata = await asyncio.wait_for(
+                request.app[self.metadata_key].getmoremetadata(
+                    metadata=clean_metadata, imagecache=request.app[self.ic_key]
+                ),
+                timeout=30.0,
+            )
+            await request.app[self.remotedb_key].write_to_metadb(metadata=processed_metadata)
             # Re-read to get the dbid
             last_meta = await request.app[self.remotedb_key].read_last_meta_async()
             dbid = last_meta.get("dbid") if last_meta else None
-            return web.json_response({"dbid": dbid})
+
+            # Filter out excluded fields from response to ensure JSON serialization works
+            response_metadata = self._filter_excluded_fields(processed_metadata)
+
+            return web.json_response({"dbid": dbid, "processed_metadata": response_metadata})
+        except asyncio.TimeoutError:
+            logging.error("Metadata processing timeout for request from %s", request.remote)
+            return web.json_response({"error": "Processing timeout"}, status=408)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logging.error("Failed to store metadata in remote database: %s", exc)
             return web.json_response({"error": "Failed to store metadata"}, status=500)
+
+    async def api_v1_remoteinput_handler(self, request: web.Request):
+        """POST: receive metadata from remote source and store in remote database"""
+        if request.method == "POST":
+            try:
+                request_data = await request.json()
+            except Exception:  # pylint: disable=broad-exception-caught
+                return web.json_response({"error": "Invalid JSON in request body"}, status=400)
+        if request.method == "GET":
+            try:
+                request_data = dict(request.query)
+            except Exception:  # pylint: disable=broad-exception-caught
+                return web.json_response({"error": "Invalid query params"}, status=400)
+
+        return await self._process_remote_metadata(request, request_data, "remoteinput")

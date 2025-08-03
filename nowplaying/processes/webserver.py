@@ -110,7 +110,11 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
         # Initialize static content handler
         self.static_handler = StaticContentHandler(
-            config_key=CONFIG_KEY, metadb_key=METADB_KEY, remotedb_key=REMOTEDB_KEY
+            config_key=CONFIG_KEY,
+            ic_key=IC_KEY,
+            metadb_key=METADB_KEY,
+            remotedb_key=REMOTEDB_KEY,
+            metadata_key=METADATA_KEY,
         )
 
         while not enabled and not nowplaying.utils.safe_stopevent_check(self.stopevent):
@@ -403,6 +407,17 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             },
         )
 
+    @staticmethod
+    async def handle_404(request: web.Request):
+        """Handle unknown endpoints with logging"""
+        logging.warning(
+            "404 - Unknown endpoint accessed: %s %s from %s",
+            request.method,
+            request.path,
+            request.remote,
+        )
+        raise web.HTTPNotFound()
+
     def create_runner(self):
         """setup http routing"""
         threading.current_thread().name = "WebServer-runner"
@@ -415,6 +430,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             [
                 web.get("/", self.static_handler.index_htm_handler),
                 web.get("/v1/last", self.static_handler.api_v1_last_handler),
+                web.get("/v1/remoteinput", self.static_handler.api_v1_remoteinput_handler),
                 web.post("/v1/remoteinput", self.static_handler.api_v1_remoteinput_handler),
                 web.get("/cover.png", self.static_handler.cover_handler),
                 web.get("/artistfanart.htm", self.static_handler.artistfanartlaunch_htm_handler),
@@ -442,6 +458,8 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get("/nowplaying-websocket.js", self.static_handler.nowplaying_js_handler),
                 web.get(r"/{template_name:.+\.htm}", self.static_handler.template_handler),
                 web.get(f"/{self.magicstopurl}", self.stop_server),
+                # Catch-all 404 handler - must be last
+                web.route("*", r"/{path:.*}", self.handle_404),
             ]
         )
         return web.AppRunner(app)
