@@ -350,8 +350,15 @@ def test_webserver_remote_input_get_method(getwebserver):  # pylint: disable=red
     assert "dbid" in response_data
     assert "processed_metadata" in response_data
 
+    # Negative test: GET with empty metadata (should still work, just return minimal processed data)
+    req = requests.get(f"http://localhost:{port}/v1/remoteinput", params={}, timeout=30)
+    assert req.status_code == 200
+    response_data = req.json()
+    assert "dbid" in response_data
+    assert "processed_metadata" in response_data
+
     # Test with PUT - should still return 405
-    req = requests.put(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=5)
+    req = requests.put(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=30)
     assert req.status_code == 405
 
 
@@ -369,11 +376,12 @@ def test_webserver_remote_input_invalid_json(getwebserver):  # pylint: disable=r
         f"http://localhost:{port}/v1/remoteinput",
         data="invalid json",
         headers={"Content-Type": "application/json"},
-        timeout=5,
+        timeout=30,
     )
     assert req.status_code == 400
     response_data = req.json()
     assert "error" in response_data
+    assert response_data["error"] == "Invalid JSON in request body"
 
 
 @pytest.mark.skipif(

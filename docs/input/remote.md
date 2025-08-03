@@ -53,14 +53,13 @@ accept metadata submissions from external sources beyond the built-in Remote Out
   "artist": "Artist Name",
   "title": "Track Title",
   "album": "Album Name",
-  "filename": "/path/to/file.mp3",
   "secret": "your_secret_key"
 }
 ```
 
 **GET (Query Parameters):**
 
-```
+```url
 /v1/remoteinput?artist=Artist%20Name&title=Track%20Title&album=Album%20Name&secret=your_secret_key
 ```
 
@@ -79,9 +78,14 @@ accept metadata submissions from external sources beyond the built-in Remote Out
     "coverurl": "cover.png",
     "date": "2023",
     "genre": "Electronic"
-  }
+  },
+  "warnings": [
+    "Field 'title' truncated from 1500 to 1000 characters"
+  ]
 }
 ```
+
+> **Note:** The `warnings` field is only included if data validation issues occurred (e.g., field truncation).
 
 **Error Responses:**
 
@@ -107,24 +111,23 @@ The API includes several validation and processing features:
 
 The API accepts any metadata fields that the Remote Output plugin sends, including:
 
-* Basic track info: `artist`, `title`, `album`, `filename`
+* Basic track info: `artist`, `title`, `album`
 * Identifiers: `isrc`, `musicbrainzartistid`, `musicbrainzrecordingid`
 * Additional: `genre`, `date`, `composer`, `lyricist`, `bpm`, `key`
 * And many others (see Remote Output plugin for complete list)
 
-Fields like `coverimageraw`, `hostname`, `httpport`, and other system/binary data are automatically filtered out.
+Fields like `coverimageraw`, `hostname`, `httpport`, `filename`, and other system/binary data are automatically filtered out for security reasons.
 
 #### DJ Software Integration Examples
 
-> **Configuration Notes:**
-> Replace `localhost:8899` with your server's hostname and webserver port
-> If a secret is configured, add `&secret=your_secret_key` to the URL
-> The `filename` parameter is included for future compatibility but currently cannot be processed when sent from remote sources
+**Configuration Notes:**
+- Replace `localhost:8899` with your server's hostname and webserver port
+- If a secret is configured, add `&secret=your_secret_key` to the URL
 
 **MegaSeg (Logging → Send track info to server):**
 
 ```url
-http://localhost:8899/v1/remoteinput?title=%Title%&artist=%Artist%&album=%Album%&year=%Year%&duration=%LengthSeconds%&bpm=%BPM%&composer=%Composer%&lyricist=%Lyricist%&publisher=%Publisher%&filename=%Path%
+http://localhost:8899/v1/remoteinput?title=%Title%&artist=%Artist%&album=%Album%&year=%Year%&duration=%LengthSeconds%&bpm=%BPM%&composer=%Composer%&lyricist=%Lyricist%&publisher=%Publisher%
 ```
 
 **Radiologik (Publishing → Network & Serial → GET URL):**

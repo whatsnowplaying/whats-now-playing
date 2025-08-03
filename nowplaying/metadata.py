@@ -194,8 +194,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             for url in self.metadata["artistwebsites"]:
                 try:
                     newlist.append(url_normalize.url_normalize(url))
-                except (ValueError, Exception) as error:  # pylint: disable=broad-except
+                except ValueError as error:
                     logging.warning("Cannot normalize URL '%s': %s", url, error)
+                    newlist.append(url)  # Keep original URL if normalization fails
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.error(
+                        "Unexpected error normalizing URL '%s': %s", url, error, exc_info=True
+                    )
                     newlist.append(url)  # Keep original URL if normalization fails
             self.metadata["artistwebsites"] = newlist
 

@@ -30,6 +30,78 @@ INDEXREFRESH = (
 MAX_FIELD_LENGTH = 1000
 
 
+def validate_field_lengths(
+    metadata: dict, source_description: str = "unknown"
+) -> tuple[dict, list[str]]:
+    """
+    Validate and truncate string fields that exceed MAX_FIELD_LENGTH.
+
+    Args:
+        metadata: Dictionary of metadata fields to validate
+        source_description: Description of the source for logging purposes
+
+    Returns:
+        Tuple of (validated_metadata, list_of_truncation_warnings)
+    """
+    validated_metadata = metadata.copy()
+    warnings = []
+
+    for key, value in validated_metadata.items():
+        if isinstance(value, str) and len(value) > MAX_FIELD_LENGTH:
+            validated_metadata[key] = value[:MAX_FIELD_LENGTH]
+            warning_msg = (
+                f"Field '{key}' truncated from {len(value)} to {MAX_FIELD_LENGTH} characters"
+            )
+            warnings.append(warning_msg)
+            logging.warning(
+                "Truncated oversized field '%s' from %s (was %d chars, now %d)",
+                key,
+                source_description,
+                len(value),
+                MAX_FIELD_LENGTH,
+            )
+
+    return validated_metadata, warnings
+
+
+def ensure_json_serializable(data: dict) -> dict:
+    """
+    Ensure all values in the dictionary are JSON serializable.
+
+    Args:
+        data: Dictionary to make JSON-safe
+
+    Returns:
+        Dictionary with all values converted to JSON-serializable types
+    """
+    serializable_data = {}
+
+    for key, value in data.items():
+        if value is None:
+            serializable_data[key] = None
+        elif isinstance(value, (str, int, float, bool)):
+            serializable_data[key] = value
+        elif isinstance(value, (list, tuple)):
+            # Recursively process lists/tuples
+            serializable_data[key] = [
+                str(item) if not isinstance(item, (str, int, float, bool, type(None))) else item
+                for item in value
+            ]
+        elif isinstance(value, dict):
+            # Recursively process nested dictionaries
+            serializable_data[key] = ensure_json_serializable(value)
+        else:
+            # Convert everything else to string representation
+            serializable_data[key] = str(value)
+            logging.debug(
+                "Converted non-serializable field '%s' of type %s to string",
+                key,
+                type(value).__name__,
+            )
+
+    return serializable_data
+
+
 class StaticContentHandler:
     """Handler for static content endpoints"""
 
@@ -328,14 +400,6 @@ class StaticContentHandler:
         return metadata
 
     @staticmethod
-    def _strip_null_bytes(metadata: TrackMetadata) -> TrackMetadata:
-        """strip null bytes from string values"""
-        for key, value in metadata.items():
-            if isinstance(value, str):
-                metadata[key] = value.rstrip("\x00")
-        return metadata
-
-    @staticmethod
     def _filter_excluded_fields(metadata: TrackMetadata) -> TrackMetadata:
         """filter out fields that should be excluded from remote submissions"""
         excluded_fields = set(nowplaying.db.METADATABLOBLIST) | {
@@ -392,10 +456,9 @@ class StaticContentHandler:
         clean_metadata: TrackMetadata = metadata.copy()
 
         # Field length limits to prevent oversized fields
-        for key, value in clean_metadata.items():
-            if isinstance(value, str) and len(value) > MAX_FIELD_LENGTH:
-                clean_metadata[key] = value[:MAX_FIELD_LENGTH]
-                logging.warning("Truncated oversized field '%s' from %s", key, request.remote)
+        clean_metadata, validation_warnings = validate_field_lengths(
+            clean_metadata, str(request.remote)
+        )
 
         # Field whitelist - based on what remote.py actually sends
         clean_metadata = self._filter_excluded_fields(clean_metadata)
@@ -423,7 +486,15 @@ class StaticContentHandler:
             # Filter out excluded fields from response to ensure JSON serialization works
             response_metadata = self._filter_excluded_fields(processed_metadata)
 
-            return web.json_response({"dbid": dbid, "processed_metadata": response_metadata})
+            # Ensure all values are JSON serializable
+            response_metadata = ensure_json_serializable(response_metadata)
+
+            # Build response with optional warnings
+            response = {"dbid": dbid, "processed_metadata": response_metadata}
+            if validation_warnings:
+                response["warnings"] = validation_warnings
+
+            return web.json_response(response)
         except asyncio.TimeoutError:
             logging.error("Metadata processing timeout for request from %s", request.remote)
             return web.json_response({"error": "Processing timeout"}, status=408)
