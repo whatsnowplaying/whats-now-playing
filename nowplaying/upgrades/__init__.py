@@ -70,7 +70,9 @@ class Version:
     def __str__(self) -> str:
         return self.textversion
 
-    def __lt__(self, other: t.Any) -> bool:
+    def __lt__(  # pylint: disable=too-many-return-statements
+        self, other: t.Any
+    ) -> bool:
         """version compare
         do the easy stuff, major > minor > micro"""
         for key in ["major", "minor", "micro"]:
@@ -86,10 +88,10 @@ class Version:
             other.chunk.get("rc") or other.chunk.get("preview") or other.chunk.get("prerelease")
         )
 
-        if self_has_pre and not other_has_pre:
-            return True
+        if self_has_pre:
+            if not other_has_pre:
+                return True
 
-        if self_has_pre and other_has_pre:
             # Compare rc numbers if both have rc
             if (
                 self.chunk.get("rc")

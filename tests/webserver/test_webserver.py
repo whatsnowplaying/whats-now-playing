@@ -464,7 +464,7 @@ def test_webserver_remote_input_field_whitelisting(getwebserver):  # pylint: dis
         "httpport": 8080,  # Should be filtered out
         "hostname": "testhost",  # Should be filtered out
         "dbid": 12345,  # Should be filtered out
-        "secret": "test_secret",  # Should be filtered out
+        "secret": "test_secret",  # pragma: allowlist secret
     }
 
     req = requests.post(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=30)
