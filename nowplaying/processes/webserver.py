@@ -407,17 +407,6 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             },
         )
 
-    @staticmethod
-    async def handle_404(request: web.Request):
-        """Handle unknown endpoints with logging"""
-        logging.warning(
-            "404 - Unknown endpoint accessed: %s %s from %s",
-            request.method,
-            request.path,
-            request.remote,
-        )
-        raise web.HTTPNotFound()
-
     def create_runner(self):
         """setup http routing"""
         threading.current_thread().name = "WebServer-runner"
@@ -458,8 +447,6 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get("/nowplaying-websocket.js", self.static_handler.nowplaying_js_handler),
                 web.get(r"/{template_name:.+\.htm}", self.static_handler.template_handler),
                 web.get(f"/{self.magicstopurl}", self.stop_server),
-                # Catch-all 404 handler - must be last
-                web.route("*", r"/{path:.*}", self.handle_404),
             ]
         )
         return web.AppRunner(app)

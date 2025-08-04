@@ -427,7 +427,7 @@ class StaticContentHandler:
                 logging.exception("api_v1_last_handler: %s", err)
         return web.json_response(data)
 
-    async def _process_remote_metadata(
+    async def _process_remote_metadata(  # pylint: disable=too-many-locals
         self, request: web.Request, metadata: dict, source: str = "remote"
     ):
         """Common processing for remote metadata submissions"""
