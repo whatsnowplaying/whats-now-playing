@@ -22,12 +22,12 @@ VERSION_REGEX = re.compile(
         (?P<minor>0|[1-9]\d*)
         \.
         (?P<micro>0|[1-9]\d*)
-        (?:-rc(?P<rc>(?:0|\d*)))?
+        (?:-(?:rc(?P<rc>(?:0|\d*))|preview(?P<preview>\d*)|(?P<prerelease>[a-zA-Z]+\d*)))?
         (?:[-+](?P<commitnum>
             (?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)
             (?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*
         ))?
-        (?:-(?P<identifier>
+        (?:\.(?P<identifier>
             [0-9a-zA-Z-]+
             (?:\.[0-9a-zA-Z-]+)*
         ))?
@@ -55,7 +55,12 @@ class Version:
             if isinstance(value, str) and value.isdigit():
                 self.chunk[key] = int(value)
 
-        if self.chunk.get("rc") or self.chunk.get("commitnum"):
+        if (
+            self.chunk.get("rc")
+            or self.chunk.get("preview")
+            or self.chunk.get("prerelease")
+            or self.chunk.get("commitnum")
+        ):
             self.pre = True
 
     def is_prerelease(self) -> bool:
@@ -65,7 +70,9 @@ class Version:
     def __str__(self) -> str:
         return self.textversion
 
-    def __lt__(self, other: t.Any) -> bool:
+    def __lt__(  # pylint: disable=too-many-return-statements
+        self, other: t.Any
+    ) -> bool:
         """version compare
         do the easy stuff, major > minor > micro"""
         for key in ["major", "minor", "micro"]:
@@ -73,16 +80,39 @@ class Version:
                 continue
             return self.chunk.get(key) < other.chunk.get(key)
 
-        # rc < no rc
-        if self.chunk.get("rc") and not other.chunk.get("rc"):
-            return True
+        # rc/preview/prerelease < no rc/preview/prerelease
+        self_has_pre = (
+            self.chunk.get("rc") or self.chunk.get("preview") or self.chunk.get("prerelease")
+        )
+        other_has_pre = (
+            other.chunk.get("rc") or other.chunk.get("preview") or other.chunk.get("prerelease")
+        )
 
-        if (
-            self.chunk.get("rc")
-            and other.chunk.get("rc")
-            and self.chunk.get("rc") != other.chunk.get("rc")
-        ):
-            return self.chunk.get("rc") < other.chunk.get("rc")
+        if self_has_pre:
+            if not other_has_pre:
+                return True
+
+            # Compare rc numbers if both have rc
+            if (
+                self.chunk.get("rc")
+                and other.chunk.get("rc")
+                and self.chunk.get("rc") != other.chunk.get("rc")
+            ):
+                return self.chunk.get("rc") < other.chunk.get("rc")
+            # Compare preview numbers if both have preview
+            if (
+                self.chunk.get("preview")
+                and other.chunk.get("preview")
+                and self.chunk.get("preview") != other.chunk.get("preview")
+            ):
+                return self.chunk.get("preview") < other.chunk.get("preview")
+            # Compare prerelease strings if both have prerelease
+            if (
+                self.chunk.get("prerelease")
+                and other.chunk.get("prerelease")
+                and self.chunk.get("prerelease") != other.chunk.get("prerelease")
+            ):
+                return self.chunk.get("prerelease") < other.chunk.get("prerelease")
 
         # but commitnum > no commitnum at this point
         if self.chunk.get("commitnum") and not other.chunk.get("commitnum"):
@@ -110,6 +140,8 @@ class Version:
             and self.chunk.get("minor") == other.chunk.get("minor")
             and self.chunk.get("micro") == other.chunk.get("micro")
             and self.chunk.get("rc") == other.chunk.get("rc")
+            and self.chunk.get("preview") == other.chunk.get("preview")
+            and self.chunk.get("prerelease") == other.chunk.get("prerelease")
             and self.chunk.get("commitnum") == other.chunk.get("commitnum")
         )
 
@@ -125,6 +157,8 @@ class Version:
                 self.chunk.get("minor"),
                 self.chunk.get("micro"),
                 self.chunk.get("rc"),
+                self.chunk.get("preview"),
+                self.chunk.get("prerelease"),
                 self.chunk.get("commitnum"),
             )
         )

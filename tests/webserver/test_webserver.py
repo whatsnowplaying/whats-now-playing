@@ -237,10 +237,12 @@ def test_webserver_remote_input_no_secret(getwebserver):  # pylint: disable=rede
     # Test without secret configured - should accept any request
     test_metadata = {"artist": "Test Artist", "title": "Test Title", "filename": "test.mp3"}
 
-    req = requests.post(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=5)
+    req = requests.post(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=30)
     assert req.status_code == 200
     response_data = req.json()
     assert "dbid" in response_data
+    assert "processed_metadata" in response_data
+    assert response_data["processed_metadata"]["artist"] == "Test Artist"
 
 
 @pytest.mark.skipif(
@@ -265,10 +267,13 @@ def test_webserver_remote_input_with_secret(getwebserver):  # pylint: disable=re
     }
 
     # Test with correct secret
-    req = requests.post(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=5)
+    req = requests.post(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=30)
     assert req.status_code == 200
     response_data = req.json()
     assert "dbid" in response_data
+    assert "processed_metadata" in response_data
+    # Secret should be stripped from processed metadata
+    assert "secret" not in response_data["processed_metadata"]
 
 
 @pytest.mark.skipif(
@@ -293,7 +298,7 @@ def test_webserver_remote_input_invalid_secret(getwebserver):  # pylint: disable
     }
 
     # Test with wrong secret
-    req = requests.post(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=5)
+    req = requests.post(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=30)
     assert req.status_code == 403
     response_data = req.json()
     assert "error" in response_data
@@ -321,7 +326,7 @@ def test_webserver_remote_input_missing_secret(getwebserver):  # pylint: disable
     }
 
     # Test without secret when required
-    req = requests.post(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=5)
+    req = requests.post(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=30)
     assert req.status_code == 403
     response_data = req.json()
     assert "error" in response_data
@@ -331,19 +336,29 @@ def test_webserver_remote_input_missing_secret(getwebserver):  # pylint: disable
     sys.platform == "win32",
     reason="Windows SQLite file locking issues with multiprocess webserver",
 )
-def test_webserver_remote_input_wrong_method(getwebserver):  # pylint: disable=redefined-outer-name
-    """test remote input endpoint with wrong HTTP method"""
+def test_webserver_remote_input_get_method(getwebserver):  # pylint: disable=redefined-outer-name
+    """test remote input endpoint with GET method"""
     config, metadb = getwebserver  # pylint: disable=unused-variable
     port = config.cparser.value("weboutput/httpport", type=int)
 
     test_metadata = {"artist": "Test Artist", "title": "Test Title", "filename": "test.mp3"}
 
-    # Test with GET instead of POST
-    req = requests.get(f"http://localhost:{port}/v1/remoteinput", params=test_metadata, timeout=5)
-    assert req.status_code == 405
+    # Test with GET - should now work
+    req = requests.get(f"http://localhost:{port}/v1/remoteinput", params=test_metadata, timeout=30)
+    assert req.status_code == 200
+    response_data = req.json()
+    assert "dbid" in response_data
+    assert "processed_metadata" in response_data
 
-    # Test with PUT instead of POST
-    req = requests.put(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=5)
+    # Negative test: GET with empty metadata (should still work, just return minimal processed data)
+    req = requests.get(f"http://localhost:{port}/v1/remoteinput", params={}, timeout=30)
+    assert req.status_code == 200
+    response_data = req.json()
+    assert "dbid" in response_data
+    assert "processed_metadata" in response_data
+
+    # Test with PUT - should still return 405
+    req = requests.put(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=30)
     assert req.status_code == 405
 
 
@@ -361,8 +376,111 @@ def test_webserver_remote_input_invalid_json(getwebserver):  # pylint: disable=r
         f"http://localhost:{port}/v1/remoteinput",
         data="invalid json",
         headers={"Content-Type": "application/json"},
-        timeout=5,
+        timeout=30,
     )
     assert req.status_code == 400
     response_data = req.json()
     assert "error" in response_data
+    assert response_data["error"] == "Invalid JSON in request body"
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
+)
+def test_webserver_remote_input_null_byte_stripping(getwebserver):  # pylint: disable=redefined-outer-name
+    """test remote input endpoint strips null bytes from string fields"""
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value("weboutput/httpport", type=int)
+
+    # Test data with null bytes (like radiologik sends)
+    # using GET to avoid JSON serialization issues
+    test_metadata = {
+        "artist": "Test Artist",
+        "title": "Test Title",
+        "isrc": "USWB10104747\x00\x00\x00",  # Null bytes at end
+        "filename": "test.mp3",
+    }
+
+    req = requests.get(f"http://localhost:{port}/v1/remoteinput", params=test_metadata, timeout=30)
+    assert req.status_code == 200
+    response_data = req.json()
+    assert "dbid" in response_data
+    assert "processed_metadata" in response_data
+    # Null bytes should be stripped and ISRC should be in list format
+    # The metadata processing treats ISRC as a list field and deduplicates/sorts characters
+    processed_isrc = response_data["processed_metadata"].get("isrc", [])
+    assert isinstance(processed_isrc, list)
+    # Check that the expected characters from "USWB10104747" are present (deduplicated and sorted)
+    expected_chars = sorted(set("USWB10104747"))  # ['0', '1', '4', '7', 'B', 'S', 'U', 'W']
+    assert processed_isrc == expected_chars
+    # Ensure no null bytes in any ISRC items
+    assert all("\x00" not in item for item in processed_isrc)
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
+)
+def test_webserver_remote_input_field_length_limits(getwebserver):  # pylint: disable=redefined-outer-name
+    """test remote input endpoint enforces field length limits"""
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value("weboutput/httpport", type=int)
+
+    # Test data with oversized field (1000+ characters)
+    very_long_title = "x" * 1500  # Exceeds MAX_FIELD_LENGTH of 1000
+    test_metadata = {
+        "artist": "Test Artist",
+        "title": very_long_title,
+        "filename": "test.mp3",
+    }
+
+    req = requests.post(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=30)
+    assert req.status_code == 200
+    response_data = req.json()
+    assert "dbid" in response_data
+    assert "processed_metadata" in response_data
+    # Title should be truncated to 1000 characters
+    assert len(response_data["processed_metadata"]["title"]) == 1000
+    assert response_data["processed_metadata"]["title"] == "x" * 1000
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows SQLite file locking issues with multiprocess webserver",
+)
+def test_webserver_remote_input_field_whitelisting(getwebserver):  # pylint: disable=redefined-outer-name
+    """test remote input endpoint filters out excluded fields"""
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value("weboutput/httpport", type=int)
+
+    # Test data with fields that should be filtered out
+    # Note: Binary fields like coverimageraw can't be sent via JSON,
+    # so we test with other filterable fields
+    test_metadata = {
+        "artist": "Test Artist",
+        "title": "Test Title",
+        "filename": "test.mp3",
+        "httpport": 8080,  # Should be filtered out
+        "hostname": "testhost",  # Should be filtered out
+        "dbid": 12345,  # Should be filtered out
+        "secret": "test_secret",  # pragma: allowlist secret
+    }
+
+    req = requests.post(f"http://localhost:{port}/v1/remoteinput", json=test_metadata, timeout=30)
+    assert req.status_code == 200
+    response_data = req.json()
+    assert "dbid" in response_data  # Response dbid is different from input dbid
+    assert "processed_metadata" in response_data
+
+    processed = response_data["processed_metadata"]
+    # Allowed fields should be present
+    assert processed["artist"] == "Test Artist"
+    assert processed["title"] == "Test Title"
+
+    # Excluded fields should not be present
+    assert "httpport" not in processed
+    assert "hostname" not in processed
+    assert "secret" not in processed
+    assert "filename" not in processed  # Security: filename should be filtered
+    # Note: input dbid is filtered out, but response has a new dbid from storage

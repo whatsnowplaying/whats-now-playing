@@ -7,8 +7,9 @@ import binascii
 import copy
 import json
 import logging
-import re
 import os
+import pathlib
+import re
 import string
 import sys
 import textwrap
@@ -189,7 +190,18 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         if self.metadata.get("artistwebsites"):
-            newlist = [url_normalize.url_normalize(url) for url in self.metadata["artistwebsites"]]
+            newlist = []
+            for url in self.metadata["artistwebsites"]:
+                try:
+                    newlist.append(url_normalize.url_normalize(url))
+                except ValueError as error:
+                    logging.warning("Cannot normalize URL '%s': %s", url, error)
+                    newlist.append(url)  # Keep original URL if normalization fails
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.error(
+                        "Unexpected error normalizing URL '%s': %s", url, error, exc_info=True
+                    )
+                    newlist.append(url)  # Keep original URL if normalization fails
             self.metadata["artistwebsites"] = newlist
 
         lists = ["artistwebsites", "isrc", "musicbrainzartistid"]
@@ -497,10 +509,21 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
         if not metadata or not metadata.get("filename"):
             return metadata
 
+        # Create pathlib Path object for tinytag processing
         try:
-            tag = tinytag.TinyTag.get(self.metadata["filename"], image=True)
+            file_path = pathlib.Path(self.metadata["filename"])
+        except (ValueError, OSError) as error:
+            logging.debug("Cannot create Path object for %s: %s", self.metadata["filename"], error)
+            return metadata
+
+        try:
+            # Pass pathlib Path directly to tinytag - it will handle the path conversion
+            tag = tinytag.TinyTag.get(file_path, image=True)
         except tinytag.TinyTagException as error:
-            logging.error("tinytag could not process %s: %s", self.metadata["filename"], error)
+            logging.error("tinytag could not process %s: %s", file_path, error)
+            return metadata
+        except (FileNotFoundError, OSError, PermissionError) as error:
+            logging.debug("Cannot access file for tinytag processing %s: %s", file_path, error)
             return metadata
 
         if tag:
