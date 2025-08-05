@@ -1,6 +1,6 @@
 #
 # development
 #
-pyinstaller==6.14.2
+pyinstaller==6.15.0
 pyinstaller_versionfile==3.0.1
 vendoring==1.2.0
