@@ -685,6 +685,81 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#advanced-api-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced API Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced API Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#endpoint-v1remoteinput" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endpoint: /v1/remoteinput
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Endpoint: /v1/remoteinput">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#request-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Request Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#response-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Response Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#input-validation-processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Input Validation &amp; Processing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Fields
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dj-software-integration-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      DJ Software Integration Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#other-settings" class="md-nav__link">
     <span class="md-ellipsis">
       Other Settings
@@ -972,6 +1047,81 @@
       Settings
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-api-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced API Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced API Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#endpoint-v1remoteinput" class="md-nav__link">
+    <span class="md-ellipsis">
+      Endpoint: /v1/remoteinput
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Endpoint: /v1/remoteinput">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#request-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Request Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#response-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Response Format
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#input-validation-processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Input Validation &amp; Processing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Fields
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dj-software-integration-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      DJ Software Integration Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1696,6 +1846,83 @@ output to anything configured such as Twitch.</p>
 <blockquote>
 <p>NOTE: Some content, such as cover art, will not be sent to the remote server.</p>
 </blockquote>
+<h2 id="advanced-api-usage">Advanced API Usage<a class="headerlink" href="#advanced-api-usage" title="Permanent link">&para;</a></h2>
+<p>The remote server exposes a REST API endpoint at <code>/v1/remoteinput</code> that can
+accept metadata submissions from external sources beyond the built-in Remote Output plugin.</p>
+<h3 id="endpoint-v1remoteinput">Endpoint: <code>/v1/remoteinput</code><a class="headerlink" href="#endpoint-v1remoteinput" title="Permanent link">&para;</a></h3>
+<p><strong>Methods:</strong> <code>GET</code>, <code>POST</code></p>
+<p><strong>Authentication:</strong> Optional secret key (configured via <code>remote/remote_key</code> setting)</p>
+<h4 id="request-format">Request Format<a class="headerlink" href="#request-format" title="Permanent link">&para;</a></h4>
+<p><strong>POST (JSON):</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;artist&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Artist Name&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Track Title&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;album&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Album Name&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;secret&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;your_secret_key&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p><strong>GET (Query Parameters):</strong></p>
+<div class="highlight"><pre><span></span><code>/v1/remoteinput?artist=Artist%20Name&amp;title=Track%20Title&amp;album=Album%20Name&amp;secret=your_secret_key
+</code></pre></div>
+<h4 id="response-format">Response Format<a class="headerlink" href="#response-format" title="Permanent link">&para;</a></h4>
+<p><strong>Success (200):</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;dbid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12345</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;processed_metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;artist&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Artist Name&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Track Title&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;album&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Album Name&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;artistlongbio&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Artist biography...&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;coverurl&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cover.png&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2023&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;genre&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Electronic&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;warnings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;Field &#39;title&#39; truncated from 1500 to 1000 characters&quot;</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> The <code>warnings</code> field is only included if data validation issues occurred (e.g., field truncation).</p>
+</blockquote>
+<p><strong>Error Responses:</strong></p>
+<ul>
+<li><code>400</code>: Invalid JSON or query parameters</li>
+<li><code>403</code>: Missing or invalid secret key</li>
+<li><code>408</code>: Metadata processing timeout (30 seconds)</li>
+<li><code>500</code>: Server error during processing</li>
+</ul>
+<h4 id="input-validation-processing">Input Validation &amp; Processing<a class="headerlink" href="#input-validation-processing" title="Permanent link">&para;</a></h4>
+<p>The API includes several validation and processing features:</p>
+<ol>
+<li><strong>Field Length Limits:</strong> String fields are truncated to 1000 characters</li>
+<li><strong>Null Byte Stripping:</strong> Removes null bytes (<code>\x00</code>) from string values</li>
+<li><strong>Field Whitelisting:</strong> Filters out system fields like <code>hostname</code>, <code>dbid</code>, binary data</li>
+<li><strong>Full Metadata Processing:</strong> Runs complete metadata enrichment including:</li>
+<li>MusicBrainz lookups</li>
+<li>Artist extras (biography, images)</li>
+<li>Recognition services</li>
+<li>Image processing</li>
+</ol>
+<h4 id="supported-fields">Supported Fields<a class="headerlink" href="#supported-fields" title="Permanent link">&para;</a></h4>
+<p>The API accepts any metadata fields that the Remote Output plugin sends, including:</p>
+<ul>
+<li>Basic track info: <code>artist</code>, <code>title</code>, <code>album</code></li>
+<li>Identifiers: <code>isrc</code>, <code>musicbrainzartistid</code>, <code>musicbrainzrecordingid</code></li>
+<li>Additional: <code>genre</code>, <code>date</code>, <code>composer</code>, <code>lyricist</code>, <code>bpm</code>, <code>key</code></li>
+<li>And many others (see Remote Output plugin for complete list)</li>
+</ul>
+<p>Fields like <code>coverimageraw</code>, <code>hostname</code>, <code>httpport</code>, <code>filename</code>, and other system/binary data are automatically filtered out for security reasons.</p>
+<h4 id="dj-software-integration-examples">DJ Software Integration Examples<a class="headerlink" href="#dj-software-integration-examples" title="Permanent link">&para;</a></h4>
+<p><strong>Configuration Notes:</strong>
+- Replace <code>localhost:8899</code> with your server's hostname and webserver port
+- If a secret is configured, add <code>&amp;secret=your_secret_key</code> to the URL</p>
+<p><strong>MegaSeg (Logging → Send track info to server):</strong></p>
+<div class="highlight"><pre><span></span><code>http://localhost:8899/v1/remoteinput?title=%Title%&amp;artist=%Artist%&amp;album=%Album%&amp;year=%Year%&amp;duration=%LengthSeconds%&amp;bpm=%BPM%&amp;composer=%Composer%&amp;lyricist=%Lyricist%&amp;publisher=%Publisher%
+</code></pre></div>
+<p><strong>Radiologik (Publishing → Network &amp; Serial → GET URL):</strong></p>
+<div class="highlight"><pre><span></span><code>http://localhost:8899/v1/remoteinput?title=&lt;t&gt;&amp;artist=&lt;a&gt;&amp;album=&lt;l&gt;&amp;isrc=&lt;i&gt;&amp;composer=&lt;comp&gt;&amp;publisher=&lt;p&gt;&amp;year=&lt;y&gt;&amp;duration=&lt;s&gt;&amp;comment=&lt;c&gt;
+</code></pre></div>
 <h2 id="other-settings">Other Settings<a class="headerlink" href="#other-settings" title="Permanent link">&para;</a></h2>
 <p>It should be noted that there is no protection against multiple Twitch chat bots,
 multiple Kick bots, etc.  This can result in double posts and other weirdness.
