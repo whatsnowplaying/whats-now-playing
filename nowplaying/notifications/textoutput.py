@@ -159,15 +159,14 @@ class Plugin(NotificationPlugin):
 
     def verify_settingsui(self, qwidget: "QWidget") -> bool:
         """Verify settings"""
-        # Only validate if both file and template are provided (indicating intent to use)
+        # Only validate if user has configured output file (indicating intent to use)
         output_file = qwidget.textoutput_lineedit.text().strip()
         template_file = qwidget.texttemplate_lineedit.text().strip()
 
-        if output_file:
-            if template_file and not pathlib.Path(template_file).exists():
-                raise PluginVerifyError(f"Template file does not exist: {template_file}")
-        elif template_file:
-            raise PluginVerifyError("Output file path is required when using text output")
+        if output_file and (template_file and not pathlib.Path(template_file).exists()):
+            raise PluginVerifyError(f"Template file does not exist: {template_file}")
+        # If no output file configured, don't require anything regardless of template
+        # (template might be set by default but user doesn't want text output)
         return True
 
     def connect_settingsui(self, qwidget: "QWidget", uihelp):

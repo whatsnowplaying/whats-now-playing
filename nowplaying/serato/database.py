@@ -92,13 +92,16 @@ class SeratoDatabaseV2Reader(SeratoRuleMatchingMixin, SeratoBaseReader):
     def apply_smart_crate_rules(self, rules: list[dict[str, t.Any]]) -> list[str]:
         """Apply smart crate rules to database tracks and return file paths"""
         if not rules:
+            logging.debug("No rules provided to apply_smart_crate_rules")
             return []
 
+        logging.debug("Applying %d rules to %d tracks", len(rules), len(self.tracks))
         matching_tracks = []
         for track in self.tracks:
             if self._track_matches_rules(track, rules) and track.get("filepath"):
                 matching_tracks.append(track["filepath"])
 
+        logging.debug("Rules matched %d tracks", len(matching_tracks))
         return matching_tracks
 
     def _track_matches_rules(self, track: dict[str, t.Any], rules: list[dict[str, t.Any]]) -> bool:

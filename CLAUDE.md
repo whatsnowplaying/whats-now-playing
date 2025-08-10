@@ -164,6 +164,22 @@ except Exception as exc:  # pylint: disable=broad-exception-caught
 - Test both happy path and failure scenarios for production reliability
 - Use meaningful test names that clearly indicate what scenario is being tested
 
+**Custom Test Scripts:**
+
+If you write a custom test script that instantiates `ConfigFile` directly (outside the pytest framework), you **MUST** call the Qt bootstrap code before creating the config. This ensures proper Qt application initialization and prevents configuration errors.
+
+```python
+# Required bootstrap for custom test scripts using ConfigFile
+import nowplaying.bootstrap
+nowplaying.bootstrap.set_qt_names()
+
+# Now safe to use ConfigFile
+from nowplaying.config import ConfigFile
+config = ConfigFile()
+```
+
+This is **NOT** needed for regular pytest tests as the `bootstrap` fixture handles Qt initialization automatically.
+
 **Test Coverage Requirements for Artistextras Plugins:**
 
 Each artistextras plugin should have comprehensive test coverage including:

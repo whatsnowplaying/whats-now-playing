@@ -285,9 +285,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if primary_path:
             paths.append(primary_path)
 
-        # Additional database paths
-        additional_paths = self.config.cparser.value("serato/additional_libpaths", defaultValue="")
-        if additional_paths:
+        if additional_paths := self.config.cparser.value(
+            "serato/additional_libpaths", defaultValue=""
+        ):
             # Split by newlines or semicolons, strip whitespace, filter empty
             extra_paths = [
                 path.strip()
@@ -312,10 +312,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
             if scope == "selected_playlists":
                 # Check selected playlists across all database paths
-                for libpath in libpaths:
-                    if await self._has_tracks_in_selected_playlists(artist_name, libpath):
-                        return True
-                return False
+                return await self._has_tracks_in_selected_playlists(artist_name)
 
             # Check entire library across all database paths
             for libpath in libpaths:
@@ -330,8 +327,129 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             )
             return False
 
+    @staticmethod
+    async def _find_artist_in_filelist(
+        filelist: list[str], artist_name: str, libpath: str
+    ) -> bool:
+        """Check if artist exists in any of the provided files by looking up metadata in database"""
+        artist_name_lower = artist_name.lower()
+
+        try:  # pylint: disable=too-many-nested-blocks
+            db_reader = SeratoDatabaseV2Reader(libpath)
+            await db_reader.loaddatabase()
+            logging.debug("Database %s loaded with %d tracks", libpath, len(db_reader.tracks))
+
+            for crate_filename in filelist:
+                logging.debug("Checking crate file: %s", crate_filename)
+
+                # Normalize paths - crate has leading slash, database doesn't
+                # Convert /washu/path -> washu/path for cross-platform compatibility
+                normalized_crate_path = crate_filename.lstrip("/")
+
+                # Find track in database by filepath (not just filename)
+                track_found = False
+                for track in db_reader.tracks:
+                    db_filepath = track.get("filepath", "")
+                    if db_filepath == normalized_crate_path:
+                        track_found = True
+                        track_artist = track.get("artist", "")
+                        logging.debug(
+                            "Found track in DB: %s, artist: '%s', searching for: '%s'",
+                            normalized_crate_path,
+                            track_artist,
+                            artist_name,
+                        )
+                        if artist_name_lower in track_artist.lower():
+                            logging.debug(
+                                "Found artist '%s' in file: %s", artist_name, crate_filename
+                            )
+                            return True
+                        break
+
+                if not track_found:
+                    logging.debug(
+                        "Track not found in database: %s (normalized: %s)",
+                        crate_filename,
+                        normalized_crate_path,
+                    )
+
+            return False
+
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            logging.error("Failed to check database %s: %s", libpath, err)
+            return False
+        finally:
+            # Clean up memory
+            if "db_reader" in locals():
+                del db_reader
+
+    async def _check_regular_crate_in_path(
+        self, playlist_name: str, artist_name: str, libpath: str
+    ) -> bool:
+        """Check if artist exists in a regular crate at the given library path"""
+        crate_path = pathlib.Path(libpath).joinpath("Subcrates", f"{playlist_name}.crate")
+
+        if not crate_path.exists():
+            return False
+
+        try:
+            logging.debug("Loading regular crate: %s", crate_path)
+            crate = SeratoCrateReader(crate_path)
+            await crate.loadcrate()
+
+            if filelist := crate.getfilenames():
+                logging.debug("Regular crate '%s' contains %d files", playlist_name, len(filelist))
+                return await self._find_artist_in_filelist(filelist, artist_name, libpath)
+            logging.debug("Regular crate '%s' contains no files", playlist_name)
+            return False
+
+        except (IOError, struct.error, UnicodeDecodeError) as err:
+            logging.error("Failed to load crate %s: %s", playlist_name, err)
+            return False
+
+    async def _check_smart_crate_in_path(
+        self, playlist_name: str, artist_name: str, libpath: str
+    ) -> bool:
+        """Check if artist exists in a smart crate at the given library path"""
+        smartcrate_path = pathlib.Path(libpath).joinpath("SmartCrates", f"{playlist_name}.scrate")
+
+        if not smartcrate_path.exists():
+            return False
+
+        try:
+            logging.debug("Loading smart crate: %s", smartcrate_path)
+            smart_crate = SeratoSmartCrateReader(smartcrate_path, libpath)
+            await smart_crate.loadsmartcrate()
+
+            # For smart crates, check across all configured library paths
+            all_libpaths = self._get_all_database_paths()
+            logging.debug(
+                "Checking smart crate against %d library paths: %s",
+                len(all_libpaths),
+                all_libpaths,
+            )
+
+            if filelist := await smart_crate.getfilenames_from_multiple_paths(all_libpaths):
+                logging.debug(
+                    "Smart crate '%s' returned %d files across all libraries",
+                    playlist_name,
+                    len(filelist),
+                )
+
+                # Check each library path for artist matches
+                for check_libpath in all_libpaths:
+                    if await self._find_artist_in_filelist(filelist, artist_name, check_libpath):
+                        return True
+                return False
+            logging.debug("Smart crate '%s' returned no files across all libraries", playlist_name)
+            return False
+
+        except (IOError, struct.error, UnicodeDecodeError) as err:
+            logging.error("Failed to load smart crate %s: %s", playlist_name, err)
+            return False
+
     async def _has_tracks_in_selected_playlists(  # pylint: disable=too-many-locals,too-many-branches
-        self, artist_name: str, libpath: str
+        self, artist_name: str
     ) -> bool:
         """Check for artist tracks in specific playlists/crates"""
         selected_playlists = self.config.cparser.value(
@@ -344,53 +462,21 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if not playlist_names:
             return False
 
-        artist_name_lower = artist_name.lower()
+        # Check each specified playlist/crate across all library paths
+        for playlist_name in playlist_names:
+            # Check all library paths for this playlist
+            for check_libpath in self._get_all_database_paths():
+                # Check regular crate first
+                if await self._check_regular_crate_in_path(
+                    playlist_name, artist_name, check_libpath
+                ):
+                    return True
 
-        # Check each specified playlist/crate
-        for playlist_name in playlist_names:  # pylint: disable=too-many-nested-blocks
-            crate_path = pathlib.Path(libpath).joinpath("Subcrates", f"{playlist_name}.crate")
-            smartcrate_path = pathlib.Path(libpath).joinpath(
-                "SmartCrates", f"{playlist_name}.scrate"
-            )
-
-            # Check regular crate
-            if crate_path.exists():
-                try:
-                    crate = SeratoCrateReader(crate_path)
-                    await crate.loadcrate()
-
-                    # Check if any track in this crate matches the artist
-                    for track_file in crate.files:
-                        if artist_name_lower in track_file.get("artist", "").lower():
-                            return True
-
-                except (IOError, struct.error, UnicodeDecodeError) as err:
-                    logging.error("Failed to load crate %s: %s", playlist_name, err)
-                    continue
-
-            # Check smart crate
-            elif smartcrate_path.exists():
-                try:
-                    smart_crate = SeratoSmartCrateReader(smartcrate_path, libpath)
-                    await smart_crate.loadsmartcrate()
-
-                    # For smart crates, we need to get the actual file list and check artists
-                    if filelist := await smart_crate.getfilenames():
-                        # Load database to get track metadata for comparison
-                        db_reader = SeratoDatabaseV2Reader(libpath)
-                        await db_reader.loaddatabase()
-
-                        for filename in filelist:
-                            # Find track in database by filename
-                            for track in db_reader.tracks:
-                                if track.get("filename") == filename:
-                                    if track.get("artist", "").lower() == artist_name_lower:
-                                        return True
-                                    break
-
-                except (IOError, struct.error, UnicodeDecodeError) as err:
-                    logging.error("Failed to load smart crate %s: %s", playlist_name, err)
-                    continue
+                # Check smart crate if regular crate not found
+                if await self._check_smart_crate_in_path(
+                    playlist_name, artist_name, check_libpath
+                ):
+                    return True
 
         return False
 
@@ -410,9 +496,16 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             logging.debug("Sample artists in database: %s", sample_artists)
 
         artist_name_lower = artist_name.lower()
-        return any(
-            track.get("artist", "").lower() == artist_name_lower for track in db_reader.tracks
-        )
+
+        # Check for exact matches and log some details
+        matches = [
+            track
+            for track in db_reader.tracks
+            if track.get("artist", "").lower() == artist_name_lower
+        ]
+        logging.debug("Found %d exact matches for artist '%s'", len(matches), artist_name)
+
+        return len(matches) > 0
 
     def on_serato_lib_button(self):
         """lib button clicked action"""
@@ -428,9 +521,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         if libdir := QFileDialog.getExistingDirectory(
             self.qwidget, "Select additional Serato library directory", startdir
         ):
-            # Add to existing paths in the text edit
-            current_text = library_widgets.additional_libs_textedit.toPlainText().strip()
-            if current_text:
+            if current_text := library_widgets.additional_libs_textedit.toPlainText().strip():
                 new_text = current_text + "\n" + libdir
             else:
                 new_text = libdir
@@ -551,9 +642,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 r'Serato Library Path is required.  Should point to "\_Serato\_" folder'
             )
 
-        # Validate additional library paths
-        additional_paths = library_widgets.additional_libs_textedit.toPlainText().strip()
-        if additional_paths:
+        if additional_paths := library_widgets.additional_libs_textedit.toPlainText().strip():
             for path in additional_paths.split("\n"):
                 path = path.strip()
                 if path and "_Serato_" not in path:

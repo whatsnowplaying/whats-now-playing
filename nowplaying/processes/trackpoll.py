@@ -155,6 +155,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         threading.current_thread().name = "TrackPoll"
         socket.setdefaulttimeout(5.0)
 
+        # Start notification plugins
+        await self._start_notification_plugins()
+
         if not self.config.cparser.value("settings/input", defaultValue=None):
             logging.debug("Waiting for user to configure source input.")
 
@@ -416,16 +419,27 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             except Exception as err:  # pylint: disable=broad-except
                 logging.error("Failed to load notification plugin %s: %s", plugin_name, err)
 
+    async def _start_notification_plugins(self):
+        """Start all notification plugins"""
+        for plugin in self.active_notifications:
+            plugin_name = plugin.__class__.__name__
+            try:
+                await plugin.start()
+                logging.debug("Started notification plugin: %s", plugin_name)
+            except Exception as err:  # pylint: disable=broad-except
+                logging.error("Failed to start notification plugin %s: %s", plugin_name, err)
+
     async def _notify_plugins(self):
         """notify all active notification plugins of track change"""
         if not self.active_notifications:
             return
 
         for plugin in self.active_notifications:
+            plugin_name = plugin.__class__.__name__
             try:
                 await plugin.notify_track_change(self.currentmeta, imagecache=self.imagecache)
             except Exception as err:  # pylint: disable=broad-except
-                logging.error("Notification plugin %s failed: %s", plugin.__class__.__name__, err)
+                logging.error("Notification plugin %s failed: %s", plugin_name, err)
 
     def _artfallbacks(self):
         if (
