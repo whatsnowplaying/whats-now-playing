@@ -188,17 +188,16 @@ async def test_selected_playlists_scope_multiple_databases(mock_config, temp_ser
 
     # Mock the playlist search across databases
     with unittest.mock.patch.object(plugin, "_has_tracks_in_selected_playlists") as mock_search:
-        mock_search.side_effect = [False, True, False]  # Found in second database
+        mock_search.return_value = True  # Found artist in playlists
 
         result = await plugin.has_tracks_by_artist("Test Artist")
 
         assert result is True
-        assert mock_search.call_count == 2  # Should stop after finding match
+        assert mock_search.call_count == 1  # Called once, handles all databases internally
 
-        # Verify the paths that were searched
-        call_args = [call[0] for call in mock_search.call_args_list]
-        assert call_args[0] == ("Test Artist", temp_serato_dirs["primary"])
-        assert call_args[1] == ("Test Artist", temp_serato_dirs["external"])
+        # Verify the method was called with just the artist name
+        call_args = mock_search.call_args_list[0][0]
+        assert call_args == ("Test Artist",)
 
 
 @pytest.mark.asyncio

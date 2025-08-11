@@ -166,7 +166,10 @@ except Exception as exc:  # pylint: disable=broad-exception-caught
 
 **Custom Test Scripts:**
 
-If you write a custom test script that instantiates `ConfigFile` directly (outside the pytest framework), you **MUST** call the Qt bootstrap code before creating the config. This ensures proper Qt application initialization and prevents configuration errors.
+If you write a custom test script that instantiates `ConfigFile` directly
+(outside the pytest framework), you **MUST** call the Qt bootstrap code
+before creating the config. This ensures proper Qt application
+initialization and prevents configuration errors.
 
 ```python
 # Required bootstrap for custom test scripts using ConfigFile
