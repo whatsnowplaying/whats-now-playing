@@ -19,6 +19,21 @@ from .database import SeratoDatabaseV2Reader
 class SeratoSmartCrateReader(SeratoRuleMatchingMixin, SeratoBaseReader):
     """read a Serato smart crate (.scrate) file and execute its rules"""
 
+    # Map Serato smart crate field names to database field names
+    FIELD_MAPPING = {
+        "filename": "filename",
+        "song": "title",  # Serato calls it 'song', we have 'title'
+        "title": "title",
+        "artist": "artist",
+        "album": "album",
+        "bpm": "bpm",
+        "composer": "composer",
+        "key": "key",
+        # Unsupported fields that Serato smart crates might reference:
+        # 'year', 'genre', 'length', 'bitrate', 'comment', 'grouping',
+        # 'label', 'remixer', 'plays', 'added', 'last_played'
+    }
+
     def __init__(self, filename: str | pathlib.Path, serato_lib_path: str | pathlib.Path) -> None:
         super().__init__(filename)
         # Add smart crate specific decoders
@@ -116,29 +131,14 @@ class SeratoSmartCrateReader(SeratoRuleMatchingMixin, SeratoBaseReader):
             # Note: 'filepath' excluded as it's internal path format
         }
 
-    @staticmethod
-    def _is_rule_supported(rule: dict[str, t.Any]) -> bool:
+    @classmethod
+    def _is_rule_supported(cls, rule: dict[str, t.Any]) -> bool:
         """Check if a smart crate rule can be supported with available database fields"""
         field = rule.get("field")
         if not field:
             return False
 
-        # Map Serato smart crate field names to our database field names
-        field_mapping = {
-            "filename": "filename",
-            "song": "title",  # Serato calls it 'song', we have 'title'
-            "title": "title",
-            "artist": "artist",
-            "album": "album",
-            "bpm": "bpm",
-            "composer": "composer",
-            "key": "key",
-            # Unsupported fields that Serato smart crates might reference:
-            # 'year', 'genre', 'length', 'bitrate', 'comment', 'grouping',
-            # 'label', 'remixer', 'plays', 'added', 'last_played'
-        }
-
-        if mapped_field := field_mapping.get(field):
+        if mapped_field := cls.FIELD_MAPPING.get(field):
             # Update the rule to use our database field name
             rule["field"] = mapped_field
             return True
@@ -308,8 +308,13 @@ class SeratoSmartCrateReader(SeratoRuleMatchingMixin, SeratoBaseReader):
                 logging.error("Failed to load Serato database %s: %s", libpath, err)
                 continue
 
-        logging.debug(
-            "Smart crate found total %d matching files across all databases",
-            len(all_matching_files),
-        )
-        return all_matching_files if all_matching_files else None
+        # Deduplicate file paths while preserving order
+        if all_matching_files:
+            deduped_files = list(dict.fromkeys(all_matching_files))
+            logging.debug(
+                "Smart crate found %d total files (%d unique after deduplication) across all databases",
+                len(all_matching_files),
+                len(deduped_files),
+            )
+            return deduped_files
+        return None

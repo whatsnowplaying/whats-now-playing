@@ -249,6 +249,23 @@ def test_textoutput_plugin_verify_settingsui_missing_file():
     assert result is True
 
 
+def test_textoutput_plugin_verify_settingsui_both_missing():
+    """test verify_settingsui with both output file and template missing"""
+    config = nowplaying.config.ConfigFile(testmode=True)
+    plugin = nowplaying.notifications.textoutput.Plugin(config=config)
+
+    # Mock UI widget with neither output file nor template
+    mock_widget = unittest.mock.Mock()
+    mock_widget.textoutput_lineedit = unittest.mock.Mock()
+    mock_widget.textoutput_lineedit.text.return_value = ""
+    mock_widget.texttemplate_lineedit = unittest.mock.Mock()
+    mock_widget.texttemplate_lineedit.text.return_value = ""
+
+    # Should not raise an error - both missing is allowed (plugin disabled)
+    result = plugin.verify_settingsui(mock_widget)
+    assert result is True
+
+
 def test_textoutput_plugin_verify_settingsui_new_install_scenario():
     """test verify_settingsui with typical new install scenario
     (default template, no output file)"""

@@ -414,6 +414,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         smartcrate_path = pathlib.Path(libpath).joinpath("SmartCrates", f"{playlist_name}.scrate")
 
         if not smartcrate_path.exists():
+            logging.warning("Smart crate file not found: %s", smartcrate_path)
             return False
 
         try:
