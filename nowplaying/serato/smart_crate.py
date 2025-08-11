@@ -312,7 +312,8 @@ class SeratoSmartCrateReader(SeratoRuleMatchingMixin, SeratoBaseReader):
         if all_matching_files:
             deduped_files = list(dict.fromkeys(all_matching_files))
             logging.debug(
-                "Smart crate found %d total files (%d unique after deduplication) across all databases",
+                "Smart crate found %d total files"
+                " (%d unique after deduplication) across all databases",
                 len(all_matching_files),
                 len(deduped_files),
             )
