@@ -232,7 +232,7 @@ def test_textoutput_plugin_save_settingsui():
 
 
 def test_textoutput_plugin_verify_settingsui_missing_file():
-    """test verify_settingsui with missing output file"""
+    """test verify_settingsui with missing output file should now be allowed"""
     config = nowplaying.config.ConfigFile(testmode=True)
     plugin = nowplaying.notifications.textoutput.Plugin(config=config)
 
@@ -243,10 +243,45 @@ def test_textoutput_plugin_verify_settingsui_missing_file():
     mock_widget.texttemplate_lineedit = unittest.mock.Mock()
     mock_widget.texttemplate_lineedit.text.return_value = "/path/to/template.txt"
 
-    with pytest.raises(
-        nowplaying.exceptions.PluginVerifyError, match="Output file path is required"
-    ):
-        plugin.verify_settingsui(mock_widget)
+    # Should not raise an error - template without output file is allowed
+    # (user may have default template but not want text output)
+    result = plugin.verify_settingsui(mock_widget)
+    assert result is True
+
+
+def test_textoutput_plugin_verify_settingsui_both_missing():
+    """test verify_settingsui with both output file and template missing"""
+    config = nowplaying.config.ConfigFile(testmode=True)
+    plugin = nowplaying.notifications.textoutput.Plugin(config=config)
+
+    # Mock UI widget with neither output file nor template
+    mock_widget = unittest.mock.Mock()
+    mock_widget.textoutput_lineedit = unittest.mock.Mock()
+    mock_widget.textoutput_lineedit.text.return_value = ""
+    mock_widget.texttemplate_lineedit = unittest.mock.Mock()
+    mock_widget.texttemplate_lineedit.text.return_value = ""
+
+    # Should not raise an error - both missing is allowed (plugin disabled)
+    result = plugin.verify_settingsui(mock_widget)
+    assert result is True
+
+
+def test_textoutput_plugin_verify_settingsui_new_install_scenario():
+    """test verify_settingsui with typical new install scenario
+    (default template, no output file)"""
+    config = nowplaying.config.ConfigFile(testmode=True)
+    plugin = nowplaying.notifications.textoutput.Plugin(config=config)
+
+    # Mock UI widget simulating new install: default template set, no output file
+    mock_widget = unittest.mock.Mock()
+    mock_widget.textoutput_lineedit = unittest.mock.Mock()
+    mock_widget.textoutput_lineedit.text.return_value = ""  # No output file
+    mock_widget.texttemplate_lineedit = unittest.mock.Mock()
+    mock_widget.texttemplate_lineedit.text.return_value = "basic-plain.txt"  # Default template
+
+    # Should not require output file just because default template exists
+    result = plugin.verify_settingsui(mock_widget)
+    assert result is True
 
 
 def test_textoutput_plugin_verify_settingsui_nonexistent_template():

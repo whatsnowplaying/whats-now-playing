@@ -221,8 +221,6 @@ def image2avif(rawdata: bytes | None) -> bytes | None:
     return imgbuffer.getvalue()
 
 
-
-
 def songpathsubst(config: "nowplaying.config.ConfigFile", filename: str) -> str:
     """if needed, change the pathing of a file"""
 
@@ -259,6 +257,7 @@ def songpathsubst(config: "nowplaying.config.ConfigFile", filename: str) -> str:
 
     logging.debug("filename substitution: %s -> %s", origfilename, newname)
     return newname
+
 
 def normalize_text(text: str | None) -> str | None:
     """take a string and genercize it"""

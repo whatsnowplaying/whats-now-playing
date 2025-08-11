@@ -68,6 +68,8 @@ class SeratoRuleMatchingMixin:  # pylint: disable=too-few-public-methods
             # Additional operators found in practice
             9: "contains",
             10: "is",
+            # Smart crate specific operators
+            23: "greater_than_equal",  # Found in 2010.scrate for aft/bef conditions
         }
 
         return operator_map.get(operator_code, "contains")

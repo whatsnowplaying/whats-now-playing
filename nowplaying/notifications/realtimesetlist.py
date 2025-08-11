@@ -6,6 +6,8 @@ import pathlib
 import time
 from typing import TYPE_CHECKING
 
+import jinja2
+
 import nowplaying.utils
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.types import TrackMetadata
@@ -98,8 +100,19 @@ class Plugin(NotificationPlugin):
         if new_template_file != self.template_file:
             self.template_file = new_template_file
             if pathlib.Path(new_template_file).exists():
-                self.templatehandler = nowplaying.utils.TemplateHandler(filename=new_template_file)
-                logging.debug("Real-time setlist template loaded: %s", self.template_file)
+                try:
+                    self.templatehandler = nowplaying.utils.TemplateHandler(
+                        filename=new_template_file
+                    )
+                    logging.debug("Real-time setlist template loaded: %s", self.template_file)
+                except (jinja2.TemplateError, OSError) as error:
+                    logging.error(
+                        "Failed to load real-time setlist template %s: %s",
+                        new_template_file,
+                        error,
+                    )
+                    self.enabled = False
+                    return
             else:
                 logging.error("Template file not found: %s", new_template_file)
                 self.enabled = False
