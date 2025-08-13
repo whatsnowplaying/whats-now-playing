@@ -80,9 +80,13 @@ nav:
   - Settings:
       - General: settings/index.md
       - Filters: settings/filter.md
+      - Track Skip: settings/trackskip.md
       - Quirks: settings/quirks.md
+      - Destroy: settings/destroy.md
   - Input Sources:
-      - DJ Uced: input/djuced.md
+      - General: input/index.md
+      - Denon: input/denon.md
+      - DJUCED: input/djuced.md
       - Icecast: input/icecast.md
       - JRiver: input/jriver.md
       - M3U: input/m3u.md
@@ -92,24 +96,28 @@ nav:
       - Traktor: input/traktor.md
       - Virtual DJ: input/virtualdj.md
       - Windows Media: input/winmedia.md
-  - Output Destinations:
-      - Discord: output/discord.md
-      - Kick Bot: output/kickbot.md
-      - OBS WebSocket: output/obswebsocket.md
-      - Remote: input/remote.md
-      - Text Output: output/textoutput.md
-      - Twitch Bot: output/twitchbot.md
-      - Web Server: output/webserver.md
   - Recognition:
       - Overview: recognition/index.md
-      - AcoustID/MusicBrainz: recognition/acoustidmb.md
-  - Artist Extras:
+      - AcoustID: recognition/acoustid.md
+      - MusicBrainz: recognition/musicbrainz.md
+  - Artist Data:
       - Overview: extras/index.md
       - Discogs: extras/discogs.md
       - FanArt.TV: extras/fanarttv.md
       - TheAudioDB: extras/theaudiodb.md
+      - Wikimedia: extras/wikimedia.md
+  - Output & Display:
+      - Overview: output/index.md
+      - OBS WebSocket: output/obswebsocket.md
+      - Text Output: output/textoutput.md
+      - Web Server: output/webserver.md
+  - Streaming & Chat:
+      - Discord: output/discord.md
+      - Kick Bot: output/kickbot.md
+      - Twitch Bot: output/twitchbot.md
   - Requests: requests.md
   - Help:
+      - Overview: help/index.md
       - How Do I?: help/howdoi.md
       - Accuracy: help/accuracy.md
       - Troubleshooting: help/troubleshooting.md
@@ -117,6 +125,8 @@ nav:
       - Open Source: help/opensource.md
       - Developers: help/developers.md
   - Reference:
+      - Overview: reference/index.md
+      - API Reference: reference/api.md
       - Template Variables: reference/templatevariables.md
       - Comparisons: reference/comparisons.md
   - Gallery: gallery.md

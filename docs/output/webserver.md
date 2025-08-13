@@ -52,8 +52,8 @@ set of features is enabled.
 
 ## REST API
 
-Currently, only a very rudimentary REST API is implemented. `/v1/last`
-will return a JSON-formatted string of the currently playing track.
+The webserver provides REST API endpoints for programmatic access to track information and remote input
+functionality. See the [API Reference](../reference/api.md) for complete endpoint documentation.
 
 ## WebSockets
 

@@ -9,16 +9,15 @@ including VLC.
 
 ## Instructions
 
+[![mpris2-source-selection](images/mpris2-source-selection.png)](images/mpris2-source-selection.png)
+
 1. Open Settings from the **What's Now Playing** icon
-2. Select Input Source from the left-hand column
+2. Select Core Settings->Source from the left-hand column
+3. Select the MPRIS2 from the list of available input sources.
 
-[![mpris2-input-source](images/mpris2-input-source.png)](images/mpris2-input-source.png)
+[![mpris2-input-source](images/mpris2-dbus-source.png)](images/mpris2-dbus-source.png)
 
-1. Select the MPRIS2 from the list of available input sources.
-2. Select MPRIS2 from the left-hand column.
-3. Select from the detected MPRIS2 sources. Closing and re-opening the
+1. Select Input Sources->MPRIS2 from the left-hand column
+2. Select from the detected MPRIS2 sources. Closing and re-opening the
    Settings UI will update the list.
-
-[![mpris2-input-source](images/mpris2-source-selection.png)](images/mpris2-source-selection.png)
-
-1. Click Save
+3. Click Save

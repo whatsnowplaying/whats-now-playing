@@ -437,3 +437,32 @@ Comprehensive test suite in `tests/audio_metadata/` validates multi-value field 
 - Multi-value fields (`isrc`, `musicbrainzartistid`, `artistwebsites`) are
   automatically converted to lists
 - Single-value fields extract the first value from lists when needed
+
+## Documentation Style Guidelines
+
+When creating or editing documentation files (.md), follow these formatting standards to ensure consistency
+and pass markdown linting:
+
+### Markdown Syntax
+
+- **Lists**: Always use asterisk (*) for unordered lists, never dashes (-)
+- **Line length**: Keep lines under 120 characters, wrap long sentences across multiple lines
+- **Blank lines**: Use single blank lines between sections, avoid consecutive blank lines
+- **Headers**: Add blank lines before and after headers
+- **Final newline**: Always end files with a single newline character
+
+### Content Structure
+
+- Follow the established documentation flow: Introduction → What it provides → Setup → How it works →
+  Configuration → Troubleshooting
+- Place setup images in Setup sections, not at the top of documents
+- Use consistent heading levels and structure across similar documents
+- Include clear examples and use cases for user guidance
+
+### Common Linting Rules to Follow
+
+- **MD004**: Use consistent list style (asterisk only)
+- **MD013**: Line length limit (120 characters)
+- **MD022**: Headers should be surrounded by blank lines
+- **MD032**: Lists should be surrounded by blank lines
+- **MD047**: Files should end with a single newline

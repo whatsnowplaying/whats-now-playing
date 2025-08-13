@@ -1,32 +1,30 @@
 # Icecast
 
-[Icecast](https://icecast.org/) is a popular system to stream audio over
-the Internet. It is supported directly by software such as
-[MIXXX](https://mixxx.org/) and
-[Traktor](https://www.native-instruments.com/en/catalog/traktor) .
-Additionally, programs such as [butt](https://danielnoethen.de/butt)
-allow one to stream nearly any audio source.
+[Icecast](https://icecast.org/) is a popular system to stream audio over the Internet.
 
 > NOTE: This source does not support Oldest mix mode.
->
-> NOTE: Support for Icecast is very experimental.
+
+Icecast is best for:
+
+- Software without dedicated What's Now Playing support (like MIXXX)
+- Generic audio streaming applications (like butt)
+- Custom setups where other inputs don't work
 
 ## Instructions
 
+[![icecast-input-source](images/icecast-source-selection.png)](images/icecast-source-selection.png)
+
 1. Open Settings from the **What's Now Playing** icon
-2. Select Input Source from the left-hand column
-
-[![icecast-input-source](images/icecast-input-source.png)](images/icecast-input-source.png)
-
-1. Select Icecast from the list of available input sources.
-2. Select Icecast from the left-hand column.
+2. Select Core Settings->Source from the left-hand column
+3. Select Icecast from the list of available input sources
 
 [![icecast-mode-selection-none.png](images/icecast-mode-selection-none.png)](images/icecast-mode-selection-none.png)
 
-1. If necessary, change the port from 8000 to another port, such
+1. Select Input Sources->Icecast from the left-hand column
+2. If necessary, change the port from 8000 to another port, such
    as 5001. (Hint: port 8000 appears to be used on macOS.)
-2. Click Save
-3. If you changed the Icecast port, restart **What's Now Playing**
+3. Click Save
+4. If you changed the Icecast port, restart **What's Now Playing**
 
 ## Settings For MIXXX
 

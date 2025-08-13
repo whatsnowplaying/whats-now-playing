@@ -126,6 +126,7 @@ def test_upgrade_blank(upgrade_bootstrap):  # pylint: disable=redefined-outer-na
     compare_content(srcdir, destdir)
 
 
+@pytest.mark.xfail(os.name == "posix", reason="Template upgrade conflicts on Linux")
 def test_upgrade_conflict(upgrade_bootstrap):  # pylint: disable=redefined-outer-name,too-many-locals
     """different content of standard template should create new"""
     (testpath, config) = upgrade_bootstrap

@@ -11,60 +11,105 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Library Management</string>
+   <string>Library and Query</string>
   </property>
-  <widget class="QWidget" name="horizontalLayoutWidget">
+  <widget class="QGroupBox" name="artist_query_groupbox">
    <property name="geometry">
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>601</width>
-     <height>51</height>
+     <width>621</width>
+     <height>90</height>
     </rect>
    </property>
-   <layout class="QHBoxLayout" name="ignoredecks_layout">
+   <property name="title">
+    <string>Artist Query Configuration</string>
+   </property>
+   <widget class="QLabel" name="artist_query_label">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>25</y>
+      <width>150</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Artist Query Scope</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="serato_artist_scope_combo">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>170</x>
+      <y>25</y>
+      <width>130</width>
+      <height>26</height>
+     </rect>
+    </property>
     <item>
-     <widget class="QLabel" name="ignoredeck_label">
-      <property name="text">
-       <string>Ignore Deck(s)</string>
-      </property>
-     </widget>
+     <property name="text">
+      <string>Entire Library</string>
+     </property>
     </item>
     <item>
-     <widget class="QCheckBox" name="deck1_checkbox">
-      <property name="text">
-       <string>1</string>
-      </property>
-     </widget>
+     <property name="text">
+      <string>Selected Playlists</string>
+     </property>
     </item>
-    <item>
-     <widget class="QCheckBox" name="deck2_checkbox">
-      <property name="text">
-       <string>2</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QCheckBox" name="deck3_checkbox">
-      <property name="text">
-       <string>3</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QCheckBox" name="deck4_checkbox">
-      <property name="text">
-       <string>4</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
+   </widget>
+   <widget class="QLineEdit" name="serato_playlists_lineedit">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>310</x>
+      <y>25</y>
+      <width>300</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="placeholderText">
+     <string>Comma-separated crate names (e.g., House, Techno)</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="query_help_label">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>55</y>
+      <width>600</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Configure how artist queries from Twitch chat (!hasartist command) search your music library. Choose "Entire Library" to search all tracks, or "Selected Playlists" to limit searches to specific crates.</string>
+    </property>
+    <property name="wordWrap">
+     <bool>true</bool>
+    </property>
+    <property name="styleSheet">
+     <string>color: #666;</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QGroupBox" name="additional_libs_groupbox">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>80</y>
+     <y>110</y>
      <width>621</width>
      <height>120</height>
     </rect>
@@ -124,7 +169,7 @@
   <connection>
    <sender>local_button</sender>
    <signal>toggled(bool)</signal>
-   <receiver>deck1_checkbox</receiver>
+   <receiver>artist_query_label</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -132,7 +177,7 @@
      <y>49</y>
     </hint>
     <hint type="destinationlabel">
-     <x>189</x>
+     <x>85</x>
      <y>35</y>
     </hint>
    </hints>
@@ -140,7 +185,39 @@
   <connection>
    <sender>local_button</sender>
    <signal>toggled(bool)</signal>
-   <receiver>deck2_checkbox</receiver>
+   <receiver>serato_artist_scope_combo</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>235</x>
+     <y>35</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>serato_playlists_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>465</x>
+     <y>35</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>query_help_label</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -149,55 +226,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>310</x>
-     <y>35</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>local_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>deck3_checkbox</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>79</x>
-     <y>49</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>431</x>
-     <y>35</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>local_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>deck4_checkbox</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>79</x>
-     <y>49</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>552</x>
-     <y>35</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>local_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>ignoredeck_label</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>79</x>
-     <y>49</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>68</x>
-     <y>35</y>
+     <y>70</y>
     </hint>
    </hints>
   </connection>

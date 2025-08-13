@@ -4,27 +4,34 @@
 ## Version 5.0.0 - in-progress
 
 * New Features:
+
   * Many UI element upgrades
+
     * Major overhaul of the UI with many pages getting some clean up
     * Tree-structure to help organize various categories
     * Many preferences are now in tabs to make them less crowded
     * New startup window system shows progress tracking
+    * AcoustID and MusicBrainz setup split apart
+
   * New Output System
     * Remote server support to send results to a central computer
       to consolidate one or more DJs into one set of outputs
     * Text Output was moved here
     * Set lists are now built in real-time and can be customized
+
   * Twitch
     * Switched from deprecated PubSub to WS-EventSub
     * Twitch Redemptions and Requests are back
     * Authentication system now simplified and self-contained
     * Added contextual help system for chat commands (e.g., !track help)
+
   * Requests Overhaul
     * Fuzzy matching with customizable threshold for track requests now
       handles some typos and natural language input
     * !hasartist chat command to search either entire
       DB or specific crates/playlists
     * Support for animated gifs/memes based upon text from Tenor
+
   * Web Server changes
     * Removed bundled templates that did not use websockets
     * Revamped old templates to remove some sizing and background issues with OBS
@@ -33,6 +40,7 @@
     * ws-gifwords-fade.htm to show GifWords requests
     * ws-justthecover.htm to cycle through all of the front covers
     * Bundled copies of some common libraries available via the `/vendor` endpoint
+    * New remote control APIs
 
   * Several new template variables
     * discordguild
@@ -42,14 +50,21 @@
     * timestamp
     * today
     * twitchchannel
+
   * Completely revamped documentation website to make it easy to pick your version
+
+* Windows Binary Overhaul
+  * The binaries for Windows now come as a directory rather than a single
+    executable.  This was done to speed up launch time by removing the
+    need to extract the content.
 
 * Bug fixes
   * Icecast-based systems (butt, Traktor, etc) got some protocol fixes
   * M3U-based systems (Virtual DJ) file watching fixes
 
 * Removed
-  * The non-websocket templates have been removed
+  * The non-websocket templates have been removed. The code to support your old
+    templates is still there, but you should really update.
 
 * Denon
   * Many Denon devices using Stagelinq should now be supported
@@ -60,7 +75,8 @@
   * Smart playlists should now be supported
 
 * Serato
-  * Smart crates are now supported
+  * Support for more than one `_Serato_` library path
+  * Smart crates now have limited support
   * hasartist support for crates, smart crates, or the full database
 
 * Traktor

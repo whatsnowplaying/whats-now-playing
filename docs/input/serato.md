@@ -18,19 +18,19 @@ data available.
 
 ## Instructions
 
-1. Open Settings from the **What's Now Playing** icon
-2. Select Input Source from the left-hand column
-
 [![Serato Source Selection](images/serato-source-selection.png)](images/serato-source-selection.png)
 
-1. Select the Serato from the list of available input sources.
-2. Select Serato from the left-hand column.
-3. Configure either Local or Remote mode as appropriate (see below)
-4. Click Save
+1. Open Settings from the **What's Now Playing** icon
+2. Select Core Settings->Source from the left-hand column
+3. Select Serato from the list of available input sources
+4. Select Input Sources->Serato from the left-hand column
+5. From there, you have two tabs.
 
-### Local Mode
+### Connection Tab
 
-[![Local Mode Settings](images/serato-local.png)](images/serato-local.png)
+#### Local Mode
+
+[![Local Mode Settings](images/serato-connection-local.png)](images/serato-connection-local.png)
 
 When Local Mode is active, the **What's Now Playing** app runs on the
 same machine as Serato. Configure the Serato Library Path to Serato's
@@ -40,9 +40,9 @@ improves **What's Now Playing**'s correctness.
 
 Ignore Deck(s) allows for tracks on these deck(s) to be ignored.
 
-### Remote Mode
+#### Remote Mode
 
-[![Remote Mode Settings](images/serato-remote.png)](images/serato-remote.png)
+[![Remote Mode Settings](images/serato-connection-remote.png)](images/serato-connection-remote.png)
 
 Remote mode is useful when the streaming computer is not the same as the
 Serato DJ computer by utilizing Serato Live Playlists. It should be only
@@ -73,4 +73,55 @@ used when **What's Now Playing**'s web server mode also cannot be used.
 
 Be aware that as of this writing (2021-03-05), the only information
 available via Live Playlists is the artist and the title due to
-limitations in Serato's offering.
+limitations in Serato's offering.  If you have the capability to use Local
+Mode, that provides a much richer set of data.
+
+### Library and Query
+
+[![Library and Query Settings](images/serato-libandquery.png)](images/serato-libandquery.png)
+
+This tab controls how the !hasartist command functions, either the entire database
+or one or more crates.
+
+Additionally, if you have additional locations where Serato crates and smart crates are located.
+
+## Smart Crates
+
+What's Now Playing supports Serato Smart Crates in addition to normal crates, but
+with limitations on which filters work.  The full filter list is not supported in
+order to keep the RAM requirements lower.
+
+### Supported Filters
+
+These smart crate filters work with What's Now Playing:
+
+- Song (title)
+- Artist
+- Album
+- Filename
+- Composer
+- Key
+- BPM
+
+### Unsupported Filters
+
+These common smart crate filters do NOT work:
+
+- Year
+- Genre
+- Plays
+- Added Date
+- Last Played
+- Length/Duration
+- Bitrate
+- Comment
+- Grouping
+- Label
+- Remixer
+
+Smart crates using unsupported filters will skip those rules but still apply any supported rules in the same crate.
+
+### Multiple Libraries
+
+Smart crates work across all your configured library paths, including external drives.
+However you *MUST* configure those paths in the additional library paths, as documented above.
