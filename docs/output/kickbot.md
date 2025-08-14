@@ -48,10 +48,11 @@ with your Kick account.
 
 [![What's Now Playing Kick settings](images/kickbot-account-settings.png)](images/kickbot-account-settings.png)
 
-1. In **What's Now Playing** settings:
-    - Enter your Client ID and Client Secret
-    - Set your Kick channel name
-    - Click "Authenticate with Kick" to complete OAuth2 setup
+1. In **What's Now Playing** settings, enter your Client ID and Client Secret
+2. Set your Kick channel name
+3. Click "Save" to store the configuration
+4. **Important**: You must save the settings before proceeding to authentication
+5. Click "Authenticate with Kick" to complete OAuth2 setup
 
 ## Template Features
 

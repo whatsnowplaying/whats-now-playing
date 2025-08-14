@@ -30,8 +30,10 @@ crate/playlist. For more information see [Requests](../requests.md).
 
 ## Authentication
 
-**What's Now Playing** uses OAuth2 authentication for secure integration with Twitch.  For redemptions,
-you will need to authenticate against your own account.  For the chat bot, you can either use your
+**What's Now Playing** uses OAuth2 authentication for secure integration
+with Twitch.  For redemptions,
+you will need to authenticate against your own account.  For the chat bot,
+you can either use your
 account or create and use another account.
 
 ### Setup Process
@@ -64,6 +66,8 @@ account or create and use another account.
 
 3. **Configure What's Now Playing**
 
+![What's Now Playing's Twitch auth panel](images/twitchbot_auth.png)
+
    1. Open Settings from the **What's Now Playing** icon
    2. Select "Twitch" from the list of settings available
    3. Fill in the required information:
@@ -74,23 +78,10 @@ account or create and use another account.
       * **Redirect URI**: Will be automatically populated based on your webserver port
 
    4. Click "Save" to store the configuration
-   5. Click "**Authenticate with Twitch**" to complete OAuth2 setup
-   6. A browser will open - log in and authorize the application
-   7. You should see "Authentication Successful" when complete
-
-### OAuth2 vs Legacy Authentication
-
-**What's Now Playing** now uses modern OAuth2 authentication instead of manual token generation. This provides:
-
-* **Enhanced Security**: No need to manually copy/paste tokens
-* **Automatic Token Refresh**: Tokens are refreshed automatically when they expire
-* **Streamlined Setup**: One-click authentication through your browser
-* **PKCE Security**: Uses Proof Key for Code Exchange for additional protection
-
-!!! note
-    Legacy Bot Token authentication is still supported for backward compatibility, but OAuth2 is recommended for new setups.
-
-![What's Now Playing's Twitch auth panel](images/twitchbot_auth.png)
+   5. **Important**: You must save the settings before proceeding to authentication
+   6. Click "**Authenticate with Twitch**" to complete OAuth2 setup
+   7. A browser will open - log in and authorize the application
+   8. You should see "Authentication Successful" when complete
 
 ### Additional Setup Considerations
 
@@ -106,21 +97,14 @@ account or create and use another account.
 * **Required Permissions**: Accept the requested permissions (`chat:read` and `chat:edit`) to allow the bot to
   monitor and send messages.
 
-### Legacy Token Authentication
-
-For users who prefer manual token management or have existing setups, the legacy "Bot Token" field is still
-supported. However, OAuth2 authentication is recommended for new installations as it provides better security
-and automatic token management.
-
 ## Twitch Chat Configuration
-
-1. Open Settings from the **What's Now Playing** icon
-2. Select Twitch Chat from the list of settings available.
 
 [![Twitch Chat Settings](images/twitchbot_chat.png)](images/twitchbot_chat.png)
 
-1. Check Enable
-2. To have the bot announce new tracks in chat, select the template.
+1. Open Settings from the **What's Now Playing** icon
+2. Select Twitch Chat from the list of settings available.
+3. Check Enable
+4. To have the bot announce new tracks in chat, select the template.
 
 By default, the bot will respond to user commands in the form of Twitch
 Replies. If you would prefer the bot just post a message, uncheck the
