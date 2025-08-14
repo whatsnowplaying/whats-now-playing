@@ -13,10 +13,10 @@
         <link rel="canonical" href="https://whatsnowplaying.github.io/dev/input/remote/">
       
       
-        <link rel="prev" href="../../output/obswebsocket/">
+        <link rel="prev" href="../mpris2/">
       
       
-        <link rel="next" href="../../output/textoutput/">
+        <link rel="next" href="../serato/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -443,12 +443,58 @@
   
   
     <li class="md-nav__item">
+      <a href="../../settings/trackskip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Track Skip
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../settings/quirks/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     Quirks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../settings/destroy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Destroy
     
   </span>
   
@@ -470,18 +516,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
@@ -497,7 +545,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             Input Sources
@@ -511,12 +559,58 @@
   
   
     <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    General
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../denon/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Denon
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../djuced/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    DJ Uced
+    DJUCED
     
   </span>
   
@@ -676,9 +770,51 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#settings" class="md-nav__link">
+  <a href="#instructions" class="md-nav__link">
     <span class="md-ellipsis">
-      Settings
+      Instructions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Instructions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#server-side" class="md-nav__link">
+    <span class="md-ellipsis">
+      Server Side
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client-side" class="md-nav__link">
+    <span class="md-ellipsis">
+      Client Side
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#client-configuration-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Client Configuration Notes
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dj-software-integration-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      DJ Software Integration Examples
     </span>
   </a>
   
@@ -688,81 +824,6 @@
   <a href="#advanced-api-usage" class="md-nav__link">
     <span class="md-ellipsis">
       Advanced API Usage
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Advanced API Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#endpoint-v1remoteinput" class="md-nav__link">
-    <span class="md-ellipsis">
-      Endpoint: /v1/remoteinput
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Endpoint: /v1/remoteinput">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#request-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      Request Format
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#response-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      Response Format
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#input-validation-processing" class="md-nav__link">
-    <span class="md-ellipsis">
-      Input Validation &amp; Processing
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#supported-fields" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Fields
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dj-software-integration-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      DJ Software Integration Examples
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#other-settings" class="md-nav__link">
-    <span class="md-ellipsis">
-      Other Settings
     </span>
   </a>
   
@@ -880,20 +941,18 @@
       
   
   
-    
   
   
-  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
@@ -901,7 +960,7 @@
   
   
   <span class="md-ellipsis">
-    Output Destinations
+    Recognition
     
   </span>
   
@@ -909,10 +968,10 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
-            Output Destinations
+            Recognition
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -923,12 +982,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../../output/discord/" class="md-nav__link">
+      <a href="../../recognition/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Discord
+    Overview
     
   </span>
   
@@ -946,12 +1005,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../../output/kickbot/" class="md-nav__link">
+      <a href="../../recognition/acoustid/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Kick Bot
+    AcoustID
     
   </span>
   
@@ -969,239 +1028,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../../output/obswebsocket/" class="md-nav__link">
+      <a href="../../recognition/musicbrainz/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    OBS WebSocket
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Remote
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    Remote
-    
-  </span>
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#settings" class="md-nav__link">
-    <span class="md-ellipsis">
-      Settings
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#advanced-api-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Advanced API Usage
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Advanced API Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#endpoint-v1remoteinput" class="md-nav__link">
-    <span class="md-ellipsis">
-      Endpoint: /v1/remoteinput
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Endpoint: /v1/remoteinput">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#request-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      Request Format
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#response-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      Response Format
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#input-validation-processing" class="md-nav__link">
-    <span class="md-ellipsis">
-      Input Validation &amp; Processing
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#supported-fields" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Fields
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dj-software-integration-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      DJ Software Integration Examples
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#other-settings" class="md-nav__link">
-    <span class="md-ellipsis">
-      Other Settings
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../output/textoutput/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Text Output
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../output/twitchbot/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Twitch Bot
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../output/webserver/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Web Server
+    MusicBrainz
     
   </span>
   
@@ -1242,7 +1074,7 @@
   
   
   <span class="md-ellipsis">
-    Recognition
+    Artist Data
     
   </span>
   
@@ -1253,98 +1085,7 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
-            Recognition
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../recognition/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Overview
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../recognition/acoustidmb/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    AcoustID/MusicBrainz
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
-        
-          
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    Artist Extras
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
-            <span class="md-nav__icon md-icon"></span>
-            Artist Extras
+            Artist Data
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -1440,6 +1181,280 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../extras/wikimedia/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Wikimedia
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Output & Display
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Output & Display
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../output/obswebsocket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    OBS WebSocket
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../output/textoutput/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Text Output
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../output/webserver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Web Server
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Streaming & Chat
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            Streaming & Chat
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../output/discord/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Discord
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../output/kickbot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Kick Bot
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../output/twitchbot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Twitch Bot
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1484,10 +1499,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
         
           
-          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
             
   
   
@@ -1500,12 +1515,35 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_11">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
             <span class="md-nav__icon md-icon"></span>
             Help
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../help/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1667,10 +1705,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_13" >
         
           
-          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_13" id="__nav_13_label" tabindex="0">
             
   
   
@@ -1683,12 +1721,58 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_12">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_13">
             <span class="md-nav__icon md-icon"></span>
             Reference
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1810,133 +1894,59 @@
 <p>A common streaming configuration is to have more than one computer
 involved, such as one computer working as the DJ machine and one computer
 for processing the stream.  In some very advanced configurations, there
-might even be more than on DJ on different computers swapping back and
+might even be more than one DJ on different computers swapping back and
 forth!</p>
 <p><strong>What's Now Playing</strong> supports a configuration where each setup has
 their own app configuration running.  One or more installations on
 DJ computers send the track information to a central one.  That
 central one will then perform any additional lookups and send the
 output to anything configured such as Twitch.</p>
-<h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">&para;</a></h2>
-<ul>
-<li>
-<p>Server Side</p>
-</li>
-<li>
-<p>You will need to enable the web server</p>
-</li>
-<li>Also in webserver, you may optionally set a Secret that is required to be set on any
-   other <strong>What's Now Playing</strong> installation that talks to it</li>
-<li>Set the Input to be 'Remote'</li>
-<li>
-<p>It is recommended to enable Artist Extras on the Server</p>
-</li>
-<li>
-<p>Client Side</p>
-</li>
-<li>
-<p>Go to 'Remote Output'</p>
-</li>
+<h2 id="instructions">Instructions<a class="headerlink" href="#instructions" title="Permanent link">&para;</a></h2>
+<h3 id="server-side">Server Side<a class="headerlink" href="#server-side" title="Permanent link">&para;</a></h3>
+<p><a href="../images/remote-source-selection.png"><img alt="remote-source-selection" src="../images/remote-source-selection.png" /></a></p>
+<ol>
+<li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
+<li>Select Core Settings-&gt;Source from the left-hand column</li>
+<li>Select Remote from the list of available input sources</li>
+<li>Configure the <a href="../../output/webserver/">webserver</a> and optionally set a secret</li>
+</ol>
+<h3 id="client-side">Client Side<a class="headerlink" href="#client-side" title="Permanent link">&para;</a></h3>
+<p><a href="../images/remote-source-settings.png"><img alt="remote-source-settings" src="../images/remote-source-settings.png" /></a></p>
+<ol>
+<li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
+<li>Select Output &amp; Display-&gt;Remote Output from the left-hand column</li>
 <li>Enable it</li>
-<li>Set the Server to be either the hostname or IP address of the computer
-   acting as the server</li>
-<li>Set the port to be the server's webserver port</li>
-<li>If the Server has a Secret set, you will need to set that as well</li>
-</ul>
+<li>Set Server to the hostname or IP address of the server computer</li>
+<li>Set Port to match the server's webserver port</li>
+<li>Set Secret if the server has one configured</li>
+<li>Configure your DJ software as usual (Core Settings-&gt;Source and Input Sources)</li>
+</ol>
 <blockquote>
 <p>NOTE: Some content, such as cover art, will not be sent to the remote server.</p>
 </blockquote>
-<h2 id="advanced-api-usage">Advanced API Usage<a class="headerlink" href="#advanced-api-usage" title="Permanent link">&para;</a></h2>
-<p>The remote server exposes a REST API endpoint at <code>/v1/remoteinput</code> that can
-accept metadata submissions from external sources beyond the built-in Remote Output plugin.</p>
-<h3 id="endpoint-v1remoteinput">Endpoint: <code>/v1/remoteinput</code><a class="headerlink" href="#endpoint-v1remoteinput" title="Permanent link">&para;</a></h3>
-<p><strong>Methods:</strong> <code>GET</code>, <code>POST</code></p>
-<p><strong>Authentication:</strong> Optional secret key (configured via <code>remote/remote_key</code> setting)</p>
-<h4 id="request-format">Request Format<a class="headerlink" href="#request-format" title="Permanent link">&para;</a></h4>
-<p><strong>POST (JSON):</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;artist&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Artist Name&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Track Title&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;album&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Album Name&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;secret&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;your_secret_key&quot;</span>
-<span class="p">}</span>
-</code></pre></div>
-<p><strong>GET (Query Parameters):</strong></p>
-<div class="highlight"><pre><span></span><code>/v1/remoteinput?artist=Artist%20Name&amp;title=Track%20Title&amp;album=Album%20Name&amp;secret=your_secret_key
-</code></pre></div>
-<h4 id="response-format">Response Format<a class="headerlink" href="#response-format" title="Permanent link">&para;</a></h4>
-<p><strong>Success (200):</strong></p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;dbid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12345</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;processed_metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;artist&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Artist Name&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Track Title&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;album&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Album Name&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;artistlongbio&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Artist biography...&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;coverurl&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cover.png&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2023&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;genre&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Electronic&quot;</span>
-<span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;warnings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="s2">&quot;Field &#39;title&#39; truncated from 1500 to 1000 characters&quot;</span>
-<span class="w">  </span><span class="p">]</span>
-<span class="p">}</span>
-</code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> The <code>warnings</code> field is only included if data validation issues occurred (e.g., field truncation).</p>
-</blockquote>
-<p><strong>Error Responses:</strong></p>
-<ul>
-<li><code>400</code>: Invalid JSON or query parameters</li>
-<li><code>403</code>: Missing or invalid secret key</li>
-<li><code>408</code>: Metadata processing timeout (30 seconds)</li>
-<li><code>500</code>: Server error during processing</li>
-</ul>
-<h4 id="input-validation-processing">Input Validation &amp; Processing<a class="headerlink" href="#input-validation-processing" title="Permanent link">&para;</a></h4>
-<p>The API includes several validation and processing features:</p>
-<ol>
-<li><strong>Field Length Limits:</strong> String fields are truncated to 1000 characters</li>
-<li><strong>Null Byte Stripping:</strong> Removes null bytes (<code>\x00</code>) from string values</li>
-<li><strong>Field Whitelisting:</strong> Filters out system fields like <code>hostname</code>, <code>dbid</code>, binary data</li>
-<li><strong>Full Metadata Processing:</strong> Runs complete metadata enrichment including:</li>
-<li>MusicBrainz lookups</li>
-<li>Artist extras (biography, images)</li>
-<li>Recognition services</li>
-<li>Image processing</li>
-</ol>
-<h4 id="supported-fields">Supported Fields<a class="headerlink" href="#supported-fields" title="Permanent link">&para;</a></h4>
-<p>The API accepts any metadata fields that the Remote Output plugin sends, including:</p>
-<ul>
-<li>Basic track info: <code>artist</code>, <code>title</code>, <code>album</code></li>
-<li>Identifiers: <code>isrc</code>, <code>musicbrainzartistid</code>, <code>musicbrainzrecordingid</code></li>
-<li>Additional: <code>genre</code>, <code>date</code>, <code>composer</code>, <code>lyricist</code>, <code>bpm</code>, <code>key</code></li>
-<li>And many others (see Remote Output plugin for complete list)</li>
-</ul>
-<p>Fields like <code>coverimageraw</code>, <code>hostname</code>, <code>httpport</code>, <code>filename</code>, and other system/binary data are automatically filtered out for security reasons.</p>
-<h4 id="dj-software-integration-examples">DJ Software Integration Examples<a class="headerlink" href="#dj-software-integration-examples" title="Permanent link">&para;</a></h4>
-<p><strong>Configuration Notes:</strong>
-- Replace <code>localhost:8899</code> with your server's hostname and webserver port
-- If a secret is configured, add <code>&amp;secret=your_secret_key</code> to the URL</p>
-<p><strong>MegaSeg (Logging → Send track info to server):</strong></p>
-<div class="highlight"><pre><span></span><code>http://localhost:8899/v1/remoteinput?title=%Title%&amp;artist=%Artist%&amp;album=%Album%&amp;year=%Year%&amp;duration=%LengthSeconds%&amp;bpm=%BPM%&amp;composer=%Composer%&amp;lyricist=%Lyricist%&amp;publisher=%Publisher%
-</code></pre></div>
-<p><strong>Radiologik (Publishing → Network &amp; Serial → GET URL):</strong></p>
-<div class="highlight"><pre><span></span><code>http://localhost:8899/v1/remoteinput?title=&lt;t&gt;&amp;artist=&lt;a&gt;&amp;album=&lt;l&gt;&amp;isrc=&lt;i&gt;&amp;composer=&lt;comp&gt;&amp;publisher=&lt;p&gt;&amp;year=&lt;y&gt;&amp;duration=&lt;s&gt;&amp;comment=&lt;c&gt;
-</code></pre></div>
-<h2 id="other-settings">Other Settings<a class="headerlink" href="#other-settings" title="Permanent link">&para;</a></h2>
-<p>It should be noted that there is no protection against multiple Twitch chat bots,
-multiple Kick bots, etc.  This can result in double posts and other weirdness.
-On the client computers, you will want to turn off such services.  Here is a
-non-complete list of things to check:</p>
+<h2 id="client-configuration-notes">Client Configuration Notes<a class="headerlink" href="#client-configuration-notes" title="Permanent link">&para;</a></h2>
+<p>Turn off these services on client computers to avoid conflicts:</p>
 <ul>
 <li>Artist Extras</li>
 <li>Discord</li>
 <li>Kick Chat</li>
 <li>Twitch (Chat and Requests)</li>
 </ul>
-<p>Note that Recognition services such as AcoustID support are required to run
-on the client computer as they need access to the local file for those systems
-that provide access to it.</p>
+<p>Recognition services (like AcoustID) must run on the client computer since they need local file access.</p>
+<h2 id="dj-software-integration-examples">DJ Software Integration Examples<a class="headerlink" href="#dj-software-integration-examples" title="Permanent link">&para;</a></h2>
+<p>Some DJ software can send track information directly to What's Now Playing via HTTP requests:</p>
+<p><strong>MegaSeg (Logging → Send track info to server):</strong></p>
+<div class="highlight"><pre><span></span><code>http://localhost:8899/v1/remoteinput?title=%Title%&amp;artist=%Artist%&amp;album=%Album%&amp;year=%Year%&amp;duration=%LengthSeconds%&amp;bpm=%BPM%&amp;composer=%Composer%&amp;lyricist=%Lyricist%&amp;publisher=%Publisher%
+</code></pre></div>
+<p><strong>Radiologik (Publishing → Network &amp; Serial → GET URL):</strong></p>
+<div class="highlight"><pre><span></span><code>http://localhost:8899/v1/remoteinput?title=&lt;t&gt;&amp;artist=&lt;a&gt;&amp;album=&lt;l&gt;&amp;isrc=&lt;i&gt;&amp;composer=&lt;comp&gt;&amp;publisher=&lt;p&gt;&amp;year=&lt;y&gt;&amp;duration=&lt;s&gt;&amp;comment=&lt;c&gt;
+</code></pre></div>
+<blockquote>
+<p>Replace <code>localhost:8899</code> with your server's hostname and webserver port.
+If a secret is configured, add <code>&amp;secret=your_secret_key</code> to the URL.</p>
+</blockquote>
+<h2 id="advanced-api-usage">Advanced API Usage<a class="headerlink" href="#advanced-api-usage" title="Permanent link">&para;</a></h2>
+<p>For detailed API documentation including request/response formats, authentication, and validation details, see the <a href="../../reference/api/#getpost-v1remoteinput">API Reference</a>.</p>
 
 
 
