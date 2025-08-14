@@ -1424,27 +1424,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#oauth2-vs-legacy-authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      OAuth2 vs Legacy Authentication
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#additional-setup-considerations" class="md-nav__link">
     <span class="md-ellipsis">
       Additional Setup Considerations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#legacy-token-authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      Legacy Token Authentication
     </span>
   </a>
   
@@ -1999,8 +1981,10 @@ either by artist/title or picking a random song in a 'roulette' mode
 when that redemption is tied to a supported DJ's software
 crate/playlist. For more information see <a href="../../requests/">Requests</a>.</p>
 <h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
-<p><strong>What's Now Playing</strong> uses OAuth2 authentication for secure integration with Twitch.  For redemptions,
-you will need to authenticate against your own account.  For the chat bot, you can either use your
+<p><strong>What's Now Playing</strong> uses OAuth2 authentication for secure integration
+with Twitch.  For redemptions,
+you will need to authenticate against your own account.  For the chat bot,
+you can either use your
 account or create and use another account.</p>
 <h3 id="setup-process">Setup Process<a class="headerlink" href="#setup-process" title="Permanent link">&para;</a></h3>
 <ol>
@@ -2045,9 +2029,10 @@ account or create and use another account.</p>
 <li>
 <p><strong>Configure What's Now Playing</strong></p>
 </li>
-<li>
-<p>Open Settings from the <strong>What's Now Playing</strong> icon</p>
-</li>
+</ol>
+<p><img alt="What's Now Playing's Twitch auth panel" src="../images/twitchbot_auth.png" /></p>
+<ol>
+<li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
 <li>Select "Twitch" from the list of settings available</li>
 <li>
 <p>Fill in the required information:</p>
@@ -2061,23 +2046,11 @@ account or create and use another account.</p>
 <li>
 <p>Click "Save" to store the configuration</p>
 </li>
+<li><strong>Important</strong>: You must save the settings before proceeding to authentication</li>
 <li>Click "<strong>Authenticate with Twitch</strong>" to complete OAuth2 setup</li>
 <li>A browser will open - log in and authorize the application</li>
 <li>You should see "Authentication Successful" when complete</li>
 </ol>
-<h3 id="oauth2-vs-legacy-authentication">OAuth2 vs Legacy Authentication<a class="headerlink" href="#oauth2-vs-legacy-authentication" title="Permanent link">&para;</a></h3>
-<p><strong>What's Now Playing</strong> now uses modern OAuth2 authentication instead of manual token generation. This provides:</p>
-<ul>
-<li><strong>Enhanced Security</strong>: No need to manually copy/paste tokens</li>
-<li><strong>Automatic Token Refresh</strong>: Tokens are refreshed automatically when they expire</li>
-<li><strong>Streamlined Setup</strong>: One-click authentication through your browser</li>
-<li><strong>PKCE Security</strong>: Uses Proof Key for Code Exchange for additional protection</li>
-</ul>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Legacy Bot Token authentication is still supported for backward compatibility, but OAuth2 is recommended for new setups.</p>
-</div>
-<p><img alt="What's Now Playing's Twitch auth panel" src="../images/twitchbot_auth.png" /></p>
 <h3 id="additional-setup-considerations">Additional Setup Considerations<a class="headerlink" href="#additional-setup-considerations" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
@@ -2099,17 +2072,11 @@ account or create and use another account.</p>
   monitor and send messages.</p>
 </li>
 </ul>
-<h3 id="legacy-token-authentication">Legacy Token Authentication<a class="headerlink" href="#legacy-token-authentication" title="Permanent link">&para;</a></h3>
-<p>For users who prefer manual token management or have existing setups, the legacy "Bot Token" field is still
-supported. However, OAuth2 authentication is recommended for new installations as it provides better security
-and automatic token management.</p>
 <h2 id="twitch-chat-configuration">Twitch Chat Configuration<a class="headerlink" href="#twitch-chat-configuration" title="Permanent link">&para;</a></h2>
+<p><a href="../images/twitchbot_chat.png"><img alt="Twitch Chat Settings" src="../images/twitchbot_chat.png" /></a></p>
 <ol>
 <li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
 <li>Select Twitch Chat from the list of settings available.</li>
-</ol>
-<p><a href="../images/twitchbot_chat.png"><img alt="Twitch Chat Settings" src="../images/twitchbot_chat.png" /></a></p>
-<ol>
 <li>Check Enable</li>
 <li>To have the bot announce new tracks in chat, select the template.</li>
 </ol>
