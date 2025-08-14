@@ -5,27 +5,27 @@ import os
 
 import pytest
 
-import nowplaying.recognition.acoustidmb  # pylint: disable=import-error
+import nowplaying.recognition.acoustid  # pylint: disable=import-error
 
 if not os.environ.get("ACOUSTID_TEST_APIKEY"):
     pytest.skip("skipping, ACOUSTID_TEST_APIKEY is not set", allow_module_level=True)
 
 
 @pytest.fixture
-def getacoustidmbplugin(bootstrap):
+def getacoustidplugin(bootstrap):
     """automated integration test"""
     config = bootstrap
     config.cparser.setValue("acoustidmb/enabled", True)
     config.cparser.setValue("musicbrainz/enabled", True)
     config.cparser.setValue("acoustidmb/acoustidapikey", os.environ["ACOUSTID_TEST_APIKEY"])
-    config.cparser.setValue("acoustidmb/emailaddress", "aw+wnptest@effectivemachines.com")
-    yield nowplaying.recognition.acoustidmb.Plugin(config=config)
+    config.cparser.setValue("musicbrainz/emailaddress", "aw+wnptest@effectivemachines.com")
+    yield nowplaying.recognition.acoustid.Plugin(config=config)
 
 
 @pytest.mark.asyncio
-async def test_15ghosts2_orig(getacoustidmbplugin, getroot):  # pylint: disable=redefined-outer-name
+async def test_15ghosts2_orig(getacoustidplugin, getroot):  # pylint: disable=redefined-outer-name
     """automated integration test"""
-    plugin = getacoustidmbplugin
+    plugin = getacoustidplugin
     metadata = await plugin.recognize(
         {"filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_orig.mp3")}
     )
@@ -39,9 +39,9 @@ async def test_15ghosts2_orig(getacoustidmbplugin, getroot):  # pylint: disable=
 
 
 @pytest.mark.asyncio
-async def test_15ghosts2_fullytagged(getacoustidmbplugin, getroot):  # pylint: disable=redefined-outer-name
+async def test_15ghosts2_fullytagged(getacoustidplugin, getroot):  # pylint: disable=redefined-outer-name
     """automated integration test"""
-    plugin = getacoustidmbplugin
+    plugin = getacoustidplugin
     metadata = await plugin.recognize(
         {"filename": os.path.join(getroot, "tests", "audio", "15_Ghosts_II_64kb_füllytâgged.mp3")}
     )

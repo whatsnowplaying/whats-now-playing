@@ -23,6 +23,13 @@ minimal information, will give the best outcome.
 
 Configure music recognition services to identify untagged tracks:
 
-- **[AcoustID/MusicBrainz](acoustidmb.md)** - Audio fingerprinting and metadata lookup using open databases
+- **[AcoustID](acoustid.md)** - Audio fingerprinting service for track identification
+- **[MusicBrainz](musicbrainz.md)** - Open music encyclopedia for enhanced metadata
 
-Click on the service above for detailed configuration instructions.
+These services can be used together or independently:
+
+- **AcoustID only**: Identifies tracks using audio fingerprinting, returns basic metadata
+- **MusicBrainz only**: Enhances existing track info with additional metadata (fallback mode)
+- **Both enabled**: AcoustID identifies tracks, MusicBrainz provides enhanced metadata (recommended)
+
+Click on the services above for detailed configuration instructions.

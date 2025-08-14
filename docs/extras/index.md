@@ -1,116 +1,138 @@
-# General Info About Artist Extras
+# Artist Extras
 
-> IMPORTANT: Many settings in this section currently require a restart
-> of the software in order to take effect.
+Artist Extras automatically downloads additional content about artists during live DJ sets, including images (banners,
+logos, thumbnails, fan art) and biographies. This enhances audio-only streaming with visual content and background
+information.
 
-Need some extra content for audio-only DJing? The artist extras plug-ins
-allow for near real-time downloads of banners, logos, thumbnails, and
-fan art based upon the artists of the track that is currently playing.
+> **Note**: Many settings in this section require restarting **What's Now Playing** to take effect.
 
-## Artwork Details
+## What You Get
+
+### Images
 
 [![OBS screen with an example of each image type](images/artexamples.png)](images/artexamples.png)
 
-| Type | WebSocket URL | Raw Image URL | WS Height | WS Width | General Quality | Description |
-|----|----|----|----|----|----|----|
-| Banners | /artistbanner.htm | /artistbanner.png | 200px | No Max | High | Image usually with picture and name of artist. |
-| Fan Art | /artistfanart.htm |  | 800px | 1280px | Varies | Most sites curate these to be of higher quality but low quality images do get in |
-| Logos | /artistlogo.htm | /artistlogo.png | 200px | 480px | High | Stylized text or image that represents the artist |
-| Thumbnails | /artistthumb.htm | /artistthumb.png | 480px | 200px | Varies | Image of the artist |
+| Type | WebSocket URL | Raw Image URL | Size | Description |
+|------|---------------|---------------|------|-------------|
+| **Banners** | /artistbanner.htm | /artistbanner.png | 200px × unlimited | Artist image with name text |
+| **Fan Art** | /artistfanart.htm | N/A | 800px × 1280px | High-quality background images |
+| **Logos** | /artistlogo.htm | /artistlogo.png | 200px × 480px | Stylized artist text/graphics |
+| **Thumbnails** | /artistthumb.htm | /artistthumb.png | 480px × 200px | Artist photos |
 
-Image Resources
+### Biographies
 
-Notes:
+Artist biographies are available in two formats:
 
-> - Raw image URLs are not scaled and represent the original format as
->   downloaded.
-> - Enabling this feature may cause a slowdown during the Exit of the
->   app in order to save work in progress.
-> - Tracks with multiple artists will download both sets of images.
->   However, only one will be used for fanart, banners, and logos.
+* **artistlongbio** - Full biography content
+* **artistshortbio** - Biography truncated to fit in a single Twitch chat message
 
-## Biographies
+## Setup
 
-Additionally, a biography of the artist may also be available. These
-biographies are also written by fans and may be brief or fairly
-detailed. The 'artistlongbio' value has the full content whereas the
-'artistshortbio' has only the content that will fit in a single Twitch
-chat message.
+[![Artist Extras Settings](images/artistextras.png)](images/artistextras.png)
 
-> NOTE: The short bio will end in a complete sentence as determined by a
-> natural language toolkit. One should be aware, however, that
-> punctuation marks may occasionally trip it up so the last sentence may
-> get truncated early.
+> **Note**: Artist Extras settings are located under Artist Data in the settings menu.
 
-## Timing
+## How It Works
 
-Most of the content is downloaded during the write delay time period as
-set in the [general settings](../settings/index.md) . You may need
-to bump up the delay to give enough time to not have 'empty' graphics.
-In general:
+### Download Timing
 
-- Every time an artist is loaded as a track, the system will try to
-  download any new art that was either skipped or missed. So all limits
-  that are set are for that track's downloads. All previously downloaded
-  content will is saved locally for long periods of time. (They will
-  eventually be removed.)
-- Banners, Logos, and Thumbnails are determined once per track from
-  whatever content has been downloaded just prior to announcement.
-- Fanart will start to download next and will rotate during the entire
-  time that artist is being played.
-- Switching to a different track from the same artist pick new banners,
-  logos, and thumbnails if they are available.
-- Collaborations will attempt (but it is not guaranteed!) to pull extras
-  for both artists if the metadata of the track has more than one set of
-  artists listed. For example, a track labeled with both David Bowie and
-  Lou Reed should have both Bowie and Reed's images.
+Content downloads during the write delay period (set in [General Settings](../settings/index.md)):
 
-At startup and every hour while running, the image cache will be
-verified so that image lookups remain fast. This operation is completely
-local and will cause no extra network traffic.
+1. **Immediate downloads**: Banners, logos, and thumbnails download first
+2. **Background downloads**: Fan art continues downloading while the track plays
+3. **Track changes**: New banners/logos/thumbnails are selected if available
+4. **Artist changes**: Full download process starts for the new artist
 
-## Generic Settings
+### Multi-Artist Support
 
-Configuring this feature is more involved than many others due to the
-need to compensate for various hardware limitations such as CPU and
-network bandwidth vs the amount of time it takes for the content to be
-available. The default settings are thought to be fairly conservative
-and work with most configurations that have relatively good Internet
-connectivity with a Write Delay of 5 seconds.
+For collaborations (e.g., "David Bowie & Lou Reed"):
 
-Maximums: the number of images to attempt to download at a given time
-out of the total set available. Banners, logos, and thumbnails are
-downloaded first, and then fan art will be downloaded. Any extra fan art
-will be downloaded. The maximums should be low enough that the first set
-downloads prior to the track being announced and the fanart finishes
-downloading prior to the next track being selected.
+* Attempts to download content for both artists
+* Only one set of images is displayed (banners, logos, fan art)
+* Both artists' content is cached for future use
 
-Download processes: The number of background processes to run that do
-nothing but download art and update the backend storage. This number
-should be configured high enough to get all of the first pass of
-downloads done quickly but low enough that it doesn't overwhelm
+### Caching
 
-Image cache size in GB: The amount of space to use for images. In
-general, every 1GB will store approximately 1,000 mixed size images.
+* **Local storage**: All content is cached locally for fast access
 
-The 'Clear Cache' button will remove all mappings between artists and
-images. It does not remove the cached responses from the web server in
-order to save bandwidth.
+* **Automatic cleanup**: Old content is eventually removed to manage disk space
 
-## Reminder
+* **Hourly verification**: Cache is verified every hour for performance
 
-In order to perform these look ups, certain data is required to be
-tagged in the media to make the results remotely accurate. More data ==
-more better results. Therefore, media with ISRC tags will cause
-MusicBrainz lookups if that service is enabled to fill in any missing
-data.
+* **Clear Cache button**: Removes artist-to-image mappings but preserves API response cache
+
+## Configuration
+
+### Download Limits
+
+Control how much content to download per track:
+
+* **Banners/Logos/Thumbnails**: Downloaded first, before track announcement
+
+* **Fan Art**: Downloaded continuously while track plays
+
+* **Size Limit**: Total cache size in GB (approximately 1,000 images per GB)
+
+### Performance Settings
+
+* **Download Processes**: Background workers for downloading content
+  * Higher = faster downloads but more system load
+  * Lower = gentler on system resources but slower downloads
+
+* **Write Delay**: Give more time if images appear "empty" initially
+
+### Fallback Options
+
+When specific image types aren't available:
+
+* Use cover art for missing fan art
+* Use cover art for missing logos
+* Use cover art for missing thumbnails
+
+## Requirements for Best Results
+
+Artist Extras works best with well-tagged music files:
+
+* **ISRC codes**: Enable automatic MusicBrainz lookups for missing metadata
+
+* **Complete artist/album/title tags**: Improve matching accuracy
+
+* **MusicBrainz integration**: Provides artist IDs for more accurate results
 
 ## Available Services
 
-Configure specific artist extras services for images and biographies:
+Configure specific services for different types of content:
 
-- **[Discogs](discogs.md)** - Discogs database integration for artist information and images
-- **[TheAudioDB](theaudiodb.md)** - Artist biographies and additional metadata
-- **[FanArt.TV](fanarttv.md)** - High-quality artist images and artwork
+* **[Discogs](discogs.md)** - Artist information and album artwork
 
-Click on any service above for detailed configuration instructions.
+* **[TheAudioDB](theaudiodb.md)** - Artist biographies and additional images
+
+* **[FanArt.TV](fanarttv.md)** - High-quality curated artist artwork
+
+* **[Wikimedia](wikimedia.md)** - Free artist biographies from Wikipedia
+
+## Troubleshooting
+
+### Images Not Appearing
+
+* Increase write delay in General Settings (try 10+ seconds)
+* Check that Artist Extras is enabled
+* Verify your music files have good artist/title tags
+
+### Slow Performance
+
+* Reduce download processes (try 2-4)
+* Lower image download limits
+* Check internet connection speed
+
+### Cache Issues
+
+* Use "Clear Cache" button to reset image mappings
+* Restart **What's Now Playing** after changing cache size
+* Monitor disk space usage
+
+### Missing Content for Artist
+
+* Check if artist exists in the configured services
+* Verify artist name spelling matches service databases
+* Try enabling MusicBrainz for better artist matching

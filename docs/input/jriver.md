@@ -46,14 +46,15 @@ track.
 
 ### What's Now Playing Configuration
 
+[![jriver-input-source](images/jriver-source-selection.png)](images/jriver-source-selection.png)
+
 1. Open Settings from the **What's Now Playing** icon
-2. Select **Input Source** from the left-hand column
-3. Select **JRiver** from the list of available input sources
-4. Select **JRiver** from the left-hand column to configure settings
+2. Select Core Settings->Source from the left-hand column
+3. Select JRiver from the list of available input sources
 
-## Configuration Options
+[![jriver-source-setup](images/jriver-source-setup.png)](images/jriver-source-setup.png
 
-[![JRiver input selection in What's Now Playing showing an access key and port](images/jriver-source-selection.png)](images/jriver-source-selection.png)
+1. Select **JRiver** from the left-hand column to configure settings
 
 Host/IP Address
 The hostname or IP address of the machine running JRiver Media Center.

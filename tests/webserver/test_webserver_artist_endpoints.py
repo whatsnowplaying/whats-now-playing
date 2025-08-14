@@ -21,6 +21,7 @@ def getwebserver(shared_webserver_config):
     config.cparser.setValue("weboutput/httpenabled", "true")
     config.cparser.setValue("weboutput/httpport", port)
     config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
     config.cparser.setValue("weboutput/once", True)
     config.cparser.sync()
 

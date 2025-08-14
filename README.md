@@ -1,40 +1,30 @@
-<!-- markdownlint-disable MD013 MD034 -->
-
-# __What's Now Playing__
+# What's Now Playing
 
 ![Logo](docs/images/wnp-logo-small.png?raw=true)
 
-__What's Now Playing__ is a tool written in Python to retrieve live song data for
-streaming DJs using a variety of software, including:
+**What's Now Playing** retrieves live track information from DJ
+software and displays it on streams, in chat, or anywhere else you need it.
 
-* [MIXXX](https://mixxx.org/)
-* [JRiver Media Center](https://jriver.com/)
-* [Serato DJ](https://serato.com/)
-* [Traktor](https://www.native-instruments.com/en/catalog/traktor/)
-* [Virtual DJ](https://www.virtualdj.com/) and other software that writes m3u files
-* MPRIS2-compatible software like [VLC](https://www.videolan.org/vlc/) on Linux
-* ... and more!
+**[Start here: Complete Documentation & Setup Guide](https://whatsnowplaying.github.io/)**
 
-Output can be highly customized in a variety of ways:
+## Supported DJ Software
 
-* plain text
-* HTML
-* streamed over WebSockets
-* directly to an OBS Text field via [OBS WebSocket Plug-in](https://github.com/Palakis/obs-websocket/)
-* Artwork in a variety of styles
-* Artist biographies
-* Twitch Chat
-* Discord Bot
+Serato DJ, Traktor, Denon DJ (StagelinQ), Virtual DJ, DJUCED, MIXXX, JRiver Media Center, and more.
 
-[Compiled, standalone versions](https://github.com/whatsnowplaying/whats-now-playing/releases)
-are available for:
+## Download
 
-* Windows 10+
-* macOS 11 (Big Sur) and up
+[Get the latest release](https://github.com/whatsnowplaying/whats-now-playing/releases) for Windows 10+ or macOS 11+.
 
-More detailed information is available at:
+## Quick Links
 
-* [Documentation](https://whatsnowplaying.github.io/)
-* [Releases](https://github.com/whatsnowplaying/whats-now-playing/releases)
-* [Changes](CHANGELOG.md)
-* [Discord](https://discord.gg/rgEvcdUHUV)
+- **[Quickstart Guide](https://whatsnowplaying.github.io/quickstart/)** - Get up and running
+- **[Gallery](https://whatsnowplaying.github.io/gallery/)** - See it in action
+- **[Discord Community](https://discord.gg/rgEvcdUHUV)** - Get help and share setups
+
+---
+
+## For Developers
+
+This is an open-source Python application using Qt6 for the interface. See
+the [developer documentation](https://whatsnowplaying.github.io/help/developers/)
+for contributing guidelines and architecture details.

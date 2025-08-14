@@ -10,4 +10,5 @@ tests/seratolive/
 tests/upgrade/releasedata.json
 docs/_static/basic.css
 docs/input/remote.md
+docs/reference/api.md
 tests/playlists/traktor/collection.nml

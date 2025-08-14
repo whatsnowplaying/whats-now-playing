@@ -90,6 +90,7 @@ def shared_webserver_config(pytestconfig):
                     bundledir=bundledir, logpath=newpath, testmode=True
                 )
                 config.cparser.setValue("acoustidmb/enabled", False)
+                config.cparser.setValue("musicbrainz/enabled", False)
                 config.cparser.setValue("weboutput/httpenabled", "true")
                 config.cparser.sync()
 
@@ -142,6 +143,7 @@ async def getwebserver(shared_webserver_config):
     config.cparser.setValue("weboutput/httpenabled", "true")
     config.cparser.setValue("weboutput/httpport", port)
     config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
     config.cparser.sync()
 
     # Recreate the database for clean test isolation
@@ -174,6 +176,7 @@ async def webserver_with_imagecache(shared_webserver_config):
     config.cparser.setValue("weboutput/httpenabled", "true")
     config.cparser.setValue("weboutput/httpport", port)
     config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
     config.cparser.setValue("artistextras/enabled", True)
     config.cparser.sync()
 

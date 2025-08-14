@@ -36,7 +36,7 @@ class Plugin(RecognitionPlugin):
         self.musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(self.config)
         self.acoustidmd = {}
         self.fpcalcexe = None
-        self.displayname = "AcoustID/MusicBrainz"
+        self.displayname = "AcoustID"
 
     @staticmethod
     def _fpcalc(filename):
@@ -362,6 +362,11 @@ class Plugin(RecognitionPlugin):
             )
             return self.acoustidmd
 
+        # Check if MusicBrainz is enabled before doing lookup
+        if not self.config.cparser.value("musicbrainz/enabled", type=bool, defaultValue=True):
+            logging.debug("acoustidmb: MusicBrainz disabled, returning basic acoustid data")
+            return self.acoustidmd
+
         if musicbrainzlookup := await self.musicbrainz.recordingid(
             self.acoustidmd["musicbrainzrecordingid"]
         ):
@@ -377,11 +382,10 @@ class Plugin(RecognitionPlugin):
         return self.musicbrainz.providerinfo()
 
     def connect_settingsui(self, qwidget, uihelp):
-        """connect m3u button to filename picker"""
+        """connect acoustid button to filename picker"""
         self.qwidget = qwidget
         self.uihelp = uihelp
         qwidget.fpcalcexe_button.clicked.connect(self.on_fpcalcexe_button)
-        qwidget.acoustid_checkbox.clicked.connect(self.on_acoustid_checkbox)
 
     def on_fpcalcexe_button(self):
         """filename button clicked action"""
@@ -395,52 +399,18 @@ class Plugin(RecognitionPlugin):
         if dirname and dirname[0]:
             self.qwidget.fpcalcexe_lineedit.setText(dirname[0])
 
-    def on_acoustid_checkbox(self):
-        """if acoustid is turned on, then musicbrainz must also be on"""
-        if self.qwidget.acoustid_checkbox.isChecked():
-            self.qwidget.musicbrainz_checkbox.setChecked(True)
-
     def load_settingsui(self, qwidget):
         """draw the plugin's settings page"""
         qwidget.acoustid_checkbox.setChecked(
             self.config.cparser.value("acoustidmb/enabled", type=bool)
         )
-        qwidget.musicbrainz_checkbox.setChecked(
-            self.config.cparser.value("musicbrainz/enabled", type=bool)
-        )
-        qwidget.mb_fallback_checkbox.setChecked(
-            self.config.cparser.value("musicbrainz/fallback", type=bool)
-        )
-
-        qwidget.emailaddress_lineedit.setText(
-            self.config.cparser.value("musicbrainz/emailaddress")
-        )
-
         qwidget.apikey_lineedit.setText(self.config.cparser.value("acoustidmb/acoustidapikey"))
-
         qwidget.fpcalcexe_lineedit.setText(self.config.cparser.value("acoustidmb/fpcalcexe"))
 
-        qwidget.websites_checkbox.setChecked(
-            self.config.cparser.value("acoustidmb/websites", type=bool)
-        )
-
-        for website in [
-            "bandcamp",
-            "homepage",
-            "lastfm",
-            "musicbrainz",
-            "discogs",
-        ]:
-            guiattr = getattr(qwidget, f"ws_{website}_checkbox")
-            guiattr.setChecked(self.config.cparser.value(f"acoustidmb/{website}", type=bool))
-
     def verify_settingsui(self, qwidget):
-        """no verification to do"""
+        """verify acoustid settings"""
         if qwidget.acoustid_checkbox.isChecked() and not qwidget.apikey_lineedit.text():
             raise PluginVerifyError("Acoustid enabled, but no API Key provided.")
-
-        # if qwidget.musicbrainz_checkbox.isChecked() and not qwidget.emailaddress_lineedit.text():
-        #    raise PluginVerifyError('Musicbrainz enabled, but no email address provided.')
 
         if qwidget.acoustid_checkbox.isChecked() and not qwidget.fpcalcexe_lineedit.text():
             raise PluginVerifyError("Acoustid enabled, but no fpcalc binary provided.")
@@ -453,41 +423,13 @@ class Plugin(RecognitionPlugin):
     def save_settingsui(self, qwidget):
         """take the settings page and save it"""
         self.config.cparser.setValue("acoustidmb/enabled", qwidget.acoustid_checkbox.isChecked())
-        self.config.cparser.setValue(
-            "musicbrainz/enabled", qwidget.musicbrainz_checkbox.isChecked()
-        )
-        self.config.cparser.setValue(
-            "musicbrainz/fallback", qwidget.mb_fallback_checkbox.isChecked()
-        )
         self.config.cparser.setValue("acoustidmb/acoustidapikey", qwidget.apikey_lineedit.text())
-        self.config.cparser.setValue(
-            "musicbrainz/emailaddress", qwidget.emailaddress_lineedit.text()
-        )
         self.config.cparser.setValue("acoustidmb/fpcalcexe", qwidget.fpcalcexe_lineedit.text())
-
-        self.config.cparser.setValue("acoustidmb/websites", qwidget.websites_checkbox.isChecked())
-
-        for website in [
-            "bandcamp",
-            "homepage",
-            "lastfm",
-            "musicbrainz",
-            "discogs",
-        ]:
-            guiattr = getattr(qwidget, f"ws_{website}_checkbox")
-            self.config.cparser.setValue(f"acoustidmb/{website}", guiattr.isChecked())
 
     def defaults(self, qsettings):
         qsettings.setValue("acoustidmb/enabled", False)
         qsettings.setValue("acoustidmb/acoustidapikey", None)
-        qsettings.setValue("acoustidmb/emailaddress", None)
         qsettings.setValue("acoustidmb/fpcalcexe", None)
-        qsettings.setValue("acoustidmb/websites", False)
-
-        for website in ["bandcamp", "homepage", "lastfm", "musicbrainz"]:
-            qsettings.setValue(f"acoustidmb/{website}", False)
-
-        qsettings.setValue("acoustidmb/discogs", True)
 
 
 async def main():

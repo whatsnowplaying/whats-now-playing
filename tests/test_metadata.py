@@ -566,7 +566,7 @@ async def test_discogs_from_mb(bootstrap):  # pylint: disable=redefined-outer-na
         return
 
     config = bootstrap
-    config.cparser.setValue("acoustidmb/homepage", False)
+    config.cparser.setValue("musicbrainz/websites", False)
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     config.cparser.setValue("musicbrainz/enabled", True)
@@ -596,11 +596,12 @@ async def test_keeptitle_despite_mb(bootstrap):  # pylint: disable=redefined-out
         return
 
     config = bootstrap
-    config.cparser.setValue("acoustidmb/homepage", False)
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
     config.cparser.setValue("musicbrainz/enabled", True)
     config.cparser.setValue("musicbrainz/fallback", True)
+    config.cparser.setValue("musicbrainz/websites", True)
+    config.cparser.setValue("musicbrainz/discogs", True)
     metadatain = {
         "artist": "Simple Minds",
         "title": "Don't You (Forget About Me) (DJ Paulharwood Remix)",

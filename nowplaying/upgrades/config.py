@@ -70,6 +70,12 @@ class UpgradeConfig:
         mapping = {
             "acoustidmb/emailaddress": "musicbrainz/emailaddress",
             "acoustidmb/enabled": "musicbrainz/enabled",
+            "acoustidmb/websites": "musicbrainz/websites",
+            "acoustidmb/bandcamp": "musicbrainz/bandcamp",
+            "acoustidmb/homepage": "musicbrainz/homepage",
+            "acoustidmb/lastfm": "musicbrainz/lastfm",
+            "acoustidmb/musicbrainz": "musicbrainz/musicbrainz",
+            "acoustidmb/discogs": "musicbrainz/discogs",
             "twitchbot/enabled": "twitchbot/chat",
             "twitchbot/token": "twitchbot/chattoken",
         }

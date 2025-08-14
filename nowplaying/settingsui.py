@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 
 import nowplaying.config
 import nowplaying.hostmeta
+import nowplaying.musicbrainz.plugin
 import nowplaying.settings.categories
 import nowplaying.settings.tabs
 from nowplaying.exceptions import PluginVerifyError
@@ -72,6 +73,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "kick": nowplaying.kick.settings.KickSettings(),
             "kickchat": nowplaying.kick.settings.KickChatSettings(),
             "requests": nowplaying.trackrequests.TrackRequestSettings(),
+            "recognition_musicbrainz": nowplaying.musicbrainz.plugin.Plugin(config=self.config),
         }
 
         # New tree structure managers
@@ -175,6 +177,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         # Connect the source list signal once after all items are added
         self.widgets["source"].sourcelist.currentRowChanged.connect(self._set_source_description)
 
+        # Manually add MusicBrainz settings widget (not a discoverable plugin)
+        self._setup_widgets("recognition_musicbrainz")
+
         self._setup_widgets("destroy")
         self._setup_widgets("about")
 
@@ -187,6 +192,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         ]:
             self.settingsclasses[key].load(self.config, self.widgets[key], self.uihelp)
             self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
+
+        # Handle MusicBrainz plugin using standard plugin interface
+        if self.widgets["recognition_musicbrainz"]:
+            mb_plugin = self.settingsclasses["recognition_musicbrainz"]
+            mb_plugin.load_settingsui(self.widgets["recognition_musicbrainz"])
+            mb_plugin.connect_settingsui(self.widgets["recognition_musicbrainz"], self.uihelp)
 
         self._connect_plugins()
         self._build_settings_tree()
@@ -225,6 +236,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 pkey = key.replace(f"nowplaying.{plugintype}.", "")
                 display_name = self.config.pluginobjs[plugintype][key].displayname
                 self.category_manager.add_plugin_item(plugintype, pkey)
+
+        # Manually add MusicBrainz to recognition category
+        self.category_manager.add_plugin_item("recognition", "musicbrainz")
 
         # Create tree structure for categories
         for category in self.category_manager.categories:
@@ -697,6 +711,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """tell config to trigger plugins to update"""
         self.config.plugins_save_settingsui(self.widgets)
 
+        # Handle MusicBrainz plugin separately
+        if self.widgets["recognition_musicbrainz"]:
+            self.settingsclasses["recognition_musicbrainz"].save_settingsui(
+                self.widgets["recognition_musicbrainz"]
+            )
+
     def _upd_conf_webserver(self):
         """update the webserver settings"""
         # Check to see if our web settings changed
@@ -984,6 +1004,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         try:
             self.config.plugins_verify_settingsui(inputtext, self.widgets)
+
+            # Handle MusicBrainz plugin separately
+            if self.widgets["recognition_musicbrainz"]:
+                self.settingsclasses["recognition_musicbrainz"].verify_settingsui(
+                    self.widgets["recognition_musicbrainz"]
+                )
         except PluginVerifyError as error:
             if self.errormessage:
                 self.errormessage.showMessage(error.message)

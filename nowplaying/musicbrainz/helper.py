@@ -518,7 +518,7 @@ class MusicBrainzHelper:
 
         sitelist = []
         for artistid in idlist:
-            if self.config.cparser.value("acoustidmb/musicbrainz", type=bool):
+            if self.config.cparser.value("musicbrainz/musicbrainz", type=bool):
                 sitelist.append(f"https://musicbrainz.org/artist/{artistid}")
             try:
                 webdata = await self.mb_client.get_artist_by_id(artistid, includes=["url-rels"])
@@ -549,7 +549,7 @@ class MusicBrainzHelper:
                     elif urlrel["type"] == "wikidata":
                         sitelist.append(urlrel["target"])
                     elif urlrel["type"] == src and self.config.cparser.value(
-                        f"acoustidmb/{dest}", type=bool
+                        f"musicbrainz/{dest}", type=bool
                     ):
                         sitelist.append(urlrel["target"])
                         logging.debug("placed %s", dest)

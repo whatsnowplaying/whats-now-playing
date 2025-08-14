@@ -8,27 +8,27 @@ import unittest.mock
 
 import pytest
 
-import nowplaying.recognition.acoustidmb  # pylint: disable=import-error
+import nowplaying.recognition.acoustid  # pylint: disable=import-error
 
 if not os.environ.get("ACOUSTID_TEST_APIKEY"):
     pytest.skip("skipping, ACOUSTID_TEST_APIKEY is not set", allow_module_level=True)
 
 
 @pytest.fixture
-def getacoustidmbplugin(bootstrap):
+def getacoustidplugin(bootstrap):
     """automated integration test"""
     config = bootstrap
     config.cparser.setValue("acoustidmb/enabled", True)
     config.cparser.setValue("musicbrainz/enabled", True)
     config.cparser.setValue("acoustidmb/acoustidapikey", os.environ["ACOUSTID_TEST_APIKEY"])
-    config.cparser.setValue("acoustidmb/emailaddress", "aw+wnptest@effectivemachines.com")
-    yield nowplaying.recognition.acoustidmb.Plugin(config=config)
+    config.cparser.setValue("musicbrainz/emailaddress", "aw+wnptest@effectivemachines.com")
+    yield nowplaying.recognition.acoustid.Plugin(config=config)
 
 
 @pytest.mark.asyncio
-async def test_join_phrases_multiartist(getacoustidmbplugin):  # pylint: disable=redefined-outer-name
+async def test_join_phrases_multiartist(getacoustidplugin):  # pylint: disable=redefined-outer-name
     """test join phrase support with multi-artist track using mocked data"""
-    plugin = getacoustidmbplugin
+    plugin = getacoustidplugin
 
     # Load fingerprint data from external JSON file
     fingerprint_file = (
@@ -45,7 +45,7 @@ async def test_join_phrases_multiartist(getacoustidmbplugin):  # pylint: disable
     # Mock both fpcalc and acoustid.lookup to return our test data
     with (
         unittest.mock.patch(
-            "nowplaying.recognition.acoustidmb.Plugin._fpcalc", return_value=mock_fingerprint
+            "nowplaying.recognition.acoustid.Plugin._fpcalc", return_value=mock_fingerprint
         ),
         unittest.mock.patch("acoustid.lookup", return_value=mock_acoustid_response),
     ):

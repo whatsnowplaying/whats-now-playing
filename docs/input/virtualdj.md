@@ -2,42 +2,53 @@
 
 > NOTE: This source does not support Oldest mix mode.
 
-The Virtual DJ input source is a specialized version of the [M3U
-source](m3u.md) that also provides access to playlists for [Request
-support](../requests.md) .
+## Instructions
 
-[![Virtual DJ Settings](images/virtualdj.png)](images/virtualdj.png)
+[![Virtual DJ Source Selection](images/virtualdj-source-selection.png)](images/virtualdj-source-selection.png)
 
-On install, the Virtual DJ directories should be set correctly for most
-computers. If they are not set correct, use the 'Select Dir' buttons to
-point to the correct ones.
+1. Open Settings from the **What's Now Playing** icon
+2. Select Core Settings->Source from the left-hand column
+3. Select Virtual DJ from the list of available input sources
+4. Select Input Sources->Virtual DJ from the left-hand column
 
-If the History does not exist, then you may need to change the time on
-Virtual DJ's history output as well as actually play a track on a deck
-long enough for the history file to be created.
+## Setup
 
-Click the Re-read Playlists button to cause **What's Now Playing** to
-re-read Virtual DJ's playlists for roulette-style requests. Be aware
-that playlist files are only updated when Virtual DJ is closed.
+[![Virtual DJ Settings](images/virtualdj-settings.png)](images/virtualdj-settings.png)
 
-The `Use Remix Field` option will attempt
-to ignore the Remix entry that Virtual DJ puts inside the history file.
-However, if the media file has the remix data in the track title, that
-will still be read. For example, if an MP3 file has ID3 tag data that
-has "Purple Rain (Are You Depressed Yet Remix)" the full title will be
-used.
+### Configure Directories
 
-## Changing Metadata
+1. **History Directory** - Usually auto-detected as `Documents/VirtualDJ/History`
+2. **Playlists Directory** - Usually auto-detected as `Documents/VirtualDJ/Playlists`
+3. Use **Select Dir** buttons if paths need adjustment
 
-Be aware that sometimes Virtual DJ will write to the history file in
-such a way that **What's Now Playing** may appear to go a bit crazy. In
-general, this situation appears to happen when changing the tag data in
-Virtual DJ while **What's Now Playing** is running. In order to prevent
-that from happening, it is recommended:
+### Database Settings
 
-1. Play a track
-2. Pause **What's Now Playing** from the menu so that it will ignore
-   history changes.
-3. Make your change
-4. Play the next track
-5. Unpause **What's Now Playing**
+1. Click **Re-read** to build the metadata database
+2. Set **Max age** for automatic database refreshes (default: 7 days)
+3. **Use Remix Field** - Filters out remix data (recommended)
+
+## Troubleshooting
+
+### No Track Updates
+
+- Check that History directory path is correct
+- Ensure VirtualDJ is writing history files (play tracks long enough)
+
+### No Enhanced Metadata
+
+- Click **Re-read** to build database from VirtualDJ's collection
+
+### Playlist Requests Not Working
+
+- Ensure Playlists directory is correct
+- Click **Re-read** after making playlist changes in VirtualDJ
+- Playlist files only update when VirtualDJ is closed
+
+### Changing Metadata
+
+If What's Now Playing acts erratic when changing metadata in VirtualDJ:
+
+1. Pause What's Now Playing from the menu
+2. Make your metadata changes in VirtualDJ
+3. Play the next track
+4. Unpause What's Now Playing

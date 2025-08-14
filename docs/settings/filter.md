@@ -40,14 +40,14 @@ entries. Clicking on the 'Add Recommended' button will add those rules:
 
 [![Add Recommended](images/filterrecommended.png)](images/filterrecommended.png)
 
-- ' (Clean)', ' (clean)', and all other variations of case like '
+* ' (Clean)', ' (clean)', and all other variations of case like '
   (ClEaN)'
-- At the end of the line: ' - clean', ' - Clean' and similarly is case
+* At the end of the line: ' - clean', ' - Clean' and similarly is case
   insensitive
-- ' \[Clean\]' and ' \[clean\]' and smiliarly is case insensitive
+* ' \[Clean\]' and ' \[clean\]' and smiliarly is case insensitive
 
 They will also remove the same types of variations of:
 
-- explicit
-- dirty
-- official music video
+* explicit
+* dirty
+* official music video
