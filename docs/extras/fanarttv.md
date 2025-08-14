@@ -70,7 +70,7 @@ FanArt.TV **requires** MusicBrainz Artist IDs to function:
 
 * **Enable banners**: Download artist banner images
 
-* **Enable fan art**: Download background/fan art images  
+* **Enable fan art**: Download background/fan art images
 
 * **Enable logos**: Download artist logo graphics
 
