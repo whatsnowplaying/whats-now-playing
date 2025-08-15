@@ -42,6 +42,15 @@ TEST_PLAYLISTS = [
     ("Electronic", "/music/bjork1.flac"),
 ]
 
+# Extended playlist data with artist/title metadata (for modern .vdjfolder format)
+TEST_PLAYLISTS_WITH_METADATA = [
+    ("House", "/music/nin1.flac", "Nine Inch Nails", "Head Like a Hole"),
+    ("House", "/music/beatles1.flac", "The Beatles", "Hey Jude"),
+    ("Techno", "/music/nin2.flac", "Nine Inch Nails", "Closer"),
+    ("Electronic", "/music/uziq1.flac", "µ-Ziq", "Hasty Boom Alert"),
+    ("Electronic", "/music/bjork1.flac", "Björk", "Human Behaviour"),
+]
+
 
 @pytest.fixture
 def traktor_database():
@@ -212,14 +221,17 @@ def virtualdj_databases():
                 CREATE TABLE playlists (
                     id INTEGER PRIMARY KEY,
                     name TEXT,
-                    filename TEXT
+                    filename TEXT,
+                    artist TEXT,
+                    title TEXT
                 )
             """)
 
-            for playlist_name, filename in TEST_PLAYLISTS:
+            # Insert modern vdjfolder-style playlists with metadata
+            for playlist_name, filename, artist, title in TEST_PLAYLISTS_WITH_METADATA:
                 connection.execute(
-                    "INSERT INTO playlists (name, filename) VALUES (?, ?)",
-                    (playlist_name, filename),
+                    "INSERT INTO playlists (name, filename, artist, title) VALUES (?, ?, ?, ?)",
+                    (playlist_name, filename, artist, title),
                 )
             connection.commit()
 

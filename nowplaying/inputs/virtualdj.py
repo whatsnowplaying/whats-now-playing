@@ -14,6 +14,7 @@ import aiosqlite
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
+import nowplaying.utils
 import nowplaying.utils.xml
 from nowplaying.db import LISTFIELDS
 from nowplaying.exceptions import PluginVerifyError
@@ -23,7 +24,7 @@ from .m3u import Plugin as M3UPlugin
 if TYPE_CHECKING:
     import nowplaying.config
 
-PLAYLIST = ["name", "filename"]
+PLAYLIST = ["name", "filename", "artist", "title"]
 METADATALIST = ["artist", "title", "album", "filename"]
 
 
@@ -60,6 +61,26 @@ class VirtualDJSAXHandler(xml.sax.ContentHandler):
                 datatuple = tuple(self.current_entry.values())
                 self.sqlcursor.execute(sql, datatuple)
             delattr(self, "current_entry")
+
+
+class VirtualDJFolderSAXHandler(xml.sax.ContentHandler):
+    """SAX handler for streaming VirtualDJ .vdjfolder XML parsing"""
+
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        self.content = []
+
+    def startElement(self, name: str, attrs: dict[str, str]) -> None:
+        if name == "song":
+            song_path = attrs.get("path")
+            artist = attrs.get("artist")
+            title = attrs.get("title")
+
+            if song_path and artist and title:
+                # Apply song path substitution like M3U processing
+                song_path = nowplaying.utils.songpathsubst(self.config, song_path)
+                self.content.append({"filename": song_path, "artist": artist, "title": title})
 
 
 class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
@@ -223,12 +244,24 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
             sql += " TEXT, ".join(PLAYLIST) + " TEXT, "
             sql += "id INTEGER PRIMARY KEY AUTOINCREMENT)"
             cursor.execute(sql)
+            self._ensure_playlist_schema(cursor)
             connection.commit()
 
+            # Process both .m3u and .vdjfolder files
             for filepath in list(playlistdirpath.rglob("*.m3u")):
-                logging.debug("Reading %s", filepath)
+                logging.debug("Reading M3U file %s", filepath)
                 content = self._read_full_file(filepath)
                 self._write_playlist(cursor, filepath.stem, content)
+
+            # Search for .vdjfolder files from VirtualDJ root directory (parent of Playlists)
+            vdj_root_dir = playlistdirpath.parent
+            for filepath in list(vdj_root_dir.rglob("*.vdjfolder")):
+                logging.debug("Reading vdjfolder file %s", filepath)
+                content = self._read_vdjfolder_file(filepath)
+                # Use filename without extension as playlist name
+                playlist_name = filepath.stem
+                self._write_playlist(cursor, playlist_name, content)
+
             connection.commit()
 
     def _atomic_playlists_swap(
@@ -277,10 +310,44 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
     @staticmethod
     def _write_playlist(sqlcursor, playlist, filelist):
         """take the collections XML and save the playlists off"""
-        sql = "INSERT INTO playlists (name,filename) VALUES (?,?)"
-        for filename in filelist:
-            datatuple = playlist, filename
+        sql = "INSERT INTO playlists (name,filename,artist,title) VALUES (?,?,?,?)"
+        for entry in filelist:
+            if isinstance(entry, dict):
+                # New format with metadata
+                datatuple = (
+                    playlist,
+                    entry.get("filename"),
+                    entry.get("artist"),
+                    entry.get("title"),
+                )
+            else:
+                # Legacy format - just filename
+                datatuple = (playlist, entry, None, None)
             sqlcursor.execute(sql, datatuple)
+
+    @staticmethod
+    def _ensure_playlist_schema(cursor):
+        """Ensure playlist database has the current schema with artist/title columns"""
+        try:
+            # Check if artist/title columns exist
+            cursor.execute("SELECT artist, title FROM playlists LIMIT 1")
+        except sqlite3.OperationalError:
+            # Columns don't exist, add them
+            logging.info("Upgrading playlist database schema to include artist/title columns")
+            cursor.execute("ALTER TABLE playlists ADD COLUMN artist TEXT")
+            cursor.execute("ALTER TABLE playlists ADD COLUMN title TEXT")
+
+    def _read_vdjfolder_file(self, filepath):
+        """read VirtualDJ .vdjfolder XML file and extract song metadata using SAX parser"""
+        try:
+            handler = VirtualDJFolderSAXHandler(self.config)
+            with open(filepath, "r", encoding="utf-8") as xml_file:
+                xml.sax.parse(xml_file, handler)
+            return handler.content
+
+        except (xml.sax.SAXException, OSError, UnicodeDecodeError) as err:
+            logging.error("Error parsing vdjfolder file %s: %s", filepath, err)
+            return []
 
     def rewrite_db(self, playlistdir=None):
         """erase and update the old db"""
@@ -306,15 +373,27 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
             sql += " TEXT, ".join(PLAYLIST) + " TEXT, "
             sql += "id INTEGER PRIMARY KEY AUTOINCREMENT)"
             cursor.execute(sql)
+            self._ensure_playlist_schema(cursor)
             connection.commit()
 
+            # Process both .m3u and .vdjfolder files
             for filepath in list(playlistdirpath.rglob("*.m3u")):
-                logging.debug("Reading %s", filepath)
+                logging.debug("Reading M3U file %s", filepath)
                 content = self._read_full_file(filepath)
                 self._write_playlist(cursor, filepath.stem, content)
+
+            # Search for .vdjfolder files from VirtualDJ root directory (parent of Playlists)
+            vdj_root_dir = playlistdirpath.parent
+            for filepath in list(vdj_root_dir.rglob("*.vdjfolder")):
+                logging.debug("Reading vdjfolder file %s", filepath)
+                content = self._read_vdjfolder_file(filepath)
+                # Use filename without extension as playlist name
+                playlist_name = filepath.stem
+                self._write_playlist(cursor, playlist_name, content)
+
             connection.commit()
 
-    def install(self):
+    def install(self) -> bool:
         """locate Virtual DJ"""
         # Check multiple possible VirtualDJ locations
         possible_locations = [
@@ -409,71 +488,145 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
             )
 
             if scope == "selected_playlists":
-                # Query specific playlists
-                selected_playlists = self.config.cparser.value(
-                    "virtualdj/selected_playlists", defaultValue=""
-                )
-                if not selected_playlists.strip():
-                    return False
+                return await self._has_tracks_in_selected_playlists(artist_name)
 
-                playlist_names = [
-                    name.strip() for name in selected_playlists.split(",") if name.strip()
-                ]
-                if not playlist_names:
-                    return False
-
-                # First get filenames from selected playlists
-                playlist_filenames = set()
-                async with aiosqlite.connect(self.playlists_databasefile) as connection:
-                    connection.row_factory = sqlite3.Row
-                    cursor = await connection.cursor()
-
-                    # Use safe parameterized query with fixed number of placeholders
-                    # Limit to reasonable number of playlists to prevent abuse
-                    if len(playlist_names) > 50:
-                        playlist_names = playlist_names[:50]
-
-                    placeholders = ",".join("?" * len(playlist_names))
-                    sql = f"SELECT DISTINCT filename FROM playlists WHERE name IN ({placeholders})"
-                    await cursor.execute(sql, playlist_names)
-                    rows = await cursor.fetchall()
-                    playlist_filenames = {row["filename"] for row in rows}
-
-                if not playlist_filenames:
-                    return False
-
-                # Then check if any of those files have the specified artist in songs database
-                async with aiosqlite.connect(self.songs_databasefile) as connection:
-                    connection.row_factory = sqlite3.Row
-                    cursor = await connection.cursor()
-
-                    # Create placeholders for filenames
-                    filename_placeholders = ",".join("?" * len(playlist_filenames))
-                    sql = f"""
-                        SELECT COUNT(*) as count
-                        FROM songs
-                        WHERE LOWER(artist) = LOWER(?) AND filename IN ({filename_placeholders})
-                    """
-                    params = [artist_name] + list(playlist_filenames)
-                    await cursor.execute(sql, params)
-                    row = await cursor.fetchone()
-                    return row["count"] > 0 if row else False
-            else:
-                # Query entire library
-                async with aiosqlite.connect(self.songs_databasefile) as connection:
-                    connection.row_factory = sqlite3.Row
-                    cursor = await connection.cursor()
-
-                    await cursor.execute(
-                        "SELECT COUNT(*) as count FROM songs WHERE LOWER(artist) = LOWER(?)",
-                        (artist_name,),
-                    )
-                    row = await cursor.fetchone()
-                    return row["count"] > 0 if row else False
+            return await self._has_tracks_in_entire_library(artist_name)
 
         except sqlite3.OperationalError as err:
             logging.error("Failed to query VirtualDJ database for artist %s: %s", artist_name, err)
             return False
+
+    async def _has_tracks_in_entire_library(self, artist_name: str) -> bool:
+        """Check if artist has tracks in the entire library"""
+        async with aiosqlite.connect(self.songs_databasefile) as connection:
+            connection.row_factory = sqlite3.Row
+            cursor = await connection.cursor()
+
+            await cursor.execute(
+                "SELECT COUNT(*) as count FROM songs WHERE LOWER(artist) = LOWER(?)",
+                (artist_name,),
+            )
+            row = await cursor.fetchone()
+            return row["count"] > 0 if row else False
+
+    async def _has_tracks_in_selected_playlists(self, artist_name: str) -> bool:
+        """Check if artist has tracks in selected playlists"""
+        playlist_names = self._get_selected_playlist_names()
+        if not playlist_names:
+            return False
+
+        async with aiosqlite.connect(self.playlists_databasefile) as connection:
+            connection.row_factory = sqlite3.Row
+            cursor = await connection.cursor()
+
+            # Limit to reasonable number of playlists to prevent abuse
+            if len(playlist_names) > 50:
+                playlist_names = playlist_names[:50]
+
+            placeholders = ",".join("?" * len(playlist_names))
+
+            # Check if playlists have artist metadata (vdjfolder entries)
+            has_metadata = await self._playlists_have_metadata(
+                cursor, playlist_names, placeholders
+            )
+
+            logging.debug(
+                "VDJ hasartist: playlists have metadata=%s, checking artist %s",
+                has_metadata,
+                artist_name,
+            )
+
+            if has_metadata:
+                return await self._check_artist_in_playlist_metadata(
+                    cursor, artist_name, playlist_names, placeholders
+                )
+
+            return await self._check_artist_via_filename_matching(
+                cursor, artist_name, playlist_names, placeholders
+            )
+
+    def _get_selected_playlist_names(self) -> list[str]:
+        """Get the list of selected playlist names from configuration"""
+        selected_playlists = self.config.cparser.value(
+            "virtualdj/selected_playlists", defaultValue=""
+        )
+        if not selected_playlists.strip():
+            return []
+
+        playlist_names = [name.strip() for name in selected_playlists.split(",") if name.strip()]
+        return playlist_names
+
+    @staticmethod
+    async def _playlists_have_metadata(
+        cursor, playlist_names: list[str], placeholders: str
+    ) -> bool:
+        """Check if playlists have artist metadata (vdjfolder entries)"""
+        metadata_sql = (
+            f"SELECT COUNT(*) as count FROM playlists "
+            f"WHERE name IN ({placeholders}) AND artist IS NOT NULL"
+        )
+        await cursor.execute(metadata_sql, playlist_names)
+        metadata_row = await cursor.fetchone()
+        return metadata_row and metadata_row["count"] > 0
+
+    @staticmethod
+    async def _check_artist_in_playlist_metadata(
+        cursor, artist_name: str, playlist_names: list[str], placeholders: str
+    ) -> bool:
+        """Fast path: Direct artist query for modern vdjfolder playlists"""
+        artist_sql = f"""
+            SELECT COUNT(*) as count FROM playlists
+            WHERE name IN ({placeholders}) AND LOWER(artist) = LOWER(?)
+        """
+        params = playlist_names + [artist_name]
+        await cursor.execute(artist_sql, params)
+        row = await cursor.fetchone()
+
+        if row and row["count"] > 0:
+            logging.debug(
+                "VDJ hasartist: fast path found %d artist matches in playlists",
+                row["count"],
+            )
+            return True
+
+        logging.debug("VDJ hasartist: fast path found no matches, returning False")
+        return False
+
+    async def _check_artist_via_filename_matching(
+        self, cursor, artist_name: str, playlist_names: list[str], placeholders: str
+    ) -> bool:
+        """Legacy path: Filename matching for M3U playlists"""
+        logging.debug("VDJ hasartist: using legacy filename matching")
+        # Get playlist filenames
+        filename_sql = f"SELECT DISTINCT filename FROM playlists WHERE name IN ({placeholders})"
+        await cursor.execute(filename_sql, playlist_names)
+        rows = await cursor.fetchall()
+        playlist_filenames = {row["filename"] for row in rows if row["filename"]}
+
+        if not playlist_filenames:
+            return False
+
+        # Check songs database for filename matches
+        async with aiosqlite.connect(self.songs_databasefile) as songs_conn:
+            songs_conn.row_factory = sqlite3.Row
+            songs_cursor = await songs_conn.cursor()
+
+            filename_placeholders = ",".join("?" * len(playlist_filenames))
+            songs_sql = f"""
+                SELECT COUNT(*) as count FROM songs
+                WHERE LOWER(artist) = LOWER(?) AND filename IN ({filename_placeholders})
+            """
+            params = [artist_name] + list(playlist_filenames)
+            await songs_cursor.execute(songs_sql, params)
+            row = await songs_cursor.fetchone()
+
+            result = row and row["count"] > 0
+            logging.debug(
+                "VDJ hasartist: legacy path found %d matches, returning %s",
+                row["count"] if row else 0,
+                result,
+            )
+            return result
 
     def defaults(self, qsettings):
         """(re-)set the default configuration values for this plugin"""
