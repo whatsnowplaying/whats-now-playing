@@ -24,8 +24,31 @@ from .m3u import Plugin as M3UPlugin
 if TYPE_CHECKING:
     import nowplaying.config
 
-PLAYLIST = ["name", "filename", "artist", "title"]
-METADATALIST = ["artist", "title", "album", "filename"]
+PLAYLIST = [
+    "name",
+    "filename",
+    "artist",
+    "title",
+    "album",
+    "genre",
+    "year",
+    "bpm",
+    "key",
+    "label",
+    "tracknumber",
+]
+METADATALIST = [
+    "artist",
+    "title",
+    "album",
+    "filename",
+    "genre",
+    "year",
+    "bpm",
+    "key",
+    "label",
+    "tracknumber",
+]
 
 
 class VirtualDJSAXHandler(xml.sax.ContentHandler):
@@ -44,12 +67,24 @@ class VirtualDJSAXHandler(xml.sax.ContentHandler):
                     "title": None,
                     "album": None,
                     "filename": filepath,
+                    "genre": None,
+                    "year": None,
+                    "bpm": None,
+                    "key": None,
+                    "label": None,
+                    "tracknumber": None,
                 }
         elif name == "Tags" and hasattr(self, "current_entry"):
             # Extract metadata from Tags element
             self.current_entry["artist"] = attrs.get("Author")
             self.current_entry["title"] = attrs.get("Title")
             self.current_entry["album"] = attrs.get("Album")
+            self.current_entry["genre"] = attrs.get("Genre")
+            self.current_entry["year"] = attrs.get("Year")
+            self.current_entry["bpm"] = attrs.get("Bpm")
+            self.current_entry["key"] = attrs.get("Key")
+            self.current_entry["label"] = attrs.get("Label")
+            self.current_entry["tracknumber"] = attrs.get("TrackNumber")
 
     def endElement(self, name: str) -> None:
         if name == "Song" and hasattr(self, "current_entry"):
@@ -80,7 +115,21 @@ class VirtualDJFolderSAXHandler(xml.sax.ContentHandler):
             if song_path and artist and title:
                 # Apply song path substitution like M3U processing
                 song_path = nowplaying.utils.songpathsubst(self.config, song_path)
-                self.content.append({"filename": song_path, "artist": artist, "title": title})
+
+                # Extract all available metadata from vdjfolder
+                entry = {
+                    "filename": song_path,
+                    "artist": artist,
+                    "title": title,
+                    "album": attrs.get("album"),
+                    "genre": attrs.get("genre"),
+                    "year": attrs.get("year"),
+                    "bpm": attrs.get("bpm"),
+                    "key": attrs.get("key"),
+                    "label": attrs.get("label"),
+                    "tracknumber": attrs.get("tracknumber"),
+                }
+                self.content.append(entry)
 
 
 class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
@@ -210,9 +259,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
         try:
             # Build temp database using M3U processing
-            await asyncio.to_thread(
-                self._build_temp_playlists_database, temp_playlists_db, playlistdirpath
-            )
+            await asyncio.to_thread(self.rewrite_db, str(playlistdirpath), temp_playlists_db)
 
             # Atomic swap: rename temp to live
             if temp_playlists_db.exists():
@@ -233,36 +280,6 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
             if temp_playlists_db.exists():
                 temp_playlists_db.unlink()
             return False
-
-    def _build_temp_playlists_database(
-        self, temp_db_path: pathlib.Path, playlistdirpath: pathlib.Path
-    ) -> None:
-        """Build temporary playlists database"""
-        with sqlite3.connect(temp_db_path) as connection:
-            cursor = connection.cursor()
-            sql = "CREATE TABLE IF NOT EXISTS playlists ("
-            sql += " TEXT, ".join(PLAYLIST) + " TEXT, "
-            sql += "id INTEGER PRIMARY KEY AUTOINCREMENT)"
-            cursor.execute(sql)
-            self._ensure_playlist_schema(cursor)
-            connection.commit()
-
-            # Process both .m3u and .vdjfolder files
-            for filepath in list(playlistdirpath.rglob("*.m3u")):
-                logging.debug("Reading M3U file %s", filepath)
-                content = self._read_full_file(filepath)
-                self._write_playlist(cursor, filepath.stem, content)
-
-            # Search for .vdjfolder files from VirtualDJ root directory (parent of Playlists)
-            vdj_root_dir = playlistdirpath.parent
-            for filepath in list(vdj_root_dir.rglob("*.vdjfolder")):
-                logging.debug("Reading vdjfolder file %s", filepath)
-                content = self._read_vdjfolder_file(filepath)
-                # Use filename without extension as playlist name
-                playlist_name = filepath.stem
-                self._write_playlist(cursor, playlist_name, content)
-
-            connection.commit()
 
     def _atomic_playlists_swap(
         self, temp_db_path: pathlib.Path, backup_db_path: pathlib.Path
@@ -310,32 +327,71 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
     @staticmethod
     def _write_playlist(sqlcursor, playlist, filelist):
         """take the collections XML and save the playlists off"""
-        sql = "INSERT INTO playlists (name,filename,artist,title) VALUES (?,?,?,?)"
+        columns = ', '.join(PLAYLIST)
+        placeholders = ', '.join('?' * len(PLAYLIST))
+        sql = f"INSERT INTO playlists ({columns}) VALUES ({placeholders})"
         for entry in filelist:
             if isinstance(entry, dict):
-                # New format with metadata
-                datatuple = (
-                    playlist,
-                    entry.get("filename"),
-                    entry.get("artist"),
-                    entry.get("title"),
-                )
+                # New format with metadata - normalize empty strings to None
+                values = []
+                for field in PLAYLIST:
+                    if field == "name":
+                        values.append(playlist)
+                    else:
+                        value = entry.get(field)
+                        # Strip whitespace and convert empty strings to None for consistency
+                        value = value.strip() if value and isinstance(value, str) else None
+                        values.append(value)
+
+                # Only keep artist/title metadata if both are valid
+                artist_idx = PLAYLIST.index("artist")
+                title_idx = PLAYLIST.index("title")
+                if not values[artist_idx] or not values[title_idx]:
+                    values[artist_idx] = None
+                    values[title_idx] = None
+
+                datatuple = tuple(values)
             else:
-                # Legacy format - just filename
-                datatuple = (playlist, entry, None, None)
+                # Legacy format - just filename, rest None
+                values = [
+                    playlist if field == "name" else (entry if field == "filename" else None)
+                    for field in PLAYLIST
+                ]
+                datatuple = tuple(values)
             sqlcursor.execute(sql, datatuple)
 
-    @staticmethod
-    def _ensure_playlist_schema(cursor):
-        """Ensure playlist database has the current schema with artist/title columns"""
-        try:
-            # Check if artist/title columns exist
-            cursor.execute("SELECT artist, title FROM playlists LIMIT 1")
-        except sqlite3.OperationalError:
-            # Columns don't exist, add them
-            logging.info("Upgrading playlist database schema to include artist/title columns")
-            cursor.execute("ALTER TABLE playlists ADD COLUMN artist TEXT")
-            cursor.execute("ALTER TABLE playlists ADD COLUMN title TEXT")
+    def _scan_and_populate_playlists(self, cursor, playlistdirpath: pathlib.Path) -> None:
+        """Scan and populate playlists from .m3u and .vdjfolder files"""
+        # Get VirtualDJ root directory (parent of Playlists)
+        vdj_root_dir = playlistdirpath.parent
+        mylists_dir = vdj_root_dir / "MyLists"
+
+        if mylists_dir.exists():
+            # VirtualDJ 2024+ unified format - scan only MyLists directory
+            logging.debug("Found VirtualDJ 2024+ MyLists directory, scanning unified playlists")
+            for filepath in list(mylists_dir.rglob("*.vdjfolder")):
+                logging.debug("Reading vdjfolder file %s", filepath)
+                content = self._read_vdjfolder_file(filepath)
+                playlist_name = filepath.stem
+                self._write_playlist(cursor, playlist_name, content)
+        else:
+            # VirtualDJ 2023 and earlier - scan legacy locations
+            logging.debug(
+                "Using VirtualDJ 2023 legacy format, scanning Playlists and scattered files"
+            )
+
+            # Process legacy .m3u files from Playlists directory
+            for filepath in list(playlistdirpath.rglob("*.m3u")):
+                logging.debug("Reading M3U file %s", filepath)
+                content = self._read_full_file(filepath)
+                self._write_playlist(cursor, filepath.stem, content)
+
+            # Process legacy .vdjfolder files scattered throughout VDJ directory
+            for filepath in list(vdj_root_dir.rglob("*.vdjfolder")):
+                logging.debug("Reading vdjfolder file %s", filepath)
+                content = self._read_vdjfolder_file(filepath)
+                playlist_name = filepath.stem
+                self._write_playlist(cursor, playlist_name, content)
 
     def _read_vdjfolder_file(self, filepath):
         """read VirtualDJ .vdjfolder XML file and extract song metadata using SAX parser"""
@@ -349,7 +405,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
             logging.error("Error parsing vdjfolder file %s: %s", filepath, err)
             return []
 
-    def rewrite_db(self, playlistdir=None):
+    def rewrite_db(self, playlistdir=None, db_path=None):
         """erase and update the old db"""
         if not playlistdir:
             playlistdir = self.config.cparser.value("virtualdj/playlists")
@@ -363,33 +419,23 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
             logging.error("playlistdir (%s) does not exist", playlistdir)
             return
 
-        self.playlists_databasefile.parent.mkdir(parents=True, exist_ok=True)
-        if self.playlists_databasefile.exists():
-            self.playlists_databasefile.unlink()
+        # Use provided db_path or default to instance variable
+        database_path = pathlib.Path(db_path) if db_path else self.playlists_databasefile
 
-        with sqlite3.connect(self.playlists_databasefile) as connection:
+        database_path.parent.mkdir(parents=True, exist_ok=True)
+        if database_path.exists():
+            database_path.unlink()
+
+        with sqlite3.connect(database_path) as connection:
             cursor = connection.cursor()
             sql = "CREATE TABLE IF NOT EXISTS playlists ("
             sql += " TEXT, ".join(PLAYLIST) + " TEXT, "
             sql += "id INTEGER PRIMARY KEY AUTOINCREMENT)"
             cursor.execute(sql)
-            self._ensure_playlist_schema(cursor)
             connection.commit()
 
-            # Process both .m3u and .vdjfolder files
-            for filepath in list(playlistdirpath.rglob("*.m3u")):
-                logging.debug("Reading M3U file %s", filepath)
-                content = self._read_full_file(filepath)
-                self._write_playlist(cursor, filepath.stem, content)
-
-            # Search for .vdjfolder files from VirtualDJ root directory (parent of Playlists)
-            vdj_root_dir = playlistdirpath.parent
-            for filepath in list(vdj_root_dir.rglob("*.vdjfolder")):
-                logging.debug("Reading vdjfolder file %s", filepath)
-                content = self._read_vdjfolder_file(filepath)
-                # Use filename without extension as playlist name
-                playlist_name = filepath.stem
-                self._write_playlist(cursor, playlist_name, content)
+            # Scan playlists with VirtualDJ 2024+ MyLists support
+            self._scan_and_populate_playlists(cursor, playlistdirpath)
 
             connection.commit()
 

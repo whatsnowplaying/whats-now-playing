@@ -142,6 +142,9 @@ class UpgradeConfig:
         if oldversion < Version("4.3.0"):
             self._upgrade_to_4_3_0(config)
 
+        if oldversstr == "5.0.0-preview1":
+            self._upgrade_from_5_0_0_preview1(config)
+
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
         config.setValue("settings/configversion", thisverstr)
@@ -201,6 +204,41 @@ class UpgradeConfig:
             config.setValue("realtimesetlist/template", str(template_path))
             # Disable old setlist
             config.setValue("setlist/enabled", False)
+
+    @staticmethod
+    def _upgrade_from_5_0_0_preview1(config: QSettings) -> None:
+        """Upgrade from 5.0.0-preview1 - Force VirtualDJ database rebuild for schema changes"""
+        logging.info("Upgrade from 5.0.0-preview1: Cleaning VirtualDJ databases for schema update")
+
+        # Get VirtualDJ database paths
+        virtualdj_cache_dir = pathlib.Path(
+            QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
+        ).joinpath("virtualdj")
+
+        if virtualdj_cache_dir.exists():
+            # Delete VirtualDJ databases to force clean rebuild with new schema
+            virtualdj_songs_db = virtualdj_cache_dir.joinpath("virtualdj-songs.db")
+            virtualdj_playlists_db = virtualdj_cache_dir.joinpath("virtualdj-playlists.db")
+
+            databases_removed = []
+            for db_path in [virtualdj_songs_db, virtualdj_playlists_db]:
+                if db_path.exists():
+                    try:
+                        db_path.unlink()
+                        databases_removed.append(db_path.name)
+                        logging.info("Removed VirtualDJ database: %s", db_path.name)
+                    except OSError as err:
+                        logging.warning(
+                            "Failed to remove VirtualDJ database %s: %s", db_path.name, err
+                        )
+
+            if databases_removed:
+                logging.info("VirtualDJ databases removed: %s", ", ".join(databases_removed))
+                # Force rebuild flags
+                config.setValue("virtualdj/rebuild_db", True)
+                config.setValue("virtualdj/rebuild_playlists_db", True)
+            else:
+                logging.debug("No VirtualDJ databases found to remove")
 
     @staticmethod
     def _upgrade_filters(config: QSettings) -> None:
