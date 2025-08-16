@@ -327,7 +327,9 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
     @staticmethod
     def _write_playlist(sqlcursor, playlist, filelist):
         """take the collections XML and save the playlists off"""
-        sql = f"INSERT INTO playlists ({', '.join(PLAYLIST)}) VALUES ({', '.join('?' * len(PLAYLIST))})"
+        columns = ', '.join(PLAYLIST)
+        placeholders = ', '.join('?' * len(PLAYLIST))
+        sql = f"INSERT INTO playlists ({columns}) VALUES ({placeholders})"
         for entry in filelist:
             if isinstance(entry, dict):
                 # New format with metadata - normalize empty strings to None
