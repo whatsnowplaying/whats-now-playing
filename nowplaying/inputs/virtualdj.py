@@ -24,7 +24,19 @@ from .m3u import Plugin as M3UPlugin
 if TYPE_CHECKING:
     import nowplaying.config
 
-PLAYLIST = ["name", "filename", "artist", "title"]
+PLAYLIST = [
+    "name",
+    "filename",
+    "artist",
+    "title",
+    "album",
+    "genre",
+    "year",
+    "bpm",
+    "key",
+    "label",
+    "tracknumber",
+]
 METADATALIST = [
     "artist",
     "title",
@@ -103,7 +115,21 @@ class VirtualDJFolderSAXHandler(xml.sax.ContentHandler):
             if song_path and artist and title:
                 # Apply song path substitution like M3U processing
                 song_path = nowplaying.utils.songpathsubst(self.config, song_path)
-                self.content.append({"filename": song_path, "artist": artist, "title": title})
+
+                # Extract all available metadata from vdjfolder
+                entry = {
+                    "filename": song_path,
+                    "artist": artist,
+                    "title": title,
+                    "album": attrs.get("album"),
+                    "genre": attrs.get("genre"),
+                    "year": attrs.get("year"),
+                    "bpm": attrs.get("bpm"),
+                    "key": attrs.get("key"),
+                    "label": attrs.get("label"),
+                    "tracknumber": attrs.get("tracknumber"),
+                }
+                self.content.append(entry)
 
 
 class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
@@ -301,28 +327,35 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
     @staticmethod
     def _write_playlist(sqlcursor, playlist, filelist):
         """take the collections XML and save the playlists off"""
-        sql = "INSERT INTO playlists (name,filename,artist,title) VALUES (?,?,?,?)"
+        sql = f"INSERT INTO playlists ({', '.join(PLAYLIST)}) VALUES ({', '.join('?' * len(PLAYLIST))})"
         for entry in filelist:
             if isinstance(entry, dict):
                 # New format with metadata - normalize empty strings to None
-                artist = entry.get("artist")
-                title = entry.get("title")
-                filename = entry.get("filename")
+                values = []
+                for field in PLAYLIST:
+                    if field == "name":
+                        values.append(playlist)
+                    else:
+                        value = entry.get(field)
+                        # Strip whitespace and convert empty strings to None for consistency
+                        value = value.strip() if value and isinstance(value, str) else None
+                        values.append(value)
 
-                # Strip whitespace and convert empty strings to None for consistency
-                artist = artist.strip() if artist and isinstance(artist, str) else None
-                title = title.strip() if title and isinstance(title, str) else None
-                filename = filename.strip() if filename and isinstance(filename, str) else None
+                # Only keep artist/title metadata if both are valid
+                artist_idx = PLAYLIST.index("artist")
+                title_idx = PLAYLIST.index("title")
+                if not values[artist_idx] or not values[title_idx]:
+                    values[artist_idx] = None
+                    values[title_idx] = None
 
-                # Only keep metadata if both artist and title are valid
-                if not artist or not title:
-                    artist = None
-                    title = None
-
-                datatuple = (playlist, filename, artist, title)
+                datatuple = tuple(values)
             else:
-                # Legacy format - just filename
-                datatuple = (playlist, entry, None, None)
+                # Legacy format - just filename, rest None
+                values = [
+                    playlist if field == "name" else (entry if field == "filename" else None)
+                    for field in PLAYLIST
+                ]
+                datatuple = tuple(values)
             sqlcursor.execute(sql, datatuple)
 
     def _scan_and_populate_playlists(self, cursor, playlistdirpath: pathlib.Path) -> None:
