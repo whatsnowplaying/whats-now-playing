@@ -63,6 +63,8 @@ playing" information from various DJ software.
 
 - Template system for customizable output formatting
 - SQLite database for metadata caching (`db.py`)
+- SQLite retry utilities (`nowplaying/utils/sqlite.py`) for handling database
+  locking and Windows file permission issues with exponential backoff
 - API response caching system (`apicache.py`) with TTL support for external
   services
 - WebSocket server for real-time data streaming
@@ -78,6 +80,18 @@ playing" information from various DJ software.
 - Plugins are dynamically loaded and follow a common interface pattern
 - The application uses multiprocessing for background tasks
 - Vendor dependencies are managed in `nowplaying/vendor/` to avoid conflicts
+
+**Database Reliability Patterns:**
+
+- Use `nowplaying.utils.sqlite.retry_sqlite_operation()` for sync SQLite operations
+  that may encounter database locking issues
+- Use `nowplaying.utils.sqlite.retry_sqlite_operation_async()` for async SQLite
+  operations with the same retry logic
+- Use `nowplaying.utils.sqlite.retry_file_operation()` for Windows file operations
+  that may encounter file locking (ERROR_SHARING_VIOLATION)
+- All retry functions use exponential backoff with jitter to prevent thundering herd
+  problems during database contention
+- Default: 10 retries, 0.1s base delay, up to 0.05s jitter
 
 **Python Version and Type Annotations:**
 
