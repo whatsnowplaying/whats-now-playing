@@ -97,13 +97,17 @@ variables to the empty string. Instead of having to render a template
 as:
 
 ``` jinja
+{%- raw -%}
 {% if variable is defined and variable is not none and variable|length %}
+{%- endraw -%}
 ```
 
 This can be short-cut to:
 
 ``` jinja
+{%- raw -%}
 {% if variable %}
+{%- endraw -%}
 ```
 
 since the variable will always be defined. This also means that

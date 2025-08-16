@@ -617,7 +617,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
                         has_video = True
                         break
                     # Check for explicit audio indicators
-                    elif "audio" in file_type_str:
+                    if "audio" in file_type_str:
                         has_audio_indicator = True
 
                 # Default to True for known video extensions if no clear audio indication

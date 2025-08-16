@@ -25,15 +25,28 @@ def define_env(env):
         Returns:
             Formatted markdown string with all templates organized by category
         """
-        config_dir = pathlib.Path("template-src/configs")
+        try:
+            return _generate_template_reference()
+        except Exception as e:
+            return f"*Error generating template reference: {e}*"
 
-        # Check if we're running from the docs directory
-        if not config_dir.exists():
-            # Try relative to project root when building docs
-            config_dir = pathlib.Path("../template-src/configs")
+    def _generate_template_reference() -> str:
+        """Internal function to generate template reference."""
+        # Try multiple possible paths for the config directory
+        possible_paths = [
+            pathlib.Path("template-src/configs"),  # From project root
+            pathlib.Path("../template-src/configs"),  # From docs directory
+            pathlib.Path(__file__).parent.parent / "template-src/configs",  # Relative to this file
+        ]
 
-        if not config_dir.exists():
-            return "*Template configuration files not found. Run from project root.*"
+        config_dir = None
+        for path in possible_paths:
+            if path.exists():
+                config_dir = path
+                break
+
+        if not config_dir:
+            return f"*Template configuration files not found. Checked: {[str(p) for p in possible_paths]}*"
 
         configs = {}
 
