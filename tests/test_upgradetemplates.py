@@ -149,9 +149,13 @@ def test_upgrade_same(upgrade_bootstrap):  # pylint: disable=redefined-outer-nam
     destdir = os.path.join(testpath, "testsuite", "templates")
     srctemplates = os.listdir(srcdir)
     pathlib.Path(destdir).mkdir(parents=True, exist_ok=True)
+    num = 1
+    if srctemplates[num] == "vendor":
+        num = 2
+    print(srctemplates[num])
     shutil.copyfile(
-        os.path.join(srcdir, srctemplates[1]),
-        os.path.join(destdir, os.path.basename(srctemplates[1])),
+        os.path.join(srcdir, srctemplates[num]),
+        os.path.join(destdir, os.path.basename(srctemplates[num])),
     )
     nowplaying.upgrades.templates.UpgradeTemplates(bundledir=bundledir, testdir=testpath)
     compare_content(srcdir, destdir)
