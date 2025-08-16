@@ -149,7 +149,7 @@ def test_upgrade_same(upgrade_bootstrap):  # pylint: disable=redefined-outer-nam
     destdir = os.path.join(testpath, "testsuite", "templates")
     srctemplates = os.listdir(srcdir)
     pathlib.Path(destdir).mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(
+    shutil.copytree(
         os.path.join(srcdir, srctemplates[1]),
         os.path.join(destdir, os.path.basename(srctemplates[1])),
     )
