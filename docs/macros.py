@@ -27,10 +27,10 @@ def define_env(env):
         """
         try:
             return _generate_template_reference()
-        except Exception as e:
-            return f"*Error generating template reference: {e}*"
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            return f"*Error generating template reference: {error}*"
 
-    def _generate_template_reference() -> str:
+    def _generate_template_reference() -> str:  # pylint: disable=too-many-locals
         """Internal function to generate template reference."""
         # Try multiple possible paths for the config directory
         possible_paths = [
@@ -46,14 +46,15 @@ def define_env(env):
                 break
 
         if not config_dir:
-            return f"*Template configuration files not found. Checked: {[str(p) for p in possible_paths]}*"
+            paths_str = [str(path) for path in possible_paths]
+            return f"*Template configuration files not found. Checked: {paths_str}*"
 
         configs = {}
 
         # Load all template configuration files
         for yaml_file in config_dir.glob("*.yaml"):
-            with open(yaml_file, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
+            with open(yaml_file, "r", encoding="utf-8") as file_handle:
+                data = yaml.safe_load(file_handle)
                 if data and "template_families" in data:
                     configs[yaml_file.stem] = data["template_families"]
 

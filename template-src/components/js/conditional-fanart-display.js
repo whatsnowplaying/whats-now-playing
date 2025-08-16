@@ -2,15 +2,15 @@
 function updateDisplay(metadata) {
     // Clear display initially
     $("#image-display").html('');
-    
+
     // Only show if we have track metadata
     if (!metadata.title && !metadata.artist) {
         return;
     }
-    
+
     // Check if this is a video file
     const hasVideo = metadata.has_video === true || metadata.has_video === "true";
-    
+
     if (hasVideo) {
         // For video files, show transparent 1x1 pixel PNG
         const transparentImg = document.createElement("img");
