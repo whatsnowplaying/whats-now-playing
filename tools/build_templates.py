@@ -143,14 +143,35 @@ class TemplateBuilder:
         external_imports: list[str],
     ) -> dict[str, Any]:
         """Create the template rendering context"""
+        # Collect component names for metadata
+        css_components = []
+        if family_config.get("common_css"):
+            css_components.extend(family_config["common_css"])
+        if template_config.get("custom_css"):
+            css_components.extend(template_config["custom_css"])
+
+        js_components = []
+        if template_config.get("display_js"):
+            js_components.append(template_config["display_js"])
+        if template_config.get("effects"):
+            js_components.extend(template_config["effects"])
+        if family_config.get("common_websocket"):
+            js_components.extend(family_config["common_websocket"])
+
         return {
             "template_title": template_config.get("title", template_name),
+            "template_name": template_name,
+            "template_description": template_config.get("description", "No description available"),
             "font_link": family_config.get("font_link") or template_config.get("font_link"),
             "css_content": "\n\n".join(css_parts),
             "js_content": "\n\n".join(js_parts) if js_parts else None,
             "body_content": body_content,
             "external_imports": "\n    ".join(external_imports) if external_imports else None,
             "refresh_rate": template_config.get("refresh_rate"),
+            "image_field": template_config.get("image_field"),
+            "effects": template_config.get("effects", []),
+            "css_components": css_components,
+            "js_components": js_components,
         }
 
     def build_template_family(self, family_name: str, family_config: dict[str, Any]) -> None:

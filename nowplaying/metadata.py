@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 
 import tinytag
 import url_normalize
+import puremagic
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -25,6 +26,13 @@ import nowplaying.musicbrainz
 import nowplaying.tinytag_fixes
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
+
+# File extension constants for video/audio detection
+AUDIO_EXTENSIONS = frozenset([".mp3", ".flac", ".m4a", ".f4a", ".aac", ".ogg", ".wav", ".wma"])
+VIDEO_EXTENSIONS = frozenset(
+    [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v", ".vob", ".ogv"]
+)
+AUDIO_CONTAINER_EXCLUSIONS = frozenset([".m4a", ".f4a"])
 
 if TYPE_CHECKING:
     import nowplaying.imagecache
@@ -516,6 +524,9 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             logging.debug("Cannot create Path object for %s: %s", self.metadata["filename"], error)
             return metadata
 
+        # Detect if file contains video content
+        self.metadata["has_video"] = self._detect_video_content(file_path)
+
         try:
             # Pass pathlib Path directly to tinytag - it will handle the path conversion
             tag = tinytag.TinyTag.get(file_path, image=True)
@@ -570,6 +581,67 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             self.metadata[newkey] = str(value[0])
         else:
             self.metadata[newkey] = value
+
+    @staticmethod
+    def _detect_video_content(file_path: pathlib.Path) -> bool:
+        """Detect if file contains video content using puremagic and file extension analysis.
+
+        Args:
+            file_path: Path to the file to analyze
+
+        Returns:
+            True if file contains video content, False if audio-only or detection fails
+        """
+        try:
+            file_types = puremagic.magic_file(str(file_path))
+            # More precise video detection - prioritize actual file extension over detected types
+            file_extension = file_path.suffix.lower()
+
+            # If file has known audio-only extension, it's definitely not video
+            if file_extension in AUDIO_EXTENSIONS:
+                has_video = False
+            # If file has known video extension, check if it's actually video content
+            elif file_extension in VIDEO_EXTENSIONS:
+                # For ambiguous containers like MP4, check the detected types
+                has_video = False
+                has_audio_indicator = False
+
+                for file_type in file_types:
+                    file_type_str = str(file_type).lower()
+                    # Look for video indicators that aren't specifically audio
+                    if (
+                        "video" in file_type_str
+                        and "audio" not in file_type_str
+                        and file_type.extension not in AUDIO_CONTAINER_EXCLUSIONS
+                    ):
+                        has_video = True
+                        break
+                    # Check for explicit audio indicators
+                    elif "audio" in file_type_str:
+                        has_audio_indicator = True
+
+                # Default to True for known video extensions if no clear audio indication
+                if (
+                    not has_video
+                    and not has_audio_indicator
+                    and file_extension in VIDEO_EXTENSIONS
+                ):
+                    has_video = True
+            else:
+                # Unknown extension, use puremagic detection
+                has_video = any(
+                    "video" in str(file_type).lower() and "audio" not in str(file_type).lower()
+                    for file_type in file_types
+                )
+
+            logging.debug(
+                "Video detection for %s: %s (types: %s)", file_path, has_video, file_types
+            )
+            return has_video
+
+        except Exception as error:  # pylint: disable=broad-except
+            logging.debug("Video detection failed for %s: %s", file_path, error)
+            return False  # Default to audio if detection fails
 
     @staticmethod
     def _decode_musical_key(key_value) -> str | None:

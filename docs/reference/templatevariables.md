@@ -59,6 +59,7 @@ data.
 | duration_hhmmss | Same as duration but in `HH:MM:SS` format (so 1 minute 30 seconds becomes 01:30) |
 | filename | Local filename of the media |
 | genre | Genre of the song |
+| has_video | True if the file contains video content, False for audio-only files |
 | hostip | IP address of the machine running **What's Now Playing** |
 | hostfqdn | Fully qualified hostname of the machine running **What's Now Playing** |
 | hostname | Short hostname of the machine running **What's Now Playing** |

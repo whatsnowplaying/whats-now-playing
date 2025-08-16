@@ -54,3 +54,9 @@ template_families:
         body_layout: single-image-layout
         display_js: single-image-display
         image_field: artistfanart
+
+      ws-artistfanart-conditional:
+        title: "covercard"
+        description: "Conditional Artist Fanart (audio only, transparent for video)"
+        body_layout: single-image-layout
+        display_js: conditional-fanart-display

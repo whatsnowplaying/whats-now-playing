@@ -49,6 +49,7 @@ METADATALIST = [
     "fpcalcfingerprint",
     "genre",
     "genres",
+    "has_video",
     "hostfqdn",
     "hostip",
     "hostname",
@@ -75,6 +76,10 @@ LISTFIELDS = [
     "isrc",
     "musicbrainzalbumid",
     "musicbrainzartistid",
+]
+
+BOOLFIELDS = [
+    "has_video",
 ]
 
 # NOTE: artistfanartraw is never actually stored in this DB
@@ -217,7 +222,9 @@ class MetadataDB:
             for data in mdcopy:
                 if isinstance(mdcopy[data], list):
                     mdcopy[data] = SPLITSTR.join(mdcopy[data])
-                if isinstance(mdcopy[data], str) and len(mdcopy[data]) == 0:
+                elif isinstance(mdcopy[data], bool):
+                    mdcopy[data] = "true" if mdcopy[data] else "false"
+                elif isinstance(mdcopy[data], str) and len(mdcopy[data]) == 0:
                     mdcopy[data] = None
 
             sql = "INSERT INTO currentmeta ("
@@ -292,6 +299,15 @@ class MetadataDB:
             metadata[key] = row[key]
             if metadata[key]:
                 metadata[key] = metadata[key].split(SPLITSTR)
+
+        for key in BOOLFIELDS:
+            metadata[key] = row[key]
+            if metadata[key] == "true":
+                metadata[key] = True
+            elif metadata[key] == "false":
+                metadata[key] = False
+            else:
+                metadata[key] = None  # Handle unexpected values
 
         metadata["dbid"] = row["id"]
         return metadata  # type: ignore[return-value]

@@ -128,6 +128,7 @@ nav:
       - Overview: reference/index.md
       - API Reference: reference/api.md
       - Template Variables: reference/templatevariables.md
+      - Template Reference: reference/templates.md
       - Comparisons: reference/comparisons.md
   - Gallery: gallery.md
   - Contact: contact.md
