@@ -496,9 +496,11 @@ async def test_playlist_read(virtualdj_bootstrap, getroot):  # pylint: disable=r
 
 def test_sax_handler_expanded_metadata():
     """Test VirtualDJSAXHandler extracts expanded metadata fields"""
-    # Create temporary database
-    with tempfile.NamedTemporaryFile() as temp_db:
-        conn = sqlite3.connect(temp_db.name)
+    # Create temporary database - use delete=False for Windows compatibility
+    with tempfile.NamedTemporaryFile(delete=False) as temp_db:
+        temp_db_path = temp_db.name
+    try:
+        conn = sqlite3.connect(temp_db_path)
         cursor = conn.cursor()
 
         # Create songs table with expanded metadata
@@ -549,13 +551,19 @@ def test_sax_handler_expanded_metadata():
         assert row[9] == "5"  # tracknumber
 
         conn.close()
+    finally:
+        # Clean up temporary file
+        if os.path.exists(temp_db_path):
+            os.unlink(temp_db_path)
 
 
 def test_sax_handler_partial_metadata():
     """Test VirtualDJSAXHandler handles missing metadata fields gracefully"""
-    # Create temporary database
-    with tempfile.NamedTemporaryFile() as temp_db:
-        conn = sqlite3.connect(temp_db.name)
+    # Create temporary database - use delete=False for Windows compatibility
+    with tempfile.NamedTemporaryFile(delete=False) as temp_db:
+        temp_db_path = temp_db.name
+    try:
+        conn = sqlite3.connect(temp_db_path)
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -598,3 +606,7 @@ def test_sax_handler_partial_metadata():
         assert row[9] is None  # tracknumber (missing)
 
         conn.close()
+    finally:
+        # Clean up temporary file
+        if os.path.exists(temp_db_path):
+            os.unlink(temp_db_path)
