@@ -14,8 +14,6 @@ import aiosqlite  # pylint: disable=import-error
 from PySide6.QtCore import QStandardPaths  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtWidgets import QFileDialog  # pylint: disable=import-error, no-name-in-module
 
-import nowplaying.utils.sqlite
-
 logging.config.dictConfig(
     {
         "version": 1,
@@ -282,13 +280,7 @@ class Plugin(IcecastPlugin):
 
     async def lookup(self, artist: str | None = None, title: str | None = None):
         """lookup the metadata"""
-
-        async def _connect():
-            return await aiosqlite.connect(self.databasefile)
-
-        async with await nowplaying.utils.sqlite.retry_sqlite_operation_async(
-            _connect
-        ) as connection:
+        async with aiosqlite.connect(self.databasefile) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
             try:
@@ -332,13 +324,7 @@ class Plugin(IcecastPlugin):
 
     async def getrandomtrack(self, playlist: str):
         """return the contents of a playlist"""
-
-        async def _connect():
-            return await aiosqlite.connect(self.databasefile)
-
-        async with await nowplaying.utils.sqlite.retry_sqlite_operation_async(
-            _connect
-        ) as connection:
+        async with aiosqlite.connect(self.databasefile) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
             try:
@@ -418,12 +404,7 @@ class Plugin(IcecastPlugin):
                 "traktor/artist_query_scope", defaultValue="entire_library"
             )
 
-            async def _connect():
-                return await aiosqlite.connect(self.databasefile)
-
-            async with await nowplaying.utils.sqlite.retry_sqlite_operation_async(
-                _connect
-            ) as connection:
+            async with aiosqlite.connect(self.databasefile) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
 

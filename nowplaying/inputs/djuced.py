@@ -48,7 +48,6 @@ from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
-import nowplaying.utils.sqlite
 from nowplaying.types import TrackMetadata
 import nowplaying.utils
 
@@ -185,13 +184,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             "FROM tracks WHERE album=? AND artist=? AND title=? "
             "ORDER BY last_played"
         )
-
-        async def _connect():
-            return await aiosqlite.connect(dbfile, timeout=30)
-
-        async with await nowplaying.utils.sqlite.retry_sqlite_operation_async(
-            _connect
-        ) as connection:
+        async with aiosqlite.connect(dbfile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
             params = (
@@ -263,12 +256,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         dbfile = pathlib.Path(self.djuceddir).joinpath("DJUCED.db")
         playlists = []
 
-        async def _connect():
-            return await aiosqlite.connect(dbfile, timeout=30)
-
-        async with await nowplaying.utils.sqlite.retry_sqlite_operation_async(
-            _connect
-        ) as connection:
+        async with aiosqlite.connect(dbfile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
 
@@ -401,12 +389,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """Get a random track from playlist (handles both static and smart playlists)"""
         dbfile = pathlib.Path(self.djuceddir).joinpath("DJUCED.db")
 
-        async def _connect():
-            return await aiosqlite.connect(dbfile, timeout=30)
-
-        async with await nowplaying.utils.sqlite.retry_sqlite_operation_async(
-            _connect
-        ) as connection:
+        async with aiosqlite.connect(dbfile, timeout=30) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
 
@@ -450,13 +433,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         )
 
         try:
-
-            async def _connect():
-                return await aiosqlite.connect(dbfile, timeout=30)
-
-            async with await nowplaying.utils.sqlite.retry_sqlite_operation_async(
-                _connect
-            ) as connection:
+            async with aiosqlite.connect(dbfile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
 
