@@ -57,6 +57,6 @@ template_families:
 
       ws-artistfanart-conditional:
         title: "covercard"
-        description: "Conditional Artist Fanart (audio only, transparent for video)"
+        description: "Conditional Artist Fanart (audio only, transparent video)"
         body_layout: single-image-layout
         display_js: conditional-fanart-display

@@ -8,10 +8,14 @@ import pathlib
 import shutil
 import sys
 import tempfile
+import tracemalloc
 import unittest.mock
 
 import pytest
 import pytest_asyncio
+
+# Enable tracemalloc to track resource allocations
+tracemalloc.start()
 
 from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=import-error, no-name-in-module
 
