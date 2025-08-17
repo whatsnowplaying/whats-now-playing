@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING, Any
 import aiosqlite
 import diskcache
 import requests_cache
-
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.bootstrap
@@ -84,7 +83,9 @@ class ImageCache:
 
         v1path.rename(self.databasefile)
 
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=30
+        ) as connection:
             cursor = connection.cursor()
             failed = False
             try:
@@ -112,7 +113,9 @@ class ImageCache:
         logging.info("Create imagecache db file %s", self.databasefile)
         self.databasefile.resolve().parent.mkdir(parents=True, exist_ok=True)
 
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=30
+        ) as connection:
             cursor = connection.cursor()
 
             try:
@@ -133,8 +136,9 @@ class ImageCache:
             self.setup_sql()
             return None
 
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = sqlite3.Row
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=30, row_factory=sqlite3.Row
+        ) as connection:
             cursor = connection.cursor()
             try:
                 cursor.execute(
@@ -200,8 +204,9 @@ class ImageCache:
             self.setup_sql()
             return None
 
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = sqlite3.Row
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=30, row_factory=sqlite3.Row
+        ) as connection:
             cursor = connection.cursor()
             try:
                 cursor.execute(
@@ -229,8 +234,9 @@ class ImageCache:
             self.setup_sql()
             return None
 
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = sqlite3.Row
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=30, row_factory=sqlite3.Row
+        ) as connection:
             cursor = connection.cursor()
             try:
                 _ = cursor.execute("""SELECT * FROM identifiersha WHERE cachekey=?""", (cachekey,))
@@ -256,8 +262,9 @@ class ImageCache:
             self.setup_sql()
             return cache_keys
 
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = sqlite3.Row
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=30, row_factory=sqlite3.Row
+        ) as connection:
             cursor = connection.cursor()
 
             try:
@@ -330,8 +337,9 @@ class ImageCache:
             logging.error("imagecache does not exist yet?")
             return None
 
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = dict_factory
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=30, row_factory=dict_factory
+        ) as connection:
             cursor = connection.cursor()
             try:
                 cursor.execute("""SELECT * FROM identifiersha WHERE cachekey IS NULL
@@ -391,8 +399,9 @@ ORDER BY TIMESTAMP DESC""")
         normalidentifier = nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True)
 
         def _do_put():
-            with sqlite3.connect(self.databasefile, timeout=30) as connection:
-                connection.row_factory = sqlite3.Row
+            with nowplaying.utils.sqlite.sqlite_connection(
+                self.databasefile, timeout=30, row_factory=sqlite3.Row
+            ) as connection:
                 cursor = connection.cursor()
 
                 sql = """
@@ -435,8 +444,9 @@ INSERT OR REPLACE INTO
             return
 
         def _do_put_srclocation():
-            with sqlite3.connect(self.databasefile, timeout=30) as connection:
-                connection.row_factory = sqlite3.Row
+            with nowplaying.utils.sqlite.sqlite_connection(
+                self.databasefile, timeout=30, row_factory=sqlite3.Row
+            ) as connection:
                 cursor = connection.cursor()
 
                 sql = """
@@ -474,8 +484,9 @@ VALUES (?,?,?);
         logging.debug("Erasing %s", srclocation)
 
         def _do_erase():
-            with sqlite3.connect(self.databasefile, timeout=30) as connection:
-                connection.row_factory = sqlite3.Row
+            with nowplaying.utils.sqlite.sqlite_connection(
+                self.databasefile, timeout=30, row_factory=sqlite3.Row
+            ) as connection:
                 cursor = connection.cursor()
                 cursor.execute("DELETE FROM identifiersha WHERE srclocation=?;", (srclocation,))
                 connection.commit()
@@ -518,7 +529,9 @@ VALUES (?,?,?);
             return
 
         try:
-            with sqlite3.connect(self.databasefile, timeout=30) as connection:
+            with nowplaying.utils.sqlite.sqlite_connection(
+                self.databasefile, timeout=30
+            ) as connection:
                 logging.debug("Vacuuming image cache database...")
                 connection.execute("VACUUM")
                 connection.commit()
@@ -708,9 +721,13 @@ VALUES (?,?,?);
             del recently_processed[key]
             logging.debug("removing %s from recently processed tracking", key)
 
+    def close(self) -> None:
+        """Close the diskcache to release file handles"""
+        self.cache.close()
+
     def stop_process(self) -> None:
         """stop the bg ImageCache process"""
         logging.debug("imagecache stop_process called")
         self.put_db_srclocation("STOPWNP", "STOPWNP", imagetype="STOPWNP")
-        self.cache.close()
+        self.close()
         logging.debug("WNP should be set")

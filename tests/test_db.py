@@ -18,6 +18,13 @@ def results(expected, metadata):
 
 
 @pytest.mark.asyncio
+async def test_simple_check(bootstrap):  # pylint: disable=unused-argument
+    """test writing false data"""
+    metadb = nowplaying.db.MetadataDB(initialize=True)
+    assert metadb
+
+
+@pytest.mark.asyncio
 async def test_empty_db(bootstrap):  # pylint: disable=unused-argument
     """test writing false data"""
     metadb = nowplaying.db.MetadataDB(initialize=True)

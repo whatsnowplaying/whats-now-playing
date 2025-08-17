@@ -59,16 +59,7 @@ async def imagecache_with_dir(bootstrap):
     dbdir.mkdir()
     cache = nowplaying.imagecache.ImageCache(cachedir=dbdir)
     yield cache
-
-    # Cleanup: close cache to release file handles
-    with contextlib.suppress(Exception):
-        if hasattr(cache, "close"):
-            cache.close()
-        # Force close any database connections
-        if hasattr(cache, "databasefile"):
-            with contextlib.suppress(sqlite3.Error, Exception):
-                conn = sqlite3.connect(cache.databasefile)
-                conn.close()
+    cache.close()
 
 
 @pytest_asyncio.fixture
@@ -88,14 +79,7 @@ async def imagecache_with_stopevent(bootstrap):
 
     # Cleanup: close all created caches to release file handles
     for cache in created_caches:
-        with contextlib.suppress(Exception):
-            if hasattr(cache, "close"):
-                cache.close()
-            # Force close any database connections
-            if hasattr(cache, "databasefile"):
-                with contextlib.suppress(sqlite3.Error, Exception):
-                    conn = sqlite3.connect(cache.databasefile)
-                    conn.close()
+        cache.close()
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
@@ -180,7 +164,7 @@ async def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-n
     assert image == cachedimage
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
+#@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.asyncio
 async def test_randomfailure(get_imagecache):  # pylint: disable=redefined-outer-name
     """test db del 1"""

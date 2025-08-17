@@ -159,7 +159,7 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
 
     def _build_temp_database(self, xml_file: pathlib.Path, table_schemas: list[str]) -> None:
         """Build temporary database using streaming parser"""
-        with sqlite3.connect(self.temp_database_path) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(self.temp_database_path) as connection:
             cursor = connection.cursor()
 
             # Create tables from schemas (use provided schemas or instance schemas)

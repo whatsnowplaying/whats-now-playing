@@ -175,10 +175,6 @@ class OBSWebSocketHandler:  # pylint: disable=too-many-instance-attributes
         if self.watcher:
             self.watcher.stop()
 
-    def __del__(self):
-        logging.debug("Stopping OBSWS")
-        self.stop()
-
 
 def start(stopevent, bundledir, testmode=False):  # pylint: disable=unused-argument
     """multiprocessing start hook"""
