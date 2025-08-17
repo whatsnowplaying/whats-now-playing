@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from aioresponses import aioresponses
 
-import nowplaying.kick.oauth2  # pylint: disable=import-error,no-name-in-module
 import nowplaying.kick.chat  # pylint: disable=import-error,no-name-in-module
 import nowplaying.kick.launch  # pylint: disable=import-error,no-name-in-module
+import nowplaying.kick.oauth2  # pylint: disable=import-error,no-name-in-module
 import nowplaying.kick.settings  # pylint: disable=import-error,no-name-in-module
 from nowplaying.kick.constants import OAUTH_HOST  # pylint: disable=import-error,no-name-in-module
 

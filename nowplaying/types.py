@@ -46,6 +46,7 @@ class TrackMetadata(TypedDict, total=False):
     coverimagetype: str
     coverurl: str
     coverimageraw: bytes
+    has_video: bool
 
     # Identifiers and codes
     isrc: list[str]

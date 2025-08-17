@@ -9,7 +9,6 @@ Refactored version using parameterization to reduce duplication.
 
 import asyncio
 import gc
-import sqlite3
 import tempfile
 import time
 import unittest.mock
@@ -21,7 +20,7 @@ import nowplaying.inputs.djuced
 import nowplaying.inputs.traktor
 import nowplaying.inputs.virtualdj
 import nowplaying.serato.plugin
-
+import nowplaying.utils.sqlite
 
 # Test data shared across all plugins
 TEST_TRACKS = [
@@ -59,7 +58,7 @@ def traktor_database():
         db_path = temp_file.name
 
     def _create_database():
-        with sqlite3.connect(db_path, timeout=30.0) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(db_path, timeout=30.0) as connection:
             connection.execute("""
                 CREATE TABLE songs (
                     id INTEGER PRIMARY KEY,
@@ -121,7 +120,7 @@ def djuced_database():
         djuced_db_path = djuced_file.name
 
     def _create_database():
-        with sqlite3.connect(djuced_db_path, timeout=30.0) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(djuced_db_path, timeout=30.0) as connection:
             connection.execute("""
                 CREATE TABLE tracks (
                     id INTEGER PRIMARY KEY,
@@ -197,7 +196,7 @@ def virtualdj_databases():
         playlists_db_path = playlists_file.name
 
     def _create_songs_database():
-        with sqlite3.connect(songs_db_path, timeout=30.0) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(songs_db_path, timeout=30.0) as connection:
             connection.execute("""
                 CREATE TABLE songs (
                     id INTEGER PRIMARY KEY,
@@ -216,7 +215,9 @@ def virtualdj_databases():
             connection.commit()
 
     def _create_playlists_database():
-        with sqlite3.connect(playlists_db_path, timeout=30.0) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(
+            playlists_db_path, timeout=30.0
+        ) as connection:
             connection.execute("""
                 CREATE TABLE playlists (
                     id INTEGER PRIMARY KEY,

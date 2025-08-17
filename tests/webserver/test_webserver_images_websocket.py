@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """test Images WebSocket API in webserver"""
 
-import sys
 import json
 
 import pytest
@@ -9,7 +8,6 @@ import websockets
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 async def test_images_websocket_hello(webserver_with_imagecache):
     """test Images WebSocket hello handshake"""
     _, _, _, port = webserver_with_imagecache
@@ -32,7 +30,6 @@ async def test_images_websocket_hello(webserver_with_imagecache):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.parametrize("category", ["fanart", "banner", "logo", "thumbnail"])
 async def test_images_websocket_list_images_no_artist(webserver_with_imagecache, category):
     """test Images WebSocket list_images without artist"""
@@ -60,7 +57,6 @@ async def test_images_websocket_list_images_no_artist(webserver_with_imagecache,
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.parametrize("category", ["fanart", "banner", "logo", "thumbnail"])
 async def test_images_websocket_list_images_with_artist(webserver_with_imagecache, category):
     """test Images WebSocket list_images with artist"""
@@ -91,7 +87,6 @@ async def test_images_websocket_list_images_with_artist(webserver_with_imagecach
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 async def test_images_websocket_get_images_unsupported_data_type(webserver_with_imagecache):
     """test Images WebSocket get_images with unsupported data_type"""
     _, _, _, port = webserver_with_imagecache
@@ -118,7 +113,6 @@ async def test_images_websocket_get_images_unsupported_data_type(webserver_with_
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 async def test_images_websocket_get_images_missing_artist(webserver_with_imagecache):
     """test Images WebSocket get_images with missing artist parameter"""
     _, _, _, port = webserver_with_imagecache
@@ -145,7 +139,6 @@ async def test_images_websocket_get_images_missing_artist(webserver_with_imageca
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 async def test_images_websocket_unknown_message_type_check_new_keys(webserver_with_imagecache):
     """test Images WebSocket with old check_new_keys message type"""
     _, _, _, port = webserver_with_imagecache
@@ -167,7 +160,6 @@ async def test_images_websocket_unknown_message_type_check_new_keys(webserver_wi
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 async def test_images_websocket_unknown_message_type_get_image(webserver_with_imagecache):
     """test Images WebSocket with old get_image message type"""
     _, _, _, port = webserver_with_imagecache
@@ -187,7 +179,6 @@ async def test_images_websocket_unknown_message_type_get_image(webserver_with_im
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 async def test_images_websocket_invalid_json(webserver_with_imagecache):
     """test Images WebSocket with invalid JSON"""
     _, _, _, port = webserver_with_imagecache
@@ -208,7 +199,6 @@ async def test_images_websocket_invalid_json(webserver_with_imagecache):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 async def test_images_websocket_unknown_message_type(webserver_with_imagecache):
     """test Images WebSocket with unknown message type"""
     _, _, _, port = webserver_with_imagecache
@@ -230,7 +220,6 @@ async def test_images_websocket_unknown_message_type(webserver_with_imagecache):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.parametrize("category", ["fanart", "banner", "logo", "thumbnail"])
 async def test_images_websocket_get_artist_images_by_category(webserver_with_imagecache, category):
     """test Images WebSocket get_images for all artist image categories"""
@@ -261,7 +250,6 @@ async def test_images_websocket_get_artist_images_by_category(webserver_with_ima
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 async def test_images_websocket_get_artist_unsupported_category(webserver_with_imagecache):
     """test Images WebSocket get_images with unsupported category"""
     _, _, _, port = webserver_with_imagecache
@@ -288,7 +276,6 @@ async def test_images_websocket_get_artist_unsupported_category(webserver_with_i
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 async def test_images_websocket_get_images_missing_category(webserver_with_imagecache):
     """test Images WebSocket get_images without category parameter"""
     _, _, _, port = webserver_with_imagecache
@@ -314,7 +301,6 @@ async def test_images_websocket_get_images_missing_category(webserver_with_image
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 async def test_images_websocket_list_images_missing_category(webserver_with_imagecache):
     """test Images WebSocket list_images without category parameter"""
     _, _, _, port = webserver_with_imagecache

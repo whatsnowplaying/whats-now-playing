@@ -4,14 +4,13 @@
 import os
 
 import pytest
-
 from utils_artistextras import (
     configureplugins,
     configuresettings,
-    skip_no_fanarttv_key,
-    run_cache_consistency_test,
     run_api_call_count_test,
+    run_cache_consistency_test,
     run_failure_cache_test,
+    skip_no_fanarttv_key,
 )
 
 

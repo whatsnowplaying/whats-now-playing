@@ -2,7 +2,9 @@
 
 **What's Now Playing** has quite a bit of flexibility in what kind of
 output you can generate to the point that there are nearly infinite
-possibilities. The text versions are meant to be used to feed other
+possibilities. For a complete list of all available templates with descriptions, see the [Template Reference](reference/templates.md).
+
+The text versions are meant to be used to feed other
 systems and are rather basic. E.g., the basic text template generates:
 
 > Utah Saints - Something Good '08

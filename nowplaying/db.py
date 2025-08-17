@@ -5,22 +5,23 @@ import copy
 import logging
 import os
 import pathlib
-import sys
 import sqlite3
+import sys
 import time
 from typing import TYPE_CHECKING, Any
 
 import aiosqlite
-
 import watchdog.observers.api  # pylint: disable=import-error, no-name-in-module
-from watchdog.observers import Observer  # pylint: disable=import-error
-from watchdog.events import PatternMatchingEventHandler  # pylint: disable=import-error
-
 from PySide6.QtCore import QStandardPaths  # pylint: disable=import-error, no-name-in-module
+from watchdog.events import PatternMatchingEventHandler  # pylint: disable=import-error
+from watchdog.observers import Observer  # pylint: disable=import-error
+
+import nowplaying.utils.sqlite
 
 if TYPE_CHECKING:
-    from nowplaying.types import TrackMetadata
     import nowplaying.config
+    from nowplaying.types import TrackMetadata
+
 
 SPLITSTR = "@@SPLITHERE@@"
 
@@ -49,6 +50,7 @@ METADATALIST = [
     "fpcalcfingerprint",
     "genre",
     "genres",
+    "has_video",
     "hostfqdn",
     "hostip",
     "hostname",
@@ -75,6 +77,10 @@ LISTFIELDS = [
     "isrc",
     "musicbrainzalbumid",
     "musicbrainzartistid",
+]
+
+BOOLFIELDS = [
+    "has_video",
 ]
 
 # NOTE: artistfanartraw is never actually stored in this DB
@@ -141,9 +147,6 @@ class DBWatcher:
         if self.callback:
             self.callback(self)
 
-    def __del__(self):
-        self.stop()
-
 
 class MetadataDB:
     """Metadata DB module"""
@@ -174,11 +177,6 @@ class MetadataDB:
         self.watchers.add(watcher)
         watcher._set_callback(self.watchers.discard)  # pylint: disable=protected-access
         return watcher
-
-    def __del__(self):
-        for watcher in copy.copy(self.watchers):
-            logging.exception("Clearing leftover watcher")
-            watcher.stop()
 
     async def write_to_metadb(self, metadata: "TrackMetadata | None" = None) -> None:
         """update metadb"""
@@ -217,7 +215,9 @@ class MetadataDB:
             for data in mdcopy:
                 if isinstance(mdcopy[data], list):
                     mdcopy[data] = SPLITSTR.join(mdcopy[data])
-                if isinstance(mdcopy[data], str) and len(mdcopy[data]) == 0:
+                elif isinstance(mdcopy[data], bool):
+                    mdcopy[data] = "true" if mdcopy[data] else "false"
+                elif isinstance(mdcopy[data], str) and len(mdcopy[data]) == 0:
                     mdcopy[data] = None
 
             sql = "INSERT INTO currentmeta ("
@@ -235,8 +235,9 @@ class MetadataDB:
             logging.error("MetadataDB does not exist yet?")
             return None
 
-        with sqlite3.connect(self.databasefile, timeout=10) as connection:
-            connection.row_factory = sqlite3.Row
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=10, row_factory=sqlite3.Row
+        ) as connection:
             cursor = connection.cursor()
             try:
                 cursor.execute("""SELECT artist, title FROM currentmeta ORDER BY id DESC""")
@@ -244,6 +245,7 @@ class MetadataDB:
                 return None
 
             records = cursor.fetchall()
+            cursor.close()
 
         previouslist = []
         if records:
@@ -293,6 +295,18 @@ class MetadataDB:
             if metadata[key]:
                 metadata[key] = metadata[key].split(SPLITSTR)
 
+        for key in BOOLFIELDS:
+            if key in row.keys():
+                metadata[key] = row[key]
+                if metadata[key] == "true":
+                    metadata[key] = True
+                elif metadata[key] == "false":
+                    metadata[key] = False
+                else:
+                    metadata[key] = None  # Handle unexpected values
+            else:
+                metadata[key] = None  # Default for missing fields
+
         metadata["dbid"] = row["id"]
         return metadata  # type: ignore[return-value]
 
@@ -330,8 +344,9 @@ class MetadataDB:
             logging.error("MetadataDB does not exist yet?")
             return None
 
-        with sqlite3.connect(self.databasefile, timeout=10) as connection:
-            connection.row_factory = sqlite3.Row
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=10, row_factory=sqlite3.Row
+        ) as connection:
             cursor = connection.cursor()
             try:
                 cursor.execute("""SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1""")
@@ -340,6 +355,7 @@ class MetadataDB:
                 return None
 
             row = cursor.fetchone()
+            cursor.close()
             if not row:
                 return None
 
@@ -359,7 +375,9 @@ class MetadataDB:
             logging.info("Clearing cache file %s", self.databasefile)
             os.unlink(self.databasefile)
 
-        with sqlite3.connect(self.databasefile, timeout=10) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=10
+        ) as connection:
             cursor = connection.cursor()
 
             sql = "CREATE TABLE currentmeta (id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -367,7 +385,8 @@ class MetadataDB:
             sql += " BLOB, ".join(METADATABLOBLIST) + " BLOB)"
 
             cursor.execute(sql)
-            logging.debug("Cache db file created")
+            cursor.close()
+        logging.debug("Cache db file created")
 
 
 def create_setlist(

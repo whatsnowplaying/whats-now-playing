@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """test m3u"""
 
+import logging
 import os
 import pathlib
-import logging
 import shutil
 import tempfile
 

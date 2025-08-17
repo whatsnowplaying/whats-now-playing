@@ -7,8 +7,6 @@ import asyncio
 import contextlib
 import logging
 import multiprocessing
-import sqlite3
-import sys
 import time
 from unittest.mock import patch
 
@@ -18,6 +16,7 @@ import requests
 
 import nowplaying.imagecache  # pylint: disable=import-error
 import nowplaying.utils  # pylint: disable=import-error
+import nowplaying.utils.sqlite
 
 TEST_URLS = [
     "https://www.theaudiodb.com/images/media/artist/fanart/numan-gary-5026a93c591b1.jpg",
@@ -59,16 +58,7 @@ async def imagecache_with_dir(bootstrap):
     dbdir.mkdir()
     cache = nowplaying.imagecache.ImageCache(cachedir=dbdir)
     yield cache
-
-    # Cleanup: close cache to release file handles
-    with contextlib.suppress(Exception):
-        if hasattr(cache, "close"):
-            cache.close()
-        # Force close any database connections
-        if hasattr(cache, "databasefile"):
-            with contextlib.suppress(sqlite3.Error, Exception):
-                conn = sqlite3.connect(cache.databasefile)
-                conn.close()
+    cache.close()
 
 
 @pytest_asyncio.fixture
@@ -88,17 +78,9 @@ async def imagecache_with_stopevent(bootstrap):
 
     # Cleanup: close all created caches to release file handles
     for cache in created_caches:
-        with contextlib.suppress(Exception):
-            if hasattr(cache, "close"):
-                cache.close()
-            # Force close any database connections
-            if hasattr(cache, "databasefile"):
-                with contextlib.suppress(sqlite3.Error, Exception):
-                    conn = sqlite3.connect(cache.databasefile)
-                    conn.close()
+        cache.close()
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.asyncio
 async def test_ic_upgrade(bootstrap):
     """setup the image cache for testing"""
@@ -107,7 +89,9 @@ async def test_ic_upgrade(bootstrap):
     dbdir = config.testdir.joinpath("imagecache")
     dbdir.mkdir()
 
-    with sqlite3.connect(dbdir.joinpath("imagecachev1.db"), timeout=30) as connection:
+    with nowplaying.utils.sqlite.sqlite_connection(
+        dbdir.joinpath("imagecachev1.db"), timeout=30
+    ) as connection:
         cursor = connection.cursor()
 
         v1tabledef = """
@@ -153,7 +137,6 @@ def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
             logging.debug("Found it at %s", cachekey)
 
 
-# @pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.asyncio
 async def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
     """get a 'random' image'"""
@@ -180,7 +163,6 @@ async def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-n
     assert image == cachedimage
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.asyncio
 async def test_randomfailure(get_imagecache):  # pylint: disable=redefined-outer-name
     """test db del 1"""
@@ -317,7 +299,9 @@ async def test_get_next_dlset_empty_database(bootstrap):
         # Clean up SQLite WAL files to prevent flaky test failures
         if imagecache.databasefile.exists():
             with contextlib.suppress(Exception):
-                with sqlite3.connect(imagecache.databasefile, timeout=5) as conn:
+                with nowplaying.utils.sqlite.sqlite_connection(
+                    imagecache.databasefile, timeout=5
+                ) as conn:
                     conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
                     conn.execute("PRAGMA journal_mode=DELETE")
 

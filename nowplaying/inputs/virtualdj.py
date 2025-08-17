@@ -15,6 +15,7 @@ from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 import nowplaying.utils
+import nowplaying.utils.sqlite
 import nowplaying.utils.xml
 from nowplaying.db import LISTFIELDS
 from nowplaying.exceptions import PluginVerifyError
@@ -327,8 +328,8 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
     @staticmethod
     def _write_playlist(sqlcursor, playlist, filelist):
         """take the collections XML and save the playlists off"""
-        columns = ', '.join(PLAYLIST)
-        placeholders = ', '.join('?' * len(PLAYLIST))
+        columns = ", ".join(PLAYLIST)
+        placeholders = ", ".join("?" * len(PLAYLIST))
         sql = f"INSERT INTO playlists ({columns}) VALUES ({placeholders})"
         for entry in filelist:
             if isinstance(entry, dict):
@@ -426,7 +427,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
         if database_path.exists():
             database_path.unlink()
 
-        with sqlite3.connect(database_path) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(database_path) as connection:
             cursor = connection.cursor()
             sql = "CREATE TABLE IF NOT EXISTS playlists ("
             sql += " TEXT, ".join(PLAYLIST) + " TEXT, "

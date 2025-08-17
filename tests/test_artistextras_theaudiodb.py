@@ -5,12 +5,11 @@ import logging
 import os
 
 import pytest
-
 from utils_artistextras import (
     configureplugins,
     configuresettings,
-    skip_no_theaudiodb_key,
     run_api_call_count_test,
+    skip_no_theaudiodb_key,
 )
 
 

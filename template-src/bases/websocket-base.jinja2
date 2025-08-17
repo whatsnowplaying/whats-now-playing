@@ -1,4 +1,35 @@
 <!DOCTYPE HTML>
+<!--
+Template Metadata (AI-parseable):
+{
+  "name": "{{template_name}}",
+  "description": "{{template_description}}",
+  "type": "websocket",
+  "base": "websocket-base",
+  "image_field": "{{image_field|default('none')}}",
+  "effects": {{effects|default('[]')|tojson}},
+  "css_components": {{css_components|default('[]')|tojson}},
+  "js_components": {{js_components|default('[]')|tojson}},
+  "purpose": "Real-time display using WebSocket streaming",
+  "customizable_elements": {
+    "colors": "CSS color properties in style section",
+    "fonts": "Font family and size in CSS",
+    "layout": "HTML structure in body",
+    "animations": "JavaScript effects and transitions"
+  },
+  "websocket_endpoints": {
+    "metadata": "/api/current-song",
+    "fanart": "/api/artist-fanart"
+  },
+  "documentation": {
+    "template_variables": "https://whatsnowplaying.github.io/whats-now-playing/latest/reference/templatevariables/",
+    "api_reference": "https://whatsnowplaying.github.io/whats-now-playing/latest/reference/api/",
+    "template_reference": "https://whatsnowplaying.github.io/whats-now-playing/latest/reference/templates/",
+    "gallery_examples": "https://whatsnowplaying.github.io/whats-now-playing/latest/gallery/",
+    "websocket_guide": "https://whatsnowplaying.github.io/whats-now-playing/latest/output/obswebsocket/"
+  }
+}
+-->
 <html>
 
 <head>

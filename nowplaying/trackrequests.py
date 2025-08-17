@@ -171,7 +171,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                         error,
                     )
 
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=30
+        ) as connection:
             cursor = connection.cursor()
             try:
                 sql = (
@@ -206,7 +208,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         if not self.databasefile.exists():
             return
         try:
-            with sqlite3.connect(self.databasefile, timeout=30) as connection:
+            with nowplaying.utils.sqlite.sqlite_connection(
+                self.databasefile, timeout=30
+            ) as connection:
                 logging.debug("Vacuuming requests database...")
                 connection.execute("VACUUM")
                 connection.commit()
@@ -216,7 +220,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
 
     def clear_roulette_artist_dupes(self):
         """clear out artists from the roulette table"""
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=30
+        ) as connection:
             cursor = connection.cursor()
             try:
                 sql = (
@@ -359,7 +365,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             return
 
         sql = "UPDATE userrequest SET filename=? WHERE reqid=?"
-        with sqlite3.connect(self.databasefile, timeout=30) as connection:
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=30
+        ) as connection:
             try:
                 connection.row_factory = sqlite3.Row
                 cursor = connection.cursor()
@@ -376,8 +384,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             return
 
         def _do_erase():
-            with sqlite3.connect(self.databasefile, timeout=30) as connection:
-                connection.row_factory = sqlite3.Row
+            with nowplaying.utils.sqlite.sqlite_connection(
+                self.databasefile, timeout=30, row_factory=sqlite3.Row
+            ) as connection:
                 cursor = connection.cursor()
                 cursor.execute("DELETE FROM userrequest WHERE reqid=?;", (reqid,))
                 connection.commit()
@@ -1102,8 +1111,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             return None
 
         def _do_get_dataset():
-            with sqlite3.connect(self.databasefile, timeout=30) as connection:
-                connection.row_factory = sqlite3.Row
+            with nowplaying.utils.sqlite.sqlite_connection(
+                self.databasefile, timeout=30, row_factory=sqlite3.Row
+            ) as connection:
                 cursor = connection.cursor()
                 cursor.execute("""SELECT * FROM userrequest""")
                 dataset = cursor.fetchall()

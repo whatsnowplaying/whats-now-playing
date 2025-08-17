@@ -2,13 +2,14 @@
 """SQLite utility functions for nowplaying"""
 
 import asyncio
+import contextlib
 import logging
 import os
 import random
 import sqlite3
 import time
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, Iterator
 
 
 def retry_sqlite_operation(
@@ -136,3 +137,34 @@ async def retry_sqlite_operation_async(
                 continue
             logging.exception("SQLite operation failed after retries")
             raise
+
+
+@contextlib.contextmanager
+def sqlite_connection(
+    database_path: str, timeout: int = 10, row_factory=None
+) -> Iterator[sqlite3.Connection]:
+    """Context manager for sqlite3 connections that properly handles cleanup in Python 3.13.
+
+    This wrapper uses nested context managers to ensure both proper transaction handling
+    and proper connection cleanup, avoiding ResourceWarnings in Python 3.13.
+
+    Args:
+        database_path: Path to SQLite database file
+        timeout: Connection timeout in seconds
+        row_factory: Optional row factory (e.g., sqlite3.Row)
+
+    Yields:
+        sqlite3.Connection object ready for use
+
+    Example:
+        with sqlite_connection("path/to/db.sqlite", row_factory=sqlite3.Row) as connection:
+            cursor = connection.cursor()
+            cursor.execute("SELECT * FROM table")
+            rows = cursor.fetchall()
+            cursor.close()
+    """
+    with contextlib.closing(sqlite3.connect(database_path, timeout=timeout)) as connection:
+        if row_factory:
+            connection.row_factory = row_factory
+        with connection:
+            yield connection

@@ -2,11 +2,10 @@
 """test m3u"""
 
 import asyncio
-import pathlib
-import os
-import sys
-
 import logging
+import os
+import pathlib
+import sys
 
 import pytest
 import watchdog.observers.polling  # pylint: disable=import-error

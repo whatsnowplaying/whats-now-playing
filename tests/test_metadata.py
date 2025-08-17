@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """test metadata"""
 
-import os
 import logging
 import multiprocessing
-import sqlite3
+import os
 import types
 
 import pytest
 import pytest_asyncio
 
 import nowplaying.bootstrap  # pylint: disable=import-error
+import nowplaying.imagecache  # pylint: disable=import-error,no-member
 import nowplaying.metadata  # pylint: disable=import-error
 import nowplaying.upgrade  # pylint: disable=import-error
 import nowplaying.upgrades.config  # pylint: disable=import-error
-import nowplaying.imagecache  # pylint: disable=import-error,no-member
+import nowplaying.utils.sqlite
 
 
 @pytest_asyncio.fixture
@@ -745,7 +745,9 @@ async def test_multiimage(get_imagecache, getroot, multifilename):  # pylint: di
     )
 
     assert metadataout["coverimageraw"]
-    with sqlite3.connect(imagecache.databasefile, timeout=30) as connection:
+    with nowplaying.utils.sqlite.sqlite_connection(
+        imagecache.databasefile, timeout=30
+    ) as connection:
         cursor = connection.cursor()
         cursor.execute(
             '''SELECT COUNT(cachekey) FROM identifiersha WHERE imagetype="front_cover"'''
@@ -772,7 +774,9 @@ async def test_preset_image(get_imagecache, getroot):  # pylint: disable=redefin
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain, imagecache=imagecache
     )
-    with sqlite3.connect(imagecache.databasefile, timeout=30) as connection:
+    with nowplaying.utils.sqlite.sqlite_connection(
+        imagecache.databasefile, timeout=30
+    ) as connection:
         cursor = connection.cursor()
         cursor.execute(
             '''SELECT COUNT(cachekey) FROM identifiersha WHERE imagetype="front_cover"'''

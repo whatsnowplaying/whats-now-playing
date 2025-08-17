@@ -59,6 +59,7 @@ data.
 | duration_hhmmss | Same as duration but in `HH:MM:SS` format (so 1 minute 30 seconds becomes 01:30) |
 | filename | Local filename of the media |
 | genre | Genre of the song |
+| has_video | True if the file contains video content, False for audio-only files |
 | hostip | IP address of the machine running **What's Now Playing** |
 | hostfqdn | Fully qualified hostname of the machine running **What's Now Playing** |
 | hostname | Short hostname of the machine running **What's Now Playing** |
@@ -96,13 +97,17 @@ variables to the empty string. Instead of having to render a template
 as:
 
 ``` jinja
+{%- raw -%}
 {% if variable is defined and variable is not none and variable|length %}
+{%- endraw -%}
 ```
 
 This can be short-cut to:
 
 ``` jinja
+{%- raw -%}
 {% if variable %}
+{%- endraw -%}
 ```
 
 since the variable will always be defined. This also means that

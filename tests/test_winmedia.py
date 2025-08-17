@@ -4,6 +4,7 @@
 import sys
 
 import pytest
+
 import nowplaying.inputs.winmedia  # pylint: disable=import-error
 
 

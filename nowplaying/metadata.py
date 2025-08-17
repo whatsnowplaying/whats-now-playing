@@ -4,6 +4,7 @@
 import asyncio
 import base64
 import binascii
+import contextlib
 import copy
 import json
 import logging
@@ -17,6 +18,7 @@ from typing import TYPE_CHECKING
 
 import tinytag
 import url_normalize
+import puremagic
 
 import nowplaying.bootstrap
 import nowplaying.config
@@ -25,6 +27,13 @@ import nowplaying.musicbrainz
 import nowplaying.tinytag_fixes
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
+
+# File extension constants for video/audio detection
+AUDIO_EXTENSIONS = frozenset([".mp3", ".flac", ".m4a", ".f4a", ".aac", ".ogg", ".wav", ".wma"])
+VIDEO_EXTENSIONS = frozenset(
+    [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v", ".vob", ".ogv"]
+)
+AUDIO_CONTAINER_EXCLUSIONS = frozenset([".m4a", ".f4a"])
 
 if TYPE_CHECKING:
     import nowplaying.imagecache
@@ -516,6 +525,9 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             logging.debug("Cannot create Path object for %s: %s", self.metadata["filename"], error)
             return metadata
 
+        # Detect if file contains video content
+        self.metadata["has_video"] = self._detect_video_content(file_path)
+
         try:
             # Pass pathlib Path directly to tinytag - it will handle the path conversion
             tag = tinytag.TinyTag.get(file_path, image=True)
@@ -572,6 +584,98 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             self.metadata[newkey] = value
 
     @staticmethod
+    def _detect_video_content(file_path: pathlib.Path) -> bool:  # pylint: disable=too-many-return-statements,too-many-branches
+        """Detect if file contains video content using puremagic and file extension analysis.
+
+        Args:
+            file_path: Path to the file to analyze
+
+        Returns:
+            True if file contains video content, False if audio-only or detection fails
+        """
+        try:
+            # Short-circuit: Check file extension first to avoid expensive puremagic call
+            file_extension = file_path.suffix.lower()
+
+            # If file has known audio-only extension, it's definitely not video
+            if file_extension in AUDIO_EXTENSIONS:
+                logging.debug("Video detection for %s: False (audio extension)", file_path)
+                return False
+
+            # If file has known video extension, it's likely video
+            # (but we'll verify with puremagic for containers)
+            if file_extension in VIDEO_EXTENSIONS:
+                # For most video extensions, we can confidently assume video content
+                # Only use puremagic for ambiguous containers that could be audio-only
+                ambiguous_containers = {".mp4", ".m4v", ".mov"}
+                if file_extension not in ambiguous_containers:
+                    logging.debug("Video detection for %s: True (video extension)", file_path)
+                    return True
+
+            # Only call expensive puremagic detection for unknown or ambiguous extensions
+            file_types = puremagic.magic_file(str(file_path))
+
+            # Analyze file types to determine video content
+            if file_extension in VIDEO_EXTENSIONS:
+                # For ambiguous containers, check the detected types
+                has_video = False
+                has_audio_indicator = False
+
+                for file_type in file_types:
+                    file_type_str = str(file_type).lower()
+                    # Look for video indicators that aren't specifically audio
+                    if (
+                        "video" in file_type_str
+                        and "audio" not in file_type_str
+                        and file_type.extension not in AUDIO_CONTAINER_EXCLUSIONS
+                    ):
+                        has_video = True
+                        break
+                    # Check for explicit audio indicators
+                    if "audio" in file_type_str:
+                        has_audio_indicator = True
+
+                # Default to True for known video extensions if no clear audio indication
+                if not has_video and not has_audio_indicator:
+                    has_video = True
+            else:
+                # Unknown extension, use puremagic detection
+                has_video = any(
+                    "video" in str(file_type).lower() and "audio" not in str(file_type).lower()
+                    for file_type in file_types
+                )
+
+            logging.debug(
+                "Video detection for %s: %s (types: %s)", file_path, has_video, file_types
+            )
+            return has_video
+
+        except (OSError, IOError) as error:
+            # File system errors - file doesn't exist, can't read, permission issues
+            logging.warning(
+                "Video detection failed due to file system error for %s: %s", file_path, error
+            )
+            return False  # Default to audio when file can't be accessed
+        except ValueError as error:
+            # puremagic raises ValueError for empty files or invalid content
+            logging.info(
+                "Video detection failed due to invalid file content for %s: %s", file_path, error
+            )
+            return False  # Default to audio for invalid/empty files
+        except puremagic.PureError as error:
+            # puremagic-specific errors (not regular file, etc.)
+            logging.info(
+                "Video detection failed due to puremagic error for %s: %s", file_path, error
+            )
+            return False  # Default to audio for puremagic-specific issues
+        except Exception as error:  # pylint: disable=broad-except
+            # Unexpected errors that should be investigated
+            logging.error(
+                "Unexpected error in video detection for %s: %s", file_path, error, exc_info=True
+            )
+            return False  # Still default to audio, but log as error for investigation
+
+    @staticmethod
     def _decode_musical_key(key_value) -> str | None:
         """Decode musical key field, handling JSON structures from MixedInKey."""
         if not key_value:
@@ -580,7 +684,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
         key_str = str(key_value).strip()
 
         # Check if it looks like base64 encoded JSON
-        try:
+        with contextlib.suppress(binascii.Error, json.JSONDecodeError, UnicodeDecodeError):
             # Try to decode as base64 first
             decoded_bytes = base64.b64decode(key_str)
             decoded_str = decoded_bytes.decode("utf-8")
@@ -589,17 +693,11 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             key_data = json.loads(decoded_str)
             if isinstance(key_data, dict) and "key" in key_data and key_data["key"] is not None:
                 return key_data["key"]
-        except (binascii.Error, json.JSONDecodeError, UnicodeDecodeError):
-            pass
-
         # If not base64/JSON, try direct JSON parsing
-        try:
+        with contextlib.suppress(json.JSONDecodeError, TypeError):
             key_data = json.loads(key_str)
             if isinstance(key_data, dict) and "key" in key_data and key_data["key"] is not None:
                 return key_data["key"]
-        except (json.JSONDecodeError, TypeError):
-            pass
-
         # If all else fails, return the string as-is
         return key_str
 

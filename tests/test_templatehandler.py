@@ -7,8 +7,8 @@ import tempfile
 
 import pytest
 
-import nowplaying.utils  # pylint: disable=import-error
 import nowplaying.notifications.textoutput  # pylint: disable=import-error
+import nowplaying.utils  # pylint: disable=import-error
 
 
 @pytest.mark.parametrize(

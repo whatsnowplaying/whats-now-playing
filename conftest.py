@@ -8,21 +8,28 @@ import pathlib
 import shutil
 import sys
 import tempfile
+import tracemalloc
 import unittest.mock
 
 import pytest
 import pytest_asyncio
+from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
+    QCoreApplication,
+    QSettings,
+    QStandardPaths,
+)
 
-from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=import-error, no-name-in-module
-
+import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
-import nowplaying.apicache
 
 # if sys.platform == 'darwin':
 #     import psutil
 #     import pwd
+
+# Enable tracemalloc to track resource allocations
+tracemalloc.start()
 
 # DO NOT CHANGE THIS TO BE com.github.whatsnowplaying
 # otherwise your actual bits will disappear!
@@ -64,12 +71,9 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
     """bootstrap a configuration"""
     with contextlib.suppress(PermissionError):  # Windows blows
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as newpath:
-            dbinit_patch = unittest.mock.patch("nowplaying.db.MetadataDB.init_db_var")
-            dbinit_mock = dbinit_patch.start()
             dbdir = pathlib.Path(newpath).joinpath("mdb")
             dbdir.mkdir()
             dbfile = dbdir.joinpath("test.db")
-            dbinit_mock.return_value = dbfile
 
             with unittest.mock.patch.dict(
                 os.environ,
@@ -86,7 +90,6 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
                 config.testdir = pathlib.Path(newpath)
 
                 yield config
-                dbinit_mock.stop()
             if pathlib.Path(rmdir).exists():
                 shutil.rmtree(rmdir)
 

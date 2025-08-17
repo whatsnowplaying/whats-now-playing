@@ -11,10 +11,17 @@ def results(expected, metadata):
     """take a metadata result and compare to expected"""
     for expkey in expected:
         assert expkey in metadata
-        assert expkey and expected[expkey] == metadata[expkey]
+        assert expected[expkey] == metadata[expkey]
         del metadata[expkey]
 
     assert metadata == {}
+
+
+@pytest.mark.asyncio
+async def test_simple_check(bootstrap):  # pylint: disable=unused-argument
+    """test writing false data"""
+    metadb = nowplaying.db.MetadataDB(initialize=True)
+    assert metadb
 
 
 @pytest.mark.asyncio
@@ -77,6 +84,7 @@ async def test_data_db1(bootstrap):  # pylint: disable=unused-argument
         "fpcalcfingerprint": None,
         "genre": None,
         "genres": None,
+        "has_video": False,
         "hostfqdn": None,
         "hostip": None,
         "hostname": None,
@@ -121,6 +129,7 @@ async def test_data_db2(bootstrap):  # pylint: disable=unused-argument
         "deck": 1,
         "filename": "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3",
         "genre": "Rock",
+        "has_video": False,
         "key": "C#m",
         "label": "Radioactive Records",
         "title": "Lakini's Juice",
@@ -158,6 +167,7 @@ async def test_data_db2(bootstrap):  # pylint: disable=unused-argument
         "fpcalcfingerprint": None,
         "genre": "Rock",
         "genres": ["trip-hop", "electronic", "country"],
+        "has_video": False,
         "hostfqdn": None,
         "hostip": None,
         "hostname": None,

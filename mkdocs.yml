@@ -38,7 +38,8 @@ theme:
 plugins:
   - search
   - macros:
-      render_by_default: false
+      module_name: docs/macros
+      render_by_default: true
       j2_variable_start_string: '{$'
       j2_variable_end_string: '$}'
   - mike:
@@ -128,6 +129,7 @@ nav:
       - Overview: reference/index.md
       - API Reference: reference/api.md
       - Template Variables: reference/templatevariables.md
+      - Template Reference: reference/templates.md
       - Comparisons: reference/comparisons.md
   - Gallery: gallery.md
   - Contact: contact.md

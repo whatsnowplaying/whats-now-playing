@@ -20,6 +20,8 @@ from contextlib import asynccontextmanager
 import aiosqlite
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
+import nowplaying.utils.sqlite
+
 
 class APIResponseCache:
     """Fast SQLite-based cache for API responses with TTL support."""
@@ -511,10 +513,9 @@ class APIResponseCache:
 
         try:
             if db_file.exists():
-                with sqlite3.connect(db_file) as connection:
+                with nowplaying.utils.sqlite.sqlite_connection(db_file) as connection:
                     logging.debug("Vacuuming API cache database...")
                     connection.execute("VACUUM")
-                    connection.commit()
                     logging.info("API cache database vacuumed successfully")
             else:
                 logging.warning("API cache database does not exist at %s", db_file)
