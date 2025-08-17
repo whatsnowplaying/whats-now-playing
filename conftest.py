@@ -68,12 +68,9 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
     """bootstrap a configuration"""
     with contextlib.suppress(PermissionError):  # Windows blows
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as newpath:
-            dbinit_patch = unittest.mock.patch("nowplaying.db.MetadataDB.init_db_var")
-            dbinit_mock = dbinit_patch.start()
             dbdir = pathlib.Path(newpath).joinpath("mdb")
             dbdir.mkdir()
             dbfile = dbdir.joinpath("test.db")
-            dbinit_mock.return_value = dbfile
 
             with unittest.mock.patch.dict(
                 os.environ,
@@ -90,7 +87,6 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
                 config.testdir = pathlib.Path(newpath)
 
                 yield config
-                dbinit_mock.stop()
             if pathlib.Path(rmdir).exists():
                 shutil.rmtree(rmdir)
 

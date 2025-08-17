@@ -301,13 +301,16 @@ class MetadataDB:
                 metadata[key] = metadata[key].split(SPLITSTR)
 
         for key in BOOLFIELDS:
-            metadata[key] = row[key]
-            if metadata[key] == "true":
-                metadata[key] = True
-            elif metadata[key] == "false":
-                metadata[key] = False
+            if key in row.keys():
+                metadata[key] = row[key]
+                if metadata[key] == "true":
+                    metadata[key] = True
+                elif metadata[key] == "false":
+                    metadata[key] = False
+                else:
+                    metadata[key] = None  # Handle unexpected values
             else:
-                metadata[key] = None  # Handle unexpected values
+                metadata[key] = None  # Default for missing fields
 
         metadata["dbid"] = row["id"]
         return metadata  # type: ignore[return-value]

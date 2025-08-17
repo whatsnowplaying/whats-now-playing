@@ -11,7 +11,7 @@ def results(expected, metadata):
     """take a metadata result and compare to expected"""
     for expkey in expected:
         assert expkey in metadata
-        assert expkey and expected[expkey] == metadata[expkey]
+        assert expected[expkey] == metadata[expkey]
         del metadata[expkey]
 
     assert metadata == {}
@@ -160,6 +160,7 @@ async def test_data_db2(bootstrap):  # pylint: disable=unused-argument
         "fpcalcfingerprint": None,
         "genre": "Rock",
         "genres": ["trip-hop", "electronic", "country"],
+        "has_video": False,
         "hostfqdn": None,
         "hostip": None,
         "hostname": None,
