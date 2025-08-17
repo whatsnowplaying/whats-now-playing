@@ -6,8 +6,8 @@ This test verifies that the compatibility shim can handle old AuthScope enum obj
 stored in Qt config from previous app versions, preventing crashes during upgrades.
 """
 
-import sys
 import subprocess
+import sys
 
 import pytest
 from PySide6.QtCore import QSettings  # pylint:disable=no-name-in-module

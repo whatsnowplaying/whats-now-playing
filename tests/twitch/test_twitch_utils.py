@@ -2,13 +2,13 @@
 """Unit tests for Twitch utils functionality."""
 
 import json
-from unittest.mock import patch, Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from aioresponses import aioresponses
 
-import nowplaying.twitch.utils
 import nowplaying.twitch.oauth2
+import nowplaying.twitch.utils
 
 
 # Token validation tests

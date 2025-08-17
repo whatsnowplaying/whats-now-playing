@@ -7,7 +7,6 @@ import ssl
 
 import pytest
 from aiohttp import ClientResponseError
-
 from utils_artistextras import configureplugins, configuresettings, run_cache_consistency_test
 
 import nowplaying.apicache  # pylint: disable=import-error

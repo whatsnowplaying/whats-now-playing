@@ -7,8 +7,6 @@ import asyncio
 import contextlib
 import logging
 import multiprocessing
-import sqlite3
-import sys
 import time
 from unittest.mock import patch
 
@@ -18,6 +16,7 @@ import requests
 
 import nowplaying.imagecache  # pylint: disable=import-error
 import nowplaying.utils  # pylint: disable=import-error
+import nowplaying.utils.sqlite
 
 TEST_URLS = [
     "https://www.theaudiodb.com/images/media/artist/fanart/numan-gary-5026a93c591b1.jpg",
@@ -82,7 +81,7 @@ async def imagecache_with_stopevent(bootstrap):
         cache.close()
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
+# @pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.asyncio
 async def test_ic_upgrade(bootstrap):
     """setup the image cache for testing"""
@@ -91,7 +90,9 @@ async def test_ic_upgrade(bootstrap):
     dbdir = config.testdir.joinpath("imagecache")
     dbdir.mkdir()
 
-    with sqlite3.connect(dbdir.joinpath("imagecachev1.db"), timeout=30) as connection:
+    with nowplaying.utils.sqlite.sqlite_connection(
+        dbdir.joinpath("imagecachev1.db"), timeout=30
+    ) as connection:
         cursor = connection.cursor()
 
         v1tabledef = """
@@ -164,7 +165,6 @@ async def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-n
     assert image == cachedimage
 
 
-#@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.asyncio
 async def test_randomfailure(get_imagecache):  # pylint: disable=redefined-outer-name
     """test db del 1"""
@@ -301,7 +301,9 @@ async def test_get_next_dlset_empty_database(bootstrap):
         # Clean up SQLite WAL files to prevent flaky test failures
         if imagecache.databasefile.exists():
             with contextlib.suppress(Exception):
-                with sqlite3.connect(imagecache.databasefile, timeout=5) as conn:
+                with nowplaying.utils.sqlite.sqlite_connection(
+                    imagecache.databasefile, timeout=5
+                ) as conn:
                     conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
                     conn.execute("PRAGMA journal_mode=DELETE")
 

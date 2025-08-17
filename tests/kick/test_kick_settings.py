@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-import nowplaying.kick.settings
 import nowplaying.kick.oauth2
+import nowplaying.kick.settings
 from nowplaying.exceptions import PluginVerifyError
 
 

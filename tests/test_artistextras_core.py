@@ -5,7 +5,6 @@ import logging
 import os
 
 import pytest
-
 from utils_artistextras import configureplugins, configuresettings
 
 PLUGINS = ["wikimedia"]

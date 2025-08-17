@@ -9,12 +9,11 @@ import os
 
 import pytest
 from aiohttp import ClientResponseError
-
 from utils_artistextras import configureplugins, configuresettings, skip_no_discogs_key
 
-import nowplaying.metadata  # pylint: disable=import-error
 import nowplaying.apicache  # pylint: disable=import-error
 import nowplaying.discogsclient  # pylint: disable=import-error
+import nowplaying.metadata  # pylint: disable=import-error
 
 
 @pytest.mark.asyncio

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """test acoustid join phrases"""
 
-import os
 import json
+import os
 import pathlib
 import unittest.mock
 

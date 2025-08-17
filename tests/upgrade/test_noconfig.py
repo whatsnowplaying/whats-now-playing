@@ -7,10 +7,9 @@ import tempfile
 
 from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
 
-from tests.upgrade.upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
-
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.upgrades.config  # pylint: disable=import-error
+from tests.upgrade.upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
 
 
 def test_noconfigfile():  # pylint: disable=redefined-outer-name

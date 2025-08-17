@@ -6,8 +6,8 @@ import sys
 from pathlib import Path
 
 import pytest
-
 import tinytag
+
 import nowplaying.tinytag_fixes  # pylint: disable=import-error
 
 # Apply tinytag patches for testing

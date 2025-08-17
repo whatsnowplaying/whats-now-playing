@@ -7,6 +7,7 @@ Tests against real Wikimedia APIs to verify batch optimization works.
 # pylint: disable=protected-access
 
 import pytest
+
 import nowplaying.wikiclient
 
 

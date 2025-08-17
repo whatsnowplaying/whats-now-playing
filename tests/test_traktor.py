@@ -3,6 +3,7 @@
 
 import asyncio
 import os
+
 import pytest
 
 import nowplaying.inputs.traktor  # pylint: disable=import-error

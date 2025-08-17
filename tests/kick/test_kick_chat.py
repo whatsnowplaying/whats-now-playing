@@ -10,8 +10,8 @@ import pytest
 from aioresponses import aioresponses
 
 import nowplaying.kick.chat  # pylint: disable=no-name-in-module
-import nowplaying.kick.settings  # pylint: disable=no-name-in-module
 import nowplaying.kick.constants
+import nowplaying.kick.settings  # pylint: disable=no-name-in-module
 from nowplaying.exceptions import PluginVerifyError  # pylint: disable=no-name-in-module
 
 

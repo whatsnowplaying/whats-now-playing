@@ -524,6 +524,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         """cleanup the app"""
         await app["statedb"].close()
         app[WATCHER_KEY].stop()
+        app[IC_KEY].close()
 
     async def stop_server(self, request: web.Request):
         """stop our server"""

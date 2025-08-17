@@ -4,7 +4,7 @@
 import pathlib
 import unittest.mock
 
-from nowplaying.metadata import TinyTagRunner, AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
+from nowplaying.metadata import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS, TinyTagRunner
 
 
 def test_audio_only_extensions():

@@ -17,12 +17,16 @@ import pytest_asyncio
 # Enable tracemalloc to track resource allocations
 tracemalloc.start()
 
-from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
+    QCoreApplication,
+    QSettings,
+    QStandardPaths,
+)
 
+import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.db
-import nowplaying.apicache
 
 # if sys.platform == 'darwin':
 #     import psutil

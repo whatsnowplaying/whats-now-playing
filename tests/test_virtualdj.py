@@ -2,12 +2,10 @@
 """test virtualdj"""
 
 import asyncio
-import pathlib
-import os
-import sqlite3
-import sys
-
 import logging
+import os
+import pathlib
+import sys
 import tempfile
 
 import pytest
@@ -17,6 +15,7 @@ import watchdog.observers.polling  # pylint: disable=import-error
 import nowplaying.inputs.m3u  # pylint: disable=import-error
 import nowplaying.inputs.virtualdj  # pylint: disable=import-error
 import nowplaying.utils  # pylint: disable=import-error
+import nowplaying.utils.sqlite
 
 
 @pytest.fixture
@@ -500,57 +499,53 @@ def test_sax_handler_expanded_metadata():
     with tempfile.NamedTemporaryFile(delete=False) as temp_db:
         temp_db_path = temp_db.name
     try:
-        conn = sqlite3.connect(temp_db_path)
-        cursor = conn.cursor()
+        with nowplaying.utils.sqlite.sqlite_connection(temp_db_path) as conn:
+            cursor = conn.cursor()
 
-        # Create songs table with expanded metadata
-        cursor.execute("""
-            CREATE TABLE songs (
-                artist TEXT, title TEXT, album TEXT, filename TEXT,
-                genre TEXT, year TEXT, bpm TEXT, key TEXT, label TEXT, tracknumber TEXT,
-                id INTEGER PRIMARY KEY AUTOINCREMENT
+            # Create songs table with expanded metadata
+            cursor.execute("""
+                CREATE TABLE songs (
+                    artist TEXT, title TEXT, album TEXT, filename TEXT,
+                    genre TEXT, year TEXT, bpm TEXT, key TEXT, label TEXT, tracknumber TEXT,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT
+                )
+            """)
+
+            # Test SAX handler
+            handler = nowplaying.inputs.virtualdj.VirtualDJSAXHandler(cursor)
+
+            # Simulate Song element with expanded metadata
+            handler.startElement("Song", {"FilePath": "/path/to/test.mp3"})
+            handler.startElement(
+                "Tags",
+                {
+                    "Author": "Test Artist",
+                    "Title": "Test Song",
+                    "Album": "Test Album",
+                    "Genre": "Electronic",
+                    "Year": "2023",
+                    "Bpm": "128",
+                    "Key": "Am",
+                    "Label": "Test Records",
+                    "TrackNumber": "5",
+                },
             )
-        """)
+            handler.endElement("Song")
 
-        # Test SAX handler
-        handler = nowplaying.inputs.virtualdj.VirtualDJSAXHandler(cursor)
+            # Verify data was inserted with all fields
+            cursor.execute("SELECT * FROM songs")
+            row = cursor.fetchone()
 
-        # Simulate Song element with expanded metadata
-        handler.startElement("Song", {"FilePath": "/path/to/test.mp3"})
-        handler.startElement(
-            "Tags",
-            {
-                "Author": "Test Artist",
-                "Title": "Test Song",
-                "Album": "Test Album",
-                "Genre": "Electronic",
-                "Year": "2023",
-                "Bpm": "128",
-                "Key": "Am",
-                "Label": "Test Records",
-                "TrackNumber": "5",
-            },
-        )
-        handler.endElement("Song")
-
-        conn.commit()
-
-        # Verify data was inserted with all fields
-        cursor.execute("SELECT * FROM songs")
-        row = cursor.fetchone()
-
-        assert row[0] == "Test Artist"  # artist
-        assert row[1] == "Test Song"  # title
-        assert row[2] == "Test Album"  # album
-        assert row[3] == "/path/to/test.mp3"  # filename
-        assert row[4] == "Electronic"  # genre
-        assert row[5] == "2023"  # year
-        assert row[6] == "128"  # bpm
-        assert row[7] == "Am"  # key
-        assert row[8] == "Test Records"  # label
-        assert row[9] == "5"  # tracknumber
-
-        conn.close()
+            assert row[0] == "Test Artist"  # artist
+            assert row[1] == "Test Song"  # title
+            assert row[2] == "Test Album"  # album
+            assert row[3] == "/path/to/test.mp3"  # filename
+            assert row[4] == "Electronic"  # genre
+            assert row[5] == "2023"  # year
+            assert row[6] == "128"  # bpm
+            assert row[7] == "Am"  # key
+            assert row[8] == "Test Records"  # label
+            assert row[9] == "5"  # tracknumber
     finally:
         # Clean up temporary file
         if os.path.exists(temp_db_path):
@@ -563,49 +558,45 @@ def test_sax_handler_partial_metadata():
     with tempfile.NamedTemporaryFile(delete=False) as temp_db:
         temp_db_path = temp_db.name
     try:
-        conn = sqlite3.connect(temp_db_path)
-        cursor = conn.cursor()
+        with nowplaying.utils.sqlite.sqlite_connection(temp_db_path) as conn:
+            cursor = conn.cursor()
 
-        cursor.execute("""
-            CREATE TABLE songs (
-                artist TEXT, title TEXT, album TEXT, filename TEXT,
-                genre TEXT, year TEXT, bpm TEXT, key TEXT, label TEXT, tracknumber TEXT,
-                id INTEGER PRIMARY KEY AUTOINCREMENT
+            cursor.execute("""
+                CREATE TABLE songs (
+                    artist TEXT, title TEXT, album TEXT, filename TEXT,
+                    genre TEXT, year TEXT, bpm TEXT, key TEXT, label TEXT, tracknumber TEXT,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT
+                )
+            """)
+
+            handler = nowplaying.inputs.virtualdj.VirtualDJSAXHandler(cursor)
+
+            # Simulate Song with only basic metadata
+            handler.startElement("Song", {"FilePath": "/path/to/basic.mp3"})
+            handler.startElement(
+                "Tags",
+                {
+                    "Author": "Basic Artist",
+                    "Title": "Basic Song",
+                    # Missing album, genre, year, bpm, key, label, tracknumber
+                },
             )
-        """)
+            handler.endElement("Song")
 
-        handler = nowplaying.inputs.virtualdj.VirtualDJSAXHandler(cursor)
+            # Verify data was inserted with None for missing fields
+            cursor.execute("SELECT * FROM songs")
+            row = cursor.fetchone()
 
-        # Simulate Song with only basic metadata
-        handler.startElement("Song", {"FilePath": "/path/to/basic.mp3"})
-        handler.startElement(
-            "Tags",
-            {
-                "Author": "Basic Artist",
-                "Title": "Basic Song",
-                # Missing album, genre, year, bpm, key, label, tracknumber
-            },
-        )
-        handler.endElement("Song")
-
-        conn.commit()
-
-        # Verify data was inserted with None for missing fields
-        cursor.execute("SELECT * FROM songs")
-        row = cursor.fetchone()
-
-        assert row[0] == "Basic Artist"  # artist
-        assert row[1] == "Basic Song"  # title
-        assert row[2] is None  # album (missing)
-        assert row[3] == "/path/to/basic.mp3"  # filename
-        assert row[4] is None  # genre (missing)
-        assert row[5] is None  # year (missing)
-        assert row[6] is None  # bpm (missing)
-        assert row[7] is None  # key (missing)
-        assert row[8] is None  # label (missing)
-        assert row[9] is None  # tracknumber (missing)
-
-        conn.close()
+            assert row[0] == "Basic Artist"  # artist
+            assert row[1] == "Basic Song"  # title
+            assert row[2] is None  # album (missing)
+            assert row[3] == "/path/to/basic.mp3"  # filename
+            assert row[4] is None  # genre (missing)
+            assert row[5] is None  # year (missing)
+            assert row[6] is None  # bmp (missing)
+            assert row[7] is None  # key (missing)
+            assert row[8] is None  # label (missing)
+            assert row[9] is None  # tracknumber (missing)
     finally:
         # Clean up temporary file
         if os.path.exists(temp_db_path):

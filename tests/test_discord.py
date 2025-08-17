@@ -6,15 +6,17 @@ import asyncio
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 import discord
 import pypresence
+import pytest
 
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.processes.discordbot
-from nowplaying.processes.discordbot import DiscordSupport, DiscordClients  # pylint: disable=no-name-in-module
-
+from nowplaying.processes.discordbot import (  # pylint: disable=no-name-in-module
+    DiscordClients,
+    DiscordSupport,
+)
 
 # Skip decorators for integration tests requiring Discord credentials
 skip_no_discord_bot_token = pytest.mark.skipif(

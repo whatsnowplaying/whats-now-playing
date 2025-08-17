@@ -2,6 +2,7 @@
 """test musicbrainz"""
 
 import logging
+
 import pytest
 
 import nowplaying.apicache  # pylint: disable=import-error

@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import nowplaying.inputs.remote
 import nowplaying.db
+import nowplaying.inputs.remote
 
 
 @pytest.fixture

@@ -3,7 +3,10 @@
 
 import pathlib
 
-from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtCore import (  # pylint: disable=no-name-in-module
+    QCoreApplication,
+    QStandardPaths,
+)
 
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.config  # pylint: disable=import-error

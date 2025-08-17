@@ -2,14 +2,14 @@
 """test serato"""
 # pylint: disable=protected-access
 
-from datetime import datetime
 import logging
-import pathlib
 import os
+import pathlib
+from datetime import datetime
 
+import lxml.html
 import pytest
 import pytest_asyncio  # pylint: disable=import-error
-import lxml.html
 
 import nowplaying.inputs.serato  # pylint: disable=import-error
 
