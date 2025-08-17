@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """pull out metadata"""
 
-
 import asyncio
 import base64
 import binascii
@@ -585,7 +584,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             self.metadata[newkey] = value
 
     @staticmethod
-    def _detect_video_content(file_path: pathlib.Path) -> bool:    # pylint: disable=too-many-return-statements,too-many-branches
+    def _detect_video_content(file_path: pathlib.Path) -> bool:  # pylint: disable=too-many-return-statements,too-many-branches
         """Detect if file contains video content using puremagic and file extension analysis.
 
         Args:
@@ -675,7 +674,6 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
                 "Unexpected error in video detection for %s: %s", file_path, error, exc_info=True
             )
             return False  # Still default to audio, but log as error for investigation
-
 
     @staticmethod
     def _decode_musical_key(key_value) -> str | None:

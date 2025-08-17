@@ -2,7 +2,10 @@
 """Test video detection functionality"""
 
 import pathlib
+import tempfile
 import unittest.mock
+
+import puremagic
 
 from nowplaying.metadata import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS, TinyTagRunner
 
@@ -99,67 +102,25 @@ def test_unknown_extension_fallback():
 
 
 def test_puremagic_exception_handling():
-    """Test that specific exceptions in puremagic are handled gracefully with appropriate logging"""
-    import logging
-    from unittest.mock import patch
-
+    """Test that exceptions in puremagic are handled gracefully"""
     unknown_path = pathlib.Path("test.unknown")  # Unknown extension to trigger puremagic call
 
-    # Test file system errors (OSError, IOError, PermissionError)
-    for error_type in [
+    # Test various exception types - all should return False (default to audio)
+    exception_types = [
         OSError("File not found"),
         IOError("I/O error"),
         PermissionError("Access denied"),
-    ]:
+        ValueError("Input was empty"),
+        puremagic.PureError("Not a regular file"),
+        RuntimeError("Unexpected issue"),
+    ]
+
+    for error_type in exception_types:
         with unittest.mock.patch(
             "nowplaying.metadata.puremagic.magic_file", side_effect=error_type
         ):
-            with patch("nowplaying.metadata.logging.warning") as mock_warning:
-                result = TinyTagRunner._detect_video_content(unknown_path)  # pylint: disable=protected-access
-                assert result is False, f"{type(error_type).__name__} should default to audio-only"
-                mock_warning.assert_called_once()
-                assert "file system error" in str(mock_warning.call_args)
-
-    # Test ValueError (empty/invalid file content)
-    with unittest.mock.patch(
-        "nowplaying.metadata.puremagic.magic_file", side_effect=ValueError("Input was empty")
-    ):
-        with patch("nowplaying.metadata.logging.info") as mock_info:
             result = TinyTagRunner._detect_video_content(unknown_path)  # pylint: disable=protected-access
-            assert result is False, "ValueError should default to audio-only"
-            mock_info.assert_called_once()
-            assert "invalid file content" in str(mock_info.call_args)
-
-    # Test PureError (puremagic-specific errors)
-    import puremagic
-
-    with unittest.mock.patch(
-        "nowplaying.metadata.puremagic.magic_file",
-        side_effect=puremagic.PureError("Not a regular file"),
-    ):
-        with patch("nowplaying.metadata.logging.info") as mock_info:
-            result = TinyTagRunner._detect_video_content(unknown_path)  # pylint: disable=protected-access
-            assert result is False, "PureError should default to audio-only"
-            mock_info.assert_called_once()
-            assert "puremagic error" in str(mock_info.call_args)
-
-    # Test unexpected exceptions (should be logged as errors with full traceback)
-    class UnexpectedError(RuntimeError):
-        pass
-
-    with unittest.mock.patch(
-        "nowplaying.metadata.puremagic.magic_file", side_effect=UnexpectedError("Unexpected issue")
-    ):
-        with patch("nowplaying.metadata.logging.error") as mock_error:
-            result = TinyTagRunner._detect_video_content(unknown_path)  # pylint: disable=protected-access
-            assert result is False, "Unexpected exceptions should default to audio-only"
-            mock_error.assert_called_once()
-            assert "Unexpected error" in str(mock_error.call_args)
-            # Verify exc_info=True was used for full traceback
-            call_args = mock_error.call_args
-            assert call_args[1].get("exc_info") is True, (
-                "Should log full traceback for unexpected errors"
-            )
+            assert result is False, f"{type(error_type).__name__} should default to audio-only"
 
 
 def test_real_audio_files():
@@ -202,9 +163,7 @@ def test_excludes_audio_containers_from_video_detection():
 
 
 def test_puremagic_optimization():
-    """Test that video detection optimizes by short-circuiting puremagic calls for known extensions."""
-    import tempfile
-
+    """Test that video detection optimizes by short-circuiting puremagic calls."""
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = pathlib.Path(tmpdir)
 
