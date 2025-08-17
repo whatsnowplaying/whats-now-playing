@@ -1873,6 +1873,29 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Template Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/comparisons/" class="md-nav__link">
         
   
@@ -2136,7 +2159,7 @@ mindful of where to put spaces.</p>
 </tr>
 <tr>
 <td>cmdtarget[x]</td>
-<td>The x'th target on the command, starting with 0. For example, if the command was <code>!so modernmeerkat</code>, then <code>{% raw %}{{ cmdtarget[0] }}{% endraw %}</code> will have <code>modernmeerkat</code> in it. See below for an example.</td>
+<td>The x'th target on the command, starting with 0. For example, if the command was <code>!so modernmeerkat</code>, then <code>{{ cmdtarget[0] }}</code> will have <code>modernmeerkat</code> in it. See below for an example.</td>
 </tr>
 <tr>
 <td>startnewmessage</td>
@@ -2164,7 +2187,7 @@ one command to perform actions on, for example, multiple users.</p>
 <pre><code>bot: @modernmeerkat hugs @twitch
 </code></pre>
 <p>But this can be expanded to do multiple users at once:</p>
-<pre><code>@{{ cmduser }} sends hugs to {% for people in cmdtarget %}@{{ people }} {% endfor %}
+<pre><code>@{{ cmduser }} sends hugs to
 </code></pre>
 <p>such that:</p>
 <pre><code>modernmeerkat: !hug person1 person2 person3
@@ -2177,20 +2200,6 @@ one command to perform actions on, for example, multiple users.</p>
 the Twitchbot track announcement. You can pick and choose which websites
 are printed by taking the following code snippet and modifying as
 necessary:</p>
-<p _="%" endif="endif">{% if artistwebsites %}
-  {% for website in artistwebsites %}
-  {% if 'bandcamp' in website %} |Bandcamp: {{ website }}
-  {% elif 'discogs' in website %} | Discogs: {{ website }}
-  {% elif 'facebook' in website %} | Facebook: {{ website }}
-  {% elif 'instagram' in website %} | IG: {{ website }}
-  {% elif 'last.fm' in website %} | last.fm: {{ website }}
-  {% elif 'musicbrainz' in website %} | MusicBrainz: {{ website }}
-  {% elif 'twitter' in website %} | Twitter: {{ website }}
-  {% elif 'wikipedia' in website %} | Wikipedia: {{ website }}
-  {% elif 'youtube' in website %} | YouTube: {{ website }}
-  {% else %} | Official homepage: {{ website }}
-  {% endif %}
-  {% endfor %}</p>
 
 
 

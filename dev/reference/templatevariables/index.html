@@ -16,7 +16,7 @@
         <link rel="prev" href="../api/">
       
       
-        <link rel="next" href="../comparisons/">
+        <link rel="next" href="../templates/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -1828,6 +1828,29 @@
   
   
     <li class="md-nav__item">
+      <a href="../templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Template Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../comparisons/" class="md-nav__link">
         
   
@@ -2036,6 +2059,10 @@ data.</p>
 <td>Genre of the song</td>
 </tr>
 <tr>
+<td>has_video</td>
+<td>True if the file contains video content, False for audio-only files</td>
+</tr>
+<tr>
 <td>hostip</td>
 <td>IP address of the machine running <strong>What's Now Playing</strong></td>
 </tr>
@@ -2130,11 +2157,9 @@ a list.</p>
 <p>When rendering templates, <strong>What's Now Playing</strong> will set any undefined
 variables to the empty string. Instead of having to render a template
 as:</p>
-<div class="highlight"><pre><span></span><code><span class="cp">{%</span> <span class="k">if</span> <span class="nv">variable</span> <span class="k">is</span> <span class="nf">defined</span> <span class="k">and</span> <span class="nv">variable</span> <span class="k">is</span> <span class="k">not</span> <span class="nf">none</span> <span class="k">and</span> <span class="nv">variable</span><span class="o">|</span><span class="nf">length</span> <span class="cp">%}</span>
-</code></pre></div>
+<p><code>jinja{% if variable is defined and variable is not none and variable|length %}</code></p>
 <p>This can be short-cut to:</p>
-<div class="highlight"><pre><span></span><code><span class="cp">{%</span> <span class="k">if</span> <span class="nv">variable</span> <span class="cp">%}</span>
-</code></pre></div>
+<p><code>jinja{% if variable %}</code></p>
 <p>since the variable will always be defined. This also means that
 templates that incorrectly use the wrong variable name will render, just
 with an empty string in place of the expected text.</p>

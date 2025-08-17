@@ -1789,6 +1789,29 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Template Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/comparisons/" class="md-nav__link">
         
   
@@ -1939,10 +1962,9 @@ with your Kick account.</p>
   automatically split at sentence or word boundaries using NLTK</li>
 </ul>
 <p>Example announcement template:</p>
-<pre><code>{% if artist %}{{ artist }} - {% endif %}"{{ title }}"
-{% if album %} from {{ album }}{% endif %}
+<pre><code>"{{ title }}"
+
 {{ startnewmessage }}
-{% if artistshortbio %}{{ artistshortbio }}{% endif %}
 </code></pre>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <ol>
