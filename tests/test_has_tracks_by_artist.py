@@ -9,7 +9,6 @@ Refactored version using parameterization to reduce duplication.
 
 import asyncio
 import gc
-import sqlite3
 import tempfile
 import time
 import unittest.mock

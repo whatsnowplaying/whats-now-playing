@@ -81,7 +81,6 @@ async def imagecache_with_stopevent(bootstrap):
         cache.close()
 
 
-# @pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.asyncio
 async def test_ic_upgrade(bootstrap):
     """setup the image cache for testing"""
@@ -138,7 +137,6 @@ def test_imagecache(get_imagecache):  # pylint: disable=redefined-outer-name
             logging.debug("Found it at %s", cachekey)
 
 
-# @pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 @pytest.mark.asyncio
 async def test_randomimage(get_imagecache):  # pylint: disable=redefined-outer-name
     """get a 'random' image'"""

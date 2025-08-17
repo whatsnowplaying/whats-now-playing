@@ -38,10 +38,6 @@ def getwebserver(shared_webserver_config):
     time.sleep(1)
 
 
-# @pytest.mark.skipif(
-#     sys.platform == "win32",
-#     reason="Windows SQLite file locking issues with multiprocess webserver",
-# )
 def test_webserver_artistfanart_test(getwebserver):  # pylint: disable=redefined-outer-name
     """make sure artistfanart works"""
     config, metadb = getwebserver  # pylint: disable=unused-variable
@@ -53,10 +49,6 @@ def test_webserver_artistfanart_test(getwebserver):  # pylint: disable=redefined
     assert req.status_code == 202
 
 
-# @pytest.mark.skipif(
-#     sys.platform == "win32",
-#     reason="Windows SQLite file locking issues with multiprocess webserver",
-# )
 def test_webserver_banner_test(getwebserver):  # pylint: disable=redefined-outer-name
     """make sure banner works"""
     config, metadb = getwebserver  # pylint: disable=unused-variable
@@ -71,7 +63,6 @@ def test_webserver_banner_test(getwebserver):  # pylint: disable=redefined-outer
     assert req.status_code == 200
 
 
-# @pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot close fast enough")
 def test_webserver_logo_test(getwebserver):  # pylint: disable=redefined-outer-name
     """make sure banner works"""
     config, metadb = getwebserver  # pylint: disable=unused-variable

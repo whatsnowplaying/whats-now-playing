@@ -13,10 +13,6 @@ import unittest.mock
 
 import pytest
 import pytest_asyncio
-
-# Enable tracemalloc to track resource allocations
-tracemalloc.start()
-
 from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
     QCoreApplication,
     QSettings,
@@ -31,6 +27,9 @@ import nowplaying.db
 # if sys.platform == 'darwin':
 #     import psutil
 #     import pwd
+
+# Enable tracemalloc to track resource allocations
+tracemalloc.start()
 
 # DO NOT CHANGE THIS TO BE com.github.whatsnowplaying
 # otherwise your actual bits will disappear!
