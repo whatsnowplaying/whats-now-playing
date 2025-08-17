@@ -99,14 +99,67 @@ def test_unknown_extension_fallback():
 
 
 def test_puremagic_exception_handling():
-    """Test that exceptions in puremagic are handled gracefully"""
-    test_path = pathlib.Path("test.mp3")
+    """Test that specific exceptions in puremagic are handled gracefully with appropriate logging"""
+    import logging
+    from unittest.mock import patch
+
+    unknown_path = pathlib.Path("test.unknown")  # Unknown extension to trigger puremagic call
+
+    # Test file system errors (OSError, IOError, PermissionError)
+    for error_type in [
+        OSError("File not found"),
+        IOError("I/O error"),
+        PermissionError("Access denied"),
+    ]:
+        with unittest.mock.patch(
+            "nowplaying.metadata.puremagic.magic_file", side_effect=error_type
+        ):
+            with patch("nowplaying.metadata.logging.warning") as mock_warning:
+                result = TinyTagRunner._detect_video_content(unknown_path)  # pylint: disable=protected-access
+                assert result is False, f"{type(error_type).__name__} should default to audio-only"
+                mock_warning.assert_called_once()
+                assert "file system error" in str(mock_warning.call_args)
+
+    # Test ValueError (empty/invalid file content)
+    with unittest.mock.patch(
+        "nowplaying.metadata.puremagic.magic_file", side_effect=ValueError("Input was empty")
+    ):
+        with patch("nowplaying.metadata.logging.info") as mock_info:
+            result = TinyTagRunner._detect_video_content(unknown_path)  # pylint: disable=protected-access
+            assert result is False, "ValueError should default to audio-only"
+            mock_info.assert_called_once()
+            assert "invalid file content" in str(mock_info.call_args)
+
+    # Test PureError (puremagic-specific errors)
+    import puremagic
 
     with unittest.mock.patch(
-        "nowplaying.metadata.puremagic.magic_file", side_effect=Exception("Test error")
+        "nowplaying.metadata.puremagic.magic_file",
+        side_effect=puremagic.PureError("Not a regular file"),
     ):
-        result = TinyTagRunner._detect_video_content(test_path)  # pylint: disable=protected-access
-        assert result is False, "Exceptions should default to audio-only"
+        with patch("nowplaying.metadata.logging.info") as mock_info:
+            result = TinyTagRunner._detect_video_content(unknown_path)  # pylint: disable=protected-access
+            assert result is False, "PureError should default to audio-only"
+            mock_info.assert_called_once()
+            assert "puremagic error" in str(mock_info.call_args)
+
+    # Test unexpected exceptions (should be logged as errors with full traceback)
+    class UnexpectedError(RuntimeError):
+        pass
+
+    with unittest.mock.patch(
+        "nowplaying.metadata.puremagic.magic_file", side_effect=UnexpectedError("Unexpected issue")
+    ):
+        with patch("nowplaying.metadata.logging.error") as mock_error:
+            result = TinyTagRunner._detect_video_content(unknown_path)  # pylint: disable=protected-access
+            assert result is False, "Unexpected exceptions should default to audio-only"
+            mock_error.assert_called_once()
+            assert "Unexpected error" in str(mock_error.call_args)
+            # Verify exc_info=True was used for full traceback
+            call_args = mock_error.call_args
+            assert call_args[1].get("exc_info") is True, (
+                "Should log full traceback for unexpected errors"
+            )
 
 
 def test_real_audio_files():
@@ -146,3 +199,70 @@ def test_excludes_audio_containers_from_video_detection():
     ):
         result = TinyTagRunner._detect_video_content(f4a_path)  # pylint: disable=protected-access
         assert result is False, "F4A extension should override video type detection"
+
+
+def test_puremagic_optimization():
+    """Test that video detection optimizes by short-circuiting puremagic calls for known extensions."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = pathlib.Path(tmpdir)
+
+        # Test audio extensions - should short-circuit without calling puremagic
+        for ext in [".mp3", ".flac", ".wav", ".ogg"]:
+            test_file = tmp_path / f"test{ext}"
+            test_file.touch()
+
+            with unittest.mock.patch("nowplaying.metadata.puremagic.magic_file") as mock_puremagic:
+                result = TinyTagRunner._detect_video_content(test_file)  # pylint: disable=protected-access
+                assert result is False, f"Audio extension {ext} should return False"
+                assert not mock_puremagic.called, (
+                    f"Audio extension {ext} should not call puremagic"
+                )
+
+        # Test clear video extensions - should short-circuit without calling puremagic
+        for ext in [".avi", ".mkv", ".wmv", ".flv", ".webm", ".vob", ".ogv"]:
+            test_file = tmp_path / f"test{ext}"
+            test_file.touch()
+
+            with unittest.mock.patch("nowplaying.metadata.puremagic.magic_file") as mock_puremagic:
+                result = TinyTagRunner._detect_video_content(test_file)  # pylint: disable=protected-access
+                assert result is True, f"Video extension {ext} should return True"
+                assert not mock_puremagic.called, (
+                    f"Video extension {ext} should not call puremagic"
+                )
+
+        # Test ambiguous containers - should call puremagic for verification
+        for ext in [".mp4", ".m4v", ".mov"]:
+            test_file = tmp_path / f"test{ext}"
+            test_file.touch()
+
+            with unittest.mock.patch("nowplaying.metadata.puremagic.magic_file") as mock_puremagic:
+                # Mock to return video content
+                mock_type = unittest.mock.MagicMock()
+                mock_type.extension = ext
+                mock_type.__str__ = lambda self: "video/mp4"
+                mock_puremagic.return_value = [mock_type]
+
+                result = TinyTagRunner._detect_video_content(test_file)  # pylint: disable=protected-access
+                assert result is True, (
+                    f"Ambiguous extension {ext} should return True with video content"
+                )
+                assert mock_puremagic.called, f"Ambiguous extension {ext} should call puremagic"
+
+        # Test unknown extensions - should call puremagic
+        for ext in [".xyz", ".unknown"]:
+            test_file = tmp_path / f"test{ext}"
+            test_file.touch()
+
+            with unittest.mock.patch("nowplaying.metadata.puremagic.magic_file") as mock_puremagic:
+                # Mock to return non-video content
+                mock_type = unittest.mock.MagicMock()
+                mock_type.__str__ = lambda self: "application/octet-stream"
+                mock_puremagic.return_value = [mock_type]
+
+                result = TinyTagRunner._detect_video_content(test_file)  # pylint: disable=protected-access
+                assert result is False, (
+                    f"Unknown extension {ext} should return False with non-video content"
+                )
+                assert mock_puremagic.called, f"Unknown extension {ext} should call puremagic"

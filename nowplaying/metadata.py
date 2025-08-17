@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """pull out metadata"""
 
+
 import asyncio
 import base64
 import binascii
+import contextlib
 import copy
 import json
 import logging
@@ -583,7 +585,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             self.metadata[newkey] = value
 
     @staticmethod
-    def _detect_video_content(file_path: pathlib.Path) -> bool:
+    def _detect_video_content(file_path: pathlib.Path) -> bool:    # pylint: disable=too-many-return-statements,too-many-branches
         """Detect if file contains video content using puremagic and file extension analysis.
 
         Args:
@@ -593,16 +595,30 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             True if file contains video content, False if audio-only or detection fails
         """
         try:
-            file_types = puremagic.magic_file(str(file_path))
-            # More precise video detection - prioritize actual file extension over detected types
+            # Short-circuit: Check file extension first to avoid expensive puremagic call
             file_extension = file_path.suffix.lower()
 
             # If file has known audio-only extension, it's definitely not video
             if file_extension in AUDIO_EXTENSIONS:
-                has_video = False
-            # If file has known video extension, check if it's actually video content
-            elif file_extension in VIDEO_EXTENSIONS:
-                # For ambiguous containers like MP4, check the detected types
+                logging.debug("Video detection for %s: False (audio extension)", file_path)
+                return False
+
+            # If file has known video extension, it's likely video
+            # (but we'll verify with puremagic for containers)
+            if file_extension in VIDEO_EXTENSIONS:
+                # For most video extensions, we can confidently assume video content
+                # Only use puremagic for ambiguous containers that could be audio-only
+                ambiguous_containers = {".mp4", ".m4v", ".mov"}
+                if file_extension not in ambiguous_containers:
+                    logging.debug("Video detection for %s: True (video extension)", file_path)
+                    return True
+
+            # Only call expensive puremagic detection for unknown or ambiguous extensions
+            file_types = puremagic.magic_file(str(file_path))
+
+            # Analyze file types to determine video content
+            if file_extension in VIDEO_EXTENSIONS:
+                # For ambiguous containers, check the detected types
                 has_video = False
                 has_audio_indicator = False
 
@@ -621,11 +637,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
                         has_audio_indicator = True
 
                 # Default to True for known video extensions if no clear audio indication
-                if (
-                    not has_video
-                    and not has_audio_indicator
-                    and file_extension in VIDEO_EXTENSIONS
-                ):
+                if not has_video and not has_audio_indicator:
                     has_video = True
             else:
                 # Unknown extension, use puremagic detection
@@ -639,9 +651,31 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             )
             return has_video
 
+        except (OSError, IOError) as error:
+            # File system errors - file doesn't exist, can't read, permission issues
+            logging.warning(
+                "Video detection failed due to file system error for %s: %s", file_path, error
+            )
+            return False  # Default to audio when file can't be accessed
+        except ValueError as error:
+            # puremagic raises ValueError for empty files or invalid content
+            logging.info(
+                "Video detection failed due to invalid file content for %s: %s", file_path, error
+            )
+            return False  # Default to audio for invalid/empty files
+        except puremagic.PureError as error:
+            # puremagic-specific errors (not regular file, etc.)
+            logging.info(
+                "Video detection failed due to puremagic error for %s: %s", file_path, error
+            )
+            return False  # Default to audio for puremagic-specific issues
         except Exception as error:  # pylint: disable=broad-except
-            logging.debug("Video detection failed for %s: %s", file_path, error)
-            return False  # Default to audio if detection fails
+            # Unexpected errors that should be investigated
+            logging.error(
+                "Unexpected error in video detection for %s: %s", file_path, error, exc_info=True
+            )
+            return False  # Still default to audio, but log as error for investigation
+
 
     @staticmethod
     def _decode_musical_key(key_value) -> str | None:
@@ -652,7 +686,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
         key_str = str(key_value).strip()
 
         # Check if it looks like base64 encoded JSON
-        try:
+        with contextlib.suppress(binascii.Error, json.JSONDecodeError, UnicodeDecodeError):
             # Try to decode as base64 first
             decoded_bytes = base64.b64decode(key_str)
             decoded_str = decoded_bytes.decode("utf-8")
@@ -661,17 +695,11 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             key_data = json.loads(decoded_str)
             if isinstance(key_data, dict) and "key" in key_data and key_data["key"] is not None:
                 return key_data["key"]
-        except (binascii.Error, json.JSONDecodeError, UnicodeDecodeError):
-            pass
-
         # If not base64/JSON, try direct JSON parsing
-        try:
+        with contextlib.suppress(json.JSONDecodeError, TypeError):
             key_data = json.loads(key_str)
             if isinstance(key_data, dict) and "key" in key_data and key_data["key"] is not None:
                 return key_data["key"]
-        except (json.JSONDecodeError, TypeError):
-            pass
-
         # If all else fails, return the string as-is
         return key_str
 
