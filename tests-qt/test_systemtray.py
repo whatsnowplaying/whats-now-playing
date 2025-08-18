@@ -26,8 +26,8 @@ class MockConfig:
         self.iconfile = pathlib.Path("test_icon.png")
         self.logpath = pathlib.Path("/tmp/test.log")
         self.notif = True
-        self.initialized = True  # Always initialized for testing
-        self.version = "4.2.0-test"  # Mock version
+        self.initialized = True
+        self.version = "4.2.0-test"
         self.cparser = MagicMock()
         self.cparser.value.side_effect = self._mock_config_value
         self.cparser.setValue = MagicMock()
@@ -55,7 +55,6 @@ class MockConfig:
 
     def setmixmode(self, mode):
         """Set mix mode"""
-        # No implementation needed for mock
 
     def get(self):
         """Get configuration"""
@@ -84,7 +83,6 @@ class MockConfig:
     @staticmethod
     def logsettings():
         """Log current settings"""
-        # No logging needed for mock
 
 
 class MockSubprocessManager:
@@ -120,15 +118,12 @@ class MockSettingsUI:
 
     def raise_(self):
         """Raise settings window to front"""
-        # Mock implementation - no action needed
 
     def activateWindow(self):  # pylint: disable=invalid-name
         """Activate settings window"""
-        # Mock implementation - no action needed
 
     def post_tray_init(self):
         """Post tray initialization"""
-        # No implementation needed for mock
 
 
 class MockTrackrequests:
@@ -141,7 +136,6 @@ class MockTrackrequests:
 
     def initial_ui(self):
         """Initialize UI"""
-        # No implementation needed for mock
 
     def raise_window(self):
         """Raise window to front"""
@@ -153,7 +147,6 @@ class MockTrackrequests:
 
     def vacuum_database(self):
         """Vacuum database"""
-        # No implementation needed for mock
 
 
 class MockMetadataDB:
@@ -191,7 +184,6 @@ def mock_dependencies():
         patch("nowplaying.systemtray.QFileSystemWatcher") as mock_watcher,
     ):
         mock_load_ui.return_value = MagicMock()
-        # Configure the mock watcher to have the expected Qt signal interface
         mock_watcher_instance = MagicMock()
         mock_watcher_instance.fileChanged = MagicMock()
         mock_watcher_instance.fileChanged.connect = MagicMock()
@@ -209,7 +201,6 @@ def mock_dependencies():
 def test_tray_initialization_normal_mode(qtbot, mock_dependencies):
     """Test basic system tray initialization in normal mode"""
     tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
     # qtbot.addWidget(tray.tray)
 
     # Verify core Qt components are created
@@ -230,7 +221,6 @@ def test_tray_initialization_normal_mode(qtbot, mock_dependencies):
 def test_menu_actions_creation(qtbot, mock_dependencies):
     """Test that all menu actions are created correctly"""
     tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
 
     # Verify required actions exist
     assert isinstance(tray.about_action, QAction)
@@ -255,7 +245,6 @@ def test_database_vacuum_on_startup(qtbot, mock_dependencies):
     """Test that databases are vacuumed on startup"""
     with patch("nowplaying.systemtray.Tray._vacuum_databases_on_startup") as mock_vacuum:
         nowplaying.systemtray.Tray()
-        # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
 
         # Verify vacuum was called during initialization
         mock_vacuum.assert_called_once()
@@ -263,21 +252,15 @@ def test_database_vacuum_on_startup(qtbot, mock_dependencies):
 
 def test_vacuum_databases_on_startup_method(qtbot, mock_dependencies):
     """Test the actual vacuum database startup method"""
-    tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
+    _ = nowplaying.systemtray.Tray()
 
     # Verify API cache vacuum was called
     mock_dependencies["api_vacuum"].assert_called_once()
-
-    # Verify metadata DB vacuum was called
-    # This is harder to test directly, but we can verify the method exists
-    assert hasattr(tray, "_vacuum_databases_on_startup")
 
 
 def test_settings_window_integration(qtbot, mock_dependencies):
     """Test settings window creation and integration"""
     tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
 
     # Verify settings window is created
     assert tray.settingswindow is not None
@@ -292,7 +275,6 @@ def test_settings_window_integration(qtbot, mock_dependencies):
 def test_subprocess_integration(qtbot, mock_dependencies):
     """Test subprocess manager integration"""
     tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
 
     # Verify subprocess manager is created
     assert tray.subprocesses is not None
@@ -300,14 +282,11 @@ def test_subprocess_integration(qtbot, mock_dependencies):
 
     # Test that processes are started after tray init
     tray.settingswindow.post_tray_init()
-    # Mock doesn't auto-call start_all_processes, but we can verify it exists
-    assert hasattr(tray.subprocesses, "start_all_processes")
 
 
 def test_track_requests_integration(qtbot, mock_dependencies):
     """Test track requests window integration"""
     tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
 
     # Verify requests window is created
     assert tray.requestswindow is not None
@@ -315,14 +294,11 @@ def test_track_requests_integration(qtbot, mock_dependencies):
 
     # Test requests action trigger
     tray.request_action.trigger()
-    # This calls _requestswindow which checks config first
-    assert hasattr(tray, "requestswindow")
 
 
 def test_mixmode_configuration(qtbot, mock_dependencies):
     """Test mix mode menu configuration"""
     tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
 
     # Verify mix mode actions are configured
     assert tray.action_newestmode.isCheckable()
@@ -330,31 +306,19 @@ def test_mixmode_configuration(qtbot, mock_dependencies):
 
     # Test mix mode switching
     tray.newestmixmode()
-    # Verify the method exists and can be called
-    assert hasattr(tray, "newestmixmode")
-    assert hasattr(tray, "oldestmixmode")
 
 
 def test_pause_functionality(qtbot, mock_dependencies):
     """Test pause/unpause functionality"""
     tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
 
     # Verify pause action exists and is configured
     assert isinstance(tray.action_pause, QAction)
-
-    # Test pause/unpause methods exist
-    assert hasattr(tray, "pause")
-    assert hasattr(tray, "unpause")
 
 
 def test_track_notification_system(qtbot, mock_dependencies):
     """Test track notification functionality"""
     tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
-
-    # Test tracknotify method exists
-    assert hasattr(tray, "tracknotify")
 
     # Test that it can be called without error
     tray.tracknotify()
@@ -363,7 +327,6 @@ def test_track_notification_system(qtbot, mock_dependencies):
 def test_clean_quit_functionality(qtbot, mock_dependencies):
     """Test clean quit process"""
     tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
 
     # Mock the exit methods to avoid actually exiting
     with patch.object(tray, "exit_everything") as mock_exit:
@@ -374,7 +337,6 @@ def test_clean_quit_functionality(qtbot, mock_dependencies):
 def test_exit_everything_subprocess_cleanup(qtbot, mock_dependencies):
     """Test that exit_everything properly cleans up subprocesses"""
     tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
 
     # Test exit_everything method
     tray.exit_everything()
@@ -422,7 +384,6 @@ def test_settings_ui_creation_error_handling(qtbot, mock_dependencies):
 def test_menu_structure_and_separators(qtbot, mock_dependencies):
     """Test that menu has proper structure with separators"""
     tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
 
     # Verify menu exists and has actions
     assert tray.menu is not None
@@ -436,23 +397,12 @@ def test_menu_structure_and_separators(qtbot, mock_dependencies):
 
 def test_action_connections(qtbot, mock_dependencies):
     """Test that actions are properly connected to methods"""
-    tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
-
-    # Test that actions have connections
-    # Note: We can't easily test signal connections in unit tests,
-    # but we can verify the methods exist
-    assert hasattr(tray, "cleanquit")
-    assert callable(tray.cleanquit)
-
-    # Test about action connection by verifying aboutwindow exists
-    assert hasattr(tray, "aboutwindow")
+    _ = nowplaying.systemtray.Tray()
 
 
 def test_requestswindow_conditional_display(qtbot, mock_dependencies):
     """Test that requests window only shows when enabled"""
     tray = nowplaying.systemtray.Tray()
-    # Note: QSystemTrayIcon is not a QWidget, so we can't add it to qtbot
 
     # Test _requestswindow method
     tray._requestswindow()

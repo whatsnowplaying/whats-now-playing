@@ -206,8 +206,7 @@ class APIResponseCache:
             Cached response data or None if not found/expired
         """
         # Ensure database is initialized before operations
-        if hasattr(self, "_init_task"):
-            await self._init_task
+        await self._init_task
 
         cache_key = APIResponseCache._make_cache_key(provider, artist_name, endpoint, params)
         current_time = int(time.time())
@@ -267,8 +266,7 @@ class APIResponseCache:
             return
 
         # Ensure database is initialized before operations
-        if hasattr(self, "_init_task"):
-            await self._init_task
+        await self._init_task
 
         cache_key = APIResponseCache._make_cache_key(provider, artist_name, endpoint, params)
         current_time = int(time.time())
@@ -468,7 +466,7 @@ class APIResponseCache:
         warnings about closed event loops.
         """
         # Cancel the initialization task if it's still running
-        if hasattr(self, "_init_task") and not self._init_task.done():
+        if not self._init_task.done():
             self._init_task.cancel()
             try:
                 await self._init_task
