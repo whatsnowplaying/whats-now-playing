@@ -69,6 +69,7 @@ METADATALIST = [
     "title",
     "track",
     "track_total",
+    "track_received",
 ]
 
 LISTFIELDS = [

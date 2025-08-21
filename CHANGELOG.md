@@ -4,6 +4,9 @@
 ## Version 5.0.0 - in-progress
 
 * New Features:
+  * ANNOUNCING WHATS NOW PLAYING CHARTS!
+    * Now you can help the community figure out what DJs are ACTUALLY
+      PLAYING on their streams!
 
   * Many UI element upgrades
 
@@ -61,6 +64,7 @@
 * Bug fixes
   * Icecast-based systems (butt, Traktor, etc) got some protocol fixes
   * M3U-based systems (Virtual DJ) file watching fixes
+  * Wikimedia links did not correctly redirect
 
 * Removed
   * The non-websocket templates have been removed. The code to support your old

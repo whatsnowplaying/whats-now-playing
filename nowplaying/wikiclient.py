@@ -42,6 +42,23 @@ class AsyncWikiClient:
         # Create SSL context with proper certificate verification
         self.ssl_context = ssl.create_default_context()
 
+    def _handle_redirect(self, data: dict, entity: str) -> dict | None:  # pylint: disable=no-self-use
+        """Handle Wikidata entity redirects."""
+        if entity not in data["entities"]:
+            entities = list(data["entities"].keys())
+            if len(entities) == 1:
+                logging.debug("Following redirect from %s to %s", entity, entities[0])
+                return data["entities"][entities[0]]
+            if len(entities) > 1:
+                logging.warning(
+                    "Ambiguous redirect for entity %s: multiple entities returned (%s).",
+                    entity,
+                    ", ".join(entities),
+                )
+                return None
+            return None
+        return data["entities"][entity]
+
     async def __aenter__(self):
         connector = nowplaying.utils.create_http_connector(self.ssl_context)
         self.session = aiohttp.ClientSession(timeout=self.timeout, connector=connector)
@@ -67,10 +84,12 @@ class AsyncWikiClient:
         async with self.session.get(url, params=params) as response:
             data = await response.json()
 
-            if "entities" not in data or entity not in data["entities"]:
+            if "entities" not in data:
                 return {}
 
-            entity_data = data["entities"][entity]
+            entity_data = self._handle_redirect(data, entity)
+            if not entity_data:
+                return {}
             result = {"claims": {}}
 
             # Extract claims (P434 = MusicBrainz, P1953 = Discogs, P18 = Image)
@@ -105,7 +124,7 @@ class AsyncWikiClient:
 
             return result
 
-    async def _get_wikipedia_extract(
+    async def _get_wikipedia_extract(  # pylint: disable=too-many-return-statements
         self, entity: str, lang: str, sitelinks: dict | None = None
     ) -> str | None:
         """Get Wikipedia page extract using sitelinks (fetched separately if not provided)."""
@@ -124,10 +143,12 @@ class AsyncWikiClient:
             async with self.session.get(url, params=params) as response:
                 data = await response.json()
 
-                if "entities" not in data or entity not in data["entities"]:
+                if "entities" not in data:
                     return None
 
-                entity_data = data["entities"][entity]
+                entity_data = self._handle_redirect(data, entity)
+                if not entity_data:
+                    return None
                 sitelinks = entity_data.get("sitelinks", {})
 
         # Look for the Wikipedia page in the specified language
@@ -176,10 +197,12 @@ class AsyncWikiClient:
         async with self.session.get(url, params=params) as response:
             data = await response.json()
 
-            if "entities" not in data or entity not in data["entities"]:
+            if "entities" not in data:
                 return images
 
-            entity_data = data["entities"][entity]
+            entity_data = self._handle_redirect(data, entity)
+            if not entity_data:
+                return images
             claims = entity_data.get("claims", {})
 
             # Get P18 (image) claims
@@ -253,7 +276,7 @@ class AsyncWikiClient:
         results = await self._get_commons_image_urls_batch([filename])
         return results[0] if results else None
 
-    async def _get_wikipedia_images(  # pylint: disable=too-many-locals
+    async def _get_wikipedia_images(  # pylint: disable=too-many-locals,too-many-return-statements
         self, entity: str, lang: str, sitelinks: dict | None = None
     ) -> list[dict[str, str]]:
         """Get images from Wikipedia page using sitelinks (fetched separately if not provided)."""
@@ -272,10 +295,12 @@ class AsyncWikiClient:
             async with self.session.get(url, params=params) as response:
                 data = await response.json()
 
-                if "entities" not in data or entity not in data["entities"]:
+                if "entities" not in data:
                     return []
 
-                entity_data = data["entities"][entity]
+                entity_data = self._handle_redirect(data, entity)
+                if not entity_data:
+                    return []
                 sitelinks = entity_data.get("sitelinks", {})
 
         wiki_key = f"{lang}wiki"

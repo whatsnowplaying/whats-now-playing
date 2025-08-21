@@ -7,6 +7,7 @@
 - **[OBS WebSocket](obswebsocket.md)** - Direct integration with OBS Studio
 - **[Web Server](webserver.md)** - Built-in web server for browser sources
 - **[Text Output](textoutput.md)** - Simple text file output
+- **[Charts](charts.md)** - Submit track data to What's Now Playing Charts service
 - **[Twitch Bot](twitchbot.md)** - Twitch chat bot integration
 - **[Kick Bot](kickbot.md)** - Kick streaming platform bot
 - **[Discord](discord.md)** - Discord rich presence integration
