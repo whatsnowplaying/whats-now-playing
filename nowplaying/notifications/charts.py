@@ -266,14 +266,14 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         Returns:
             True if successful, False if failed
         """
-        try:
-            # Choose URL based on debug flag
-            url = (
-                "http://localhost:8000/v1/submit"
-                if self.debug
-                else "https://whatsnowplaying.org/v1/submit"
-            )
+        # Choose URL based on debug flag
+        url = (
+            "http://localhost:8000/v1/submit"
+            if self.debug
+            else "https://whatsnowplaying.com/v1/submit"
+        )
 
+        try:
             # Remove non-JSON-serializable fields to prevent submission failures
             non_serializable_keys = []
             for key, value in charts_data.items():
@@ -336,11 +336,10 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                             logging.error("Charts server returned status %d", response.status)
                         return False
         except aiohttp.ClientError as exc:
-            url = "localhost:8000" if self.debug else "whatsnowplaying.org"
             logging.error("Failed to connect to charts server %s - %s", url, exc)
             return False
         except Exception as exc:  # pylint: disable=broad-except
-            logging.error("Unexpected error sending to charts server: %s", exc)
+            logging.error("Unexpected error sending to charts server: %s - %s", url, exc)
             return False
 
     def defaults(self, qsettings: "QSettings"):
