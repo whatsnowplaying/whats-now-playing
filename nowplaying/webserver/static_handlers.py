@@ -18,8 +18,8 @@ from nowplaying.types import TrackMetadata
 
 if TYPE_CHECKING:
     import nowplaying.config
-    import nowplaying.metadata
     import nowplaying.imagecache
+    import nowplaying.metadata
 
 # Import constants from main webserver module
 INDEXREFRESH = (
@@ -300,7 +300,7 @@ class StaticContentHandler:
         js_path = config.getbundledir().joinpath("templates", "nowplaying-websocket.js")
 
         if js_path.exists():
-            with open(js_path, "r", encoding="utf-8") as fhin:
+            with open(js_path, encoding="utf-8") as fhin:
                 js_content = fhin.read()
             return web.Response(text=js_content, content_type="application/javascript")
 
@@ -332,7 +332,7 @@ class StaticContentHandler:
         # Determine content type based on file extension
         if vendor_file.endswith(".js"):
             content_type = "application/javascript"
-            with open(vendor_path, "r", encoding="utf-8") as fhin:
+            with open(vendor_path, encoding="utf-8") as fhin:
                 content = fhin.read()
 
         if vendor_file.endswith(".woff"):
@@ -413,6 +413,8 @@ class StaticContentHandler:
             "cache_warmed",
             "secret",
             "filename",  # Security: Never accept filenames from remote sources
+            "track_received",  # System-generated timestamp, not user-provided
+            "version",  # System-generated version, not user-provided
         }
         return {k: v for k, v in metadata.items() if k not in excluded_fields}
 
@@ -495,7 +497,7 @@ class StaticContentHandler:
                 response["warnings"] = validation_warnings
 
             return web.json_response(response)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logging.error("Metadata processing timeout for request from %s", request.remote)
             return web.json_response({"error": "Processing timeout"}, status=408)
         except Exception as exc:  # pylint: disable=broad-exception-caught

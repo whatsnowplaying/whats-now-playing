@@ -104,6 +104,7 @@ async def test_data_db1(bootstrap):  # pylint: disable=unused-argument
         "title": "15 Ghosts II",
         "track": "15",
         "track_total": None,
+        "track_received": None,
     }
 
     await metadb.write_to_metadb(metadata=expected)
@@ -187,6 +188,7 @@ async def test_data_db2(bootstrap):  # pylint: disable=unused-argument
         "title": "Lakini's Juice",
         "track": None,
         "track_total": None,
+        "track_received": None,
         "dbid": 1,
     }
 

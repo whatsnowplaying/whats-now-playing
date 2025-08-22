@@ -153,7 +153,7 @@ class Plugin(ArtistExtrasPlugin):
                 mymeta["artistshortbio"] = page.data["description"]
 
         if not metadata or self._check_missing(metadata):
-            return None
+            return {}
 
         mymeta = {}
         processed_any_page = False
@@ -167,7 +167,7 @@ class Plugin(ArtistExtrasPlugin):
             ]
             if not wikidata_websites:
                 logging.debug("no wikidata entity")
-                return None
+                return {}
 
             lang = self.config.cparser.value("wikimedia/bio_iso", type=str) or "en"
             for website in wikidata_websites:
@@ -226,10 +226,10 @@ class Plugin(ArtistExtrasPlugin):
                     )
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("Async metadata breaks wikimedia (%s): %s", err, metadata)
-            return None
+            return {}
 
-        # Return None if no valid pages were processed
-        return mymeta if processed_any_page else None
+        # Always return a dictionary, even if empty
+        return mymeta if processed_any_page else {}
 
     def providerinfo(self):  # pylint: disable=no-self-use
         """return list of what is provided by this plug-in"""
