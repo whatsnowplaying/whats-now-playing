@@ -3,6 +3,7 @@
 
 import asyncio
 import contextlib
+import datetime
 import multiprocessing
 import logging
 import os
@@ -22,6 +23,7 @@ import nowplaying.metadata
 import nowplaying.notifications
 import nowplaying.pluginimporter
 import nowplaying.trackrequests
+import nowplaying.version
 from nowplaying.types import TrackMetadata
 import nowplaying.utils
 
@@ -363,6 +365,12 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             logging.exception("Ignoring the %s crash and just keep going!", err)
             await asyncio.sleep(5)
             self.currentmeta = nextmeta
+
+        # Set timestamp and version when track is accepted as current
+        self.currentmeta["track_received"] = datetime.datetime.now(
+            datetime.timezone.utc
+        ).isoformat()
+        self.currentmeta["version"] = nowplaying.version.__VERSION__
 
         logging.info(
             "Potential new track: %s / %s", self.currentmeta["artist"], self.currentmeta["title"]
