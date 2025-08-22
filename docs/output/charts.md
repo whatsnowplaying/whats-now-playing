@@ -16,7 +16,7 @@ allowing you to:
 
 Before setting up Charts output, you'll need to get your authentication key:
 
-1. Visit [whatsnowplaying.org](https://whatsnowplaying.org)
+1. Visit [whatsnowplaying.com](https://whatsnowplaying.com)
 2. Click **Login with Twitch** or **Login with Kick**
 3. Complete the OAuth login process
 4. Go to your **Dashboard**

@@ -551,7 +551,7 @@ VALUES (?,?,?);
         try:
             headers = {
                 "user-agent": f"whatsnowplaying/{nowplaying.version.__VERSION__}"  # pylint: disable=no-member
-                " +https://whatsnowplaying.github.io/"
+                " +https://whatsnowplaying.org/"
             }
             dlimage = session.get(imagedict["srclocation"], timeout=5, headers=headers)
         except Exception as error:  # pylint: disable=broad-except
