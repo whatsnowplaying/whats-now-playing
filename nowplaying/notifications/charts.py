@@ -147,7 +147,6 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                 "charts/enabled", type=bool, defaultValue=False
             )
             self.key = self.config.cparser.value("charts/charts_key")
-            self.debug = self.config.cparser.value("charts/debug", type=bool, defaultValue=False)
 
             # Set up queue file path
             cache_dir = pathlib.Path(QStandardPaths.writableLocation(QStandardPaths.CacheLocation))
@@ -222,7 +221,6 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         # Refresh config to get latest key and debug flag
         if self.config:
             self.key = self.config.cparser.value("charts/charts_key")
-            self.debug = self.config.cparser.value("charts/debug", type=bool, defaultValue=False)
 
         while True:
             async with self._queue_lock:
@@ -235,8 +233,8 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             if self.key:
                 charts_data["secret"] = self.key
 
-            success = await self._send_to_charts(charts_data)
-            if success:
+            result = await self._send_to_charts(charts_data)
+            if result == "success":
                 async with self._queue_lock:
                     # Remove successfully sent item
                     self.queue.pop(0)
@@ -245,7 +243,18 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                         "Charts submission successful, %d items remaining in queue",
                         len(self.queue),
                     )
-            else:
+            elif result == "drop":
+                async with self._queue_lock:
+                    # Drop the problematic item and continue
+                    dropped_item = self.queue.pop(0)
+                    await self._save_queue()
+                    logging.warning(
+                        "Dropped charts submission due to client error: %s - %s, %d remaining",
+                        dropped_item.get("artist", "Unknown Artist"),
+                        dropped_item.get("title", "Unknown Title"),
+                        len(self.queue),
+                    )
+            else:  # result == "retry"
                 # Failed to send, leave in queue and stop processing
                 async with self._queue_lock:
                     logging.debug(
@@ -257,14 +266,16 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             # Small delay between submissions (outside lock)
             await asyncio.sleep(0.1)
 
-    async def _send_to_charts(  # pylint: disable=too-many-return-statements,too-many-branches
+    async def _send_to_charts(  # pylint: disable=too-many-statements,too-many-return-statements,too-many-branches
         self, charts_data: TrackMetadata
-    ) -> bool:
+    ) -> str:
         """
         Send a single item to charts server
 
         Returns:
-            True if successful, False if failed
+            "success": Item sent successfully, remove from queue and continue
+            "retry": Failed to send, keep in queue and stop processing (retry later)
+            "drop": Drop this item from queue and continue processing
         """
         # Choose URL based on debug flag
         url = (
@@ -304,10 +315,28 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                         try:
                             result = await response.json()
                             logging.debug("Charts server accepted track update: %s", result)
-                            return True
+                            return "success"
                         except Exception as exc:  # pylint: disable=broad-except
                             logging.warning("Failed to parse charts server response: %s", exc)
-                            return True  # Still consider it successful if status was 200
+                            return "success"  # Still consider it successful if status was 200
+                    elif response.status == 400:
+                        try:
+                            error_text = await response.text()
+                            logging.error(
+                                "Charts server rejected malformed data (400): %s", error_text
+                            )
+                        except Exception:  # pylint: disable=broad-except
+                            logging.error("Charts server rejected malformed data (400)")
+                        return "drop"  # Drop malformed data, continue processing
+                    elif response.status == 401:
+                        try:
+                            error_text = await response.text()
+                            logging.error(
+                                "Charts server authentication failed (401): %s", error_text
+                            )
+                        except Exception:  # pylint: disable=broad-except
+                            logging.error("Charts server authentication failed (401)")
+                        return "retry"  # Stop processing, auth needs to be fixed
                     elif response.status == 403:
                         try:
                             error_text = await response.text()
@@ -316,7 +345,14 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                             )
                         except Exception:  # pylint: disable=broad-except
                             logging.error("Charts server authentication failed (403)")
-                        return False
+                        return "retry"  # Stop processing, auth needs to be fixed
+                    elif response.status == 404:
+                        try:
+                            error_text = await response.text()
+                            logging.error("Charts server endpoint not found (404): %s", error_text)
+                        except Exception:  # pylint: disable=broad-except
+                            logging.error("Charts server endpoint not found (404)")
+                        return "drop"  # Drop item, endpoint won't change
                     elif response.status == 405:
                         try:
                             error_text = await response.text()
@@ -325,8 +361,26 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                             logging.error(
                                 "Charts server method not allowed (405) - check endpoint"
                             )
-                        return False
+                        return "drop"  # Drop item, method won't change
+                    elif response.status == 429:
+                        try:
+                            error_text = await response.text()
+                            logging.warning("Charts server rate limited (429): %s", error_text)
+                        except Exception:  # pylint: disable=broad-except
+                            logging.warning("Charts server rate limited (429)")
+                        return "retry"  # Stop processing, retry later with backoff
+                    elif 400 <= response.status < 500:
+                        # Other 4xx client errors - drop the item
+                        try:
+                            error_text = await response.text()
+                            logging.error(
+                                "Charts server client error %d: %s", response.status, error_text
+                            )
+                        except Exception:  # pylint: disable=broad-except
+                            logging.error("Charts server client error %d", response.status)
+                        return "drop"  # Drop item, client error won't resolve by retrying
                     else:
+                        # 5xx server errors - retry later
                         try:
                             error_text = await response.text()
                             logging.error(
@@ -334,19 +388,18 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                             )
                         except Exception:  # pylint: disable=broad-except
                             logging.error("Charts server returned status %d", response.status)
-                        return False
+                        return "retry"  # Retry later, server may recover
         except aiohttp.ClientError as exc:
             logging.error("Failed to connect to charts server %s - %s", url, exc)
-            return False
+            return "retry"  # Network issues, retry later
         except Exception as exc:  # pylint: disable=broad-except
             logging.error("Unexpected error sending to charts server: %s - %s", url, exc)
-            return False
+            return "retry"  # Unexpected error, retry later
 
     def defaults(self, qsettings: "QSettings"):
         """Set default configuration values"""
         qsettings.setValue("charts/enabled", False)
         qsettings.setValue("charts/charts_key", "")
-        qsettings.setValue("charts/debug", False)
 
     def load_settingsui(self, qwidget: "QWidget"):
         """Load settings into UI"""
@@ -361,7 +414,6 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         """Save settings from UI"""
         self.config.cparser.setValue("charts/enabled", qwidget.enable_checkbox.isChecked())
         self.config.cparser.setValue("charts/charts_key", qwidget.secret_lineedit.text())
-        # Note: debug flag is not exposed in UI, only settable via config file
 
     def verify_settingsui(self, qwidget: "QWidget"):
         """Verify settings"""
