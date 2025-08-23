@@ -196,8 +196,23 @@ class IcecastProtocol(asyncio.Protocol):
                 if fieldname := comment_type_to_attr_mapping.get(key.lower()):
                     metadata[fieldname] = value
 
+        # Fallback: If artist is empty but title contains " - ", try splitting the title
+        artist_value = metadata.get("artist")
+        if (
+            (not artist_value or not artist_value.strip())
+            and metadata.get("title")
+            and " - " in metadata["title"]
+        ):
+            artist, title = metadata["title"].split(" - ", 1)
+            artist = artist.strip()
+            title = title.strip()
+            if artist:  # Only apply the split if we get a non-empty artist
+                metadata["artist"] = artist
+                metadata["title"] = title
+
         # Update instance metadata and notify callback
         self._current_metadata.update(metadata)
+
         if self.metadata_callback:
             self.metadata_callback(self._current_metadata.copy())
 
