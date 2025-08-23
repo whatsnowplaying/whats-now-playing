@@ -266,7 +266,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             # Small delay between submissions (outside lock)
             await asyncio.sleep(0.1)
 
-    async def _send_to_charts(  # pylint: disable=too-many-return-statements,too-many-branches
+    async def _send_to_charts(  # pylint: disable=too-many-statements,too-many-return-statements,too-many-branches
         self, charts_data: TrackMetadata
     ) -> str:
         """

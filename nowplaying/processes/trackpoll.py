@@ -23,7 +23,7 @@ import nowplaying.metadata
 import nowplaying.notifications
 import nowplaying.pluginimporter
 import nowplaying.trackrequests
-import nowplaying.version
+import nowplaying.version  # pylint: disable=import-error,no-name-in-module
 from nowplaying.types import TrackMetadata
 import nowplaying.utils
 
@@ -370,7 +370,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         self.currentmeta["track_received"] = datetime.datetime.now(
             datetime.timezone.utc
         ).isoformat()
-        self.currentmeta["version"] = nowplaying.version.__VERSION__
+        self.currentmeta["version"] = nowplaying.version.__VERSION__  # pylint: disable=no-member
 
         logging.info(
             "Potential new track: %s / %s", self.currentmeta["artist"], self.currentmeta["title"]
