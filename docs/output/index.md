@@ -4,12 +4,12 @@
 
 ## Available Output Destinations
 
-- **[OBS WebSocket](obswebsocket.md)** - Direct integration with OBS Studio
-- **[Web Server](webserver.md)** - Built-in web server for browser sources
-- **[Text Output](textoutput.md)** - Simple text file output
 - **[Charts](charts.md)** - Submit track data to What's Now Playing Charts service
-- **[Twitch Bot](twitchbot.md)** - Twitch chat bot integration
-- **[Kick Bot](kickbot.md)** - Kick streaming platform bot
 - **[Discord](discord.md)** - Discord rich presence integration
+- **[Kick Bot](kickbot.md)** - Kick streaming platform bot
+- **[OBS WebSocket](obswebsocket.md)** - Direct integration with OBS Studio
+- **[Text Output](textoutput.md)** - Simple text file output
+- **[Twitch Bot](twitchbot.md)** - Twitch chat bot integration
+- **[Web Server](webserver.md)** - Built-in web server for browser sources
 
 Click on any output destination above to see detailed configuration instructions.
