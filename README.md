@@ -5,7 +5,7 @@
 **What's Now Playing** retrieves live track information from DJ
 software and displays it on streams, in chat, or anywhere else you need it.
 
-**[Start here: Complete Documentation & Setup Guide](https://whatsnowplaying.org/)**
+**[Start here: Complete Documentation & Setup Guide](http://whatsnowplaying.github.io/)**
 
 ## Supported DJ Software
 
@@ -17,8 +17,8 @@ Serato DJ, Traktor, Denon DJ (StagelinQ), Virtual DJ, DJUCED, MIXXX, JRiver Medi
 
 ## Quick Links
 
-- **[Quickstart Guide](https://whatsnowplaying.org/quickstart/)** - Get up and running
-- **[Gallery](https://whatsnowplaying.org/gallery/)** - See it in action
+- **[Quickstart Guide](http://whatsnowplaying.github.io/quickstart/)** - Get up and running
+- **[Gallery](http://whatsnowplaying.github.io/gallery/)** - See it in action
 - **[Discord Community](https://discord.gg/rgEvcdUHUV)** - Get help and share setups
 
 ---
@@ -26,5 +26,5 @@ Serato DJ, Traktor, Denon DJ (StagelinQ), Virtual DJ, DJUCED, MIXXX, JRiver Medi
 ## For Developers
 
 This is an open-source Python application using Qt6 for the interface. See
-the [developer documentation](https://whatsnowplaying.org/help/developers/)
+the [developer documentation](http://whatsnowplaying.github.io/help/developers/)
 for contributing guidelines and architecture details.
