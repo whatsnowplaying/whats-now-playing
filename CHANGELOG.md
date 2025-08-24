@@ -82,7 +82,7 @@
   * Icecast protocol fixes to make it more reliable
   * Fixed an issue where files without metadata were not properly doing "dash" separations.
     For example, a title of "The Pixies - Monkey Gone to Heaven" will now get split into
-    artist: "The Pixes" title: "Monkey Gone to Heaven" so that proper metadata handling
+    artist: "The Pixies" title: "Monkey Gone to Heaven" so that proper metadata handling
     from there on out will work. Of course, properly tagged files are way better.
 
 * Serato
