@@ -1,7 +1,7 @@
 ---
 site_name: "What's Now Playing"
 site_description: "A tool to retrieve current/last played song in DJ software"
-site_url: https://whatsnowplaying.org
+site_url: http://whatsnowplaying.github.io
 repo_url: https://github.com/whatsnowplaying/whats-now-playing
 repo_name: whatsnowplaying/whats-now-playing
 

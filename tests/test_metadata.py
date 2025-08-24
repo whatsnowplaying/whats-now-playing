@@ -467,7 +467,7 @@ async def test_url_dedupe4(bootstrap):
     metadatain = {
         "artistwebsites": [
             "https://example.com",
-            "https://whatsnowplaying.org",
+            "http://whatsnowplaying.github.io",
             "http://example.com/",
         ]
     }
@@ -476,7 +476,7 @@ async def test_url_dedupe4(bootstrap):
     )
     assert metadataout["artistwebsites"] == [
         "https://example.com/",
-        "https://whatsnowplaying.org/",
+        "http://whatsnowplaying.github.io/",
     ]
 
 

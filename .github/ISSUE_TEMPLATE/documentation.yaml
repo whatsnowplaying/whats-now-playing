@@ -15,7 +15,7 @@ body:
     attributes:
       label: "💻 Web Link"
       description: "Location on the documentation website."
-      placeholder: "https://whatsnowplaying.org/whatsnowplaying/"
+      placeholder: "http://whatsnowplaying.github.io/whatsnowplaying/"
   - type: textarea
     id: issue-description
     validations:
