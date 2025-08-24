@@ -4,7 +4,7 @@
 ## Version 5.0.0 - in-progress
 
 * New Features:
-  * ANNOUNCING WHATS NOW PLAYING CHARTS!
+  * ANNOUNCING [WHAT'S NOW PLAYING CHARTS](https://whatsnowplaying.com/)!
     * Now you can help the community figure out what DJs are ACTUALLY
       PLAYING on their streams!
 
@@ -52,6 +52,7 @@
     * now
     * timestamp
     * today
+    * track_received
     * twitchchannel
 
   * Completely revamped documentation website to make it easy to pick your version
@@ -62,7 +63,6 @@
     need to extract the content.
 
 * Bug fixes
-  * Icecast-based systems (butt, Traktor, etc) got some protocol fixes
   * M3U-based systems (Virtual DJ) file watching fixes
   * Wikimedia links did not correctly redirect
 
@@ -77,6 +77,13 @@
   * Revamped database support
   * hasartist support
   * Smart playlists should now be supported
+
+* Icecast (butt, Traktor, MIXX, others)
+  * Icecast protocol fixes to make it more reliable
+  * Fixed an issue where files without metadata were not properly doing "dash" separations.
+    For example, a title of "The Pixies - Monkey Gone to Heaven" will now get split into
+    artist: "The Pixes" title: "Monkey Gone to Heaven" so that proper metadata handling
+    from there on out will work. Of course, properly tagged files are way better.
 
 * Serato
   * Support for more than one `_Serato_` library path
