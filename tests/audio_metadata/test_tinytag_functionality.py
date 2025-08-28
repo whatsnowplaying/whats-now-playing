@@ -4,7 +4,7 @@
 from pathlib import Path
 
 import pytest
-import tinytag
+from nowplaying.vendor import tinytag  # pylint: disable=import-error,no-name-in-module
 
 
 @pytest.fixture

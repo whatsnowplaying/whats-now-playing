@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from nowplaying.vendor import tinytag  # pylint: disable=import-error,no-name-in-module
 
 # Add project root to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -115,7 +116,6 @@ def expected_metadata_fields():
 @pytest.fixture
 def metadata_extraction_helper():
     """Helper fixture for consistent metadata extraction."""
-    import tinytag  # pylint: disable=import-outside-toplevel
 
     class MetadataExtractor:
         """Helper class for extracting metadata from audio files."""

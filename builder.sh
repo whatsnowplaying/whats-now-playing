@@ -2,6 +2,10 @@
 
 set -e
 
+export PYTHONIOENCODING=utf-8
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
 SYSTEM=$1
 VERSION=$(git describe --tags)
 UNAMESYS=$(uname -s)
@@ -85,6 +89,12 @@ echo "* Installing dependencies"
 echo "****"
 
 "${PYTHONBIN}" -m pip install ".[binaries,osspecials]"
+
+echo "*****"
+echo "* Installing vendored dependencies"
+echo "****"
+
+"${PYTHONBIN}" -m vendoring sync
 
 echo "*****"
 echo "* Setting up NLTK"

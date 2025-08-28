@@ -6,12 +6,9 @@ import sys
 from pathlib import Path
 
 import pytest
-import tinytag
+from nowplaying.vendor import tinytag  # pylint: disable=import-error,no-name-in-module
 
-import nowplaying.tinytag_fixes  # pylint: disable=import-error
-
-# Apply tinytag patches for testing
-nowplaying.tinytag_fixes.apply_tinytag_patches()
+# Vendored TinyTag already includes all fixes
 
 
 def _has_multiple_values(value) -> bool:
@@ -307,16 +304,3 @@ def test_multivalue_field_order_consistency(multivalue_files, file_key):  # pyli
             assert isrc_extraction == first_isrc, (
                 f"ISRC field order inconsistent in {file_key}: {first_isrc} vs {isrc_extraction}"
             )
-
-
-def test_tinytag_monkey_patch_functionality():
-    """Test that our monkey patch for M4A multi-value fields is working."""
-    # This test verifies that our monkey patch is properly applied
-    # (already imported at module level)
-    # Verify the monkey patch was applied by checking the method signature
-    import tinytag.tinytag as tt  # pylint: disable=import-outside-toplevel
-
-    # pylint: disable=protected-access
-    assert hasattr(tt._MP4, "_parse_custom_field"), "Monkey patch should be applied"  # pylint: disable=protected-access,no-member
-
-    print("[OK] TinyTag monkey patch successfully applied")

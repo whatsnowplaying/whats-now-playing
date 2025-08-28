@@ -3,4 +3,3 @@
 #
 pyinstaller==6.15.0
 pyinstaller_versionfile==3.0.1
-vendoring==1.2.0
