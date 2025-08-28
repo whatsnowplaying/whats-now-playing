@@ -12,30 +12,31 @@ allowing you to:
 * Participate in community charts
 * Share your music data with the What's Now Playing ecosystem
 
-## Getting your Secret Key
+## Automatic Setup
 
-Before setting up Charts output, you'll need to get your authentication key:
+Charts is **enabled by default** and requires no manual configuration. What's Now Playing automatically:
 
-1. Visit [whatsnowplaying.com](https://whatsnowplaying.com)
-2. Click **Login with Twitch** or **Login with Kick**
-3. Complete the OAuth login process
-4. Go to your **Dashboard**
-5. Click **Regenerate API Key** to reveal your key (required for first-time users)
-6. Copy your **API Key** and save it securely
+* Generates an anonymous API key during first startup
+* Begins tracking your music immediately
+* Stores your key securely for future sessions
 
-## Setup
+## Claiming Your Anonymous Key
 
-To enable Charts output:
+To access advanced features and view your data online:
 
 1. Navigate to **Settings** → **Output Destinations** → **Charts**
-2. Check the **Enable** checkbox
-3. Enter your **Secret Key** from the dashboard above
-4. Click **Save**
+2. Copy your auto-generated **Secret Key** from the input field
+3. Visit [whatsnowplaying.com](https://whatsnowplaying.com)
+4. Click **Login with Twitch** or **Login with Kick**
+5. Complete the OAuth login process
+6. Go to your **Dashboard**
+7. Enter your copied key in the **Claim Anonymous Key** section
+8. Click **Claim Key** to link it to your account
 
 ## Configuration
 
-* **Enable** - Turn Charts output on or off
-* **Secret** - Your authentication key for the Charts service (required)
+* **Enable** - Turn Charts output on or off (enabled by default)
+* **Secret** - Your auto-generated anonymous API key (automatically created)
 
 ## How it works
 

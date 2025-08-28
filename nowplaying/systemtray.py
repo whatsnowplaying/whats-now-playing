@@ -22,6 +22,8 @@ import nowplaying.settingsui
 import nowplaying.subprocesses
 import nowplaying.twitch.chat
 import nowplaying.trackrequests
+import nowplaying.notifications.charts
+
 
 LASTANNOUNCED: dict[str, str | None] = {"artist": None, "title": None}
 
@@ -46,6 +48,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         # System setup
         self._setup_database_and_processes()
+
+        # Charts initialization
+        self._setup_charts_key()
 
         # Settings and finalization
         self.settingswindow = None
@@ -232,6 +237,19 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             logging.error("Error vacuuming requests database: %s", error, exc_info=True)
 
         logging.debug("Database vacuum operations completed")
+
+    def _setup_charts_key(self) -> None:
+        """Generate anonymous charts key if none exists"""
+        self._update_startup_progress("Setting up Charts service...")
+        existing_key = self.config.cparser.value("charts/charts_key", defaultValue="")
+        if not existing_key:
+            anonymous_key = nowplaying.notifications.charts.generate_anonymous_key()
+            if anonymous_key:
+                self.config.cparser.setValue("charts/charts_key", anonymous_key)
+                self.config.cparser.sync()  # Ensure key is written to disk immediately
+                logging.info("Generated and saved anonymous charts key during startup")
+            else:
+                logging.warning("Failed to generate anonymous key during startup")
 
     def _requestswindow(self) -> None:
         if self.config.cparser.value("settings/requests", type=bool) and self.requestswindow:

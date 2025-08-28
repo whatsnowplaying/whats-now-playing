@@ -178,3 +178,12 @@ def auto_temp_api_cache_for_artistextras(request, temp_api_cache):  # pylint: di
             nowplaying.apicache.set_cache_instance(original_cache)
     else:
         yield
+
+
+@pytest.fixture(autouse=True)
+def mock_charts_key_generation():
+    """Mock Charts anonymous key generation to prevent API calls during tests."""
+    with unittest.mock.patch("nowplaying.notifications.charts.generate_anonymous_key") as mock_key:
+        # Return None to simulate no key generation during tests
+        mock_key.return_value = None
+        yield mock_key
