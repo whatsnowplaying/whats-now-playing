@@ -13,7 +13,6 @@ import aiohttp
 from PySide6.QtCore import QStandardPaths  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.db
-from nowplaying.exceptions import PluginVerifyError
 from nowplaying.types import TrackMetadata
 
 from . import NotificationPlugin
@@ -51,20 +50,19 @@ def generate_anonymous_key(debug: bool = False) -> str | None:
                     return api_key
                 logging.error("Charts server returned response without api_key")
                 return None
-            else:
-                try:
-                    error_data = response.read()
-                    error_response = json.loads(error_data)
-                    error_detail = error_response.get("detail", "Unknown error")
-                    logging.error(
-                        "Charts server returned status %d: %s", response.status, error_detail
-                    )
-                except Exception:  # pylint: disable=broad-except
-                    logging.error(
-                        "Charts server returned status %d for anonymous key request",
-                        response.status,
-                    )
-                return None
+            try:
+                error_data = response.read()
+                error_response = json.loads(error_data)
+                error_detail = error_response.get("detail", "Unknown error")
+                logging.error(
+                    "Charts server returned status %d: %s", response.status, error_detail
+                )
+            except Exception:  # pylint: disable=broad-except
+                logging.error(
+                    "Charts server returned status %d for anonymous key request",
+                    response.status,
+                )
+            return None
     except urllib.error.URLError as exc:
         logging.error("Failed to connect to charts server %s: %s", url, exc)
         return None
@@ -518,20 +516,19 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                         return api_key
                     logging.error("Charts server returned response without api_key")
                     return None
-                else:
-                    try:
-                        error_data = response.read()
-                        error_response = json.loads(error_data)
-                        error_detail = error_response.get("detail", "Unknown error")
-                        logging.error(
-                            "Charts server returned status %d: %s", response.status, error_detail
-                        )
-                    except Exception:  # pylint: disable=broad-except
-                        logging.error(
-                            "Charts server returned status %d for anonymous key request",
-                            response.status,
-                        )
-                    return None
+                try:
+                    error_data = response.read()
+                    error_response = json.loads(error_data)
+                    error_detail = error_response.get("detail", "Unknown error")
+                    logging.error(
+                        "Charts server returned status %d: %s", response.status, error_detail
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    logging.error(
+                        "Charts server returned status %d for anonymous key request",
+                        response.status,
+                    )
+                return None
         except urllib.error.URLError as exc:
             logging.error("Failed to connect to charts server %s: %s", url, exc)
             return None
