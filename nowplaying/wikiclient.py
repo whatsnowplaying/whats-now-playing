@@ -65,7 +65,9 @@ class AsyncWikiClient:
         # Set proper headers required by Wikimedia APIs
         headers = {
             "User-Agent": f"WhatNowPlaying/{nowplaying.__version__} "
-            "(https://github.com/whatsnowplaying/whats-now-playing; aw@effectivemachines.com) aiohttp/3.12.0",
+            "(https://github.com/whatsnowplaying/whats-now-playing; "
+            "aw@"
+            "effectivemachines.com) aiohttp/3.12.0",
         }
         self.session = aiohttp.ClientSession(
             timeout=self.timeout, connector=connector, headers=headers
