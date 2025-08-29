@@ -1236,18 +1236,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#getting-your-secret-key" class="md-nav__link">
+  <a href="#automatic-setup" class="md-nav__link">
     <span class="md-ellipsis">
-      Getting your Secret Key
+      Automatic Setup
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#setup" class="md-nav__link">
+  <a href="#claiming-your-anonymous-key" class="md-nav__link">
     <span class="md-ellipsis">
-      Setup
+      Claiming Your Anonymous Key
     </span>
   </a>
   
@@ -1950,28 +1950,29 @@ allowing you to:</p>
 <li>Participate in community charts</li>
 <li>Share your music data with the What's Now Playing ecosystem</li>
 </ul>
-<h2 id="getting-your-secret-key">Getting your Secret Key<a class="headerlink" href="#getting-your-secret-key" title="Permanent link">&para;</a></h2>
-<p>Before setting up Charts output, you'll need to get your authentication key:</p>
+<h2 id="automatic-setup">Automatic Setup<a class="headerlink" href="#automatic-setup" title="Permanent link">&para;</a></h2>
+<p>Charts is <strong>enabled by default</strong> and requires no manual configuration. What's Now Playing automatically:</p>
+<ul>
+<li>Generates an anonymous API key during first startup</li>
+<li>Begins tracking your music immediately</li>
+<li>Stores your key securely for future sessions</li>
+</ul>
+<h2 id="claiming-your-anonymous-key">Claiming Your Anonymous Key<a class="headerlink" href="#claiming-your-anonymous-key" title="Permanent link">&para;</a></h2>
+<p>To access advanced features and view your data online:</p>
 <ol>
+<li>Navigate to <strong>Settings</strong> → <strong>Output Destinations</strong> → <strong>Charts</strong></li>
+<li>Copy your auto-generated <strong>Secret Key</strong> from the input field</li>
 <li>Visit <a href="https://whatsnowplaying.com">whatsnowplaying.com</a></li>
 <li>Click <strong>Login with Twitch</strong> or <strong>Login with Kick</strong></li>
 <li>Complete the OAuth login process</li>
 <li>Go to your <strong>Dashboard</strong></li>
-<li>Click <strong>Regenerate API Key</strong> to reveal your key (required for first-time users)</li>
-<li>Copy your <strong>API Key</strong> and save it securely</li>
-</ol>
-<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
-<p>To enable Charts output:</p>
-<ol>
-<li>Navigate to <strong>Settings</strong> → <strong>Output Destinations</strong> → <strong>Charts</strong></li>
-<li>Check the <strong>Enable</strong> checkbox</li>
-<li>Enter your <strong>Secret Key</strong> from the dashboard above</li>
-<li>Click <strong>Save</strong></li>
+<li>Enter your copied key in the <strong>Claim Anonymous Key</strong> section</li>
+<li>Click <strong>Claim Key</strong> to link it to your account</li>
 </ol>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Enable</strong> - Turn Charts output on or off</li>
-<li><strong>Secret</strong> - Your authentication key for the Charts service (required)</li>
+<li><strong>Enable</strong> - Turn Charts output on or off (enabled by default)</li>
+<li><strong>Secret</strong> - Your auto-generated anonymous API key (automatically created)</li>
 </ul>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <p>When enabled, the Charts plugin:</p>
