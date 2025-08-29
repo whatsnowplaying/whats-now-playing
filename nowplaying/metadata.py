@@ -531,6 +531,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
         try:
             # Pass pathlib Path directly to tinytag - it will handle the path conversion
             tag = tinytag.TinyTag.get(file_path, image=True)
+            logging.debug("umm: %s", tag.as_dict())
         except tinytag.TinyTagException as error:
             logging.error("tinytag could not process %s: %s", file_path, error)
             return metadata

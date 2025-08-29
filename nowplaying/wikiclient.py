@@ -14,6 +14,7 @@ from typing import Any
 from urllib.parse import quote
 import aiohttp
 
+import nowplaying
 import nowplaying.utils
 
 
@@ -61,7 +62,16 @@ class AsyncWikiClient:
 
     async def __aenter__(self):
         connector = nowplaying.utils.create_http_connector(self.ssl_context)
-        self.session = aiohttp.ClientSession(timeout=self.timeout, connector=connector)
+        # Set proper headers required by Wikimedia APIs
+        headers = {
+            "User-Agent": f"WhatNowPlaying/{nowplaying.__version__} "
+            "(https://github.com/whatsnowplaying/whats-now-playing; "
+            "aw@"
+            "effectivemachines.com) aiohttp/3.12.0",
+        }
+        self.session = aiohttp.ClientSession(
+            timeout=self.timeout, connector=connector, headers=headers
+        )
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

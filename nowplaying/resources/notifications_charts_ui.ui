@@ -63,15 +63,15 @@
     <rect>
      <x>110</x>
      <y>100</y>
-     <width>200</width>
+     <width>480</width>
      <height>22</height>
     </rect>
    </property>
    <property name="placeholderText">
-    <string>Required authentication key</string>
+    <string>Auto-generated anonymous key (claim at whatsnowplaying.com)</string>
    </property>
    <property name="echoMode">
-    <enum>QLineEdit::Password</enum>
+    <enum>QLineEdit::Normal</enum>
    </property>
   </widget>
   <widget class="QLabel" name="description_label">
@@ -85,7 +85,7 @@
    </property>
    <property name="text">
     <string>Charts sends track metadata to the What's Now Playing Charts service.
-Configure the required secret key for authentication.</string>
+Anonymous keys are auto-generated. Copy your key to claim it at whatsnowplaying.com for additional features.</string>
    </property>
    <property name="wordWrap">
     <bool>true</bool>

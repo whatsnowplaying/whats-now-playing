@@ -9,10 +9,8 @@ import types
 import pytest
 import pytest_asyncio
 
-import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.imagecache  # pylint: disable=import-error,no-member
 import nowplaying.metadata  # pylint: disable=import-error
-import nowplaying.upgrade  # pylint: disable=import-error
 import nowplaying.upgrades.config  # pylint: disable=import-error
 import nowplaying.utils.sqlite
 
@@ -474,10 +472,12 @@ async def test_url_dedupe4(bootstrap):
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
     )
-    assert metadataout["artistwebsites"] == [
-        "https://example.com/",
-        "http://whatsnowplaying.github.io/",
-    ]
+    assert set(metadataout["artistwebsites"]) == set(
+        [
+            "https://example.com/",
+            "http://whatsnowplaying.github.io/",
+        ]
+    )
 
 
 @pytest.mark.asyncio

@@ -6,12 +6,13 @@ import json
 import logging
 import pathlib
 from typing import TYPE_CHECKING
+import urllib.request
+import urllib.error
 
 import aiohttp
 from PySide6.QtCore import QStandardPaths  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.db
-from nowplaying.exceptions import PluginVerifyError
 from nowplaying.types import TrackMetadata
 
 from . import NotificationPlugin
@@ -22,6 +23,52 @@ if TYPE_CHECKING:
 
     import nowplaying.config
     import nowplaying.imagecache
+
+
+def generate_anonymous_key(debug: bool = False) -> str | None:
+    """
+    Generate an anonymous charts key from the server (standalone function for main process)
+    """
+    url = (
+        "https://localhost:8000api/v1/request-anonymous-key"
+        if debug
+        else "https://whatsnowplaying.com/api/v1/request-anonymous-key"
+    )
+
+    try:
+        request = urllib.request.Request(url, method="POST")
+        request.add_header("Content-Type", "application/json")
+
+        with urllib.request.urlopen(request, timeout=10) as response:
+            if response.status == 200:
+                response_data = response.read()
+                result = json.loads(response_data)
+                api_key = result.get("api_key")
+                message = result.get("message", "")
+                if api_key:
+                    logging.info("Received anonymous key from charts server: %s", message)
+                    return api_key
+                logging.error("Charts server returned response without api_key")
+                return None
+            try:
+                error_data = response.read()
+                error_response = json.loads(error_data)
+                error_detail = error_response.get("detail", "Unknown error")
+                logging.error(
+                    "Charts server returned status %d: %s", response.status, error_detail
+                )
+            except Exception:  # pylint: disable=broad-except
+                logging.error(
+                    "Charts server returned status %d for anonymous key request",
+                    response.status,
+                )
+            return None
+    except urllib.error.URLError as exc:
+        logging.error("Failed to connect to charts server %s: %s", url, exc)
+        return None
+    except Exception as exc:  # pylint: disable=broad-except
+        logging.error("Failed to request anonymous key from charts server: %s", exc)
+        return None
 
 
 class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attributes
@@ -35,11 +82,11 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         config: "nowplaying.config.ConfigFile | None" = None,
         qsettings: "QWidget | None" = None,
     ):
+        self.debug = False  # Initialize before super() since defaults() needs it
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Charts"
-        self.enabled = False
+        self.enabled = True  # Default enabled
         self.key: str | None = None
-        self.debug = False
         self.queue: list[TrackMetadata] = []
         self.queue_file: pathlib.Path | None = None
         self._queue_lock = asyncio.Lock()
@@ -144,9 +191,14 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         oldenabled = self.enabled
         if self.config:
             self.enabled = self.config.cparser.value(
-                "charts/enabled", type=bool, defaultValue=False
+                "charts/enabled", type=bool, defaultValue=True
             )
             self.key = self.config.cparser.value("charts/charts_key")
+
+            # Key should have been generated in defaults() - if still missing, disable charts
+            if not self.key:
+                logging.warning("No charts key available - charts will be disabled")
+                self.enabled = False
 
             # Set up queue file path
             cache_dir = pathlib.Path(QStandardPaths.writableLocation(QStandardPaths.CacheLocation))
@@ -396,15 +448,103 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             logging.error("Unexpected error sending to charts server: %s - %s", url, exc)
             return "retry"  # Unexpected error, retry later
 
+    async def _request_anonymous_key(self) -> str | None:
+        """Request an anonymous key from the charts server"""
+        url = (
+            "http://localhost:8000/api/v1/request-anonymous-key"
+            if self.debug
+            else "https://whatsnowplaying.com/api/v1/request-anonymous-key"
+        )
+
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+                async with session.post(url) as response:
+                    if response.status == 200:
+                        try:
+                            result = await response.json()
+                            api_key = result.get("api_key")
+                            message = result.get("message", "")
+                            if api_key:
+                                logging.info(
+                                    "Received anonymous key from charts server: %s", message
+                                )
+                                return api_key
+                            logging.error("Charts server returned response without api_key")
+                            return None
+                        except Exception as exc:  # pylint: disable=broad-except
+                            logging.error("Failed to parse anonymous key response: %s", exc)
+                            return None
+                    else:
+                        try:
+                            error_response = await response.json()
+                            error_detail = error_response.get("detail", "Unknown error")
+                            logging.error(
+                                "Charts server returned status %d: %s",
+                                response.status,
+                                error_detail,
+                            )
+                        except Exception:  # pylint: disable=broad-except
+                            logging.error(
+                                "Charts server returned status %d for anonymous key request",
+                                response.status,
+                            )
+                        return None
+        except Exception as exc:  # pylint: disable=broad-except
+            logging.error("Failed to request anonymous key from charts server: %s", exc)
+            return None
+
+    def _request_anonymous_key_sync(self) -> str | None:
+        """Request an anonymous key from the charts server (synchronous version)"""
+        url = (
+            "http://localhost:8000/api/v1/request-anonymous-key"
+            if self.debug
+            else "https://whatsnowplaying.com/api/v1/request-anonymous-key"
+        )
+
+        try:
+            request = urllib.request.Request(url, method="POST")
+            request.add_header("Content-Type", "application/json")
+
+            with urllib.request.urlopen(request, timeout=10) as response:
+                if response.status == 200:
+                    response_data = response.read()
+                    result = json.loads(response_data)
+                    api_key = result.get("api_key")
+                    message = result.get("message", "")
+                    if api_key:
+                        logging.info("Received anonymous key from charts server: %s", message)
+                        return api_key
+                    logging.error("Charts server returned response without api_key")
+                    return None
+                try:
+                    error_data = response.read()
+                    error_response = json.loads(error_data)
+                    error_detail = error_response.get("detail", "Unknown error")
+                    logging.error(
+                        "Charts server returned status %d: %s", response.status, error_detail
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    logging.error(
+                        "Charts server returned status %d for anonymous key request",
+                        response.status,
+                    )
+                return None
+        except urllib.error.URLError as exc:
+            logging.error("Failed to connect to charts server %s: %s", url, exc)
+            return None
+        except Exception as exc:  # pylint: disable=broad-except
+            logging.error("Failed to request anonymous key from charts server: %s", exc)
+            return None
+
     def defaults(self, qsettings: "QSettings"):
         """Set default configuration values"""
-        qsettings.setValue("charts/enabled", False)
+        qsettings.setValue("charts/enabled", True)
         qsettings.setValue("charts/charts_key", "")
 
     def load_settingsui(self, qwidget: "QWidget"):
         """Load settings into UI"""
         qwidget.enable_checkbox.setChecked(
-            self.config.cparser.value("charts/enabled", type=bool, defaultValue=False)
+            self.config.cparser.value("charts/enabled", type=bool, defaultValue=True)
         )
         qwidget.secret_lineedit.setText(
             self.config.cparser.value("charts/charts_key", defaultValue="")
@@ -417,9 +557,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
 
     def verify_settingsui(self, qwidget: "QWidget"):
         """Verify settings"""
-        if qwidget.enable_checkbox.isChecked():
-            if not qwidget.secret_lineedit.text().strip():
-                raise PluginVerifyError("Secret key is required when Charts is enabled")
+        # No verification needed - anonymous key will be auto-generated if empty
         return True
 
     def desc_settingsui(self, qwidget: "QWidget"):

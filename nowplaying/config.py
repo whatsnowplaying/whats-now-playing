@@ -95,8 +95,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
         self.defaults()
         if reset:
+            # Preserve charts key across reset
+            charts_key = self.cparser.value("charts/charts_key", defaultValue="")
             self.cparser.clear()
             self._force_set_statics()
+            # Restore charts key if it existed
+            if charts_key:
+                self.cparser.setValue("charts/charts_key", charts_key)
+                logging.info("Preserved charts key across configuration reset")
             self.save()
         else:
             self.get()
