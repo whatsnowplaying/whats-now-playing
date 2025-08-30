@@ -108,7 +108,7 @@ def test_puremagic_exception_handling():
     # Test various exception types - all should return False (default to audio)
     exception_types = [
         OSError("File not found"),
-        IOError("I/O error"),
+        OSError("I/O error"),
         PermissionError("Access denied"),
         ValueError("Input was empty"),
         puremagic.PureError("Not a regular file"),

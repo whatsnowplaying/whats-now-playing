@@ -853,7 +853,7 @@ def test_metadata_handles_zero_values(test_value, expected_result):
 
     # Test the specific condition that was problematic
     has_attr = hasattr(mock_tag, "track")
-    value_check = getattr(mock_tag, "track") is not None  # Our fix: was getattr(mock_tag, 'track')
+    value_check = mock_tag.track is not None  # Our fix: was getattr(mock_tag, 'track')
 
     should_process = has_attr and value_check
 

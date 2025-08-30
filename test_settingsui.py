@@ -2,14 +2,14 @@
 """test code"""
 
 # This Python file uses the following encoding: utf-8
-import sys
 import pathlib
 import socket
+import sys
 
 # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QApplication, QListWidgetItem, QWidget
 from PySide6.QtCore import QFile, Qt, Slot
 from PySide6.QtUiTools import QUiLoader
+from PySide6.QtWidgets import QApplication, QListWidgetItem, QWidget
 
 GENERAL = [
     "about",

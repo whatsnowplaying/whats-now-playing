@@ -13,7 +13,7 @@ import nowplaying.upgrades  # pylint: disable=import-error
 def getreleasedata(getroot):
     """automated integration test"""
     releasedata = pathlib.Path(getroot).joinpath("tests", "upgrade", "releasedata.json")
-    with open(releasedata, "r", encoding="utf-8") as fhin:
+    with open(releasedata, encoding="utf-8") as fhin:
         data = json.load(fhin)
     return data
 

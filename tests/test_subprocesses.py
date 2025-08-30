@@ -103,10 +103,12 @@ class MockProcess:  # pylint: disable=too-many-instance-attributes
     def join(self, timeout=None):
         """Mock process join"""
         # Simulate quick shutdown for most processes
-        if self.name in ["webserver", "obsws"]:
-            self._alive = False
-        # Simulate slow shutdown for some processes
-        elif self.name == "trackpoll" and timeout and timeout >= 5:
+        if (
+            self.name in ["webserver", "obsws"]
+            or self.name == "trackpoll"
+            and timeout
+            and timeout >= 5
+        ):
             self._alive = False
 
     def terminate(self):

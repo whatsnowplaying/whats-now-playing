@@ -66,8 +66,8 @@ def _compare_files(srcfn, destfn):
         # Text comparison with UTF-8 encoding
         try:
             with (
-                open(srcfn, "r", encoding="utf-8") as src,
-                open(destfn, "r", encoding="utf-8") as dest,
+                open(srcfn, encoding="utf-8") as src,
+                open(destfn, encoding="utf-8") as dest,
             ):
                 return list(src) == list(dest)
         except UnicodeDecodeError:
@@ -213,8 +213,8 @@ def test_upgrade_subdirectories(upgrade_bootstrap):  # pylint: disable=redefined
 
         # Verify content matches source
         src_file_path = os.path.join(bundledir, "templates", "oauth", expected_file)
-        with open(src_file_path, "r", encoding="utf-8") as src_file:
+        with open(src_file_path, encoding="utf-8") as src_file:
             src_content = src_file.read()
-        with open(oauth_file_path, "r", encoding="utf-8") as dest_file:
+        with open(oauth_file_path, encoding="utf-8") as dest_file:
             dest_content = dest_file.read()
         assert src_content == dest_content, f"Content mismatch for {expected_file}"

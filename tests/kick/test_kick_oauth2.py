@@ -395,10 +395,9 @@ async def test_revoke_token_scenarios(  # pylint: disable=redefined-outer-name, 
         assert oauth.refresh_token is None
         assert oauth.config.cparser.value("kick/accesstoken") is None
         assert oauth.config.cparser.value("kick/refreshtoken") is None
-    else:
-        # For error cases, tokens should remain if they were set
-        if has_token:
-            assert oauth.config.cparser.value("kick/accesstoken") == "test_token"
+    # For error cases, tokens should remain if they were set
+    elif has_token:
+        assert oauth.config.cparser.value("kick/accesstoken") == "test_token"
 
 
 # Edge cases and error conditions tests
@@ -422,9 +421,7 @@ async def test_network_timeout(oauth_with_pkce, mock_responses):  # pylint: disa
     oauth = oauth_with_pkce
 
     # Mock a timeout by using an exception
-    mock_responses.post(
-        f"{OAUTH_HOST}/oauth/token", exception=asyncio.TimeoutError("Request timed out")
-    )
+    mock_responses.post(f"{OAUTH_HOST}/oauth/token", exception=TimeoutError("Request timed out"))
 
     with pytest.raises(asyncio.TimeoutError):
         await oauth.exchange_code_for_token("test_code", oauth.state)

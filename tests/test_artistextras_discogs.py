@@ -260,7 +260,7 @@ async def test_discogs_timeout_handling(bootstrap):
     original_search = plugin.client.search_async if plugin.client else None
 
     async def mock_timeout(*args, **kwargs):  # pylint: disable=unused-argument
-        raise asyncio.TimeoutError("Simulated timeout")
+        raise TimeoutError("Simulated timeout")
 
     if plugin.client:
         plugin.client.search_async = mock_timeout
@@ -926,7 +926,7 @@ async def test_discogs_live_performance_timeout_recovery(bootstrap):
 
         # Simulate timeout on first call, success on second
         if call_count == 1:
-            raise asyncio.TimeoutError("Simulated network issue")
+            raise TimeoutError("Simulated network issue")
         # Return to original behavior for subsequent calls
         if original_search:
             return await original_search(*args, **kwargs)

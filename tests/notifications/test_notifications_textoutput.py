@@ -84,7 +84,7 @@ async def test_textoutput_plugin_enabled_writes_file(textoutput_plugin):  # pyli
         await textoutput_plugin.notify_track_change(metadata)
 
         # Verify output file was written with correct content
-        with open(output_file, "r", encoding="utf-8") as tfio:
+        with open(output_file, encoding="utf-8") as tfio:
             content = tfio.read()
         assert content == "Artist: Test Artist\nTitle: Test Title"
 
@@ -114,7 +114,7 @@ async def test_textoutput_plugin_template_reload(textoutput_plugin):  # pylint: 
         await textoutput_plugin.notify_track_change(metadata)
 
         # Verify first template was written
-        with open(output_file, "r", encoding="utf-8") as tfio:
+        with open(output_file, encoding="utf-8") as tfio:
             content = tfio.read()
         assert content == "Template 1: Test Artist"
 
@@ -124,7 +124,7 @@ async def test_textoutput_plugin_template_reload(textoutput_plugin):  # pylint: 
         await textoutput_plugin.notify_track_change(metadata)
 
         # Verify second template was written
-        with open(output_file, "r", encoding="utf-8") as tfio:
+        with open(output_file, encoding="utf-8") as tfio:
             content = tfio.read()
         assert content == "Template 2: Test Title"
 
@@ -175,7 +175,7 @@ async def test_textoutput_plugin_start_clears_file_on_startup(textoutput_plugin)
         await textoutput_plugin.start()
 
         # Should clear the file
-        with open(output_file, "r", encoding="utf-8") as tfio:
+        with open(output_file, encoding="utf-8") as tfio:
             content = tfio.read()
         assert content == ""
 
