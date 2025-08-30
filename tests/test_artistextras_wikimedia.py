@@ -141,7 +141,7 @@ async def test_wikimedia_timeout_handling(bootstrap):
     original_get_page = nowplaying.wikiclient.get_page_async
 
     async def mock_timeout(*args, **kwargs):
-        raise asyncio.TimeoutError("Simulated Wikipedia timeout")
+        raise TimeoutError("Simulated Wikipedia timeout")
 
     nowplaying.wikiclient.get_page_async = mock_timeout
 

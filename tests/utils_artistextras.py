@@ -8,7 +8,6 @@ artistextras plugins, particularly around API caching functionality.
 
 import logging
 import os
-import typing as t
 
 import pytest
 
@@ -41,7 +40,7 @@ class FakeImageCache:  # pylint: disable=too-few-public-methods
         config=None,  # pylint: disable=unused-argument
         identifier: str = None,
         imagetype: str = None,
-        srclocationlist: t.List[str] = None,
+        srclocationlist: list[str] = None,
     ):
         """Just keep track of what was picked"""
         if not self.urls.get(identifier):

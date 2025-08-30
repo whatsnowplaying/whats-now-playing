@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
+
 from nowplaying.vendor import tinytag  # pylint: disable=import-error,no-name-in-module
 
 # Add project root to Python path

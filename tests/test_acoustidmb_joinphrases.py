@@ -34,12 +34,12 @@ async def test_join_phrases_multiartist(getacoustidplugin):  # pylint: disable=r
     fingerprint_file = (
         pathlib.Path(__file__).parent / "audio" / "1_Giant_Leap_My_Culture_fingerprint.json"
     )
-    with open(fingerprint_file, "r", encoding="utf-8") as json_file:
+    with open(fingerprint_file, encoding="utf-8") as json_file:
         mock_fingerprint = json.load(json_file)
 
     # Load mock AcoustID lookup response from external JSON file
     joinphrases_file = pathlib.Path(__file__).parent / "resources" / "joinphrases.json"
-    with open(joinphrases_file, "r", encoding="utf-8") as json_file:
+    with open(joinphrases_file, encoding="utf-8") as json_file:
         mock_acoustid_response = json.load(json_file)
 
     # Mock both fpcalc and acoustid.lookup to return our test data

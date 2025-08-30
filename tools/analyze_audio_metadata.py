@@ -147,8 +147,8 @@ def compare_metadata(tinytag_data: dict, audio_metadata_data: dict) -> dict[str,
         return comparison
 
     # Get field names (excluding special info fields)
-    tinytag_fields = set(k for k in tinytag_data.keys() if not k.endswith("_info"))
-    audio_metadata_fields = set(k for k in audio_metadata_data.keys() if not k.endswith("_info"))
+    tinytag_fields = set(k for k in tinytag_data if not k.endswith("_info"))
+    audio_metadata_fields = set(k for k in audio_metadata_data if not k.endswith("_info"))
 
     # Map some common field name variations
     field_mappings = {

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from nowplaying.vendor import tinytag  # pylint: disable=import-error,no-name-in-module
 
 
@@ -44,7 +45,7 @@ class GoldenMasterManager:
         if not golden_file.exists():
             return None
 
-        with open(golden_file, "r", encoding="utf-8") as json_file:
+        with open(golden_file, encoding="utf-8") as json_file:
             return json.load(json_file)
 
     def compare_with_golden_master(
@@ -108,18 +109,17 @@ class GoldenMasterManager:
                 }
 
             # Compare list elements
-            for i, (g_item, c_item) in enumerate(zip(golden, current)):
+            for i, (g_item, c_item) in enumerate(zip(golden, current, strict=False)):
                 sub_path = f"{path}[{i}]" if path else f"[{i}]"
                 sub_diffs = self._find_differences(g_item, c_item, sub_path)
                 differences.update(sub_diffs)
 
-        else:
-            # Direct value comparison
-            if golden != current:
-                differences[f"{path}_value_change"] = {
-                    "golden_value": golden,
-                    "current_value": current,
-                }
+        # Direct value comparison
+        elif golden != current:
+            differences[f"{path}_value_change"] = {
+                "golden_value": golden,
+                "current_value": current,
+            }
 
         return differences
 

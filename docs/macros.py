@@ -7,6 +7,7 @@ generate content from the template build system configuration files.
 """
 
 import pathlib
+
 import yaml
 
 
@@ -53,7 +54,7 @@ def define_env(env):
 
         # Load all template configuration files
         for yaml_file in config_dir.glob("*.yaml"):
-            with open(yaml_file, "r", encoding="utf-8") as file_handle:
+            with open(yaml_file, encoding="utf-8") as file_handle:
                 data = yaml.safe_load(file_handle)
                 if data and "template_families" in data:
                     configs[yaml_file.stem] = data["template_families"]

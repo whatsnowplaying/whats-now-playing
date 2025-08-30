@@ -2,6 +2,7 @@
 """setup nltk"""
 
 import ssl
+
 import nltk
 
 try:

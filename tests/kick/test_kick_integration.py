@@ -433,7 +433,7 @@ async def test_network_timeouts(kick_integration_config):  # pylint: disable=red
     with aioresponses() as mock:
         mock.post(
             "https://api.kick.com/public/v1/chat",
-            exception=asyncio.TimeoutError("Request timed out"),
+            exception=TimeoutError("Request timed out"),
         )
 
         result = await chat._send_message("Test message")  # pylint: disable=protected-access
