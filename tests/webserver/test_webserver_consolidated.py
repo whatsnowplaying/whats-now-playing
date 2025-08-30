@@ -250,7 +250,7 @@ async def test_webserver_remote_input_validation(getwebserver):
             "httpport": 8080,  # Should be filtered out
             "hostname": "testhost",  # Should be filtered out
             "dbid": 12345,  # Should be filtered out
-            "secret": "test_secret",  # Should be filtered out
+            "secret": "test_secret",   # pragma: allowlist secret
         }
         async with session.post(
             f"http://localhost:{port}/v1/remoteinput",
