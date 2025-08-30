@@ -212,6 +212,7 @@ nowplaying.pyproject.user
 NowPlaying*.zip
 nowplaying/version.py
 nowplaying/qtrc.py
+nowplaying/vendor/tinytag
 fixed_wheel
 
 # Qt Creator user files

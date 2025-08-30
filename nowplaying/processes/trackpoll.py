@@ -351,7 +351,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             nextmeta = await self.input.getplayingtrack() or {}
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("Failed during getplayingtrack() (%s)", err)
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
             return
 
         if self._ismetaempty(nextmeta) or self._ismetasame(nextmeta) or self._isignored(nextmeta):
@@ -363,7 +363,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             self.currentmeta = await self._fill_inmetadata(nextmeta)
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("Ignoring the %s crash and just keep going!", err)
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
             self.currentmeta = nextmeta
 
         # Set timestamp and version when track is accepted as current

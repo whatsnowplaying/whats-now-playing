@@ -563,6 +563,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.widgets["quirks"].fs_events_button.setChecked(True)
             self.widgets["quirks"].fs_poll_button.setChecked(False)
 
+        # set polling interval
+        polling_interval = self.config.cparser.value(
+            "quirks/pollinginterval", type=float, defaultValue=5.0
+        )
+        self.widgets["quirks"].polling_interval_lineedit.setText(str(polling_interval))
+
         # s,in,out,g
         self.widgets["quirks"].song_subst_checkbox.setChecked(
             self.config.cparser.value("quirks/filesubst", type=bool)
@@ -838,9 +844,23 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """update the quirks settings to match config"""
 
         # file system notification method
-        self.config.cparser.value(
+        self.config.cparser.setValue(
             "quirks/pollingobserver", self.widgets["quirks"].fs_poll_button.isChecked()
         )
+
+        # save polling interval with validation
+        try:
+            polling_interval = float(self.widgets["quirks"].polling_interval_lineedit.text())
+            if 0.1 <= polling_interval <= 60.0:
+                self.config.cparser.setValue("quirks/pollinginterval", polling_interval)
+            else:
+                # Reset to default if out of range
+                self.config.cparser.setValue("quirks/pollinginterval", 5.0)
+                self.widgets["quirks"].polling_interval_lineedit.setText("5.0")
+        except ValueError:
+            # Reset to default if invalid number
+            self.config.cparser.setValue("quirks/pollinginterval", 5.0)
+            self.widgets["quirks"].polling_interval_lineedit.setText("5.0")
 
         # s,in,out,g
         self.config.cparser.setValue(

@@ -214,6 +214,11 @@ def test_webserver_remote_input_no_secret(getwebserver):  # pylint: disable=rede
     config, metadb = getwebserver  # pylint: disable=unused-variable
     port = config.cparser.value("weboutput/httpport", type=int)
 
+    # Wait for webserver to be ready
+    webserver_ready = asyncio.run(wait_for_webserver_ready(port, timeout=10.0))
+    if not webserver_ready:
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
     # Test without secret configured - should accept any request
     test_metadata = {"artist": "Test Artist", "title": "Test Title", "filename": "test.mp3"}
 
@@ -229,6 +234,11 @@ def test_webserver_remote_input_with_secret(getwebserver):  # pylint: disable=re
     """test remote input endpoint with secret authentication"""
     config, metadb = getwebserver  # pylint: disable=unused-variable
     port = config.cparser.value("weboutput/httpport", type=int)
+
+    # Wait for webserver to be ready
+    webserver_ready = asyncio.run(wait_for_webserver_ready(port, timeout=10.0))
+    if not webserver_ready:
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
 
     # Configure secret
     test_secret = "test_secret_123"  # pragma: allowlist secret
@@ -305,6 +315,11 @@ def test_webserver_remote_input_get_method(getwebserver):  # pylint: disable=red
     config, metadb = getwebserver  # pylint: disable=unused-variable
     port = config.cparser.value("weboutput/httpport", type=int)
 
+    # Wait for webserver to be ready
+    webserver_ready = asyncio.run(wait_for_webserver_ready(port, timeout=10.0))
+    if not webserver_ready:
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
     test_metadata = {"artist": "Test Artist", "title": "Test Title", "filename": "test.mp3"}
 
     # Test with GET - should now work
@@ -349,6 +364,11 @@ def test_webserver_remote_input_null_byte_stripping(getwebserver):  # pylint: di
     config, metadb = getwebserver  # pylint: disable=unused-variable
     port = config.cparser.value("weboutput/httpport", type=int)
 
+    # Wait for webserver to be ready
+    webserver_ready = asyncio.run(wait_for_webserver_ready(port, timeout=10.0))
+    if not webserver_ready:
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
     # Test data with null bytes (like radiologik sends)
     # using GET to avoid JSON serialization issues
     test_metadata = {
@@ -379,6 +399,11 @@ def test_webserver_remote_input_field_length_limits(getwebserver):  # pylint: di
     config, metadb = getwebserver  # pylint: disable=unused-variable
     port = config.cparser.value("weboutput/httpport", type=int)
 
+    # Wait for webserver to be ready
+    webserver_ready = asyncio.run(wait_for_webserver_ready(port, timeout=10.0))
+    if not webserver_ready:
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
     # Test data with oversized field (1000+ characters)
     very_long_title = "x" * 1500  # Exceeds MAX_FIELD_LENGTH of 1000
     test_metadata = {
@@ -401,6 +426,11 @@ def test_webserver_remote_input_field_whitelisting(getwebserver):  # pylint: dis
     """test remote input endpoint filters out excluded fields"""
     config, metadb = getwebserver  # pylint: disable=unused-variable
     port = config.cparser.value("weboutput/httpport", type=int)
+
+    # Wait for webserver to be ready
+    webserver_ready = asyncio.run(wait_for_webserver_ready(port, timeout=10.0))
+    if not webserver_ready:
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
 
     # Test data with fields that should be filtered out
     # Note: Binary fields like coverimageraw can't be sent via JSON,
