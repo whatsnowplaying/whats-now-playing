@@ -220,13 +220,10 @@ class KickChatSettings:
         """connect kick chat settings"""
         self.widget = widget
         self.uihelp = uihelp
-        # Connect buttons with hasattr checks for robustness
-        if hasattr(widget, "announce_button"):
-            widget.announce_button.clicked.connect(self.on_announce_button)
-        if hasattr(widget, "add_button"):
-            widget.add_button.clicked.connect(self.on_add_button)
-        if hasattr(widget, "del_button"):
-            widget.del_button.clicked.connect(self.on_del_button)
+        # Connect buttons
+        widget.announce_button.clicked.connect(self.on_announce_button)
+        widget.add_button.clicked.connect(self.on_add_button)
+        widget.del_button.clicked.connect(self.on_del_button)
 
     @Slot()
     def on_announce_button(self) -> None:
@@ -264,17 +261,11 @@ class KickChatSettings:
         widget.announce_lineedit.setText(config.cparser.value("kick/announce") or "")
 
         # Handle delay field
-        if hasattr(widget, "announce_delay_lineedit"):
-            delay_value = config.cparser.value("kick/announcedelay", type=float) or 1.0
-            widget.announce_delay_lineedit.setText(str(delay_value))
-        elif hasattr(widget, "announcedelay_spin"):
-            widget.announcedelay_spin.setValue(
-                config.cparser.value("kick/announcedelay", type=float) or 1.0
-            )
+        delay_value = config.cparser.value("kick/announcedelay", type=float) or 1.0
+        widget.announce_delay_lineedit.setText(str(delay_value))
 
         # Load permission table
-        if hasattr(widget, "command_perm_table"):
-            self._kickbot_command_load(config, widget)
+        self._kickbot_command_load(config, widget)
 
     def _kickbot_command_load(self, config: nowplaying.config.ConfigFile, widget: Any) -> None:
         """load kickbot commands into permission table (mirrors TwitchChatSettings)"""
@@ -325,20 +316,15 @@ class KickChatSettings:
         config.cparser.setValue("kick/announce", newannounce)
 
         # Handle delay field
-        delay_value = 1.0
-        if hasattr(widget, "announce_delay_lineedit"):
-            try:
-                delay_value = float(widget.announce_delay_lineedit.text())
-            except (ValueError, AttributeError):
-                delay_value = 1.0
-        elif hasattr(widget, "announcedelay_spin"):
-            delay_value = widget.announcedelay_spin.value()
+        try:
+            delay_value = float(widget.announce_delay_lineedit.text())
+        except (ValueError, AttributeError):
+            delay_value = 1.0
 
         config.cparser.setValue("kick/announcedelay", delay_value)
 
         # Save permission table
-        if hasattr(widget, "command_perm_table"):
-            KickChatSettings._save_kickbot_commands(config, widget)
+        KickChatSettings._save_kickbot_commands(config, widget)
 
         # If chat settings changed, restart kick bot
         if (oldchat != newchat) or (oldannounce != newannounce):

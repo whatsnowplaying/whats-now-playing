@@ -161,8 +161,7 @@ async def temp_api_cache():
             yield cache
         finally:
             # Properly close the cache to prevent event loop warnings
-            if hasattr(cache, "close"):
-                await cache.close()
+            await cache.close()
 
 
 @pytest.fixture(autouse=True)

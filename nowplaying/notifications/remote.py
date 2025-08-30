@@ -166,50 +166,41 @@ class Plugin(NotificationPlugin):
 
     def load_settingsui(self, qwidget: "QWidget"):
         """Load settings into UI"""
-        if hasattr(qwidget, "enable_checkbox"):
-            qwidget.enable_checkbox.setChecked(
-                self.config.cparser.value("remote/enabled", type=bool, defaultValue=False)
-            )
-        if hasattr(qwidget, "server_lineedit"):
-            qwidget.server_lineedit.setText(
-                self.config.cparser.value("remote/remote_server", defaultValue="remotehost")
-            )
-        if hasattr(qwidget, "port_lineedit"):
-            qwidget.port_lineedit.setText(
-                str(self.config.cparser.value("remote/remote_port", type=int, defaultValue=8899))
-            )
-        if hasattr(qwidget, "secret_lineedit"):
-            qwidget.secret_lineedit.setText(
-                self.config.cparser.value("remote/remote_key", defaultValue="")
-            )
+        qwidget.enable_checkbox.setChecked(
+            self.config.cparser.value("remote/enabled", type=bool, defaultValue=False)
+        )
+        qwidget.server_lineedit.setText(
+            self.config.cparser.value("remote/remote_server", defaultValue="remotehost")
+        )
+        qwidget.port_lineedit.setText(
+            str(self.config.cparser.value("remote/remote_port", type=int, defaultValue=8899))
+        )
+        qwidget.secret_lineedit.setText(
+            self.config.cparser.value("remote/remote_key", defaultValue="")
+        )
 
     def save_settingsui(self, qwidget: "QWidget"):
         """Save settings from UI"""
-        if hasattr(qwidget, "enable_checkbox"):
-            self.config.cparser.setValue("remote/enabled", qwidget.enable_checkbox.isChecked())
-        if hasattr(qwidget, "server_lineedit"):
-            self.config.cparser.setValue("remote/remote_server", qwidget.server_lineedit.text())
-        if hasattr(qwidget, "port_lineedit"):
-            with contextlib.suppress(ValueError):
-                port = int(qwidget.port_lineedit.text())
-                self.config.cparser.setValue("remote/remote_port", port)
-        if hasattr(qwidget, "secret_lineedit"):
-            self.config.cparser.setValue("remote/remote_key", qwidget.secret_lineedit.text())
+        self.config.cparser.setValue("remote/enabled", qwidget.enable_checkbox.isChecked())
+        self.config.cparser.setValue("remote/remote_server", qwidget.server_lineedit.text())
+        with contextlib.suppress(ValueError):
+            port = int(qwidget.port_lineedit.text())
+            self.config.cparser.setValue("remote/remote_port", port)
+        self.config.cparser.setValue("remote/remote_key", qwidget.secret_lineedit.text())
 
     def verify_settingsui(self, qwidget: "QWidget"):
         """Verify settings"""
-        if hasattr(qwidget, "enable_checkbox") and qwidget.enable_checkbox.isChecked():
-            if hasattr(qwidget, "server_lineedit") and not qwidget.server_lineedit.text().strip():
+        if qwidget.enable_checkbox.isChecked():
+            if not qwidget.server_lineedit.text().strip():
                 raise PluginVerifyError(
                     "Remote server address is required when remote output is enabled"
                 )
-            if hasattr(qwidget, "port_lineedit"):
-                try:
-                    port = int(qwidget.port_lineedit.text())
-                    if not 1 <= port <= 65535:
-                        raise PluginVerifyError("Remote port must be between 1 and 65535")
-                except ValueError as err:
-                    raise PluginVerifyError("Remote port must be a valid number") from err
+            try:
+                port = int(qwidget.port_lineedit.text())
+                if not 1 <= port <= 65535:
+                    raise PluginVerifyError("Remote port must be between 1 and 65535")
+            except ValueError as err:
+                raise PluginVerifyError("Remote port must be a valid number") from err
         return True
 
     def desc_settingsui(self, qwidget: "QWidget"):

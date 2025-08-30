@@ -26,22 +26,11 @@ class TwitchSettings:
         self.widget = widget
         self.uihelp = uihelp
 
-        # Connect OAuth buttons - dual token support
-        if hasattr(widget, "copy_broadcaster_auth_button"):
-            widget.copy_broadcaster_auth_button.clicked.connect(self._copy_broadcaster_auth_link)
-        if hasattr(widget, "copy_chat_auth_button"):
-            widget.copy_chat_auth_button.clicked.connect(self._copy_chat_auth_link)
-
-        # Backward compatibility for old single button UI
-        if hasattr(widget, "copy_auth_link_button"):
-            widget.copy_auth_link_button.clicked.connect(self._copy_auth_link)
-
-        if hasattr(widget, "clientid_lineedit"):
-            widget.clientid_lineedit.editingFinished.connect(self.update_oauth_status)
-        if hasattr(widget, "secret_lineedit"):
-            widget.secret_lineedit.editingFinished.connect(self.update_oauth_status)
-        if hasattr(widget, "redirecturi_lineedit"):
-            widget.redirecturi_lineedit.editingFinished.connect(self.update_oauth_status)
+        # Connect OAuth buttons
+        widget.copy_broadcaster_auth_button.clicked.connect(self._copy_broadcaster_auth_link)
+        widget.copy_chat_auth_button.clicked.connect(self._copy_chat_auth_link)
+        widget.clientid_lineedit.editingFinished.connect(self.update_oauth_status)
+        widget.secret_lineedit.editingFinished.connect(self.update_oauth_status)
 
     def load(self, config, widget, uihelp):  # pylint: disable=unused-argument
         """load the settings window"""
@@ -51,10 +40,7 @@ class TwitchSettings:
         widget.channel_lineedit.setText(config.cparser.value("twitchbot/channel"))
         widget.secret_lineedit.setText(config.cparser.value("twitchbot/secret"))
 
-        # Display redirect URI info (dynamically generated, not stored)
-        if hasattr(widget, "redirecturi_lineedit"):
-            redirect_uri = self.oauth.get_redirect_uri("broadcaster") if self.oauth else ""
-            widget.redirecturi_lineedit.setText(redirect_uri)
+        # Redirect URI info is displayed as static text in UI instructions
 
         # Initialize single OAuth2 handler
         self.oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)
@@ -158,8 +144,7 @@ class TwitchSettings:
 
         # Check if configuration is complete
         if not self.oauth.is_configuration_complete():
-            if hasattr(self.widget, "oauth_status_label"):
-                self.widget.oauth_status_label.setText("Configuration incomplete")
+            self.widget.oauth_status_label.setText("Configuration incomplete")
             # Disable copy buttons if configuration is incomplete
             self._set_auth_buttons_enabled(False)
             return
@@ -171,21 +156,15 @@ class TwitchSettings:
         self._update_auth_button_states(status)
 
         # Update status label
-        if hasattr(self.widget, "oauth_status_label"):
-            self.widget.oauth_status_label.setText(status["status_text"])
+        self.widget.oauth_status_label.setText(status["status_text"])
 
         # Update account name display
         self.update_token_name()
 
     def _set_auth_buttons_enabled(self, enabled: bool) -> None:
         """Enable or disable authentication buttons"""
-        if hasattr(self.widget, "copy_broadcaster_auth_button"):
-            self.widget.copy_broadcaster_auth_button.setEnabled(enabled)
-        if hasattr(self.widget, "copy_chat_auth_button"):
-            self.widget.copy_chat_auth_button.setEnabled(enabled)
-        # Backward compatibility
-        if hasattr(self.widget, "copy_auth_link_button"):
-            self.widget.copy_auth_link_button.setEnabled(enabled)
+        self.widget.copy_broadcaster_auth_button.setEnabled(enabled)
+        self.widget.copy_chat_auth_button.setEnabled(enabled)
 
     def _update_auth_button_states(self, status: dict) -> None:
         """Update authentication button text and states based on OAuth status"""
@@ -193,24 +172,17 @@ class TwitchSettings:
         chat_valid = status["chat_valid"]
 
         # Update button states with status-aware messaging
-        if hasattr(self.widget, "copy_broadcaster_auth_button"):
-            if broadcaster_valid:
-                self.widget.copy_broadcaster_auth_button.setText("✅ Broadcaster Authenticated")
-            else:
-                self.widget.copy_broadcaster_auth_button.setText("Copy Broadcaster Auth URL")
-            self.widget.copy_broadcaster_auth_button.setEnabled(True)
+        if broadcaster_valid:
+            self.widget.copy_broadcaster_auth_button.setText("✅ Broadcaster Authenticated")
+        else:
+            self.widget.copy_broadcaster_auth_button.setText("Copy Broadcaster Auth URL")
+        self.widget.copy_broadcaster_auth_button.setEnabled(True)
 
-        if hasattr(self.widget, "copy_chat_auth_button"):
-            if chat_valid:
-                self.widget.copy_chat_auth_button.setText("✅ Chat Bot Authenticated")
-            else:
-                self.widget.copy_chat_auth_button.setText("Copy Chat Bot Auth URL")
-            self.widget.copy_chat_auth_button.setEnabled(True)
-
-        # Backward compatibility
-        if hasattr(self.widget, "copy_auth_link_button"):
-            self.widget.copy_auth_link_button.setText("Copy Auth URL")
-            self.widget.copy_auth_link_button.setEnabled(True)
+        if chat_valid:
+            self.widget.copy_chat_auth_button.setText("✅ Chat Bot Authenticated")
+        else:
+            self.widget.copy_chat_auth_button.setText("Copy Chat Bot Auth URL")
+        self.widget.copy_chat_auth_button.setEnabled(True)
 
     def start_status_timer(self):
         """Start periodic status updates to catch automatic token refresh"""
@@ -311,29 +283,26 @@ class TwitchSettings:
 
         # Validate configuration
         if not self.oauth.is_configuration_complete():
-            if hasattr(self.widget, "oauth_status_label"):
-                self.widget.oauth_status_label.setText("Error: Configuration incomplete")
+            self.widget.oauth_status_label.setText("Error: Configuration incomplete")
             return
 
         try:
             # Generate the auth URL using OAuth service
             auth_url = self.oauth.get_auth_url(token_type)
             if not auth_url:
-                if hasattr(self.widget, "oauth_status_label"):
-                    self.widget.oauth_status_label.setText(f"Error generating {token_type} URL")
+                self.widget.oauth_status_label.setText(f"Error generating {token_type} URL")
                 return
 
             # Copy to clipboard
             clipboard = QApplication.clipboard()
             clipboard.setText(auth_url)
 
-            if hasattr(self.widget, "oauth_status_label"):
-                self.widget.oauth_status_label.setText(
-                    f"{token_type.title()} auth URL copied to clipboard"
-                )
+            self.widget.oauth_status_label.setText(
+                f"{token_type.title()} auth URL copied to clipboard"
+            )
 
             # Show success dialog with the URL
-            if self.uihelp and hasattr(self.uihelp, "qtui"):
+            if self.uihelp:
                 msgbox = QMessageBox(self.uihelp.qtui)
                 msgbox.setWindowTitle(success_title)
                 msgbox.setIcon(QMessageBox.Icon.Information)
@@ -348,7 +317,4 @@ class TwitchSettings:
 
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Failed to generate %s auth URL: %s", token_type, error)
-            if hasattr(self.widget, "oauth_status_label"):
-                self.widget.oauth_status_label.setText(
-                    f"Error generating {token_type} URL: {error}"
-                )
+            self.widget.oauth_status_label.setText(f"Error generating {token_type} URL: {error}")
