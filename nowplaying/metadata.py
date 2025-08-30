@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 import puremagic
 import url_normalize
 
-from nowplaying.vendor import tinytag # pylint: disable=no-name-in-module
+from nowplaying.vendor import tinytag  # pylint: disable=no-name-in-module
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.hostmeta
@@ -528,7 +528,6 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
         try:
             # Pass pathlib Path directly to tinytag - it will handle the path conversion
             tag = tinytag.TinyTag.get(file_path, image=True)
-            logging.debug("umm: %s", tag.as_dict())
         except tinytag.TinyTagException as error:
             logging.error("tinytag could not process %s: %s", file_path, error)
             return metadata
