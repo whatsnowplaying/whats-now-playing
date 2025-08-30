@@ -16,15 +16,14 @@ import sys
 import textwrap
 from typing import TYPE_CHECKING
 
-import tinytag
-import url_normalize
 import puremagic
+import url_normalize
 
+from nowplaying.vendor import tinytag # pylint: disable=no-name-in-module
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.hostmeta
 import nowplaying.musicbrainz
-import nowplaying.tinytag_fixes
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
 
@@ -489,10 +488,8 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
         self.metadata: TrackMetadata = {}
         self.datedata: dict[str, str] = {}
 
-        # Apply tinytag patches once after logging is set up
-        if not TinyTagRunner._patches_applied:
-            _ = nowplaying.tinytag_fixes.apply_tinytag_patches()
-            TinyTagRunner._patches_applied = True
+        # Vendored TinyTag already includes all fixes
+        TinyTagRunner._patches_applied = True
 
     @staticmethod
     def tt_date_calc(tag: object) -> str | None:

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import tinytag
+from nowplaying.vendor import tinytag  # pylint: disable=import-error,no-name-in-module
 
 
 class GoldenMasterManager:

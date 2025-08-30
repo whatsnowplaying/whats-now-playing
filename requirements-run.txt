@@ -20,7 +20,6 @@ rapidfuzz==3.13.0
 requests-cache==1.2.1
 requests==2.32.4
 simpleobsws==1.4.3
-tinytag==2.1.1
 twitchAPI==4.5.0
 url_normalize==2.2.1
 watchdog==6.0.0
@@ -29,3 +28,4 @@ watchdog==6.0.0
 # required to install
 #
 versioningit==3.3.0
+vendoring==1.2.0
