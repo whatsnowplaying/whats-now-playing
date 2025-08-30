@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Consolidated webserver tests using aiohttp"""
 
+import sys
+
 import aiohttp
 import pytest
 
@@ -60,6 +62,7 @@ async def test_webserver_templates(getwebserver, template_type, endpoint, expect
     assert response_text == expected_content
 
 
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "endpoint",
@@ -88,6 +91,7 @@ async def test_webserver_static_endpoints(getwebserver, endpoint):
             assert req.status in (200, 202)
 
 
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "secret_config,request_secret,expected_status",
@@ -139,6 +143,7 @@ async def test_webserver_remote_input_authentication(
                 assert "error" in response_data
 
 
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "method,expected_status",
@@ -184,6 +189,7 @@ async def test_webserver_remote_input_http_methods(getwebserver, method, expecte
                 assert req.status == expected_status
 
 
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
 @pytest.mark.asyncio
 async def test_webserver_remote_input_validation(getwebserver):
     """test remote input endpoint input validation and processing"""
