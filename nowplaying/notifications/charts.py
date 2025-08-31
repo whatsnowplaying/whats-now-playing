@@ -398,6 +398,17 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                         except Exception:  # pylint: disable=broad-except
                             logging.error("Charts server authentication failed (403)")
                         return "retry"  # Stop processing, auth needs to be fixed
+                    elif response.status == 498:
+                        # Key rotation required
+                        try:
+                            rotation_response = await response.json()
+                            if await self._handle_key_rotation(rotation_response):
+                                return "retry"  # Retry with new key
+                            else:
+                                return "drop"  # Rotation failed, drop item
+                        except Exception as exc:  # pylint: disable=broad-except
+                            logging.error("Failed to handle key rotation response: %s", exc)
+                            return "retry"
                     elif response.status == 404:
                         try:
                             error_text = await response.text()
@@ -492,6 +503,98 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         except Exception as exc:  # pylint: disable=broad-except
             logging.error("Failed to request anonymous key from charts server: %s", exc)
             return None
+
+    async def _handle_key_rotation(self, rotation_response: dict) -> bool:
+        """
+        Handle key rotation when server returns 498 status
+
+        Args:
+            rotation_response: JSON response containing rotation details
+
+        Returns:
+            bool: True if rotation was successful, False otherwise
+        """
+        try:
+            logging.debug("Full 498 rotation response: %s", rotation_response)
+            rotation = rotation_response.get("rotation", {})
+            logging.debug("Extracted rotation object: %s", rotation)
+            secret = rotation.get("secret")
+            endpoint = rotation.get("endpoint", "/v1/rotate-key")
+            expires_in = rotation.get("expires_in", 900)
+
+            if not secret:
+                logging.error("Key rotation response missing secret")
+                logging.error(
+                    "Expected 'rotation.secret' but got rotation keys: %s",
+                    list(rotation.keys()) if rotation else "None",
+                )
+                return False
+
+            logging.info("Charts key rotation required, expires in %d seconds", expires_in)
+
+            # Choose URL based on debug flag
+            base_url = "http://localhost:8000" if self.debug else "https://whatsnowplaying.com"
+            rotate_url = f"{base_url}{endpoint}"
+
+            # Prepare rotation request
+            rotation_data = {"old_api_key": self.key, "rotation_secret": secret}
+
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+                async with session.post(
+                    rotate_url, json=rotation_data, headers={"Content-Type": "application/json"}
+                ) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        new_key = result.get("new_api_key")
+                        message = result.get("message", "")
+                        if new_key and self.config:
+                            # Save new key
+                            self.config.cparser.setValue("charts/charts_key", new_key)
+                            self.config.cparser.sync()
+                            self.key = new_key
+                            logging.info("Charts key rotated successfully: %s", message)
+                            return True
+                        else:
+                            logging.error("Key rotation response missing new_api_key")
+                            return False
+                    elif response.status in (401, 403):
+                        # Key is completely invalid - delete it
+                        try:
+                            error_text = await response.text()
+                            logging.error(
+                                "Key rotation failed - key no longer valid (%d): %s",
+                                response.status,
+                                error_text,
+                            )
+                        except Exception:  # pylint: disable=broad-except
+                            logging.error(
+                                "Key rotation failed - key no longer valid (%d)", response.status
+                            )
+
+                        # Clear the invalid key from config
+                        if self.config:
+                            self.config.cparser.remove("charts/charts_key")
+                            self.config.cparser.sync()
+                            self.key = None
+                            logging.warning(
+                                "Invalid charts key deleted - please get a new key from dashboard"
+                            )
+                        return False
+                    else:
+                        try:
+                            error_text = await response.text()
+                            logging.error(
+                                "Key rotation failed with status %d: %s",
+                                response.status,
+                                error_text,
+                            )
+                        except Exception:  # pylint: disable=broad-except
+                            logging.error("Key rotation failed with status %d", response.status)
+                        return False
+
+        except Exception as exc:  # pylint: disable=broad-except
+            logging.error("Failed to rotate charts key: %s", exc)
+            return False
 
     def _request_anonymous_key_sync(self) -> str | None:
         """Request an anonymous key from the charts server (synchronous version)"""
