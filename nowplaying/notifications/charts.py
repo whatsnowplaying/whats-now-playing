@@ -29,6 +29,17 @@ if TYPE_CHECKING:
 LOCAL_BASE_URL = "http://localhost:8000"
 PROD_BASE_URL = "https://whatsnowplaying.com"
 
+# HTTP status code handling for charts submissions
+HTTP_STATUS_ACTIONS = {
+    200: ("success", "debug", "Charts server accepted submission"),
+    400: ("drop", "error", "Charts server rejected malformed data"),
+    401: ("retry", "error", "Charts server authentication failed"),
+    403: ("retry", "error", "Charts server authentication failed"),
+    404: ("drop", "error", "Charts server endpoint not found"),
+    405: ("drop", "error", "Charts server method not allowed"),
+    429: ("retry", "warning", "Charts server rate limited"),
+}
+
 
 def generate_anonymous_key(debug: bool = False) -> str | None:
     """
@@ -443,7 +454,8 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             logging.error("Failed to request anonymous key from charts server: %s", exc)
             return None
 
-    def _handle_http_response(self, status: int, response_text: str = "") -> str:
+    @staticmethod
+    def _handle_http_response(status: int, response_text: str = "") -> str:
         """
         Handle HTTP response status codes for charts submissions
 
@@ -454,29 +466,28 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         Returns:
             str: Action to take ("success", "retry", "drop")
         """
-        if status == 200:
-            return "success"
-        elif status == 400:
-            logging.error("Charts server rejected malformed data (400): %s", response_text)
-            return "drop"  # Drop malformed data, continue processing
-        elif status in (401, 403):
-            logging.error("Charts server authentication failed (%d): %s", status, response_text)
-            return "retry"  # Stop processing, auth needs to be fixed
-        elif status == 404:
-            logging.error("Charts server endpoint not found (404): %s", response_text)
-            return "drop"  # Drop item, endpoint won't change
-        elif status == 405:
-            logging.error("Charts server method not allowed (405): %s", response_text)
-            return "drop"  # Drop item, method won't change
-        elif status == 429:
-            logging.warning("Charts server rate limited (429): %s", response_text)
-            return "retry"  # Stop processing, retry later with backoff
-        elif 400 <= status < 500:
+        # Check for specific status codes first
+        if status in HTTP_STATUS_ACTIONS:
+            action, log_level, message = HTTP_STATUS_ACTIONS[status]
+            full_message = f"{message} ({status}): {response_text}"
+
+            if log_level == "warning":
+                logging.warning(full_message)
+            elif log_level == "error":
+                logging.error(full_message)
+            elif log_level == "info":
+                logging.info(full_message)
+            elif log_level == "debug":
+                logging.debug(full_message)
+
+            return action
+
+        # Handle ranges for unlisted status codes
+        if 400 <= status < 500:
             logging.error("Charts server client error %d: %s", status, response_text)
-            return "drop"  # Drop item, client error won't resolve by retrying
-        else:
-            logging.error("Charts server error %d: %s", status, response_text)
-            return "retry"  # Retry later, server may recover
+            return "drop"  # Client errors won't resolve by retrying
+        logging.error("Charts server error %d: %s", status, response_text)
+        return "retry"  # Server errors may recover
 
     @staticmethod
     def _is_valid_api_key(key: str) -> bool:
