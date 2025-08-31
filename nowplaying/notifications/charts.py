@@ -25,6 +25,11 @@ if TYPE_CHECKING:
     import nowplaying.imagecache
 
 
+# Base URLs for charts service
+LOCAL_BASE_URL = "http://localhost:8000"
+PROD_BASE_URL = "https://whatsnowplaying.com"
+
+
 def generate_anonymous_key(debug: bool = False) -> str | None:
     """
     Generate an anonymous charts key from the server (standalone function for main process)
@@ -91,6 +96,8 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         self.queue_file: pathlib.Path | None = None
         self._queue_lock = asyncio.Lock()
         self._queue_task: asyncio.Task | None = None
+        self.base_url = LOCAL_BASE_URL if self.debug else PROD_BASE_URL
+        self._session: aiohttp.ClientSession | None = None
 
     async def notify_track_change(
         self, metadata: TrackMetadata, imagecache: "nowplaying.imagecache.ImageCache|None" = None
@@ -235,6 +242,9 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                     logging.error("Error while stopping queue task: %s", exc)
                 self._queue_task = None
 
+        # Close aiohttp session
+        await self._close_session()
+
     async def _load_queue(self) -> None:
         """Load queued items from disk"""
         if not self.queue_file or not self.queue_file.exists():
@@ -329,12 +339,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             "retry": Failed to send, keep in queue and stop processing (retry later)
             "drop": Drop this item from queue and continue processing
         """
-        # Choose URL based on debug flag
-        url = (
-            "http://localhost:8000/v1/submit"
-            if self.debug
-            else "https://whatsnowplaying.com/v1/submit"
-        )
+        url = f"{self.base_url}/v1/submit"
 
         try:
             # Remove non-JSON-serializable fields to prevent submission failures
@@ -356,102 +361,93 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             logging.info("Charts submission data keys: %s", list(debug_data.keys()))
             logging.debug("Charts submission data: %s", debug_data)
 
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-                async with session.post(
-                    url,
-                    json=charts_data,
-                    headers={"Content-Type": "application/json"},
-                ) as response:
-                    logging.debug("Sending to %s", url)
-                    if response.status == 200:
-                        try:
-                            result = await response.json()
-                            logging.debug("Charts server accepted track update: %s", result)
-                            return "success"
-                        except Exception as exc:  # pylint: disable=broad-except
-                            logging.warning("Failed to parse charts server response: %s", exc)
-                            return "success"  # Still consider it successful if status was 200
-                    elif response.status == 400:
-                        try:
-                            error_text = await response.text()
-                            logging.error(
-                                "Charts server rejected malformed data (400): %s", error_text
-                            )
-                        except Exception:  # pylint: disable=broad-except
-                            logging.error("Charts server rejected malformed data (400)")
-                        return "drop"  # Drop malformed data, continue processing
-                    elif response.status == 401:
-                        try:
-                            error_text = await response.text()
-                            logging.error(
-                                "Charts server authentication failed (401): %s", error_text
-                            )
-                        except Exception:  # pylint: disable=broad-except
-                            logging.error("Charts server authentication failed (401)")
-                        return "retry"  # Stop processing, auth needs to be fixed
-                    elif response.status == 403:
-                        try:
-                            error_text = await response.text()
-                            logging.error(
-                                "Charts server authentication failed (403): %s", error_text
-                            )
-                        except Exception:  # pylint: disable=broad-except
-                            logging.error("Charts server authentication failed (403)")
-                        return "retry"  # Stop processing, auth needs to be fixed
-                    elif response.status == 498:
-                        # Key rotation required
-                        try:
-                            rotation_response = await response.json()
-                            if await self._handle_key_rotation(rotation_response):
-                                return "retry"  # Retry with new key
-                            else:
-                                return "drop"  # Rotation failed, drop item
-                        except Exception as exc:  # pylint: disable=broad-except
-                            logging.error("Failed to handle key rotation response: %s", exc)
-                            return "retry"
-                    elif response.status == 404:
-                        try:
-                            error_text = await response.text()
-                            logging.error("Charts server endpoint not found (404): %s", error_text)
-                        except Exception:  # pylint: disable=broad-except
-                            logging.error("Charts server endpoint not found (404)")
-                        return "drop"  # Drop item, endpoint won't change
-                    elif response.status == 405:
-                        try:
-                            error_text = await response.text()
-                            logging.error("Charts server method not allowed (405): %s", error_text)
-                        except Exception:  # pylint: disable=broad-except
-                            logging.error(
-                                "Charts server method not allowed (405) - check endpoint"
-                            )
-                        return "drop"  # Drop item, method won't change
-                    elif response.status == 429:
-                        try:
-                            error_text = await response.text()
-                            logging.warning("Charts server rate limited (429): %s", error_text)
-                        except Exception:  # pylint: disable=broad-except
-                            logging.warning("Charts server rate limited (429)")
-                        return "retry"  # Stop processing, retry later with backoff
-                    elif 400 <= response.status < 500:
-                        # Other 4xx client errors - drop the item
-                        try:
-                            error_text = await response.text()
-                            logging.error(
-                                "Charts server client error %d: %s", response.status, error_text
-                            )
-                        except Exception:  # pylint: disable=broad-except
-                            logging.error("Charts server client error %d", response.status)
-                        return "drop"  # Drop item, client error won't resolve by retrying
-                    else:
-                        # 5xx server errors - retry later
-                        try:
-                            error_text = await response.text()
-                            logging.error(
-                                "Charts server error %d: %s", response.status, error_text
-                            )
-                        except Exception:  # pylint: disable=broad-except
-                            logging.error("Charts server returned status %d", response.status)
-                        return "retry"  # Retry later, server may recover
+            session = await self._get_session()
+            async with session.post(
+                url,
+                json=charts_data,
+                headers={"Content-Type": "application/json"},
+            ) as response:
+                logging.debug("Sending to %s", url)
+                if response.status == 200:
+                    try:
+                        result = await response.json()
+                        logging.debug("Charts server accepted track update: %s", result)
+                        return "success"
+                    except Exception as exc:  # pylint: disable=broad-except
+                        logging.warning("Failed to parse charts server response: %s", exc)
+                        return "success"  # Still consider it successful if status was 200
+                elif response.status == 400:
+                    try:
+                        error_text = await response.text()
+                        logging.error(
+                            "Charts server rejected malformed data (400): %s", error_text
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        logging.error("Charts server rejected malformed data (400)")
+                    return "drop"  # Drop malformed data, continue processing
+                elif response.status == 401:
+                    try:
+                        error_text = await response.text()
+                        logging.error("Charts server authentication failed (401): %s", error_text)
+                    except Exception:  # pylint: disable=broad-except
+                        logging.error("Charts server authentication failed (401)")
+                    return "retry"  # Stop processing, auth needs to be fixed
+                elif response.status == 403:
+                    try:
+                        error_text = await response.text()
+                        logging.error("Charts server authentication failed (403): %s", error_text)
+                    except Exception:  # pylint: disable=broad-except
+                        logging.error("Charts server authentication failed (403)")
+                    return "retry"  # Stop processing, auth needs to be fixed
+                elif response.status == 498:
+                    # Key rotation required
+                    try:
+                        rotation_response = await response.json()
+                        if await self._handle_key_rotation(rotation_response):
+                            return "retry"  # Retry with new key
+                        return "drop"  # Rotation failed, drop item
+                    except Exception:  # pylint: disable=broad-except
+                        logging.exception("Failed to handle key rotation response")
+                        return "retry"
+                elif response.status == 404:
+                    try:
+                        error_text = await response.text()
+                        logging.error("Charts server endpoint not found (404): %s", error_text)
+                    except Exception:  # pylint: disable=broad-except
+                        logging.error("Charts server endpoint not found (404)")
+                    return "drop"  # Drop item, endpoint won't change
+                elif response.status == 405:
+                    try:
+                        error_text = await response.text()
+                        logging.error("Charts server method not allowed (405): %s", error_text)
+                    except Exception:  # pylint: disable=broad-except
+                        logging.error("Charts server method not allowed (405) - check endpoint")
+                    return "drop"  # Drop item, method won't change
+                elif response.status == 429:
+                    try:
+                        error_text = await response.text()
+                        logging.warning("Charts server rate limited (429): %s", error_text)
+                    except Exception:  # pylint: disable=broad-except
+                        logging.warning("Charts server rate limited (429)")
+                    return "retry"  # Stop processing, retry later with backoff
+                elif 400 <= response.status < 500:
+                    # Other 4xx client errors - drop the item
+                    try:
+                        error_text = await response.text()
+                        logging.error(
+                            "Charts server client error %d: %s", response.status, error_text
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        logging.error("Charts server client error %d", response.status)
+                    return "drop"  # Drop item, client error won't resolve by retrying
+                else:
+                    # 5xx server errors - retry later
+                    try:
+                        error_text = await response.text()
+                        logging.error("Charts server error %d: %s", response.status, error_text)
+                    except Exception:  # pylint: disable=broad-except
+                        logging.error("Charts server returned status %d", response.status)
+                    return "retry"  # Retry later, server may recover
         except aiohttp.ClientError as exc:
             logging.error("Failed to connect to charts server %s - %s", url, exc)
             return "retry"  # Network issues, retry later
@@ -461,48 +457,121 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
 
     async def _request_anonymous_key(self) -> str | None:
         """Request an anonymous key from the charts server"""
-        url = (
-            "http://localhost:8000/api/v1/request-anonymous-key"
-            if self.debug
-            else "https://whatsnowplaying.com/api/v1/request-anonymous-key"
-        )
+        url = f"{self.base_url}/api/v1/request-anonymous-key"
 
         try:
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-                async with session.post(url) as response:
-                    if response.status == 200:
-                        try:
-                            result = await response.json()
-                            api_key = result.get("api_key")
-                            message = result.get("message", "")
-                            if api_key:
-                                logging.info(
-                                    "Received anonymous key from charts server: %s", message
-                                )
-                                return api_key
-                            logging.error("Charts server returned response without api_key")
-                            return None
-                        except Exception as exc:  # pylint: disable=broad-except
-                            logging.error("Failed to parse anonymous key response: %s", exc)
-                            return None
-                    else:
-                        try:
-                            error_response = await response.json()
-                            error_detail = error_response.get("detail", "Unknown error")
-                            logging.error(
-                                "Charts server returned status %d: %s",
-                                response.status,
-                                error_detail,
-                            )
-                        except Exception:  # pylint: disable=broad-except
-                            logging.error(
-                                "Charts server returned status %d for anonymous key request",
-                                response.status,
-                            )
+            session = await self._get_session()
+            async with session.post(url) as response:
+                if response.status == 200:
+                    try:
+                        result = await response.json()
+                        api_key = result.get("api_key")
+                        message = result.get("message", "")
+                        if api_key:
+                            logging.info("Received anonymous key from charts server: %s", message)
+                            return api_key
+                        logging.error("Charts server returned response without api_key")
                         return None
+                    except Exception as exc:  # pylint: disable=broad-except
+                        logging.error("Failed to parse anonymous key response: %s", exc)
+                        return None
+                else:
+                    try:
+                        error_response = await response.json()
+                        error_detail = error_response.get("detail", "Unknown error")
+                        logging.error(
+                            "Charts server returned status %d: %s",
+                            response.status,
+                            error_detail,
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        logging.error(
+                            "Charts server returned status %d for anonymous key request",
+                            response.status,
+                        )
+                    return None
         except Exception as exc:  # pylint: disable=broad-except
             logging.error("Failed to request anonymous key from charts server: %s", exc)
             return None
+
+    @staticmethod
+    def _is_valid_api_key(key: str) -> bool:
+        """
+        Validate API key format
+
+        Args:
+            key: API key to validate
+
+        Returns:
+            bool: True if key format is valid
+        """
+        # API keys should be non-empty strings with reasonable length
+        return isinstance(key, str) and len(key.strip()) >= 10
+
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create aiohttp session"""
+        if self._session is None or self._session.closed:
+            timeout = aiohttp.ClientTimeout(total=10)
+            self._session = aiohttp.ClientSession(timeout=timeout)
+        return self._session
+
+    async def _close_session(self) -> None:
+        """Close aiohttp session"""
+        if self._session and not self._session.closed:
+            await self._session.close()
+            self._session = None
+
+    async def _rotate_key(self, secret: str, endpoint: str) -> tuple[bool, str | None]:
+        """
+        Perform the actual key rotation HTTP request
+
+        Args:
+            secret: Rotation secret from 498 response
+            endpoint: Rotation endpoint from 498 response
+
+        Returns:
+            Tuple of (success: bool, new_key: str | None)
+        """
+        rotate_url = f"{self.base_url}{endpoint}"
+        rotation_data = {"old_api_key": self.key, "rotation_secret": secret}
+
+        session = await self._get_session()
+        async with session.post(
+            rotate_url, json=rotation_data, headers={"Content-Type": "application/json"}
+        ) as response:
+            if response.status == 200:
+                result = await response.json()
+                new_key = result.get("new_api_key")
+                if new_key and self._is_valid_api_key(new_key):
+                    message = result.get("message", "")
+                    logging.info("Charts key rotated successfully: %s", message)
+                    return True, new_key
+                logging.error("Key rotation response missing valid new_api_key")
+                return False, None
+            if response.status in (401, 403):
+                try:
+                    error_text = await response.text()
+                    logging.error(
+                        "Key rotation failed - key no longer valid (%d): %s",
+                        response.status,
+                        error_text,
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    logging.error(
+                        "Key rotation failed - key no longer valid (%d)", response.status
+                    )
+                return False, None
+
+            try:
+                error_text = await response.text()
+                logging.error(
+                    "Key rotation failed with status %d: %s",
+                    response.status,
+                    error_text,
+                )
+            except Exception:  # pylint: disable=broad-except
+                logging.error("Key rotation failed with status %d", response.status)
+            return False, None
 
     async def _handle_key_rotation(self, rotation_response: dict) -> bool:
         """
@@ -532,77 +601,36 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
 
             logging.info("Charts key rotation required, expires in %d seconds", expires_in)
 
-            # Choose URL based on debug flag
-            base_url = "http://localhost:8000" if self.debug else "https://whatsnowplaying.com"
-            rotate_url = f"{base_url}{endpoint}"
+            # Attempt key rotation
+            success, new_key = await self._rotate_key(secret, endpoint)
 
-            # Prepare rotation request
-            rotation_data = {"old_api_key": self.key, "rotation_secret": secret}
+            if success and new_key and self.config:
+                # Save new key
+                self.config.cparser.setValue("charts/charts_key", new_key)
+                self.config.cparser.sync()
+                self.key = new_key
+                return True
 
-            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
-                async with session.post(
-                    rotate_url, json=rotation_data, headers={"Content-Type": "application/json"}
-                ) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        new_key = result.get("new_api_key")
-                        message = result.get("message", "")
-                        if new_key and self.config:
-                            # Save new key
-                            self.config.cparser.setValue("charts/charts_key", new_key)
-                            self.config.cparser.sync()
-                            self.key = new_key
-                            logging.info("Charts key rotated successfully: %s", message)
-                            return True
-                        else:
-                            logging.error("Key rotation response missing new_api_key")
-                            return False
-                    elif response.status in (401, 403):
-                        # Key is completely invalid - delete it
-                        try:
-                            error_text = await response.text()
-                            logging.error(
-                                "Key rotation failed - key no longer valid (%d): %s",
-                                response.status,
-                                error_text,
-                            )
-                        except Exception:  # pylint: disable=broad-except
-                            logging.error(
-                                "Key rotation failed - key no longer valid (%d)", response.status
-                            )
+            if not success:
+                # Key is invalid - delete it
+                if self.config:
+                    self.config.cparser.remove("charts/charts_key")
+                    self.config.cparser.sync()
+                    self.key = None
+                    logging.warning(
+                        "Invalid charts key deleted - please get a new key from dashboard"
+                    )
+                return False
+            logging.error("Key rotation succeeded but missing config or key")
+            return False
 
-                        # Clear the invalid key from config
-                        if self.config:
-                            self.config.cparser.remove("charts/charts_key")
-                            self.config.cparser.sync()
-                            self.key = None
-                            logging.warning(
-                                "Invalid charts key deleted - please get a new key from dashboard"
-                            )
-                        return False
-                    else:
-                        try:
-                            error_text = await response.text()
-                            logging.error(
-                                "Key rotation failed with status %d: %s",
-                                response.status,
-                                error_text,
-                            )
-                        except Exception:  # pylint: disable=broad-except
-                            logging.error("Key rotation failed with status %d", response.status)
-                        return False
-
-        except Exception as exc:  # pylint: disable=broad-except
-            logging.error("Failed to rotate charts key: %s", exc)
+        except Exception:  # pylint: disable=broad-except
+            logging.exception("Failed to handle key rotation")
             return False
 
     def _request_anonymous_key_sync(self) -> str | None:
         """Request an anonymous key from the charts server (synchronous version)"""
-        url = (
-            "http://localhost:8000/api/v1/request-anonymous-key"
-            if self.debug
-            else "https://whatsnowplaying.com/api/v1/request-anonymous-key"
-        )
+        url = f"{self.base_url}/api/v1/request-anonymous-key"
 
         try:
             request = urllib.request.Request(url, method="POST")
