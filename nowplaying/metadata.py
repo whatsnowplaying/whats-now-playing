@@ -281,6 +281,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if not self.metadata:
             return None
 
+        if not self.config.cparser.value("musicbrainz/enabled", type=bool):
+            logging.debug("Skipping MusicBrainz lookup - disabled")
+            return
+
         # Check if we already have key MusicBrainz data to avoid unnecessary lookups
         if (
             self.metadata.get("musicbrainzartistid")
@@ -301,6 +305,10 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     async def _mb_fallback(self) -> None:
         """at least see if album can be found"""
+
+        if not self.config.cparser.value("musicbrainz/enabled", type=bool):
+            logging.debug("Skipping MusicBrainz fallback lookup - disabled")
+            return
 
         addmeta = {}
         # user does not want fallback support
@@ -336,6 +344,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
     ) -> None:
         if not self.metadata:
             return
+
+        if not self.config.cparser.value("musicbrainz/enabled", type=bool):
+            logging.debug("Skipping youtube fallback lookup - disabled")
+            return None
+
         addmeta2 = copy.deepcopy(self.metadata)
         artist, title = self.metadata["title"].split(" - ")
         addmeta2["artist"] = artist.strip()

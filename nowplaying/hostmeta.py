@@ -88,9 +88,8 @@ def gethostmeta() -> dict[str, str | None]:
     """resolve hostname/ip of this machine"""
     global TIMESTAMP  # pylint: disable=global-statement
 
-    logging.debug("Attempting to get DNS information")
-
     if not TIMESTAMP or (datetime.datetime.now() - TIMESTAMP > TIMEDELTA) or not HOSTNAME:
+        logging.debug("Attempting to get DNS information")
         trysocket()
         # sourcery skip: hoist-repeated-if-condition
         if not HOSTIP and IFACES:
