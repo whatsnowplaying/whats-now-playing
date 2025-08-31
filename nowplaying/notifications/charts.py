@@ -584,9 +584,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             bool: True if rotation was successful, False otherwise
         """
         try:
-            logging.debug("Full 498 rotation response: %s", rotation_response)
             rotation = rotation_response.get("rotation", {})
-            logging.debug("Extracted rotation object: %s", rotation)
             secret = rotation.get("secret")
             endpoint = rotation.get("endpoint", "/v1/rotate-key")
             expires_in = rotation.get("expires_in", 900)
