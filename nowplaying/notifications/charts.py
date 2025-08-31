@@ -368,39 +368,9 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                 headers={"Content-Type": "application/json"},
             ) as response:
                 logging.debug("Sending to %s", url)
-                if response.status == 200:
-                    try:
-                        result = await response.json()
-                        logging.debug("Charts server accepted track update: %s", result)
-                        return "success"
-                    except Exception as exc:  # pylint: disable=broad-except
-                        logging.warning("Failed to parse charts server response: %s", exc)
-                        return "success"  # Still consider it successful if status was 200
-                elif response.status == 400:
-                    try:
-                        error_text = await response.text()
-                        logging.error(
-                            "Charts server rejected malformed data (400): %s", error_text
-                        )
-                    except Exception:  # pylint: disable=broad-except
-                        logging.error("Charts server rejected malformed data (400)")
-                    return "drop"  # Drop malformed data, continue processing
-                elif response.status == 401:
-                    try:
-                        error_text = await response.text()
-                        logging.error("Charts server authentication failed (401): %s", error_text)
-                    except Exception:  # pylint: disable=broad-except
-                        logging.error("Charts server authentication failed (401)")
-                    return "retry"  # Stop processing, auth needs to be fixed
-                elif response.status == 403:
-                    try:
-                        error_text = await response.text()
-                        logging.error("Charts server authentication failed (403): %s", error_text)
-                    except Exception:  # pylint: disable=broad-except
-                        logging.error("Charts server authentication failed (403)")
-                    return "retry"  # Stop processing, auth needs to be fixed
-                elif response.status == 498:
-                    # Key rotation required
+
+                # Handle special case for key rotation
+                if response.status == 498:
                     try:
                         rotation_response = await response.json()
                         if await self._handle_key_rotation(rotation_response):
@@ -409,45 +379,24 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                     except Exception:  # pylint: disable=broad-except
                         logging.exception("Failed to handle key rotation response")
                         return "retry"
-                elif response.status == 404:
+
+                # Handle successful response with optional JSON parsing
+                if response.status == 200:
                     try:
-                        error_text = await response.text()
-                        logging.error("Charts server endpoint not found (404): %s", error_text)
-                    except Exception:  # pylint: disable=broad-except
-                        logging.error("Charts server endpoint not found (404)")
-                    return "drop"  # Drop item, endpoint won't change
-                elif response.status == 405:
-                    try:
-                        error_text = await response.text()
-                        logging.error("Charts server method not allowed (405): %s", error_text)
-                    except Exception:  # pylint: disable=broad-except
-                        logging.error("Charts server method not allowed (405) - check endpoint")
-                    return "drop"  # Drop item, method won't change
-                elif response.status == 429:
-                    try:
-                        error_text = await response.text()
-                        logging.warning("Charts server rate limited (429): %s", error_text)
-                    except Exception:  # pylint: disable=broad-except
-                        logging.warning("Charts server rate limited (429)")
-                    return "retry"  # Stop processing, retry later with backoff
-                elif 400 <= response.status < 500:
-                    # Other 4xx client errors - drop the item
-                    try:
-                        error_text = await response.text()
-                        logging.error(
-                            "Charts server client error %d: %s", response.status, error_text
-                        )
-                    except Exception:  # pylint: disable=broad-except
-                        logging.error("Charts server client error %d", response.status)
-                    return "drop"  # Drop item, client error won't resolve by retrying
-                else:
-                    # 5xx server errors - retry later
-                    try:
-                        error_text = await response.text()
-                        logging.error("Charts server error %d: %s", response.status, error_text)
-                    except Exception:  # pylint: disable=broad-except
-                        logging.error("Charts server returned status %d", response.status)
-                    return "retry"  # Retry later, server may recover
+                        result = await response.json()
+                        logging.debug("Charts server accepted track update: %s", result)
+                    except Exception as exc:  # pylint: disable=broad-except
+                        logging.warning("Failed to parse charts server response: %s", exc)
+                        # Still consider it successful if status was 200
+                    return "success"
+
+                # Handle all other status codes using shared logic
+                try:
+                    error_text = await response.text()
+                except Exception:  # pylint: disable=broad-except
+                    error_text = ""
+
+                return self._handle_http_response(response.status, error_text)
         except aiohttp.ClientError as exc:
             logging.error("Failed to connect to charts server %s - %s", url, exc)
             return "retry"  # Network issues, retry later
@@ -493,6 +442,41 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         except Exception as exc:  # pylint: disable=broad-except
             logging.error("Failed to request anonymous key from charts server: %s", exc)
             return None
+
+    def _handle_http_response(self, status: int, response_text: str = "") -> str:
+        """
+        Handle HTTP response status codes for charts submissions
+
+        Args:
+            status: HTTP status code
+            response_text: Response body text for logging
+
+        Returns:
+            str: Action to take ("success", "retry", "drop")
+        """
+        if status == 200:
+            return "success"
+        elif status == 400:
+            logging.error("Charts server rejected malformed data (400): %s", response_text)
+            return "drop"  # Drop malformed data, continue processing
+        elif status in (401, 403):
+            logging.error("Charts server authentication failed (%d): %s", status, response_text)
+            return "retry"  # Stop processing, auth needs to be fixed
+        elif status == 404:
+            logging.error("Charts server endpoint not found (404): %s", response_text)
+            return "drop"  # Drop item, endpoint won't change
+        elif status == 405:
+            logging.error("Charts server method not allowed (405): %s", response_text)
+            return "drop"  # Drop item, method won't change
+        elif status == 429:
+            logging.warning("Charts server rate limited (429): %s", response_text)
+            return "retry"  # Stop processing, retry later with backoff
+        elif 400 <= status < 500:
+            logging.error("Charts server client error %d: %s", status, response_text)
+            return "drop"  # Drop item, client error won't resolve by retrying
+        else:
+            logging.error("Charts server error %d: %s", status, response_text)
+            return "retry"  # Retry later, server may recover
 
     @staticmethod
     def _is_valid_api_key(key: str) -> bool:
