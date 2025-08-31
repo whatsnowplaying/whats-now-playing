@@ -281,7 +281,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if not self.metadata:
             return None
 
-        if not self.config.cparser.value("musicbrainz/enabled"):
+        if not self.config.cparser.value("musicbrainz/enabled", type=bool):
             logging.debug("Skipping MusicBrainz lookup - disabled")
             return
 
@@ -306,7 +306,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
     async def _mb_fallback(self) -> None:
         """at least see if album can be found"""
 
-        if not self.config.cparser.value("musicbrainz/enabled"):
+        if not self.config.cparser.value("musicbrainz/enabled", type=bool):
             logging.debug("Skipping MusicBrainz fallback lookup - disabled")
             return
 
@@ -345,7 +345,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if not self.metadata:
             return
 
-        if not self.config.cparser.value("musicbrainz/enabled"):
+        if not self.config.cparser.value("musicbrainz/enabled", type=bool):
             logging.debug("Skipping youtube fallback lookup - disabled")
             return None
 
