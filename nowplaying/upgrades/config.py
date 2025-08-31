@@ -145,6 +145,9 @@ class UpgradeConfig:
         if oldversstr == "5.0.0-preview1":
             self._upgrade_from_5_0_0_preview1(config)
 
+        if oldversion < Version("5.0.0-preview3"):
+            self._upgrade_from_5_0_0_preview3(config)
+
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
         config.setValue("settings/configversion", thisverstr)
@@ -239,6 +242,12 @@ class UpgradeConfig:
                 config.setValue("virtualdj/rebuild_playlists_db", True)
             else:
                 logging.debug("No VirtualDJ databases found to remove")
+
+    @staticmethod
+    def _upgrade_from_5_0_0_preview3(config: QSettings) -> None:
+        """Upgrade from 5.0.0-preview3 - Force enable charts"""
+        logging.info("Upgrade from 5.0.0-preview3: force enable charts plugin")
+        config.setValue("charts/enabled", True)
 
     @staticmethod
     def _upgrade_filters(config: QSettings) -> None:
