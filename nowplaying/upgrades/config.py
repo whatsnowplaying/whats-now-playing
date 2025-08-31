@@ -243,13 +243,11 @@ class UpgradeConfig:
             else:
                 logging.debug("No VirtualDJ databases found to remove")
 
-
     @staticmethod
     def _upgrade_from_5_0_0_preview3(config: QSettings) -> None:
-        """Upgrade from 5.0.0-preview3 - Force enable charts """
+        """Upgrade from 5.0.0-preview3 - Force enable charts"""
         logging.info("Upgrade from 5.0.0-preview3: force enable charts plugin")
         config.setValue("charts/enabled", True)
-
 
     @staticmethod
     def _upgrade_filters(config: QSettings) -> None:
