@@ -19,9 +19,9 @@ import nowplaying.utils  # pylint: disable=import-error
 import nowplaying.utils.sqlite
 
 TEST_URLS = [
-    "https://www.theaudiodb.com/images/media/artist/fanart/numan-gary-5026a93c591b1.jpg",
-    "https://www.theaudiodb.com/images/media/artist/fanart/numan-gary-5098b765ed348.jpg",
-    "https://www.theaudiodb.com/images/media/artist/fanart/numan-gary-5098b899f3268.jpg",
+    "https://r2.theaudiodb.com/images/media/artist/fanart/numan-gary-5026a93c591b1.jpg",
+    "https://r2.theaudiodb.com/images/media/artist/fanart/numan-gary-5098b765ed348.jpg",
+    "https://r2.theaudiodb.com/images/media/artist/fanart/numan-gary-5098b899f3268.jpg",
 ]
 
 
