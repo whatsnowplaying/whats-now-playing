@@ -229,7 +229,7 @@ async def test_queue_should_stop(imagecache_with_stopevent, stopevent_state, exp
             ],
             {
                 "url1": {
-                    "timestamp": time.time(),
+                    "timestamp": time.time() - 10,  # 10 seconds ago, well within 150 second cooldown
                     "error_type": "success",
                     "cooldown": 150,
                     "failure_count": 0,
