@@ -539,7 +539,7 @@ VALUES (?,?,?);
         except sqlite3.Error as error:
             logging.error("Database error during vacuum: %s", error)
 
-    def image_dl(self, imagedict: dict[str, str]) -> None:
+    def image_dl(self, imagedict: dict[str, str]) -> dict[str, str] | None:
         """fetch an image and store it"""
         nowplaying.bootstrap.setuplogging(logdir=self.logpath, rotate=False)
         threading.current_thread().name = "ICFollower"
@@ -557,7 +557,7 @@ VALUES (?,?,?);
         except Exception as error:  # pylint: disable=broad-except
             logging.error("image_dl: %s %s", imagedict["srclocation"], error)
             self.erase_srclocation(imagedict["srclocation"])
-            return
+            return {"error_type": "network_error", "cooldown": 300}  # 5 minutes for network errors
         if dlimage.status_code == 200:
             if not self.put_db_cachekey(
                 identifier=imagedict["identifier"],
@@ -572,12 +572,24 @@ VALUES (?,?,?);
                 "image_dl: rate limit exceeded (429) for %s - keeping URL for retry",
                 imagedict["srclocation"],
             )
-            return
-        else:
-            # Other errors (404, 403, 500, etc.) - remove invalid URLs
-            logging.error("image_dl: status_code %s", dlimage.status_code)
+            return {"error_type": "rate_limit", "cooldown": 60}
+        elif 400 <= dlimage.status_code < 500:
+            # Client errors (404, 403, etc.) - URL is likely invalid, remove it
+            logging.error(
+                "image_dl: client error %s for %s - removing invalid URL",
+                dlimage.status_code,
+                imagedict["srclocation"],
+            )
             self.erase_srclocation(imagedict["srclocation"])
-            return
+            return {"error_type": "client_error", "cooldown": 0}  # No retry for client errors
+        else:
+            # Server errors (500, 503, etc.) - transient issues, keep URL for retry
+            logging.warning(
+                "image_dl: server error %s for %s - keeping URL for retry",
+                dlimage.status_code,
+                imagedict["srclocation"],
+            )
+            return {"error_type": "server_error", "cooldown": 600}  # 10 minutes for server errors
 
         return
 
@@ -637,8 +649,8 @@ VALUES (?,?,?);
         self.logpath = logpath
         self.erase_srclocation("STOPWNP")
 
-        # Track recently processed items to avoid duplicates
-        recently_processed: dict[str, float] = {}
+        # Track recently processed items with failure types and cooldown periods
+        recently_processed: dict[str, dict] = {}
 
         with concurrent.futures.ProcessPoolExecutor(max_workers=maxworkers) as executor:
             while not self._queue_should_stop():
@@ -663,17 +675,72 @@ VALUES (?,?,?);
                     continue
 
                 # Submit batch for processing if there are items
+                results = []
                 if items_to_process:
-                    executor.map(self.image_dl, items_to_process)
+                    results = list(executor.map(self.image_dl, items_to_process))
 
                 # Stop after processing if stop signal was found
                 if should_stop:
                     break
 
-                # Mark items as recently processed (only the ones we actually processed)
+                # Process results and update tracking
                 current_time = time.time()
-                for item in items_to_process:
-                    recently_processed[item["srclocation"]] = current_time
+                for i, item in enumerate(items_to_process):
+                    result = results[i] if i < len(results) else None
+                    srclocation = item["srclocation"]
+
+                    if result is None:
+                        # Success - no error info returned, reset failure count
+                        recently_processed[srclocation] = {
+                            "timestamp": current_time,
+                            "error_type": "success",
+                            "cooldown": 30,  # Short cooldown for successful downloads
+                            "failure_count": 0,
+                        }
+                    else:
+                        # Failure - increment failure count and check limits
+                        existing_info = recently_processed.get(srclocation, {"failure_count": 0})
+                        failure_count = existing_info["failure_count"] + 1
+                        error_type = result["error_type"]
+
+                        # Define failure limits for different error types
+                        failure_limits = {
+                            "rate_limit": 10,  # Rate limits should eventually resolve
+                            "server_error": 5,  # Server issues should be temporary
+                            "network_error": 3,  # Connection issues should resolve quickly
+                            "client_error": 1,  # Already removed, but just in case
+                        }
+
+                        max_failures = failure_limits.get(error_type, 3)  # Default to 3
+
+                        if failure_count >= max_failures:
+                            # Too many failures - remove URL permanently
+                            logging.warning(
+                                "Removing %s after %d %s failures (limit: %d)",
+                                srclocation,
+                                failure_count,
+                                error_type,
+                                max_failures,
+                            )
+                            self.erase_srclocation(srclocation)
+                            # Remove from tracking so it won't be retried
+                            recently_processed.pop(srclocation, None)
+                        else:
+                            # Record failure with updated count
+                            recently_processed[srclocation] = {
+                                "timestamp": current_time,
+                                "error_type": error_type,
+                                "cooldown": result["cooldown"],
+                                "failure_count": failure_count,
+                            }
+                            logging.debug(
+                                "Recorded failure for %s: %s (attempt %d/%d, cooldown: %d seconds)",
+                                srclocation,
+                                error_type,
+                                failure_count,
+                                max_failures,
+                                result["cooldown"],
+                            )
 
                 # Clean up old entries from tracking
                 self._cleanup_queue_tracking(recently_processed)
@@ -691,13 +758,15 @@ VALUES (?,?,?);
         """Check if the queue process should stop."""
         return nowplaying.utils.safe_stopevent_check(self.stopevent)
 
-    def _get_next_queue_batch(self, recently_processed: dict[str, float]) -> list[dict[str, str]]:
+    def _get_next_queue_batch(self, recently_processed: dict[str, dict]) -> list[dict[str, str]]:
         """Get next batch of items for queue processing, filtering out recently processed ones."""
         dataset = self.get_next_dlset()
         if not dataset:
             return []
 
         batch = []
+        current_time = time.time()
+
         for entry in dataset:
             srclocation = entry["srclocation"]
 
@@ -706,28 +775,45 @@ VALUES (?,?,?);
                 batch.append(entry)
                 continue
 
-            # Skip if recently processed
+            # Skip if recently processed and still in cooldown
             if srclocation in recently_processed:
-                logging.debug("skipping recently processed srclocation %s", srclocation)
-                continue
+                failure_info = recently_processed[srclocation]
+                time_since_failure = current_time - failure_info["timestamp"]
+                cooldown_period = failure_info["cooldown"]
+
+                if time_since_failure < cooldown_period:
+                    logging.debug(
+                        "skipping %s (failure type: %s, %d seconds remaining)",
+                        srclocation,
+                        failure_info["error_type"],
+                        int(cooldown_period - time_since_failure),
+                    )
+                    continue
 
             batch.append(entry)
 
         return batch
 
     @staticmethod
-    def _cleanup_queue_tracking(recently_processed: dict[str, float]) -> None:
-        """Remove entries older than 3 minutes from queue processing tracking."""
+    def _cleanup_queue_tracking(recently_processed: dict[str, dict]) -> None:
+        """Remove entries past their cooldown period from queue processing tracking."""
         current_time = time.time()
         expired_keys = [
             srclocation
-            for srclocation, timestamp in recently_processed.items()
-            if current_time - timestamp > 180  # 3 minutes
+            for srclocation, failure_info in recently_processed.items()
+            if current_time - failure_info["timestamp"] > failure_info["cooldown"]
         ]
 
         for key in expired_keys:
+            failure_info = recently_processed[key]
+            # Only remove successful downloads and retryable failures from tracking
+            # Failed URLs that hit failure limits were already removed from the database
             del recently_processed[key]
-            logging.debug("removing %s from recently processed tracking", key)
+            logging.debug(
+                "removing %s from recently processed tracking (cooldown expired, %d failures)",
+                key,
+                failure_info.get("failure_count", 0),
+            )
 
     def close(self) -> None:
         """Close the diskcache to release file handles"""

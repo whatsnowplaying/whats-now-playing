@@ -85,7 +85,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             # Re-raise rate limit exceptions so they don't get cached
             raise
         except Exception as error:  # pragma: no cover pylint: disable=broad-except
-            logging.error("TheAudioDB async hit %s", error)
+            logging.exception("TheAudioDB async hit unexpected error for %s", api)
             return None
 
     async def _fetch_cached(self, apikey: str, api: str, artist_name: str) -> TrackMetadata | None:

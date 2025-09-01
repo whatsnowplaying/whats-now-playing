@@ -248,8 +248,6 @@ class UpgradeConfig:
         """Upgrade from 5.0.0-preview3 - Force enable charts"""
         logging.info("Upgrade from 5.0.0-preview3: force enable charts plugin")
         config.setValue("charts/enabled", True)
-        if not config.value("theaudiodb/apikey"):
-            config.setValue("theaudiodb/apikey", "123")
 
     @staticmethod
     def _upgrade_filters(config: QSettings) -> None:
