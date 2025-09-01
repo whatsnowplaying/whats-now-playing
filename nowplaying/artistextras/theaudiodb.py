@@ -3,35 +3,60 @@
 
 import asyncio
 import logging
-import logging.config
-import logging.handlers
+import time
 import urllib.parse
+from typing import Any, TYPE_CHECKING
 
 import aiohttp
 
-import nowplaying.bootstrap
-import nowplaying.config
 import nowplaying.artistextras
 import nowplaying.apicache
+import nowplaying.config
 import nowplaying.utils
+from nowplaying.types import TrackMetadata
+
+
+class RateLimitException(Exception):
+    """Exception raised when API rate limit is hit - should not be cached"""
+
+
+if TYPE_CHECKING:
+    from PySide6.QtWidgets import QWidget
+    from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
 
 
 class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
     """handler for TheAudioDB"""
 
-    def __init__(self, config=None, qsettings=None):
+    # Class variable to track rate limit across all instances
+    _rate_limit_until: float = 0
+
+    def __init__(
+        self, config: nowplaying.config.ConfigFile | None = None, qsettings: "QSettings" = None
+    ):
         super().__init__(config=config, qsettings=qsettings)
-        self.fnstr = None
-        self.displayname = "TheAudioDB"
-        self.priority = 50
+        self.fnstr: str | None = None
+        self.displayname: str = "TheAudioDB"
+        self.priority: int = 50
 
     @staticmethod
-    def _filter(text):
+    def _filter(text: str) -> str:
         htmlfilter = nowplaying.utils.HTMLFilter()
         htmlfilter.feed(text)
         return htmlfilter.text
 
-    async def _fetch_async(self, apikey, api):
+    async def _fetch_async(self, apikey: str, api: str) -> TrackMetadata | None:
+        # Check if we're still in rate limit cooldown period
+        current_time = time.time()
+        if current_time < Plugin._rate_limit_until:
+            remaining = int(Plugin._rate_limit_until - current_time)
+            logging.warning(
+                "TheAudioDB rate limit active - skipping request for %s (waiting %d more seconds)",
+                api,
+                remaining,
+            )
+            return None
+
         delay = self.calculate_delay()
         try:
             logging.debug("Fetching async %s", api)
@@ -41,29 +66,47 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                     f"https://theaudiodb.com/api/v1/json/{apikey}/{api}",
                     timeout=aiohttp.ClientTimeout(total=delay),
                 ) as response:
+                    if response.status == 429:
+                        # Rate limit exceeded - set 60 second cooldown
+                        Plugin._rate_limit_until = time.time() + 60
+                        logging.warning(
+                            "TheAudioDB rate limit exceeded; blocking requests for 60 seconds"
+                        )
+                        raise RateLimitException(f"Rate limit exceeded for {api}")
+                    if response.status != 200:
+                        # Other HTTP errors - log and return None
+                        logging.error("TheAudioDB HTTP error %s for %s", response.status, api)
+                        return None
                     return await response.json()
         except asyncio.TimeoutError:
             logging.error("TheAudioDB _fetch_async hit timeout on %s", api)
             return None
-        except Exception as error:  # pragma: no cover pylint: disable=broad-except
-            logging.error("TheAudioDB async hit %s", error)
+        except RateLimitException:
+            # Re-raise rate limit exceptions so they don't get cached
+            raise
+        except Exception:  # pragma: no cover pylint: disable=broad-except
+            logging.exception("TheAudioDB async hit unexpected error for %s", api)
             return None
 
-    async def _fetch_cached(self, apikey, api, artist_name):
+    async def _fetch_cached(self, apikey: str, api: str, artist_name: str) -> TrackMetadata | None:
         """Cached version of _fetch for better performance."""
 
         async def fetch_func():
             return await self._fetch_async(apikey, api)
 
-        return await nowplaying.apicache.cached_fetch(
-            provider="theaudiodb",
-            artist_name=artist_name,
-            endpoint=api.split(".")[0],  # Use the first part of API call as endpoint
-            fetch_func=fetch_func,
-            ttl_seconds=None,  # Use provider default from apicache.py
-        )
+        try:
+            return await nowplaying.apicache.cached_fetch(
+                provider="theaudiodb",
+                artist_name=artist_name,
+                endpoint=api.split(".")[0],  # Use the first part of API call as endpoint
+                fetch_func=fetch_func,
+                ttl_seconds=None,  # Use provider default from apicache.py
+            )
+        except RateLimitException:
+            # Don't cache rate limit responses - return None without caching
+            return None
 
-    def _check_artist(self, artdata):
+    def _check_artist(self, artdata: dict[str, Any]) -> bool:
         """is this actually the artist we are looking for?"""
         for fieldname in ["strArtist", "strArtistAlternate"]:
             if artdata.get(fieldname) and self.fnstr:
@@ -80,7 +123,13 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             )
         return False
 
-    def _handle_extradata(self, extradata, metadata, imagecache, used_musicbrainz=False):
+    def _handle_extradata(
+        self,
+        extradata: list[dict[str, Any]],
+        metadata: TrackMetadata,
+        imagecache: Any,
+        used_musicbrainz: bool = False,
+    ) -> TrackMetadata:
         """deal with the various bits of data"""
         bio = self._extract_bio_data(extradata, metadata)
         if bio:
@@ -97,7 +146,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         self._correct_artist_name(extradata, metadata, used_musicbrainz)
         return metadata
 
-    def _extract_bio_data(self, extradata, metadata):
+    def _extract_bio_data(self, extradata: list[dict[str, Any]], metadata: TrackMetadata) -> str:
         """Extract biography data from TheAudioDB response"""
         if metadata.get("artistlongbio") or not self.config.cparser.value(
             "theaudiodb/bio", type=bool
@@ -121,7 +170,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
         return bio
 
-    def _handle_website_data(self, artdata, metadata):
+    def _handle_website_data(self, artdata: dict[str, Any], metadata: TrackMetadata) -> None:
         """Handle website data from TheAudioDB response"""
         if not (
             self.config.cparser.value("theaudiodb/websites", type=bool)
@@ -134,7 +183,9 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             metadata["artistwebsites"] = []
         metadata["artistwebsites"].append(webstr)
 
-    def _handle_image_data(self, artdata, metadata, imagecache):
+    def _handle_image_data(
+        self, artdata: dict[str, Any], metadata: TrackMetadata, imagecache: Any
+    ) -> None:
         """Handle image data from TheAudioDB response"""
         self._queue_single_image(
             artdata,
@@ -160,8 +211,15 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         self._handle_fanart_data(artdata, metadata, imagecache)
 
     def _queue_single_image(  # pylint: disable=too-many-arguments
-        self, artdata, metadata, imagecache, source_key, metadata_key, image_type, config_key
-    ):
+        self,
+        artdata: dict[str, Any],
+        metadata: TrackMetadata,
+        imagecache: Any,
+        source_key: str,
+        metadata_key: str,
+        image_type: str,
+        config_key: str,
+    ) -> None:
         """Queue a single image type from TheAudioDB data"""
         if (
             metadata.get(metadata_key)
@@ -177,7 +235,9 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             srclocationlist=[artdata[source_key]],
         )
 
-    def _handle_fanart_data(self, artdata, metadata, imagecache):
+    def _handle_fanart_data(
+        self, artdata: dict[str, Any], metadata: TrackMetadata, imagecache: Any
+    ) -> None:
         """Handle fanart data from TheAudioDB response"""
         if not self.config.cparser.value("theaudiodb/fanart", type=bool):
             return
@@ -201,7 +261,9 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                     srclocationlist=[artdata[artstring]],
                 )
 
-    def _correct_artist_name(self, extradata, metadata, used_musicbrainz):
+    def _correct_artist_name(
+        self, extradata: list[dict[str, Any]], metadata: TrackMetadata, used_musicbrainz: bool
+    ) -> None:
         """Correct artist name from API response for name-based searches"""
         if used_musicbrainz or not extradata:
             return
@@ -220,14 +282,16 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                 metadata["artist"] = corrected_artist
             break
 
-    async def artistdatafrommbid_async(self, apikey, mbartistid, artist_name):
+    async def artistdatafrommbid_async(
+        self, apikey: str, mbartistid: str, artist_name: str
+    ) -> TrackMetadata | None:
         """async cached version of artistdatafrommbid"""
         data = await self._fetch_cached(apikey, f"artist-mb.php?i={mbartistid}", artist_name)
         if not data or not data.get("artists"):
             return None
         return data
 
-    async def artistdatafromname_async(self, apikey, artist):
+    async def artistdatafromname_async(self, apikey: str, artist: str) -> TrackMetadata | None:
         """async cached version of artistdatafromname"""
         if not artist:
             return None
@@ -238,7 +302,9 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         return data
 
     @staticmethod
-    async def _cache_individual_artist(artist_data, artist_name):
+    async def _cache_individual_artist(
+        artist_data: TrackMetadata, artist_name: str
+    ) -> TrackMetadata:
         """Cache individual artist data by TheAudioDB ID to handle duplicates"""
         if not artist_data.get("idArtist"):
             return artist_data
@@ -255,7 +321,9 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             ttl_seconds=None,  # Use provider default from apicache.py
         )
 
-    async def download_async(self, metadata=None, imagecache=None):  # pylint: disable=too-many-branches
+    async def download_async(  # pylint: disable=too-many-branches
+        self, metadata: TrackMetadata | None = None, imagecache: Any = None
+    ) -> TrackMetadata | None:
         """async do data lookup"""
 
         if not self.config.cparser.value("theaudiodb/enabled", type=bool):
@@ -307,7 +375,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
         return self._handle_extradata(extradata, metadata, imagecache, used_musicbrainz)
 
-    def providerinfo(self):  # pylint: disable=no-self-use
+    def providerinfo(self) -> list[str]:  # pylint: disable=no-self-use
         """return list of what is provided by this plug-in"""
         return [
             "artistbannerraw",
@@ -317,10 +385,10 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             "theaudiodb-artistfanarturls",
         ]
 
-    def connect_settingsui(self, qwidget, uihelp):
+    def connect_settingsui(self, qwidget: "QWidget", uihelp: Any) -> None:
         """pass"""
 
-    def load_settingsui(self, qwidget):
+    def load_settingsui(self, qwidget: "QWidget") -> None:
         """draw the plugin's settings page"""
         if self.config.cparser.value("theaudiodb/enabled", type=bool):
             qwidget.theaudiodb_checkbox.setChecked(True)
@@ -337,10 +405,10 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         else:
             qwidget.bio_iso_en_checkbox.setChecked(False)
 
-    def verify_settingsui(self, qwidget):
+    def verify_settingsui(self, qwidget: "QWidget") -> None:
         """pass"""
 
-    def save_settingsui(self, qwidget):
+    def save_settingsui(self, qwidget: "QWidget") -> None:
         """take the settings page and save it"""
 
         self.config.cparser.setValue("theaudiodb/enabled", qwidget.theaudiodb_checkbox.isChecked())
@@ -354,7 +422,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             func = getattr(qwidget, f"{field}_checkbox")
             self.config.cparser.setValue(f"theaudiodb/{field}", func.isChecked())
 
-    def defaults(self, qsettings):
+    def defaults(self, qsettings: "QSettings") -> None:
         for field in ["banners", "bio", "fanart", "logos", "thumbnails", "websites"]:
             qsettings.setValue(f"theaudiodb/{field}", False)
 

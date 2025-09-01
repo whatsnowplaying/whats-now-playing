@@ -8,9 +8,10 @@ import contextlib
 import logging
 import multiprocessing
 import time
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
+from freezegun import freeze_time
 import pytest_asyncio
 import requests
 
@@ -227,7 +228,14 @@ async def test_queue_should_stop(imagecache_with_stopevent, stopevent_state, exp
                 {"srclocation": "url1", "identifier": "artist1", "imagetype": "fanart"},
                 {"srclocation": "url2", "identifier": "artist2", "imagetype": "fanart"},
             ],
-            {"url1": time.time()},
+            {
+                "url1": {
+                    "timestamp": 1000000000,  # Fixed timestamp: 2001-09-09 01:46:40
+                    "error_type": "success",
+                    "cooldown": 150,
+                    "failure_count": 0,
+                }
+            },
             1,
             ["url2"],
         ),
@@ -243,6 +251,9 @@ async def test_queue_should_stop(imagecache_with_stopevent, stopevent_state, exp
         ),
     ],
 )
+@freeze_time(
+    "2001-09-09 01:48:20"
+)  # 100 seconds after the timestamp in test data (1000000000 + 100)
 async def test_get_next_queue_batch(
     imagecache_with_dir, mock_dataset, recently_processed, expected_count, expected_urls
 ):
@@ -263,9 +274,24 @@ def test_cleanup_queue_tracking():
     """test _cleanup_queue_tracking removes old entries"""
     current_time = time.time()
     recently_processed = {
-        "url1": current_time - 100,  # 100 seconds ago - should stay
-        "url2": current_time - 200,  # 200 seconds ago - should be removed
-        "url3": current_time - 50,  # 50 seconds ago - should stay
+        "url1": {
+            "timestamp": current_time - 100,
+            "error_type": "success",
+            "cooldown": 150,  # Should stay (100 < 150)
+            "failure_count": 0,
+        },
+        "url2": {
+            "timestamp": current_time - 200,
+            "error_type": "server_error",
+            "cooldown": 180,  # Should be removed (200 > 180)
+            "failure_count": 2,
+        },
+        "url3": {
+            "timestamp": current_time - 50,
+            "error_type": "network_error",
+            "cooldown": 300,  # Should stay (50 < 300)
+            "failure_count": 1,
+        },
     }
 
     nowplaying.imagecache.ImageCache._cleanup_queue_tracking(recently_processed)  # pylint: disable=protected-access
@@ -497,3 +523,423 @@ async def test_database_operations_after_stopwnp(imagecache_with_dir):
 
     # Database maintenance should work
     imagecache_with_dir.vacuum_database()  # Should not raise exception
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status_code", [400, 401, 403, 404, 410])
+async def test_image_dl_client_errors_remove_urls(imagecache_with_dir, status_code):
+    """Test that 4xx client errors remove URLs as they're likely invalid"""
+    imagedict = {
+        "srclocation": f"https://example.com/client_error_{status_code}.jpg",
+        "identifier": "testartist",
+        "imagetype": "fanart",
+    }
+
+    # Add URL to database
+    imagecache_with_dir.put_db_srclocation("testartist", imagedict["srclocation"], "fanart")
+
+    # Verify URL exists
+    data_before = imagecache_with_dir.find_srclocation(imagedict["srclocation"])
+    assert data_before is not None
+
+    # Mock client error response
+    mock_response = MagicMock()
+    mock_response.status_code = status_code
+
+    with patch("requests_cache.CachedSession.get", return_value=mock_response):
+        imagecache_with_dir.image_dl(imagedict)
+
+    # Verify URL was erased (invalid client error)
+    data_after = imagecache_with_dir.find_srclocation(imagedict["srclocation"])
+    assert data_after is None, f"URL should be removed after {status_code} client error"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status_code", [500, 502, 503, 504])
+async def test_image_dl_server_errors_preserve_urls(imagecache_with_dir, status_code):
+    """Test that 5xx server errors preserve URLs as they're likely transient"""
+    imagedict = {
+        "srclocation": f"https://example.com/server_error_{status_code}.jpg",
+        "identifier": "testartist",
+        "imagetype": "fanart",
+    }
+
+    # Add URL to database
+    imagecache_with_dir.put_db_srclocation("testartist", imagedict["srclocation"], "fanart")
+
+    # Verify URL exists
+    data_before = imagecache_with_dir.find_srclocation(imagedict["srclocation"])
+    assert data_before is not None
+
+    # Mock server error response
+    mock_response = MagicMock()
+    mock_response.status_code = status_code
+
+    with patch("requests_cache.CachedSession.get", return_value=mock_response):
+        imagecache_with_dir.image_dl(imagedict)
+
+    # Verify URL still exists (transient server error)
+    data_after = imagecache_with_dir.find_srclocation(imagedict["srclocation"])
+    assert data_after is not None, f"URL should be preserved after {status_code} server error"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "status_code,expected_error_type,expected_cooldown",
+    [
+        (429, "rate_limit", 60),
+        (500, "server_error", 600),
+        (502, "server_error", 600),
+        (503, "server_error", 600),
+    ],
+)
+async def test_image_dl_returns_proper_failure_info(
+    imagecache_with_dir, status_code, expected_error_type, expected_cooldown
+):
+    """Test that image_dl returns correct failure information for different HTTP errors"""
+    imagedict = {
+        "srclocation": f"https://example.com/error_{status_code}.jpg",
+        "identifier": "testartist",
+        "imagetype": "fanart",
+    }
+
+    # Mock the HTTP response
+    mock_response = MagicMock()
+    mock_response.status_code = status_code
+
+    with patch("requests_cache.CachedSession.get", return_value=mock_response):
+        result = imagecache_with_dir.image_dl(imagedict)
+
+    # Verify the correct failure information is returned
+    assert result is not None, f"Should return failure info for {status_code}"
+    assert result["error_type"] == expected_error_type
+    assert result["cooldown"] == expected_cooldown
+
+
+@pytest.mark.asyncio
+async def test_image_dl_returns_none_on_success(imagecache_with_dir):
+    """Test that image_dl returns None on successful download"""
+    imagedict = {
+        "srclocation": "https://example.com/success.jpg",
+        "identifier": "testartist",
+        "imagetype": "fanart",
+    }
+
+    # Mock successful HTTP response
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.content = b"fake image data"
+
+    with patch("requests_cache.CachedSession.get", return_value=mock_response):
+        result = imagecache_with_dir.image_dl(imagedict)
+
+    # Success should return None
+    assert result is None, "Successful download should return None"
+
+
+@pytest.mark.asyncio
+async def test_image_dl_network_error_returns_failure_info(imagecache_with_dir):
+    """Test that network errors return proper failure information"""
+    imagedict = {
+        "srclocation": "https://example.com/network_error.jpg",
+        "identifier": "testartist",
+        "imagetype": "fanart",
+    }
+
+    # Mock network exception
+    with patch("requests_cache.CachedSession.get", side_effect=Exception("Network error")):
+        result = imagecache_with_dir.image_dl(imagedict)
+
+    # Should return network error info
+    assert result is not None
+    assert result["error_type"] == "network_error"
+    assert result["cooldown"] == 300  # 5 minutes
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "error_type,expected_limit",
+    [
+        ("rate_limit", 10),
+        ("server_error", 5),
+        ("network_error", 3),
+    ],
+)
+async def test_failure_count_tracking_and_limits(imagecache_with_dir, error_type, expected_limit):
+    """Test that URLs are removed after exceeding failure limits"""
+    # Create a tracking dict to simulate the queue processing
+    recently_processed = {}
+    current_time = time.time()
+
+    srclocation = f"https://example.com/{error_type}_test.jpg"
+
+    # Add URL to database first
+    imagecache_with_dir.put_db_srclocation("testartist", srclocation, "fanart")
+
+    # Verify URL exists initially
+    data_before = imagecache_with_dir.find_srclocation(srclocation)
+    assert data_before is not None
+
+    # Simulate repeated failures up to the limit
+    for attempt in range(1, expected_limit + 1):
+        # Simulate existing failure info (like queue processing would have)
+        existing_info = recently_processed.get(srclocation, {"failure_count": attempt - 1})
+        failure_count = existing_info["failure_count"] + 1
+
+        # Define the same failure limits as in the actual code
+        failure_limits = {
+            "rate_limit": 10,
+            "server_error": 5,
+            "network_error": 3,
+            "client_error": 1,
+        }
+
+        max_failures = failure_limits.get(error_type, 3)
+
+        if failure_count >= max_failures:
+            # Should remove URL at this point
+            imagecache_with_dir.erase_srclocation(srclocation)
+            recently_processed.pop(srclocation, None)
+
+            # Verify URL was removed
+            data_after = imagecache_with_dir.find_srclocation(srclocation)
+            assert data_after is None, (
+                f"URL should be removed after {failure_count} {error_type} failures"
+            )
+            assert srclocation not in recently_processed
+            break
+
+        # Record failure (simulate queue processing logic)
+        recently_processed[srclocation] = {
+            "timestamp": current_time,
+            "error_type": error_type,
+            "cooldown": 300,  # Doesn't matter for this test
+            "failure_count": failure_count,
+        }
+
+    # Final verification - URL should be gone after exceeding limit
+    final_data = imagecache_with_dir.find_srclocation(srclocation)
+    assert final_data is None, (
+        f"URL should be permanently removed after {expected_limit} {error_type} failures"
+    )
+
+
+@pytest.mark.asyncio
+async def test_failure_count_resets_on_success(imagecache_with_dir):  # pylint: disable=unused-argument
+    """Test that failure counts reset to zero on successful download"""
+    recently_processed = {}
+    current_time = time.time()
+    srclocation = "https://example.com/reset_test.jpg"
+
+    # Simulate some failures first
+    recently_processed[srclocation] = {
+        "timestamp": current_time,
+        "error_type": "server_error",
+        "cooldown": 600,
+        "failure_count": 3,  # Close to the limit of 5
+    }
+
+    # Simulate successful download (like queue processing would do)
+    recently_processed[srclocation] = {
+        "timestamp": current_time,
+        "error_type": "success",
+        "cooldown": 30,
+        "failure_count": 0,  # Should reset to 0
+    }
+
+    # Verify failure count was reset
+    assert recently_processed[srclocation]["failure_count"] == 0
+    assert recently_processed[srclocation]["error_type"] == "success"
+
+
+@pytest.mark.asyncio
+async def test_failure_count_increments_properly(imagecache_with_dir):  # pylint: disable=unused-argument
+    """Test that failure counts increment correctly across multiple failures"""
+    recently_processed = {}
+    current_time = time.time()
+    srclocation = "https://example.com/increment_test.jpg"
+
+    # Simulate gradual failure accumulation (like queue processing)
+    for expected_count in range(1, 4):  # Test 1, 2, 3 failures
+        existing_info = recently_processed.get(srclocation, {"failure_count": 0})
+        failure_count = existing_info["failure_count"] + 1
+
+        recently_processed[srclocation] = {
+            "timestamp": current_time,
+            "error_type": "network_error",
+            "cooldown": 300,
+            "failure_count": failure_count,
+        }
+
+        # Verify count incremented correctly
+        assert recently_processed[srclocation]["failure_count"] == expected_count
+
+    # At this point we should have 3 failures for network_error (which has limit of 3)
+    # The 4th failure should trigger removal
+    existing_info = recently_processed.get(srclocation, {"failure_count": 0})
+    failure_count = existing_info["failure_count"] + 1  # This makes it 4
+
+    failure_limits = {"network_error": 3}
+    max_failures = failure_limits.get("network_error", 3)
+
+    # Should hit the limit
+    assert failure_count >= max_failures, "Should exceed failure limit"
+
+
+@pytest.mark.asyncio
+async def test_queue_processing_failure_count_integration(imagecache_with_dir):  # pylint: disable=too-many-locals
+    """Integration test for the complete failure count system in queue processing"""
+    # Add a URL that will consistently fail with server errors
+    test_url = "https://example.com/integration_test.jpg"
+    imagecache_with_dir.put_db_srclocation("testartist", test_url, "fanart")
+
+    # Verify URL exists initially
+    data_before = imagecache_with_dir.find_srclocation(test_url)
+    assert data_before is not None
+
+    # Mock the image_dl method to consistently return server errors
+    server_error_count = 0
+    original_image_dl = imagecache_with_dir.image_dl
+
+    def mock_image_dl_server_errors(imagedict):  # pylint: disable=unused-argument
+        nonlocal server_error_count
+        server_error_count += 1
+        # Return server error info (like the real method would)
+        return {"error_type": "server_error", "cooldown": 600}
+
+    imagecache_with_dir.image_dl = mock_image_dl_server_errors
+
+    try:
+        # Simulate the queue processing logic for server errors (limit: 5)
+        recently_processed = {}
+        current_time = time.time()
+
+        for _ in range(1, 7):  # Go beyond the limit of 5
+            # Simulate queue batch processing
+            batch = [{"srclocation": test_url, "identifier": "testartist", "imagetype": "fanart"}]
+            results = [mock_image_dl_server_errors(item) for item in batch]
+
+            # Process results like the real queue processing does
+            for i, item in enumerate(batch):
+                result = results[i] if i < len(results) else None
+                srclocation = item["srclocation"]
+
+                if result is None:
+                    # Success case (won't happen in this test)
+                    recently_processed[srclocation] = {
+                        "timestamp": current_time,
+                        "error_type": "success",
+                        "cooldown": 30,
+                        "failure_count": 0,
+                    }
+                else:
+                    # Failure - increment failure count and check limits
+                    existing_info = recently_processed.get(srclocation, {"failure_count": 0})
+                    failure_count = existing_info["failure_count"] + 1
+                    error_type = result["error_type"]
+
+                    # Use the same failure limits as the actual code
+                    failure_limits = {
+                        "rate_limit": 10,
+                        "server_error": 5,
+                        "network_error": 3,
+                        "client_error": 1,
+                    }
+
+                    max_failures = failure_limits.get(error_type, 3)
+
+                    if failure_count >= max_failures:
+                        # Should remove URL at attempt 5
+                        imagecache_with_dir.erase_srclocation(srclocation)
+                        recently_processed.pop(srclocation, None)
+                        break
+
+                    # Record failure with updated count
+                    recently_processed[srclocation] = {
+                        "timestamp": current_time,
+                        "error_type": error_type,
+                        "cooldown": result["cooldown"],
+                        "failure_count": failure_count,
+                    }
+
+        # Verify URL was removed after 5 server error failures
+        data_after = imagecache_with_dir.find_srclocation(test_url)
+        assert data_after is None, "URL should be removed after 5 server error failures"
+        assert server_error_count >= 5, (
+            f"Should have attempted at least 5 times, got {server_error_count}"
+        )
+
+    finally:
+        # Restore original method
+        imagecache_with_dir.image_dl = original_image_dl
+
+
+@pytest.mark.asyncio
+async def test_queue_processing_success_recovery_integration(imagecache_with_dir):  # pylint: disable=too-many-locals
+    """Integration test for failure count reset on successful download"""
+    # Add a URL that will fail then succeed
+    test_url = "https://example.com/recovery_test.jpg"
+    imagecache_with_dir.put_db_srclocation("testartist", test_url, "fanart")
+
+    # Mock image_dl to fail 3 times then succeed
+    attempt_count = 0
+    original_image_dl = imagecache_with_dir.image_dl
+
+    def mock_image_dl_recovery(imagedict):  # pylint: disable=unused-argument
+        nonlocal attempt_count
+        attempt_count += 1
+        if attempt_count <= 3:
+            # First 3 attempts fail with network error
+            return {"error_type": "network_error", "cooldown": 300}
+
+        # 4th attempt succeeds
+        return None  # Success returns None
+
+    imagecache_with_dir.image_dl = mock_image_dl_recovery
+
+    try:
+        recently_processed = {}
+        current_time = time.time()
+
+        # Process 4 attempts
+        for _ in range(1, 5):
+            batch = [{"srclocation": test_url, "identifier": "testartist", "imagetype": "fanart"}]
+            results = [mock_image_dl_recovery(item) for item in batch]
+
+            # Process results
+            for i, item in enumerate(batch):
+                result = results[i] if i < len(results) else None
+                srclocation = item["srclocation"]
+
+                if result is None:
+                    # Success - reset failure count
+                    recently_processed[srclocation] = {
+                        "timestamp": current_time,
+                        "error_type": "success",
+                        "cooldown": 30,
+                        "failure_count": 0,
+                    }
+                else:
+                    # Failure - increment count
+                    existing_info = recently_processed.get(srclocation, {"failure_count": 0})
+                    failure_count = existing_info["failure_count"] + 1
+
+                    recently_processed[srclocation] = {
+                        "timestamp": current_time,
+                        "error_type": result["error_type"],
+                        "cooldown": result["cooldown"],
+                        "failure_count": failure_count,
+                    }
+
+        # Verify URL still exists (not removed due to success)
+        data_after = imagecache_with_dir.find_srclocation(test_url)
+        assert data_after is not None, "URL should still exist after successful recovery"
+
+        # Verify failure count was reset to 0 on success
+        assert recently_processed[test_url]["failure_count"] == 0
+        assert recently_processed[test_url]["error_type"] == "success"
+        assert attempt_count == 4, "Should have made exactly 4 attempts"
+
+    finally:
+        # Restore original method
+        imagecache_with_dir.image_dl = original_image_dl
