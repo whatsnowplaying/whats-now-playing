@@ -566,7 +566,15 @@ VALUES (?,?,?);
                 content=dlimage.content,
             ):
                 logging.error("db put failed")
+        elif dlimage.status_code == 429:
+            # Rate limit exceeded - don't erase URL, it's still valid
+            logging.warning(
+                "image_dl: rate limit exceeded (429) for %s - keeping URL for retry",
+                imagedict["srclocation"],
+            )
+            return
         else:
+            # Other errors (404, 403, 500, etc.) - remove invalid URLs
             logging.error("image_dl: status_code %s", dlimage.status_code)
             self.erase_srclocation(imagedict["srclocation"])
             return

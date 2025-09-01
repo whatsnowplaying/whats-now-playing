@@ -3,8 +3,11 @@
 
 import logging
 import os
+import time
+from unittest.mock import patch
 
 import pytest
+from aioresponses import aioresponses
 from utils_artistextras import (
     configureplugins,
     configuresettings,
@@ -248,3 +251,126 @@ async def test_theaudiodb_api_call_count(bootstrap):
         mock_method_name="_fetch_async",
         imagecache=imagecache,
     )
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_429_rate_limit_handling(bootstrap):
+    """test that theaudiodb handles 429 rate limits with proper cooldown"""
+    import nowplaying.artistextras.theaudiodb
+
+    config = bootstrap
+    configuresettings("theaudiodb", config.cparser)
+    config.cparser.setValue("theaudiodb/apikey", "test_key")
+
+    plugin = nowplaying.artistextras.theaudiodb.Plugin(config=config)
+
+    # Reset rate limit state
+    nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
+
+    with aioresponses() as m:
+        # Mock 429 response
+        m.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=test", status=429)
+
+        # First call should trigger rate limit exception
+        with pytest.raises(nowplaying.artistextras.theaudiodb.RateLimitException):
+            await plugin._fetch_async("test_key", "search.php?s=test")
+
+        # Rate limit should now be set for 60 seconds
+        assert nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until > time.time()
+
+        # Second call should be blocked without making HTTP request
+        result2 = await plugin._fetch_async("test_key", "search.php?s=test2")
+        assert result2 is None
+
+        # Only one HTTP request should have been made (first one, second was blocked)
+        assert len(m.requests) == 1
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_429_cooldown_expiry(bootstrap):
+    """test that theaudiodb rate limit cooldown expires after 60 seconds"""
+    import nowplaying.artistextras.theaudiodb
+
+    config = bootstrap
+    configuresettings("theaudiodb", config.cparser)
+    config.cparser.setValue("theaudiodb/apikey", "test_key")
+
+    plugin = nowplaying.artistextras.theaudiodb.Plugin(config=config)
+
+    # Set rate limit in the past (expired)
+    nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = time.time() - 1
+
+    with aioresponses() as m:
+        # Mock successful response after cooldown
+        m.get(
+            "https://theaudiodb.com/api/v1/json/test_key/search.php?s=test",
+            payload={"test": "data"},
+        )
+
+        result = await plugin._fetch_async("test_key", "search.php?s=test")
+        assert result == {"test": "data"}
+
+        # HTTP request should have been made (cooldown expired)
+        assert len(m.requests) == 1
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_other_http_errors(bootstrap):
+    """test that theaudiodb handles other HTTP errors (non-429) properly"""
+    import nowplaying.artistextras.theaudiodb
+
+    config = bootstrap
+    configuresettings("theaudiodb", config.cparser)
+    config.cparser.setValue("theaudiodb/apikey", "test_key")
+
+    plugin = nowplaying.artistextras.theaudiodb.Plugin(config=config)
+
+    # Reset rate limit state
+    nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
+
+    with aioresponses() as m:
+        # Mock 404 response
+        m.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=notfound", status=404)
+
+        result = await plugin._fetch_async("test_key", "search.php?s=notfound")
+        assert result is None
+
+        # Rate limit should NOT be set for non-429 errors
+        assert nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until == 0
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_429_not_cached(bootstrap):
+    """test that theaudiodb 429 responses are not cached"""
+    import nowplaying.artistextras.theaudiodb
+
+    config = bootstrap
+    configuresettings("theaudiodb", config.cparser)
+    config.cparser.setValue("theaudiodb/apikey", "test_key")
+
+    plugin = nowplaying.artistextras.theaudiodb.Plugin(config=config)
+
+    # Reset rate limit state
+    nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
+
+    with aioresponses() as m:
+        # Mock 429 response
+        m.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=test", status=429)
+
+        # Cached fetch should handle the rate limit exception and return None
+        result = await plugin._fetch_cached("test_key", "search.php?s=test", "testartist")
+        assert result is None
+
+        # Rate limit should be set
+        assert nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until > time.time()
+
+        # Clear rate limit and add successful response
+        nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
+        m.get(
+            "https://theaudiodb.com/api/v1/json/test_key/search.php?s=test",
+            payload={"test": "data"},
+        )
+
+        # Now it should work and get the real data (not cached 429)
+        result2 = await plugin._fetch_cached("test_key", "search.php?s=test", "testartist")
+        assert result2 == {"test": "data"}

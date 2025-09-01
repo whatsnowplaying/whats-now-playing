@@ -8,7 +8,7 @@ import contextlib
 import logging
 import multiprocessing
 import time
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 import pytest_asyncio
@@ -497,3 +497,62 @@ async def test_database_operations_after_stopwnp(imagecache_with_dir):
 
     # Database maintenance should work
     imagecache_with_dir.vacuum_database()  # Should not raise exception
+
+
+@pytest.mark.asyncio
+async def test_image_dl_rate_limit_handling(imagecache_with_dir):
+    """Test that 429 rate limit responses preserve URLs for retry"""
+    imagedict = {
+        "srclocation": "https://example.com/image.jpg",
+        "identifier": "testartist",
+        "imagetype": "fanart",
+    }
+
+    # First add the URL to the database
+    imagecache_with_dir.put_db_srclocation("testartist", "https://example.com/image.jpg", "fanart")
+
+    # Verify URL exists
+    data_before = imagecache_with_dir.find_srclocation("https://example.com/image.jpg")
+    assert data_before is not None
+
+    # Mock 429 response
+    mock_response = MagicMock()
+    mock_response.status_code = 429
+
+    with patch("requests_cache.CachedSession.get", return_value=mock_response):
+        imagecache_with_dir.image_dl(imagedict)
+
+    # URL should still exist after 429 (not erased)
+    data_after = imagecache_with_dir.find_srclocation("https://example.com/image.jpg")
+    assert data_after is not None
+    assert data_after["identifier"] == "testartist"
+
+
+@pytest.mark.asyncio
+async def test_image_dl_404_handling(imagecache_with_dir):
+    """Test that 404 responses erase URLs as invalid"""
+    imagedict = {
+        "srclocation": "https://example.com/notfound.jpg",
+        "identifier": "testartist",
+        "imagetype": "fanart",
+    }
+
+    # First add the URL to the database
+    imagecache_with_dir.put_db_srclocation(
+        "testartist", "https://example.com/notfound.jpg", "fanart"
+    )
+
+    # Verify URL exists
+    data_before = imagecache_with_dir.find_srclocation("https://example.com/notfound.jpg")
+    assert data_before is not None
+
+    # Mock 404 response
+    mock_response = MagicMock()
+    mock_response.status_code = 404
+
+    with patch("requests_cache.CachedSession.get", return_value=mock_response):
+        imagecache_with_dir.image_dl(imagedict)
+
+    # URL should be erased after 404
+    data_after = imagecache_with_dir.find_srclocation("https://example.com/notfound.jpg")
+    assert data_after is None
