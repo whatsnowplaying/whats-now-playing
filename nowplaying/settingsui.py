@@ -107,14 +107,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             # Validate Twitch OAuth2 tokens (broadcaster + chat)
             if "twitch" in self.settingsclasses:
                 twitch_settings = self.settingsclasses["twitch"]
-                if hasattr(twitch_settings, "update_oauth_status"):
-                    twitch_settings.update_oauth_status()
+                twitch_settings.update_oauth_status()
 
             # Validate Kick OAuth2 tokens
             if "kick" in self.settingsclasses:
                 kick_settings = self.settingsclasses["kick"]
-                if hasattr(kick_settings, "update_oauth_status"):
-                    kick_settings.update_oauth_status()
+                kick_settings.update_oauth_status()
 
             logging.debug("OAuth2 token validation completed during settings UI initialization")
         except Exception as error:  # pylint: disable=broad-except
@@ -1276,7 +1274,7 @@ def _load_tabbed_ui_files(tab_files, name):
                 # Use the tab name from filename, but could be overridden by windowTitle in XML
                 display_name = (
                     tab_content.windowTitle()
-                    if hasattr(tab_content, "windowTitle") and tab_content.windowTitle()
+                    if tab_content.windowTitle()
                     else tab_name.replace("_", " ").title()
                 )
                 tab_widget.addTab(tab_content, display_name)

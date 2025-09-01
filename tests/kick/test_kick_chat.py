@@ -455,18 +455,11 @@ def test_kickchat_settings_save(bootstrap):
     mock_widget.announce_lineedit.text.return_value = "new_template.txt"
     # Setup announce_delay_lineedit for delay handling
     mock_widget.announce_delay_lineedit.text.return_value = "3.0"
+    # Make command table empty to avoid MagicMock pickling issues
+    mock_widget.command_perm_table.rowCount.return_value = 0
     mock_subprocesses = MagicMock()
 
-    # Patch hasattr to return False only for command_perm_table, True for announce_delay_lineedit
-    def mock_hasattr(obj, attr):  # pylint: disable=unused-argument
-        if attr == "command_perm_table":
-            return False
-        elif attr == "announce_delay_lineedit":
-            return True
-        return False
-
-    with patch("nowplaying.kick.settings.hasattr", side_effect=mock_hasattr):
-        nowplaying.kick.settings.KickChatSettings.save(config, mock_widget, mock_subprocesses)
+    nowplaying.kick.settings.KickChatSettings.save(config, mock_widget, mock_subprocesses)
 
     assert config.cparser.value("kick/chat", type=bool)
     assert config.cparser.value("kick/announce") == "new_template.txt"
