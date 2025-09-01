@@ -227,7 +227,14 @@ async def test_queue_should_stop(imagecache_with_stopevent, stopevent_state, exp
                 {"srclocation": "url1", "identifier": "artist1", "imagetype": "fanart"},
                 {"srclocation": "url2", "identifier": "artist2", "imagetype": "fanart"},
             ],
-            {"url1": time.time()},
+            {
+                "url1": {
+                    "timestamp": time.time(),
+                    "error_type": "success",
+                    "cooldown": 150,
+                    "failure_count": 0,
+                }
+            },
             1,
             ["url2"],
         ),
@@ -263,9 +270,24 @@ def test_cleanup_queue_tracking():
     """test _cleanup_queue_tracking removes old entries"""
     current_time = time.time()
     recently_processed = {
-        "url1": current_time - 100,  # 100 seconds ago - should stay
-        "url2": current_time - 200,  # 200 seconds ago - should be removed
-        "url3": current_time - 50,  # 50 seconds ago - should stay
+        "url1": {
+            "timestamp": current_time - 100,
+            "error_type": "success",
+            "cooldown": 150,  # Should stay (100 < 150)
+            "failure_count": 0,
+        },
+        "url2": {
+            "timestamp": current_time - 200,
+            "error_type": "server_error",
+            "cooldown": 180,  # Should be removed (200 > 180)
+            "failure_count": 2,
+        },
+        "url3": {
+            "timestamp": current_time - 50,
+            "error_type": "network_error",
+            "cooldown": 300,  # Should stay (50 < 300)
+            "failure_count": 1,
+        },
     }
 
     nowplaying.imagecache.ImageCache._cleanup_queue_tracking(recently_processed)  # pylint: disable=protected-access

@@ -652,7 +652,7 @@ VALUES (?,?,?);
         # Track recently processed items with failure types and cooldown periods
         recently_processed: dict[str, dict] = {}
 
-        with concurrent.futures.ProcessPoolExecutor(max_workers=maxworkers) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=maxworkers) as executor:
             while not self._queue_should_stop():
                 # Get next batch of items to download
                 batch = self._get_next_queue_batch(recently_processed)
