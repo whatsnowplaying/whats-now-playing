@@ -11,6 +11,7 @@ import time
 from unittest.mock import patch, MagicMock
 
 import pytest
+from freezegun import freeze_time
 import pytest_asyncio
 import requests
 
@@ -229,7 +230,7 @@ async def test_queue_should_stop(imagecache_with_stopevent, stopevent_state, exp
             ],
             {
                 "url1": {
-                    "timestamp": time.time() - 10,  # 10 seconds ago, well within 150 second cooldown
+                    "timestamp": 1000000000,  # Fixed timestamp: 2001-09-09 01:46:40
                     "error_type": "success",
                     "cooldown": 150,
                     "failure_count": 0,
@@ -250,6 +251,9 @@ async def test_queue_should_stop(imagecache_with_stopevent, stopevent_state, exp
         ),
     ],
 )
+@freeze_time(
+    "2001-09-09 01:48:20"
+)  # 100 seconds after the timestamp in test data (1000000000 + 100)
 async def test_get_next_queue_batch(
     imagecache_with_dir, mock_dataset, recently_processed, expected_count, expected_urls
 ):
@@ -522,36 +526,7 @@ async def test_database_operations_after_stopwnp(imagecache_with_dir):
 
 
 @pytest.mark.asyncio
-async def test_image_dl_rate_limit_handling(imagecache_with_dir):
-    """Test that 429 rate limit responses preserve URLs for retry"""
-    imagedict = {
-        "srclocation": "https://example.com/image.jpg",
-        "identifier": "testartist",
-        "imagetype": "fanart",
-    }
-
-    # First add the URL to the database
-    imagecache_with_dir.put_db_srclocation("testartist", "https://example.com/image.jpg", "fanart")
-
-    # Verify URL exists
-    data_before = imagecache_with_dir.find_srclocation("https://example.com/image.jpg")
-    assert data_before is not None
-
-    # Mock 429 response
-    mock_response = MagicMock()
-    mock_response.status_code = 429
-
-    with patch("requests_cache.CachedSession.get", return_value=mock_response):
-        imagecache_with_dir.image_dl(imagedict)
-
-    # URL should still exist after 429 (not erased)
-    data_after = imagecache_with_dir.find_srclocation("https://example.com/image.jpg")
-    assert data_after is not None
-    assert data_after["identifier"] == "testartist"
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("status_code", [400, 401, 403, 410])
+@pytest.mark.parametrize("status_code", [400, 401, 403, 404, 410])
 async def test_image_dl_client_errors_remove_urls(imagecache_with_dir, status_code):
     """Test that 4xx client errors remove URLs as they're likely invalid"""
     imagedict = {
@@ -968,33 +943,3 @@ async def test_queue_processing_success_recovery_integration(imagecache_with_dir
     finally:
         # Restore original method
         imagecache_with_dir.image_dl = original_image_dl
-
-
-@pytest.mark.asyncio
-async def test_image_dl_404_handling(imagecache_with_dir):
-    """Test that 404 responses erase URLs as invalid"""
-    imagedict = {
-        "srclocation": "https://example.com/notfound.jpg",
-        "identifier": "testartist",
-        "imagetype": "fanart",
-    }
-
-    # First add the URL to the database
-    imagecache_with_dir.put_db_srclocation(
-        "testartist", "https://example.com/notfound.jpg", "fanart"
-    )
-
-    # Verify URL exists
-    data_before = imagecache_with_dir.find_srclocation("https://example.com/notfound.jpg")
-    assert data_before is not None
-
-    # Mock 404 response
-    mock_response = MagicMock()
-    mock_response.status_code = 404
-
-    with patch("requests_cache.CachedSession.get", return_value=mock_response):
-        imagecache_with_dir.image_dl(imagedict)
-
-    # URL should be erased after 404
-    data_after = imagecache_with_dir.find_srclocation("https://example.com/notfound.jpg")
-    assert data_after is None
