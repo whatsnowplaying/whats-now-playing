@@ -733,14 +733,14 @@ async def test_failure_count_tracking_and_limits(imagecache_with_dir, error_type
             )
             assert srclocation not in recently_processed
             break
-        else:
-            # Record failure (simulate queue processing logic)
-            recently_processed[srclocation] = {
-                "timestamp": current_time,
-                "error_type": error_type,
-                "cooldown": 300,  # Doesn't matter for this test
-                "failure_count": failure_count,
-            }
+
+        # Record failure (simulate queue processing logic)
+        recently_processed[srclocation] = {
+            "timestamp": current_time,
+            "error_type": error_type,
+            "cooldown": 300,  # Doesn't matter for this test
+            "failure_count": failure_count,
+        }
 
     # Final verification - URL should be gone after exceeding limit
     final_data = imagecache_with_dir.find_srclocation(srclocation)
@@ -750,7 +750,7 @@ async def test_failure_count_tracking_and_limits(imagecache_with_dir, error_type
 
 
 @pytest.mark.asyncio
-async def test_failure_count_resets_on_success(imagecache_with_dir):
+async def test_failure_count_resets_on_success(imagecache_with_dir):  # pylint: disable=unused-argument
     """Test that failure counts reset to zero on successful download"""
     recently_processed = {}
     current_time = time.time()
@@ -778,7 +778,7 @@ async def test_failure_count_resets_on_success(imagecache_with_dir):
 
 
 @pytest.mark.asyncio
-async def test_failure_count_increments_properly(imagecache_with_dir):
+async def test_failure_count_increments_properly(imagecache_with_dir):  # pylint: disable=unused-argument
     """Test that failure counts increment correctly across multiple failures"""
     recently_processed = {}
     current_time = time.time()
@@ -812,7 +812,7 @@ async def test_failure_count_increments_properly(imagecache_with_dir):
 
 
 @pytest.mark.asyncio
-async def test_queue_processing_failure_count_integration(imagecache_with_dir):
+async def test_queue_processing_failure_count_integration(imagecache_with_dir):  # pylint: disable=too-many-locals
     """Integration test for the complete failure count system in queue processing"""
     # Add a URL that will consistently fail with server errors
     test_url = "https://example.com/integration_test.jpg"
@@ -826,7 +826,7 @@ async def test_queue_processing_failure_count_integration(imagecache_with_dir):
     server_error_count = 0
     original_image_dl = imagecache_with_dir.image_dl
 
-    def mock_image_dl_server_errors(imagedict):
+    def mock_image_dl_server_errors(imagedict):  # pylint: disable=unused-argument
         nonlocal server_error_count
         server_error_count += 1
         # Return server error info (like the real method would)
@@ -839,7 +839,7 @@ async def test_queue_processing_failure_count_integration(imagecache_with_dir):
         recently_processed = {}
         current_time = time.time()
 
-        for attempt in range(1, 7):  # Go beyond the limit of 5
+        for _ in range(1, 7):  # Go beyond the limit of 5
             # Simulate queue batch processing
             batch = [{"srclocation": test_url, "identifier": "testartist", "imagetype": "fanart"}]
             results = [mock_image_dl_server_errors(item) for item in batch]
@@ -878,14 +878,14 @@ async def test_queue_processing_failure_count_integration(imagecache_with_dir):
                         imagecache_with_dir.erase_srclocation(srclocation)
                         recently_processed.pop(srclocation, None)
                         break
-                    else:
-                        # Record failure with updated count
-                        recently_processed[srclocation] = {
-                            "timestamp": current_time,
-                            "error_type": error_type,
-                            "cooldown": result["cooldown"],
-                            "failure_count": failure_count,
-                        }
+
+                    # Record failure with updated count
+                    recently_processed[srclocation] = {
+                        "timestamp": current_time,
+                        "error_type": error_type,
+                        "cooldown": result["cooldown"],
+                        "failure_count": failure_count,
+                    }
 
         # Verify URL was removed after 5 server error failures
         data_after = imagecache_with_dir.find_srclocation(test_url)
@@ -900,7 +900,7 @@ async def test_queue_processing_failure_count_integration(imagecache_with_dir):
 
 
 @pytest.mark.asyncio
-async def test_queue_processing_success_recovery_integration(imagecache_with_dir):
+async def test_queue_processing_success_recovery_integration(imagecache_with_dir):  # pylint: disable=too-many-locals
     """Integration test for failure count reset on successful download"""
     # Add a URL that will fail then succeed
     test_url = "https://example.com/recovery_test.jpg"
@@ -910,15 +910,15 @@ async def test_queue_processing_success_recovery_integration(imagecache_with_dir
     attempt_count = 0
     original_image_dl = imagecache_with_dir.image_dl
 
-    def mock_image_dl_recovery(imagedict):
+    def mock_image_dl_recovery(imagedict):  # pylint: disable=unused-argument
         nonlocal attempt_count
         attempt_count += 1
         if attempt_count <= 3:
             # First 3 attempts fail with network error
             return {"error_type": "network_error", "cooldown": 300}
-        else:
-            # 4th attempt succeeds
-            return None  # Success returns None
+
+        # 4th attempt succeeds
+        return None  # Success returns None
 
     imagecache_with_dir.image_dl = mock_image_dl_recovery
 
@@ -927,7 +927,7 @@ async def test_queue_processing_success_recovery_integration(imagecache_with_dir
         current_time = time.time()
 
         # Process 4 attempts
-        for attempt in range(1, 5):
+        for _ in range(1, 5):
             batch = [{"srclocation": test_url, "identifier": "testartist", "imagetype": "fanart"}]
             results = [mock_image_dl_recovery(item) for item in batch]
 
