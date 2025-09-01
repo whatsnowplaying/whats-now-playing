@@ -795,38 +795,38 @@ async def test_queue_processing_failure_count_integration(imagecache_with_dir):
     # Add a URL that will consistently fail with server errors
     test_url = "https://example.com/integration_test.jpg"
     imagecache_with_dir.put_db_srclocation("testartist", test_url, "fanart")
-    
+
     # Verify URL exists initially
     data_before = imagecache_with_dir.find_srclocation(test_url)
     assert data_before is not None
-    
+
     # Mock the image_dl method to consistently return server errors
     server_error_count = 0
     original_image_dl = imagecache_with_dir.image_dl
-    
+
     def mock_image_dl_server_errors(imagedict):
         nonlocal server_error_count
         server_error_count += 1
         # Return server error info (like the real method would)
         return {"error_type": "server_error", "cooldown": 600}
-    
+
     imagecache_with_dir.image_dl = mock_image_dl_server_errors
-    
+
     try:
         # Simulate the queue processing logic for server errors (limit: 5)
         recently_processed = {}
         current_time = time.time()
-        
+
         for attempt in range(1, 7):  # Go beyond the limit of 5
             # Simulate queue batch processing
             batch = [{"srclocation": test_url, "identifier": "testartist", "imagetype": "fanart"}]
             results = [mock_image_dl_server_errors(item) for item in batch]
-            
+
             # Process results like the real queue processing does
             for i, item in enumerate(batch):
                 result = results[i] if i < len(results) else None
                 srclocation = item["srclocation"]
-                
+
                 if result is None:
                     # Success case (won't happen in this test)
                     recently_processed[srclocation] = {
@@ -840,7 +840,7 @@ async def test_queue_processing_failure_count_integration(imagecache_with_dir):
                     existing_info = recently_processed.get(srclocation, {"failure_count": 0})
                     failure_count = existing_info["failure_count"] + 1
                     error_type = result["error_type"]
-                    
+
                     # Use the same failure limits as the actual code
                     failure_limits = {
                         "rate_limit": 10,
@@ -848,9 +848,9 @@ async def test_queue_processing_failure_count_integration(imagecache_with_dir):
                         "network_error": 3,
                         "client_error": 1,
                     }
-                    
+
                     max_failures = failure_limits.get(error_type, 3)
-                    
+
                     if failure_count >= max_failures:
                         # Should remove URL at attempt 5
                         imagecache_with_dir.erase_srclocation(srclocation)
@@ -864,12 +864,14 @@ async def test_queue_processing_failure_count_integration(imagecache_with_dir):
                             "cooldown": result["cooldown"],
                             "failure_count": failure_count,
                         }
-        
+
         # Verify URL was removed after 5 server error failures
         data_after = imagecache_with_dir.find_srclocation(test_url)
         assert data_after is None, "URL should be removed after 5 server error failures"
-        assert server_error_count >= 5, f"Should have attempted at least 5 times, got {server_error_count}"
-        
+        assert server_error_count >= 5, (
+            f"Should have attempted at least 5 times, got {server_error_count}"
+        )
+
     finally:
         # Restore original method
         imagecache_with_dir.image_dl = original_image_dl
@@ -881,11 +883,11 @@ async def test_queue_processing_success_recovery_integration(imagecache_with_dir
     # Add a URL that will fail then succeed
     test_url = "https://example.com/recovery_test.jpg"
     imagecache_with_dir.put_db_srclocation("testartist", test_url, "fanart")
-    
+
     # Mock image_dl to fail 3 times then succeed
     attempt_count = 0
     original_image_dl = imagecache_with_dir.image_dl
-    
+
     def mock_image_dl_recovery(imagedict):
         nonlocal attempt_count
         attempt_count += 1
@@ -895,23 +897,23 @@ async def test_queue_processing_success_recovery_integration(imagecache_with_dir
         else:
             # 4th attempt succeeds
             return None  # Success returns None
-    
+
     imagecache_with_dir.image_dl = mock_image_dl_recovery
-    
+
     try:
         recently_processed = {}
         current_time = time.time()
-        
+
         # Process 4 attempts
         for attempt in range(1, 5):
             batch = [{"srclocation": test_url, "identifier": "testartist", "imagetype": "fanart"}]
             results = [mock_image_dl_recovery(item) for item in batch]
-            
+
             # Process results
             for i, item in enumerate(batch):
                 result = results[i] if i < len(results) else None
                 srclocation = item["srclocation"]
-                
+
                 if result is None:
                     # Success - reset failure count
                     recently_processed[srclocation] = {
@@ -924,23 +926,23 @@ async def test_queue_processing_success_recovery_integration(imagecache_with_dir
                     # Failure - increment count
                     existing_info = recently_processed.get(srclocation, {"failure_count": 0})
                     failure_count = existing_info["failure_count"] + 1
-                    
+
                     recently_processed[srclocation] = {
                         "timestamp": current_time,
                         "error_type": result["error_type"],
                         "cooldown": result["cooldown"],
                         "failure_count": failure_count,
                     }
-        
+
         # Verify URL still exists (not removed due to success)
         data_after = imagecache_with_dir.find_srclocation(test_url)
         assert data_after is not None, "URL should still exist after successful recovery"
-        
+
         # Verify failure count was reset to 0 on success
         assert recently_processed[test_url]["failure_count"] == 0
         assert recently_processed[test_url]["error_type"] == "success"
         assert attempt_count == 4, "Should have made exactly 4 attempts"
-        
+
     finally:
         # Restore original method
         imagecache_with_dir.image_dl = original_image_dl

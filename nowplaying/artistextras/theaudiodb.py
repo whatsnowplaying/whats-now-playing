@@ -84,7 +84,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         except RateLimitException:
             # Re-raise rate limit exceptions so they don't get cached
             raise
-        except Exception as error:  # pragma: no cover pylint: disable=broad-except
+        except Exception:  # pragma: no cover pylint: disable=broad-except
             logging.exception("TheAudioDB async hit unexpected error for %s", api)
             return None
 

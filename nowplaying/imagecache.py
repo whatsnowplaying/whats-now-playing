@@ -591,7 +591,7 @@ VALUES (?,?,?);
             )
             return {"error_type": "server_error", "cooldown": 600}  # 10 minutes for server errors
 
-        return
+        return None  # Successful download
 
     async def verify_cache_timer(self, stopevent: asyncio.Event) -> None:
         """run verify_cache periodically"""
@@ -687,60 +687,7 @@ VALUES (?,?,?);
                 current_time = time.time()
                 for i, item in enumerate(items_to_process):
                     result = results[i] if i < len(results) else None
-                    srclocation = item["srclocation"]
-
-                    if result is None:
-                        # Success - no error info returned, reset failure count
-                        recently_processed[srclocation] = {
-                            "timestamp": current_time,
-                            "error_type": "success",
-                            "cooldown": 30,  # Short cooldown for successful downloads
-                            "failure_count": 0,
-                        }
-                    else:
-                        # Failure - increment failure count and check limits
-                        existing_info = recently_processed.get(srclocation, {"failure_count": 0})
-                        failure_count = existing_info["failure_count"] + 1
-                        error_type = result["error_type"]
-
-                        # Define failure limits for different error types
-                        failure_limits = {
-                            "rate_limit": 10,  # Rate limits should eventually resolve
-                            "server_error": 5,  # Server issues should be temporary
-                            "network_error": 3,  # Connection issues should resolve quickly
-                            "client_error": 1,  # Already removed, but just in case
-                        }
-
-                        max_failures = failure_limits.get(error_type, 3)  # Default to 3
-
-                        if failure_count >= max_failures:
-                            # Too many failures - remove URL permanently
-                            logging.warning(
-                                "Removing %s after %d %s failures (limit: %d)",
-                                srclocation,
-                                failure_count,
-                                error_type,
-                                max_failures,
-                            )
-                            self.erase_srclocation(srclocation)
-                            # Remove from tracking so it won't be retried
-                            recently_processed.pop(srclocation, None)
-                        else:
-                            # Record failure with updated count
-                            recently_processed[srclocation] = {
-                                "timestamp": current_time,
-                                "error_type": error_type,
-                                "cooldown": result["cooldown"],
-                                "failure_count": failure_count,
-                            }
-                            logging.debug(
-                                "Recorded failure for %s: %s (attempt %d/%d, cooldown: %d seconds)",
-                                srclocation,
-                                error_type,
-                                failure_count,
-                                max_failures,
-                                result["cooldown"],
-                            )
+                    self._process_download_result(item, result, recently_processed, current_time)
 
                 # Clean up old entries from tracking
                 self._cleanup_queue_tracking(recently_processed)
@@ -757,6 +704,69 @@ VALUES (?,?,?);
     def _queue_should_stop(self) -> bool:
         """Check if the queue process should stop."""
         return nowplaying.utils.safe_stopevent_check(self.stopevent)
+
+    def _process_download_result(
+        self,
+        item: dict[str, str],
+        result: dict[str, str] | None,
+        recently_processed: dict[str, dict],
+        current_time: float,
+    ) -> None:
+        """Process a single download result and update failure tracking."""
+        srclocation = item["srclocation"]
+
+        if result is None:
+            # Success - no error info returned, reset failure count
+            recently_processed[srclocation] = {
+                "timestamp": current_time,
+                "error_type": "success",
+                "cooldown": 30,  # Short cooldown for successful downloads
+                "failure_count": 0,
+            }
+        else:
+            # Failure - increment failure count and check limits
+            existing_info = recently_processed.get(srclocation, {"failure_count": 0})
+            failure_count = existing_info["failure_count"] + 1
+            error_type = result["error_type"]
+
+            # Define failure limits for different error types
+            failure_limits = {
+                "rate_limit": 10,  # Rate limits should eventually resolve
+                "server_error": 5,  # Server issues should be temporary
+                "network_error": 3,  # Connection issues should resolve quickly
+                "client_error": 1,  # Already removed, but just in case
+            }
+
+            max_failures = failure_limits.get(error_type, 3)  # Default to 3
+
+            if failure_count >= max_failures:
+                # Too many failures - remove URL permanently
+                logging.warning(
+                    "Removing %s after %d %s failures (limit: %d)",
+                    srclocation,
+                    failure_count,
+                    error_type,
+                    max_failures,
+                )
+                self.erase_srclocation(srclocation)
+                # Remove from tracking so it won't be retried
+                recently_processed.pop(srclocation, None)
+            else:
+                # Record failure with updated count
+                recently_processed[srclocation] = {
+                    "timestamp": current_time,
+                    "error_type": error_type,
+                    "cooldown": result["cooldown"],
+                    "failure_count": failure_count,
+                }
+                logging.debug(
+                    "Recorded failure for %s: %s (attempt %d/%d, cooldown: %d seconds)",
+                    srclocation,
+                    error_type,
+                    failure_count,
+                    max_failures,
+                    result["cooldown"],
+                )
 
     def _get_next_queue_batch(self, recently_processed: dict[str, dict]) -> list[dict[str, str]]:
         """Get next batch of items for queue processing, filtering out recently processed ones."""
