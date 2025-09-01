@@ -70,11 +70,10 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                         # Rate limit exceeded - set 60 second cooldown
                         Plugin._rate_limit_until = time.time() + 60
                         logging.warning(
-                            "TheAudioDB rate limit exceeded (429) for %s - blocking requests for 60 seconds",
-                            api,
+                            "TheAudioDB rate limit exceeded; blocking requests for 60 seconds"
                         )
                         raise RateLimitException(f"Rate limit exceeded for {api}")
-                    elif response.status != 200:
+                    if response.status != 200:
                         # Other HTTP errors - log and return None
                         logging.error("TheAudioDB HTTP error %s for %s", response.status, api)
                         return None
@@ -322,9 +321,9 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             ttl_seconds=None,  # Use provider default from apicache.py
         )
 
-    async def download_async(
+    async def download_async(  # pylint: disable=too-many-branches
         self, metadata: TrackMetadata | None = None, imagecache: Any = None
-    ) -> TrackMetadata | None:  # pylint: disable=too-many-branches
+    ) -> TrackMetadata | None:
         """async do data lookup"""
 
         if not self.config.cparser.value("theaudiodb/enabled", type=bool):

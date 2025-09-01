@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """test artistextras theaudiodb plugin"""
 
+# pylint: disable=protected-access,
 import logging
 import os
 import time
-from unittest.mock import patch
 
 import pytest
 from aioresponses import aioresponses
 from utils_artistextras import (
+    FakeImageCache,
     configureplugins,
     configuresettings,
     run_api_call_count_test,
     skip_no_theaudiodb_key,
 )
+import nowplaying.artistextras.theaudiodb
 
 
 def _setup_theaudiodb_plugin(bootstrap):
@@ -23,6 +25,17 @@ def _setup_theaudiodb_plugin(bootstrap):
     config.cparser.setValue("theaudiodb/apikey", os.environ["THEAUDIODB_API_KEY"])
     imagecaches, plugins = configureplugins(config)
     return plugins["theaudiodb"], imagecaches["theaudiodb"]
+
+
+def _setup_theaudiodb_plugin_no_key(bootstrap):
+    """Set up TheAudioDB plugin for testing without requiring API key"""
+    config = bootstrap
+    configuresettings("theaudiodb", config.cparser)
+    config.cparser.setValue("theaudiodb/apikey", "test_key")
+    # Directly instantiate the plugin since we don't need real API key
+    plugin = nowplaying.artistextras.theaudiodb.Plugin(config=config)
+    imagecache = FakeImageCache()
+    return plugin, imagecache
 
 
 @pytest.mark.asyncio
@@ -256,20 +269,15 @@ async def test_theaudiodb_api_call_count(bootstrap):
 @pytest.mark.asyncio
 async def test_theaudiodb_429_rate_limit_handling(bootstrap):
     """test that theaudiodb handles 429 rate limits with proper cooldown"""
-    import nowplaying.artistextras.theaudiodb
 
-    config = bootstrap
-    configuresettings("theaudiodb", config.cparser)
-    config.cparser.setValue("theaudiodb/apikey", "test_key")
-
-    plugin = nowplaying.artistextras.theaudiodb.Plugin(config=config)
+    plugin, _ = _setup_theaudiodb_plugin_no_key(bootstrap)
 
     # Reset rate limit state
     nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
 
-    with aioresponses() as m:
+    with aioresponses() as mockr:
         # Mock 429 response
-        m.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=test", status=429)
+        mockr.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=test", status=429)
 
         # First call should trigger rate limit exception
         with pytest.raises(nowplaying.artistextras.theaudiodb.RateLimitException):
@@ -283,26 +291,20 @@ async def test_theaudiodb_429_rate_limit_handling(bootstrap):
         assert result2 is None
 
         # Only one HTTP request should have been made (first one, second was blocked)
-        assert len(m.requests) == 1
+        assert len(mockr.requests) == 1
 
 
 @pytest.mark.asyncio
 async def test_theaudiodb_429_cooldown_expiry(bootstrap):
     """test that theaudiodb rate limit cooldown expires after 60 seconds"""
-    import nowplaying.artistextras.theaudiodb
-
-    config = bootstrap
-    configuresettings("theaudiodb", config.cparser)
-    config.cparser.setValue("theaudiodb/apikey", "test_key")
-
-    plugin = nowplaying.artistextras.theaudiodb.Plugin(config=config)
+    plugin, _ = _setup_theaudiodb_plugin_no_key(bootstrap)
 
     # Set rate limit in the past (expired)
     nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = time.time() - 1
 
-    with aioresponses() as m:
+    with aioresponses() as mockr:
         # Mock successful response after cooldown
-        m.get(
+        mockr.get(
             "https://theaudiodb.com/api/v1/json/test_key/search.php?s=test",
             payload={"test": "data"},
         )
@@ -311,26 +313,20 @@ async def test_theaudiodb_429_cooldown_expiry(bootstrap):
         assert result == {"test": "data"}
 
         # HTTP request should have been made (cooldown expired)
-        assert len(m.requests) == 1
+        assert len(mockr.requests) == 1
 
 
 @pytest.mark.asyncio
 async def test_theaudiodb_other_http_errors(bootstrap):
     """test that theaudiodb handles other HTTP errors (non-429) properly"""
-    import nowplaying.artistextras.theaudiodb
-
-    config = bootstrap
-    configuresettings("theaudiodb", config.cparser)
-    config.cparser.setValue("theaudiodb/apikey", "test_key")
-
-    plugin = nowplaying.artistextras.theaudiodb.Plugin(config=config)
+    plugin, _ = _setup_theaudiodb_plugin_no_key(bootstrap)
 
     # Reset rate limit state
     nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
 
-    with aioresponses() as m:
+    with aioresponses() as mockr:
         # Mock 404 response
-        m.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=notfound", status=404)
+        mockr.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=notfound", status=404)
 
         result = await plugin._fetch_async("test_key", "search.php?s=notfound")
         assert result is None
@@ -342,20 +338,14 @@ async def test_theaudiodb_other_http_errors(bootstrap):
 @pytest.mark.asyncio
 async def test_theaudiodb_429_not_cached(bootstrap):
     """test that theaudiodb 429 responses are not cached"""
-    import nowplaying.artistextras.theaudiodb
-
-    config = bootstrap
-    configuresettings("theaudiodb", config.cparser)
-    config.cparser.setValue("theaudiodb/apikey", "test_key")
-
-    plugin = nowplaying.artistextras.theaudiodb.Plugin(config=config)
+    plugin, _ = _setup_theaudiodb_plugin_no_key(bootstrap)
 
     # Reset rate limit state
     nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
 
-    with aioresponses() as m:
+    with aioresponses() as mockr:
         # Mock 429 response
-        m.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=test", status=429)
+        mockr.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=test", status=429)
 
         # Cached fetch should handle the rate limit exception and return None
         result = await plugin._fetch_cached("test_key", "search.php?s=test", "testartist")
@@ -366,7 +356,7 @@ async def test_theaudiodb_429_not_cached(bootstrap):
 
         # Clear rate limit and add successful response
         nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
-        m.get(
+        mockr.get(
             "https://theaudiodb.com/api/v1/json/test_key/search.php?s=test",
             payload={"test": "data"},
         )
