@@ -11,6 +11,7 @@ import requests
 import nowplaying.config
 import nowplaying.kick.constants
 import nowplaying.oauth2
+import nowplaying.utils
 
 
 class KickOAuth2(nowplaying.oauth2.OAuth2Client):
@@ -31,9 +32,10 @@ class KickOAuth2(nowplaying.oauth2.OAuth2Client):
         url = nowplaying.kick.constants.TOKEN_INTROSPECT_ENDPOINT
         headers = {"Authorization": f"Bearer {token}"}
 
-        async with aiohttp.ClientSession() as session:
+        connector = nowplaying.utils.create_http_connector()
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.post(
-                url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
+                url, headers=headers, timeout=aiohttp.ClientTimeout(total=15)
             ) as response:
                 if response.status == 200:
                     validation_response = await response.json()
@@ -121,7 +123,8 @@ class KickOAuth2(nowplaying.oauth2.OAuth2Client):
 
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
-        async with aiohttp.ClientSession() as session:
+        connector = nowplaying.utils.create_http_connector()
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.post(
                 revoke_url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=30)
             ) as response:

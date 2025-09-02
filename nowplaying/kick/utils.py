@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """kick utils"""
 
+import asyncio
 import logging
 from typing import Any
 
@@ -60,6 +61,10 @@ async def attempt_token_refresh(config: nowplaying.config.ConfigFile) -> bool:
                 raise
         logging.debug("No refresh_token available")
 
+    except (TimeoutError, asyncio.TimeoutError, asyncio.CancelledError) as error:
+        # Network timeout - assume token is still valid, just couldn't verify
+        logging.warning("Token validation timed out, assuming token is still valid: %s", error)
+        return True
     except Exception as error:  # pylint: disable=broad-except
         logging.exception("Token refresh failed: %s", error)
 
