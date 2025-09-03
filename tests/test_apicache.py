@@ -311,7 +311,7 @@ async def test_cache_concurrent_access(temp_api_cache):  # pylint: disable=redef
 
 
 @pytest.mark.asyncio
-async def test_cache_database_error_handling(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_database_error_handling(temp_api_cache):    # pylint: disable=redefined-outer-name
     """Test handling of database errors."""
     cache = temp_api_cache
 
@@ -324,7 +324,7 @@ async def test_cache_database_error_handling(temp_api_cache):  # pylint: disable
     try:
         with open(cache.db_file, "wb") as file_handle:
             file_handle.write(b"corrupted data that is not a valid sqlite database")
-    except (PermissionError, OSError):
+    except OSError:
         # If we can't write to the file (Windows file locking), skip this test
         pytest.skip("Cannot corrupt database file due to file locking")
 

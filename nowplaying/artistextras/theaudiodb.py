@@ -130,8 +130,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         used_musicbrainz: bool = False,
     ) -> TrackMetadata:
         """deal with the various bits of data"""
-        bio = self._extract_bio_data(extradata, metadata)
-        if bio:
+        if bio := self._extract_bio_data(extradata, metadata):
             metadata["artistlongbio"] = bio
 
         for artdata in extradata:

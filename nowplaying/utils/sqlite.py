@@ -76,7 +76,7 @@ def retry_file_operation(
     for attempt in range(max_retries):
         try:
             return operation_func()
-        except (OSError, PermissionError) as error:
+        except OSError as error:
             # Check for Windows file locking errors
             if (
                 os.name == "nt"

@@ -146,7 +146,7 @@ class UpgradeConfig:
             self._upgrade_from_5_0_0_preview1(config)
 
         if oldversion < Version("5.0.0-preview3"):
-            self._upgrade_from_5_0_0_preview3(config)
+            self._upgrade_to_5_0_0_preview3(config)
 
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
@@ -192,8 +192,7 @@ class UpgradeConfig:
     @staticmethod
     def _upgrade_to_4_3_0(config: QSettings) -> None:
         """Upgrade to version 4.3.0 - Migrate old setlist setting to new real-time setlist"""
-        old_setlist_enabled = config.value("setlist/enabled", type=bool)
-        if old_setlist_enabled:
+        if config.value("setlist/enabled", type=bool):
             logging.info("Upgrade to 4.3.0: Converting old setlist to real-time setlist")
             # Enable real-time setlist with default file pattern
             config.setValue("realtimesetlist/filepattern", "setlist-%Y%m%d-%H%M%S.txt")
@@ -211,6 +210,9 @@ class UpgradeConfig:
     @staticmethod
     def _upgrade_from_5_0_0_preview1(config: QSettings) -> None:
         """Upgrade from 5.0.0-preview1 - Force VirtualDJ database rebuild for schema changes"""
+
+        # This code _only_ happens if they were running 5.0.0-preview1
+        # so very limited exposure
         logging.info("Upgrade from 5.0.0-preview1: Cleaning VirtualDJ databases for schema update")
 
         # Get VirtualDJ database paths
@@ -244,7 +246,7 @@ class UpgradeConfig:
                 logging.debug("No VirtualDJ databases found to remove")
 
     @staticmethod
-    def _upgrade_from_5_0_0_preview3(config: QSettings) -> None:
+    def _upgrade_to_5_0_0_preview3(config: QSettings) -> None:
         """Upgrade from 5.0.0-preview3 - Force enable charts"""
         logging.info("Upgrade from 5.0.0-preview3: force enable charts plugin")
         config.setValue("charts/enabled", True)

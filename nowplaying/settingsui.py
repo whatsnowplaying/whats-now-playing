@@ -128,7 +128,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.qtui.settings_stack.addWidget(self.widgets[uiname])
         # Note: Tree structure will be built later in _build_settings_tree()
 
-    def load_qtui(self):  # pylint: disable=too-many-branches, too-many-statements
+    def load_qtui(self):    # pylint: disable=too-many-branches, too-many-statements
         """load the base UI and wire it up"""
 
         self.qtui = load_widget_ui(self.config, "settings")
@@ -206,9 +206,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.qtui.save_button.clicked.connect(self.on_save_button)
         self.errormessage = QErrorMessage(self.qtui)
 
-        # Select "About" as the default
-        about_items = self.qtui.settings_tree.findItems("About", Qt.MatchRecursive)
-        if about_items:
+        if about_items := self.qtui.settings_tree.findItems(
+            "About", Qt.MatchRecursive
+        ):
             self.qtui.settings_tree.setCurrentItem(about_items[0])
             self._on_tree_item_clicked(about_items[0], 0)
 
@@ -250,8 +250,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 # Handle regular categories
                 for item_name in category.items:
                     if item_name in self.widgets:
-                        item_widget = self.widgets[item_name]
-                        if item_widget:  # Only add if widget exists
+                        if item_widget := self.widgets[item_name]:
                             display_name = self._get_display_name(item_name, item_widget)
                             child_item = QTreeWidgetItem([display_name])
                             category_item.addChild(child_item)
@@ -485,8 +484,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         # value directly (for backward compatibility)
         search_term = target_display_name or currentinput
 
-        curbutton = self.widgets["source"].sourcelist.findItems(search_term, Qt.MatchContains)
-        if curbutton:
+        if curbutton := self.widgets["source"].sourcelist.findItems(
+            search_term, Qt.MatchContains
+        ):
             self.widgets["source"].sourcelist.setCurrentItem(curbutton[0])
         else:
             logging.warning(
@@ -887,9 +887,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
     @Slot()
     def on_artistextras_clearcache_button(self):
         """clear the cache button was pushed"""
-        # Clear image cache
-        cachedbfile = self.config.cparser.value("artistextras/cachedbfile")
-        if cachedbfile:
+        if cachedbfile := self.config.cparser.value("artistextras/cachedbfile"):
             cachedbfilepath = pathlib.Path(cachedbfile)
             if cachedbfilepath.exists() and "imagecache" in str(cachedbfile):
                 logging.debug("Deleting image cache: %s", cachedbfilepath)
@@ -1129,13 +1127,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             suggested_name = f"nowplaying_config_{self.config.version.replace('.', '_')}.json"
             default_dir = QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
 
-            file_path = self.uihelp.save_file_picker(
+            if file_path := self.uihelp.save_file_picker(
                 title="Export Configuration",
                 startdir=os.path.join(default_dir, suggested_name),
                 filter_str="JSON Files (*.json);;All Files (*)",
-            )
-
-            if file_path:
+            ):
                 export_path = pathlib.Path(file_path)
                 if self.config.export_config(export_path):
                     QMessageBox.information(
@@ -1151,7 +1147,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                         "Export Failed",
                         "Failed to export configuration. Check the logs for details.",
                     )
-        except (OSError, PermissionError, FileNotFoundError) as error:
+        except OSError as error:
             logging.error("Export configuration error: %s", error)
             QMessageBox.critical(self.qtui, "Export Error", f"An error occurred: {error}")
 
@@ -1199,7 +1195,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                         "Import Failed",
                         "Failed to import configuration. Check the logs for details.",
                     )
-        except (OSError, PermissionError, FileNotFoundError, json.JSONDecodeError) as error:
+        except (OSError, json.JSONDecodeError) as error:
             logging.error("Import configuration error: %s", error)
             QMessageBox.critical(self.qtui, "Import Error", f"An error occurred: {error}")
 
@@ -1220,9 +1216,7 @@ def load_widget_ui(config, name):
     if single_path.exists():
         return _load_single_ui_file(single_path, name)
 
-    # If single file doesn't exist, try to find tabbed UI files
-    tab_files = _find_tab_ui_files(config.uidir, name)
-    if tab_files:
+    if tab_files := _find_tab_ui_files(config.uidir, name):
         return _load_tabbed_ui_files(tab_files, name)
 
     # Neither single nor tabbed files found
@@ -1283,9 +1277,7 @@ def _load_tabbed_ui_files(tab_files, name):
             if tab_content := loader.load(ui_file):
                 # Use the tab name from filename, but could be overridden by windowTitle in XML
                 display_name = (
-                    tab_content.windowTitle()
-                    if tab_content.windowTitle()
-                    else tab_name.replace("_", " ").title()
+                    tab_content.windowTitle() or tab_name.replace("_", " ").title()
                 )
                 tab_widget.addTab(tab_content, display_name)
                 logging.debug("Added tab '%s' for %s from %s", display_name, name, filepath)

@@ -725,28 +725,19 @@ async def test_failure_count_tracking_and_limits(imagecache_with_dir, error_type
 
 
 @pytest.mark.asyncio
-async def test_failure_count_resets_on_success(imagecache_with_dir):  # pylint: disable=unused-argument
+async def test_failure_count_resets_on_success(imagecache_with_dir):    # pylint: disable=unused-argument
     """Test that failure counts reset to zero on successful download"""
-    recently_processed = {}
     current_time = time.time()
     srclocation = "https://example.com/reset_test.jpg"
 
-    # Simulate some failures first
-    recently_processed[srclocation] = {
-        "timestamp": current_time,
-        "error_type": "server_error",
-        "cooldown": 600,
-        "failure_count": 3,  # Close to the limit of 5
+    recently_processed = {
+        srclocation: {
+            "timestamp": current_time,
+            "error_type": "success",
+            "cooldown": 30,
+            "failure_count": 0,
+        }
     }
-
-    # Simulate successful download (like queue processing would do)
-    recently_processed[srclocation] = {
-        "timestamp": current_time,
-        "error_type": "success",
-        "cooldown": 30,
-        "failure_count": 0,  # Should reset to 0
-    }
-
     # Verify failure count was reset
     assert recently_processed[srclocation]["failure_count"] == 0
     assert recently_processed[srclocation]["error_type"] == "success"

@@ -64,42 +64,6 @@ def validate_field_lengths(
     return validated_metadata, warnings
 
 
-def ensure_json_serializable(data: dict) -> dict:
-    """
-    Ensure all values in the dictionary are JSON serializable.
-
-    Args:
-        data: Dictionary to make JSON-safe
-
-    Returns:
-        Dictionary with all values converted to JSON-serializable types
-    """
-    serializable_data = {}
-
-    for key, value in data.items():
-        if value is None:
-            serializable_data[key] = None
-        elif isinstance(value, (str, int, float, bool)):
-            serializable_data[key] = value
-        elif isinstance(value, (list, tuple)):
-            # Recursively process lists/tuples
-            serializable_data[key] = [
-                str(item) if not isinstance(item, (str, int, float, bool, type(None))) else item
-                for item in value
-            ]
-        elif isinstance(value, dict):
-            # Recursively process nested dictionaries
-            serializable_data[key] = ensure_json_serializable(value)
-        else:
-            # Convert everything else to string representation
-            serializable_data[key] = str(value)
-            logging.debug(
-                "Converted non-serializable field '%s' of type %s to string",
-                key,
-                type(value).__name__,
-            )
-
-    return serializable_data
 
 
 class StaticContentHandler:
@@ -488,8 +452,7 @@ class StaticContentHandler:
             # Filter out excluded fields from response to ensure JSON serialization works
             response_metadata = self._filter_excluded_fields(processed_metadata)
 
-            # Ensure all values are JSON serializable
-            response_metadata = ensure_json_serializable(response_metadata)
+            # Let aiohttp handle JSON serialization automatically
 
             # Build response with optional warnings
             response = {"dbid": dbid, "processed_metadata": response_metadata}

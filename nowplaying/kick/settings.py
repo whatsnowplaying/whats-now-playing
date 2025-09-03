@@ -277,10 +277,10 @@ class KickChatSettings:
                 command = group.replace("kickbot-command-", "!")
 
                 config.cparser.beginGroup(group)
-                # Read permission values from config
-                permissions = {}
-                for checkbox_type in self.KICKBOT_CHECKBOXES:
-                    permissions[checkbox_type] = config.cparser.value(checkbox_type, type=bool)
+                permissions = {
+                    checkbox_type: config.cparser.value(checkbox_type, type=bool)
+                    for checkbox_type in self.KICKBOT_CHECKBOXES
+                }
                 config.cparser.endGroup()
 
                 # Add row with permissions

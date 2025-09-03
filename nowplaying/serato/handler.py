@@ -339,8 +339,9 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
         all_text = tree.xpath('//text()[contains(., " - ")]')
         for text in all_text:
             cleaned = text.strip()
-            if len(cleaned) > 10 and not any(
-                skip in cleaned.lower() for skip in ["copyright", "serato", "playlist"]
+            if len(cleaned) > 10 and all(
+                skip not in cleaned.lower()
+                for skip in ["copyright", "serato", "playlist"]
             ):
                 logging.debug("Method 4 success: Text fallback search")
                 return cleaned

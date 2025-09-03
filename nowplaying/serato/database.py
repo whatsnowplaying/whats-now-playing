@@ -96,11 +96,11 @@ class SeratoDatabaseV2Reader(SeratoRuleMatchingMixin, SeratoBaseReader):
             return []
 
         logging.debug("Applying %d rules to %d tracks", len(rules), len(self.tracks))
-        matching_tracks = []
-        for track in self.tracks:
-            if self._track_matches_rules(track, rules) and track.get("filepath"):
-                matching_tracks.append(track["filepath"])
-
+        matching_tracks = [
+            track["filepath"]
+            for track in self.tracks
+            if self._track_matches_rules(track, rules) and track.get("filepath")
+        ]
         logging.debug("Rules matched %d tracks", len(matching_tracks))
         return matching_tracks
 

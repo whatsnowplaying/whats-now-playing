@@ -280,9 +280,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """Get all configured Serato database paths (primary + additional)"""
         paths = []
 
-        # Primary libpath (for session files and primary database)
-        primary_path = self.config.cparser.value("serato/libpath")
-        if primary_path:
+        if primary_path := self.config.cparser.value("serato/libpath"):
             paths.append(primary_path)
 
         if additional_paths := self.config.cparser.value(

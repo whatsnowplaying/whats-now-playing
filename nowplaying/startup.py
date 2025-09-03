@@ -58,7 +58,7 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
 
         logging.debug("Startup window initialized")
 
-    def _setup_ui(self) -> None:  # pylint: disable=too-many-statements
+    def _setup_ui(self) -> None:    # pylint: disable=too-many-statements
         """Set up the startup window UI."""
         self.setWindowTitle("Starting What's Now Playing - Press Escape to cancel")
         self.setModal(True)
@@ -164,7 +164,7 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
         layout.addWidget(self.failsafe_warning_label)
 
         # Version label (small, bottom)
-        try:
+        with contextlib.suppress(AttributeError):
             version_label = QLabel(f"Version {nowplaying.__version__}")
             version_font = QFont()
             version_font.setPointSize(8)
@@ -172,9 +172,6 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
             version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             version_label.setStyleSheet("color: gray;")
             layout.addWidget(version_label)
-        except AttributeError:
-            # If version isn't available, just skip it
-            pass
 
     def _center_window(self) -> None:
         """Center the window on the screen."""

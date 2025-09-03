@@ -55,10 +55,11 @@ def parse_message(message: str | bytes) -> dict[str, Any]:
 
 def parse_response_message(element: ET.Element) -> dict[str, Any]:
     """Parse error/response messages"""
-    texts = []
-    for child in element:
-        if child.tag.endswith("text") and child.text:
-            texts.append(child.text)
+    texts = [
+        child.text
+        for child in element
+        if child.tag.endswith("text") and child.text
+    ]
     return {"text": texts}
 
 

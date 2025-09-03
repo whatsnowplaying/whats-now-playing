@@ -77,9 +77,7 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
 
-        # Make it full screen
-        screen = QApplication.primaryScreen()
-        if screen:
+        if screen := QApplication.primaryScreen():
             screen_geometry = screen.geometry()
             self.setGeometry(screen_geometry)
 
@@ -225,7 +223,7 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
         radius = int(60 * self.arrow_scale)
         painter.drawEllipse(x - radius, y - radius, radius * 2, radius * 2)
 
-    def _draw_arrow(self, painter: QPainter, x: int, y: int, direction: str) -> None:  # pylint: disable=invalid-name
+    def _draw_arrow(self, painter: QPainter, x: int, y: int, direction: str) -> None:    # pylint: disable=invalid-name
         """Draw the arrow pointing in the specified direction."""
         # Set up arrow color and pen (opacity handled by Qt effect)
         arrow_color = QColor(255, 100, 0, 255)  # Orange arrow, full alpha
@@ -237,12 +235,12 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
         # Scale the arrow
         scale = self.arrow_scale
 
+        # Simple clean arrow pointing up and right (for macOS menu bar)
+        # Draw arrow shaft (line from bottom-left to top-right)
+        shaft_start_x = x
+        shaft_start_y = y
+        shaft_end_x = x + 60 * scale
         if direction == "up_right":
-            # Simple clean arrow pointing up and right (for macOS menu bar)
-            # Draw arrow shaft (line from bottom-left to top-right)
-            shaft_start_x = x
-            shaft_start_y = y
-            shaft_end_x = x + 60 * scale
             shaft_end_y = y - 60 * scale
             painter.drawLine(shaft_start_x, shaft_start_y, shaft_end_x, shaft_end_y)
 
@@ -258,11 +256,6 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
             )
 
         else:  # down_right
-            # Simple clean arrow pointing down and right (for Windows/Linux system tray)
-            # Draw arrow shaft (line from top-left to bottom-right)
-            shaft_start_x = x
-            shaft_start_y = y
-            shaft_end_x = x + 60 * scale
             shaft_end_y = y + 60 * scale
             painter.drawLine(shaft_start_x, shaft_start_y, shaft_end_x, shaft_end_y)
 
@@ -277,7 +270,7 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
                 shaft_end_x, shaft_end_y, shaft_end_x - head_size * 0.5, shaft_end_y - head_size
             )
 
-    def _draw_text(self, painter: QPainter, x: int, y: int) -> None:  # pylint: disable=invalid-name
+    def _draw_text(self, painter: QPainter, x: int, y: int) -> None:    # pylint: disable=invalid-name
         """Draw instructional text near the arrow."""
         # Set up text properties (opacity handled by Qt effect)
         text_color = QColor(255, 255, 255, 200)  # White text, fixed alpha
@@ -288,14 +281,12 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
 
         # Platform-specific text
         if self.platform_location == "menu_bar":
-            text = "What's Now Playing\nis running here!"
-            text_x = x - 120
             text_y = y + 80
         else:
-            text = "What's Now Playing\nis running here!"
-            text_x = x - 120
             text_y = y - 80
 
+        text_x = x - 120
+        text = "What's Now Playing\nis running here!"
         # Draw text with background for better visibility
         text_rect = QRect(text_x - 10, text_y - 30, 140, 50)
 
@@ -426,15 +417,11 @@ def show_first_install_dialog(
     if test_mode:
         # In test mode, show dialog non-blocking and immediately close overlay
         msgbox.show()
-        if arrow_overlay:
-            arrow_overlay.close()
     else:
         # Normal mode - show dialog and wait for user acknowledgment
         msgbox.exec()
-        # Close the arrow overlay when dialog is dismissed
-        if arrow_overlay:
-            arrow_overlay.close()
-
+    if arrow_overlay:
+        arrow_overlay.close()
     # Save timestamp when dialog was shown (if config is available)
     if config:
         current_timestamp = time.strftime("%Y%m%d%H%M%S")

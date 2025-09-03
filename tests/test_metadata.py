@@ -472,12 +472,10 @@ async def test_url_dedupe4(bootstrap):
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
     )
-    assert set(metadataout["artistwebsites"]) == set(
-        [
-            "https://example.com/",
-            "http://whatsnowplaying.github.io/",
-        ]
-    )
+    assert set(metadataout["artistwebsites"]) == {
+        "https://example.com/",
+        "http://whatsnowplaying.github.io/",
+    }
 
 
 @pytest.mark.asyncio

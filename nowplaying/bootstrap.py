@@ -75,7 +75,7 @@ def setuplogging(
             try:
                 logfhandler.doRollover()
                 break
-            except (OSError, PermissionError) as error:
+            except OSError as error:
                 if attempt < 2:  # Don't sleep on the last attempt
                     time.sleep(0.5 * (attempt + 1))  # 0.5s, then 1.0s
                     continue
