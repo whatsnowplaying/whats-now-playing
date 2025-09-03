@@ -149,6 +149,13 @@ def clear_old_testsuite():
     reboot_macosx_prefs()
 
 
+@pytest.fixture(autouse=True)
+def mock_first_install_dialog():
+    """Globally mock the first-install dialog to prevent it from blocking tests."""
+    with unittest.mock.patch("nowplaying.firstinstall.show_first_install_dialog"):
+        yield
+
+
 @pytest_asyncio.fixture
 async def temp_api_cache():
     """Create a temporary API cache for testing."""

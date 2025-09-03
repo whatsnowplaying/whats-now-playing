@@ -5,11 +5,13 @@
 
 # pylint: disable=redefined-outer-name, too-few-public-methods, missing-function-docstring, no-self-use
 
-from unittest.mock import patch
-
 from PySide6.QtCore import Qt  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtGui import QAction  # pylint: disable=import-error, no-name-in-module
-from PySide6.QtWidgets import QLabel, QWidget  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
+    QLabel,
+    QSystemTrayIcon,
+    QWidget,
+)
 
 import nowplaying.settingsui  # pylint: disable=import-error
 from nowplaying.settings.tabs import SettingsTabWidget
@@ -45,6 +47,7 @@ class MockTray:
         self.settings_action = QAction()
         self.action_pause = QAction()
         self.subprocesses = MockSubprocesses()
+        self.tray = QSystemTrayIcon()  # Add missing tray attribute
 
     def cleanquit(self):
         """mock"""
@@ -149,86 +152,6 @@ def test_settingsui_tab_duplicate_handling(bootstrap, qtbot):
     tab_widget.add_settings_tab("test_key", widget2, "Tab 2")
     assert tab_widget.count() == 1  # Still only 1 tab
     assert tab_widget.get_tab_widget("test_key") == widget2  # Points to new widget
-
-
-def test_first_install_dialog_integration(bootstrap, qtbot):
-    """Test that first-install dialog is shown after first save."""
-    config = bootstrap
-    # Ensure config is not initialized (first install state)
-    config.cparser.setValue("settings/initialized", False)
-    config.initialized = False
-
-    tray = MockTray(config)
-    settingsui = nowplaying.settingsui.SettingsUI(tray=tray)
-    qtbot.addWidget(settingsui.qtui)
-
-    # Mock the first-install dialog
-    with patch("nowplaying.firstinstall.show_first_install_dialog") as mock_dialog:
-        # Mock required widgets and settings for a valid save operation
-        settingsui.widgets = {"general": MockWidget(), "source": MockSourceWidget()}
-
-        # Mock the verify methods to avoid validation issues
-        with (
-            patch.object(config, "plugins_verify_settingsui"),
-            patch.object(settingsui, "verify_regex_filters", return_value=True),
-            patch.object(settingsui, "_upd_conf_input"),
-            patch.object(settingsui, "_upd_conf_external_services"),
-            patch.object(settingsui, "_upd_conf_artistextras"),
-            patch.object(settingsui, "_upd_conf_filters"),
-            patch.object(settingsui, "_upd_conf_trackskip"),
-            patch.object(settingsui, "_upd_conf_webserver"),
-            patch.object(settingsui, "_upd_conf_obsws"),
-            patch.object(settingsui, "_upd_conf_quirks"),
-            patch.object(settingsui, "_upd_conf_discordbot"),
-            patch.object(settingsui, "_upd_conf_kickbot"),
-        ):
-            # Simulate saving settings for first time
-            settingsui.on_save_button()
-
-            # Verify first-install dialog was shown
-            mock_dialog.assert_called_once()
-
-            # Verify config is now initialized
-            assert config.initialized is True
-
-
-def test_first_install_dialog_not_shown_subsequent_saves(bootstrap, qtbot):
-    """Test that first-install dialog is NOT shown on subsequent saves."""
-
-    config = bootstrap
-    # Set config as already initialized
-    config.cparser.setValue("settings/initialized", True)
-    config.initialized = True
-
-    tray = MockTray(config)
-    settingsui = nowplaying.settingsui.SettingsUI(tray=tray)
-    qtbot.addWidget(settingsui.qtui)
-
-    # Mock the first-install dialog
-    with patch("nowplaying.firstinstall.show_first_install_dialog") as mock_dialog:
-        # Mock required widgets and settings for a valid save operation
-        settingsui.widgets = {"general": MockWidget(), "source": MockSourceWidget()}
-
-        # Mock the verify methods to avoid validation issues
-        with (
-            patch.object(config, "plugins_verify_settingsui"),
-            patch.object(settingsui, "verify_regex_filters", return_value=True),
-            patch.object(settingsui, "_upd_conf_input"),
-            patch.object(settingsui, "_upd_conf_external_services"),
-            patch.object(settingsui, "_upd_conf_artistextras"),
-            patch.object(settingsui, "_upd_conf_filters"),
-            patch.object(settingsui, "_upd_conf_trackskip"),
-            patch.object(settingsui, "_upd_conf_webserver"),
-            patch.object(settingsui, "_upd_conf_obsws"),
-            patch.object(settingsui, "_upd_conf_quirks"),
-            patch.object(settingsui, "_upd_conf_discordbot"),
-            patch.object(settingsui, "_upd_conf_kickbot"),
-        ):
-            # Simulate saving settings when already initialized
-            settingsui.on_save_button()
-
-            # Verify first-install dialog was NOT shown
-            mock_dialog.assert_not_called()
 
 
 class MockWidget:

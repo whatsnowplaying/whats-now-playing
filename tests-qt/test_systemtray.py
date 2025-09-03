@@ -111,6 +111,7 @@ class MockSettingsUI:
     ):
         self.tray = tray
         self.shown = False
+        self.qtui = self  # Mock qtui as self to satisfy systemtray._show_settings
 
     def show(self):
         """Show settings UI"""
@@ -121,6 +122,9 @@ class MockSettingsUI:
 
     def activateWindow(self):  # pylint: disable=invalid-name
         """Activate settings window"""
+
+    def setFocus(self):  # pylint: disable=invalid-name
+        """Set focus to settings window"""
 
     def post_tray_init(self):
         """Post tray initialization"""
