@@ -213,7 +213,7 @@ class UpgradeConfig:
 
         # This code _only_ happens if they were running 5.0.0-preview1
         # so very limited exposure
-        logging.info("Upgrade from 5.0.0-preview2: Cleaning VirtualDJ databases for schema update")
+        logging.info("Upgrade from 5.0.0-preview1: Cleaning VirtualDJ databases for schema update")
 
         # Get VirtualDJ database paths
         virtualdj_cache_dir = pathlib.Path(
