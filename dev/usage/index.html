@@ -346,6 +346,19 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Usage
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -357,6 +370,34 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#menu-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Menu Options
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1843,42 +1884,25 @@
 
 
 <h1 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h1>
-<p>Start the <strong>What's Now Playing</strong> app from the location where you placed
-it. The app is controlled and configured by accessing the menu from the
-icon in the Windows system tray or Mac menu bar after configuration.</p>
-<p>However, the first time you run the app, a
-<a href="../settings/">Settings</a> window will appear. Populate the
-fields accordingly, and press Save. Once saved, the app will start
-polling for new songs. The app can be controlled and exited from...</p>
-<p>the macOS menu bar icon:</p>
-<p><a href="../images/snpMac.gif"><img alt="Mac menu bar animation" src="../images/snpMac.gif" /></a></p>
-<p>or the Windows system task tray:</p>
-<p><a href="../images/snpWin.gif"><img alt="Windows menu bar animation" src="../images/snpWin.gif" /></a></p>
-<p>The menu bar:</p>
-<p><a href="../images/menu.png"><img alt="Menu from the app" src="../images/menu.png" /></a></p>
-<p>includes the following options:</p>
+<p>Start <strong>What's Now Playing</strong> from wherever you installed it. On first launch,
+a <a href="../settings/">Settings</a> window will appear - configure your DJ software
+and outputs, then click Save.</p>
+<p><strong>After initial setup, the app runs in the background</strong> and can be accessed through:</p>
 <ul>
-<li>Settings</li>
-<li>Reconfigure the application after going through the initial
-    configuration. See <a href="../settings/">Settings</a> for more
-    information.</li>
-<li>Oldest/Newest</li>
-<li>Toggle that determines which mixing mode is currently used. Not all
-    Sources support both modes. Be sure to check the documentation for
-    your particular Source.<ul>
-<li>Oldest mode will pick the oldest track from all decks. This
-  setting is for DJs who are using the non-playing deck or will be
-  manually controlling cross-fades.</li>
-<li>Newest mode will pick the newest track from all decks. This
-  setting is helpful for pre-built playlists or Serato's AutoDJ
-  capability.</li>
+<li><strong>macOS</strong>: Menu bar icon (top of screen)</li>
+<li><strong>Windows</strong>: System tray icon (bottom-right corner)</li>
 </ul>
-</li>
-<li>Pause/Unpause</li>
-<li>Determines whether <strong>What's Now Playing</strong> is looking for data and
-    writing an updated title.</li>
-<li>Exit</li>
-<li>Stop and exit <strong>What's Now Playing</strong></li>
+<p><a href="../images/snpMac.gif"><img alt="Mac menu bar animation" src="../images/snpMac.gif" /></a></p>
+<p><a href="../images/snpWin.gif"><img alt="Windows system tray animation" src="../images/snpWin.gif" /></a></p>
+<h2 id="menu-options">Menu Options<a class="headerlink" href="#menu-options" title="Permanent link">&para;</a></h2>
+<p><a href="../images/menu.png"><img alt="Menu from the app" src="../images/menu.png" /></a></p>
+<ul>
+<li><strong>Settings</strong> - Reconfigure the application. See <a href="../settings/">Settings</a> for more information.</li>
+<li><strong>Oldest/Newest</strong> - Toggle mixing mode detection (not supported by all DJ software):</li>
+<li><em>Oldest mode</em>: Tracks the oldest song across decks (for manual crossfading)</li>
+<li><em>Newest mode</em>: Tracks the newest song across decks (for AutoDJ/playlists)</li>
+<li><strong>Pause/Unpause</strong> - Stop/resume track detection and output updates</li>
+<li><strong>Exit</strong> - Quit <strong>What's Now Playing</strong></li>
 </ul>
 
 
