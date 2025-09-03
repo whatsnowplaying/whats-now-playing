@@ -6,7 +6,13 @@ import math
 import sys
 import time
 
-from PySide6.QtCore import QPropertyAnimation, QRect, Qt, QTimer, QEasingCurve  # pylint: disable=no-name-in-module
+from PySide6.QtCore import (  # pylint: disable=no-name-in-module
+    QEasingCurve,
+    QPropertyAnimation,
+    QRect,
+    Qt,
+    QTimer,
+)
 from PySide6.QtGui import (  # pylint: disable=no-name-in-module
     QBrush,
     QColor,
@@ -348,10 +354,24 @@ def should_show_reminder_dialog(config) -> bool:
         return True
 
 
-def show_first_install_dialog(config=None, is_reminder: bool = False, tray_icon=None) -> None:
-    """Show first-install notification dialog with platform-specific instructions."""
+def show_first_install_dialog(
+    config=None, is_reminder: bool = False, tray_icon=None, test_mode: bool = False
+) -> None:
+    """Show first-install notification dialog with platform-specific instructions.
+
+    Args:
+        config: Configuration object
+        is_reminder: Whether this is a reminder dialog or first-install
+        tray_icon: System tray icon for positioning arrow overlay
+        test_mode: If True, dialog will not block (for testing)
+    """
     dialog_type = "reminder" if is_reminder else "first-install"
     logging.info("Showing %s notification dialog", dialog_type)
+
+    # Skip first-install dialog on Linux - system tray behavior varies too much across DEs
+    if sys.platform.startswith("linux"):
+        logging.info("Skipping %s dialog on Linux due to inconsistent system tray behavior", dialog_type)
+        return
 
     # Platform-specific message content
     if sys.platform == "darwin":
@@ -403,12 +423,18 @@ def show_first_install_dialog(config=None, is_reminder: bool = False, tray_icon=
     # Show visual arrow overlay BEFORE showing dialog so they appear together
     arrow_overlay = _show_arrow_overlay(tray_icon)
 
-    # Show dialog and wait for user acknowledgment
-    msgbox.exec()
-
-    # Close the arrow overlay when dialog is dismissed
-    if arrow_overlay:
-        arrow_overlay.close()
+    # Show dialog - wait for user acknowledgment unless in test mode
+    if test_mode:
+        # In test mode, show dialog non-blocking and immediately close overlay
+        msgbox.show()
+        if arrow_overlay:
+            arrow_overlay.close()
+    else:
+        # Normal mode - show dialog and wait for user acknowledgment
+        msgbox.exec()
+        # Close the arrow overlay when dialog is dismissed
+        if arrow_overlay:
+            arrow_overlay.close()
 
     # Save timestamp when dialog was shown (if config is available)
     if config:
