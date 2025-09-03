@@ -84,7 +84,7 @@ def ensure_json_serializable(data: dict) -> dict:
         elif isinstance(value, (list, tuple)):
             # Recursively process lists/tuples
             serializable_data[key] = [
-                item if isinstance(item, (str, int, float, bool, type(None))) else str(item)
+                ensure_json_serializable(item) if isinstance(item, dict) else item
                 for item in value
             ]
         elif isinstance(value, dict):
@@ -488,8 +488,7 @@ class StaticContentHandler:
             # Filter out excluded fields from response to ensure JSON serialization works
             response_metadata = self._filter_excluded_fields(processed_metadata)
 
-            # Ensure all values are JSON serializable
-            response_metadata = ensure_json_serializable(response_metadata)
+            # Let aiohttp handle JSON serialization automatically
 
             # Build response with optional warnings
             response = {"dbid": dbid, "processed_metadata": response_metadata}
