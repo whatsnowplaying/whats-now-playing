@@ -4,9 +4,6 @@
 import importlib
 import pkgutil
 import types
-import typing as t
-
-import nowplaying  # pylint: disable=unused-import, cyclic-import
 
 
 def import_plugins(namespace: types.ModuleType) -> dict[str, types.ModuleType]:
@@ -24,7 +21,7 @@ def import_plugins(namespace: types.ModuleType) -> dict[str, types.ModuleType]:
 
         # special handling when the package is bundled with PyInstaller
         # See https://github.com/pyinstaller/pyinstaller/issues/1905#issuecomment-445787510
-        toc: t.Set[str] = set()
+        toc: set[str] = set()
         for importer in pkgutil.iter_importers(
             ns_pkg.__name__.partition(".")[0]
         ):  # pragma: no cover

@@ -10,14 +10,14 @@ try:
     from winrt.windows.media.control import (
         GlobalSystemMediaTransportControlsSessionManager as MediaManager,
     )
-    from winrt.windows.storage.streams import DataReader, Buffer, InputStreamOptions
+    from winrt.windows.storage.streams import Buffer, DataReader, InputStreamOptions
 
     WINMEDIA_STATUS = True
 except ImportError:
     WINMEDIA_STATUS = False
 
-from nowplaying.inputs import InputPlugin
 import nowplaying.utils
+from nowplaying.inputs import InputPlugin
 
 
 class Plugin(InputPlugin):

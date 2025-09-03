@@ -8,11 +8,17 @@ import logging
 import secrets
 import urllib.parse
 import webbrowser
-from typing import Any, Callable, TypedDict, NotRequired  # pylint: disable=no-name-in-module
+from collections.abc import Callable  # pylint: disable=no-name-in-module
+from typing import Any, TypedDict
+
+try:
+    from typing import NotRequired  # Python 3.11+
+except ImportError:
+    from typing_extensions import NotRequired  # Python 3.10
 
 import aiohttp
-from aiohttp import web
 import jinja2
+from aiohttp import web
 
 import nowplaying.config
 

@@ -208,7 +208,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 random_index = random.randrange(file_count)
                 return crate.get_file_at_index(random_index)
 
-            except (IOError, struct.error, UnicodeDecodeError) as err:
+            except (OSError, struct.error, UnicodeDecodeError) as err:
                 logging.error("Failed to load crate %s: %s", playlist, err)
                 return None
 
@@ -403,7 +403,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             logging.debug("Regular crate '%s' contains no files", playlist_name)
             return False
 
-        except (IOError, struct.error, UnicodeDecodeError) as err:
+        except (OSError, struct.error, UnicodeDecodeError) as err:
             logging.error("Failed to load crate %s: %s", playlist_name, err)
             return False
 
@@ -445,7 +445,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             logging.debug("Smart crate '%s' returned no files across all libraries", playlist_name)
             return False
 
-        except (IOError, struct.error, UnicodeDecodeError) as err:
+        except (OSError, struct.error, UnicodeDecodeError) as err:
             logging.error("Failed to load smart crate %s: %s", playlist_name, err)
             return False
 

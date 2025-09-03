@@ -14,17 +14,21 @@ import sys
 import time
 from types import ModuleType
 
-from PySide6.QtCore import QCoreApplication, QSettings, QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtCore import (  # pylint: disable=no-name-in-module
+    QCoreApplication,
+    QSettings,
+    QStandardPaths,
+)
 from PySide6.QtWidgets import QWidget  # pylint: disable=no-name-in-module
-
-# IMPORTANT: Import compatibility shim FIRST to handle old AuthScope enums in Qt config
-import nowplaying.twitch.compat
 
 import nowplaying.artistextras
 import nowplaying.inputs
 import nowplaying.notifications
 import nowplaying.pluginimporter
 import nowplaying.recognition
+
+# IMPORTANT: Import compatibility shim FIRST to handle old AuthScope enums in Qt config
+import nowplaying.twitch.compat
 import nowplaying.types
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 

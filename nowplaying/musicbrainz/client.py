@@ -112,7 +112,7 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
                         else:
                             raise ResponseError(f"HTTP {response.status}: {await response.text()}")
 
-            except asyncio.TimeoutError as timeout_error:
+            except TimeoutError as timeout_error:
                 if attempt < self.max_retries:
                     logger.debug("Request timeout, retrying (attempt %d)", attempt + 1)
                     continue

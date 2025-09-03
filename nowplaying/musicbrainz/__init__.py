@@ -8,7 +8,7 @@ This module provides MusicBrainz API integration including:
 - High-level helper class for metadata lookup and recognition
 """
 
-from .helper import MusicBrainzHelper
 from .client import MusicBrainzClient
+from .helper import MusicBrainzHelper
 
 __all__ = ["MusicBrainzHelper", "MusicBrainzClient"]

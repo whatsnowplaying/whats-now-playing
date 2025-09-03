@@ -58,7 +58,7 @@ class APIResponseCache:
         "CREATE INDEX IF NOT EXISTS idx_last_accessed ON api_responses(last_accessed);",
     ]
 
-    def __init__(self, cache_dir: t.Optional[pathlib.Path] = None):
+    def __init__(self, cache_dir: pathlib.Path | None = None):
         """Initialize the API cache.
 
         Args:
@@ -89,7 +89,7 @@ class APIResponseCache:
 
     @staticmethod
     def _make_cache_key(
-        provider: str, artist_name: str, endpoint: str, params: t.Optional[dict] = None
+        provider: str, artist_name: str, endpoint: str, params: dict | None = None
     ) -> str:
         """Generate a cache key for the request.
 
@@ -171,7 +171,7 @@ class APIResponseCache:
         endpoint: str,
         expires_at: int,
         current_time: int,
-    ) -> t.Optional[dict]:
+    ) -> dict | None:
         """Process a cache hit and return the deserialized data."""
         try:
             cached_data = json.loads(data)
@@ -192,8 +192,8 @@ class APIResponseCache:
             return None
 
     async def get(
-        self, provider: str, artist_name: str, endpoint: str, params: t.Optional[dict] = None
-    ) -> t.Optional[dict]:
+        self, provider: str, artist_name: str, endpoint: str, params: dict | None = None
+    ) -> dict | None:
         """Retrieve cached API response if available and not expired.
 
         Args:
@@ -249,8 +249,8 @@ class APIResponseCache:
         artist_name: str,
         endpoint: str,
         response_data: dict,
-        ttl_seconds: t.Optional[int] = None,
-        params: t.Optional[dict] = None,
+        ttl_seconds: int | None = None,
+        params: dict | None = None,
     ):
         """Store API response in cache.
 
@@ -318,8 +318,8 @@ class APIResponseCache:
         artist_name: str,
         endpoint: str,
         fetch_func: t.Callable[[], t.Awaitable[dict]],
-        ttl_seconds: t.Optional[int] = None,
-        params: t.Optional[dict] = None,
+        ttl_seconds: int | None = None,
+        params: dict | None = None,
     ):
         """Get from cache or fetch and cache the result.
 
@@ -436,7 +436,7 @@ class APIResponseCache:
             logging.error("Database error getting stats: %s", error)
             return {}
 
-    async def clear_cache(self, provider: t.Optional[str] = None):
+    async def clear_cache(self, provider: str | None = None):
         """Clear cache entries.
 
         Args:
@@ -491,7 +491,7 @@ class APIResponseCache:
         APIResponseCache.vacuum_database_file(self.db_file)
 
     @staticmethod
-    def vacuum_database_file(db_file: t.Optional[pathlib.Path] = None):
+    def vacuum_database_file(db_file: pathlib.Path | None = None):
         """Vacuum the database file to reclaim space from deleted entries.
 
         This static method can be called during startup without instantiating the class.
@@ -522,7 +522,7 @@ class APIResponseCache:
 
 
 # Global cache instance for use across the application
-_global_cache_instance: t.Optional[APIResponseCache] = None
+_global_cache_instance: APIResponseCache | None = None
 
 
 def get_cache() -> APIResponseCache:
@@ -544,8 +544,8 @@ async def cached_fetch(
     artist_name: str,
     endpoint: str,
     fetch_func: t.Callable[[], t.Awaitable[dict]],
-    ttl_seconds: t.Optional[int] = None,
-) -> t.Optional[dict]:
+    ttl_seconds: int | None = None,
+) -> dict | None:
     """Utility function for manual cache-or-fetch operations.
 
     Args:

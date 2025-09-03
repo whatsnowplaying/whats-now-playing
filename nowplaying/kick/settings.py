@@ -5,13 +5,13 @@ import logging
 import os
 from typing import Any
 
+from PySide6.QtCore import QTimer, Slot  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QCheckBox, QTableWidgetItem  # pylint: disable=no-name-in-module
-from PySide6.QtCore import Slot, QTimer  # pylint: disable=no-name-in-module
 
-from nowplaying.exceptions import PluginVerifyError
 import nowplaying.config
 import nowplaying.kick.oauth2
 import nowplaying.kick.utils
+from nowplaying.exceptions import PluginVerifyError
 
 
 class KickSettings:

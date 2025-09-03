@@ -8,12 +8,12 @@ import contextlib
 import logging
 import multiprocessing
 import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
-from freezegun import freeze_time
 import pytest_asyncio
 import requests
+from freezegun import freeze_time
 
 import nowplaying.imagecache  # pylint: disable=import-error
 import nowplaying.utils  # pylint: disable=import-error

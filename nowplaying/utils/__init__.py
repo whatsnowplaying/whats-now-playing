@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 """handler to read the metadata from various file formats"""
 
-from html.parser import HTMLParser
-from typing import TYPE_CHECKING, Any
-
 import asyncio
 import base64
 import copy
@@ -15,6 +12,8 @@ import re
 import ssl
 import time
 import traceback
+from html.parser import HTMLParser
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 import jinja2
@@ -24,8 +23,8 @@ import PIL.Image
 import pillow_avif  # pylint: disable=unused-import
 
 if TYPE_CHECKING:
-    from nowplaying.types import TrackMetadata
     import nowplaying.config
+    from nowplaying.types import TrackMetadata
 
 STRIPWORDLIST = ["clean", "dirty", "explicit", "official music video"]
 STRIPRELIST = [

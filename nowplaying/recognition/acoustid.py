@@ -5,27 +5,25 @@
 import asyncio
 import copy
 import json
+import logging
+import logging.config
+import logging.handlers
 import os
 import pathlib
 import subprocess
 import sys
 import time
 
-import logging
-import logging.config
-import logging.handlers
-
+import acoustid
 from PySide6.QtCore import QDir  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
-import acoustid
-
 import nowplaying.bootstrap
 import nowplaying.config
-from nowplaying.recognition import RecognitionPlugin
-from nowplaying.exceptions import PluginVerifyError
 import nowplaying.musicbrainz
 import nowplaying.utils
+from nowplaying.exceptions import PluginVerifyError
+from nowplaying.recognition import RecognitionPlugin
 
 
 class Plugin(RecognitionPlugin):

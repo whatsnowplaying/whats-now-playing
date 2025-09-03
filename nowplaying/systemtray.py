@@ -4,6 +4,8 @@
 import logging
 import sqlite3
 
+from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=no-name-in-module
+from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QApplication,
     QErrorMessage,
@@ -11,19 +13,17 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QMessageBox,
     QSystemTrayIcon,
 )
-from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module
-from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=no-name-in-module
 
 import nowplaying.apicache
 import nowplaying.config
 import nowplaying.db
+import nowplaying.firstinstall
+import nowplaying.notifications.charts
 import nowplaying.oauth2
 import nowplaying.settingsui
 import nowplaying.subprocesses
-import nowplaying.twitch.chat
 import nowplaying.trackrequests
-import nowplaying.notifications.charts
-
+import nowplaying.twitch.chat
 
 LASTANNOUNCED: dict[str, str | None] = {"artist": None, "title": None}
 
@@ -114,8 +114,10 @@ class Tray:  # pylint: disable=too-many-instance-attributes
     def _show_settings(self) -> None:
         """Show settings window and bring it to the front."""
         self.settingswindow.show()
-        self.settingswindow.raise_()
-        self.settingswindow.activateWindow()
+        if self.settingswindow.qtui:
+            self.settingswindow.qtui.raise_()
+            self.settingswindow.qtui.activateWindow()
+            self.settingswindow.qtui.setFocus()
 
     def _setup_tray_menu(self) -> None:
         """Setup all tray menu actions and structure."""
@@ -175,6 +177,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.requestswindow = None
         self._configure_twitchrequests()
 
+        # Check if reminder dialog should be shown for returning users
+        self._check_reminder_dialog()
+
     def _handle_installer_dialogs(self) -> None:
         """Handle installer dialogs that may require window hiding."""
         if self.startup_window:
@@ -199,6 +204,14 @@ class Tray:  # pylint: disable=too-many-instance-attributes
     def _configure_twitchrequests(self) -> None:
         self.requestswindow = nowplaying.trackrequests.Requests(config=self.config)
         self.requestswindow.initial_ui()
+
+    def _check_reminder_dialog(self) -> None:
+        """Check if reminder dialog should be shown for returning users."""
+        if nowplaying.firstinstall.should_show_reminder_dialog(self.config):
+            logging.info("Showing reminder dialog for returning user")
+            nowplaying.firstinstall.show_first_install_dialog(
+                config=self.config, is_reminder=True, tray_icon=self.tray
+            )
 
     @staticmethod
     def _show_installation_error(ui_file: str) -> None:

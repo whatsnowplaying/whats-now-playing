@@ -4,12 +4,11 @@
 import logging
 import time
 
-from PySide6.QtWidgets import QMessageBox, QApplication  # pylint: disable=no-name-in-module
 from PySide6.QtCore import QTimer  # pylint: disable=no-name-in-module
-
-from nowplaying.exceptions import PluginVerifyError
+from PySide6.QtWidgets import QApplication, QMessageBox  # pylint: disable=no-name-in-module
 
 import nowplaying.twitch.oauth2
+from nowplaying.exceptions import PluginVerifyError
 
 
 class TwitchSettings:

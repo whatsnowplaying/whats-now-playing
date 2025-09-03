@@ -12,8 +12,6 @@ import pathlib
 import re
 from typing import TYPE_CHECKING
 
-import PySide6.QtXml  # pylint: disable=unused-import, import-error
-
 # pylint: disable=no-name-in-module
 from PySide6.QtCore import QFile, QStandardPaths, Qt, Slot
 from PySide6.QtGui import QIcon
@@ -29,6 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 import nowplaying.config
+import nowplaying.firstinstall
 import nowplaying.hostmeta
 import nowplaying.musicbrainz.plugin
 import nowplaying.settings.categories
@@ -1009,7 +1008,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.refresh_ui()
 
     @Slot()
-    def on_save_button(self):
+    def on_save_button(  # pylint: disable=too-many-branches
+        self,
+    ):
         """save button clicked action"""
         inputtext = None
         if curbutton := self.widgets["source"].sourcelist.currentItem():
@@ -1055,12 +1056,21 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     self.errormessage.showMessage(error.message)
                 return
 
+        # Check if this is first-time setup before marking as initialized
+        is_first_install = not self.config.initialized
+
         self.config.unpause()
-        self.upd_conf()
+        self.upd_conf()  # This sets initialized=True
         self.close()
         self.tray.fix_mixmode_menu()
         self.tray.action_pause.setText("Pause")
         self.tray.action_pause.setEnabled(True)
+
+        # Show first-install notification after settings window closes
+        if is_first_install:
+            nowplaying.firstinstall.show_first_install_dialog(
+                config=self.config, tray_icon=self.tray.tray
+            )
 
     def show(self):
         """show the system tray"""
@@ -1258,7 +1268,7 @@ def _find_tab_ui_files(uidir, name):
             tab_names.append(f"tab_{len(tab_names)}")
 
     logging.debug("Found tab UI files for %s: %s", name, tab_names)
-    return list(zip(tab_files, tab_names))
+    return list(zip(tab_files, tab_names, strict=False))
 
 
 def _load_tabbed_ui_files(tab_files, name):

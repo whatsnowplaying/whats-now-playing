@@ -6,12 +6,12 @@ import logging
 import pathlib
 import sqlite3
 import time
-from typing import Protocol
-from collections.abc import Callable
-
 import xml.sax
-import defusedxml.sax
+from collections.abc import Callable
+from typing import Protocol
+
 import defusedxml.common
+import defusedxml.sax
 
 import nowplaying.utils.sqlite
 
@@ -97,7 +97,7 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
                 try:
                     await asyncio.wait_for(self._shutdown_event.wait(), timeout=5)
                     break  # Shutdown requested
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue  # Normal timeout, continue loop
 
         except asyncio.CancelledError:

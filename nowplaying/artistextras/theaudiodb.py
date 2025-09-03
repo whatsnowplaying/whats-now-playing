@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """start of support of theaudiodb"""
 
-import asyncio
 import logging
 import time
 import urllib.parse
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 
-import nowplaying.artistextras
 import nowplaying.apicache
+import nowplaying.artistextras
 import nowplaying.config
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
@@ -21,8 +20,8 @@ class RateLimitException(Exception):
 
 
 if TYPE_CHECKING:
-    from PySide6.QtWidgets import QWidget
     from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
+    from PySide6.QtWidgets import QWidget
 
 
 class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
@@ -78,7 +77,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                         logging.error("TheAudioDB HTTP error %s for %s", response.status, api)
                         return None
                     return await response.json()
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logging.error("TheAudioDB _fetch_async hit timeout on %s", api)
             return None
         except RateLimitException:

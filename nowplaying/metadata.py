@@ -19,13 +19,13 @@ from typing import TYPE_CHECKING
 import puremagic
 import url_normalize
 
-from nowplaying.vendor import tinytag  # pylint: disable=no-name-in-module
 import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.hostmeta
 import nowplaying.musicbrainz
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
+from nowplaying.vendor import tinytag  # pylint: disable=no-name-in-module
 
 # File extension constants for video/audio detection
 AUDIO_EXTENSIONS = frozenset([".mp3", ".flac", ".m4a", ".f4a", ".aac", ".ogg", ".wav", ".wma"])
@@ -78,7 +78,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
     def __init__(self, config: nowplaying.config.ConfigFile | None = None):
         self.metadata: TrackMetadata = {}
-        self.imagecache: "nowplaying.imagecache.ImageCache | None" = None
+        self.imagecache: nowplaying.imagecache.ImageCache | None = None
         if config:
             self.config: nowplaying.config.ConfigFile = config
         else:
@@ -497,7 +497,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
     _patches_applied: bool = False
 
     def __init__(self, imagecache: "nowplaying.imagecache.ImageCache | None" = None):
-        self.imagecache: "nowplaying.imagecache.ImageCache | None" = imagecache
+        self.imagecache: nowplaying.imagecache.ImageCache | None = imagecache
         self.metadata: TrackMetadata = {}
         self.datedata: dict[str, str] = {}
 
@@ -660,7 +660,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             )
             return has_video
 
-        except (OSError, IOError) as error:
+        except OSError as error:
             # File system errors - file doesn't exist, can't read, permission issues
             logging.warning(
                 "Video detection failed due to file system error for %s: %s", file_path, error
@@ -775,15 +775,15 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
                 self.metadata[key] = str(getattr(tag, key))
 
         # Handle the 'key' field separately to decode JSON if needed
-        if "key" not in self.metadata and hasattr(tag, "key") and getattr(tag, "key"):
-            self.metadata["key"] = self._decode_musical_key(getattr(tag, "key"))
+        if "key" not in self.metadata and hasattr(tag, "key") and tag.key:
+            self.metadata["key"] = self._decode_musical_key(tag.key)
 
         if self.metadata.get("comment") and not self.metadata.get("comments"):
             self.metadata["comments"] = self.metadata["comment"]
             del self.metadata["comment"]
 
         if getattr(tag, "other", None):
-            other = getattr(tag, "other")
+            other = tag.other
 
             self._ufid(other)
             self._process_extra(other)
@@ -844,9 +844,12 @@ def recognition_replacement(
 
     for meta in addmeta:
         if meta in ["artist", "title", "artistwebsites"]:
-            if config.cparser.value(f"recognition/replace{meta}", type=bool) and addmeta.get(meta):
-                metadata[meta] = addmeta[meta]
-            elif not metadata.get(meta) and addmeta.get(meta):
+            if (
+                config.cparser.value(f"recognition/replace{meta}", type=bool)
+                and addmeta.get(meta)
+                or not metadata.get(meta)
+                and addmeta.get(meta)
+            ):
                 metadata[meta] = addmeta[meta]
         elif not metadata.get(meta) and addmeta.get(meta):
             metadata[meta] = addmeta[meta]

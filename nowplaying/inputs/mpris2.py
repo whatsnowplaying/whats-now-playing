@@ -17,8 +17,8 @@ import urllib
 import urllib.parse
 
 try:
-    from dbus_fast.aio import MessageBus
     from dbus_fast import BusType
+    from dbus_fast.aio import MessageBus
     from dbus_fast.unpack import unpack_variants
 
     DBUS_STATUS = True
@@ -26,8 +26,8 @@ except ImportError:
     DBUS_STATUS = False
 
 from multidict import CIMultiDict
-
 from PySide6.QtCore import Qt  # pylint: disable=no-name-in-module
+
 from nowplaying.inputs import InputPlugin
 
 MPRIS2_BASE = "org.mpris.MediaPlayer2"

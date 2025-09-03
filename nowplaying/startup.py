@@ -7,17 +7,21 @@ import pathlib
 from typing import Any
 
 from PySide6.QtCore import Qt, QTimer  # pylint: disable=import-error,no-name-in-module
-from PySide6.QtWidgets import QApplication  # pylint: disable=import-error,no-name-in-module
-from PySide6.QtGui import QFont, QIcon  # pylint: disable=import-error,no-name-in-module
+from PySide6.QtGui import (  # pylint: disable=import-error,no-name-in-module  # pylint: disable=import-error,no-name-in-module
+    QFont,
+    QIcon,
+    QKeyEvent,
+    QPixmap,
+)
 from PySide6.QtWidgets import (  # pylint: disable=import-error,no-name-in-module
+    QApplication,  # pylint: disable=import-error,no-name-in-module
     QDialog,
+    QHBoxLayout,
     QLabel,
     QProgressBar,
-    QVBoxLayout,
-    QHBoxLayout,
     QPushButton,
+    QVBoxLayout,
 )
-from PySide6.QtGui import QPixmap, QKeyEvent  # pylint: disable=import-error,no-name-in-module
 
 import nowplaying
 

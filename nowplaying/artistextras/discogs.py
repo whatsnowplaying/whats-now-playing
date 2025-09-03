@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """start of support of discogs"""
 
-import asyncio
 import logging
 
 import nowplaying.apicache
 import nowplaying.discogsclient
-from nowplaying.discogsclient import Models as models
-
-from nowplaying.artistextras import ArtistExtrasPlugin
 import nowplaying.utils
+from nowplaying.artistextras import ArtistExtrasPlugin
+from nowplaying.discogsclient import Models as models
 
 
 class Plugin(ArtistExtrasPlugin):
@@ -239,7 +237,7 @@ class Plugin(ArtistExtrasPlugin):
             # Get first page if paginated results
             if hasattr(resultlist, "page"):
                 resultlist = resultlist.page(1)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logging.error("discogs async releaselist timeout error")
             return None
         except Exception as error:  # pragma: no cover pylint: disable=broad-except

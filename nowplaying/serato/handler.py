@@ -18,13 +18,12 @@ import typing as t
 
 import lxml.html
 import requests
+from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
-from watchdog.events import PatternMatchingEventHandler
 
 # Import the base classes from the same module
 from .session import SeratoSessionReader
-
 
 TIDAL_FORMAT = re.compile(r"^_(.*).tdl")
 
@@ -257,19 +256,11 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
             self.playingadat.get("starttime"),
         )
         for deck, adat in self.decks.items():
-            if self.mixmode == "newest" and adat.get("starttime") > self.playingadat.get(
-                "starttime"
-            ):
-                self.playingadat = adat
-                logging.debug(
-                    "Playing = time: %s deck: %d artist: %s title %s",
-                    self.playingadat.get("starttime"),
-                    deck,
-                    self.playingadat.get("artist"),
-                    self.playingadat.get("title"),
-                )
-            elif self.mixmode == "oldest" and adat.get("starttime") < self.playingadat.get(
-                "starttime"
+            if (
+                self.mixmode == "newest"
+                and adat.get("starttime") > self.playingadat.get("starttime")
+                or self.mixmode == "oldest"
+                and adat.get("starttime") < self.playingadat.get("starttime")
             ):
                 self.playingadat = adat
                 logging.debug(

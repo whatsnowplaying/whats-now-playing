@@ -13,9 +13,10 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import nowplaying.config
     from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QWidget
+
+    import nowplaying.config
 
 
 logging.config.dictConfig(

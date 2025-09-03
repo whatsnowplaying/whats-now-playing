@@ -4,15 +4,15 @@
 import asyncio
 import contextlib
 import datetime
-import multiprocessing
 import logging
+import multiprocessing
 import os
 import pathlib
 import signal
 import socket
+import sys
 import threading
 import time
-import sys
 
 import nowplaying.config
 import nowplaying.db
@@ -23,9 +23,9 @@ import nowplaying.metadata
 import nowplaying.notifications
 import nowplaying.pluginimporter
 import nowplaying.trackrequests
+import nowplaying.utils
 import nowplaying.version  # pylint: disable=import-error,no-name-in-module
 from nowplaying.types import TrackMetadata
-import nowplaying.utils
 
 COREMETA = ["artist", "filename", "title"]
 
