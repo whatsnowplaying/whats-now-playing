@@ -370,7 +370,6 @@ def show_first_install_dialog(
 
     # Skip first-install dialog on Linux - system tray behavior varies too much across DEs
     if sys.platform.startswith("linux"):
-        logging.info("Skipping %s dialog on Linux due to inconsistent system tray behavior", dialog_type)
         return
 
     # Platform-specific message content
