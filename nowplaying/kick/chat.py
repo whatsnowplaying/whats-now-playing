@@ -9,7 +9,6 @@ from typing import Any
 
 import aiohttp
 import jinja2
-
 from PySide6.QtCore import QCoreApplication, QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.config

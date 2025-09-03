@@ -9,7 +9,8 @@ import re
 import sqlite3
 import time
 import typing as t
-from typing import TYPE_CHECKING, Iterable
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 import aiohttp
 import aiosqlite
@@ -1091,7 +1092,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
 
         def dict_factory(cursor, row):
             fields = [column[0] for column in cursor.description]
-            return dict(zip(fields, row))
+            return dict(zip(fields, row, strict=False))
 
         async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
             connection.row_factory = dict_factory

@@ -5,9 +5,9 @@ import asyncio
 import json
 import logging
 import pathlib
-from typing import TYPE_CHECKING
-import urllib.request
 import urllib.error
+import urllib.request
+from typing import TYPE_CHECKING
 
 import aiohttp
 from PySide6.QtCore import QStandardPaths  # pylint: disable=import-error, no-name-in-module

@@ -2,6 +2,7 @@
 
 import logging
 from dataclasses import dataclass, field
+
 from PySide6.QtWidgets import QTreeWidgetItem  # pylint: disable=no-name-in-module
 
 

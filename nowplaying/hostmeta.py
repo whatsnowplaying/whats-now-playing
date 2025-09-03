@@ -4,8 +4,8 @@
 # pylint: disable=c-extension-no-member
 
 import datetime
-import socket
 import logging
+import socket
 
 try:
     import netifaces  # pylint: disable=import-error

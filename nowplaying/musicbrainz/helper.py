@@ -14,7 +14,7 @@ import sys
 import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
-from nowplaying.utils import normalize_text, normalize, artist_name_variations
+from nowplaying.utils import artist_name_variations, normalize, normalize_text
 
 from . import client
 
@@ -413,14 +413,15 @@ class MusicBrainzHelper:
             variousartist = []
             for release in mbdata["release-list"]:
                 if (
-                    len(newdata["musicbrainzartistid"]) > 1
-                    and newdata.get("artist")
-                    and release["artist-credit-phrase"] in newdata["artist"]
+                    (
+                        len(newdata["musicbrainzartistid"]) > 1
+                        and newdata.get("artist")
+                        and release["artist-credit-phrase"] in newdata["artist"]
+                    )
+                    or "artist" in newdata
+                    and normalize_text(release["artist-credit-phrase"])
+                    == normalize_text(newdata["artist"])
                 ):
-                    namedartist.append(release)
-                elif "artist" in newdata and normalize_text(
-                    release["artist-credit-phrase"]
-                ) == normalize_text(newdata["artist"]):
                     namedartist.append(release)
                 elif release["artist-credit-phrase"] == "Various Artists":
                     variousartist.append(release)

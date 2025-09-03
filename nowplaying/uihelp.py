@@ -4,7 +4,10 @@
 import os
 from typing import TYPE_CHECKING
 
-from PySide6.QtWidgets import QFileDialog, QTabWidget  # pylint: disable=import-error, no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=import-error, no-name-in-module
+    QFileDialog,
+    QTabWidget,
+)
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget

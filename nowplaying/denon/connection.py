@@ -10,7 +10,7 @@ import asyncio
 import contextlib
 import logging
 import socket
-from typing import Callable
+from collections.abc import Callable
 
 import nowplaying.version  # pylint: disable=no-member,import-error,no-name-in-module
 

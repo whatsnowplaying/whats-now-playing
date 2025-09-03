@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """start of support of fanarttv"""
 
-import asyncio
 import logging
 import logging.config
 import logging.handlers
@@ -35,7 +34,7 @@ class Plugin(ArtistExtrasPlugin):
                     f"{baseurl}?api_key={apikey}", timeout=aiohttp.ClientTimeout(total=delay)
                 ) as response:
                     return await response.json()
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logging.error("fantart.tv async timeout getting artistid %s", artistid)
             return None
         except Exception as error:  # pragma: no cover pylint: disable=broad-except

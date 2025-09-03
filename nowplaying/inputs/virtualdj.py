@@ -234,7 +234,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
                 try:
                     await asyncio.wait_for(self._playlists_shutdown_event.wait(), timeout=5)
                     break  # Shutdown requested
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue  # Normal timeout, continue loop
 
         except asyncio.CancelledError:
@@ -398,7 +398,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
         """read VirtualDJ .vdjfolder XML file and extract song metadata using SAX parser"""
         try:
             handler = VirtualDJFolderSAXHandler(self.config)
-            with open(filepath, "r", encoding="utf-8") as xml_file:
+            with open(filepath, encoding="utf-8") as xml_file:
                 xml.sax.parse(xml_file, handler)
             return handler.content
 

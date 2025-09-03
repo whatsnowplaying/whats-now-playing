@@ -6,9 +6,9 @@ import logging
 import traceback
 from typing import TYPE_CHECKING, Any
 
-from twitchAPI.object.api import TwitchUser
 from twitchAPI.eventsub.websocket import EventSubWebsocket
 from twitchAPI.helper import first
+from twitchAPI.object.api import TwitchUser
 from twitchAPI.object.eventsub import ChannelPointsCustomRewardRedemptionAddEvent
 from twitchAPI.twitch import Twitch
 

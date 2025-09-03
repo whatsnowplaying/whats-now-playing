@@ -422,7 +422,6 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
             for line in traceback.format_exc().splitlines():
                 logging.error(line)
             await self.chat.send_message(self.config.cparser.value("twitchbot/channel"), content)
-        return
 
     def check_command_perms(self, profile: dict, command: str):
         """given the profile, check if the command is allowed to be executed"""

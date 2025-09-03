@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 import aiohttp
 from aiohttp import web
 
-import nowplaying.utils
 import nowplaying.trackrequests
+import nowplaying.utils
 
 if TYPE_CHECKING:
     import nowplaying.config
@@ -59,7 +59,7 @@ class GifwordsWebSocketHandler:
                             websocket.exception(),
                         )
                         break
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Timeout is normal - just means no messages received
                     continue
                 except Exception as error:  # pylint: disable=broad-except

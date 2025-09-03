@@ -79,7 +79,7 @@ class SubprocessManager:
             logging.info("Starting %s", processname)
             self.processes[processname]["stopevent"].clear()
             self.processes[processname]["process"] = multiprocessing.Process(
-                target=getattr(self.processes[processname]["module"], "start"),
+                target=self.processes[processname]["module"].start,
                 name=processname,
                 args=(
                     self.processes[processname]["stopevent"],
@@ -100,7 +100,7 @@ class SubprocessManager:
         # Special handling for twitchbot
         if processname in {"twitchbot"}:
             try:
-                func = getattr(self.processes[processname]["module"], "stop")
+                func = self.processes[processname]["module"].stop
                 func(process.pid)
             except Exception as error:  # pylint: disable=broad-exception-caught
                 logging.error("Error calling stop function for %s: %s", processname, error)

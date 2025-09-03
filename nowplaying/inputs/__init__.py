@@ -9,8 +9,9 @@ from nowplaying.plugin import WNPBasePlugin
 from nowplaying.types import TrackMetadata
 
 if TYPE_CHECKING:
-    import nowplaying.config
     from PySide6.QtWidgets import QWidget
+
+    import nowplaying.config
 
 
 class InputPlugin(WNPBasePlugin):

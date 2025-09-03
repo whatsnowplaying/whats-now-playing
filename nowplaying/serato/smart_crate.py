@@ -173,10 +173,7 @@ class SeratoSmartCrateReader(SeratoRuleMatchingMixin, SeratoBaseReader):
                     if "con_str" in condition_type:
                         rule["field"] = "filename"  # Contains string in filename
                         rule["field_type"] = "text"
-                    elif "aft_str" in condition_type:
-                        rule["field"] = "year"
-                        rule["field_type"] = "numeric"
-                    elif "bef_str" in condition_type:
+                    elif "aft_str" in condition_type or "bef_str" in condition_type:
                         rule["field"] = "year"
                         rule["field_type"] = "numeric"
 

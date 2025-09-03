@@ -36,26 +36,26 @@ import json
 import logging
 import pathlib
 import random
+import sqlite3
 from typing import TYPE_CHECKING
 
-import sqlite3
 import aiosqlite
+from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
+from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
-from watchdog.events import PatternMatchingEventHandler
 
-from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
-
+import nowplaying.utils
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
 from nowplaying.types import TrackMetadata
-import nowplaying.utils
 
 if TYPE_CHECKING:
-    import nowplaying.config
-    import nowplaying.uihelp
     from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QWidget
+
+    import nowplaying.config
+    import nowplaying.uihelp
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes

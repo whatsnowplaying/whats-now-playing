@@ -15,6 +15,7 @@ from utils_artistextras import (
     run_api_call_count_test,
     skip_no_theaudiodb_key,
 )
+
 import nowplaying.artistextras.theaudiodb
 
 

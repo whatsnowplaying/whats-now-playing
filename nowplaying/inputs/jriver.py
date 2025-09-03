@@ -15,9 +15,10 @@ from nowplaying.inputs import InputPlugin
 from nowplaying.types import TrackMetadata
 
 if TYPE_CHECKING:
-    import nowplaying.config
     from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QWidget
+
+    import nowplaying.config
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
@@ -101,7 +102,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             if self._should_log_error():
                 logging.debug("JRiver is not running or not accessible at %s", self.base_url)
             return False
-        except asyncio.TimeoutError:
+        except TimeoutError:
             if self._should_log_error():
                 logging.warning("JRiver connection test timed out at %s", self.base_url)
             return False
@@ -137,7 +138,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 logging.debug(
                     "JRiver is not running or not accessible at %s for auth", self.base_url
                 )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             if self._should_log_error():
                 logging.warning("JRiver authentication timed out at %s", self.base_url)
         except Exception as error:  # pylint: disable=broad-except
@@ -180,7 +181,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 if self._should_log_error():
                     logging.debug("JRiver is not running or not accessible at %s", self.base_url)
                 self._connection_failed = True
-        except (asyncio.TimeoutError, aiohttp.ServerTimeoutError):
+        except (TimeoutError, aiohttp.ServerTimeoutError):
             if not self._connection_failed:
                 if self._should_log_error():
                     logging.warning("JRiver connection timed out at %s", self.base_url)
@@ -344,7 +345,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                         "JRiver is not running or not accessible for FileKey %s", filekey
                     )
                 self._connection_failed = True
-        except (asyncio.TimeoutError, aiohttp.ServerTimeoutError):
+        except (TimeoutError, aiohttp.ServerTimeoutError):
             if not self._connection_failed:
                 if self._should_log_error():
                     logging.debug("JRiver GetInfo timed out for FileKey %s", filekey)

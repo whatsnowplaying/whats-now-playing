@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Twitch-related constants"""
 
-from twitchAPI.type import AuthScope
 import twitchAPI.helper
+from twitchAPI.type import AuthScope
 
 import nowplaying.oauth2
 

@@ -5,17 +5,18 @@ import logging
 import pathlib
 from typing import TYPE_CHECKING
 
-
 import nowplaying.utils
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.types import TrackMetadata
+
 from . import NotificationPlugin
 
 if TYPE_CHECKING:
+    from PySide6.QtCore import QSettings
+    from PySide6.QtWidgets import QWidget
+
     import nowplaying.config
     import nowplaying.imagecache
-    from PySide6.QtWidgets import QWidget
-    from PySide6.QtCore import QSettings
     from nowplaying.utils import TemplateHandler
 
 

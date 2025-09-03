@@ -11,13 +11,15 @@ import jinja2
 import nowplaying.utils
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.types import TrackMetadata
+
 from . import NotificationPlugin
 
 if TYPE_CHECKING:
+    from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
+    from PySide6.QtWidgets import QWidget
+
     import nowplaying.config
     import nowplaying.imagecache
-    from PySide6.QtWidgets import QWidget
-    from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
     from nowplaying.utils import TemplateHandler
 
 

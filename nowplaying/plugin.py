@@ -5,9 +5,10 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import nowplaying.config
-    from PySide6.QtWidgets import QWidget  # pylint: disable=import-error, no-name-in-module
     from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module
+    from PySide6.QtWidgets import QWidget  # pylint: disable=import-error, no-name-in-module
+
+    import nowplaying.config
 
 
 class WNPBasePlugin:
@@ -20,8 +21,8 @@ class WNPBasePlugin:
     ):
         self.available: bool = True
         self.plugintype: str = ""
-        self.config: "nowplaying.config.ConfigFile | None" = config
-        self.qwidget: "QWidget | None" = None
+        self.config: nowplaying.config.ConfigFile | None = config
+        self.qwidget: QWidget | None = None
         self.uihelp: object | None = None
         self.displayname: str = ""
         self.priority: int = 0

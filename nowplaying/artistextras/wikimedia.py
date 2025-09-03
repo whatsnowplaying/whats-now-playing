@@ -5,7 +5,6 @@ import logging
 
 import nowplaying.apicache
 import nowplaying.wikiclient
-
 from nowplaying.artistextras import ArtistExtrasPlugin
 
 

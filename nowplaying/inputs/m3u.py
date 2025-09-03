@@ -6,16 +6,15 @@ import logging
 import os
 import re
 
-from watchdog.observers import Observer
-from watchdog.observers.polling import PollingObserver
-from watchdog.events import PatternMatchingEventHandler
-
 from PySide6.QtCore import QDir  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
+from watchdog.events import PatternMatchingEventHandler
+from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
 
-from nowplaying.inputs import InputPlugin
-from nowplaying.exceptions import PluginVerifyError
 import nowplaying.utils
+from nowplaying.exceptions import PluginVerifyError
+from nowplaying.inputs import InputPlugin
 
 # VDJ Extension lines that matter
 EXTVDJ_TITLE_RE = re.compile(r".*<title>(.+)</title>.*")

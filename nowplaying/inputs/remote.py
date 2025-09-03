@@ -5,16 +5,15 @@ import logging
 import pathlib
 from typing import TYPE_CHECKING
 
-from PySide6.QtWidgets import QWidget  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QWidget  # pylint: disable=import-error, no-name-in-module
 
+import nowplaying.db
 from nowplaying.inputs import InputPlugin
 from nowplaying.types import TrackMetadata
-import nowplaying.db
 
 if TYPE_CHECKING:
     import nowplaying.config
-    from PySide6.QtCore import QSettings
 
 
 class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes

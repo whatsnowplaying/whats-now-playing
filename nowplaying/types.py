@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Type definitions for nowplaying structures."""
 
-from typing import TypedDict, TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
-    import nowplaying.inputs
     import nowplaying.artistextras
+    import nowplaying.inputs
     import nowplaying.notifications
     import nowplaying.recognition
 

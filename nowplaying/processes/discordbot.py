@@ -16,9 +16,9 @@ import threading
 from dataclasses import dataclass
 from typing import Any
 
+import discord
 import pypresence
 import pypresence.exceptions
-import discord
 
 import nowplaying.bootstrap
 import nowplaying.config

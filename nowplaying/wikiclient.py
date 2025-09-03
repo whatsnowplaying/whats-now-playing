@@ -12,6 +12,7 @@ import logging
 import ssl
 from typing import Any
 from urllib.parse import quote
+
 import aiohttp
 
 import nowplaying

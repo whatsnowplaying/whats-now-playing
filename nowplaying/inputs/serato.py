@@ -12,13 +12,13 @@ nowplaying.serato package for better maintainability and separation of concerns.
 # Import all classes from the new modular structure for backwards compatibility
 from nowplaying.serato import (
     Plugin,
-    SeratoHandler,
     SeratoBaseReader,
-    SeratoRuleMatchingMixin,
-    SeratoDatabaseV2Reader,
     SeratoCrateReader,
-    SeratoSmartCrateReader,
+    SeratoDatabaseV2Reader,
+    SeratoHandler,
+    SeratoRuleMatchingMixin,
     SeratoSessionReader,
+    SeratoSmartCrateReader,
 )
 
 # Export all classes to maintain full backwards compatibility

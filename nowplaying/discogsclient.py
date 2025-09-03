@@ -10,6 +10,7 @@ with just the functionality needed by the nowplaying application.
 import logging
 import ssl
 from typing import Any
+
 import aiohttp
 
 import nowplaying.utils

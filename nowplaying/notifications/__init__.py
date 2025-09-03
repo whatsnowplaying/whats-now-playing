@@ -7,9 +7,10 @@ from nowplaying.plugin import WNPBasePlugin
 from nowplaying.types import TrackMetadata
 
 if TYPE_CHECKING:
+    from PySide6.QtWidgets import QWidget
+
     import nowplaying.config
     import nowplaying.imagecache
-    from PySide6.QtWidgets import QWidget
 
 
 class NotificationPlugin(WNPBasePlugin):

@@ -16,16 +16,15 @@ import threading
 import time
 import weakref
 
-import requests
 import aiohttp
-from aiohttp import web, WSCloseCode
 import aiosqlite
 import jinja2
-
+import requests
+from aiohttp import WSCloseCode, web
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
-from nowplaying.webserver.images_websocket import ImagesWebSocketHandler
 from nowplaying.webserver.gifwords_websocket import GifwordsWebSocketHandler
+from nowplaying.webserver.images_websocket import ImagesWebSocketHandler
 from nowplaying.webserver.static_handlers import StaticContentHandler
 
 #
@@ -52,7 +51,6 @@ import nowplaying.oauth2
 import nowplaying.twitch.oauth2
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
-
 
 INDEXREFRESH = (
     '<!doctype html><html lang="en">'

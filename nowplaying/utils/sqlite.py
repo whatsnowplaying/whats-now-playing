@@ -8,8 +8,8 @@ import os
 import random
 import sqlite3
 import time
-from collections.abc import Awaitable, Callable
-from typing import Any, Iterator
+from collections.abc import Awaitable, Callable, Iterator
+from typing import Any
 
 
 def retry_sqlite_operation(
