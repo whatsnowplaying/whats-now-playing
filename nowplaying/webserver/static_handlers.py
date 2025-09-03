@@ -84,7 +84,7 @@ def ensure_json_serializable(data: dict) -> dict:
         elif isinstance(value, (list, tuple)):
             # Recursively process lists/tuples
             serializable_data[key] = [
-                str(item) if not isinstance(item, (str, int, float, bool, type(None))) else item
+                item if isinstance(item, (str, int, float, bool, type(None))) else str(item)
                 for item in value
             ]
         elif isinstance(value, dict):

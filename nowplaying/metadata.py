@@ -521,7 +521,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
                     datedata[datetype] = value
         return _date_calc(datedata)
 
-    def process(self, metadata: TrackMetadata) -> TrackMetadata:  # pylint: disable=too-many-branches
+    def process(self, metadata: TrackMetadata) -> TrackMetadata:    # pylint: disable=too-many-branches
         """given a chunk of metadata, try to fill in more"""
         self.metadata = metadata
 
@@ -544,7 +544,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
         except tinytag.TinyTagException as error:
             logging.error("tinytag could not process %s: %s", file_path, error)
             return metadata
-        except (FileNotFoundError, OSError, PermissionError) as error:
+        except OSError as error:
             logging.debug("Cannot access file for tinytag processing %s: %s", file_path, error)
             return metadata
 

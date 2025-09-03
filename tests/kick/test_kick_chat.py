@@ -157,7 +157,7 @@ async def test_kickchat_send_message_token_expired(bootstrap):
         result = await chat._send_message("Test message")  # pylint: disable=protected-access
 
         assert result is False
-        assert chat.authenticated is False
+        assert not chat.authenticated
 
 
 @pytest.mark.asyncio
@@ -387,7 +387,7 @@ async def test_kickchat_stop(bootstrap):
     # Verify cleanup
     mock_task.cancel.assert_called_once()
     mock_watcher.stop.assert_called_once()
-    assert chat.authenticated is False
+    assert not chat.authenticated
 
 
 @pytest.mark.asyncio

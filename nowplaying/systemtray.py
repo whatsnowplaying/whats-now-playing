@@ -223,9 +223,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         )
         msgbox.show()
         msgbox.exec()
-        # Exit the application since we cannot continue without UI files
-        app = QApplication.instance()
-        if app:
+        if app := QApplication.instance():
             app.exit(1)
 
     def _vacuum_databases_on_startup(self) -> None:
@@ -256,8 +254,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self._update_startup_progress("Setting up Charts service...")
         existing_key = self.config.cparser.value("charts/charts_key", defaultValue="")
         if not existing_key:
-            anonymous_key = nowplaying.notifications.charts.generate_anonymous_key()
-            if anonymous_key:
+            if (
+                anonymous_key := nowplaying.notifications.charts.generate_anonymous_key()
+            ):
                 self.config.cparser.setValue("charts/charts_key", anonymous_key)
                 self.config.cparser.sync()  # Ensure key is written to disk immediately
                 logging.info("Generated and saved anonymous charts key during startup")

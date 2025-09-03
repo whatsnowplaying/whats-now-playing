@@ -116,8 +116,7 @@ async def test_wikimedia_humantetris_de(bootstrap):
         },
         imagecache=None,
     )
-    longbio = data.get("artistlongbio")
-    if longbio:  # Only check if we got data
+    if longbio := data.get("artistlongbio"):
         assert "Human Tetris ist eine Band aus Moskau" in longbio  # codespell:ignore
     else:
         # API call didn't return expected data - this can happen in CI environments

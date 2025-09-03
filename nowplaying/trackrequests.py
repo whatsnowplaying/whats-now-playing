@@ -649,7 +649,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         # Clean up extra whitespace
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
 
-        return cleaned if cleaned else text
+        return cleaned or text
 
     @staticmethod
     def _calculate_similarity_with_length_penalty(text1: str, text2: str) -> int:
@@ -1209,12 +1209,10 @@ class TrackRequestSettings:
         self.widget = widget
         self.uihelp = uihelp
 
-        add_button = uihelp.find_widget_in_tabs(widget, "add_button")
-        if add_button:
+        if add_button := uihelp.find_widget_in_tabs(widget, "add_button"):
             add_button.clicked.connect(self.on_add_button)
 
-        del_button = uihelp.find_widget_in_tabs(widget, "del_button")
-        if del_button:
+        if del_button := uihelp.find_widget_in_tabs(widget, "del_button"):
             del_button.clicked.connect(self.on_del_button)
 
     def _row_load(self, widget: QWidget, uihelp: "nowplaying.uihelp.UIHelp", **kwargs):

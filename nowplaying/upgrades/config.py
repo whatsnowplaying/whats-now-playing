@@ -192,8 +192,7 @@ class UpgradeConfig:
     @staticmethod
     def _upgrade_to_4_3_0(config: QSettings) -> None:
         """Upgrade to version 4.3.0 - Migrate old setlist setting to new real-time setlist"""
-        old_setlist_enabled = config.value("setlist/enabled", type=bool)
-        if old_setlist_enabled:
+        if old_setlist_enabled := config.value("setlist/enabled", type=bool):
             logging.info("Upgrade to 4.3.0: Converting old setlist to real-time setlist")
             # Enable real-time setlist with default file pattern
             config.setValue("realtimesetlist/filepattern", "setlist-%Y%m%d-%H%M%S.txt")

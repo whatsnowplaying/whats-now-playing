@@ -44,22 +44,22 @@ class AsyncWikiClient:
         # Create SSL context with proper certificate verification
         self.ssl_context = ssl.create_default_context()
 
-    def _handle_redirect(self, data: dict, entity: str) -> dict | None:  # pylint: disable=no-self-use
+    def _handle_redirect(self, data: dict, entity: str) -> dict | None:    # pylint: disable=no-self-use
         """Handle Wikidata entity redirects."""
-        if entity not in data["entities"]:
-            entities = list(data["entities"].keys())
-            if len(entities) == 1:
-                logging.debug("Following redirect from %s to %s", entity, entities[0])
-                return data["entities"][entities[0]]
-            if len(entities) > 1:
-                logging.warning(
-                    "Ambiguous redirect for entity %s: multiple entities returned (%s).",
-                    entity,
-                    ", ".join(entities),
-                )
-                return None
+        if entity in data["entities"]:
+            return data["entities"][entity]
+        entities = list(data["entities"].keys())
+        if len(entities) == 1:
+            logging.debug("Following redirect from %s to %s", entity, entities[0])
+            return data["entities"][entities[0]]
+        if len(entities) > 1:
+            logging.warning(
+                "Ambiguous redirect for entity %s: multiple entities returned (%s).",
+                entity,
+                ", ".join(entities),
+            )
             return None
-        return data["entities"][entity]
+        return None
 
     async def __aenter__(self):
         connector = nowplaying.utils.create_http_connector(self.ssl_context)
@@ -218,14 +218,11 @@ class AsyncWikiClient:
 
             # Get P18 (image) claims
             if "P18" in claims:
-                filenames = []
-                for claim in claims["P18"]:
-                    if "mainsnak" in claim and "datavalue" in claim["mainsnak"]:
-                        filename = claim["mainsnak"]["datavalue"]["value"]
-                        filenames.append(filename)
-
-                # Batch process all filenames at once for better performance
-                if filenames:
+                if filenames := [
+                    claim["mainsnak"]["datavalue"]["value"]
+                    for claim in claims["P18"]
+                    if "mainsnak" in claim and "datavalue" in claim["mainsnak"]
+                ]:
                     image_urls = await self._get_commons_image_urls_batch(filenames)
                     for img_url in image_urls:
                         if img_url:
@@ -263,17 +260,18 @@ class AsyncWikiClient:
                 # Maintain order by matching against original filenames
                 for filename in filenames:
                     file_title = f"File:{filename}"
-                    url = None
-
-                    for page_data in pages.values():
-                        if (
-                            page_data.get("title") == file_title
-                            and "imageinfo" in page_data
-                            and page_data["imageinfo"]
-                        ):
-                            url = page_data["imageinfo"][0].get("url")
-                            break
-
+                    url = next(
+                        (
+                            page_data["imageinfo"][0].get("url")
+                            for page_data in pages.values()
+                            if (
+                                page_data.get("title") == file_title
+                                and "imageinfo" in page_data
+                                and page_data["imageinfo"]
+                            )
+                        ),
+                        None,
+                    )
                     results.append(url)
 
                 return results

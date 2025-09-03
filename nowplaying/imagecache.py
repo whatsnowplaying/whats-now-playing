@@ -316,8 +316,9 @@ class ImageCache:
             imagetype,
             identifier,
         )
-        normalidentifier = nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True)
-        if normalidentifier:
+        if normalidentifier := nowplaying.utils.normalize(
+            identifier, sizecheck=0, nospaces=True
+        ):
             for srclocation in random.sample(srclocationlist, min(len(srclocationlist), maxart)):
                 self.put_db_srclocation(
                     identifier=normalidentifier, imagetype=imagetype, srclocation=srclocation

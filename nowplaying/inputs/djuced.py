@@ -299,7 +299,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             connector = " AND " if match_type == 1 else " OR "
             where_clause = connector.join(where_conditions)
 
-            sql = "SELECT COUNT(*) as count FROM tracks WHERE " + where_clause
+            sql = f"SELECT COUNT(*) as count FROM tracks WHERE {where_clause}"
             await cursor.execute(sql, params)
             row = await cursor.fetchone()
             return row["count"] if row else 0
@@ -377,7 +377,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             connector = " AND " if match_type == 1 else " OR "
             where_clause = connector.join(where_conditions)
 
-            sql = "SELECT absolutepath FROM tracks WHERE " + where_clause
+            sql = f"SELECT absolutepath FROM tracks WHERE {where_clause}"
             await cursor.execute(sql, params)
             rows = await cursor.fetchall()
             return [row["absolutepath"] for row in rows]

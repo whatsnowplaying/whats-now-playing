@@ -29,10 +29,14 @@ class SettingsTabWidget(QTabWidget):
     def get_current_tab_key(self) -> str | None:
         """Get the key of the currently selected tab"""
         current_widget = self.currentWidget()
-        for key, widget in self.tab_widgets.items():
-            if widget == current_widget:
-                return key
-        return None
+        return next(
+            (
+                key
+                for key, widget in self.tab_widgets.items()
+                if widget == current_widget
+            ),
+            None,
+        )
 
 
 class TabWidgetManager:

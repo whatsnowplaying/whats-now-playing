@@ -351,14 +351,13 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
                     values[artist_idx] = None
                     values[title_idx] = None
 
-                datatuple = tuple(values)
             else:
                 # Legacy format - just filename, rest None
                 values = [
                     playlist if field == "name" else (entry if field == "filename" else None)
                     for field in PLAYLIST
                 ]
-                datatuple = tuple(values)
+            datatuple = tuple(values)
             sqlcursor.execute(sql, datatuple)
 
     def _scan_and_populate_playlists(self, cursor, playlistdirpath: pathlib.Path) -> None:
@@ -600,8 +599,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
         if not selected_playlists.strip():
             return []
 
-        playlist_names = [name.strip() for name in selected_playlists.split(",") if name.strip()]
-        return playlist_names
+        return [name.strip() for name in selected_playlists.split(",") if name.strip()]
 
     @staticmethod
     async def _playlists_have_metadata(

@@ -542,12 +542,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
                     value = self.cparser.value(key)
 
                     # Convert QSettings types to JSON-serializable types
-                    if isinstance(value, bool):
+                    if (
+                        isinstance(value, bool)
+                        or value is not None
+                        and isinstance(value, (int, float, str))
+                    ):
                         pass  # bools are fine
                     elif value is None:
                         value = None
-                    elif isinstance(value, (int, float, str)):
-                        pass  # these are fine
                     elif isinstance(value, list):
                         # Convert list items to strings
                         value = [str(item) for item in value]
@@ -587,7 +589,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             logging.info("Configuration exported to: %s", export_path)
             return True
 
-        except (OSError, PermissionError, FileNotFoundError, TypeError, ValueError) as error:
+        except (OSError, TypeError, ValueError) as error:
             logging.error("Failed to export configuration: %s", error)
             return False
 
@@ -656,6 +658,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         except json.JSONDecodeError as error:
             logging.error("Invalid JSON in import file: %s", error)
             return False
-        except (OSError, PermissionError, FileNotFoundError, KeyError, ValueError) as error:
+        except (OSError, KeyError, ValueError) as error:
             logging.error("Failed to import configuration: %s", error)
             return False

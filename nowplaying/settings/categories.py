@@ -110,24 +110,29 @@ class SettingsCategoryManager:
                     if category.name == "streaming":
                         return category
 
-        # Check regular categories
-        for category in self.categories:
-            if item_name in category.items:
-                return category
-
-        return None
+        return next(
+            (
+                category
+                for category in self.categories
+                if item_name in category.items
+            ),
+            None,
+        )
 
     def get_tab_group_for_item(self, item_name: str) -> TabGroup | None:
         """Find which tab group contains the given item"""
-        for tab_group in self.tab_groups:
-            if item_name in tab_group.tabs:
-                return tab_group
-        return None
+        return next(
+            (
+                tab_group
+                for tab_group in self.tab_groups
+                if item_name in tab_group.tabs
+            ),
+            None,
+        )
 
     def add_plugin_item(self, plugin_type: str, item_name: str):
         """Add a plugin item to the appropriate category"""
-        target_category_name = self.plugin_type_mapping.get(plugin_type)
-        if target_category_name:
+        if target_category_name := self.plugin_type_mapping.get(plugin_type):
             if target_category := next(
                 (c for c in self.categories if c.name == target_category_name), None
             ):
