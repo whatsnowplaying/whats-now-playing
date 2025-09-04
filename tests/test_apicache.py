@@ -311,7 +311,7 @@ async def test_cache_concurrent_access(temp_api_cache):  # pylint: disable=redef
 
 
 @pytest.mark.asyncio
-async def test_cache_database_error_handling(temp_api_cache):    # pylint: disable=redefined-outer-name
+async def test_cache_database_error_handling(temp_api_cache):  # pylint: disable=redefined-outer-name
     """Test handling of database errors."""
     cache = temp_api_cache
 

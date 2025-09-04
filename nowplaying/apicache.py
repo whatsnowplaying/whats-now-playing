@@ -240,8 +240,22 @@ class APIResponseCache:
                     )
 
             except sqlite3.Error as error:
-                logging.error("Database error retrieving cache from %s: %s", self.db_file, error)
-                return None
+                if "no such table" in str(error).lower():
+                    logging.warning(
+                        "API cache table missing, reinitializing database: %s", self.db_file
+                    )
+                    try:
+                        await self._initialize_db()
+                        logging.debug("API cache database reinitialized, cache miss")
+                    except Exception as init_error:
+                        logging.error("Failed to reinitialize API cache database: %s", init_error)
+                    # Return cache miss - don't retry to avoid infinite recursion
+                    return None
+                else:
+                    logging.error(
+                        "Database error retrieving cache from %s: %s", self.db_file, error
+                    )
+                    return None
 
     async def put(  # pylint: disable=too-many-arguments
         self,
@@ -309,7 +323,21 @@ class APIResponseCache:
                     )
 
             except sqlite3.Error as error:
-                logging.error("Database error storing cache to %s: %s", self.db_file, error)
+                if "no such table" in str(error).lower():
+                    logging.warning(
+                        "API cache table missing during put, reinitializing database: %s",
+                        self.db_file,
+                    )
+                    try:
+                        await self._initialize_db()
+                        logging.debug("API cache database reinitialized, put operation skipped")
+                    except Exception as init_error:
+                        logging.error(
+                            "Failed to reinitialize API cache database during put: %s", init_error
+                        )
+                    # Don't retry put to avoid infinite recursion - data will be cached on next request
+                else:
+                    logging.error("Database error storing cache to %s: %s", self.db_file, error)
 
     @asynccontextmanager
     async def get_or_fetch(  # pylint: disable=too-many-arguments

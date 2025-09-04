@@ -64,8 +64,6 @@ def validate_field_lengths(
     return validated_metadata, warnings
 
 
-
-
 class StaticContentHandler:
     """Handler for static content endpoints"""
 

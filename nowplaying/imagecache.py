@@ -183,7 +183,12 @@ class ImageCache:
                     image = cache_result
                     break  # Success, exit loop
             except KeyError as error:
-                logging.error("random: cannot fetch key %s", error)
+                logging.error(
+                    "random: cachekey %s not found in memory cache (db has %d entries, memory has %d entries)",
+                    data["cachekey"],
+                    len(data) if hasattr(data, "__len__") else "unknown",
+                    len(self.cache),
+                )
                 self.erase_cachekey(data["cachekey"])
                 # Continue to next iteration to try another entry
 
@@ -316,9 +321,7 @@ class ImageCache:
             imagetype,
             identifier,
         )
-        if normalidentifier := nowplaying.utils.normalize(
-            identifier, sizecheck=0, nospaces=True
-        ):
+        if normalidentifier := nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True):
             for srclocation in random.sample(srclocationlist, min(len(srclocationlist), maxart)):
                 self.put_db_srclocation(
                     identifier=normalidentifier, imagetype=imagetype, srclocation=srclocation
@@ -511,7 +514,9 @@ VALUES (?,?,?);
         # It was retrieved once before so put it back in the queue
         # if it fails in the queue, it will be deleted
         logging.debug(
-            "Cache %s  srclocation %s has left cache, requeue it.", cachekey, data["srclocation"]
+            "Cache %s  srclocation %s has left cache, requeue it.",
+            cachekey,
+            data["srclocation"],
         )
         self.erase_srclocation(data["srclocation"])
         self.put_db_srclocation(
@@ -567,6 +572,7 @@ VALUES (?,?,?);
                 content=dlimage.content,
             ):
                 logging.error("db put failed")
+            return None  # Successful download, no cooldown needed
         elif dlimage.status_code == 429:
             # Rate limit exceeded - don't erase URL, it's still valid
             logging.warning(

@@ -223,7 +223,7 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
         radius = int(60 * self.arrow_scale)
         painter.drawEllipse(x - radius, y - radius, radius * 2, radius * 2)
 
-    def _draw_arrow(self, painter: QPainter, x: int, y: int, direction: str) -> None:    # pylint: disable=invalid-name
+    def _draw_arrow(self, painter: QPainter, x: int, y: int, direction: str) -> None:  # pylint: disable=invalid-name
         """Draw the arrow pointing in the specified direction."""
         # Set up arrow color and pen (opacity handled by Qt effect)
         arrow_color = QColor(255, 100, 0, 255)  # Orange arrow, full alpha
@@ -270,7 +270,7 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
                 shaft_end_x, shaft_end_y, shaft_end_x - head_size * 0.5, shaft_end_y - head_size
             )
 
-    def _draw_text(self, painter: QPainter, x: int, y: int) -> None:    # pylint: disable=invalid-name
+    def _draw_text(self, painter: QPainter, x: int, y: int) -> None:  # pylint: disable=invalid-name
         """Draw instructional text near the arrow."""
         # Set up text properties (opacity handled by Qt effect)
         text_color = QColor(255, 255, 255, 200)  # White text, fixed alpha

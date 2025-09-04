@@ -340,8 +340,7 @@ class SeratoHandler:  # pylint: disable=too-many-instance-attributes
         for text in all_text:
             cleaned = text.strip()
             if len(cleaned) > 10 and all(
-                skip not in cleaned.lower()
-                for skip in ["copyright", "serato", "playlist"]
+                skip not in cleaned.lower() for skip in ["copyright", "serato", "playlist"]
             ):
                 logging.debug("Method 4 success: Text fallback search")
                 return cleaned
