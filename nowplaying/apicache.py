@@ -87,6 +87,21 @@ class APIResponseCache:
             await connection.commit()
             logging.debug("API cache database initialized at %s", self.db_file)
 
+    async def _handle_missing_table_error(self, operation: str) -> None:
+        """Handle 'no such table' errors by reinitializing the database."""
+        logging.warning(
+            "API cache table missing during %s, reinitializing database: %s",
+            operation,
+            self.db_file,
+        )
+        try:
+            await self._initialize_db()
+            logging.debug("API cache database reinitialized after %s error", operation)
+        except Exception as init_error:  # pylint: disable=broad-exception-caught
+            logging.error(
+                "Failed to reinitialize API cache database during %s: %s", operation, init_error
+            )
+
     @staticmethod
     def _make_cache_key(
         provider: str, artist_name: str, endpoint: str, params: dict | None = None
@@ -241,21 +256,11 @@ class APIResponseCache:
 
             except sqlite3.Error as error:
                 if "no such table" in str(error).lower():
-                    logging.warning(
-                        "API cache table missing, reinitializing database: %s", self.db_file
-                    )
-                    try:
-                        await self._initialize_db()
-                        logging.debug("API cache database reinitialized, cache miss")
-                    except Exception as init_error:
-                        logging.error("Failed to reinitialize API cache database: %s", init_error)
+                    await self._handle_missing_table_error("get")
                     # Return cache miss - don't retry to avoid infinite recursion
                     return None
-                else:
-                    logging.error(
-                        "Database error retrieving cache from %s: %s", self.db_file, error
-                    )
-                    return None
+                logging.error("Database error retrieving cache from %s: %s", self.db_file, error)
+                return None
 
     async def put(  # pylint: disable=too-many-arguments
         self,
@@ -324,20 +329,11 @@ class APIResponseCache:
 
             except sqlite3.Error as error:
                 if "no such table" in str(error).lower():
-                    logging.warning(
-                        "API cache table missing during put, reinitializing database: %s",
-                        self.db_file,
-                    )
-                    try:
-                        await self._initialize_db()
-                        logging.debug("API cache database reinitialized, put operation skipped")
-                    except Exception as init_error:
-                        logging.error(
-                            "Failed to reinitialize API cache database during put: %s", init_error
-                        )
-                    # Don't retry put to avoid infinite recursion - data will be cached on next request
-                else:
-                    logging.error("Database error storing cache to %s: %s", self.db_file, error)
+                    await self._handle_missing_table_error("put")
+                    # Don't retry put to avoid infinite recursion
+                    # data will be cached on next request
+                    return
+                logging.error("Database error storing cache to %s: %s", self.db_file, error)
 
     @asynccontextmanager
     async def get_or_fetch(  # pylint: disable=too-many-arguments

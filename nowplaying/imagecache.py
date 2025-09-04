@@ -182,11 +182,10 @@ class ImageCache:
                 if isinstance(cache_result, bytes):
                     image = cache_result
                     break  # Success, exit loop
-            except KeyError as error:
+            except KeyError:
                 logging.error(
-                    "random: cachekey %s not found in memory cache (db has %d entries, memory has %d entries)",
+                    "random: cachekey %s not found in memory cache (memory has %d entries)",
                     data["cachekey"],
-                    len(data) if hasattr(data, "__len__") else "unknown",
                     len(self.cache),
                 )
                 self.erase_cachekey(data["cachekey"])
@@ -573,14 +572,14 @@ VALUES (?,?,?);
             ):
                 logging.error("db put failed")
             return None  # Successful download, no cooldown needed
-        elif dlimage.status_code == 429:
+        if dlimage.status_code == 429:
             # Rate limit exceeded - don't erase URL, it's still valid
             logging.warning(
                 "image_dl: rate limit exceeded (429) for %s - keeping URL for retry",
                 imagedict["srclocation"],
             )
             return {"error_type": "rate_limit", "cooldown": 60}
-        elif 400 <= dlimage.status_code < 500:
+        if 400 <= dlimage.status_code < 500:
             # Client errors (404, 403, etc.) - URL is likely invalid, remove it
             logging.error(
                 "image_dl: client error %s for %s - removing invalid URL",
@@ -589,16 +588,13 @@ VALUES (?,?,?);
             )
             self.erase_srclocation(imagedict["srclocation"])
             return {"error_type": "client_error", "cooldown": 0}  # No retry for client errors
-        else:
-            # Server errors (500, 503, etc.) - transient issues, keep URL for retry
-            logging.warning(
-                "image_dl: server error %s for %s - keeping URL for retry",
-                dlimage.status_code,
-                imagedict["srclocation"],
-            )
-            return {"error_type": "server_error", "cooldown": 600}  # 10 minutes for server errors
-
-        return None  # Successful download
+        # Server errors (500, 503, etc.) - transient issues, keep URL for retry
+        logging.warning(
+            "image_dl: server error %s for %s - keeping URL for retry",
+            dlimage.status_code,
+            imagedict["srclocation"],
+        )
+        return {"error_type": "server_error", "cooldown": 600}  # 10 minutes for server errors
 
     async def verify_cache_timer(self, stopevent: asyncio.Event) -> None:
         """run verify_cache periodically"""
