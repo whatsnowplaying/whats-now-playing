@@ -521,7 +521,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
                     datedata[datetype] = value
         return _date_calc(datedata)
 
-    def process(self, metadata: TrackMetadata) -> TrackMetadata:    # pylint: disable=too-many-branches
+    def process(self, metadata: TrackMetadata) -> TrackMetadata:  # pylint: disable=too-many-branches
         """given a chunk of metadata, try to fill in more"""
         self.metadata = metadata
 

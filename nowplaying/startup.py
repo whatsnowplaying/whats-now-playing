@@ -58,7 +58,7 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
 
         logging.debug("Startup window initialized")
 
-    def _setup_ui(self) -> None:    # pylint: disable=too-many-statements
+    def _setup_ui(self) -> None:  # pylint: disable=too-many-statements
         """Set up the startup window UI."""
         self.setWindowTitle("Starting What's Now Playing - Press Escape to cancel")
         self.setModal(True)

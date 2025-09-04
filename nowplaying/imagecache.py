@@ -182,8 +182,12 @@ class ImageCache:
                 if isinstance(cache_result, bytes):
                     image = cache_result
                     break  # Success, exit loop
-            except KeyError as error:
-                logging.error("random: cannot fetch key %s", error)
+            except KeyError:
+                logging.error(
+                    "random: cachekey %s not found in memory cache (memory has %d entries)",
+                    data["cachekey"],
+                    len(self.cache),
+                )
                 self.erase_cachekey(data["cachekey"])
                 # Continue to next iteration to try another entry
 
@@ -316,9 +320,7 @@ class ImageCache:
             imagetype,
             identifier,
         )
-        if normalidentifier := nowplaying.utils.normalize(
-            identifier, sizecheck=0, nospaces=True
-        ):
+        if normalidentifier := nowplaying.utils.normalize(identifier, sizecheck=0, nospaces=True):
             for srclocation in random.sample(srclocationlist, min(len(srclocationlist), maxart)):
                 self.put_db_srclocation(
                     identifier=normalidentifier, imagetype=imagetype, srclocation=srclocation
@@ -511,7 +513,9 @@ VALUES (?,?,?);
         # It was retrieved once before so put it back in the queue
         # if it fails in the queue, it will be deleted
         logging.debug(
-            "Cache %s  srclocation %s has left cache, requeue it.", cachekey, data["srclocation"]
+            "Cache %s  srclocation %s has left cache, requeue it.",
+            cachekey,
+            data["srclocation"],
         )
         self.erase_srclocation(data["srclocation"])
         self.put_db_srclocation(
@@ -567,14 +571,15 @@ VALUES (?,?,?);
                 content=dlimage.content,
             ):
                 logging.error("db put failed")
-        elif dlimage.status_code == 429:
+            return None  # Successful download, no cooldown needed
+        if dlimage.status_code == 429:
             # Rate limit exceeded - don't erase URL, it's still valid
             logging.warning(
                 "image_dl: rate limit exceeded (429) for %s - keeping URL for retry",
                 imagedict["srclocation"],
             )
             return {"error_type": "rate_limit", "cooldown": 60}
-        elif 400 <= dlimage.status_code < 500:
+        if 400 <= dlimage.status_code < 500:
             # Client errors (404, 403, etc.) - URL is likely invalid, remove it
             logging.error(
                 "image_dl: client error %s for %s - removing invalid URL",
@@ -583,16 +588,13 @@ VALUES (?,?,?);
             )
             self.erase_srclocation(imagedict["srclocation"])
             return {"error_type": "client_error", "cooldown": 0}  # No retry for client errors
-        else:
-            # Server errors (500, 503, etc.) - transient issues, keep URL for retry
-            logging.warning(
-                "image_dl: server error %s for %s - keeping URL for retry",
-                dlimage.status_code,
-                imagedict["srclocation"],
-            )
-            return {"error_type": "server_error", "cooldown": 600}  # 10 minutes for server errors
-
-        return None  # Successful download
+        # Server errors (500, 503, etc.) - transient issues, keep URL for retry
+        logging.warning(
+            "image_dl: server error %s for %s - keeping URL for retry",
+            dlimage.status_code,
+            imagedict["srclocation"],
+        )
+        return {"error_type": "server_error", "cooldown": 600}  # 10 minutes for server errors
 
     async def verify_cache_timer(self, stopevent: asyncio.Event) -> None:
         """run verify_cache periodically"""

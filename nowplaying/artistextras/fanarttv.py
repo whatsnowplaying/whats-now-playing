@@ -104,9 +104,7 @@ class Plugin(ArtistExtrasPlugin):
 
         # Process logos (prefer HD, fallback to regular)
         if self.config.cparser.value("fanarttv/logos", type=bool):
-            if logo_data := artist_data.get("hdmusiclogo") or artist_data.get(
-                "musiclogo"
-            ):
+            if logo_data := artist_data.get("hdmusiclogo") or artist_data.get("musiclogo"):
                 self._queue_images(logo_data, identifier, "artistlogo", imagecache)
 
         # Process thumbnails

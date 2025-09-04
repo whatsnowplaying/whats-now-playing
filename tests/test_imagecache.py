@@ -725,7 +725,7 @@ async def test_failure_count_tracking_and_limits(imagecache_with_dir, error_type
 
 
 @pytest.mark.asyncio
-async def test_failure_count_resets_on_success(imagecache_with_dir):    # pylint: disable=unused-argument
+async def test_failure_count_resets_on_success(imagecache_with_dir):  # pylint: disable=unused-argument
     """Test that failure counts reset to zero on successful download"""
     current_time = time.time()
     srclocation = "https://example.com/reset_test.jpg"

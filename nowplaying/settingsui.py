@@ -128,7 +128,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.qtui.settings_stack.addWidget(self.widgets[uiname])
         # Note: Tree structure will be built later in _build_settings_tree()
 
-    def load_qtui(self):    # pylint: disable=too-many-branches, too-many-statements
+    def load_qtui(self):  # pylint: disable=too-many-branches, too-many-statements
         """load the base UI and wire it up"""
 
         self.qtui = load_widget_ui(self.config, "settings")
@@ -206,9 +206,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.qtui.save_button.clicked.connect(self.on_save_button)
         self.errormessage = QErrorMessage(self.qtui)
 
-        if about_items := self.qtui.settings_tree.findItems(
-            "About", Qt.MatchRecursive
-        ):
+        if about_items := self.qtui.settings_tree.findItems("About", Qt.MatchRecursive):
             self.qtui.settings_tree.setCurrentItem(about_items[0])
             self._on_tree_item_clicked(about_items[0], 0)
 
@@ -484,9 +482,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         # value directly (for backward compatibility)
         search_term = target_display_name or currentinput
 
-        if curbutton := self.widgets["source"].sourcelist.findItems(
-            search_term, Qt.MatchContains
-        ):
+        if curbutton := self.widgets["source"].sourcelist.findItems(search_term, Qt.MatchContains):
             self.widgets["source"].sourcelist.setCurrentItem(curbutton[0])
         else:
             logging.warning(
@@ -1276,9 +1272,7 @@ def _load_tabbed_ui_files(tab_files, name):
         try:
             if tab_content := loader.load(ui_file):
                 # Use the tab name from filename, but could be overridden by windowTitle in XML
-                display_name = (
-                    tab_content.windowTitle() or tab_name.replace("_", " ").title()
-                )
+                display_name = tab_content.windowTitle() or tab_name.replace("_", " ").title()
                 tab_widget.addTab(tab_content, display_name)
                 logging.debug("Added tab '%s' for %s from %s", display_name, name, filepath)
         except RuntimeError as error:

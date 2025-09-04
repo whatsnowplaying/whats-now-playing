@@ -44,7 +44,7 @@ class AsyncWikiClient:
         # Create SSL context with proper certificate verification
         self.ssl_context = ssl.create_default_context()
 
-    def _handle_redirect(self, data: dict, entity: str) -> dict | None:    # pylint: disable=no-self-use
+    def _handle_redirect(self, data: dict, entity: str) -> dict | None:  # pylint: disable=no-self-use
         """Handle Wikidata entity redirects."""
         if entity in data["entities"]:
             return data["entities"][entity]

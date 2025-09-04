@@ -30,11 +30,7 @@ class SettingsTabWidget(QTabWidget):
         """Get the key of the currently selected tab"""
         current_widget = self.currentWidget()
         return next(
-            (
-                key
-                for key, widget in self.tab_widgets.items()
-                if widget == current_widget
-            ),
+            (key for key, widget in self.tab_widgets.items() if widget == current_widget),
             None,
         )
 

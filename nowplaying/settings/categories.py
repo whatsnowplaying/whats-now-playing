@@ -111,22 +111,14 @@ class SettingsCategoryManager:
                         return category
 
         return next(
-            (
-                category
-                for category in self.categories
-                if item_name in category.items
-            ),
+            (category for category in self.categories if item_name in category.items),
             None,
         )
 
     def get_tab_group_for_item(self, item_name: str) -> TabGroup | None:
         """Find which tab group contains the given item"""
         return next(
-            (
-                tab_group
-                for tab_group in self.tab_groups
-                if item_name in tab_group.tabs
-            ),
+            (tab_group for tab_group in self.tab_groups if item_name in tab_group.tabs),
             None,
         )
 
