@@ -95,6 +95,7 @@ nav:
       - MPRIS2: input/mpris2.md
       - Remote: input/remote.md
       - Serato: input/serato.md
+      - Serato (Legacy): input/serato3.md
       - Traktor: input/traktor.md
       - Virtual DJ: input/virtualdj.md
       - Windows Media: input/winmedia.md

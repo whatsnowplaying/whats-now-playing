@@ -8,7 +8,8 @@ has its own screen to configure them.
 
 Professional DJ software with direct integration:
 
-- **[Serato](serato.md)** - Serato DJ software integration with smart crate support
+- **[Serato 4+](serato.md)** - Modern Serato DJ 4.0+ integration with auto-detection and SQLite database
+- **[Serato 3.x](serato3.md)** - Legacy Serato DJ integration with smart crate support
 - **[Traktor](traktor.md)** - Native Instruments Traktor with Icecast streaming + database enhancement
 - **[Virtual DJ](virtualdj.md)** - Virtual DJ software with history file monitoring
 - **[DJUCED](djuced.md)** - Hercules DJUCED software integration

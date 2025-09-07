@@ -3,32 +3,16 @@
 Serato Input Plugin
 
 This module provides the Serato input plugin for reading track data from
-local Serato library files or Serato Live playlists.
+Serato DJ 4.0+ SQLite database architecture.
 
-The implementation has been refactored into a modular structure in the
-nowplaying.serato package for better maintainability and separation of concerns.
+The implementation uses a modular structure in the nowplaying.serato package
+for better maintainability and separation of concerns.
 """
 
-# Import all classes from the new modular structure for backwards compatibility
-from nowplaying.serato import (
-    Plugin,
-    SeratoBaseReader,
-    SeratoCrateReader,
-    SeratoDatabaseV2Reader,
-    SeratoHandler,
-    SeratoRuleMatchingMixin,
-    SeratoSessionReader,
-    SeratoSmartCrateReader,
-)
+# Import the main plugin class from the modular structure
+from nowplaying.serato import Plugin
 
-# Export all classes to maintain full backwards compatibility
+# Export for backwards compatibility
 __all__ = [
     "Plugin",
-    "SeratoHandler",
-    "SeratoBaseReader",
-    "SeratoRuleMatchingMixin",
-    "SeratoDatabaseV2Reader",
-    "SeratoCrateReader",
-    "SeratoSmartCrateReader",
-    "SeratoSessionReader",
 ]

@@ -19,7 +19,7 @@ import pytest
 import nowplaying.inputs.djuced
 import nowplaying.inputs.traktor
 import nowplaying.inputs.virtualdj
-import nowplaying.serato.plugin
+import nowplaying.serato3.plugin
 import nowplaying.utils.sqlite
 
 # Test data shared across all plugins
@@ -591,10 +591,12 @@ async def test_serato_has_tracks_multiple_databases(bootstrap):
         "serato/additional_libpaths", "/external/_Serato_\n/backup/_Serato_"
     )
 
-    plugin = nowplaying.serato.plugin.Plugin(config=bootstrap)
+    plugin = nowplaying.serato3.plugin.Plugin(config=bootstrap)
 
-    # Mock the database search across multiple paths
-    with unittest.mock.patch.object(plugin, "_has_tracks_in_entire_library") as mock_search:
+    # Mock the static database search method
+    with unittest.mock.patch(
+        "nowplaying.serato3.plugin.Plugin._has_tracks_in_entire_library"
+    ) as mock_search:
         mock_search.side_effect = [False, True, False]  # Found in second database
 
         result = await plugin.has_tracks_by_artist("Test Artist")
@@ -642,7 +644,7 @@ async def test_all_plugins_implement_has_tracks_by_artist(bootstrap):
         nowplaying.inputs.traktor.Plugin,
         nowplaying.inputs.virtualdj.Plugin,
         nowplaying.inputs.djuced.Plugin,
-        nowplaying.serato.plugin.Plugin,
+        nowplaying.serato3.plugin.Plugin,
     ]
 
     for plugin_class in plugins_to_test:

@@ -1,127 +1,67 @@
-# Serato
+# Serato 4+
 
-> NOTE: Serato DJ Pro and Serato DJ Lite are both supported.
+> Using older Serato versions? See [Serato 3.x](serato3.md)
 
-Serato is a commercial software package that runs on Mac OS X and
-Windows. **What's Now Playing** has two modes with which it may use
-Serato as an input: Local and Remote.
-
-In Local mode, **What's Now Playing** will read the local session data
-on your computer directly. This mode has much more data available to use
-but requires **What's Now Playing** to run on the DJ computer.
-
-In Remote mode, **What's Now Playing** will read [Serato Live
-Playlists](https://support.serato.com/hc/en-us/articles/228019568-Live-Playlists)
-over the Internet. This mode allows for **What's Now Playing** to run on
-a different computer than the DJ computer, but does not have as much
-data available.
-
-## Instructions
-
-[![Serato Source Selection](images/serato-source-selection.png)](images/serato-source-selection.png)
+## Setup
 
 1. Open Settings from the **What's Now Playing** icon
 2. Select Core Settings->Source from the left-hand column
-3. Select Serato from the list of available input sources
+3. Select "Serato" from the list of available input sources
 4. Select Input Sources->Serato from the left-hand column
-5. From there, you have two tabs.
 
-### Connection Tab
+## Configuration
 
-#### Local Mode
+TODO: put image here
 
-[![Local Mode Settings](images/serato-connection-local.png)](images/serato-connection-local.png)
+### Local Mode (Recommended)
 
-When Local Mode is active, the **What's Now Playing** app runs on the
-same machine as Serato. Configure the Serato Library Path to Serato's
-directory, usually `Music/_Serato_`. This method is the recommended
-installation as much more information is available and significantly
-improves **What's Now Playing**'s correctness.
+Select **Local** if **What's Now Playing** runs on the same computer as Serato:
 
-Ignore Deck(s) allows for tracks on these deck(s) to be ignored.
+* **Database Status**: Shows whether your Serato library was found automatically
+* **Ignore Deck(s)**: Check any decks you want to skip (1, 2, 3, 4)
+* **Mix Mode**:
+  * **Newest**: Show the most recently started track
+  * **Oldest**: Show the longest-playing track
 
-#### Remote Mode
+No other setup is required - the plugin finds your Serato library automatically.
 
-[![Remote Mode Settings](images/serato-connection-remote.png)](images/serato-connection-remote.png)
+### Remote Mode
 
-Remote mode is useful when the streaming computer is not the same as the
-Serato DJ computer by utilizing Serato Live Playlists. It should be only
-used when **What's Now Playing**'s web server mode also cannot be used.
+Select **Remote** if **What's Now Playing** runs on a different computer than Serato:
 
-> NOTE: This mode does not support Oldest mix mode.
+1. **In Serato**: Enable Live Playlists
+   * Go to Setup → Expansion Pack tab
+   * Check "Enable Live Playlists"
+   * Click "Start Live Playlist" in the History panel
 
-1. In Serato, make sure you enable Live Playlists and start a new session.
-   From the [Serato website](https://support.serato.com/hc/en-us/articles/228019568-Live-Playlists):
+2. **In your web browser**: Make the playlist public
+   * Serato opens your Live Playlist webpage
+   * Click "Edit Details"
+   * Change visibility to "Public"
+   * Copy the playlist URL
 
-> "To enable the Live Playlists feature, go to the Expansion Pack tab on
-> the Setup screen and check the Enable Live Playlists option. Once
-> enabled, the Start Live Playlist button is now displayed in the
-> History panel. Click this to start and stop your Live Playlist
-> session."
+3. **In What's Now Playing**:
+   * Paste the URL into the URL field
+   * Set polling interval (30 seconds is recommended)
 
-1. Once a new playlist session is started, Serato will automatically open
-   your web browser to your Live Playlist. **IMPORTANT:** You will need to
-   select "Edit Details" on the Live Playlist webpage and change your
-   playlist to "Public", or else the **What's Now Playing** app will not be
-   able to retrieve any song data. The webpage does not need to remain
-   open. So you can close it once you ensure that the playlist has been
-   made public.
+> **Note:** Remote mode only provides artist and title information.
 
-2. Start the **What's Now Playing** app. The app can be controlled and
-   configured by accessing the menu from the icon in the Windows system
-   tray or Mac menu bar.
+## Troubleshooting
 
-Be aware that as of this writing (2021-03-05), the only information
-available via Live Playlists is the artist and the title due to
-limitations in Serato's offering.  If you have the capability to use Local
-Mode, that provides a much richer set of data.
+### "No Serato 4+ installation found"
 
-### Library and Query
+* Make sure Serato DJ Pro/Lite 4.0+ is installed
+* Run Serato at least once after installation
+* Restart **What's Now Playing**
 
-[![Library and Query Settings](images/serato-libandquery.png)](images/serato-libandquery.png)
+### Tracks not showing up
 
-This tab controls how the !hasartist command functions, either the entire database
-or one or more crates.
+* Make sure tracks are actually playing (not just loaded)
+* Check that your crossfader isn't cutting off the track
+* Verify your DJ controller is working properly in Serato
 
-Additionally, if you have additional locations where Serato crates and smart crates are located.
+### Tracks updating slowly
 
-## Smart Crates
-
-What's Now Playing supports Serato Smart Crates in addition to normal crates, but
-with limitations on which filters work.  The full filter list is not supported in
-order to keep the RAM requirements lower.
-
-### Supported Filters
-
-These smart crate filters work with What's Now Playing:
-
-- Song (title)
-- Artist
-- Album
-- Filename
-- Composer
-- Key
-- BPM
-
-### Unsupported Filters
-
-These common smart crate filters do NOT work:
-
-- Year
-- Genre
-- Plays
-- Added Date
-- Last Played
-- Length/Duration
-- Bitrate
-- Comment
-- Grouping
-- Label
-- Remixer
-
-Smart crates using unsupported filters will skip those rules but still apply any supported rules in the same crate.
-
-### Multiple Libraries
-
-Smart crates work across all your configured library paths, including external drives.
-However you *MUST* configure those paths in the additional library paths, as documented above.
+* Go to Settings → Quirks
+* Enable "Use Polling Observer"
+* Set polling interval to 1.0 seconds

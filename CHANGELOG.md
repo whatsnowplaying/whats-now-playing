@@ -97,9 +97,16 @@
     from there on out will work. Of course, properly tagged files are way better.
 
 * Serato
-  * Support for more than one `_Serato_` library path
-  * Smart crates now have limited support
-  * hasartist support for crates, smart crates, or the full database
+  * New Dual Serato Support
+    * Very basic and experimental support for Serato 4.  Since that is the future of Serato,
+      a few renames in the UI have happened to show Serato vs Serato Legacy or Serato3. The
+      system will copy over settings from Serato 3 to Serato on upgrade if your current
+      input source is Serato.
+    * Future releases will attempt to bring it to parity.
+  * Before the beta drop, some changes to Serato Legacy had already happened:
+    * Support for more than one `_Serato_` library path
+    * Smart crates now have limited support
+    * hasartist support for crates, smart crates, or the full database
 
 * Traktor
   * Revamped database support, including automatic database refresh running in the background
