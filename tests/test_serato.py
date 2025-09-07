@@ -6,13 +6,13 @@ These tests use the conftest.py bootstrap fixture and a custom Serato database f
 """
 
 import pathlib
-import sqlite3
 import tempfile
 import unittest.mock
 
 import pytest
 
 import nowplaying.inputs.serato
+import nowplaying.utils.sqlite
 
 
 @pytest.fixture
@@ -24,148 +24,152 @@ def serato_master_db():
         library_dir.mkdir(parents=True)
 
         db_path = library_dir / "master.sqlite"
-        conn = sqlite3.connect(db_path)
 
-        # Create realistic Serato 4+ schema (simplified but functional)
-        conn.execute("""
-            CREATE TABLE history_session (
-                id INTEGER PRIMARY KEY,
-                start_time INTEGER,
-                end_time INTEGER,
-                file_name TEXT
-            )
-        """)
+        def _create_database():
+            with nowplaying.utils.sqlite.sqlite_connection(db_path) as conn:
+                # Create realistic Serato 4+ schema (simplified but functional)
+                conn.execute("""
+                CREATE TABLE history_session (
+                    id INTEGER PRIMARY KEY,
+                    start_time INTEGER,
+                    end_time INTEGER,
+                    file_name TEXT
+                )
+            """)
 
-        conn.execute("""
-            CREATE TABLE history_entry (
-                id INTEGER PRIMARY KEY,
-                session_id INTEGER,
-                file_name TEXT,
-                artist TEXT,
-                name TEXT,
-                album TEXT,
-                genre TEXT,
-                bpm REAL,
-                key TEXT,
-                year TEXT,
-                length_sec INTEGER,
-                start_time INTEGER,
-                played INTEGER,
-                deck TEXT,
-                file_size INTEGER,
-                file_sample_rate REAL,
-                file_bit_rate REAL,
-                FOREIGN KEY (session_id) REFERENCES history_session(id)
-            )
-        """)
+                conn.execute("""
+                    CREATE TABLE history_entry (
+                        id INTEGER PRIMARY KEY,
+                        session_id INTEGER,
+                        file_name TEXT,
+                        artist TEXT,
+                        name TEXT,
+                        album TEXT,
+                        genre TEXT,
+                        bpm REAL,
+                        key TEXT,
+                        year TEXT,
+                        length_sec INTEGER,
+                        start_time INTEGER,
+                        played INTEGER,
+                        deck TEXT,
+                        file_size INTEGER,
+                        file_sample_rate REAL,
+                        file_bit_rate REAL,
+                        FOREIGN KEY (session_id) REFERENCES history_session(id)
+                    )
+                """)
 
-        # Insert test session (end_time = -1 means active session)
-        current_time = 1693125000
-        conn.execute(
-            """
-            INSERT INTO history_session (id, start_time, end_time, file_name)
-            VALUES (1, ?, -1, 'session.txt')
-        """,
-            (current_time - 1800,),
-        )  # Session started 30 min ago
+                # Insert test session (end_time = -1 means active session)
+                current_time = 1693125000
+                conn.execute(
+                    """
+                    INSERT INTO history_session (id, start_time, end_time, file_name)
+                    VALUES (1, ?, -1, 'session.txt')
+                """,
+                    (current_time - 1800,),
+                )  # Session started 30 min ago
 
-        # Insert test tracks with different timestamps and decks
-        test_tracks = [
-            # Deck 1 - older track (20 min ago) - will be superseded by newer track
-            (
-                1,
-                1,
-                "/music/track1.mp3",
-                "Artist One",
-                "Track One",
-                "Album One",
-                "House",
-                120.0,
-                "Gm",
-                "2020",
-                180,
-                current_time - 1200,
-                1,
-                "1",
-                5000000,
-                44100.0,
-                320.0,
-            ),
-            # Deck 1 - latest track on deck 1 (5 min ago) - this is what query returns for deck 1
-            (
-                2,
-                1,
-                "/music/track2.mp3",
-                "Artist Two",
-                "Track Two",
-                "Album Two",
-                "Techno",
-                132.0,
-                "Cm",
-                "2022",
-                220,
-                current_time - 300,
-                1,
-                "1",
-                7000000,
-                44100.0,
-                320.0,
-            ),
-            # Deck 2 - newest track overall (2 min ago) - latest on deck 2
-            (
-                3,
-                1,
-                "/music/track3.mp3",
-                "Artist Three",
-                "Track Three",
-                "Album Three",
-                "Electronic",
-                125.0,
-                "Dm",
-                "2023",
-                240,
-                current_time - 120,
-                1,
-                "2",
-                8000000,
-                44100.0,
-                320.0,
-            ),
-            # Deck 3 - oldest among current deck leaders (10 min ago) - latest on deck 3
-            (
-                4,
-                1,
-                "/music/track4.mp3",
-                "Artist Four",
-                "Track Four",
-                "Album Four",
-                "Ambient",
-                100.0,
-                "Em",
-                "2019",
-                300,
-                current_time - 600,
-                1,
-                "3",
-                9000000,
-                44100.0,
-                320.0,
-            ),
-        ]
+                # Insert test tracks with different timestamps and decks
+                test_tracks = [
+                    # Deck 1 - older track (20 min ago) - will be superseded by newer track
+                    (
+                        1,
+                        1,
+                        "/music/track1.mp3",
+                        "Artist One",
+                        "Track One",
+                        "Album One",
+                        "House",
+                        120.0,
+                        "Gm",
+                        "2020",
+                        180,
+                        current_time - 1200,
+                        1,
+                        "1",
+                        5000000,
+                        44100.0,
+                        320.0,
+                    ),
+                    # Deck 1 - latest track on deck 1 (5 min ago) - this is what query returns for deck 1
+                    (
+                        2,
+                        1,
+                        "/music/track2.mp3",
+                        "Artist Two",
+                        "Track Two",
+                        "Album Two",
+                        "Techno",
+                        132.0,
+                        "Cm",
+                        "2022",
+                        220,
+                        current_time - 300,
+                        1,
+                        "1",
+                        7000000,
+                        44100.0,
+                        320.0,
+                    ),
+                    # Deck 2 - newest track overall (2 min ago) - latest on deck 2
+                    (
+                        3,
+                        1,
+                        "/music/track3.mp3",
+                        "Artist Three",
+                        "Track Three",
+                        "Album Three",
+                        "Electronic",
+                        125.0,
+                        "Dm",
+                        "2023",
+                        240,
+                        current_time - 120,
+                        1,
+                        "2",
+                        8000000,
+                        44100.0,
+                        320.0,
+                    ),
+                    # Deck 3 - oldest among current deck leaders (10 min ago) - latest on deck 3
+                    (
+                        4,
+                        1,
+                        "/music/track4.mp3",
+                        "Artist Four",
+                        "Track Four",
+                        "Album Four",
+                        "Ambient",
+                        100.0,
+                        "Em",
+                        "2019",
+                        300,
+                        current_time - 600,
+                        1,
+                        "3",
+                        9000000,
+                        44100.0,
+                        320.0,
+                    ),
+                ]
 
-        for track in test_tracks:
-            conn.execute(
-                """
-                INSERT INTO history_entry 
-                (id, session_id, file_name, artist, name, album, genre, bpm, key, year, 
-                 length_sec, start_time, played, deck, file_size, file_sample_rate, file_bit_rate)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-                track,
-            )
+                for track in test_tracks:
+                    conn.execute(
+                        """
+                        INSERT INTO history_entry
+                        (id, session_id, file_name, artist, name, album, genre, bpm, key, year,
+                         length_sec, start_time, played, deck, file_size, file_sample_rate, file_bit_rate)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                        track,
+                    )
 
-        conn.commit()
-        conn.close()
+                    conn.commit()
+                    # Context manager handles conn.close() automatically
+
+        # Use retry wrapper for Windows file locking compatibility
+        nowplaying.utils.sqlite.retry_sqlite_operation(_create_database)
 
         yield {
             "library_path": library_dir,
