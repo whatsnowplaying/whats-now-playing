@@ -28,7 +28,7 @@ jobs:
       - name: update tags
         run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: setup python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: run builder
@@ -59,7 +59,7 @@ jobs:
       - name: update tags
         run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
       - name: setup python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: run builder
