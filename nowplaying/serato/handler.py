@@ -42,10 +42,10 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
         self.current_track: dict[str, t.Any] | None = None
         self._last_db_change_time: float = 0
         self._db_change_debounce_delay: float = 0.5  # 500ms debounce
+        self._db_needs_refresh: bool = True  # Flag set by watchdog, checked by async methods
 
     async def start(self):
         """perform any startup tasks"""
-        # if self.seratodir and self.mode == "local":
         await self._setup_watcher()
 
     async def _setup_watcher(self):
@@ -72,8 +72,8 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
         )
         self.observer.start()
 
-        # process what is already there
-        await self._async_process_sessions()
+        # process what is already there - just check for initial track
+        await self._async_check_track_change()
 
     async def stop(self):
         """Stop the handler and clean up resources"""
@@ -95,35 +95,14 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
     def process_sessions(self, event):
         """handle incoming session file updates"""
         logging.debug("processing %s", event)
-        try:
-            loop = asyncio.get_running_loop()
-            logging.debug("got a running loop")
-            task = loop.create_task(self._async_process_sessions())
-            self.tasks.add(task)
-            task.add_done_callback(self.tasks.discard)
-
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            logging.debug("created a loop")
-            loop.run_until_complete(self._async_process_sessions())
-
-    async def _async_process_sessions(self):
-        """Handle database file changes with debouncing to avoid rapid-fire events"""
-
-        try:
-            loop = asyncio.get_running_loop()
-            logging.debug("Got running event loop, creating task")
-            task = loop.create_task(self._async_check_track_change())
-            self.tasks.add(task)
-            task.add_done_callback(self.tasks.discard)
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            logging.debug("Created new event loop")
-            loop.run_until_complete(self._async_check_track_change())
-            loop.close()
+        # Simple synchronous processing - just set a flag that async methods can check
+        self._db_needs_refresh = True
 
     async def _async_check_track_change(self) -> None:
-        """Async method to check for track changes - called from file watcher"""
+        """Async method to check for track changes - only when database changed"""
+        # Only check if database was modified (flag set by watchdog)
+        if not self._db_needs_refresh:
+            return
         try:
             # Get all deck data and find the most recent overall track for change detection
             deck_tracks = await self.sqlite_reader.get_latest_tracks_per_deck()
@@ -144,8 +123,12 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
                     new_track_data.get("title", "Unknown") if new_track_data else None,
                 )
 
+            # Clear the refresh flag after processing
+            self._db_needs_refresh = False
+
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logging.error("Error checking track change: %s", exc)
+            # Don't clear the flag on error - we'll try again next time
 
     async def _check_track_change(self) -> None:
         """Check if the current track has changed (compatibility method)"""
@@ -171,6 +154,8 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
         self, mixmode: str = "newest", deckskip: list[str] | None = None
     ) -> dict[str, t.Any] | None:
         """Get the current track based on mixmode and deck skip settings"""
+        # Check for database changes first
+        await self._async_check_track_change()
         # Get the latest track from each deck (excluding skipped decks)
         deck_tracks = await self.sqlite_reader.get_latest_tracks_per_deck(deckskip=deckskip)
 
