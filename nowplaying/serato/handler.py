@@ -82,9 +82,14 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
             self.observer.join()
             self.observer = None
 
-        # Cancel any pending tasks
-        for task in self.tasks.copy():
-            task.cancel()
+        # Cancel any pending tasks and wait for them to finish
+        if self.tasks:
+            for task in self.tasks.copy():
+                task.cancel()
+
+            # Wait for all cancelled tasks to complete cleanup
+            await asyncio.gather(*self.tasks, return_exceptions=True)
+
         self.tasks.clear()
 
     def process_sessions(self, event):

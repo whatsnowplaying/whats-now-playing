@@ -92,7 +92,7 @@ def serato_master_db():
                         44100.0,
                         320.0,
                     ),
-                    # Deck 1 - latest track on deck 1 (5 min ago) - this is what query returns for deck 1
+                    # Deck 1 - latest track on deck 1 (5 min ago)
                     (
                         2,
                         1,
@@ -159,7 +159,8 @@ def serato_master_db():
                         """
                         INSERT INTO history_entry
                         (id, session_id, file_name, artist, name, album, genre, bpm, key, year,
-                         length_sec, start_time, played, deck, file_size, file_sample_rate, file_bit_rate)
+                         length_sec, start_time, played, deck, file_size,
+                         file_sample_rate, file_bit_rate)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                         track,
