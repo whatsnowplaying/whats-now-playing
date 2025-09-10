@@ -1,358 +1,345 @@
 #!/usr/bin/env python3
-"""test serato"""
-# pylint: disable=protected-access
+"""
+Test suite for Serato 4+ SQLite input plugin.
 
-import logging
-import os
+These tests use the conftest.py bootstrap fixture and a custom Serato database fixture.
+"""
+
 import pathlib
-from datetime import datetime
+import tempfile
+import unittest.mock
 
-import lxml.html
 import pytest
-import pytest_asyncio  # pylint: disable=import-error
 
-import nowplaying.inputs.serato  # pylint: disable=import-error
-
-MONEYSTRING = "Money Thats What I Want"  # codespell:ignore
+import nowplaying.inputs.serato
+import nowplaying.utils.sqlite
 
 
 @pytest.fixture
-def serato_bootstrap(bootstrap):
-    """bootstrap test"""
-    config = bootstrap
-    config.cparser.setValue("serato/interval", 0.0)
-    config.cparser.setValue("serato/deckskip", None)
-    config.cparser.sync()
-    yield config
+def serato_master_db():
+    """Create a temporary Serato 4+ master.sqlite database with test data"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        serato_dir = pathlib.Path(temp_dir) / "Serato"
+        library_dir = serato_dir / "Library"
+        library_dir.mkdir(parents=True)
+
+        db_path = library_dir / "master.sqlite"
+
+        def _create_database():
+            with nowplaying.utils.sqlite.sqlite_connection(db_path) as conn:
+                # Create realistic Serato 4+ schema (simplified but functional)
+                conn.execute("""
+                CREATE TABLE history_session (
+                    id INTEGER PRIMARY KEY,
+                    start_time INTEGER,
+                    end_time INTEGER,
+                    file_name TEXT
+                )
+            """)
+
+                conn.execute("""
+                    CREATE TABLE history_entry (
+                        id INTEGER PRIMARY KEY,
+                        session_id INTEGER,
+                        file_name TEXT,
+                        artist TEXT,
+                        name TEXT,
+                        album TEXT,
+                        genre TEXT,
+                        bpm REAL,
+                        key TEXT,
+                        year TEXT,
+                        length_sec INTEGER,
+                        start_time INTEGER,
+                        played INTEGER,
+                        deck TEXT,
+                        file_size INTEGER,
+                        file_sample_rate REAL,
+                        file_bit_rate REAL,
+                        FOREIGN KEY (session_id) REFERENCES history_session(id)
+                    )
+                """)
+
+                # Insert test session (end_time = -1 means active session)
+                current_time = 1693125000
+                conn.execute(
+                    """
+                    INSERT INTO history_session (id, start_time, end_time, file_name)
+                    VALUES (1, ?, -1, 'session.txt')
+                """,
+                    (current_time - 1800,),
+                )  # Session started 30 min ago
+
+                # Insert test tracks with different timestamps and decks
+                test_tracks = [
+                    # Deck 1 - older track (20 min ago) - will be superseded by newer track
+                    (
+                        1,
+                        1,
+                        "/music/track1.mp3",
+                        "Artist One",
+                        "Track One",
+                        "Album One",
+                        "House",
+                        120.0,
+                        "Gm",
+                        "2020",
+                        180,
+                        current_time - 1200,
+                        1,
+                        "1",
+                        5000000,
+                        44100.0,
+                        320.0,
+                    ),
+                    # Deck 1 - latest track on deck 1 (5 min ago)
+                    (
+                        2,
+                        1,
+                        "/music/track2.mp3",
+                        "Artist Two",
+                        "Track Two",
+                        "Album Two",
+                        "Techno",
+                        132.0,
+                        "Cm",
+                        "2022",
+                        220,
+                        current_time - 300,
+                        1,
+                        "1",
+                        7000000,
+                        44100.0,
+                        320.0,
+                    ),
+                    # Deck 2 - newest track overall (2 min ago) - latest on deck 2
+                    (
+                        3,
+                        1,
+                        "/music/track3.mp3",
+                        "Artist Three",
+                        "Track Three",
+                        "Album Three",
+                        "Electronic",
+                        125.0,
+                        "Dm",
+                        "2023",
+                        240,
+                        current_time - 120,
+                        1,
+                        "2",
+                        8000000,
+                        44100.0,
+                        320.0,
+                    ),
+                    # Deck 3 - oldest among current deck leaders (10 min ago) - latest on deck 3
+                    (
+                        4,
+                        1,
+                        "/music/track4.mp3",
+                        "Artist Four",
+                        "Track Four",
+                        "Album Four",
+                        "Ambient",
+                        100.0,
+                        "Em",
+                        "2019",
+                        300,
+                        current_time - 600,
+                        1,
+                        "3",
+                        9000000,
+                        44100.0,
+                        320.0,
+                    ),
+                ]
+
+                for track in test_tracks:
+                    conn.execute(
+                        """
+                        INSERT INTO history_entry
+                        (id, session_id, file_name, artist, name, album, genre, bpm, key, year,
+                         length_sec, start_time, played, deck, file_size,
+                         file_sample_rate, file_bit_rate)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                        track,
+                    )
+
+                    conn.commit()
+                    # Context manager handles conn.close() automatically
+
+        # Use retry wrapper for Windows file locking compatibility
+        nowplaying.utils.sqlite.retry_sqlite_operation(_create_database)
+
+        yield {
+            "library_path": library_dir,
+            "db_path": db_path,
+            "expected_newest": "Artist Three",  # Deck 2, newest among deck leaders
+            "expected_oldest": "Artist Four",  # Deck 3, oldest among deck leaders
+            "expected_newest_skip_deck2": "Artist Two",  # Skip deck 2, newest remaining (deck 1)
+            "expected_only_deck3": "Artist Four",  # Only deck 3 remains
+        }
 
 
-def touchdir(directory):
-    """serato requires current session files to process"""
-    files = {
-        "1": "2021-02-06 15:14:57",
-        "12": "2021-02-06 19:13:23",
-        "66": "2021-02-07 00:27:26",
-        "74": "2021-02-07 12:59:41",
-        "80": "2021-02-07 23:21:04",
-        "84": "2021-02-08 00:15:07",
-    }
-    for key, value in files.items():
-        filepath = pathlib.Path(directory).joinpath(f"{key}.session")
-        if not filepath.exists():
-            continue
-        utc_dt = datetime.fromisoformat(value)
-        epochtime = (utc_dt - datetime(1970, 1, 1)).total_seconds()
-        logging.debug("changing %s to %s", filepath, epochtime)
-        os.utime(filepath, times=(epochtime, epochtime))
+def test_plugin_instantiation(bootstrap):
+    """Test basic plugin instantiation"""
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
 
-
-@pytest_asyncio.fixture
-async def getseratoplugin(serato_bootstrap, getroot, request):  # pylint: disable=redefined-outer-name
-    """automated integration test"""
-    config = serato_bootstrap
-    mark = request.node.get_closest_marker("seratosettings")
-    if "mode" in mark.kwargs and "remote" in mark.kwargs["mode"]:
-        config.cparser.setValue("serato/local", False)
-        config.cparser.setValue("serato/url", mark.kwargs["url"])
-    else:
-        datadir = mark.kwargs["datadir"]
-        config.cparser.setValue("serato/local", True)
-        config.cparser.setValue("serato/libpath", os.path.join(getroot, "tests", datadir))
-        if "mixmode" in mark.kwargs:
-            config.cparser.setValue("serato/mixmode", mark.kwargs["mixmode"])
-        touchdir(os.path.join(getroot, "tests", datadir, "History", "Sessions"))
-    config.cparser.sync()
-    plugin = nowplaying.inputs.serato.Plugin(config=config)
-    await plugin.start(testmode=True)
-    yield plugin
-    await plugin.stop()
-
-
-def results(expected, metadata):
-    """take a metadata result and compare to expected"""
-    for expkey in expected:
-        assert expkey in metadata
-        assert expected[expkey] == metadata[expkey]
-        del metadata[expkey]
-    assert metadata == {}
-
-
-@pytest.mark.seratosettings(mode="remote", url="https://localhost")
-@pytest.mark.asyncio
-async def test_serato_remote2(getseratoplugin, getroot, httpserver):  # pylint: disable=redefined-outer-name
-    """test serato remote"""
-    plugin = getseratoplugin
-    with open(
-        os.path.join(getroot, "tests", "seratolive", "2025_05_27_dj_marcus_mcbride.html"),
-        encoding="utf8",
-    ) as inputfh:
-        content = inputfh.readlines()
-    httpserver.expect_request("/index.html").respond_with_data("".join(content))
-    plugin.config.cparser.setValue("serato/url", httpserver.url_for("/index.html"))
-    plugin.config.cparser.sync()
-    metadata = await plugin.getplayingtrack()
-
-    assert metadata["artist"] == "Barrett Strong"
-    assert metadata["title"] == f"{MONEYSTRING} (CLEAN) (MM Edit)"
-    assert "filename" not in metadata
-
-
-@pytest.mark.asyncio
-@pytest.mark.seratosettings(datadir="serato-2.4-mac", mixmode="oldest")
-async def test_serato24_mac_oldest(getseratoplugin):  # pylint: disable=redefined-outer-name
-    """automated integration test"""
-    plugin = getseratoplugin
-    metadata = await plugin.getplayingtrack()
-    expected = {
-        "album": "Mental Jewelry",
-        "artist": "LĪVE",
-        "bpm": 109,
-        "date": "1991",
-        "deck": 2,
-        "filename": "/Users/aw/Music/songs/LĪVE/Mental Jewelry/08 Take My Anthem.mp3",
-        "genre": "Rock",
-        "key": "G#m",
-        "label": "Radioactive Records",
-        "title": "Take My Anthem",
-    }
-    results(expected, metadata)
-
-
-@pytest.mark.asyncio
-@pytest.mark.seratosettings(datadir="serato-2.4-mac", mixmode="newest")
-async def test_serato24_mac_newest(getseratoplugin):  # pylint: disable=redefined-outer-name
-    """automated integration test"""
-    plugin = getseratoplugin
-    metadata = await plugin.getplayingtrack()
-    expected = {
-        "album": "Secret Samadhi",
-        "artist": "LĪVE",
-        "bpm": 91,
-        "date": "1997",
-        "deck": 1,
-        "filename": "/Users/aw/Music/songs/LĪVE/Secret Samadhi/02 Lakini's Juice.mp3",
-        "genre": "Rock",
-        "key": "C#m",
-        "label": "Radioactive Records",
-        "title": "Lakini's Juice",
-    }
-    results(expected, metadata)
-
-
-@pytest.mark.asyncio
-@pytest.mark.seratosettings(datadir="serato-2.5-win", mixmode="oldest")
-async def test_serato25_win_oldest(getseratoplugin):  # pylint: disable=redefined-outer-name
-    """automated integration test"""
-    plugin = getseratoplugin
-    metadata = await plugin.getplayingtrack()
-    expected = {
-        "album": "Directionless EP",
-        "artist": "Broke For Free",
-        "comments": "URL: http://freemusicarchive.org/music/Broke_For_Free/"
-        "Directionless_EP/Broke_For_Free_-_Directionless_EP_-_01_Night_Owl\r\n"
-        "Comments: http://freemusicarchive.org/\r\nCurator: WFMU\r\n"
-        "Copyright: Creative Commons Attribution: http://creativecommons.org/licenses/by/3.0/",
-        "date": "2011-01-18T11:15:40",
-        "deck": 2,
-        "filename": "C:\\Users\\aw\\Music\\Broke For Free - Night Owl.mp3",
-        "genre": "Electronic",
-        "title": "Night Owl",
-    }
-    results(expected, metadata)
-
-
-@pytest.mark.asyncio
-@pytest.mark.seratosettings(datadir="serato-2.5-win", mixmode="newest")
-async def test_serato25_win_newest(getseratoplugin):  # pylint: disable=redefined-outer-name
-    """automated integration test"""
-    plugin = getseratoplugin
-    metadata = await plugin.getplayingtrack()
-    expected = {
-        "album": "Ampex",
-        "artist": "Bio Unit",
-        "date": "2020",
-        "deck": 1,
-        "filename": "C:\\Users\\aw\\Music\\Bio Unit - Heaven.mp3",
-        "genre": "Electronica",
-        "title": "Heaven",
-    }
-    results(expected, metadata)
-
-
-@pytest.mark.asyncio
-@pytest.mark.seratosettings(datadir="seratotidal-win", mixmode="newest")
-async def test_seratotidal_win_newest(getseratoplugin):  # pylint: disable=redefined-outer-name
-    """automated integration test"""
-    plugin = getseratoplugin
-    metadata = await plugin.getplayingtrack()
-    assert metadata["coverimageraw"] is not None
-    del metadata["coverimageraw"]
-    expected = {
-        "album": "City of Gold",
-        "artist": "Doomroar",
-        "date": "2018",
-        "deck": 2,
-        "filename": "_85474382.tdl",
-        "title": "Laser Evolution",
-    }
-    results(expected, metadata)
-
-
-@pytest.mark.asyncio
-@pytest.mark.seratosettings(datadir="serato-2.5-win")
-async def test_serato_nomixmode(getseratoplugin):  # pylint: disable=redefined-outer-name
-    """test default mixmode"""
-    plugin = getseratoplugin
+    assert plugin.pluginname == "serato"
+    assert plugin.description == "Serato DJ input"
+    assert plugin.validmixmodes() == ["newest", "oldest"]
     assert plugin.getmixmode() == "newest"
 
 
 @pytest.mark.asyncio
-@pytest.mark.seratosettings(datadir="serato-2.5-win")
-async def test_serato_localmixmodes(getseratoplugin):  # pylint: disable=redefined-outer-name
-    """test local mixmodes"""
-    plugin = getseratoplugin
-    validmodes = plugin.validmixmodes()
-    assert "newest" in validmodes
-    assert "oldest" in validmodes
-    mode = plugin.setmixmode("oldest")
-    assert mode == "oldest"
-    mode = plugin.setmixmode("fred")
-    assert mode == "oldest"
-    mode = plugin.setmixmode("newest")
-    mode = plugin.getmixmode()
-    assert mode == "newest"
+async def test_auto_detection_mocked(bootstrap, serato_master_db):  # pylint: disable=redefined-outer-name
+    """Test plugin with mocked auto-detection"""
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
+
+    # Mock the auto-detection method to return our test database
+    with unittest.mock.patch.object(
+        plugin, "_find_serato_library", return_value=serato_master_db["library_path"]
+    ):
+        plugin.configure()
+        assert plugin.serato_lib_path == serato_master_db["library_path"]
 
 
 @pytest.mark.asyncio
-@pytest.mark.seratosettings(mode="remote", url="https://localhost.example.com")
-async def test_serato_remote1(getseratoplugin):  # pylint: disable=redefined-outer-name
-    """test local mixmodes"""
-    plugin = getseratoplugin
-    validmodes = plugin.validmixmodes()
-    assert "newest" in validmodes
-    assert "oldest" not in validmodes
-    mode = plugin.setmixmode("oldest")
-    assert mode == "newest"
-    mode = plugin.setmixmode("fred")
-    assert mode == "newest"
-    mode = plugin.getmixmode()
-    assert mode == "newest"
+async def test_no_detection_returns_none(bootstrap):
+    """Test plugin when auto-detection finds nothing"""
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
+
+    # Mock the auto-detection to return None
+    with unittest.mock.patch.object(plugin, "_find_serato_library", return_value=None):
+        plugin.configure()
+        assert plugin.serato_lib_path is None
 
 
-# Unit tests for remote extraction methods
-def test_remote_extract_by_js_id(getroot):  # pylint: disable=redefined-outer-name,protected-access
-    """Test JavaScript track ID extraction method"""
-    with open(
-        os.path.join(getroot, "tests", "seratolive", "2025_05_27_dj_marcus_mcbride.html"),
-        encoding="utf8",
-    ) as inputfh:
-        page_text = inputfh.read()
+@pytest.mark.asyncio
+async def test_newest_mixmode(bootstrap, serato_master_db):  # pylint: disable=redefined-outer-name
+    """Test newest mixmode returns most recent track across all decks"""
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
 
-    tree = lxml.html.fromstring(page_text)
+    # Mock auto-detection and configure
+    with unittest.mock.patch.object(
+        plugin, "_find_serato_library", return_value=serato_master_db["library_path"]
+    ):
+        plugin.configure()
 
-    handler = nowplaying.inputs.serato.SeratoHandler()
-    result = handler._remote_extract_by_js_id(page_text, tree)
-    assert result is not None
-    assert "Barrett Strong" in result
-    assert MONEYSTRING in result
+        # Set mixmode to newest
+        plugin.setmixmode("newest")
 
+        # Start the plugin
+        await plugin.start()
 
-def test_remote_extract_by_position(getroot):  # pylint: disable=redefined-outer-name,protected-access
-    """Test positional XPath extraction method"""
-    with open(
-        os.path.join(getroot, "tests", "seratolive", "2025_05_27_dj_marcus_mcbride.html"),
-        encoding="utf8",
-    ) as inputfh:
-        page_text = inputfh.read()
+        try:
+            # Get current track
+            track = await plugin.getplayingtrack()
 
-    tree = lxml.html.fromstring(page_text)
+            assert track is not None
+            assert track["artist"] == serato_master_db["expected_newest"]
+            assert track["deck"] == "2"
 
-    result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_position(tree)
-    assert result is not None
-    assert "Barrett Strong" in result
-    assert MONEYSTRING in result
+        finally:
+            await plugin.stop()
 
 
-def test_remote_extract_by_pattern(getroot):  # pylint: disable=redefined-outer-name,protected-access
-    """Test pattern matching extraction method"""
-    with open(
-        os.path.join(getroot, "tests", "seratolive", "2025_05_27_dj_marcus_mcbride.html"),
-        encoding="utf8",
-    ) as inputfh:
-        page_text = inputfh.read()
+@pytest.mark.asyncio
+async def test_oldest_mixmode(bootstrap, serato_master_db):  # pylint: disable=redefined-outer-name
+    """Test oldest mixmode returns oldest track across all decks"""
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
 
-    tree = lxml.html.fromstring(page_text)
+    with unittest.mock.patch.object(
+        plugin, "_find_serato_library", return_value=serato_master_db["library_path"]
+    ):
+        plugin.configure()
+        plugin.setmixmode("oldest")
 
-    result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_pattern(tree)
-    assert result is not None
-    assert "Barrett Strong" in result
-    assert MONEYSTRING in result
+        await plugin.start()
 
+        try:
+            track = await plugin.getplayingtrack()
 
-def test_remote_extract_by_text_search(getroot):  # pylint: disable=redefined-outer-name,protected-access
-    """Test text search extraction method"""
-    with open(
-        os.path.join(getroot, "tests", "seratolive", "2025_05_27_dj_marcus_mcbride.html"),
-        encoding="utf8",
-    ) as inputfh:
-        page_text = inputfh.read()
+            assert track is not None
+            assert track["artist"] == serato_master_db["expected_oldest"]
+            assert track["deck"] == "3"
 
-    tree = lxml.html.fromstring(page_text)
-
-    result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_text_search(tree)
-    assert result is not None
-    assert "Barrett Strong" in result
-    assert MONEYSTRING in result
+        finally:
+            await plugin.stop()
 
 
-def test_remote_extract_fallback_order(getroot):  # pylint: disable=redefined-outer-name,protected-access
-    """Test that extraction methods work in fallback order"""
-    with open(
-        os.path.join(getroot, "tests", "seratolive", "2025_05_27_dj_marcus_mcbride.html"),
-        encoding="utf8",
-    ) as inputfh:
-        page_text = inputfh.read()
+@pytest.mark.asyncio
+async def test_deckskip_functionality(bootstrap, serato_master_db):  # pylint: disable=redefined-outer-name
+    """Test deckskip excludes specified decks"""
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
 
-    tree = lxml.html.fromstring(page_text)
+    with unittest.mock.patch.object(
+        plugin, "_find_serato_library", return_value=serato_master_db["library_path"]
+    ):
+        plugin.configure()
+        plugin.setmixmode("newest")
 
-    # All methods should work with this test data
-    handler = nowplaying.inputs.serato.SeratoHandler()
-    js_result = handler._remote_extract_by_js_id(page_text, tree)
-    pos_result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_position(tree)
-    pattern_result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_pattern(tree)
-    text_result = nowplaying.inputs.serato.SeratoHandler._remote_extract_by_text_search(tree)
+        # Skip deck 2 (which has the newest track)
+        bootstrap.cparser.setValue("serato4/deckskip", ["2"])
 
-    # All should find the same track
-    assert js_result is not None
-    assert pos_result is not None
-    assert pattern_result is not None
-    assert text_result is not None
+        await plugin.start()
 
-    # They should all contain the expected content
-    for result in [js_result, pos_result, pattern_result, text_result]:
-        assert "Barrett Strong" in result
-        assert MONEYSTRING in result
+        try:
+            track = await plugin.getplayingtrack()
+
+            assert track is not None
+            assert track["artist"] == serato_master_db["expected_newest_skip_deck2"]
+            assert track["deck"] != "2"  # Should not be from skipped deck
+
+        finally:
+            await plugin.stop()
 
 
-def test_remote_extract_edge_cases():  # pylint: disable=protected-access
-    """Test edge cases for remote extraction methods"""
-    # Test with empty/malformed data
-    empty_tree = lxml.html.fromstring("<html></html>")
+@pytest.mark.asyncio
+async def test_getplayingtrack_without_handler(bootstrap):
+    """Test getplayingtrack returns None when handler not started"""
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
 
-    # All methods should return None for empty content
-    handler = nowplaying.inputs.serato.SeratoHandler()
-    assert handler._remote_extract_by_js_id("no js data", empty_tree) is None
-    assert nowplaying.inputs.serato.SeratoHandler._remote_extract_by_position(empty_tree) is None
-    assert nowplaying.inputs.serato.SeratoHandler._remote_extract_by_pattern(empty_tree) is None
-    assert (
-        nowplaying.inputs.serato.SeratoHandler._remote_extract_by_text_search(empty_tree) is None
-    )
+    # Don't start the plugin
+    track = await plugin.getplayingtrack()
+    assert track is None
 
-    # Test with content that has tracks but malformed
-    malformed_html = """<html><div class="playlist-track">
-        <div class="playlist-trackname">Short</div>
-    </div></html>"""
-    malformed_tree = lxml.html.fromstring(malformed_html)
 
-    # Pattern matching should fail on short content
-    assert handler._remote_extract_by_pattern(malformed_tree) is None
+@pytest.mark.asyncio
+async def test_track_metadata_mapping(bootstrap, serato_master_db):  # pylint: disable=redefined-outer-name
+    """Test that track metadata is correctly mapped to nowplaying format"""
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
+
+    with unittest.mock.patch.object(
+        plugin, "_find_serato_library", return_value=serato_master_db["library_path"]
+    ):
+        plugin.configure()
+        await plugin.start()
+
+        try:
+            track = await plugin.getplayingtrack()
+
+            assert track is not None
+
+            # Verify all expected fields are present and correctly typed
+            assert "artist" in track
+            assert "title" in track
+            assert "album" in track
+            assert "genre" in track
+            assert "year" in track
+            assert "bpm" in track
+            assert "key" in track
+            assert "duration" in track
+            assert "bitrate" in track
+            assert "filename" in track
+            assert "deck" in track
+
+            # Verify string conversions for numeric fields
+            assert isinstance(track["bpm"], str)
+            assert isinstance(track["year"], str)
+            assert isinstance(track["bitrate"], str)
+            assert isinstance(track["duration"], int)  # Duration should be int (seconds)
+
+        finally:
+            await plugin.stop()

@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>serato_library_ui</class>
+ <widget class="QWidget" name="serato_library_ui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Library and Query</string>
+  </property>
+  <widget class="QGroupBox" name="artist_query_groupbox">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>621</width>
+     <height>90</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Artist Query Configuration</string>
+   </property>
+   <widget class="QLabel" name="artist_query_label">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>25</y>
+      <width>150</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>Artist Query Scope</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="serato_artist_scope_combo">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>170</x>
+      <y>25</y>
+      <width>130</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <item>
+     <property name="text">
+      <string>Entire Library</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>Selected Playlists</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QLineEdit" name="serato_playlists_lineedit">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>310</x>
+      <y>25</y>
+      <width>300</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="placeholderText">
+     <string>Comma-separated crate names (e.g., House, Techno)</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="query_help_label">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>55</y>
+      <width>600</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Configure how artist queries from Twitch chat (!hasartist command) search your music library. Choose "Entire Library" to search all tracks, or "Selected Playlists" to limit searches to specific crates.</string>
+    </property>
+    <property name="wordWrap">
+     <bool>true</bool>
+    </property>
+    <property name="styleSheet">
+     <string>color: #666;</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="additional_libs_groupbox">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>110</y>
+     <width>621</width>
+     <height>120</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Additional Library Paths</string>
+   </property>
+   <widget class="QTextEdit" name="additional_libs_textedit">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>25</y>
+      <width>501</width>
+      <height>60</height>
+     </rect>
+    </property>
+    <property name="toolTip">
+     <string>Additional Serato library paths (one per line). Used for external drives and multiple music collections.</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="add_additional_lib_button">
+    <property name="geometry">
+     <rect>
+      <x>520</x>
+      <y>25</y>
+      <width>90</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Add Path...</string>
+    </property>
+    <property name="toolTip">
+     <string>Browse for additional Serato library directory</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="additional_libs_help_label">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>90</y>
+      <width>600</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Enter additional _Serato_ folder paths (one per line) for external drives or multiple libraries.</string>
+    </property>
+    <property name="styleSheet">
+     <string>color: #666;</string>
+    </property>
+   </widget>
+  </widget>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>artist_query_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>85</x>
+     <y>35</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>serato_artist_scope_combo</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>235</x>
+     <y>35</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>serato_playlists_lineedit</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>465</x>
+     <y>35</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>query_help_label</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>310</x>
+     <y>70</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

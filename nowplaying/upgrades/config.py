@@ -148,6 +148,9 @@ class UpgradeConfig:
         if oldversion < Version("5.0.0-preview3"):
             self._upgrade_to_5_0_0_preview3(config)
 
+        if oldversion < Version("5.0.0-preview5"):
+            self._upgrade_to_5_0_0_preview5(config)
+
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
         config.setValue("settings/configversion", thisverstr)
@@ -250,6 +253,48 @@ class UpgradeConfig:
         """Upgrade from 5.0.0-preview3 - Force enable charts"""
         logging.info("Upgrade from 5.0.0-preview3: force enable charts plugin")
         config.setValue("charts/enabled", True)
+
+    @staticmethod
+    def _upgrade_to_5_0_0_preview5(config: QSettings) -> None:
+        """Upgrade to 5.0.0-preview5 - Migrate Serato config for new serato4 plugin"""
+        logging.info("Upgrade to 5.0.0-preview5: migrating serato/* config to serato4/*")
+
+        # Keys that should be copied to serato4 for new plugin
+        # (serato3 continues using the original serato/ keys)
+        serato4_keys = [
+            "deckskip",
+            "mixmode",
+            "url",
+            "local",
+            "interval",
+        ]
+
+        # Only migrate if user currently has serato plugin selected
+        current_input = config.value("settings/input")
+        if current_input == "serato":
+            logging.info(
+                "Current input is serato - copying config to serato4 and switching to serato3"
+            )
+
+            # Copy keys to serato4 for new plugin (serato3 continues using serato/ keys)
+            for key in serato4_keys:
+                old_key = f"serato/{key}"
+                serato4_key = f"serato4/{key}"
+
+                old_value = config.value(old_key)
+                existing_serato4_value = config.value(serato4_key)
+
+                if old_value is not None and existing_serato4_value is None:
+                    logging.debug("Copying %s to %s: %s", old_key, serato4_key, old_value)
+                    config.setValue(serato4_key, old_value)
+                elif old_value is not None:
+                    logging.debug("Skipping %s - %s already exists", old_key, serato4_key)
+
+            # Switch input plugin to serato3 (legacy, continues using serato/ keys)
+            config.setValue("settings/input", "serato3")
+            logging.info("Switched input plugin from serato to serato3")
+        else:
+            logging.debug("Current input is %s - no migration needed", current_input)
 
     @staticmethod
     def _upgrade_filters(config: QSettings) -> None:

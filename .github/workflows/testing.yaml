@@ -100,6 +100,8 @@ jobs:
       PYTHONIOENCODING: utf-8
       LANG: en_US.UTF-8
       LC_ALL: en_US.UTF-8
+      PYTHONASYNCIODEBUG: 1
+      PYTHONWARNINGS: "default,resource"
     steps:
       - run: Set-MpPreference -DisableRealtimeMonitoring $true
         shell: powershell
