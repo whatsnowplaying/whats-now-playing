@@ -370,7 +370,7 @@ async def test_ignores_closed_sessions(bootstrap, serato_master_db):  # pylint: 
                 (id, session_id, file_name, artist, name, album, genre, bpm, key, year,
                  length_sec, start_time, played, deck, file_size,
                  file_sample_rate, file_bit_rate)
-                VALUES (99, 2, '/music/old_track.mp3', 'Old Artist', 'Old Track', 'Old Album', 
+                VALUES (99, 2, '/music/old_track.mp3', 'Old Artist', 'Old Track', 'Old Album',
                         'Rock', 140.0, 'Am', '2020', 200, ?, 1, '1', 6000000, 44100.0, 320.0)
             """,
                 (1693125000 + 60,),  # Track from closed session
