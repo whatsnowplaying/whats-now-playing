@@ -359,7 +359,8 @@ async def test_ignores_closed_sessions(bootstrap, serato_master_db):  # pylint: 
         with nowplaying.utils.sqlite.sqlite_connection(serato_master_db["db_path"]) as conn:
             # Insert closed session (end_time != -1)
             conn.execute(
-                "INSERT INTO history_session (id, start_time, end_time, file_name) VALUES (2, ?, ?, 'old_session.txt')",
+                "INSERT INTO history_session (id, start_time, end_time, file_name) "
+                "VALUES (2, ?, ?, 'old_session.txt')",
                 (1693125000, 1693125600),  # Closed session (ended 10 min after start)
             )
 
