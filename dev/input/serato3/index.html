@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="http://whatsnowplaying.github.io/dev/output/webserver/">
+        <link rel="canonical" href="http://whatsnowplaying.github.io/dev/input/serato3/">
       
       
-        <link rel="prev" href="../textoutput/">
+        <link rel="prev" href="../serato/">
       
       
-        <link rel="next" href="../discord/">
+        <link rel="next" href="../traktor/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -24,7 +24,7 @@
     
     
       
-        <title>Web Server - What's Now Playing</title>
+        <title>Serato (Legacy) - What's Now Playing</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#webserver" class="md-skip">
+        <a href="#serato-3x-legacy" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Web Server
+              Serato (Legacy)
             
           </span>
         </div>
@@ -516,18 +516,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
@@ -543,7 +545,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             Input Sources
@@ -557,7 +559,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -580,7 +582,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/denon/" class="md-nav__link">
+      <a href="../denon/" class="md-nav__link">
         
   
   
@@ -603,7 +605,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/djuced/" class="md-nav__link">
+      <a href="../djuced/" class="md-nav__link">
         
   
   
@@ -626,7 +628,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/icecast/" class="md-nav__link">
+      <a href="../icecast/" class="md-nav__link">
         
   
   
@@ -649,7 +651,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/jriver/" class="md-nav__link">
+      <a href="../jriver/" class="md-nav__link">
         
   
   
@@ -672,7 +674,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/m3u/" class="md-nav__link">
+      <a href="../m3u/" class="md-nav__link">
         
   
   
@@ -695,7 +697,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/mpris2/" class="md-nav__link">
+      <a href="../mpris2/" class="md-nav__link">
         
   
   
@@ -718,7 +720,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/remote/" class="md-nav__link">
+      <a href="../remote/" class="md-nav__link">
         
   
   
@@ -741,7 +743,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/serato/" class="md-nav__link">
+      <a href="../serato/" class="md-nav__link">
         
   
   
@@ -761,10 +763,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../input/serato3/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Serato (Legacy)
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -775,6 +799,125 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instructions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Instructions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#connection-tab" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connection Tab
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Connection Tab">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#local-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      Local Mode
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#remote-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      Remote Mode
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#library-and-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      Library and Query
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smart-crates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Smart Crates
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Smart Crates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#supported-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Filters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unsupported-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Unsupported Filters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiple-libraries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multiple Libraries
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -787,7 +930,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/traktor/" class="md-nav__link">
+      <a href="../traktor/" class="md-nav__link">
         
   
   
@@ -810,7 +953,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/virtualdj/" class="md-nav__link">
+      <a href="../virtualdj/" class="md-nav__link">
         
   
   
@@ -833,7 +976,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../input/winmedia/" class="md-nav__link">
+      <a href="../winmedia/" class="md-nav__link">
         
   
   
@@ -1134,20 +1277,18 @@
       
   
   
-    
   
   
-  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
         
           
           <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
@@ -1163,7 +1304,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             Output & Display
@@ -1177,7 +1318,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../output/" class="md-nav__link">
         
   
   
@@ -1200,7 +1341,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../charts/" class="md-nav__link">
+      <a href="../../output/charts/" class="md-nav__link">
         
   
   
@@ -1223,7 +1364,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../obswebsocket/" class="md-nav__link">
+      <a href="../../output/obswebsocket/" class="md-nav__link">
         
   
   
@@ -1246,7 +1387,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../textoutput/" class="md-nav__link">
+      <a href="../../output/textoutput/" class="md-nav__link">
         
   
   
@@ -1266,32 +1407,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Web Server
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../output/webserver/" class="md-nav__link">
         
   
   
@@ -1302,80 +1421,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#settings" class="md-nav__link">
-    <span class="md-ellipsis">
-      Settings
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#obs-settings" class="md-nav__link">
-    <span class="md-ellipsis">
-      OBS Settings
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-urls" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported URLs
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rest-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      REST API
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#websockets" class="md-nav__link">
-    <span class="md-ellipsis">
-      WebSockets
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1433,7 +1478,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../discord/" class="md-nav__link">
+      <a href="../../output/discord/" class="md-nav__link">
         
   
   
@@ -1456,7 +1501,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kickbot/" class="md-nav__link">
+      <a href="../../output/kickbot/" class="md-nav__link">
         
   
   
@@ -1479,7 +1524,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../twitchbot/" class="md-nav__link">
+      <a href="../../output/twitchbot/" class="md-nav__link">
         
   
   
@@ -1953,94 +1998,118 @@
   
 
 
-<h1 id="webserver">Webserver<a class="headerlink" href="#webserver" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> has a built-in web server that allows for a wide
-variety of customization and deployments, including complex ones
-involving multiple hosts. Treat the files in<code>templates</code> as examples; copy them to new
-names and modify them until you are happy. Change the font, change the
-output order, do whatever it is you need to do.</p>
-<p>Using one of the WebSocket examples as your starting point is
-recommended as they are generally more predictable. They update when the
-song updates vs. the others that use a timer to check for updates. See
-more about WebSockets below.</p>
-<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<h1 id="serato-3x-legacy">Serato 3.x (Legacy)<a class="headerlink" href="#serato-3x-legacy" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>Using Serato 4.0+? See the new <a href="../serato/">Serato 4+</a> plugin
+NOTE: Both Serato DJ Pro and Serato DJ Lite legacy versions are supported.</p>
+</blockquote>
+<p>Serato is a commercial software package that runs on Mac OS X and
+Windows. <strong>What's Now Playing</strong> has two modes with which it may use
+Serato as an input: Local and Remote.</p>
+<p>In Local mode, <strong>What's Now Playing</strong> will read the local session data
+on your computer directly. This mode has much more data available to use
+but requires <strong>What's Now Playing</strong> to run on the DJ computer.</p>
+<p>In Remote mode, <strong>What's Now Playing</strong> will read <a href="https://support.serato.com/hc/en-us/articles/228019568-Live-Playlists">Serato Live
+Playlists</a>
+over the Internet. This mode allows for <strong>What's Now Playing</strong> to run on
+a different computer than the DJ computer, but does not have as much
+data available.</p>
+<h2 id="instructions">Instructions<a class="headerlink" href="#instructions" title="Permanent link">&para;</a></h2>
+<p><a href="../images/serato-source-selection.png"><img alt="Serato Source Selection" src="../images/serato-source-selection.png" /></a></p>
 <ol>
 <li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
-<li>Select OBS WebSocket from the list of available input sources.</li>
-<li>Check Enable</li>
-<li>Change any settings as desired. See below.</li>
-<li>Click Save</li>
+<li>Select Core Settings-&gt;Source from the left-hand column</li>
+<li>Select Serato from the list of available input sources</li>
+<li>Select Input Sources-&gt;Serato from the left-hand column</li>
+<li>From there, you have two tabs.</li>
 </ol>
-<h2 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">&para;</a></h2>
-<p><a href="../images/webserver.png"><img alt="Webserver settings screen" src="../images/webserver.png" /></a></p>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Port</td>
-<td>The HTTP server's TCP port. A firewall should protect this port for security reasons to limit which hosts will be permitted to connect. <strong>What's Now Playing</strong> does not limit what systems may connect to it.</td>
-</tr>
-<tr>
-<td>HTML Template</td>
-<td>The <a href="https://jinja.palletsprojects.com/en/3.1.x/templates/">Jinja2 template</a> file to use when fetching index.md. See <a href="../../reference/templatevariables/">Templates</a> for more information.</td>
-</tr>
-<tr>
-<td>Once</td>
-<td>Only give index.md once per title, then return an empty refresh page until the next song change. This setting is handy for providing a simple way to do fade-in and fade-out using simple HTML.</td>
-</tr>
-</tbody>
-</table>
-<h2 id="obs-settings">OBS Settings<a class="headerlink" href="#obs-settings" title="Permanent link">&para;</a></h2>
-<p>Once the webserver is enabled, hop into OBS and configure a Browser
-source. Set the size to match the HTML template you are using. (Check
-the <code>width</code> and <code>height</code> values in the bundled templates). Then place
-the OBS source wherever you would like.</p>
-<p><a href="../images/obs-browser-settings.png"><img alt="OBS webserver settings screen" src="../images/obs-browser-settings.png" /></a></p>
-<h2 id="supported-urls">Supported URLs<a class="headerlink" href="#supported-urls" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>URL</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>/index.md (or /index.htm or just /)</td>
-<td>This URL generates either a title card based upon the preconfigured template.</td>
-</tr>
-<tr>
-<td>/index.txt</td>
-<td>Same output as the text output in the General settings.</td>
-</tr>
-<tr>
-<td>/cover.png</td>
-<td>This URL will return the cover image, if available.</td>
-</tr>
-<tr>
-<td>/httpstatic/</td>
-<td>Any content in`Documents/NowPlaying/httpstatic` will get served under this URL.</td>
-</tr>
-</tbody>
-</table>
-<p>See also <a href="../../extras/">Artist Extras</a> for other URLs when that
-set of features is enabled.</p>
-<h2 id="rest-api">REST API<a class="headerlink" href="#rest-api" title="Permanent link">&para;</a></h2>
-<p>The webserver provides REST API endpoints for programmatic access to track information and remote input
-functionality. See the <a href="../../reference/api/">API Reference</a> for complete endpoint documentation.</p>
-<h2 id="websockets">WebSockets<a class="headerlink" href="#websockets" title="Permanent link">&para;</a></h2>
-<p>New with version 3.0.0 is a continual feed via WebSockets. The feed is a
-JSON-formatted stream that will get an update on every title change. To
-connect, use the URL <code>ws://hostname:port/wsstream</code>. The files that begin
-with <code>ws-</code> in the <code>templates</code> directory use WebSockets.</p>
-<p>Variables set should match what is on the
-<a href="../../reference/templatevariables/">Templates</a> page. Be aware that
-values may be null.</p>
+<h3 id="connection-tab">Connection Tab<a class="headerlink" href="#connection-tab" title="Permanent link">&para;</a></h3>
+<h4 id="local-mode">Local Mode<a class="headerlink" href="#local-mode" title="Permanent link">&para;</a></h4>
+<p><a href="../images/serato-connection-local.png"><img alt="Local Mode Settings" src="../images/serato-connection-local.png" /></a></p>
+<p>When Local Mode is active, the <strong>What's Now Playing</strong> app runs on the
+same machine as Serato. Configure the Serato Library Path to Serato's
+directory, usually <code>Music/_Serato_</code>. This method is the recommended
+installation as much more information is available and significantly
+improves <strong>What's Now Playing</strong>'s correctness.</p>
+<p>Ignore Deck(s) allows for tracks on these deck(s) to be ignored.</p>
+<h4 id="remote-mode">Remote Mode<a class="headerlink" href="#remote-mode" title="Permanent link">&para;</a></h4>
+<p><a href="../images/serato-connection-remote.png"><img alt="Remote Mode Settings" src="../images/serato-connection-remote.png" /></a></p>
+<p>Remote mode is useful when the streaming computer is not the same as the
+Serato DJ computer by utilizing Serato Live Playlists. It should be only
+used when <strong>What's Now Playing</strong>'s web server mode also cannot be used.</p>
+<blockquote>
+<p>NOTE: This mode does not support Oldest mix mode.</p>
+</blockquote>
+<ol>
+<li>In Serato, make sure you enable Live Playlists and start a new session.
+   From the <a href="https://support.serato.com/hc/en-us/articles/228019568-Live-Playlists">Serato website</a>:</li>
+</ol>
+<blockquote>
+<p>"To enable the Live Playlists feature, go to the Expansion Pack tab on
+the Setup screen and check the Enable Live Playlists option. Once
+enabled, the Start Live Playlist button is now displayed in the
+History panel. Click this to start and stop your Live Playlist
+session."</p>
+</blockquote>
+<ol>
+<li>
+<p>Once a new playlist session is started, Serato will automatically open
+   your web browser to your Live Playlist. <strong>IMPORTANT:</strong> You will need to
+   select "Edit Details" on the Live Playlist webpage and change your
+   playlist to "Public", or else the <strong>What's Now Playing</strong> app will not be
+   able to retrieve any song data. The webpage does not need to remain
+   open. So you can close it once you ensure that the playlist has been
+   made public.</p>
+</li>
+<li>
+<p>Start the <strong>What's Now Playing</strong> app. The app can be controlled and
+   configured by accessing the menu from the icon in the Windows system
+   tray or Mac menu bar.</p>
+</li>
+</ol>
+<p>Be aware that as of this writing (2021-03-05), the only information
+available via Live Playlists is the artist and the title due to
+limitations in Serato's offering.  If you have the capability to use Local
+Mode, that provides a much richer set of data.</p>
+<h3 id="library-and-query">Library and Query<a class="headerlink" href="#library-and-query" title="Permanent link">&para;</a></h3>
+<p><a href="../images/serato-libandquery.png"><img alt="Library and Query Settings" src="../images/serato-libandquery.png" /></a></p>
+<p>This tab controls how the !hasartist command functions, either the entire database
+or one or more crates.</p>
+<p>Additionally, if you have additional locations where Serato crates and smart crates are located.</p>
+<h2 id="smart-crates">Smart Crates<a class="headerlink" href="#smart-crates" title="Permanent link">&para;</a></h2>
+<p>What's Now Playing supports Serato Smart Crates in addition to normal crates, but
+with limitations on which filters work.  The full filter list is not supported in
+order to keep the RAM requirements lower.</p>
+<h3 id="supported-filters">Supported Filters<a class="headerlink" href="#supported-filters" title="Permanent link">&para;</a></h3>
+<p>These smart crate filters work with What's Now Playing:</p>
+<ul>
+<li>Song (title)</li>
+<li>Artist</li>
+<li>Album</li>
+<li>Filename</li>
+<li>Composer</li>
+<li>Key</li>
+<li>BPM</li>
+</ul>
+<h3 id="unsupported-filters">Unsupported Filters<a class="headerlink" href="#unsupported-filters" title="Permanent link">&para;</a></h3>
+<p>These common smart crate filters do NOT work:</p>
+<ul>
+<li>Year</li>
+<li>Genre</li>
+<li>Plays</li>
+<li>Added Date</li>
+<li>Last Played</li>
+<li>Length/Duration</li>
+<li>Bitrate</li>
+<li>Comment</li>
+<li>Grouping</li>
+<li>Label</li>
+<li>Remixer</li>
+</ul>
+<p>Smart crates using unsupported filters will skip those rules but still apply any supported rules in the same crate.</p>
+<h3 id="multiple-libraries">Multiple Libraries<a class="headerlink" href="#multiple-libraries" title="Permanent link">&para;</a></h3>
+<p>Smart crates work across all your configured library paths, including external drives.
+However you <em>MUST</em> configure those paths in the additional library paths, as documented above.</p>
 
 
 
