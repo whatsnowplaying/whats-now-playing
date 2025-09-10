@@ -43,6 +43,7 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
         self._last_db_change_time: float = 0
         self._db_change_debounce_delay: float = 0.5  # 500ms debounce
         self._db_needs_refresh: bool = True  # Flag set by watchdog, checked by async methods
+        self._cached_deck_tracks: list[dict[str, t.Any]] = []  # Cache all deck data
 
     async def start(self):
         """perform any startup tasks"""
@@ -72,8 +73,8 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
         )
         self.observer.start()
 
-        # process what is already there - just check for initial track
-        await self._async_check_track_change()
+        # process what is already there - trigger initial refresh
+        self._db_needs_refresh = True
 
     async def stop(self):
         """Stop the handler and clean up resources"""
@@ -98,42 +99,6 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
         # Simple synchronous processing - just set a flag that async methods can check
         self._db_needs_refresh = True
 
-    async def _async_check_track_change(self) -> None:
-        """Async method to check for track changes - only when database changed"""
-        # Only check if database was modified (flag set by watchdog)
-        if not self._db_needs_refresh:
-            return
-        try:
-            # Get all deck data and find the most recent overall track for change detection
-            deck_tracks = await self.sqlite_reader.get_latest_tracks_per_deck()
-            logging.info(deck_tracks)
-            new_track_data = None
-            if deck_tracks:
-                # Find the track with the latest start_time for file change detection
-                new_track_data = max(deck_tracks, key=lambda t: t.get("start_time", 0))
-
-            # Compare with last known track
-            if self._has_track_changed(new_track_data):
-                logging.debug("Track change detected in Serato 4")
-                self.last_track_data = self.current_track
-                self.current_track = new_track_data
-                logging.info(
-                    "Track changed: %s - %s",
-                    new_track_data.get("artist", "Unknown") if new_track_data else None,
-                    new_track_data.get("title", "Unknown") if new_track_data else None,
-                )
-
-            # Clear the refresh flag after processing
-            self._db_needs_refresh = False
-
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            logging.error("Error checking track change: %s", exc)
-            # Don't clear the flag on error - we'll try again next time
-
-    async def _check_track_change(self) -> None:
-        """Check if the current track has changed (compatibility method)"""
-        await self._async_check_track_change()
-
     def _has_track_changed(self, new_track: dict[str, t.Any] | None) -> bool:
         """Check if track data represents a different track"""
         if not new_track and not self.current_track:
@@ -154,26 +119,55 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
         self, mixmode: str = "newest", deckskip: list[str] | None = None
     ) -> dict[str, t.Any] | None:
         """Get the current track based on mixmode and deck skip settings"""
-        # Check for database changes first
-        await self._async_check_track_change()
-        # Get the latest track from each deck (excluding skipped decks)
-        deck_tracks = await self.sqlite_reader.get_latest_tracks_per_deck(deckskip=deckskip)
+        # Only query database if refresh flag is set (database changed)
+        if self._db_needs_refresh:
+            try:
+                # Query database once, get ALL decks (no deckskip filter at SQL level)
+                self._cached_deck_tracks = await self.sqlite_reader.get_latest_tracks_per_deck()
+
+                # Update change detection with the most recent overall track
+                if self._cached_deck_tracks:
+                    new_track_data = max(
+                        self._cached_deck_tracks, key=lambda t: t.get("start_time", 0)
+                    )
+
+                    if self._has_track_changed(new_track_data):
+                        logging.debug("Track change detected in Serato 4")
+                        self.last_track_data = self.current_track
+                        self.current_track = new_track_data
+                        logging.info(
+                            "Track changed: %s - %s",
+                            new_track_data.get("artist", "Unknown"),
+                            new_track_data.get("title", "Unknown"),
+                        )
+
+                # Clear the refresh flag after successful processing
+                self._db_needs_refresh = False
+
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                logging.error("Error checking track change: %s", exc)
+                # Don't clear the flag on error - we'll try again next time
+                return None
+
+        # Apply deck skip filter in Python (fast, uses cached data)
+        if deckskip:
+            deck_tracks = [
+                track
+                for track in self._cached_deck_tracks
+                if str(track.get("deck")) not in deckskip
+            ]
+        else:
+            deck_tracks = self._cached_deck_tracks
 
         if not deck_tracks:
             return None
 
-        # Apply mixmode logic to select the appropriate track
+        # Apply mixmode logic to select the appropriate track (fast, in-memory)
         if mixmode == "oldest":
             # Find the track with the earliest start_time
             selected_track = min(deck_tracks, key=lambda t: t.get("start_time", 0))
         else:  # newest
             # Find the track with the latest start_time
             selected_track = max(deck_tracks, key=lambda t: t.get("start_time", 0))
-
-        # Update internal track state for change detection
-        if self._has_track_changed(selected_track):
-            logging.debug("Track change detected via mixmode selection")
-            self.last_track_data = self.current_track
-            self.current_track = selected_track
 
         return selected_track

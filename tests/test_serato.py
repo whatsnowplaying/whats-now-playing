@@ -343,3 +343,52 @@ async def test_track_metadata_mapping(bootstrap, serato_master_db):  # pylint: d
 
         finally:
             await plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_ignores_closed_sessions(bootstrap, serato_master_db):  # pylint: disable=redefined-outer-name
+    """Test plugin ignores closed sessions and only uses active sessions"""
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
+
+    with unittest.mock.patch.object(
+        plugin, "_find_serato_library", return_value=serato_master_db["library_path"]
+    ):
+        plugin.configure()
+
+        # Add a closed session with tracks that should be ignored
+        with nowplaying.utils.sqlite.sqlite_connection(serato_master_db["db_path"]) as conn:
+            # Insert closed session (end_time != -1)
+            conn.execute(
+                "INSERT INTO history_session (id, start_time, end_time, file_name) VALUES (2, ?, ?, 'old_session.txt')",
+                (1693125000, 1693125600),  # Closed session (ended 10 min after start)
+            )
+
+            # Insert track in closed session that should be ignored
+            conn.execute(
+                """
+                INSERT INTO history_entry
+                (id, session_id, file_name, artist, name, album, genre, bpm, key, year,
+                 length_sec, start_time, played, deck, file_size,
+                 file_sample_rate, file_bit_rate)
+                VALUES (99, 2, '/music/old_track.mp3', 'Old Artist', 'Old Track', 'Old Album', 
+                        'Rock', 140.0, 'Am', '2020', 200, ?, 1, '1', 6000000, 44100.0, 320.0)
+            """,
+                (1693125000 + 60,),  # Track from closed session
+            )
+            conn.commit()
+
+        await plugin.start()
+
+        try:
+            # Get track - should ignore closed session and return from active session
+            track = await plugin.getplayingtrack()
+
+            assert track is not None
+            # Should be from active session, not the closed one
+            assert track["artist"] != "Old Artist"
+            assert track["title"] != "Old Track"
+            # Should be from the expected active session track
+            assert track["artist"] == serato_master_db["expected_newest"]
+
+        finally:
+            await plugin.stop()
