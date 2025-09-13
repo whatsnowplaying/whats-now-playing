@@ -21,13 +21,11 @@ class Serato4SQLiteReader:  # pylint: disable=too-few-public-methods
     def __init__(self, db_path: str | pathlib.Path):
         self.db_path = pathlib.Path(db_path)
 
-    async def get_latest_tracks_per_deck(
-        self, deckskip: list[str] | None = None
-    ) -> list[dict[str, t.Any]]:
+    async def get_latest_tracks_per_deck(self) -> list[dict[str, t.Any]]:
         """Get the most recent track loaded on each deck from current session
 
         Returns the latest track loaded on each deck from the current session.
-        Mixmode logic is applied in Python after retrieving all deck data.
+        Deck filtering and mixmode logic are applied in Python after retrieving all deck data.
         """
         if not self.db_path.exists():
             logging.error("Serato master.sqlite not found at %s", self.db_path)
@@ -35,65 +33,71 @@ class Serato4SQLiteReader:  # pylint: disable=too-few-public-methods
 
         async def _query_tracks() -> list[dict[str, t.Any]]:
             async with aiosqlite.connect(self.db_path) as connection:
-                # Use WAL mode for better concurrent access with Serato
-                await connection.execute("PRAGMA journal_mode=WAL")
+                # Let Serato manage its own journal mode - we're just a read-only client
                 connection.row_factory = aiosqlite.Row  # Enable column access by name
 
                 # Get the latest track loaded on each deck from current session
-                # Simple query - just return what's loaded, regardless of play state
+                # Optimized query using window functions instead of correlated subqueries
                 query = """
+                    WITH current_session AS (
+                        SELECT id FROM history_session
+                        WHERE end_time = -1
+                        ORDER BY start_time DESC
+                        LIMIT 1
+                    ),
+                    ranked_tracks AS (
+                        SELECT
+                            file_name,
+                            artist,
+                            name as title,
+                            album,
+                            genre,
+                            bpm,
+                            key,
+                            year,
+                            length_sec as duration,
+                            start_time,
+                            played,
+                            deck,
+                            file_size as file_bytes,
+                            file_sample_rate as sample_rate,
+                            file_bit_rate as bitrate,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY deck
+                                ORDER BY start_time DESC
+                            ) as rn
+                        FROM history_entry
+                        WHERE session_id = (SELECT id FROM current_session)
+                        AND played = 1
+                    )
                     SELECT
                         file_name,
                         artist,
-                        name as title,
+                        title,
                         album,
                         genre,
                         bpm,
                         key,
                         year,
-                        length_sec as duration,
+                        duration,
                         start_time,
                         played,
                         deck,
-                        file_size as file_bytes,
-                        file_sample_rate as sample_rate,
-                        file_bit_rate as bitrate
-                    FROM history_entry h1
-                    WHERE h1.session_id = (
-                        SELECT id FROM history_session
-                        WHERE end_time = -1
-                        ORDER BY start_time DESC
-                        LIMIT 1
-                    )
-                    AND h1.played = 1
-                    AND h1.start_time = (
-                        SELECT MAX(h2.start_time)
-                        FROM history_entry h2
-                        WHERE h2.deck = h1.deck
-                        AND h2.session_id = h1.session_id
-                        AND h2.played = 1
-                    )
+                        file_bytes,
+                        sample_rate,
+                        bitrate
+                    FROM ranked_tracks
+                    WHERE rn = 1
                 """
 
-                params = []
-                if deckskip:
-                    placeholders = ",".join("?" * len(deckskip))
-                    query += f" AND h1.deck NOT IN ({placeholders})"
-                    params.extend(deckskip)
-
-                cursor = await connection.execute(query, params)
+                cursor = await connection.execute(query)
 
                 rows = await cursor.fetchall()
                 if not rows:
                     return []
 
                 # Convert aiosqlite.Row to dict for easier handling
-                tracks = []
-                for row in rows:
-                    track_data = dict(row)
-                    tracks.append(track_data)
-
-                return tracks
+                return [dict(row) for row in rows]
 
         try:
             return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_query_tracks)
