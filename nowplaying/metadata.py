@@ -300,6 +300,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             self.metadata = recognition_replacement(
                 config=self.config, metadata=self.metadata, addmeta=addmeta
             )
+
         except Exception as error:  # pylint: disable=broad-except
             logging.error("MusicBrainz recognition failed: %s", error)
 
