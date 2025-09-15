@@ -20,6 +20,22 @@ from . import client
 
 REMIX_RE = re.compile(r"^\s*(.*)\s+[\(\[].*[\)\]]$")
 
+# Artist collaboration delimiters for multi-artist resolution
+STRONG_ARTIST_DELIMITERS = [
+    " feat. ",
+    " featuring ",
+    " ft. ",
+    " feat ",
+    " with ",
+    " w/ ",
+    " vs. ",
+    " versus ",
+    " vs ",
+    " x ",
+    " × ",
+    " & ",
+]
+
 
 @functools.lru_cache(maxsize=128, typed=False)
 def _verify_artist_name(artistname, artistcredit):
@@ -308,6 +324,15 @@ class MusicBrainzHelper:
         elif metadata.get("musicbrainzartistid"):
             logging.debug("Preprocessing with musicbrainz artistid")
             addmeta = await self.artistids(metadata["musicbrainzartistid"])
+        elif metadata.get("artist") and metadata.get("title"):
+            logging.debug("Attempting artist+title lookup with multi-artist resolution")
+            addmeta = await self.artist_title_lookup(metadata)
+            if addmeta.get("musicbrainzartistid"):
+                # Get additional metadata from artistids and merge
+                artist_metadata = await self.artistids(addmeta["musicbrainzartistid"])
+                if artist_metadata:
+                    # Merge artist metadata into our results, preserving multi-artist data
+                    addmeta.update(artist_metadata)
         return addmeta
 
     async def isrc(self, isrclist):
@@ -555,6 +580,167 @@ class MusicBrainzHelper:
                         sitelist.append(urlrel["target"])
                         logging.debug("placed %s", dest)
         return list(dict.fromkeys(sitelist))
+
+    async def artist_title_lookup(self, metadata):
+        """Lookup artist+title with multi-artist resolution fallback"""
+
+        # First try standard artist+title lookup (using existing lastditcheffort logic)
+        standard_result = await self.lastditcheffort(metadata)
+        if standard_result and standard_result.get("musicbrainzartistid"):
+            return standard_result
+
+        # If no artist ID found, try multi-artist resolution
+        artist_string = metadata.get("artist", "")
+        logging.debug("Attempting multi-artist resolution for: %s", artist_string)
+
+        # Try hierarchical breakdown
+        resolved_artists = await self._hierarchical_artist_resolution([artist_string])
+        if resolved_artists and len(resolved_artists) > 1:
+            logging.info(
+                "Successfully resolved multi-artist string: %s -> %d artists",
+                artist_string,
+                len(resolved_artists),
+            )
+
+            # Store individual artist IDs
+            artist_ids = [a["musicbrainzartistid"] for a in resolved_artists]
+            artist_names = [a["name"] for a in resolved_artists]
+
+            result = {
+                "musicbrainzartistid": artist_ids,  # List of all artist IDs as per TrackMetadata
+                "artists": artist_names,
+                "artist": artist_string,  # Keep original
+            }
+
+            logging.debug("Stored artist IDs: %s", artist_ids)
+            return result
+        logging.debug(
+            "Could not resolve all artists (%d), keeping original",
+            len(resolved_artists),
+        )
+        return standard_result or {}
+
+    @staticmethod
+    def _split_artist_string(artist_string: str) -> list[str]:
+        """Split artist string on common delimiters, with heuristics"""
+
+        # Import the constant from metadata module
+        # Try strong collaboration indicators first
+        for delimiter in STRONG_ARTIST_DELIMITERS:
+            if delimiter.lower() in artist_string.lower():
+                parts = re.split(re.escape(delimiter), artist_string, flags=re.IGNORECASE)
+                return [p.strip() for p in parts if p.strip()]
+
+        # Try comma splitting with minimal heuristics
+        if "," in artist_string:
+            parts = [p.strip() for p in artist_string.split(",") if p.strip()]
+            if len(parts) > 1 and len(parts) <= 4:
+                # Don't split if any part is too short to be a real artist name
+                if all(len(p) >= 2 for p in parts):
+                    return parts
+
+        return [artist_string]  # No splitting
+
+    async def _hierarchical_artist_resolution(
+        self, candidate_parts: list[str], depth: int = 0, max_depth: int = 3
+    ) -> list[dict[str, str]]:
+        """Recursively resolve artist parts using hierarchical breakdown"""
+        # Guard against excessive recursion depth
+        if depth >= max_depth:
+            logging.debug(
+                "Reached maximum recursion depth (%d), stopping hierarchical resolution", max_depth
+            )
+            return []
+
+        resolved_artists = []
+        parts_resolved = (
+            0  # Count of original parts that were resolved (may expand to multiple artists)
+        )
+
+        for part in candidate_parts:
+            part = part.strip()
+            if not part:
+                continue
+
+            # Try to resolve this part as-is first
+            artist_id = await self._lookup_single_artist(part)
+            if artist_id:
+                resolved_artists.append({"name": part, "musicbrainzartistid": artist_id})
+                logging.debug("Resolved artist part: %s -> %s", part, artist_id)
+                parts_resolved += 1
+            else:
+                # Failed to resolve - try splitting this part further
+                logging.debug("Failed to resolve '%s', attempting further breakdown", part)
+                split_parts = self._split_artist_string(part)
+
+                if len(split_parts) > 1:
+                    # Recursively resolve the split parts
+                    sub_resolved = await self._hierarchical_artist_resolution(
+                        split_parts, depth + 1, max_depth
+                    )
+                    if sub_resolved:
+                        # Got some artists back - success!
+                        resolved_artists.extend(sub_resolved)
+                        logging.debug(
+                            "Successfully resolved sub-parts of '%s': %d artists",
+                            part,
+                            len(sub_resolved),
+                        )
+                        parts_resolved += 1
+                    else:
+                        # Empty list = failure
+                        logging.debug("Failed to resolve sub-parts of '%s'", part)
+                        return []
+                else:
+                    # Cannot split further and lookup failed
+                    logging.debug("Cannot resolve or split further: %s", part)
+                    return []
+
+        if parts_resolved == len(candidate_parts):
+            return resolved_artists
+        logging.debug(
+            "Hierarchical resolution failed: resolved %d/%d original parts",
+            parts_resolved,
+            len(candidate_parts),
+        )
+        return []
+
+    async def _lookup_single_artist(self, artist_name: str) -> str | None:
+        """Look up a single artist and return MusicBrainz artist ID"""
+
+        # Use cached version for better performance
+        async def fetch_func():
+            try:
+                # Use search_recordings to find artist (same as existing code)
+                mydict = await self.mb_client.search_recordings(artist=artist_name, limit=1)
+
+                if mydict.get("recording-count", 0) == 0:
+                    logging.debug("No recordings found for artist: %s", artist_name)
+                    return None
+
+                # Extract artist ID from first recording
+                recordings = mydict.get("recording-list", [])
+                if recordings:
+                    recording = recordings[0]
+                    artist_credits = recording.get("artist-credit", [])
+                    if artist_credits and isinstance(artist_credits[0], dict):
+                        artist_info = artist_credits[0].get("artist", {})
+                        if artist_id := artist_info.get("id"):
+                            logging.debug("Found artist ID for %s: %s", artist_name, artist_id)
+                            return artist_id
+
+            except Exception as error:  # pylint: disable=broad-except
+                logging.debug("Artist lookup failed for %s: %s", artist_name, error)
+
+            return None
+
+        return await nowplaying.apicache.cached_fetch(
+            provider="musicbrainz",
+            artist_name=artist_name,
+            endpoint=f"artist_search/{normalize_text(artist_name)}",
+            fetch_func=fetch_func,
+            ttl_seconds=7 * 24 * 60 * 60,  # 7 days for MusicBrainz data
+        )
 
     def providerinfo(self):  # pylint: disable=no-self-use
         """return list of what is provided by this recognition system"""
