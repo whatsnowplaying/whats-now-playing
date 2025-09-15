@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Test multi-artist resolution functionality"""
 
+# pylint: disable=protected-access
+
 import logging
 import pytest
-import pytest_asyncio
 
 import nowplaying.metadata
 import nowplaying.musicbrainz
@@ -149,7 +150,7 @@ async def test_integration_single_artist_known_to_mb(bootstrap):
         # If MB found the artist, should not have triggered multi-artist resolution
         if processor.metadata.get("musicbrainzartistid"):
             # Found in MB - should not have split
-            assert "musicbrainzartistids" not in processor.metadata, (
+            assert len(processor.metadata["musicbrainzartistid"]) == 1, (
                 f"{artist_name} was split even though it was found in MusicBrainz"
             )
             assert processor.metadata["artist"] == artist_name, (
@@ -181,9 +182,12 @@ async def test_integration_collaboration_not_in_mb(bootstrap):
         await processor._musicbrainz()
 
         # Check if multi-artist resolution was triggered
-        if processor.metadata.get("musicbrainzartistids"):
+        if (
+            processor.metadata.get("musicbrainzartistid")
+            and len(processor.metadata["musicbrainzartistid"]) > 1
+        ):
             # Splitting occurred - verify it found individual artists
-            assert len(processor.metadata["musicbrainzartistids"]) == len(
+            assert len(processor.metadata["musicbrainzartistid"]) == len(
                 case["expected_artists"]
             ), f"Expected {len(case['expected_artists'])} artists for {case['artist']}"
             assert processor.metadata.get("artists") == case["expected_artists"], (
@@ -191,7 +195,7 @@ async def test_integration_collaboration_not_in_mb(bootstrap):
             )
 
             # Verify all individual artist IDs are valid UUIDs (MusicBrainz format)
-            for artist_id in processor.metadata["musicbrainzartistids"]:
+            for artist_id in processor.metadata["musicbrainzartistid"]:
                 assert len(artist_id) == 36 and artist_id.count("-") == 4, (
                     f"Invalid MusicBrainz ID format: {artist_id}"
                 )
@@ -318,11 +322,19 @@ async def test_integration_single_artists_not_split(bootstrap, artist_name):
             f"Invalid MusicBrainz ID format for {artist_name}: {artist_id}"
         )
 
-        logging.info(f"✓ {artist_name} correctly found as single artist: {artist_id}")
+        logging.info("✓ %s correctly found as single artist: %s", artist_name, artist_id)
+
+        # Negative assertion: for single artists, artist name should remain unchanged
+        # (already checked above, but this documents the intention)
     else:
         # If not found in MusicBrainz, that's unexpected but not necessarily a test failure
         # (could be due to network issues, etc.)
-        logging.warning(f"Could not find {artist_name} in MusicBrainz - this may be expected")
+        logging.warning("Could not find %s in MusicBrainz - this may be expected", artist_name)
+
+        # Negative assertions for artists not found in MusicBrainz
+        assert processor.metadata.get("musicbrainzartistid") is None, (
+            f"Artist {artist_name} not found in MusicBrainz should not have artist IDs"
+        )
 
 
 @pytest.mark.parametrize("collaboration,expected_artists", COLLABORATION_CASES)
@@ -348,7 +360,8 @@ async def test_integration_collaborations_split(bootstrap, collaboration, expect
     ):
         # Should have resolved to multiple artists
         assert len(processor.metadata["musicbrainzartistid"]) == len(expected_artists), (
-            f"Expected {len(expected_artists)} artists for {collaboration}, got {len(processor.metadata['musicbrainzartistid'])}"
+            f"Expected {len(expected_artists)} artists for {collaboration}, "
+            f"got {len(processor.metadata['musicbrainzartistid'])}"
         )
         assert processor.metadata["artists"] == expected_artists, (
             f"Expected {expected_artists}, got {processor.metadata['artists']}"
@@ -360,13 +373,13 @@ async def test_integration_collaborations_split(bootstrap, collaboration, expect
                 f"Invalid MusicBrainz ID format: {artist_id}"
             )
 
-        logging.info(f"✓ {collaboration} correctly split into: {processor.metadata['artists']}")
+        logging.info("✓ %s correctly split into: %s", collaboration, processor.metadata['artists'])
     else:
         # Could be that the full collaboration string was found in MusicBrainz
         if processor.metadata.get("musicbrainzartistid"):
-            logging.info(f"✓ {collaboration} found as complete collaboration in MusicBrainz")
+            logging.info("✓ %s found as complete collaboration in MusicBrainz", collaboration)
         else:
-            logging.warning(f"Could not resolve {collaboration} - may be due to network issues")
+            logging.warning("Could not resolve %s - may be due to network issues", collaboration)
 
 
 @pytest.mark.asyncio
@@ -382,20 +395,23 @@ async def test_integration_real_collaboration_example(bootstrap):
     await processor._musicbrainz()
 
     # This should trigger multi-artist resolution based on our earlier testing
-    if processor.metadata.get("musicbrainzartistids"):
-        assert len(processor.metadata["musicbrainzartistids"]) == 2
+    if (
+        processor.metadata.get("musicbrainzartistid")
+        and len(processor.metadata["musicbrainzartistid"]) > 1
+    ):
+        assert len(processor.metadata["musicbrainzartistid"]) == 2
         assert processor.metadata["artists"] == ["Disclosure", "AlunaGeorge"]
 
         # Should have found both Disclosure and AlunaGeorge
-        disclosure_id = processor.metadata["musicbrainzartistids"][0]
-        alunageorge_id = processor.metadata["musicbrainzartistids"][1]
+        disclosure_id = processor.metadata["musicbrainzartistid"][0]
+        alunageorge_id = processor.metadata["musicbrainzartistid"][1]
 
         # These should be valid MusicBrainz IDs
         assert len(disclosure_id) == 36 and disclosure_id.count("-") == 4
         assert len(alunageorge_id) == 36 and alunageorge_id.count("-") == 4
 
-        # Primary artist ID should be set to the first one
-        assert processor.metadata["musicbrainzartistid"] == disclosure_id
+        # Primary artist ID should be the first one in the list
+        assert processor.metadata["musicbrainzartistid"][0] == disclosure_id
     else:
         # If no splitting occurred, the full string should have been found in MB
         # (This would be unexpected based on our earlier testing)
@@ -427,6 +443,7 @@ async def test_integration_conservative_splitting(bootstrap):
         # 2. Not split due to conservative heuristics
         if not processor.metadata.get("musicbrainzartistid"):
             # Not found in MB - should not have split due to conservative logic
-            assert "musicbrainzartistids" not in processor.metadata, (
-                f"Conservatively should not split: {artist_name}"
-            )
+            assert not (
+                processor.metadata.get("musicbrainzartistid")
+                and len(processor.metadata["musicbrainzartistid"]) > 1
+            ), f"Conservatively should not split: {artist_name}"

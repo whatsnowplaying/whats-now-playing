@@ -614,21 +614,21 @@ class MusicBrainzHelper:
 
             logging.debug("Stored artist IDs: %s", artist_ids)
             return result
-        else:
-            logging.debug(
-                "Could not resolve all artists (%d), keeping original",
-                len(resolved_artists),
-            )
-            return standard_result or {}
+        logging.debug(
+            "Could not resolve all artists (%d), keeping original",
+            len(resolved_artists),
+        )
+        return standard_result or {}
 
-    def _split_artist_string(self, artist_string: str) -> list[str]:
+    @staticmethod
+    def _split_artist_string(artist_string: str) -> list[str]:
         """Split artist string on common delimiters, with heuristics"""
 
         # Import the constant from metadata module
         # Try strong collaboration indicators first
         for delimiter in STRONG_ARTIST_DELIMITERS:
             if delimiter.lower() in artist_string.lower():
-                parts = re.split(delimiter, artist_string, flags=re.IGNORECASE)
+                parts = re.split(re.escape(delimiter), artist_string, flags=re.IGNORECASE)
                 return [p.strip() for p in parts if p.strip()]
 
         # Try comma splitting with minimal heuristics
@@ -642,9 +642,16 @@ class MusicBrainzHelper:
         return [artist_string]  # No splitting
 
     async def _hierarchical_artist_resolution(
-        self, candidate_parts: list[str]
+        self, candidate_parts: list[str], depth: int = 0, max_depth: int = 3
     ) -> list[dict[str, str]]:
         """Recursively resolve artist parts using hierarchical breakdown"""
+        # Guard against excessive recursion depth
+        if depth >= max_depth:
+            logging.debug(
+                "Reached maximum recursion depth (%d), stopping hierarchical resolution", max_depth
+            )
+            return []
+
         resolved_artists = []
         parts_resolved = (
             0  # Count of original parts that were resolved (may expand to multiple artists)
@@ -668,7 +675,9 @@ class MusicBrainzHelper:
 
                 if len(split_parts) > 1:
                     # Recursively resolve the split parts
-                    sub_resolved = await self._hierarchical_artist_resolution(split_parts)
+                    sub_resolved = await self._hierarchical_artist_resolution(
+                        split_parts, depth + 1, max_depth
+                    )
                     if sub_resolved:
                         # Got some artists back - success!
                         resolved_artists.extend(sub_resolved)
