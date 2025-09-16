@@ -295,7 +295,7 @@ async def test_update_ipc_with_musicbrainz_cover_art(discord_support):
     metadata = {
         "title": "Test Song",
         "artist": "Test Artist",
-        "musicbrainzalbumid": ["12345678-1234-1234-1234-123456789abc"],
+        "musicbrainzalbumid": "12345678-1234-1234-1234-123456789abc",
     }
 
     await discord_support._update_ipc("test message", metadata)

@@ -98,7 +98,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         config: "nowplaying.config.ConfigFile | None" = None,
         qsettings: "QWidget | None" = None,
     ):
-        self.debug = False  # Initialize before super() since defaults() needs it
+        self.debug = True  # Initialize before super() since defaults() needs it
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Charts"
         self.enabled = True  # Default enabled
