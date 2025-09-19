@@ -506,7 +506,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session"""
         if self._session is None or self._session.closed:
-            timeout = aiohttp.ClientTimeout(total=10)
+            timeout = aiohttp.ClientTimeout(total=60)  # 1 minute timeout to prevent blocking
             self._session = aiohttp.ClientSession(timeout=timeout)
         return self._session
 
