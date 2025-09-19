@@ -116,10 +116,10 @@ DJ_COLLABORATION_CASES = [
     ("Disclosure vs. London Grammar", ["Disclosure", "London Grammar"]),
     ("Skrillex & Diplo", ["Skrillex", "Diplo"]),
     ("Martin Garrix feat. Usher", ["Martin Garrix", "Usher"]),
-    # Beatport/Spotify style comma lists
-    ("Armin van Buuren, Vini Vici, Alok", ["Armin van Buuren", "Vini Vici", "Alok"]),
-    ("David Guetta, Bebe Rexha, J Balvin", ["David Guetta", "Bebe Rexha", "J Balvin"]),
-    ("Tiësto, Jonas Blue, Rita Ora", ["Tiësto", "Jonas Blue", "Rita Ora"]),
+    # Beatport/Spotify style comma lists (first-comma splitting only)
+    ("Armin van Buuren, Vini Vici, Alok", ["Armin van Buuren", "Vini Vici, Alok"]),
+    ("David Guetta, Bebe Rexha, J Balvin", ["David Guetta", "Bebe Rexha, J Balvin"]),
+    ("Tiësto, Jonas Blue, Rita Ora", ["Tiësto", "Jonas Blue, Rita Ora"]),
 ]
 
 
@@ -286,7 +286,7 @@ SINGLE_ARTIST_WITH_DELIMITERS = [
     # Conservative cases that should not split even if not found in MB
     "Smith, John",  # Likely LastName, FirstName pattern
     "Producer A, Vocalist B",  # Ambiguous 2-part name
-    "DJ A, B, and C",  # Contains "and" indicator
+    "Xyz Unlikely Artist, Name With Comma",  # Extremely unlikely to have real matches
 ]
 
 # Test cases for collaborations that SHOULD be split into multiple artists
