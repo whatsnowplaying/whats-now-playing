@@ -238,7 +238,7 @@ async def test_integration_hierarchical_breakdown(bootstrap):
 
     # Should have found the actual collaboration (Daft Punk + Pharrell Williams)
     assert len(processor.metadata["musicbrainzartistid"]) == 2, (
-        f"Expected 2 artists from real collaboration, got {len(processor.metadata['musicbrainzartistid'])}"
+        f"Expected 2 artists, got {len(processor.metadata['musicbrainzartistid'])}"
     )
 
     # All artist IDs should be valid MusicBrainz UUIDs
