@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 import nowplaying.apicache
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 import nowplaying.config
+import nowplaying.datacache.storage
 import nowplaying.db
 import nowplaying.firstinstall
 import nowplaying.guessgame
@@ -41,7 +42,7 @@ class _VacuumThread(QThread):  # pylint: disable=too-few-public-methods
     """Background thread for database vacuum operations on startup."""
 
     def run(self) -> None:  # pylint: disable=no-self-use
-        """Run vacuum operations on API cache and guess game databases."""
+        """Run vacuum and maintenance operations on all databases."""
         logging.debug("Starting background database vacuum")
         try:
             nowplaying.apicache.APIResponseCache.vacuum_database_file()
@@ -51,6 +52,11 @@ class _VacuumThread(QThread):  # pylint: disable=too-few-public-methods
             nowplaying.guessgame.GuessGame.vacuum_database()
         except (sqlite3.Error, OSError) as error:
             logging.error("Error vacuuming guess game database: %s", error)
+        try:
+            stats = nowplaying.datacache.storage.run_datacache_maintenance()
+            logging.debug("Datacache maintenance completed: %s", stats)
+        except (sqlite3.Error, OSError) as error:
+            logging.error("Error during datacache maintenance: %s", error)
         logging.debug("Background database vacuum complete")
 
 
