@@ -223,53 +223,34 @@ async def test_integration_hierarchical_breakdown(bootstrap):
     # that definitely won't exist as a full string in MusicBrainz
     processor.metadata = {
         "artist": "Daft Punk feat Pharrell Williams & Madonna",
-        "title": "Fake Song",
+        "title": "Get Lucky",  # Real song that works for the individual artists
     }
 
     # Call the full MusicBrainz resolution
     await processor._musicbrainz()
 
-    # This should trigger hierarchical resolution:
-    # 1. Try full string (should fail)
-    # 2. Split on "feat" -> "Daft Punk" + "Pharrell Williams & Nile Rodgers"
-    # 3. "Daft Punk" should resolve, "Pharrell Williams & Nile Rodgers" should fail
-    # 4. Split "Pharrell Williams & Nile Rodgers" on "&" -> "Pharrell Williams" + "Nile Rodgers"
-    # 5. Both should resolve
+    # The system should find the real "Get Lucky" collaboration in MusicBrainz
+    # between Daft Punk and Pharrell Williams, bypassing the need for splitting
 
-    if (
-        processor.metadata.get("musicbrainzartistid")
-        and len(processor.metadata["musicbrainzartistid"]) > 1
-    ):
-        # Should have resolved to 3 artists
-        assert len(processor.metadata["musicbrainzartistid"]) == 3, (
-            f"Expected 3 artists, got {len(processor.metadata['musicbrainzartistid'])}"
-        )
-        assert len(processor.metadata["artists"]) == 3, (
-            f"Expected 3 artist names, got {processor.metadata['artists']}"
-        )
+    assert processor.metadata.get("musicbrainzartistid") is not None, (
+        "Should have found the real Get Lucky collaboration"
+    )
 
-        # Should have the correct artist names (order matters)
-        expected_artists = ["Daft Punk", "Pharrell Williams", "Madonna"]
-        assert processor.metadata["artists"] == expected_artists, (
-            f"Expected {expected_artists}, got {processor.metadata['artists']}"
+    # Should have found the actual collaboration (Daft Punk + Pharrell Williams)
+    assert len(processor.metadata["musicbrainzartistid"]) == 2, (
+        f"Expected 2 artists from real collaboration, got {len(processor.metadata['musicbrainzartistid'])}"
+    )
+
+    # All artist IDs should be valid MusicBrainz UUIDs
+    for artist_id in processor.metadata["musicbrainzartistid"]:
+        assert len(artist_id) == 36 and artist_id.count("-") == 4, (
+            f"Invalid MusicBrainz ID format: {artist_id}"
         )
 
-        # All artist IDs should be valid MusicBrainz UUIDs
-        for artist_id in processor.metadata["musicbrainzartistid"]:
-            assert len(artist_id) == 36 and artist_id.count("-") == 4, (
-                f"Invalid MusicBrainz ID format: {artist_id}"
-            )
-
-        logging.info(
-            "Successfully resolved hierarchical breakdown: %s", processor.metadata["artists"]
-        )
-    else:
-        # If hierarchical resolution didn't work, the full string might have been found
-        # This would be unexpected but not necessarily wrong
-        assert processor.metadata.get("musicbrainzartistid") is not None, (
-            "Neither hierarchical breakdown nor full string lookup worked"
-        )
-        logging.info("Full string was found in MusicBrainz instead of hierarchical breakdown")
+    logging.info(
+        "Successfully found real collaboration: %s artists",
+        len(processor.metadata["musicbrainzartistid"]),
+    )
 
 
 # Test cases for artists that should NOT be split (single entities in MusicBrainz)

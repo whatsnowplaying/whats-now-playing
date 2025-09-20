@@ -610,7 +610,10 @@ class MusicBrainzHelper:
         logging.debug("Attempting multi-artist resolution for: %s", artist_string)
 
         # Try hierarchical breakdown
-        resolved_artists = await self._hierarchical_artist_resolution([artist_string])
+        song_title = metadata.get("title")
+        resolved_artists = await self._hierarchical_artist_resolution(
+            [artist_string], song_title=song_title
+        )
         if resolved_artists and len(resolved_artists) > 1:
             logging.info(
                 "Successfully resolved multi-artist string: %s -> %d artists",
@@ -714,7 +717,11 @@ class MusicBrainzHelper:
         return [artist_string]  # No valid split found
 
     async def _hierarchical_artist_resolution(
-        self, candidate_parts: list[str], depth: int = 0, max_depth: int = 3
+        self,
+        candidate_parts: list[str],
+        depth: int = 0,
+        max_depth: int = 3,
+        song_title: str | None = None,
     ) -> list[dict[str, str]]:
         """Recursively resolve artist parts using hierarchical breakdown"""
         # Guard against excessive recursion depth
@@ -735,7 +742,7 @@ class MusicBrainzHelper:
                 continue
 
             # Try to resolve this part as-is first
-            artist_id = await self._lookup_single_artist(part)
+            artist_id = await self._lookup_single_artist(part, song_title)
             if artist_id:
                 resolved_artists.append({"name": part, "musicbrainzartistid": artist_id})
                 logging.debug("Resolved artist part: %s -> %s", part, artist_id)
@@ -748,7 +755,7 @@ class MusicBrainzHelper:
                 if len(split_parts) > 1:
                     # Recursively resolve the split parts
                     sub_resolved = await self._hierarchical_artist_resolution(
-                        split_parts, depth + 1, max_depth
+                        split_parts, depth + 1, max_depth, song_title
                     )
                     if sub_resolved:
                         # Got some artists back - success!
@@ -777,14 +784,22 @@ class MusicBrainzHelper:
         )
         return []
 
-    async def _lookup_single_artist(self, artist_name: str) -> str | None:
-        """Look up a single artist and return MusicBrainz artist ID"""
+    async def _lookup_single_artist(
+        self, artist_name: str, song_title: str | None = None
+    ) -> str | None:
+        """Look up a single artist and return MusicBrainz artist ID using artist+title search"""
 
         # Use cached version for better performance
         async def fetch_func():
             try:
-                # Use search_recordings to find artist (same as existing code)
-                mydict = await self.mb_client.search_recordings(artist=artist_name, limit=1)
+                # Use recordings search with artist+title, same pattern as rest of codebase
+                if song_title:
+                    mydict = await self.mb_client.search_recordings(
+                        artist=artist_name, recording=song_title, limit=1
+                    )
+                else:
+                    # Fallback to artist-only search if no title provided
+                    mydict = await self.mb_client.search_recordings(artist=artist_name, limit=1)
 
                 if mydict.get("recording-count", 0) == 0:
                     logging.debug("No recordings found for artist: %s", artist_name)
