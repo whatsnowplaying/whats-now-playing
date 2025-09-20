@@ -117,15 +117,15 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
     def create_tasks(self):
         """create the asyncio tasks"""
         task = self.loop.create_task(self.run())
-        task.add_done_callback(self.tasks.remove)
+        task.add_done_callback(self.tasks.discard)
         self.tasks.add(task)
         if self.trackrequests:
             task = self.loop.create_task(self.trackrequests.watch_for_respin(self.stopevent))
-            task.add_done_callback(self.tasks.remove)
+            task.add_done_callback(self.tasks.discard)
             self.tasks.add(task)
         if self.imagecache:
             task = self.loop.create_task(self.imagecache.verify_cache_timer(self.stopevent))
-            task.add_done_callback(self.tasks.remove)
+            task.add_done_callback(self.tasks.discard)
             self.tasks.add(task)
 
     async def switch_input_plugin(self):
@@ -475,7 +475,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             # Create task and manage its lifecycle to prevent garbage collection
             task = asyncio.create_task(notify_plugin_safe(plugin, plugin_name))
             self.tasks.add(task)
-            task.add_done_callback(self.tasks.remove)
+            task.add_done_callback(self.tasks.discard)
 
     def _artfallbacks(self):
         if (
@@ -603,7 +603,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
 
                     task = asyncio.create_task(fetch_image_task(key, rawkey))
                     self.tasks.add(task)
-                    task.add_done_callback(self.tasks.remove)
+                    task.add_done_callback(self.tasks.discard)
                     image_tasks.append(task)
 
             # Wait for all image fetch tasks to complete
