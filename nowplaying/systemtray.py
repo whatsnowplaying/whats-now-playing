@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 
 import nowplaying.apicache
 import nowplaying.config
+import nowplaying.datacache.storage
 import nowplaying.db
 import nowplaying.firstinstall
 import nowplaying.notifications.charts
@@ -246,6 +247,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
                 logging.debug("Requests database vacuumed successfully")
         except (sqlite3.Error, AttributeError) as error:
             logging.error("Error vacuuming requests database: %s", error, exc_info=True)
+
+        try:
+            stats = nowplaying.datacache.storage.run_datacache_maintenance()
+            logging.debug("Datacache maintenance completed: %s", stats)
+        except (sqlite3.Error, AttributeError) as error:
+            logging.error("Error during datacache maintenance: %s", error, exc_info=True)
 
         logging.debug("Database vacuum operations completed")
 
