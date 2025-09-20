@@ -111,6 +111,9 @@ qt_qapp_name = "testsuite"
 # List of plugins (as comma separated values of python module names) to load,
 # usually to register additional checkers.
 load-plugins = ["pylint.extensions.no_self_use"]
+# orjson is a C extension; allow pylint to inspect it so no-member false positives
+# don't fire on orjson.dumps / orjson.loads / orjson.JSONDecodeError etc.
+extension-pkg-allow-list = ["orjson"]
 init-hook = 'import sys; sys.path.append(".")'
 ignore-paths = [
   "nowplaying/qtrc.py",
