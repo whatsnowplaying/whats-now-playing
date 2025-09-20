@@ -13,6 +13,7 @@ import socket
 import sys
 import threading
 import time
+from typing import Any
 
 import nowplaying.config
 import nowplaying.db
@@ -62,7 +63,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         self.input: nowplaying.inputs.InputPlugin | None = None
         self.previousinput: str | None = None
         self.inputname: str | None = None
-        self.tasks = set()
+        self.tasks: set[asyncio.Task[Any]] = set()
         self.metadataprocessors = nowplaying.metadata.MetadataProcessors(config=self.config)
 
         # Plugin components - initialized separately
@@ -116,15 +117,15 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
     def create_tasks(self):
         """create the asyncio tasks"""
         task = self.loop.create_task(self.run())
-        task.add_done_callback(self.tasks.remove)
+        task.add_done_callback(self.tasks.discard)
         self.tasks.add(task)
         if self.trackrequests:
             task = self.loop.create_task(self.trackrequests.watch_for_respin(self.stopevent))
-            task.add_done_callback(self.tasks.remove)
+            task.add_done_callback(self.tasks.discard)
             self.tasks.add(task)
         if self.imagecache:
             task = self.loop.create_task(self.imagecache.verify_cache_timer(self.stopevent))
-            task.add_done_callback(self.tasks.remove)
+            task.add_done_callback(self.tasks.discard)
             self.tasks.add(task)
 
     async def switch_input_plugin(self):
@@ -337,7 +338,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
                 metadata[key] = ""
         return metadata
 
-    async def gettrack(self):  # pylint: disable=too-many-branches,
+    async def gettrack(  # pylint: disable=too-many-branches,too-many-statements
+        self,
+    ):
         """get currently playing track, returns None if not new or not found"""
 
         # check paused state
@@ -359,12 +362,16 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
 
         # fill in the blanks and make it live
         oldmeta = self.currentmeta
+        fill_start_time = time.time()
         try:
             self.currentmeta = await self._fill_inmetadata(nextmeta)
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("Ignoring the %s crash and just keep going!", err)
             await asyncio.sleep(1)
             self.currentmeta = nextmeta
+
+        fill_duration = time.time() - fill_start_time
+        logging.debug("_fill_inmetadata took %.3f seconds", fill_duration)
 
         # Set timestamp and version when track is accepted as current
         self.currentmeta["track_received"] = datetime.datetime.now(
@@ -380,19 +387,29 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             logging.info("Skipping %s / %s", self.currentmeta["artist"], self.currentmeta["title"])
             return
 
+        # Get configured delay for optimization calculations
+        try:
+            configured_delay = self.config.cparser.value(
+                "settings/delay", type=float, defaultValue=1.0
+            )
+        except ValueError:
+            configured_delay = 1.0
+
         if not self.currentmeta.get("cache_warmed", False):
             # try to interleave downloads in-between the delay
-            await self._half_delay_write()
+            await self._half_delay_write(fill_duration)  # Use fill duration for first delay
             await self._process_imagecache()
             self._start_artistfanartpool()
-            await self._half_delay_write()
+            await self._half_delay_write()  # Normal delay for second half
             await self._process_imagecache()
             self._start_artistfanartpool()
-            await asyncio.sleep(0.5)
+            # Reduce sleep by any remaining fill duration beyond the configured delay
+            sleep_time = max(0.0, 0.5 - max(0.0, fill_duration - configured_delay))
+            await asyncio.sleep(sleep_time)
         else:
             # cache was already warmed so just go for it
-            await self._half_delay_write()
-            await self._half_delay_write()
+            await self._half_delay_write(fill_duration)  # Use fill duration for first delay
+            await self._half_delay_write()  # Normal delay for second half
 
         # checkagain
         nextcheck = await self.input.getplayingtrack() or {}
@@ -442,12 +459,23 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         if not self.active_notifications:
             return
 
+        # Fire-and-forget notification plugins to prevent blocking track polling
         for plugin in self.active_notifications:
             plugin_name = plugin.__class__.__name__
-            try:
-                await plugin.notify_track_change(self.currentmeta, imagecache=self.imagecache)
-            except Exception as err:  # pylint: disable=broad-except
-                logging.error("Notification plugin %s failed: %s", plugin_name, err)
+
+            async def notify_plugin_safe(plugin_instance, plugin_instance_name):
+                """Wrapper to safely call plugin with error handling"""
+                try:
+                    await plugin_instance.notify_track_change(
+                        self.currentmeta, imagecache=self.imagecache
+                    )
+                except Exception as err:  # pylint: disable=broad-except
+                    logging.error("Notification plugin %s failed: %s", plugin_instance_name, err)
+
+            # Create task and manage its lifecycle to prevent garbage collection
+            task = asyncio.create_task(notify_plugin_safe(plugin, plugin_name))
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.discard)
 
     def _artfallbacks(self):
         if (
@@ -473,14 +501,22 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
                         imagetype=f"artist{imagetype}",
                     )
 
-    async def _half_delay_write(self):
+    async def _half_delay_write(self, elapsed_time: float = 0.0):
         try:
             delay = self.config.cparser.value("settings/delay", type=float, defaultValue=1.0)
         except ValueError:
             delay = 1.0
         delay /= 2
-        logging.debug("got half-delay of %ss", delay)
-        await asyncio.sleep(delay)
+
+        # Reduce delay by time already spent processing
+        actual_delay = max(0.0, delay - elapsed_time)
+        logging.debug(
+            "got half-delay of %ss (reduced by %.3fs elapsed, sleeping %.3fs)",
+            delay,
+            elapsed_time,
+            actual_delay,
+        )
+        await asyncio.sleep(actual_delay)
 
     def _setup_imagecache(self):
         if not self.config.cparser.value("artistextras/enabled", type=bool):
@@ -516,8 +552,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             return
 
         if self.currentmeta.get("artistfanarturls"):
-            dedupe = list(dict.fromkeys(self.currentmeta["artistfanarturls"]))
-            self.currentmeta["artistfanarturls"] = dedupe
+            # imagecache handles deduplication at the database level via UNIQUE constraints
             self.imagecache.fill_queue(
                 config=self.config,
                 identifier=self.currentmeta["artist"],
@@ -532,7 +567,8 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         ):
             return
 
-        def fill_in(self):
+        async def fill_in_async():
+            """Async wrapper to fetch images with task management"""
             tryagain = False
 
             if not self.imagecache:
@@ -541,27 +577,61 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
                 )
                 return True
 
-            for key in ["artistthumbnail", "artistlogo", "artistbanner"]:
-                logging.debug("Calling %s", key)
+            # Create tasks for each image type to fetch concurrently
+            image_tasks = []
+            image_keys = ["artistthumbnail", "artistlogo", "artistbanner"]
+
+            for key in image_keys:
                 rawkey = f"{key}raw"
                 if not self.currentmeta.get(rawkey):
-                    image = self.imagecache.random_image_fetch(
-                        identifier=self.currentmeta["artist"], imagetype=key
-                    )
+
+                    async def fetch_image_task(image_key: str, raw_key: str):
+                        """Task to fetch a single image type"""
+                        try:
+                            # Run the synchronous fetch in executor to avoid blocking
+                            loop = asyncio.get_running_loop()
+                            image = await loop.run_in_executor(
+                                None,
+                                self.imagecache.random_image_fetch,
+                                self.currentmeta["artist"],
+                                image_key,
+                            )
+                            return raw_key, image
+                        except Exception as err:  # pylint: disable=broad-except
+                            logging.debug("Error fetching %s: %s", image_key, err)
+                            return raw_key, None
+
+                    task = asyncio.create_task(fetch_image_task(key, rawkey))
+                    self.tasks.add(task)
+                    task.add_done_callback(self.tasks.discard)
+                    image_tasks.append(task)
+
+            # Wait for all image fetch tasks to complete
+            if image_tasks:
+                results = await asyncio.gather(*image_tasks, return_exceptions=True)
+
+                for result in results:
+                    if isinstance(result, Exception):
+                        logging.debug("Image fetch task failed: %s", result)
+                        tryagain = True
+                        continue
+
+                    rawkey, image = result
                     if not image:
                         logging.debug(
-                            "did not get an image for %s %s %s",
-                            key,
+                            "did not get an image for %s %s",
                             rawkey,
                             self.currentmeta["artist"],
                         )
                         tryagain = True
-                    self.currentmeta[rawkey] = image
+                    else:
+                        self.currentmeta[rawkey] = image
+
             return tryagain
 
         # try to give it a bit more time if it doesn't complete the first time
-        if not fill_in(self):
-            fill_in(self)
+        if not await fill_in_async():
+            await fill_in_async()
 
 
 def stop(pid):

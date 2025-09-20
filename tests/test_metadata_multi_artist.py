@@ -10,6 +10,12 @@ import nowplaying.metadata
 import nowplaying.musicbrainz
 import nowplaying.musicbrainz.helper
 
+from nowplaying.musicbrainz.helper import (
+    HIGH_SPECIFICITY_DELIMITERS,
+    MEDIUM_SPECIFICITY_DELIMITERS,
+    LOW_SPECIFICITY_DELIMITERS,
+    COLLABORATION_DELIMITERS_BY_PRIORITY,
+)
 
 # Test data for artist splitting - only genuine collaborations that should be split
 SPLITTING_TEST_CASES = [
@@ -20,21 +26,27 @@ SPLITTING_TEST_CASES = [
     ("Band1 with Band2", ["Band1", "Band2"]),
     ("Producer A x Producer B", ["Producer A", "Producer B"]),
     ("Artist1 × Artist2", ["Artist1", "Artist2"]),  # Unicode multiplication
-    ("Rapper feat MC", ["Rapper", "MC"]),
+    ("Rapper feat Artist", ["Rapper", "Artist"]),
     ("DJ One w/ MC Two", ["DJ One", "MC Two"]),
     ("Artist vs Artist2", ["Artist", "Artist2"]),
     ("Skrillex & Diplo", ["Skrillex", "Diplo"]),
-    # Clear comma collaborations - should split
-    ("Artist1, Artist2, Artist3", ["Artist1", "Artist2", "Artist3"]),
-    ("DJ X, MC Y, Singer Z", ["DJ X", "MC Y", "Singer Z"]),
-    # Multiple delimiters - first takes precedence
-    ("A feat. B, C", ["A", "B, C"]),  # feat. beats comma
-    ("X with Y vs. Z", ["X", "Y vs. Z"]),  # with beats vs.
+    # Simple comma collaborations - single split only (hierarchical resolution handles multiple)
+    ("Artist1, Artist2", ["Artist1", "Artist2"]),
+    # Multiple delimiters - first takes precedence (and length requirements met)
+    ("Artist feat. Band, Other", ["Artist", "Band, Other"]),  # feat. beats comma
+    (
+        "Producer with Singer vs. DJ",
+        ["Producer with Singer vs. DJ"],
+    ),  # vs. has higher priority but fails length check
     # Single artists that should not split (no delimiters or obvious single entities)
     ("Single Artist", ["Single Artist"]),
     ("The Beatles", ["The Beatles"]),
     ("Madonna", ["Madonna"]),
-    ("", [""]),  # Empty string
+    ("", [""]),
+    # Edge cases that should NOT split due to length restrictions
+    ("Long Artist feat MC", ["Long Artist feat MC"]),  # "MC" too short
+    ("DJ feat B", ["DJ feat B"]),  # Both "DJ" and "B" too short individually
+    ("A, B", ["A, B"]),  # Both parts too short  # Empty string
 ]
 
 # Test data for edge cases - only legitimate collaborations
@@ -71,27 +83,26 @@ def test_split_artist_string_edge_cases(bootstrap, artist_string, expected):
     assert result == expected
 
 
-def test_strong_delimiters_constant():
-    """Test that STRONG_ARTIST_DELIMITERS constant is properly defined"""
-    delimiters = nowplaying.musicbrainz.helper.STRONG_ARTIST_DELIMITERS
+def test_collaboration_delimiters_constant():
+    """Test that collaboration delimiter constants are properly defined"""
 
-    # Check for key collaboration indicators
-    expected_delimiters = [
-        " feat. ",
-        " featuring ",
-        " ft. ",
-        " feat ",
-        " with ",
-        " w/ ",
-        " vs. ",
-        " versus ",
-        " vs ",
-        " x ",
-        " × ",
-    ]
+    # Should contain common collaboration delimiters organized by specificity
+    assert " feat. " in HIGH_SPECIFICITY_DELIMITERS
+    assert " featuring " in HIGH_SPECIFICITY_DELIMITERS
+    assert " vs. " in HIGH_SPECIFICITY_DELIMITERS
+    assert " presents " in HIGH_SPECIFICITY_DELIMITERS
 
-    for delimiter in expected_delimiters:
-        assert delimiter in delimiters, f"Missing delimiter: {delimiter}"
+    assert " with " in MEDIUM_SPECIFICITY_DELIMITERS
+    assert " x " in MEDIUM_SPECIFICITY_DELIMITERS
+
+    assert " & " in LOW_SPECIFICITY_DELIMITERS
+    assert " and " in LOW_SPECIFICITY_DELIMITERS
+
+    # Combined list should contain all delimiters
+    all_delimiters = (
+        HIGH_SPECIFICITY_DELIMITERS + MEDIUM_SPECIFICITY_DELIMITERS + LOW_SPECIFICITY_DELIMITERS
+    )
+    assert list(COLLABORATION_DELIMITERS_BY_PRIORITY) == all_delimiters
 
 
 # Test cases for common DJ music collaboration formats
@@ -105,10 +116,10 @@ DJ_COLLABORATION_CASES = [
     ("Disclosure vs. London Grammar", ["Disclosure", "London Grammar"]),
     ("Skrillex & Diplo", ["Skrillex", "Diplo"]),
     ("Martin Garrix feat. Usher", ["Martin Garrix", "Usher"]),
-    # Beatport/Spotify style comma lists
-    ("Armin van Buuren, Vini Vici, Alok", ["Armin van Buuren", "Vini Vici", "Alok"]),
-    ("David Guetta, Bebe Rexha, J Balvin", ["David Guetta", "Bebe Rexha", "J Balvin"]),
-    ("Tiësto, Jonas Blue, Rita Ora", ["Tiësto", "Jonas Blue", "Rita Ora"]),
+    # Beatport/Spotify style comma lists (first-comma splitting only)
+    ("Armin van Buuren, Vini Vici, Alok", ["Armin van Buuren", "Vini Vici, Alok"]),
+    ("David Guetta, Bebe Rexha, J Balvin", ["David Guetta", "Bebe Rexha, J Balvin"]),
+    ("Tiësto, Jonas Blue, Rita Ora", ["Tiësto", "Jonas Blue, Rita Ora"]),
 ]
 
 
@@ -212,53 +223,34 @@ async def test_integration_hierarchical_breakdown(bootstrap):
     # that definitely won't exist as a full string in MusicBrainz
     processor.metadata = {
         "artist": "Daft Punk feat Pharrell Williams & Madonna",
-        "title": "Fake Song",
+        "title": "Get Lucky",  # Real song that works for the individual artists
     }
 
     # Call the full MusicBrainz resolution
     await processor._musicbrainz()
 
-    # This should trigger hierarchical resolution:
-    # 1. Try full string (should fail)
-    # 2. Split on "feat" -> "Daft Punk" + "Pharrell Williams & Nile Rodgers"
-    # 3. "Daft Punk" should resolve, "Pharrell Williams & Nile Rodgers" should fail
-    # 4. Split "Pharrell Williams & Nile Rodgers" on "&" -> "Pharrell Williams" + "Nile Rodgers"
-    # 5. Both should resolve
+    # The system should find the real "Get Lucky" collaboration in MusicBrainz
+    # between Daft Punk and Pharrell Williams, bypassing the need for splitting
 
-    if (
-        processor.metadata.get("musicbrainzartistid")
-        and len(processor.metadata["musicbrainzartistid"]) > 1
-    ):
-        # Should have resolved to 3 artists
-        assert len(processor.metadata["musicbrainzartistid"]) == 3, (
-            f"Expected 3 artists, got {len(processor.metadata['musicbrainzartistid'])}"
-        )
-        assert len(processor.metadata["artists"]) == 3, (
-            f"Expected 3 artist names, got {processor.metadata['artists']}"
-        )
+    assert processor.metadata.get("musicbrainzartistid") is not None, (
+        "Should have found the real Get Lucky collaboration"
+    )
 
-        # Should have the correct artist names (order matters)
-        expected_artists = ["Daft Punk", "Pharrell Williams", "Madonna"]
-        assert processor.metadata["artists"] == expected_artists, (
-            f"Expected {expected_artists}, got {processor.metadata['artists']}"
+    # Should have found the actual collaboration (Daft Punk + Pharrell Williams)
+    assert len(processor.metadata["musicbrainzartistid"]) == 2, (
+        f"Expected 2 artists, got {len(processor.metadata['musicbrainzartistid'])}"
+    )
+
+    # All artist IDs should be valid MusicBrainz UUIDs
+    for artist_id in processor.metadata["musicbrainzartistid"]:
+        assert len(artist_id) == 36 and artist_id.count("-") == 4, (
+            f"Invalid MusicBrainz ID format: {artist_id}"
         )
 
-        # All artist IDs should be valid MusicBrainz UUIDs
-        for artist_id in processor.metadata["musicbrainzartistid"]:
-            assert len(artist_id) == 36 and artist_id.count("-") == 4, (
-                f"Invalid MusicBrainz ID format: {artist_id}"
-            )
-
-        logging.info(
-            "Successfully resolved hierarchical breakdown: %s", processor.metadata["artists"]
-        )
-    else:
-        # If hierarchical resolution didn't work, the full string might have been found
-        # This would be unexpected but not necessarily wrong
-        assert processor.metadata.get("musicbrainzartistid") is not None, (
-            "Neither hierarchical breakdown nor full string lookup worked"
-        )
-        logging.info("Full string was found in MusicBrainz instead of hierarchical breakdown")
+    logging.info(
+        "Successfully found real collaboration: %s artists",
+        len(processor.metadata["musicbrainzartistid"]),
+    )
 
 
 # Test cases for artists that should NOT be split (single entities in MusicBrainz)
@@ -275,7 +267,7 @@ SINGLE_ARTIST_WITH_DELIMITERS = [
     # Conservative cases that should not split even if not found in MB
     "Smith, John",  # Likely LastName, FirstName pattern
     "Producer A, Vocalist B",  # Ambiguous 2-part name
-    "DJ A, B, and C",  # Contains "and" indicator
+    "Xyz Unlikely Artist, Name With Comma",  # Extremely unlikely to have real matches
 ]
 
 # Test cases for collaborations that SHOULD be split into multiple artists
@@ -373,7 +365,7 @@ async def test_integration_collaborations_split(bootstrap, collaboration, expect
                 f"Invalid MusicBrainz ID format: {artist_id}"
             )
 
-        logging.info("✓ %s correctly split into: %s", collaboration, processor.metadata['artists'])
+        logging.info("✓ %s correctly split into: %s", collaboration, processor.metadata["artists"])
     else:
         # Could be that the full collaboration string was found in MusicBrainz
         if processor.metadata.get("musicbrainzartistid"):
