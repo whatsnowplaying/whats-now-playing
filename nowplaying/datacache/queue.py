@@ -8,6 +8,7 @@ This module now only contains rate limiting utilities.
 import asyncio
 import logging
 import time
+from dataclasses import dataclass, field
 
 
 class RateLimiter:
@@ -22,7 +23,7 @@ class RateLimiter:
         self.rate = requests_per_second
         self.capacity = max(1.0, requests_per_second * 2)  # Burst capacity
         self.tokens = self.capacity
-        self.last_refill = time.time()
+        self.last_refill = time.monotonic()
         self._lock = asyncio.Lock()
 
     async def acquire(self, timeout: float = 30.0) -> bool:
@@ -35,9 +36,9 @@ class RateLimiter:
         Returns:
             True if token acquired, False if timeout
         """
-        start_time = time.time()
+        start_time = time.monotonic()
 
-        while time.time() - start_time < timeout:
+        while time.monotonic() - start_time < timeout:
             async with self._lock:
                 self._refill_tokens()
 
@@ -58,7 +59,7 @@ class RateLimiter:
 
     def _refill_tokens(self) -> None:
         """Refill token bucket based on elapsed time"""
-        now = time.time()
+        now = time.monotonic()
         elapsed = now - self.last_refill
         self.last_refill = now
 
@@ -78,12 +79,13 @@ class RateLimiter:
         return (1.0 - self.tokens) / self.rate
 
 
+@dataclass
 class RateLimiterManager:
     """Manages rate limiters for different providers"""
 
-    def __init__(self):
-        self.rate_limiters: dict[str, RateLimiter] = {}
-        self._default_rates = {
+    rate_limiters: dict[str, RateLimiter] = field(default_factory=dict)
+    _default_rates: dict[str, float] = field(
+        default_factory=lambda: {
             "musicbrainz": 1.0,  # 1 request per second
             "discogs": 2.0,  # 2 requests per second
             "fanarttv": 2.0,  # 2 requests per second
@@ -91,6 +93,7 @@ class RateLimiterManager:
             "wikimedia": 10.0,  # 10 requests per second
             "images": 5.0,  # 5 requests per second
         }
+    )
 
     def get_limiter(self, provider: str) -> RateLimiter:
         """Get or create rate limiter for provider"""
@@ -106,7 +109,7 @@ _rate_limiter_manager: RateLimiterManager | None = None
 
 def get_rate_limiter_manager() -> RateLimiterManager:
     """Get global rate limiter manager instance"""
-    global _rate_limiter_manager
+    global _rate_limiter_manager  # pylint: disable=global-statement
     if _rate_limiter_manager is None:
         _rate_limiter_manager = RateLimiterManager()
     return _rate_limiter_manager

@@ -11,6 +11,7 @@ Provides tools and strategies for:
 import asyncio
 import logging
 import sqlite3
+import urllib.parse
 from pathlib import Path
 from typing import Any
 
@@ -189,22 +190,34 @@ class MigrationManager:
     @staticmethod
     def _parse_legacy_url(url: str) -> tuple[str, str]:  # pylint: disable=too-many-return-statements
         """Parse provider and data type from legacy API URL"""
-        # Map legacy URLs to provider/data_type pairs
-        if "musicbrainz.org" in url:
-            if "/artist" in url:
-                return "musicbrainz", "artist"
-            if "/recording" in url:
-                return "musicbrainz", "recording"
-        if "discogs.com" in url:
-            return "discogs", "search"
-        if "fanart.tv" in url:
-            return "fanarttv", "images"
-        if "theaudiodb.com" in url:
-            return "theaudiodb", "artist"
-        if "en.wikipedia.org" in url:
-            return "wikimedia", "page"
+        try:
+            parsed = urllib.parse.urlparse(url)
+            hostname = parsed.hostname
+            path = parsed.path
 
-        return "", ""  # Unknown provider
+            if not hostname:
+                return "", ""  # Invalid URL
+
+            # Map legacy URLs to provider/data_type pairs based on hostname and path
+            if hostname == "musicbrainz.org" or hostname.endswith(".musicbrainz.org"):
+                if "/artist" in path:
+                    return "musicbrainz", "artist"
+                if "/recording" in path:
+                    return "musicbrainz", "recording"
+            elif hostname == "discogs.com" or hostname.endswith(".discogs.com"):
+                return "discogs", "search"
+            elif hostname == "fanart.tv" or hostname.endswith(".fanart.tv"):
+                return "fanarttv", "images"
+            elif hostname == "theaudiodb.com" or hostname.endswith(".theaudiodb.com"):
+                return "theaudiodb", "artist"
+            elif hostname == "en.wikipedia.org":
+                return "wikimedia", "page"
+
+            return "", ""  # Unknown provider
+
+        except Exception:  # pylint: disable=broad-exception-caught
+            # Invalid URL format
+            return "", ""
 
     @staticmethod
     def _parse_image_path(image_path: Path) -> tuple[str, str, str]:
