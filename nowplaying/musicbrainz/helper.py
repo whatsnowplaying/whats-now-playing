@@ -11,6 +11,8 @@ import os
 import re
 import sys
 
+from aiocache import cached
+
 import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
@@ -196,21 +198,16 @@ class MusicBrainzHelper:
 
     async def _lastditchrid(self, metadata):
         """Original method - extracts fields and delegates to cached version"""
-        addmeta = {
-            "artist": metadata.get("artist"),
-            "title": metadata.get("title"),
-            "album": metadata.get("album"),
-        }
-
-        if addmeta.get("musicbrainzrecordingid"):
+        # Check original metadata for existing recording ID
+        if metadata.get("musicbrainzrecordingid"):
             logging.debug("Skipping fallback: already have a rid")
             return None
 
         return await self._lastditchrid_cached(
-            addmeta["artist"], addmeta["title"], addmeta["album"]
+            metadata.get("artist"), metadata.get("title"), metadata.get("album")
         )
 
-    @functools.lru_cache(maxsize=128)
+    @cached(ttl=300)  # 5 minute cache
     async def _lastditchrid_cached(self, artist: str, title: str, album: str | None = None):
         """Cached implementation of lastditch recording ID lookup"""
 
