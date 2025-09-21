@@ -353,14 +353,21 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         addmeta2 = copy.deepcopy(self.metadata)
         artist, title = self.metadata["title"].split(" - ")
         addmeta2["artist"] = artist.strip()
-        addmeta2["title"] = title.strip()
 
-        logging.debug("Youtube video fallback with %s and %s", artist, title)
+        # Strip common video suffixes from title before MusicBrainz lookup
+        clean_title = title.strip()
+        if self.config.cparser.value("settings/stripextras", type=bool):
+            clean_title = nowplaying.utils.titlestripper_advanced(
+                title=clean_title, title_regex_list=self.config.getregexlist()
+            )
+        addmeta2["title"] = clean_title
+
+        logging.debug("Youtube video fallback with %s and %s", artist, clean_title)
 
         try:
             if addmeta := await musicbrainz.lastditcheffort(addmeta2):
                 self.metadata["artist"] = artist
-                self.metadata["title"] = title
+                self.metadata["title"] = clean_title  # Use the cleaned title
                 self.metadata = recognition_replacement(
                     config=self.config, metadata=self.metadata, addmeta=addmeta
                 )

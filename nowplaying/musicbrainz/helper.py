@@ -11,6 +11,8 @@ import os
 import re
 import sys
 
+from aiocache import cached
+
 import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
@@ -195,21 +197,37 @@ class MusicBrainzHelper:
         return riddata
 
     async def _lastditchrid(self, metadata):
+        """Original method - extracts fields and delegates to cached version"""
+        # Check original metadata for existing recording ID
+        if metadata.get("musicbrainzrecordingid"):
+            logging.debug("Skipping fallback: already have a rid")
+            return None
+
+        return await self._lastditchrid_cached(
+            metadata.get("artist"), metadata.get("title"), metadata.get("album")
+        )
+
+    @cached(ttl=300)  # 5 minute cache
+    async def _lastditchrid_cached(self, artist: str, title: str, album: str | None = None):
+        """Cached implementation of lastditch recording ID lookup"""
+
         async def havealbum():
-            for artist in artist_name_variations(addmeta["artist"]):
+            for artist_var in artist_name_variations(artist):
                 try:
                     mydict = await self.mb_client.search_recordings(
-                        artist=artist, recording=addmeta["title"], release=addmeta["album"]
+                        artist=artist_var, recording=title, release=album
                     )
                 except Exception:  # pylint: disable=broad-exception-caught
                     logging.exception(
                         "mb_client.search_recordings- ar:%s, t:%s, al:%s",
-                        artist,
-                        addmeta["title"],
-                        addmeta["album"],
+                        artist_var,
+                        title,
+                        album,
                     )
                     continue
 
+                # Create addmeta for _pickarecording compatibility
+                addmeta = {"artist": artist, "title": title, "album": album}
                 if riddata := await self._pickarecording(
                     addmeta, mydict
                 ) or await self._pickarecording(addmeta, mydict, allowothers=True):
@@ -218,30 +236,21 @@ class MusicBrainzHelper:
 
         mydict = {}
         riddata = {}
-        addmeta = {
-            "artist": metadata.get("artist"),
-            "title": metadata.get("title"),
-            "album": metadata.get("album"),
-        }
 
-        if addmeta.get("musicbrainzrecordingid"):
-            logging.debug("Skipping fallback: already have a rid")
-            return None
-
-        logging.debug("Starting data: %s", addmeta)
-        if addmeta["album"]:
+        logging.debug(
+            "Starting data: {'artist': %s, 'title': %s, 'album': %s}", artist, title, album
+        )
+        if album:
             if riddata := await havealbum():
                 return riddata
 
-        for artist in artist_name_variations(addmeta["artist"]):
-            logging.debug("Trying %s", artist)
+        for artist_var in artist_name_variations(artist):
+            logging.debug("Trying %s", artist_var)
             try:
-                mydict = await self.mb_client.search_recordings(
-                    artist=artist, recording=addmeta["title"]
-                )
+                mydict = await self.mb_client.search_recordings(artist=artist_var, recording=title)
             except Exception:  # pylint: disable=broad-exception-caught
                 logging.exception(
-                    "mb_client.search_recordings- ar:%s, t:%s (strict)", artist, addmeta["title"]
+                    "mb_client.search_recordings- ar:%s, t:%s (strict)", artist_var, title
                 )
                 continue
 
@@ -252,7 +261,7 @@ class MusicBrainzHelper:
             if mydict.get("recording-count", 0) > 100:
                 logging.debug("too many, going stricter")
                 query = (
-                    f'artist:{artist} AND recording:"{addmeta["title"]}" AND '
+                    f'artist:{artist_var} AND recording:"{title}" AND '
                     "-(secondarytype:compilation OR secondarytype:live) AND status:official"
                 )
                 logging.debug(query)
@@ -261,9 +270,14 @@ class MusicBrainzHelper:
                 except Exception:  # pylint: disable=broad-exception-caught
                     logging.exception("mb_client.search_recordings- q:%s", query)
                 continue
+
+            # Create addmeta for _pickarecording compatibility
+            addmeta = {"artist": artist, "title": title, "album": album}
             if riddata := await self._pickarecording(addmeta, mydict):
                 return riddata
 
+        # Create addmeta for final _pickarecording call
+        addmeta = {"artist": artist, "title": title, "album": album}
         if riddata := await self._pickarecording(addmeta, mydict, allowothers=True):
             return riddata
         logging.debug("Last ditch MB lookup failed. Sorry.")
