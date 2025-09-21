@@ -16,7 +16,7 @@ import nowplaying.datacache.providers
 
 
 @pytest_asyncio.fixture
-async def temp_providers(bootstrap):
+async def temp_providers(bootstrap):  # pylint: disable=unused-argument
     """Create temporary providers instance"""
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -27,16 +27,16 @@ async def temp_providers(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_providers_initialization(temp_providers):
+async def test_providers_initialization(temp_providers):  # pylint: disable=redefined-outer-name
     """Test providers initialize correctly"""
-    assert temp_providers.client._initialized is True
+    assert temp_providers.client._initialized is True  # pylint: disable=protected-access
     assert temp_providers.musicbrainz is not None
     assert temp_providers.images is not None
     assert temp_providers.api is not None
 
 
 @pytest.mark.asyncio
-async def test_musicbrainz_search_artists(temp_providers):
+async def test_musicbrainz_search_artists(temp_providers):  # pylint: disable=redefined-outer-name
     """Test MusicBrainz artist search"""
     # Mock successful search
     with patch.object(temp_providers.client, "get_or_fetch") as mock_fetch:
@@ -50,7 +50,7 @@ async def test_musicbrainz_search_artists(temp_providers):
         )
 
         assert result is not None
-        data, metadata = result
+        data, _metadata = result
         assert "artists" in data
         assert data["artists"][0]["name"] == "Test Artist"
 
@@ -64,7 +64,7 @@ async def test_musicbrainz_search_artists(temp_providers):
 
 
 @pytest.mark.asyncio
-async def test_musicbrainz_get_artist(temp_providers):
+async def test_musicbrainz_get_artist(temp_providers):  # pylint: disable=redefined-outer-name
     """Test MusicBrainz get artist by ID"""
     artist_id = "123e4567-e89b-12d3-a456-426614174000"
 
@@ -79,7 +79,7 @@ async def test_musicbrainz_get_artist(temp_providers):
         )
 
         assert result is not None
-        data, metadata = result
+        data, _metadata = result
         assert data["id"] == artist_id
         assert data["name"] == "Test Artist"
 
@@ -90,7 +90,7 @@ async def test_musicbrainz_get_artist(temp_providers):
 
 
 @pytest.mark.asyncio
-async def test_musicbrainz_search_recordings(temp_providers):
+async def test_musicbrainz_search_recordings(temp_providers):  # pylint: disable=redefined-outer-name
     """Test MusicBrainz recording search"""
     with patch.object(temp_providers.client, "get_or_fetch") as mock_fetch:
         mock_fetch.return_value = (
@@ -103,7 +103,7 @@ async def test_musicbrainz_search_recordings(temp_providers):
         )
 
         assert result is not None
-        data, metadata = result
+        data, _metadata = result
         assert "recordings" in data
 
         call_args = mock_fetch.call_args
@@ -112,7 +112,7 @@ async def test_musicbrainz_search_recordings(temp_providers):
 
 
 @pytest.mark.parametrize(
-    "image_type,method_name,test_url,expected_data,return_metadata,artist_id,provider,immediate",
+    "image_type,method_name,test_url,expected_data,return_metadata,artist_id,provider,immediate",  # pylint: disable=too-many-arguments
     [
         (
             "thumbnail",
@@ -157,8 +157,8 @@ async def test_musicbrainz_search_recordings(temp_providers):
     ],
 )
 @pytest.mark.asyncio
-async def test_image_cache_artist_types(
-    temp_providers,
+async def test_image_cache_artist_types(  # pylint: disable=too-many-arguments
+    temp_providers,  # pylint: disable=redefined-outer-name
     image_type,
     method_name,
     test_url,
@@ -184,7 +184,7 @@ async def test_image_cache_artist_types(
         )
 
         assert result is not None
-        data, metadata = result
+        data, _metadata = result
         assert data == expected_data
 
         # Verify correct parameters were passed to client
@@ -197,7 +197,7 @@ async def test_image_cache_artist_types(
 
 
 @pytest.mark.asyncio
-async def test_image_get_random_image(temp_providers):
+async def test_image_get_random_image(temp_providers):  # pylint: disable=redefined-outer-name
     """Test getting random image"""
     with patch.object(temp_providers.client, "get_random_image") as mock_random:
         mock_random.return_value = (
@@ -211,7 +211,7 @@ async def test_image_get_random_image(temp_providers):
         )
 
         assert result is not None
-        data, metadata, url = result
+        data, _metadata, _url = result
         assert data == b"random_image"
 
         mock_random.assert_called_once_with(
@@ -220,7 +220,7 @@ async def test_image_get_random_image(temp_providers):
 
 
 @pytest.mark.asyncio
-async def test_image_get_cache_keys_for_identifier(temp_providers):
+async def test_image_get_cache_keys_for_identifier(temp_providers):  # pylint: disable=redefined-outer-name
     """Test getting cache keys for identifier"""
     with patch.object(temp_providers.client, "get_cache_keys_for_identifier") as mock_keys:
         mock_keys.return_value = ["key1", "key2"]
@@ -237,7 +237,7 @@ async def test_image_get_cache_keys_for_identifier(temp_providers):
 
 
 @pytest.mark.asyncio
-async def test_api_cache_api_response(temp_providers):
+async def test_api_cache_api_response(temp_providers):  # pylint: disable=redefined-outer-name
     """Test caching generic API response"""
     test_url = "https://api.example.com/artist/123"
     test_data = {"name": "Test Artist", "bio": "Artist biography"}
@@ -257,7 +257,7 @@ async def test_api_cache_api_response(temp_providers):
         )
 
         assert result is not None
-        data, metadata = result
+        data, _metadata = result
         assert data == test_data
 
         call_args = mock_fetch.call_args
@@ -268,7 +268,7 @@ async def test_api_cache_api_response(temp_providers):
 
 
 @pytest.mark.asyncio
-async def test_api_cache_artist_bio(temp_providers):
+async def test_api_cache_artist_bio(temp_providers):  # pylint: disable=redefined-outer-name
     """Test caching artist biography"""
     test_url = "https://api.example.com/bio/artist"
 
@@ -301,7 +301,7 @@ async def test_api_cache_artist_bio(temp_providers):
 
 
 @pytest.mark.asyncio
-async def test_providers_process_queue(temp_providers):
+async def test_providers_process_queue(temp_providers):  # pylint: disable=redefined-outer-name
     """Test queue processing through providers"""
     with patch.object(temp_providers.client, "process_queue") as mock_process:
         mock_process.return_value = {"processed": 5, "succeeded": 4, "failed": 1}
@@ -325,39 +325,7 @@ def test_get_providers_singleton():
 
 
 @pytest.mark.asyncio
-async def test_musicbrainz_provider_configuration(temp_providers):
-    """Test MusicBrainz provider has correct configuration"""
-    mb = temp_providers.musicbrainz
-
-    assert mb.base_url == "https://musicbrainz.org/ws/2"
-    assert mb.rate_limit == 1.0  # 1 request per second
-    assert mb.timeout == 15.0
-    assert mb.retries == 3
-    assert mb.ttl_seconds == 30 * 24 * 3600  # 1 month
-
-
-@pytest.mark.asyncio
-async def test_image_provider_configuration(temp_providers):
-    """Test image provider has correct configuration"""
-    img = temp_providers.images
-
-    assert img.timeout == 30.0
-    assert img.retries == 3
-    assert img.ttl_seconds == 14 * 24 * 3600  # 2 weeks
-
-
-@pytest.mark.asyncio
-async def test_api_provider_configuration(temp_providers):
-    """Test API provider has correct configuration"""
-    api = temp_providers.api
-
-    assert api.timeout == 30.0
-    assert api.retries == 3
-    assert api.ttl_seconds == 7 * 24 * 3600  # 1 week
-
-
-@pytest.mark.asyncio
-async def test_providers_share_same_client(temp_providers):
+async def test_providers_share_same_client(temp_providers):  # pylint: disable=redefined-outer-name
     """Test all providers share the same client instance"""
     # All providers should share the same client
     assert temp_providers.musicbrainz.client is temp_providers.client

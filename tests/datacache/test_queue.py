@@ -80,7 +80,7 @@ async def test_rate_limiter_capacity_limit():
 
     # Wait longer than needed to fill capacity
     await asyncio.sleep(0.5)
-    limiter._refill_tokens()
+    limiter._refill_tokens()  # pylint: disable=protected-access
 
     # Should not exceed capacity
     assert limiter.available_tokens() <= limiter.capacity

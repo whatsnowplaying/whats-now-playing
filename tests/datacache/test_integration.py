@@ -17,7 +17,7 @@ import nowplaying.datacache
 
 
 @pytest_asyncio.fixture
-async def temp_datacache(bootstrap):
+async def temp_datacache(bootstrap):  # pylint: disable=unused-argument
     """Create temporary datacache instance"""
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -28,7 +28,7 @@ async def temp_datacache(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_full_image_caching_workflow(temp_datacache):
+async def test_full_image_caching_workflow(temp_datacache):  # pylint: disable=redefined-outer-name
     """Test complete image caching workflow"""
     test_image_data = b"fake_image_bytes"
     test_url = "https://example.com/artist_thumb.jpg"
@@ -52,7 +52,7 @@ async def test_full_image_caching_workflow(temp_datacache):
 
 
 @pytest.mark.asyncio
-async def test_randomimage_functionality_integration(temp_datacache):
+async def test_randomimage_functionality_integration(temp_datacache):  # pylint: disable=redefined-outer-name
     """Test randomimage functionality works end-to-end"""
     # Cache multiple images for same artist
     image_urls = [
@@ -83,7 +83,7 @@ async def test_randomimage_functionality_integration(temp_datacache):
         )
 
         assert random_result is not None
-        data, metadata, url = random_result
+        data, _metadata, url = random_result
         assert data.startswith(b"image_data_")
         assert url in image_urls
 
@@ -99,7 +99,7 @@ async def test_randomimage_functionality_integration(temp_datacache):
 
 
 @pytest.mark.asyncio
-async def test_queue_and_process_workflow(temp_datacache):
+async def test_queue_and_process_workflow(temp_datacache):  # pylint: disable=redefined-outer-name
     """Test queuing requests and processing them"""
     test_url = "https://example.com/queued_image.jpg"
     test_data = b"queued_image_data"
@@ -126,7 +126,7 @@ async def test_queue_and_process_workflow(temp_datacache):
 
 
 @pytest.mark.asyncio
-async def test_cache_hit_avoids_http_request(temp_datacache):
+async def test_cache_hit_avoids_http_request(temp_datacache):  # pylint: disable=redefined-outer-name
     """Test that cache hits don't make HTTP requests"""
     test_url = "https://example.com/cached_test.jpg"
     test_data = b"cached_test_data"
@@ -153,12 +153,12 @@ async def test_cache_hit_avoids_http_request(temp_datacache):
     )
 
     assert result2 is not None
-    data, metadata = result2
+    data, _metadata = result2
     assert data == test_data
 
 
 @pytest.mark.asyncio
-async def test_provider_filtering_works(temp_datacache):
+async def test_provider_filtering_works(temp_datacache):  # pylint: disable=redefined-outer-name
     """Test that provider filtering works correctly"""
     test_urls = {
         "theaudiodb": "https://theaudiodb.com/image1.jpg",
@@ -209,7 +209,7 @@ async def test_provider_filtering_works(temp_datacache):
 
 
 @pytest.mark.asyncio
-async def test_api_response_caching_integration(temp_datacache):
+async def test_api_response_caching_integration(temp_datacache):  # pylint: disable=redefined-outer-name
     """Test API response caching works end-to-end"""
     test_url = "https://api.example.com/artist/bio"
     test_bio_data = {
@@ -258,7 +258,7 @@ def test_maintenance_integration():
 
 
 @pytest.mark.asyncio
-async def test_concurrent_storage_operations(temp_datacache):
+async def test_concurrent_storage_operations(temp_datacache):  # pylint: disable=redefined-outer-name
     """Test concurrent operations don't interfere"""
     test_urls = [
         "https://example.com/concurrent1.jpg",
@@ -290,7 +290,7 @@ async def test_concurrent_storage_operations(temp_datacache):
         # All should succeed
         for result in results:
             assert result is not None
-            data, metadata = result
+            data, _metadata = result
             assert data.startswith(b"concurrent_data_")
 
 

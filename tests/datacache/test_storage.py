@@ -166,7 +166,7 @@ def test_maintenance_cleanup_expired():
 
 
 @pytest_asyncio.fixture
-async def temp_storage(bootstrap):
+async def temp_storage(bootstrap):  # pylint: disable=unused-argument
     """Create temporary storage instance"""
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -177,7 +177,7 @@ async def temp_storage(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_storage_initialization(temp_storage):
+async def test_storage_initialization(temp_storage):  # pylint: disable=redefined-outer-name
     """Test database initialization creates proper schema"""
     # Check that database file exists
     assert temp_storage.database_path.exists()
@@ -204,7 +204,7 @@ async def test_storage_initialization(temp_storage):
 
 
 @pytest.mark.asyncio
-async def test_store_and_retrieve_by_url(temp_storage):
+async def test_store_and_retrieve_by_url(temp_storage):  # pylint: disable=redefined-outer-name
     """Test basic URL-based storage and retrieval"""
     # Store test data
     url = "https://example.com/test.jpg"
@@ -233,7 +233,7 @@ async def test_store_and_retrieve_by_url(temp_storage):
 
 
 @pytest.mark.asyncio
-async def test_store_duplicate_url(temp_storage):
+async def test_store_duplicate_url(temp_storage):  # pylint: disable=redefined-outer-name
     """Test that duplicate URLs are handled correctly (replaced)"""
     url = "https://example.com/duplicate.jpg"
 
@@ -260,12 +260,12 @@ async def test_store_duplicate_url(temp_storage):
     # Should retrieve the second version
     result = await temp_storage.retrieve_by_url(url)
     assert result is not None
-    data, metadata = result
+    data, _metadata = result
     assert data == b"data_v2"
 
 
 @pytest.mark.asyncio
-async def test_retrieve_by_identifier_multiple_images(temp_storage):
+async def test_retrieve_by_identifier_multiple_images(temp_storage):  # pylint: disable=redefined-outer-name
     """Test identifier-based retrieval (randomimage functionality)"""
     # Store multiple images for the same artist
     urls = [
@@ -295,13 +295,13 @@ async def test_retrieve_by_identifier_multiple_images(temp_storage):
     for result in results:
         assert isinstance(result, tuple)
         assert len(result) == 3
-        data, metadata, url = result
+        data, _metadata, url = result
         assert data.startswith(b"image_data_")
         assert url in urls
 
 
 @pytest.mark.asyncio
-async def test_retrieve_by_identifier_random(temp_storage):
+async def test_retrieve_by_identifier_random(temp_storage):  # pylint: disable=redefined-outer-name
     """Test random image retrieval"""
     # Store multiple images
     urls = ["https://example.com/r1.jpg", "https://example.com/r2.jpg"]
@@ -321,13 +321,13 @@ async def test_retrieve_by_identifier_random(temp_storage):
         identifier="random_artist", data_type="thumbnail", random=True
     )
     assert isinstance(random_result, tuple)
-    data, metadata, url = random_result
+    data, _metadata, url = random_result
     assert data.startswith(b"random_data_")
     assert url in urls
 
 
 @pytest.mark.asyncio
-async def test_retrieve_by_identifier_with_provider_filter(temp_storage):
+async def test_retrieve_by_identifier_with_provider_filter(temp_storage):  # pylint: disable=redefined-outer-name
     """Test identifier retrieval with provider filtering"""
     # Store images from different providers
     await temp_storage.store(
@@ -353,13 +353,13 @@ async def test_retrieve_by_identifier_with_provider_filter(temp_storage):
         identifier="filter_artist", data_type="thumbnail", provider="theaudiodb", random=False
     )
     assert len(results) == 1
-    data, metadata, url = results[0]
+    data, _metadata, url = results[0]
     assert data == b"audiodb_image"
     assert url == "https://theaudiodb.com/image1.jpg"
 
 
 @pytest.mark.asyncio
-async def test_ttl_expiration(temp_storage):
+async def test_ttl_expiration(temp_storage):  # pylint: disable=redefined-outer-name
     """Test that expired items are not retrieved"""
     url = "https://example.com/expired.jpg"
 
@@ -386,7 +386,7 @@ async def test_ttl_expiration(temp_storage):
 
 
 @pytest.mark.asyncio
-async def test_data_serialization_json(temp_storage):
+async def test_data_serialization_json(temp_storage):  # pylint: disable=redefined-outer-name
     """Test JSON data serialization"""
     url = "https://example.com/json"
     test_data = {"key": "value", "list": [1, 2, 3]}
@@ -403,12 +403,12 @@ async def test_data_serialization_json(temp_storage):
 
     result = await temp_storage.retrieve_by_url(url)
     assert result is not None
-    data, metadata = result
+    data, _metadata = result
     assert data == test_data
 
 
 @pytest.mark.asyncio
-async def test_data_serialization_binary(temp_storage):
+async def test_data_serialization_binary(temp_storage):  # pylint: disable=redefined-outer-name
     """Test binary data serialization"""
     url = "https://example.com/binary"
     test_data = b"binary content with \x00 null bytes"
@@ -425,12 +425,12 @@ async def test_data_serialization_binary(temp_storage):
 
     result = await temp_storage.retrieve_by_url(url)
     assert result is not None
-    data, metadata = result
+    data, _metadata = result
     assert data == test_data
 
 
 @pytest.mark.asyncio
-async def test_queue_request(temp_storage):
+async def test_queue_request(temp_storage):  # pylint: disable=redefined-outer-name
     """Test request queuing functionality"""
     # Queue a request
     success = await temp_storage.queue_request(
@@ -452,7 +452,7 @@ async def test_queue_request(temp_storage):
 
 
 @pytest.mark.asyncio
-async def test_get_next_request_priority_order(temp_storage):
+async def test_get_next_request_priority_order(temp_storage):  # pylint: disable=redefined-outer-name
     """Test request retrieval respects priority order"""
     # Queue batch request first
     await temp_storage.queue_request(
@@ -488,7 +488,7 @@ async def test_get_next_request_priority_order(temp_storage):
 
 
 @pytest.mark.asyncio
-async def test_complete_request(temp_storage):
+async def test_complete_request(temp_storage):  # pylint: disable=redefined-outer-name
     """Test request completion"""
     # Queue and get a request
     await temp_storage.queue_request(
@@ -512,7 +512,7 @@ async def test_complete_request(temp_storage):
 
 
 @pytest.mark.asyncio
-async def test_cleanup_expired(temp_storage):
+async def test_cleanup_expired(temp_storage):  # pylint: disable=redefined-outer-name
     """Test cleanup of expired entries"""
     # Store expired item
     await temp_storage.store(
@@ -555,7 +555,7 @@ async def test_concurrent_access():
 
         # Create multiple storage instances (simulates multiple processes)
         storages = []
-        for i in range(3):
+        for _ in range(3):
             storage = nowplaying.datacache.storage.DataStorage(temp_path)
             await storage.initialize()
             storages.append(storage)
@@ -583,7 +583,7 @@ async def test_concurrent_access():
             for i, storage in enumerate(storages):
                 result = await storage.retrieve_by_url(f"https://example.com/concurrent_{i}.jpg")
                 assert result is not None
-                data, metadata = result
+                data, _metadata = result
                 assert data == f"data_{i}".encode()
 
         finally:

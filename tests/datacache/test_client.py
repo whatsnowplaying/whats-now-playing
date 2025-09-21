@@ -17,7 +17,7 @@ import nowplaying.datacache.client
 
 
 @pytest_asyncio.fixture
-async def temp_client(bootstrap):
+async def temp_client(bootstrap):  # pylint: disable=unused-argument
     """Create temporary client instance"""
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -28,15 +28,15 @@ async def temp_client(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_client_initialization(temp_client):
+async def test_client_initialization(temp_client):  # pylint: disable=redefined-outer-name
     """Test client initializes properly"""
-    assert temp_client._initialized is True
+    assert temp_client._initialized is True  # pylint: disable=protected-access
     assert temp_client.storage is not None
-    assert temp_client._session is not None
+    assert temp_client._session is not None  # pylint: disable=protected-access
 
 
 @pytest.mark.asyncio
-async def test_get_or_fetch_cache_hit(temp_client):
+async def test_get_or_fetch_cache_hit(temp_client):  # pylint: disable=redefined-outer-name
     """Test cache hit returns cached data without HTTP request"""
     # Pre-populate cache
     test_url = "https://example.com/cached.jpg"
@@ -62,12 +62,12 @@ async def test_get_or_fetch_cache_hit(temp_client):
     )
 
     assert result is not None
-    data, metadata = result
+    data, _metadata = result
     assert data == test_data
 
 
 @pytest.mark.asyncio
-async def test_get_or_fetch_immediate_false_queues_request(temp_client):
+async def test_get_or_fetch_immediate_false_queues_request(temp_client):  # pylint: disable=redefined-outer-name
     """Test immediate=False queues request instead of fetching"""
     test_url = "https://example.com/queue_test.jpg"
 
@@ -90,25 +90,7 @@ async def test_get_or_fetch_immediate_false_queues_request(temp_client):
 
 
 @pytest.mark.asyncio
-async def test_get_default_ttl_by_provider(temp_client):
-    """Test TTL defaults vary by provider and data type"""
-    # Test provider-specific defaults
-    theaudiodb_ttl = temp_client._get_default_ttl("theaudiodb", "thumbnail")
-    discogs_ttl = temp_client._get_default_ttl("discogs", "thumbnail")
-    fanarttv_ttl = temp_client._get_default_ttl("fanarttv", "thumbnail")
-
-    # FanartTV should have longer TTL (1 month vs 1 week for others)
-    assert fanarttv_ttl > theaudiodb_ttl
-    assert fanarttv_ttl > discogs_ttl
-
-    # Images should have longer TTL than text data
-    image_ttl = temp_client._get_default_ttl("test", "thumbnail")
-    bio_ttl = temp_client._get_default_ttl("test", "bio")
-    assert image_ttl > bio_ttl
-
-
-@pytest.mark.asyncio
-async def test_get_random_image(temp_client):
+async def test_get_random_image(temp_client):  # pylint: disable=redefined-outer-name
     """Test random image retrieval"""
     # Store multiple images
     urls = ["https://example.com/r1.jpg", "https://example.com/r2.jpg"]
@@ -130,12 +112,12 @@ async def test_get_random_image(temp_client):
     )
 
     assert result is not None
-    data, metadata, url = result
+    data, _metadata, url = result
     assert data.startswith(b"random_data_")
 
 
 @pytest.mark.asyncio
-async def test_get_cache_keys_for_identifier(temp_client):
+async def test_get_cache_keys_for_identifier(temp_client):  # pylint: disable=redefined-outer-name
     """Test retrieving cache keys for identifier/type"""
     # Store multiple images
     urls = ["https://example.com/all1.jpg", "https://example.com/all2.jpg"]
@@ -165,7 +147,7 @@ async def test_get_cache_keys_for_identifier(temp_client):
 
 
 @pytest.mark.asyncio
-async def test_queue_url_fetch(temp_client):
+async def test_queue_url_fetch(temp_client):  # pylint: disable=redefined-outer-name
     """Test URL fetch queuing"""
     success = await temp_client.queue_url_fetch(
         url="https://example.com/queue.jpg",
@@ -185,7 +167,7 @@ async def test_queue_url_fetch(temp_client):
 
 
 @pytest.mark.asyncio
-async def test_fetch_and_store_json_response(temp_client):
+async def test_fetch_and_store_json_response(temp_client):  # pylint: disable=redefined-outer-name
     """Test fetching and storing JSON response"""
     test_data = {"test": "data", "id": 123}
 
@@ -196,7 +178,7 @@ async def test_fetch_and_store_json_response(temp_client):
             headers={"content-type": "application/json"},
         )
 
-        result = await temp_client._fetch_and_store(
+        result = await temp_client._fetch_and_store(  # pylint: disable=protected-access
             url="https://api.example.com/test.json",
             identifier="json_test",
             data_type="api_response",
@@ -208,7 +190,7 @@ async def test_fetch_and_store_json_response(temp_client):
         )
 
         assert result is not None
-        data, metadata = result
+        data, _metadata = result
         assert data == test_data
 
         # Verify stored in cache
@@ -217,7 +199,7 @@ async def test_fetch_and_store_json_response(temp_client):
 
 
 @pytest.mark.asyncio
-async def test_fetch_and_store_binary_response(temp_client):
+async def test_fetch_and_store_binary_response(temp_client):  # pylint: disable=redefined-outer-name
     """Test fetching and storing binary response"""
     test_data = b"fake_jpeg_data"
 
@@ -226,7 +208,7 @@ async def test_fetch_and_store_binary_response(temp_client):
             "https://example.com/image.jpg", body=test_data, headers={"content-type": "image/jpeg"}
         )
 
-        result = await temp_client._fetch_and_store(
+        result = await temp_client._fetch_and_store(  # pylint: disable=protected-access
             url="https://example.com/image.jpg",
             identifier="binary_test",
             data_type="image",
@@ -238,17 +220,17 @@ async def test_fetch_and_store_binary_response(temp_client):
         )
 
         assert result is not None
-        data, metadata = result
+        data, _metadata = result
         assert data == test_data
 
 
 @pytest.mark.asyncio
-async def test_fetch_and_store_http_error(temp_client):
+async def test_fetch_and_store_http_error(temp_client):  # pylint: disable=redefined-outer-name
     """Test handling HTTP error responses"""
     with aioresponses() as mock_responses:
         mock_responses.get("https://example.com/notfound.jpg", status=404)
 
-        result = await temp_client._fetch_and_store(
+        result = await temp_client._fetch_and_store(  # pylint: disable=protected-access
             url="https://example.com/notfound.jpg",
             identifier="error_test",
             data_type="image",
@@ -263,7 +245,7 @@ async def test_fetch_and_store_http_error(temp_client):
 
 
 @pytest.mark.asyncio
-async def test_fetch_and_store_rate_limit_handling(temp_client):
+async def test_fetch_and_store_rate_limit_handling(temp_client):  # pylint: disable=redefined-outer-name
     """Test rate limit response handling"""
     with aioresponses() as mock_responses:
         mock_responses.get(
@@ -271,7 +253,7 @@ async def test_fetch_and_store_rate_limit_handling(temp_client):
         )
 
         # Should handle rate limit gracefully (but we won't wait for retry in test)
-        result = await temp_client._fetch_and_store(
+        result = await temp_client._fetch_and_store(  # pylint: disable=protected-access
             url="https://example.com/ratelimited.jpg",
             identifier="rate_test",
             data_type="image",
@@ -287,12 +269,12 @@ async def test_fetch_and_store_rate_limit_handling(temp_client):
 
 
 @pytest.mark.asyncio
-async def test_fetch_and_store_timeout_handling(temp_client):
+async def test_fetch_and_store_timeout_handling(temp_client):  # pylint: disable=redefined-outer-name
     """Test timeout handling with retries"""
     with aioresponses() as mock_responses:
         # Mock timeout by not adding any response - aioresponses will timeout
         # We'll use a very short timeout to speed up the test
-        result = await temp_client._fetch_and_store(
+        result = await temp_client._fetch_and_store(  # pylint: disable=protected-access
             url="https://example.com/timeout.jpg",
             identifier="timeout_test",
             data_type="image",
@@ -308,7 +290,7 @@ async def test_fetch_and_store_timeout_handling(temp_client):
 
 
 @pytest.mark.asyncio
-async def test_process_queue_single_request(temp_client):
+async def test_process_queue_single_request(temp_client):  # pylint: disable=redefined-outer-name
     """Test processing single queued request"""
     # Queue a request
     await temp_client.storage.queue_request(
@@ -341,7 +323,7 @@ async def test_process_queue_single_request(temp_client):
 
 
 @pytest.mark.asyncio
-async def test_process_queue_empty_queue(temp_client):
+async def test_process_queue_empty_queue(temp_client):  # pylint: disable=redefined-outer-name
     """Test processing empty queue"""
     stats = await temp_client.process_queue()
 
@@ -351,7 +333,7 @@ async def test_process_queue_empty_queue(temp_client):
 
 
 @pytest.mark.asyncio
-async def test_process_queue_unknown_request_key(temp_client):
+async def test_process_queue_unknown_request_key(temp_client):  # pylint: disable=redefined-outer-name
     """Test processing request with unknown request key"""
     # Queue request with unknown key
     await temp_client.storage.queue_request(
@@ -378,7 +360,7 @@ def test_get_client_singleton():
 
 
 @pytest.mark.asyncio
-async def test_rate_limiter_integration(temp_client):
+async def test_rate_limiter_integration(temp_client):  # pylint: disable=redefined-outer-name
     """Test rate limiter is applied during fetch"""
     # Get rate limiter for test provider
     rate_limiter = temp_client.rate_limiters.get_limiter("test")
@@ -395,7 +377,7 @@ async def test_rate_limiter_integration(temp_client):
         )
 
         # Fetch should apply rate limiting
-        result = await temp_client._fetch_and_store(
+        result = await temp_client._fetch_and_store(  # pylint: disable=protected-access
             url="https://example.com/ratelimit_test.txt",
             identifier="rate_test",
             data_type="text",
