@@ -105,7 +105,7 @@ class DataStorage:
         try:
             # Serialize data based on type
             if (
-                isinstance(data_value, (dict, list))
+                isinstance(data_value, dict | list)
                 or not isinstance(data_value, str)
                 and not isinstance(data_value, bytes)
             ):
@@ -262,15 +262,15 @@ class DataStorage:
 
                 # Update access statistics for all returned rows
                 urls = [row[2] for row in rows]
-                placeholders = ",".join("?" * len(urls))
-                await connection.execute(
-                    f"""
-                    UPDATE cached_data
-                    SET access_count = access_count + 1, last_accessed = ?
-                    WHERE url IN ({placeholders})
-                    """,
-                    [now] + urls,
-                )
+                for url in urls:
+                    await connection.execute(
+                        """
+                        UPDATE cached_data
+                        SET access_count = access_count + 1, last_accessed = ?
+                        WHERE url = ?
+                        """,
+                        (now, url),
+                    )
                 await connection.commit()
 
             # Deserialize all results

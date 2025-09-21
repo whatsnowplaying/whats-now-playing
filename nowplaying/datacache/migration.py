@@ -336,7 +336,7 @@ async def migrate():
     api_stats = await manager.migrate_apicache_data(Path('cache/apicache.sqlite'))
     print('API Cache Migration:', api_stats)
 
-    # Migrate image cache  
+    # Migrate image cache
     img_stats = await manager.migrate_imagecache_data(Path('cache/imagecache'))
     print('Image Cache Migration:', img_stats)
 
