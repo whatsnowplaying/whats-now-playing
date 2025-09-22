@@ -4,7 +4,6 @@ config file parsing/handling
 """
 
 import contextlib
-import json
 import logging
 import os
 import pathlib
@@ -26,6 +25,7 @@ import nowplaying.inputs
 import nowplaying.notifications
 import nowplaying.pluginimporter
 import nowplaying.recognition
+import nowplaying.utils.config_json
 
 # IMPORTANT: Import compatibility shim FIRST to handle old AuthScope enums in Qt config
 import nowplaying.twitch.compat
@@ -507,98 +507,18 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         Returns:
             True if export successful, False otherwise
         """
-        try:
-            # Sync to ensure we have latest settings
-            self.cparser.sync()
 
-            # Use childGroups() and childKeys() to avoid system preferences contamination
-            # that can occur with allKeys() on macOS
-            config_data = {}
-
-            # Settings to exclude from export
-            exclude_patterns = [
-                "settings/initialized",
-                "settings/lastsavedate",
-                "control/paused",
-                "testmode/",
-                # Cache-related settings that should be rebuilt
-                "cache/",
-                "db/",
-                "artistextras/cachedbfile",  # Cache file paths should be rebuilt
-            ]
-
-            # Get keys from each configuration group (avoids system preferences)
-            for group in self.cparser.childGroups():
-                self.cparser.beginGroup(group)
-                group_keys = self.cparser.childKeys()
-
-                for key in group_keys:
-                    full_key = f"{group}/{key}"
-
-                    # Skip excluded settings
-                    if any(full_key.startswith(pattern) for pattern in exclude_patterns):
-                        continue
-
-                    value = self.cparser.value(key)
-
-                    # Convert QSettings types to JSON-serializable types
-                    if (
-                        isinstance(value, bool)
-                        or value is not None
-                        and isinstance(value, (int, float, str))
-                    ):
-                        pass  # bools are fine
-                    elif value is None:
-                        value = None
-                    elif isinstance(value, list):
-                        # Convert list items to strings
-                        value = [str(item) for item in value]
-                    else:
-                        # Convert everything else to string
-                        value = str(value)
-
-                    config_data[full_key] = value
-
-                self.cparser.endGroup()
-
-            # Add metadata about the export
-            export_metadata = {
-                "_export_info": {
-                    "version": self.version,
-                    "export_date": time.strftime("%Y-%m-%d %H:%M:%S"),
-                    "application": QCoreApplication.applicationName(),
-                    "organization": QCoreApplication.organizationName(),
-                    "warning": "This file contains sensitive data including API keys and passwords",
-                }
-            }
-
-            # Combine metadata and config
-            full_export = export_metadata | config_data
-
-            # Write to file with restrictive permissions
-            _ = export_path.write_text(json.dumps(full_export, indent=2, sort_keys=True))
-
-            # Set restrictive file permissions (user read/write only)
-            # On Windows, this may not work as expected but won't fail
-            try:
-                export_path.chmod(0o600)
-            except (OSError, NotImplementedError):
-                # Windows may not support Unix-style permissions, but file is still created
-                logging.debug("Could not set restrictive file permissions (platform limitation)")
-
-            logging.info("Configuration exported to: %s", export_path)
-            return True
-
-        except (OSError, TypeError, ValueError) as error:
-            logging.error("Failed to export configuration: %s", error)
-            return False
+        self.cparser.sync()
+        return nowplaying.utils.config_json.export_config(
+            export_path=export_path, settings=self.cparser
+        )
 
     def import_config(self, import_path: pathlib.Path) -> bool:
         """
         Import configuration from JSON file.
 
-        This will overwrite current settings with imported values.
-        Runtime state and cache settings are automatically excluded.
+        This will completely replace current settings with imported values.
+        Runtime state and cache settings are automatically excluded from import.
 
         Args:
             import_path: Path to the JSON configuration file
@@ -606,58 +526,17 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         Returns:
             True if import successful, False otherwise
         """
-        try:
-            if not import_path.exists():
-                logging.error("Import file does not exist: %s", import_path)
-                return False
-
-            # Load the JSON data
-            import_data = json.loads(import_path.read_text())
-
-            # Check if this looks like a valid export
-            if "_export_info" not in import_data:
-                logging.warning("Import file may not be a valid configuration export")
-
-            # Log import info
-            if "_export_info" in import_data:
-                export_info = import_data["_export_info"]
-                logging.info(
-                    "Importing config from version %s, exported on %s",
-                    export_info.get("version", "unknown"),
-                    export_info.get("export_date", "unknown"),
-                )
-                # Remove metadata before processing
-                del import_data["_export_info"]
-
-            # Clear cache and runtime settings before import
-            cache_patterns = [
-                "settings/initialized",
-                "settings/lastsavedate",
-                "control/paused",
-                "testmode/",
-                "cache/",
-                "db/",
-            ]
-
-            for pattern in cache_patterns:
-                keys_to_remove = [key for key in self.cparser.allKeys() if key.startswith(pattern)]
-                for key in keys_to_remove:
-                    self.cparser.remove(key)
-
-            # Import all settings from the file
-            for key, value in import_data.items():
-                self.cparser.setValue(key, value)
-
-            # Sync and refresh our internal state
+        settings = QSettings(
+            self.qsettingsformat,
+            QSettings.UserScope,
+            QCoreApplication.organizationName(),
+            QCoreApplication.applicationName(),
+        )
+        settings.clear()
+        if settings := nowplaying.utils.config_json.import_config(
+            import_path=import_path, settings=settings
+        ):
+            self.cparser = settings
             self.cparser.sync()
-            self.get()  # Refresh internal variables
-
-            logging.info("Configuration imported successfully from: %s", import_path)
             return True
-
-        except json.JSONDecodeError as error:
-            logging.error("Invalid JSON in import file: %s", error)
-            return False
-        except (OSError, KeyError, ValueError) as error:
-            logging.error("Failed to import configuration: %s", error)
-            return False
+        return False

@@ -4,7 +4,6 @@
 import contextlib
 import logging
 import pathlib
-import shutil
 import sys
 import time
 
@@ -16,6 +15,7 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
 
 import nowplaying.trackrequests
+import nowplaying.utils.config_json
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
 from . import Version
@@ -44,7 +44,6 @@ class UpgradeConfig:
     def backup_config(self) -> None:
         """back up the old config"""
         config = self._getconfig()
-        source = config.fileName()
         datestr = time.strftime("%Y%m%d-%H%M%S")
         if self.testdir:
             docpath = self.testdir
@@ -57,8 +56,8 @@ class UpgradeConfig:
         logging.info("Making a backup of config prior to upgrade: %s", backupdir)
         try:
             pathlib.Path(backupdir).mkdir(parents=True, exist_ok=True)
-            backup = backupdir.joinpath(f"{datestr}-config.bak")
-            shutil.copyfile(source, backup)
+            backup = backupdir.joinpath(f"{datestr}-config.json")
+            nowplaying.utils.config_json.export_config(export_path=backup, settings=config)
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Failed to make a backup: %s", error)
             sys.exit(0)
@@ -150,6 +149,7 @@ class UpgradeConfig:
 
         if oldversion < Version("5.0.0-preview5"):
             self._upgrade_to_5_0_0_preview5(config)
+            self._cleanup_old_backup_files()
 
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
@@ -295,6 +295,42 @@ class UpgradeConfig:
             logging.info("Switched input plugin from serato to serato3")
         else:
             logging.debug("Current input is %s - no migration needed", current_input)
+
+    def _cleanup_old_backup_files(self) -> None:
+        """Clean up old .bak backup files from pre-5.0.0-preview5"""
+        if self.testdir:
+            docpath = self.testdir
+        else:  # pragma: no cover
+            docpath = QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
+
+        backupdir = pathlib.Path(docpath).joinpath(
+            QCoreApplication.applicationName(), "configbackup"
+        )
+
+        if not backupdir.exists():
+            return
+
+        logging.info("Cleaning up old backup files from: %s", backupdir)
+
+        removed_files = []
+        try:
+            for backup_file in backupdir.glob("*.bak"):
+                try:
+                    backup_file.unlink()
+                    removed_files.append(backup_file.name)
+                    logging.debug("Removed old backup file: %s", backup_file.name)
+                except OSError as error:
+                    logging.warning("Failed to remove backup file %s: %s", backup_file.name, error)
+        except OSError as error:
+            logging.error("Failed to scan backup directory: %s", error)
+            return
+
+        if removed_files:
+            logging.info(
+                "Removed %d old backup files: %s", len(removed_files), ", ".join(removed_files)
+            )
+        else:
+            logging.debug("No old backup files found to clean up")
 
     @staticmethod
     def _upgrade_filters(config: QSettings) -> None:

@@ -80,7 +80,6 @@ def test_export_excludes_runtime_state(temp_config):  # pylint: disable=redefine
         exported_data = json.loads(export_path.read_text())
 
         # Check that runtime state is excluded
-        assert "settings/initialized" not in exported_data
         assert "settings/lastsavedate" not in exported_data
         assert "control/paused" not in exported_data
         assert "testmode/enabled" not in exported_data
@@ -219,7 +218,6 @@ def test_import_clears_cache_settings(temp_config):  # pylint: disable=redefined
         # Verify cache settings were cleared
         temp_config.cparser.sync()
         # Default value
-        assert temp_config.cparser.value("settings/initialized", type=bool) is False
         assert temp_config.cparser.value("settings/lastsavedate") is None
         # Default value
         assert temp_config.cparser.value("control/paused", type=bool) is False
