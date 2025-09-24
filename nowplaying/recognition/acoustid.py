@@ -121,7 +121,7 @@ class Plugin(RecognitionPlugin):
         title = metadata.get("title")
         if artist and title and artist in title and len(artist) > 3:
             title = title.replace(artist, "")
-        title = nowplaying.utils.titlestripper_basic(title=title)
+        title = nowplaying.utils.filters.titlestripper(config=self.config, title=title)
         artistnstr = nowplaying.utils.normalize(artist, sizecheck=4, nospaces=True)
         titlenstr = nowplaying.utils.normalize(title, sizecheck=4, nospaces=True)
 

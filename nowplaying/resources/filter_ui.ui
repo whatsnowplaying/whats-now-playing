@@ -13,179 +13,306 @@
   <property name="windowTitle">
    <string>Filter</string>
   </property>
-  <widget class="QListWidget" name="regex_list">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>150</y>
-     <width>601</width>
-     <height>141</height>
-    </rect>
-   </property>
-   <property name="dragDropMode">
-    <enum>QAbstractItemView::InternalMove</enum>
-   </property>
-  </widget>
-  <widget class="QWidget" name="horizontalLayoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>440</y>
-     <width>621</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <layout class="QHBoxLayout" name="commandbuttons_layout">
-    <item>
-     <widget class="QPushButton" name="add_button">
-      <property name="text">
-       <string>Add Entry</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="del_button">
-      <property name="text">
-       <string>Delete Entry</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
   <widget class="QCheckBox" name="stripextras_checkbox">
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>40</y>
+     <y>10</y>
      <width>271</width>
      <height>24</height>
     </rect>
    </property>
    <property name="text">
-    <string>Filter titles using regular expressions</string>
+    <string>Filter titles using text patterns</string>
    </property>
   </widget>
-  <widget class="QTextBrowser" name="doclink">
+  <widget class="QTabWidget" name="filter_tabs">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>80</y>
-     <width>381</width>
-     <height>51</height>
+     <x>10</x>
+     <y>50</y>
+     <width>621</width>
+     <height>350</height>
     </rect>
    </property>
-   <property name="html">
-    <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+   <property name="currentIndex">
+    <number>0</number>
+   </property>
+   <widget class="QWidget" name="simple_tab">
+    <attribute name="title">
+     <string>Simple</string>
+    </attribute>
+    <widget class="QTableWidget" name="phrases_table">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>35</y>
+       <width>590</width>
+       <height>220</height>
+      </rect>
+     </property>
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <property name="sortingEnabled">
+      <bool>false</bool>
+     </property>
+     <column>
+      <property name="text">
+       <string>Phrase</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string> - phrase</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>(phrase)</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>[phrase]</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>plain</string>
+      </property>
+     </column>
+    </widget>
+    <widget class="QLabel" name="phrases_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>400</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Select phrases and formats to filter:</string>
+     </property>
+    </widget>
+    <widget class="QWidget" name="custom_phrase_widget" native="true">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>270</y>
+       <width>590</width>
+       <height>35</height>
+      </rect>
+     </property>
+     <widget class="QLineEdit" name="custom_phrase_input">
+      <property name="geometry">
+       <rect>
+        <x>115</x>
+        <y>5</y>
+        <width>275</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="placeholderText">
+       <string>Enter custom phrase to add...</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="add_custom_phrase_button">
+      <property name="geometry">
+       <rect>
+        <x>400</x>
+        <y>5</y>
+        <width>60</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Add</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="remove_custom_phrase_button">
+      <property name="geometry">
+       <rect>
+        <x>470</x>
+        <y>5</y>
+        <width>70</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Remove</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="custom_phrase_label">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>5</y>
+        <width>100</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Custom phrase:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="complex_tab">
+    <attribute name="title">
+     <string>Complex</string>
+    </attribute>
+    <widget class="QListWidget" name="regex_list">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>70</y>
+       <width>590</width>
+       <height>181</height>
+      </rect>
+     </property>
+     <property name="dragDropMode">
+      <enum>QAbstractItemView::InternalMove</enum>
+     </property>
+    </widget>
+    <widget class="QWidget" name="complex_buttons_widget">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>265</y>
+       <width>590</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <layout class="QHBoxLayout" name="complex_buttons_layout">
+      <item>
+       <widget class="QPushButton" name="add_button">
+        <property name="text">
+         <string>Add Entry</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="del_button">
+        <property name="text">
+         <string>Delete Entry</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="add_recommended_button">
+        <property name="text">
+         <string>Add Recommended</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+    <widget class="QTextBrowser" name="doclink">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>590</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-hr { height: 1px; border-width: 0; }
-li.unchecked::marker { content: &quot;\2610&quot;; }
-li.checked::marker { content: &quot;\2612&quot;; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;See the &lt;a href=&quot;https://docs.python.org/3/howto/regex.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Python Regular Expression &lt;/span&gt;&lt;/a&gt;documentation for syntax&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="openExternalLinks">
-    <bool>true</bool>
-   </property>
+     </property>
+     <property name="openExternalLinks">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </widget>
   </widget>
-  <widget class="QPushButton" name="add_recommended_button">
+  <widget class="QGroupBox" name="test_section_group">
    <property name="geometry">
     <rect>
-     <x>300</x>
-     <y>40</y>
-     <width>171</width>
-     <height>26</height>
+     <x>10</x>
+     <y>410</y>
+     <width>620</width>
+     <height>80</height>
     </rect>
    </property>
-   <property name="text">
-    <string>Add Recommended</string>
+   <property name="title">
+    <string>Test Filtering</string>
    </property>
+   <widget class="QLineEdit" name="test_lineedit">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>25</y>
+      <width>450</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Test Track - Official Video</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="test_button">
+    <property name="geometry">
+     <rect>
+      <x>470</x>
+      <y>25</y>
+      <width>80</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Test</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="test_result_label">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>55</y>
+      <width>600</width>
+      <height>15</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="textFormat">
+     <enum>Qt::PlainText</enum>
+    </property>
+   </widget>
   </widget>
-  <widget class="QLineEdit" name="test_lineedit">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>310</y>
-     <width>511</width>
-     <height>26</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>clean - clean</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="result_label">
-   <property name="geometry">
-    <rect>
-     <x>100</x>
-     <y>390</y>
-     <width>521</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-   <property name="textFormat">
-    <enum>Qt::PlainText</enum>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="test_button">
-   <property name="geometry">
-    <rect>
-     <x>540</x>
-     <y>310</y>
-     <width>80</width>
-     <height>26</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Test</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="existing_label">
-   <property name="geometry">
-    <rect>
-     <x>100</x>
-     <y>350</y>
-     <width>521</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-   <property name="textFormat">
-    <enum>Qt::PlainText</enum>
-   </property>
-  </widget>
-  <widget class="QLabel" name="new_label">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>390</y>
-     <width>51</width>
-     <height>18</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>New:</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="old_label">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>350</y>
-     <width>55</width>
-     <height>18</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Existing:</string>
-   </property>
-  </widget>
+  <zorder>test_section_group</zorder>
+  <zorder>stripextras_checkbox</zorder>
+  <zorder>filter_tabs</zorder>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>stripextras_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>filter_tabs</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

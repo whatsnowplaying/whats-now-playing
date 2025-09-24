@@ -24,6 +24,7 @@ import nowplaying.config
 import nowplaying.hostmeta
 import nowplaying.musicbrainz
 import nowplaying.utils
+import nowplaying.utils.filters
 from nowplaying.types import TrackMetadata
 from nowplaying.vendor import tinytag  # pylint: disable=no-name-in-module
 
@@ -96,7 +97,7 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             extras[priority].append(plugin)
         return dict(reversed(list(extras.items())))
 
-    async def getmoremetadata(
+    async def getmoremetadata(  # pylint: disable=too-many-branches
         self,
         metadata: TrackMetadata | None = None,
         imagecache: "nowplaying.imagecache.ImageCache | None" = None,
@@ -134,6 +135,25 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                 func()
         except Exception:  # pylint: disable=broad-except
             logging.exception("Ignoring sub-metaproc failure.")
+
+        if self.metadata.get("filename") and not self.metadata.get("title"):
+            logging.debug("No title, so setting to filename stem")
+            self.metadata["title"] = pathlib.Path(self.metadata["filename"]).stem
+            if " - " in self.metadata.get("title", "") and not self.metadata.get("artist"):
+                parts = self.metadata["title"].split(" - ", 1)
+                if len(parts) == 2:
+                    logging.debug("Splitting out filename stem to artist - title")
+                    self.metadata["artist"] = parts[0].strip()
+                    self.metadata["title"] = parts[1].strip()
+
+        if (
+            " - " in self.metadata.get("title", "")
+            and self.metadata.get("artist")
+            and self.metadata["artist"] in self.metadata.get("title", "")
+        ):
+            logging.debug("Removing extra artist - from title")
+            parts = self.metadata["title"].split(" - ", 1)
+            self.metadata["title"] = parts[1].strip()
 
         await self._process_plugins(skipplugins)
 
@@ -186,11 +206,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if not self.metadata:
             return
 
-        if self.config.cparser.value("settings/stripextras", type=bool) and self.metadata.get(
-            "title"
-        ):
-            self.metadata["title"] = nowplaying.utils.titlestripper_advanced(
-                title=self.metadata["title"], title_regex_list=self.config.getregexlist()
+        if self.metadata.get("title"):
+            self.metadata["title"] = nowplaying.utils.filters.titlestripper(
+                config=self.config, title=self.metadata["title"]
             )
 
     def _uniqlists(self) -> None:
@@ -333,46 +351,6 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self.metadata = recognition_replacement(
             config=self.config, metadata=self.metadata, addmeta=addmeta
         )
-
-        # handle the youtube download case special
-        if (not addmeta or not addmeta.get("album")) and " - " in self.metadata["title"]:
-            if comments := self.metadata.get("comments"):
-                if YOUTUBE_MATCH_RE.match(comments):
-                    await self._mb_youtube_fallback(musicbrainz)
-
-    async def _mb_youtube_fallback(
-        self, musicbrainz: "nowplaying.musicbrainz.MusicBrainzHelper"
-    ) -> None:
-        if not self.metadata:
-            return
-
-        if not self.config.cparser.value("musicbrainz/enabled", type=bool):
-            logging.debug("Skipping youtube fallback lookup - disabled")
-            return None
-
-        addmeta2 = copy.deepcopy(self.metadata)
-        artist, title = self.metadata["title"].split(" - ")
-        addmeta2["artist"] = artist.strip()
-
-        # Strip common video suffixes from title before MusicBrainz lookup
-        clean_title = title.strip()
-        if self.config.cparser.value("settings/stripextras", type=bool):
-            clean_title = nowplaying.utils.titlestripper_advanced(
-                title=clean_title, title_regex_list=self.config.getregexlist()
-            )
-        addmeta2["title"] = clean_title
-
-        logging.debug("Youtube video fallback with %s and %s", artist, clean_title)
-
-        try:
-            if addmeta := await musicbrainz.lastditcheffort(addmeta2):
-                self.metadata["artist"] = artist
-                self.metadata["title"] = clean_title  # Use the cleaned title
-                self.metadata = recognition_replacement(
-                    config=self.config, metadata=self.metadata, addmeta=addmeta
-                )
-        except Exception:  # pylint: disable=broad-except
-            logging.error("Ignoring fallback failure.")
 
     async def _process_plugins(self, skipplugins: bool) -> None:
         await self._musicbrainz()

@@ -3,11 +3,9 @@
 
 import asyncio
 import base64
-import copy
 import io
 import logging
 import os
-import pathlib
 import re
 import ssl
 import time
@@ -26,12 +24,7 @@ if TYPE_CHECKING:
     import nowplaying.config
     from nowplaying.types import TrackMetadata
 
-STRIPWORDLIST = ["clean", "dirty", "explicit", "official music video"]
-STRIPRELIST = [
-    re.compile(r" \((?i:{0})\)".format("|".join(STRIPWORDLIST))),  # pylint: disable=consider-using-f-string
-    re.compile(r" - (?i:{0}$)".format("|".join(STRIPWORDLIST))),  # pylint: disable=consider-using-f-string
-    re.compile(r" \[(?i:{0})\]".format("|".join(STRIPWORDLIST))),  # pylint: disable=consider-using-f-string
-]
+# Title stripping moved to nowplaying.utils.filters.titlestripper()
 
 TRANSPARENT_PNG = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
@@ -290,29 +283,8 @@ def normalize(text: str | None, sizecheck: int = 0, nospaces: bool = False) -> s
     return normaltext
 
 
-def titlestripper_basic(
-    title: str | None = None, title_regex_list: list[re.Pattern[str]] | None = None
-) -> str | None:
-    """Basic title removal"""
-    if not title_regex_list or len(title_regex_list) == 0:
-        title_regex_list = STRIPRELIST
-    return titlestripper_advanced(title=title, title_regex_list=title_regex_list)
-
-
-def titlestripper_advanced(
-    title: str | None = None, title_regex_list: list[re.Pattern[str]] | None = None
-) -> str | None:
-    """Advanced title removal"""
-    if not title:
-        return None
-    trackname = copy.deepcopy(title)
-    if not title_regex_list or len(title_regex_list) == 0:
-        return trackname
-    for index in title_regex_list:
-        trackname = index.sub("", trackname)
-    if len(trackname) == 0:
-        trackname = copy.deepcopy(title)
-    return trackname
+# Title stripping functions moved to nowplaying.utils.filters.titlestripper()
+# Use that function instead of these deprecated ones
 
 
 def humanize_time(seconds: float | int | str | None) -> str:
