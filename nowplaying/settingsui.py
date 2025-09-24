@@ -966,50 +966,57 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     self.widgets["filter"].regex_list.row(item)
                 )
 
+    def _test_simple_filter(self, title: str) -> str:
+        """Test title with simple filter settings"""
+        result = title
+        # Apply per-phrase filtering based on current UI state
+        for phrase, formats in self.simple_filter_manager.phrase_format_selections.items():
+            # Apply plain string matching first (fastest)
+            if formats.get("plain", False):
+                title_lower = result.lower()
+                phrase_lower = phrase.lower()
+                if phrase_lower in title_lower:
+                    start_idx = title_lower.find(phrase_lower)
+                    if start_idx != -1:
+                        result = result[:start_idx] + result[start_idx + len(phrase) :]
+
+            # Apply formatted patterns (regex-based)
+            if formats.get("dash", False):
+                pattern = re.compile(f" - (?i:{re.escape(phrase)})$")
+                result = pattern.sub("", result)
+            if formats.get("paren", False):
+                pattern = re.compile(f" \\((?i:{re.escape(phrase)})\\)")
+                result = pattern.sub("", result)
+            if formats.get("bracket", False):
+                pattern = re.compile(f" \\[(?i:{re.escape(phrase)})\\]")
+                result = pattern.sub("", result)
+        return result
+
+    def _test_complex_filter(self, title: str) -> str | None:
+        """Test title with complex regex filters"""
+        if not self.verify_regex_filters():
+            return None
+        striprelist = []
+        rowcount = self.widgets["filter"].regex_list.count()
+        for row in range(rowcount):
+            item = self.widgets["filter"].regex_list.item(row).text()
+            striprelist.append(re.compile(item))
+        return nowplaying.utils.filters.titlestripper_advanced(
+            title=title, title_regex_list=striprelist
+        )
+
     @Slot()
-    def on_filter_test_button(  # pylint: disable=too-many-branches
-        self,
-    ):
+    def on_filter_test_button(self):
         """filter test button clicked action"""
         title = self.widgets["filter"].test_lineedit.text()
 
         current_tab = self.widgets["filter"].filter_tabs.currentIndex()
         if current_tab == 0:  # Simple tab
-            # Test using current SimpleFilterManager state (not saved config)
-            result = title
-            # Apply per-phrase filtering based on current UI state
-            for phrase, formats in self.simple_filter_manager.phrase_format_selections.items():
-                # Apply plain string matching first (fastest)
-                if formats.get("plain", False):
-                    title_lower = result.lower()
-                    phrase_lower = phrase.lower()
-                    if phrase_lower in title_lower:
-                        start_idx = title_lower.find(phrase_lower)
-                        if start_idx != -1:
-                            result = result[:start_idx] + result[start_idx + len(phrase) :]
-
-                # Apply formatted patterns (regex-based)
-                if formats.get("dash", False):
-                    pattern = re.compile(f" - (?i:{re.escape(phrase)})$")
-                    result = pattern.sub("", result)
-                if formats.get("paren", False):
-                    pattern = re.compile(f" \\((?i:{re.escape(phrase)})\\)")
-                    result = pattern.sub("", result)
-                if formats.get("bracket", False):
-                    pattern = re.compile(f" \\[(?i:{re.escape(phrase)})\\]")
-                    result = pattern.sub("", result)
+            result = self._test_simple_filter(title)
         else:  # Complex tab
-            if not self.verify_regex_filters():
+            result = self._test_complex_filter(title)
+            if result is None:
                 return
-            striprelist = []
-            rowcount = self.widgets["filter"].regex_list.count()
-            for row in range(rowcount):
-                item = self.widgets["filter"].regex_list.item(row).text()
-                striprelist.append(re.compile(item))
-            # Test and show result in single label
-            result = nowplaying.utils.filters.titlestripper_advanced(
-                title=title, title_regex_list=striprelist
-            )
 
         if result != title:
             self.widgets["filter"].test_result_label.setText(f"Result: {result}")
@@ -1033,6 +1040,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self._update_simple_filter_table()
         else:
             logging.warning("Failed to add custom phrase '%s': %s", phrase_text, error_msg)
+            # Show error message to user
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setWindowTitle("Custom Phrase Error")
+            msg_box.setText(f"Failed to add custom phrase: {error_msg}")
+            msg_box.exec()
 
     @Slot()
     def on_remove_custom_phrase_button(self):
@@ -1114,16 +1127,15 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """Update checkboxes in the table based on current settings"""
 
         table = self.widgets["filter"].phrases_table
-        phrases = nowplaying.utils.filters.SIMPLE_FILTER_PHRASES
+        phrases = self.simple_filter_manager.get_all_phrases()
 
-        for row, phrase in enumerate(sorted(phrases)):
-            for col, format_type in enumerate(["dash", "paren", "bracket"], 1):
-                widget = table.cellWidget(row, col)
-                if widget:
-                    checkbox = widget.findChild(QCheckBox)
-                    if checkbox:
-                        enabled = self.simple_filter_manager.get_phrase_format(phrase, format_type)
-                        checkbox.setChecked(enabled)
+        for row, phrase in enumerate(phrases):
+            for col, format_type in enumerate(["dash", "paren", "bracket", "plain"], 1):
+                if (widget := table.cellWidget(row, col)) and (
+                    checkbox := widget.findChild(QCheckBox)
+                ):
+                    enabled = self.simple_filter_manager.get_phrase_format(phrase, format_type)
+                    checkbox.setChecked(enabled)
 
     @Slot()
     def on_cancel_button(self):

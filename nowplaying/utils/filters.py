@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Filter utilities for title stripping"""
 
+from __future__ import annotations
+
 import copy
 import re
 
@@ -53,6 +55,9 @@ SIMPLE_FILTER_DEFAULT_OFF = [
 
 # Combined list of all predefined available phrases
 SIMPLE_FILTER_PHRASES = SIMPLE_FILTER_DEFAULT_ON + SIMPLE_FILTER_DEFAULT_OFF
+
+# Global cache for SimpleFilterManager to avoid recreation on every titlestripper call
+_cached_filter_manager: SimpleFilterManager | None = None
 
 
 class SimpleFilterManager:
@@ -286,6 +291,8 @@ def titlestripper(config: "nowplaying.config.ConfigFile", title: str | None = No
     Returns:
         Stripped title or None if input was None
     """
+    global _cached_filter_manager  # pylint: disable=global-statement
+
     if not title:
         return None
 
@@ -293,12 +300,15 @@ def titlestripper(config: "nowplaying.config.ConfigFile", title: str | None = No
     if not config.cparser.value("settings/stripextras", type=bool):
         return title  # Return unchanged if stripping is disabled
 
-    # Apply simple filter patterns (from simple UI selections)
-    simple_manager = SimpleFilterManager()
-    simple_manager.load_from_config(config.cparser)
+    # Use cached SimpleFilterManager or create new one
+    if _cached_filter_manager is None:
+        _cached_filter_manager = SimpleFilterManager()
+
+    # Always reload from config to ensure current settings are used
+    _cached_filter_manager.load_from_config(config.cparser)
 
     # Apply per-phrase filtering based on user's format selections
-    for phrase, formats in simple_manager.phrase_format_selections.items():
+    for phrase, formats in _cached_filter_manager.phrase_format_selections.items():
         # Apply plain string matching first (fastest)
         if formats.get("plain", False):
             title_lower = title.lower()
