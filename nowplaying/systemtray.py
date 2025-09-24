@@ -415,6 +415,11 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self._exit_app()
 
+    def import_quit(self) -> None:
+        """imported a new config"""
+        self.exit_everything()
+        self._exit_app()
+
     def _exit_app(self) -> None:
         """actually exit"""
         app = QApplication.instance()

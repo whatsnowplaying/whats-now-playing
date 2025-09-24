@@ -1181,10 +1181,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                         self.qtui,
                         "Import Successful",
                         f"Configuration imported from:\n{import_path}\n\n"
-                        "The application may need to be restarted for all changes to take effect.",
+                        "The application will now close. Please restart "
+                        "it manually to apply all changes.",
                     )
-                    # Refresh the UI to show imported settings
-                    self.load_ui()
+                    # Configuration is already saved by import_config(), just quit
+                    self.tray.import_quit()
                 else:
                     QMessageBox.critical(
                         self.qtui,
