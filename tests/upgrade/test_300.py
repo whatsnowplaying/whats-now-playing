@@ -72,6 +72,7 @@ def test_version_300rc1_to_current():  # pylint: disable=redefined-outer-name
         else:
             qsettingsformat = QSettings.NativeFormat
         teststr = "".join(random.choice(string.ascii_lowercase) for _ in range(5))
+        _oldfilename = make_fake_300_config(teststr)
 
         # Verify backup directory doesn't exist yet
         backupdir = os.path.join(newpath, "testsuite", "configbackup")
