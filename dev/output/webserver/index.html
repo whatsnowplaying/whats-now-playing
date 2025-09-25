@@ -2026,8 +2026,14 @@ the OBS source wherever you would like.</p>
 <td>/httpstatic/</td>
 <td>Any content in`Documents/NowPlaying/httpstatic` will get served under this URL.</td>
 </tr>
+<tr>
+<td>/template.htm</td>
+<td>Any template.htm file in the templates directory. See below.</td>
+</tr>
 </tbody>
 </table>
+<p>Additionally, referencing <code>/&lt;templatename&gt;.htm</code> will also read <code>template.htm</code>  from the <code>templates</code> directory and
+render it.  This feature allows you to use more than one template at a time for advanced setups.</p>
 <p>See also <a href="../../extras/">Artist Extras</a> for other URLs when that
 set of features is enabled.</p>
 <h2 id="rest-api">REST API<a class="headerlink" href="#rest-api" title="Permanent link">&para;</a></h2>
