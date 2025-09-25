@@ -256,7 +256,7 @@ class UpgradeConfig:
 
     @staticmethod
     def _upgrade_to_5_0_0_preview5(config: QSettings) -> None:
-        """Upgrade to 5.0.0-preview5 - Migrate Serato config for new serato4 plugin"""
+        """Upgrade to 5.0.0-preview5 - Migrate Serato config and reset filters"""
         logging.info("Upgrade to 5.0.0-preview5: migrating serato/* config to serato4/*")
 
         # Keys that should be copied to serato4 for new plugin
@@ -295,6 +295,22 @@ class UpgradeConfig:
             logging.info("Switched input plugin from serato to serato3")
         else:
             logging.debug("Current input is %s - no migration needed", current_input)
+
+        # Reset filter system to new defaults
+        logging.info("Upgrade to 5.0.0-preview5: resetting filter system to new defaults")
+
+        # Remove existing regex filters (simple_filter is new in this release)
+        for key in list(config.allKeys()):
+            if key.startswith("regex_filter/"):
+                logging.debug("Removing old filter key: %s", key)
+                config.remove(key)
+
+        # Turn filtering on by default
+        config.setValue("settings/stripextras", True)
+        logging.info("Enabled title filtering by default")
+
+        # The FilterManager will automatically set up defaults when no simple filter config exists
+        # This ensures the default-on phrases are properly enabled
 
     def _cleanup_old_backup_files(self) -> None:
         """Clean up old .bak backup files from pre-5.0.0-preview5"""

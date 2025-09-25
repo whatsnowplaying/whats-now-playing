@@ -38,6 +38,14 @@
       DB or specific crates/playlists
     * Support for animated gifs/memes based upon text from Tenor
 
+  * Title Filtering Overhaul
+    * A new, simplified filter system for removing text from titles as been
+      implemented. The newer one is much easier to use without having to do
+      a lot of extra work.
+    * The complex regex-based filter is still present and available, but
+      upgrading to this version will remove existing filters and default on
+      the a default set of useful filters.
+
   * Web Server changes
     * Removed bundled templates that did not use websockets
     * Revamped old templates to remove some sizing and background issues with OBS
