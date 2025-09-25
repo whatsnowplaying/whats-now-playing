@@ -51,6 +51,7 @@
     * Revamped old templates to remove some sizing and background issues with OBS
     * New templates that mirror the boring templates everyone else uses
     * New templates with new special effects
+    * All templates may now be referenced by name (e.g, `/template.htm` -> `/templates/template.htm`)
     * ws-gifwords-fade.htm to show GifWords requests
     * ws-justthecover.htm to cycle through all of the front covers
     * Bundled copies of some common libraries available via the `/vendor` endpoint
