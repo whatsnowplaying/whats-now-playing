@@ -46,6 +46,10 @@ the OBS source wherever you would like.
 | /index.txt | Same output as the text output in the General settings. |
 | /cover.png | This URL will return the cover image, if available. |
 | /httpstatic/ | Any content in\`Documents/NowPlaying/httpstatic\` will get served under this URL. |
+| /template.htm | Any template.htm file in the templates directory. See below. |
+
+Additionally, referencing `/<templatename>.htm` will also read `template.htm`  from the `templates` directory and
+render it.  This feature allows you to use more than one template at a time for advanced setups.
 
 See also [Artist Extras](../extras/index.md) for other URLs when that
 set of features is enabled.
