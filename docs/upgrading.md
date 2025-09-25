@@ -6,11 +6,12 @@ and the [release
 notes](https://github.com/whatsnowplaying/whats-now-playing/releases)
 for any breaking changes and news.
 
-> [!TIP]
-> **New in 4.2+**: Use the **Configuration Backup** feature in General
-> Settings to export your settings before upgrading as a safety backup.
-> Normal upgrades preserve your settings automatically, but having a
-> backup helps if anything goes wrong during the upgrade process.
+## Upgrading to 5.0.0
+
+* Starting with 5.0.0, the system will automatically put an importable
+  copy of your config in the `NowPlaying\configbackup` folder to use for
+  recovery.  After the upgrade is successful, you should delete this copy
+  as necessary.
 
 ## Configuration Recovery (4.2+)
 
@@ -18,12 +19,12 @@ If an upgrade fails or settings are lost, you can restore from a
 configuration backup:
 
 1. **Export before upgrading** (recommended):
-   - Open Settings → General → **Export Configuration**
-   - Save the JSON file to a secure location
+   * Open Settings → General → **Export Configuration**
+   * Save the JSON file to a secure location
 2. **Import if needed** (only if settings are lost):
-   - Open Settings → General → **Import Configuration**
-   - Select your exported JSON file
-   - Save and restart the application
+   * Open Settings → General → **Import Configuration**
+   * Select your exported JSON file
+   * Save and restart the application
 
 > [!WARNING]
 > Only import configurations when necessary. Normal upgrades preserve
@@ -45,10 +46,10 @@ higher after upgrading to a 4.x.x release.
 3. Many templates have been added and updated. New templates will be
    copied into the templates directory. For updated templates, there
    are two outcomes:
-   - If there have been no changes to the same one in the template
+   * If there have been no changes to the same one in the template
      directory, the updated template file will overwrite the existing
      one.
-   - If there have been changes to the one in the template directory,
+   * If there have been changes to the one in the template directory,
      the updated one will be put in as `.new` and will likely require
      you to take action. The existing one will be left there, however.
      A pop-up on program launch will also inform you that the conflict

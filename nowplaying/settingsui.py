@@ -4,6 +4,7 @@
 # pylint: disable=too-many-lines
 
 import contextlib
+import functools
 import glob
 import json
 import logging
@@ -967,32 +968,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     self.widgets["filter"].regex_list.row(item)
                 )
 
-    def _test_simple_filter(self, title: str) -> str:
-        """Test title with simple filter settings"""
-        result = title
-        # Apply per-phrase filtering based on current UI state
-        for phrase, formats in self.simple_filter_manager.phrase_format_selections.items():
-            # Apply plain string matching first (fastest)
-            if formats.get("plain", False):
-                title_lower = result.lower()
-                phrase_lower = phrase.lower()
-                if phrase_lower in title_lower:
-                    start_idx = title_lower.find(phrase_lower)
-                    if start_idx != -1:
-                        result = result[:start_idx] + result[start_idx + len(phrase) :]
-
-            # Apply formatted patterns (regex-based)
-            if formats.get("dash", False):
-                pattern = re.compile(f" - (?i:{re.escape(phrase)})$")
-                result = pattern.sub("", result)
-            if formats.get("paren", False):
-                pattern = re.compile(f" \\((?i:{re.escape(phrase)})\\)")
-                result = pattern.sub("", result)
-            if formats.get("bracket", False):
-                pattern = re.compile(f" \\[(?i:{re.escape(phrase)})\\]")
-                result = pattern.sub("", result)
-        return result
-
     def _populate_manager_from_ui(self, manager: nowplaying.utils.filters.FilterManager):
         """Populate a FilterManager with current UI settings (unsaved)"""
         # Read simple filter settings from the UI table
@@ -1013,8 +988,8 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 enabled = self.simple_filter_manager.get_phrase_format(phrase, format_type)
                 manager.set_phrase_format(phrase, format_type, enabled)
 
-    def _test_complex_filter(self, title: str) -> str | None:
-        """Test title with complex regex filters"""
+    def _test_complete_filter(self, title: str) -> str | None:
+        """Test title with complete filtering (both simple and complex filters)"""
         if not self.verify_regex_filters():
             return None
 
@@ -1040,13 +1015,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """filter test button clicked action"""
         title = self.widgets["filter"].test_lineedit.text()
 
-        current_tab = self.widgets["filter"].filter_tabs.currentIndex()
-        if current_tab == 0:  # Simple tab
-            result = self._test_simple_filter(title)
-        else:  # Complex tab
-            result = self._test_complex_filter(title)
-            if result is None:
-                return
+        # Test complete filtering (both simple and complex) like real usage
+        result = self._test_complete_filter(title)
+        if result is None:
+            return
 
         if result != title:
             self.widgets["filter"].test_result_label.setText(f"Result: {result}")
@@ -1151,9 +1123,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             for col, format_type in enumerate(["dash", "paren", "bracket", "plain"], 1):
                 checkbox = QCheckBox()
                 checkbox.stateChanged.connect(
-                    lambda state, p=phrase, f=format_type: self._on_simple_filter_checkbox_changed(
-                        p, f, state
-                    )
+                    functools.partial(self._on_simple_filter_checkbox_changed, phrase, format_type)
                 )
 
                 # Center the checkbox

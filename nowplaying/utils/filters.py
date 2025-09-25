@@ -193,11 +193,11 @@ class FilterManager:
 
         # Generate patterns for each format
         if dash_phrases:
-            self._create_regex_pattern(dash_phrases, patterns, " - (?i:", ")$")
+            self._create_regex_pattern(dash_phrases, patterns, " - (", ")$")
         if paren_phrases:
-            self._create_regex_pattern(paren_phrases, patterns, " \\((?i:", ")\\)")
+            self._create_regex_pattern(paren_phrases, patterns, " \\((", ")\\)")
         if bracket_phrases:
-            self._create_regex_pattern(bracket_phrases, patterns, " \\[(?i:", ")\\]")
+            self._create_regex_pattern(bracket_phrases, patterns, " \\[(", ")\\]")
         return patterns
 
     @staticmethod
@@ -212,7 +212,7 @@ class FilterManager:
         """Get compiled regex patterns with caching for performance"""
         if self._patterns_dirty or not self._compiled_patterns:
             patterns = self.generate_regex_patterns()
-            self._compiled_patterns = [re.compile(pattern) for pattern in patterns]
+            self._compiled_patterns = [re.compile(pattern, re.IGNORECASE) for pattern in patterns]
             self._patterns_dirty = False
         return self._compiled_patterns
 
@@ -240,16 +240,9 @@ class FilterManager:
                     if start_idx != -1:
                         title = title[:start_idx] + title[start_idx + len(phrase) :]
 
-            # Apply formatted patterns (regex-based)
-            if formats.get("dash", False):
-                pattern = re.compile(f" - (?i:{re.escape(phrase)})$")
-                title = pattern.sub("", title)
-            if formats.get("paren", False):
-                pattern = re.compile(f" \\((?i:{re.escape(phrase)})\\)")
-                title = pattern.sub("", title)
-            if formats.get("bracket", False):
-                pattern = re.compile(f" \\[(?i:{re.escape(phrase)})\\]")
-                title = pattern.sub("", title)
+        # Apply formatted patterns using cached compiled regex
+        for pattern in self.get_compiled_regex_list():
+            title = pattern.sub("", title)
 
         # Apply complex regex patterns
         for pattern in self.regex_patterns:
@@ -411,11 +404,11 @@ def titlestripper(config: "nowplaying.config.ConfigFile", title: str | None = No
     current_save_date = config.cparser.value("settings/lastsavedate", type=int) or 0
 
     # Use cached FilterManager or create new one
-    if _cached_filter_manager is None or _cache_last_load_date < current_save_date:
-        if _cached_filter_manager is None:
-            _cached_filter_manager = FilterManager()
+    if _cached_filter_manager is None:
+        _cached_filter_manager = FilterManager()
 
-        # Only reload from config if it has changed
+    if _cache_last_load_date < current_save_date or current_save_date == 0:
+        # Reload from config when it has changed
         _cached_filter_manager.load_from_config(config.cparser)
         # Also load complex regex patterns from config
         _cached_filter_manager.set_regex_patterns(config.getregexlist())

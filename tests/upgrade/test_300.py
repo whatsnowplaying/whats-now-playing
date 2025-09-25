@@ -17,7 +17,7 @@ import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.upgrades.config  # pylint: disable=import-error
 import nowplaying.utils.config_json  # pylint: disable=import-error
 import nowplaying.version  # pylint: disable=no-member,import-error,no-name-in-module
-from tests.upgrade.upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
+from .upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
 
 
 def make_fake_300_config(fakestr):
