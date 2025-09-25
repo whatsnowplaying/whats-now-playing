@@ -472,27 +472,108 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#adding-your-rules" class="md-nav__link">
+  <a href="#filter-types" class="md-nav__link">
     <span class="md-ellipsis">
-      Adding Your Rules
+      Filter Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Filter Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simple-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simple Filters
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Simple Filters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#default-phrases" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default Phrases
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-custom-phrases" class="md-nav__link">
+    <span class="md-ellipsis">
+      Managing Custom Phrases
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#complex-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complex Filters
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complex Filters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-complex-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding Complex Rules
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-complex-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      Managing Complex Rules
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reset-to-defaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reset to Defaults
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#testing-your-rules" class="md-nav__link">
+  <a href="#testing-your-filters" class="md-nav__link">
     <span class="md-ellipsis">
-      Testing Your Rules
+      Testing Your Filters
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#recommended" class="md-nav__link">
+  <a href="#how-filters-are-applied" class="md-nav__link">
     <span class="md-ellipsis">
-      Recommended
+      How Filters Are Applied
     </span>
   </a>
   
@@ -1928,50 +2009,76 @@
 
 <h1 id="filter">Filter<a class="headerlink" href="#filter" title="Permanent link">&para;</a></h1>
 <p><a href="../images/filter.png"><img alt="Filter Settings" src="../images/filter.png" /></a></p>
-<p>Some DJ Pools add extra identifiers to track titles. <strong>What's Now
-Playing</strong> has the ability to remove extra text from the title of a track
-using <a href="https://docs.python.org/3/howto/regex.md">Python-style regular
-expressions</a> .</p>
-<h2 id="adding-your-rules">Adding Your Rules<a class="headerlink" href="#adding-your-rules" title="Permanent link">&para;</a></h2>
-<p>Your custom rules may be added by:</p>
+<p>Some DJ Pools add extra identifiers to track titles. <strong>What's Now Playing</strong> has
+the ability to remove extra text from the title of a track using two types of
+filters: <strong>Simple</strong> phrase-based filters and <strong>Complex</strong> regex patterns.</p>
+<h2 id="filter-types">Filter Types<a class="headerlink" href="#filter-types" title="Permanent link">&para;</a></h2>
+<p><strong>What's Now Playing</strong> provides two filtering approaches:</p>
+<h3 id="simple-filters">Simple Filters<a class="headerlink" href="#simple-filters" title="Permanent link">&para;</a></h3>
+<p>The Simple tab provides an easy-to-use interface for filtering common
+unwanted phrases from track titles. These filters work by matching
+specific phrases in different formats (all case-insensitive):</p>
+<ul>
+<li><strong>- phrase</strong>: Matches " - phrase" at the end of titles</li>
+<li><strong>(phrase)</strong>: Matches " (phrase)" anywhere in titles</li>
+<li><strong>[phrase]</strong>: Matches " [phrase]" anywhere in titles</li>
+<li><strong>plain</strong>: Matches "phrase" anywhere in titles</li>
+</ul>
+<h4 id="default-phrases">Default Phrases<a class="headerlink" href="#default-phrases" title="Permanent link">&para;</a></h4>
+<p>By default, these phrases are enabled for dash/paren/bracket filtering:</p>
+<ul>
+<li>Video quality indicators: 1080p, 480p, 4k, 720p, hd, high quality, hq</li>
+<li>Content descriptors: ce, cs, clean, clean version, dirty, explicit, explicit version</li>
+<li>Video types: lyric video, lyrics video, music video, official audio, official music video, official trailer, official video</li>
+<li>Audio processing: remaster, remastered</li>
+</ul>
+<h4 id="managing-custom-phrases">Managing Custom Phrases<a class="headerlink" href="#managing-custom-phrases" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Add custom phrases</strong>: Enter text in the input field and click "Add"</li>
+<li><strong>Remove custom phrases</strong>: Select a custom phrase row and click "Remove"</li>
+<li><strong>Configure formats</strong>: Use checkboxes to enable/disable different matching formats for each phrase</li>
+</ul>
+<h3 id="complex-filters">Complex Filters<a class="headerlink" href="#complex-filters" title="Permanent link">&para;</a></h3>
+<p>The Complex tab allows advanced users to create custom
+<a href="https://docs.python.org/3/howto/regex.html">Python-style regular expressions</a>
+for more sophisticated pattern matching.</p>
+<h4 id="adding-complex-rules">Adding Complex Rules<a class="headerlink" href="#adding-complex-rules" title="Permanent link">&para;</a></h4>
 <ol>
-<li>Click the Add Entry button</li>
-<li>Click on the 'new' entry</li>
+<li>Click "Add Entry" button</li>
+<li>Click on the new entry in the list</li>
 <li>Edit to be a regular expression</li>
 </ol>
-<p>To delete an existing entry:</p>
-<ol>
-<li>Select the entry in the list</li>
-<li>Click Delete Entry</li>
-</ol>
-<p>The order in which the rules are applied are done in the same order as
-presented in the list. To change the order, select the entry and drag it
-to the location in the list.</p>
-<h2 id="testing-your-rules">Testing Your Rules<a class="headerlink" href="#testing-your-rules" title="Permanent link">&para;</a></h2>
-<p>The text line below the ruleset may be used to test the rules.</p>
-<ol>
-<li>Place your text in the 'clean - clean' line.</li>
-<li>Click the Test button</li>
-<li>The software will then show wbat happens will the rules defined in
-    Settings and the rules as previously saved.</li>
-</ol>
-<h2 id="recommended">Recommended<a class="headerlink" href="#recommended" title="Permanent link">&para;</a></h2>
-<p>Previous versions had some built-in rules to remove a few common
-entries. Clicking on the 'Add Recommended' button will add those rules:</p>
-<p><a href="../images/filterrecommended.png"><img alt="Add Recommended" src="../images/filterrecommended.png" /></a></p>
+<h4 id="managing-complex-rules">Managing Complex Rules<a class="headerlink" href="#managing-complex-rules" title="Permanent link">&para;</a></h4>
 <ul>
-<li>' (Clean)', ' (clean)', and all other variations of case like '
-  (ClEaN)'</li>
-<li>At the end of the line: ' - clean', ' - Clean' and similarly is case
-  insensitive</li>
-<li>' [Clean]' and ' [clean]' and smiliarly is case insensitive</li>
+<li><strong>Delete entry</strong>: Select entry and click "Delete Entry"</li>
+<li><strong>Reorder rules</strong>: Drag entries to change application order</li>
+<li><strong>Add number patterns</strong>: Click "Add Numbers" to add patterns that
+  match numbers in parentheses/brackets like " (123)" and " [456]"</li>
 </ul>
-<p>They will also remove the same types of variations of:</p>
+<h2 id="reset-to-defaults">Reset to Defaults<a class="headerlink" href="#reset-to-defaults" title="Permanent link">&para;</a></h2>
+<p>Click the "Reset to Defaults" button (located at the top right) to:</p>
 <ul>
-<li>explicit</li>
-<li>dirty</li>
-<li>official music video</li>
+<li>Reset simple filters to application defaults</li>
+<li>Remove all custom phrases</li>
+<li>Clear all complex regex patterns</li>
 </ul>
+<p>This provides a clean starting point if filters become misconfigured.</p>
+<h2 id="testing-your-filters">Testing Your Filters<a class="headerlink" href="#testing-your-filters" title="Permanent link">&para;</a></h2>
+<p>The test section at the bottom works with <strong>both</strong> simple and
+complex filters together, showing exactly what will happen to track titles in real usage:</p>
+<ol>
+<li>Enter test text in the input field</li>
+<li>Click "Test" button</li>
+<li>The result shows what the title becomes after applying <strong>all active filters</strong> (both simple and complex)</li>
+</ol>
+<p>This unified testing ensures you see the complete filtering behavior that will be applied to your tracks.</p>
+<h2 id="how-filters-are-applied">How Filters Are Applied<a class="headerlink" href="#how-filters-are-applied" title="Permanent link">&para;</a></h2>
+<p>During playback, <strong>What's Now Playing</strong> applies filters in this order:</p>
+<ol>
+<li><strong>Simple phrase filters</strong> (plain text matching first, then regex patterns)</li>
+<li><strong>Complex regex patterns</strong> (in the order shown in the Complex tab)</li>
+</ol>
+<p>Both types of filters work together to provide comprehensive title cleaning.</p>
 
 
 
