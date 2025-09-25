@@ -352,6 +352,46 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             config=self.config, metadata=self.metadata, addmeta=addmeta
         )
 
+        # handle the youtube download case special
+        if (not addmeta or not addmeta.get("album")) and " - " in self.metadata["title"]:
+            if comments := self.metadata.get("comments"):
+                if YOUTUBE_MATCH_RE.match(comments):
+                    await self._mb_youtube_fallback(musicbrainz)
+
+    async def _mb_youtube_fallback(
+        self, musicbrainz: "nowplaying.musicbrainz.MusicBrainzHelper"
+    ) -> None:
+        if not self.metadata:
+            return
+
+        if not self.config.cparser.value("musicbrainz/enabled", type=bool):
+            logging.debug("Skipping youtube fallback lookup - disabled")
+            return None
+
+        addmeta2 = copy.deepcopy(self.metadata)
+        artist, title = self.metadata["title"].split(" - ")
+        addmeta2["artist"] = artist.strip()
+
+        # Strip common video suffixes from title before MusicBrainz lookup
+        clean_title = title.strip()
+        if self.config.cparser.value("settings/stripextras", type=bool):
+            clean_title = nowplaying.utils.filters.titlestripper(
+                config=self.config, title=clean_title
+            )
+        addmeta2["title"] = clean_title
+
+        logging.debug("Youtube video fallback with %s and %s", artist, clean_title)
+
+        try:
+            if addmeta := await musicbrainz.lastditcheffort(addmeta2):
+                self.metadata["artist"] = artist
+                self.metadata["title"] = clean_title  # Use the cleaned title
+                self.metadata = recognition_replacement(
+                    config=self.config, metadata=self.metadata, addmeta=addmeta
+                )
+        except Exception:  # pylint: disable=broad-except
+            logging.error("Ignoring fallback failure.")
+
     async def _process_plugins(self, skipplugins: bool) -> None:
         await self._musicbrainz()
 

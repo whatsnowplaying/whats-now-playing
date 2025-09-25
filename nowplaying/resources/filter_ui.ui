@@ -26,6 +26,22 @@
     <string>Filter titles using text patterns</string>
    </property>
   </widget>
+  <widget class="QPushButton" name="reset_to_defaults_button">
+   <property name="geometry">
+    <rect>
+     <x>500</x>
+     <y>10</y>
+     <width>120</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Reset to Defaults</string>
+   </property>
+   <property name="toolTip">
+    <string>Reset all filter settings (simple and complex) to defaults</string>
+   </property>
+  </widget>
   <widget class="QTabWidget" name="filter_tabs">
    <property name="geometry">
     <rect>
@@ -209,7 +225,10 @@
       <item>
        <widget class="QPushButton" name="add_recommended_button">
         <property name="text">
-         <string>Add Recommended</string>
+         <string>Add Numbers</string>
+        </property>
+        <property name="toolTip">
+         <string>Add patterns to filter numbers in parentheses and brackets</string>
         </property>
        </widget>
       </item>

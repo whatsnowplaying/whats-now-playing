@@ -85,7 +85,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.tree_item_mapping = {}  # Maps tree items to widget keys
 
         # Simple filter manager
-        self.simple_filter_manager = nowplaying.utils.filters.SimpleFilterManager()
+        self.simple_filter_manager = nowplaying.utils.filters.FilterManager()
 
         self.uihelp = None
         self.ui_populated = False  # Track if UI widgets are populated with config data
@@ -379,6 +379,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         # Connect custom phrase buttons
         qobject.add_custom_phrase_button.clicked.connect(self.on_add_custom_phrase_button)
         qobject.remove_custom_phrase_button.clicked.connect(self.on_remove_custom_phrase_button)
+        qobject.reset_to_defaults_button.clicked.connect(self.on_reset_to_defaults_button)
 
         # Set up simple filter table
         self._setup_simple_filter_table(qobject)
@@ -992,18 +993,47 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 result = pattern.sub("", result)
         return result
 
+    def _populate_manager_from_ui(self, manager: nowplaying.utils.filters.FilterManager):
+        """Populate a FilterManager with current UI settings (unsaved)"""
+        # Read simple filter settings from the UI table
+        table = self.widgets["filter"].phrases_table
+        phrases = manager.get_all_phrases()
+
+        for row, phrase in enumerate(phrases):
+            for col, format_type in enumerate(["dash", "paren", "bracket", "plain"]):
+                widget = table.cellWidget(row, col + 1)  # Skip phrase name column
+                checkbox = widget.findChild(QCheckBox)
+                enabled = checkbox.isChecked()
+                manager.set_phrase_format(phrase, format_type, enabled)
+
+        # Add custom phrases from the existing manager
+        for phrase in self.simple_filter_manager.custom_phrases:
+            manager.add_custom_phrase(phrase)
+            for format_type in ["dash", "paren", "bracket", "plain"]:
+                enabled = self.simple_filter_manager.get_phrase_format(phrase, format_type)
+                manager.set_phrase_format(phrase, format_type, enabled)
+
     def _test_complex_filter(self, title: str) -> str | None:
         """Test title with complex regex filters"""
         if not self.verify_regex_filters():
             return None
-        striprelist = []
+
+        # Create a FilterManager with current UI state
+        temp_manager = nowplaying.utils.filters.FilterManager()
+
+        # Load simple filter settings from UI
+        self._populate_manager_from_ui(temp_manager)
+
+        # Load complex regex patterns from UI
+        regex_patterns = []
         rowcount = self.widgets["filter"].regex_list.count()
         for row in range(rowcount):
             item = self.widgets["filter"].regex_list.item(row).text()
-            striprelist.append(re.compile(item))
-        return nowplaying.utils.filters.titlestripper_advanced(
-            title=title, title_regex_list=striprelist
-        )
+            regex_patterns.append(re.compile(item))
+        temp_manager.set_regex_patterns(regex_patterns)
+
+        # Apply all filters using the FilterManager
+        return nowplaying.utils.filters.titlestripper_with_manager(temp_manager, title)
 
     @Slot()
     def on_filter_test_button(self):
@@ -1071,14 +1101,34 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 self._update_simple_filter_table()
 
     @Slot()
-    def on_filter_add_recommended_button(self):
-        """load some recommended settings"""
-        stripworldlist = ["clean", "dirty", "explicit", "official music video"]
-        joinlist = "|".join(stripworldlist)
+    def on_reset_to_defaults_button(self):
+        """Reset all filters (simple and complex) to defaults button clicked action"""
+        # Show confirmation dialog
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Question)
+        msg_box.setWindowTitle("Reset to Defaults")
+        msg_box.setText(
+            "This will reset simple filters to defaults, remove all custom phrases, "
+            "and clear all complex patterns. Are you sure?"
+        )
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.setDefaultButton(QMessageBox.No)
 
-        self._filter_regex_load(f" \\((?i:{joinlist})\\)")
-        self._filter_regex_load(f" - (?i:{joinlist}$)")
-        self._filter_regex_load(f" \\[(?i:{joinlist})\\]")
+        if msg_box.exec() == QMessageBox.Yes:
+            # Reset simple filters to defaults
+            self.simple_filter_manager.reset_to_defaults()
+            # Refresh the simple filter table
+            self._setup_simple_filter_table(self.widgets["filter"])
+            self._update_simple_filter_table()
+
+            # Clear all complex regex patterns (leave empty)
+            self.widgets["filter"].regex_list.clear()
+
+    @Slot()
+    def on_filter_add_recommended_button(self):
+        """load number filtering patterns"""
+        self._filter_regex_load(r" \(\d+\)")  # (123)
+        self._filter_regex_load(r" \[\d+\]")  # [123]
 
     def _setup_simple_filter_table(self, qobject):
         """Set up the simple filter table with phrases and checkboxes"""

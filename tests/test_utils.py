@@ -243,7 +243,7 @@ def test_simple_filter_manager_add_custom_phrase_validation(
     input_phrase, expected_success, expected_error_contains
 ):
     """Test custom phrase validation with various inputs"""
-    manager = nowplaying.utils.filters.SimpleFilterManager()
+    manager = nowplaying.utils.filters.FilterManager()
 
     success, error = manager.add_custom_phrase(input_phrase)
     assert success is expected_success
@@ -255,7 +255,7 @@ def test_simple_filter_manager_add_custom_phrase_validation(
 
 def test_simple_filter_manager_custom_phrase_lifecycle():
     """Test custom phrase add/remove lifecycle"""
-    manager = nowplaying.utils.filters.SimpleFilterManager()
+    manager = nowplaying.utils.filters.FilterManager()
 
     # Add valid custom phrase
     success, _ = manager.add_custom_phrase("my custom phrase")
@@ -281,7 +281,7 @@ def test_simple_filter_manager_custom_phrase_lifecycle():
 
 def test_simple_filter_manager_get_all_phrases():
     """Test getting all phrases including custom ones"""
-    manager = nowplaying.utils.filters.SimpleFilterManager()
+    manager = nowplaying.utils.filters.FilterManager()
 
     # Initially should have only predefined phrases
     all_phrases = manager.get_all_phrases()
@@ -299,7 +299,7 @@ def test_simple_filter_manager_get_all_phrases():
 def test_simple_filter_manager_config_with_custom_phrases(bootstrap):
     """Test config save/load with custom phrases"""
     config = bootstrap
-    manager = nowplaying.utils.filters.SimpleFilterManager()
+    manager = nowplaying.utils.filters.FilterManager()
 
     # Add custom phrase and set some formats
     manager.add_custom_phrase("my custom phrase")
@@ -310,7 +310,7 @@ def test_simple_filter_manager_config_with_custom_phrases(bootstrap):
     manager.save_to_config(config.cparser)
 
     # Create new manager and load
-    manager2 = nowplaying.utils.filters.SimpleFilterManager()
+    manager2 = nowplaying.utils.filters.FilterManager()
     manager2.load_from_config(config.cparser)
 
     # Verify custom phrase was loaded
@@ -350,7 +350,7 @@ def test_custom_phrase_filtering(
     config.cparser.setValue("settings/stripextras", True)
 
     # Create manager and add custom phrase
-    manager = nowplaying.utils.filters.SimpleFilterManager()
+    manager = nowplaying.utils.filters.FilterManager()
     manager.add_custom_phrase(custom_phrase)
 
     # Enable specified formats
@@ -359,6 +359,9 @@ def test_custom_phrase_filtering(
 
     # Save to config
     manager.save_to_config(config.cparser)
+
+    # Clear cache to ensure fresh reload for testing
+    nowplaying.utils.filters.clear_titlestripper_cache()
 
     # Test filtering
     result = nowplaying.utils.filters.titlestripper(config=config, title=input_title)
@@ -371,12 +374,15 @@ def test_plain_format_filtering(bootstrap):
     config.cparser.setValue("settings/stripextras", True)
 
     # Create manager and add phrase with plain format enabled
-    manager = nowplaying.utils.filters.SimpleFilterManager()
+    manager = nowplaying.utils.filters.FilterManager()
     manager.add_custom_phrase("my test phrase")
     manager.set_phrase_format("my test phrase", "plain", True)
 
     # Save to config
     manager.save_to_config(config.cparser)
+
+    # Clear cache to ensure fresh reload for testing
+    nowplaying.utils.filters.clear_titlestripper_cache()
 
     # Test plain string removal (anywhere in title)
     result = nowplaying.utils.filters.titlestripper(
@@ -385,6 +391,7 @@ def test_plain_format_filtering(bootstrap):
     assert result == "Song Title  here"
 
     # Test case insensitive
+    nowplaying.utils.filters.clear_titlestripper_cache()
     result = nowplaying.utils.filters.titlestripper(
         config=config, title="Song Title MY TEST PHRASE here"
     )
@@ -394,7 +401,7 @@ def test_plain_format_filtering(bootstrap):
 # pylint: disable=protected-access
 def test_regex_compilation_caching():
     """Test that regex patterns are cached and only recompiled when dirty"""
-    manager = nowplaying.utils.filters.SimpleFilterManager()
+    manager = nowplaying.utils.filters.FilterManager()
 
     # Add some phrases
     manager.add_custom_phrase("test phrase")
@@ -430,9 +437,46 @@ def test_regex_compilation_caching():
     assert manager._patterns_dirty is True
 
 
-def test_regex_caching_across_config_loads():
+def test_reset_to_defaults():
+    """Test that reset_to_defaults works correctly"""
+    manager = nowplaying.utils.filters.FilterManager()
+
+    # Add some custom phrases and non-default settings
+    manager.add_custom_phrase("my custom phrase")
+    manager.set_phrase_format("my custom phrase", "dash", True)
+    manager.set_phrase_format("explicit", "plain", True)  # Non-default setting
+
+    # Verify we have custom data
+    assert "my custom phrase" in manager.custom_phrases
+    assert manager.get_phrase_format("my custom phrase", "dash") is True
+    assert manager.get_phrase_format("explicit", "plain") is True
+
+    # Reset to defaults
+    manager.reset_to_defaults()
+
+    # Verify custom phrases are cleared
+    assert len(manager.custom_phrases) == 0
+    assert "my custom phrase" not in manager.custom_phrases
+
+    # Verify defaults are applied to default-on phrases
+    for phrase in nowplaying.utils.filters.SIMPLE_FILTER_DEFAULT_ON:
+        assert manager.get_phrase_format(phrase, "dash") is True
+        assert manager.get_phrase_format(phrase, "paren") is True
+        assert manager.get_phrase_format(phrase, "bracket") is True
+        assert manager.get_phrase_format(phrase, "plain") is False  # Not enabled by default
+
+    # Verify non-default-on phrases are not configured
+    for phrase in nowplaying.utils.filters.SIMPLE_FILTER_DEFAULT_OFF:
+        assert manager.get_phrase_format(phrase, "dash") is False
+        assert manager.get_phrase_format(phrase, "paren") is False
+        assert manager.get_phrase_format(phrase, "bracket") is False
+        assert manager.get_phrase_format(phrase, "plain") is False
+
+
+def test_regex_caching_across_config_loads(bootstrap):
     """Test that loading from config invalidates cache correctly"""
-    manager = nowplaying.utils.filters.SimpleFilterManager()
+    config = bootstrap
+    manager = nowplaying.utils.filters.FilterManager()
 
     # Set up initial state
     manager.add_custom_phrase("test phrase")
@@ -442,12 +486,8 @@ def test_regex_caching_across_config_loads():
     patterns1 = manager.get_compiled_regex_list()
     assert manager._patterns_dirty is False
 
-    # Mock config object
-    mock_config = Mock()
-    mock_config.allKeys.return_value = []
-
-    # Loading from config should mark as dirty
-    manager.load_from_config(mock_config)
+    # Loading from empty config should mark as dirty
+    manager.load_from_config(config.cparser)
     assert manager._patterns_dirty is True
 
     # Next call should recompile

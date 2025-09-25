@@ -3,64 +3,69 @@
 
 from __future__ import annotations
 
-import copy
+import base64
 import re
+import time
 
 # Default filters that are enabled by default (common unwanted phrases)
 SIMPLE_FILTER_DEFAULT_ON = [
-    "official video",
-    "official music video",
-    "music video",
-    "official audio",
+    "1080p",
+    "480p",
+    "4k",
+    "720p",
+    "ce",
+    "clean version",
+    "clean",
+    "cs",
+    "dirty",
+    "explicit version",
+    "explicit",
+    "hd",
+    "high quality",
+    "hq",
     "lyric video",
     "lyrics video",
-    "clean",
-    "dirty",
-    "explicit",
+    "music video",
+    "official audio",
+    "official music video",
+    "official trailer",
+    "official video",
+    "remaster",
+    "remastered",
 ]
 
 # Additional filters that are available but off by default
 SIMPLE_FILTER_DEFAULT_OFF = [
-    "radio edit",
-    "radio version",
-    "clean version",
-    "explicit version",
-    "remastered",
-    "remaster",
-    "remix",
-    "extended version",
-    "extended mix",
-    "club mix",
-    "instrumental",
     "acoustic version",
     "acoustic",
-    "live version",
-    "live",
-    "studio version",
+    "anniversary edition",
+    "bonus track",
+    "club mix",
+    "deluxe edition",
     "demo version",
     "demo",
-    "unreleased",
-    "bonus track",
-    "deluxe edition",
+    "extended mix",
+    "extended version",
+    "instrumental",
+    "live version",
+    "live",
+    "radio edit",
+    "radio version",
+    "remix",
     "special edition",
-    "anniversary edition",
-    "hd",
-    "hq",
-    "high quality",
-    "4k",
-    "1080p",
-    "720p",
-    "480p",
+    "studio version",
+    "unreleased",
 ]
 
 # Combined list of all predefined available phrases
 SIMPLE_FILTER_PHRASES = SIMPLE_FILTER_DEFAULT_ON + SIMPLE_FILTER_DEFAULT_OFF
 
-# Global cache for SimpleFilterManager to avoid recreation on every titlestripper call
-_cached_filter_manager: SimpleFilterManager | None = None
+# Global cache for FilterManager to avoid recreation on every titlestripper call
+_cached_filter_manager: FilterManager | None = None
+_cache_last_load_date: int = 0
 
 
-class SimpleFilterManager:
+class FilterManager:
     """Manages simple filter phrase selection and regex generation"""
 
     def __init__(self):
@@ -71,6 +76,8 @@ class SimpleFilterManager:
         # Cached compiled patterns for performance
         self._compiled_patterns: list[re.Pattern] = []
         self._patterns_dirty = True
+        # Complex regex patterns (from manual regex entries)
+        self.regex_patterns: list[re.Pattern] = []
 
     def set_phrase_format(self, phrase: str, format_type: str, enabled: bool):
         """Set whether a phrase should be filtered in a specific format"""
@@ -209,6 +216,47 @@ class SimpleFilterManager:
             self._patterns_dirty = False
         return self._compiled_patterns
 
+    def set_regex_patterns(self, patterns: list[re.Pattern]):
+        """Set the complex regex patterns"""
+        self.regex_patterns = patterns.copy()
+
+    def get_regex_patterns(self) -> list[re.Pattern]:
+        """Get the complex regex patterns"""
+        return self.regex_patterns.copy()
+
+    def apply_all_filters(self, title: str | None) -> str | None:
+        """Apply both simple phrase filters and complex regex patterns to a title"""
+        if not title:
+            return None
+
+        # Apply per-phrase filtering based on format selections
+        for phrase, formats in self.phrase_format_selections.items():
+            # Apply plain string matching first (fastest)
+            if formats.get("plain", False):
+                title_lower = title.lower()
+                phrase_lower = phrase.lower()
+                if phrase_lower in title_lower:
+                    start_idx = title_lower.find(phrase_lower)
+                    if start_idx != -1:
+                        title = title[:start_idx] + title[start_idx + len(phrase) :]
+
+            # Apply formatted patterns (regex-based)
+            if formats.get("dash", False):
+                pattern = re.compile(f" - (?i:{re.escape(phrase)})$")
+                title = pattern.sub("", title)
+            if formats.get("paren", False):
+                pattern = re.compile(f" \\((?i:{re.escape(phrase)})\\)")
+                title = pattern.sub("", title)
+            if formats.get("bracket", False):
+                pattern = re.compile(f" \\[(?i:{re.escape(phrase)})\\]")
+                title = pattern.sub("", title)
+
+        # Apply complex regex patterns
+        for pattern in self.regex_patterns:
+            title = pattern.sub("", title)
+
+        return title
+
     def load_from_config(self, config):
         """Load selections from Qt config"""
         self.phrase_format_selections.clear()
@@ -216,7 +264,7 @@ class SimpleFilterManager:
         self._patterns_dirty = True
 
         # Check if we have any simple filter config at all
-        has_simple_config = any(key.startswith("simple_filter/") for key in config.allKeys())
+        has_simple_config = any(key.startswith("simple_filter") for key in config.allKeys())
 
         # If no simple filter config exists, set up defaults
         if not has_simple_config:
@@ -230,30 +278,53 @@ class SimpleFilterManager:
         # Load custom phrases first
         for configitem in config.allKeys():
             if configitem.startswith("simple_filter_custom/"):
-                # Format: simple_filter_custom/{phrase}
-                phrase = configitem.replace("simple_filter_custom/", "").replace("_", " ")
-                if config.value(configitem, type=bool):
-                    self.custom_phrases.add(phrase)
+                # Format: simple_filter_custom/{base64_encoded_phrase}
+                base64_phrase = configitem.replace("simple_filter_custom/", "")
+                try:
+                    phrase = base64.b64decode(base64_phrase.encode("utf-8")).decode("utf-8")
+                    if config.value(configitem, type=bool):
+                        self.custom_phrases.add(phrase)
+                except ValueError:
+                    # Skip invalid base64 entries
+                    continue
 
         # Load phrase format selections
         for configitem in config.allKeys():
             if configitem.startswith("simple_filter/"):
-                # Format: simple_filter/{phrase}/{format}
-                parts = configitem.replace("simple_filter/", "").split("/")
+                # Format: simple_filter/{base64_encoded_phrase}_{format}
+                remaining = configitem.replace("simple_filter/", "")
+                parts = remaining.split("_")
                 if len(parts) == 2:
-                    phrase = parts[0].replace("_", " ")
+                    base64_phrase = parts[0]
                     format_type = parts[1]
-                    # Allow both predefined and custom phrases
-                    if (
-                        phrase in SIMPLE_FILTER_PHRASES or phrase in self.custom_phrases
-                    ) and format_type in [
-                        "dash",
-                        "paren",
-                        "bracket",
-                        "plain",
-                    ]:
-                        enabled = config.value(configitem, type=bool)
-                        self.set_phrase_format(phrase, format_type, enabled)
+                    try:
+                        phrase = base64.b64decode(base64_phrase.encode("utf-8")).decode("utf-8")
+                        # Allow both predefined and custom phrases
+                        if (
+                            phrase in SIMPLE_FILTER_PHRASES or phrase in self.custom_phrases
+                        ) and format_type in [
+                            "dash",
+                            "paren",
+                            "bracket",
+                            "plain",
+                        ]:
+                            enabled = config.value(configitem, type=bool)
+                            self.set_phrase_format(phrase, format_type, enabled)
+                    except ValueError:
+                        # Skip invalid base64 entries
+                        continue
+
+    def reset_to_defaults(self):
+        """Reset to default filter configuration"""
+        self.phrase_format_selections.clear()
+        self.custom_phrases.clear()
+        self._patterns_dirty = True
+
+        # Enable all formats for default-on phrases
+        for phrase in SIMPLE_FILTER_DEFAULT_ON:
+            self.set_phrase_format(phrase, "dash", True)
+            self.set_phrase_format(phrase, "paren", True)
+            self.set_phrase_format(phrase, "bracket", True)
 
     def save_to_config(self, config):
         """Save selections to Qt config"""
@@ -266,15 +337,48 @@ class SimpleFilterManager:
 
         # Save custom phrases
         for phrase in self.custom_phrases:
-            config_key = f"simple_filter_custom/{phrase.replace(' ', '_')}"
+            base64_phrase = base64.b64encode(phrase.encode("utf-8")).decode("utf-8")
+            config_key = f"simple_filter_custom/{base64_phrase}"
             config.setValue(config_key, True)
 
         # Save current selections
         for phrase, formats in self.phrase_format_selections.items():
+            base64_phrase = base64.b64encode(phrase.encode("utf-8")).decode("utf-8")
             for format_type, enabled in formats.items():
                 if enabled:
-                    config_key = f"simple_filter/{phrase.replace(' ', '_')}/{format_type}"
+                    config_key = f"simple_filter/{base64_phrase}_{format_type}"
                     config.setValue(config_key, True)
+
+        # Update lastsavedate to invalidate cached FilterManager
+        config.setValue("settings/lastsavedate", time.strftime("%Y%m%d%H%M%S"))
+
+
+def clear_titlestripper_cache():
+    """Clear the global FilterManager cache for testing"""
+    global _cached_filter_manager, _cache_last_load_date  # pylint: disable=global-statement
+    _cached_filter_manager = None
+    _cache_last_load_date = 0
+
+
+def titlestripper_with_manager(
+    filter_manager: FilterManager, title: str | None = None
+) -> str | None:
+    """
+    Apply filtering using a FilterManager instance directly.
+
+    This is used by the settings UI for testing and by titlestripper() internally.
+
+    Args:
+        filter_manager: FilterManager instance with configured filters
+        title: The title to strip
+
+    Returns:
+        Stripped title or None if input was None
+    """
+    if not title:
+        return None
+
+    return filter_manager.apply_all_filters(title)
 
 
 def titlestripper(config: "nowplaying.config.ConfigFile", title: str | None = None) -> str | None:
@@ -291,7 +395,7 @@ def titlestripper(config: "nowplaying.config.ConfigFile", title: str | None = No
     Returns:
         Stripped title or None if input was None
     """
-    global _cached_filter_manager  # pylint: disable=global-statement
+    global _cached_filter_manager, _cache_last_load_date  # pylint: disable=global-statement
 
     if not title:
         return None
@@ -300,53 +404,22 @@ def titlestripper(config: "nowplaying.config.ConfigFile", title: str | None = No
     if not config.cparser.value("settings/stripextras", type=bool):
         return title  # Return unchanged if stripping is disabled
 
-    # Use cached SimpleFilterManager or create new one
-    if _cached_filter_manager is None:
-        _cached_filter_manager = SimpleFilterManager()
+    # Sync config to ensure we have latest data
+    config.cparser.sync()
 
-    # Always reload from config to ensure current settings are used
-    _cached_filter_manager.load_from_config(config.cparser)
+    # Check if config has changed since last load
+    current_save_date = config.cparser.value("settings/lastsavedate", type=int) or 0
 
-    # Apply per-phrase filtering based on user's format selections
-    for phrase, formats in _cached_filter_manager.phrase_format_selections.items():
-        # Apply plain string matching first (fastest)
-        if formats.get("plain", False):
-            title_lower = title.lower()
-            phrase_lower = phrase.lower()
-            if phrase_lower in title_lower:
-                start_idx = title_lower.find(phrase_lower)
-                if start_idx != -1:
-                    title = title[:start_idx] + title[start_idx + len(phrase) :]
+    # Use cached FilterManager or create new one
+    if _cached_filter_manager is None or _cache_last_load_date < current_save_date:
+        if _cached_filter_manager is None:
+            _cached_filter_manager = FilterManager()
 
-        # Apply formatted patterns (regex-based)
-        if formats.get("dash", False):
-            pattern = re.compile(f" - (?i:{re.escape(phrase)})$")
-            title = pattern.sub("", title)
-        if formats.get("paren", False):
-            pattern = re.compile(f" \\((?i:{re.escape(phrase)})\\)")
-            title = pattern.sub("", title)
-        if formats.get("bracket", False):
-            pattern = re.compile(f" \\[(?i:{re.escape(phrase)})\\]")
-            title = pattern.sub("", title)
+        # Only reload from config if it has changed
+        _cached_filter_manager.load_from_config(config.cparser)
+        # Also load complex regex patterns from config
+        _cached_filter_manager.set_regex_patterns(config.getregexlist())
+        _cache_last_load_date = current_save_date
 
-    # Then, apply complex regex patterns (from manual regex entries)
-    for pattern in config.getregexlist():
-        title = pattern.sub("", title)
-
-    return title
-
-
-def titlestripper_advanced(
-    title: str | None = None, title_regex_list: list[re.Pattern[str]] | None = None
-) -> str | None:
-    """Advanced title removal - FOR TESTING ONLY with custom regex lists"""
-    if not title:
-        return None
-    trackname = copy.deepcopy(title)
-    if not title_regex_list or len(title_regex_list) == 0:
-        return trackname
-    for index in title_regex_list:
-        trackname = index.sub("", trackname)
-    if len(trackname) == 0:
-        trackname = copy.deepcopy(title)
-    return trackname
+    # Use the FilterManager to apply all filters
+    return titlestripper_with_manager(_cached_filter_manager, title)
