@@ -4,6 +4,7 @@
 # pylint: disable=too-many-lines
 
 import contextlib
+import functools
 import glob
 import json
 import logging
@@ -17,10 +18,13 @@ from PySide6.QtCore import QFile, QStandardPaths, Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
+    QCheckBox,
     QErrorMessage,
     QFileDialog,
+    QHBoxLayout,
     QListWidgetItem,
     QMessageBox,
+    QTableWidgetItem,
     QTabWidget,
     QTreeWidgetItem,
     QWidget,
@@ -44,6 +48,7 @@ import nowplaying.twitch.chat
 import nowplaying.twitch.settings
 import nowplaying.uihelp
 import nowplaying.utils
+import nowplaying.utils.filters
 
 if TYPE_CHECKING:
     import nowplaying.tray
@@ -79,6 +84,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.category_manager = nowplaying.settings.categories.SettingsCategoryManager()
         self.tab_manager = nowplaying.settings.tabs.TabWidgetManager()
         self.tree_item_mapping = {}  # Maps tree items to widget keys
+
+        # Simple filter manager
+        self.simple_filter_manager = nowplaying.utils.filters.FilterManager()
 
         self.uihelp = None
         self.ui_populated = False  # Track if UI widgets are populated with config data
@@ -369,6 +377,13 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         qobject.test_button.clicked.connect(self.on_filter_test_button)
         qobject.add_button.clicked.connect(self.on_filter_regex_add_button)
         qobject.del_button.clicked.connect(self.on_filter_regex_del_button)
+        # Connect custom phrase buttons
+        qobject.add_custom_phrase_button.clicked.connect(self.on_add_custom_phrase_button)
+        qobject.remove_custom_phrase_button.clicked.connect(self.on_remove_custom_phrase_button)
+        qobject.reset_to_defaults_button.clicked.connect(self.on_reset_to_defaults_button)
+
+        # Set up simple filter table
+        self._setup_simple_filter_table(qobject)
 
     def _connect_plugins(self):
         """tell config to trigger plugins to update windows"""
@@ -444,6 +459,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         for configitem in self.config.cparser.allKeys():
             if "regex_filter/" in configitem:
                 self._filter_regex_load(regex=self.config.cparser.value(configitem))
+
+        # Load simple filter settings
+        self.simple_filter_manager.load_from_config(self.config.cparser)
+        self._update_simple_filter_table()
 
     def _upd_win_trackskip(self):
         """update the trackskip settings to match config"""
@@ -833,6 +852,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         )
         reset_filters(self.widgets["filter"].regex_list, self.config.cparser)
 
+        # Save simple filter settings
+        self.simple_filter_manager.save_to_config(self.config.cparser)
+
     def _upd_conf_quirks(self):
         """update the quirks settings to match config"""
 
@@ -946,36 +968,194 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     self.widgets["filter"].regex_list.row(item)
                 )
 
-    @Slot()
-    def on_filter_test_button(self):
-        """filter add button clicked action"""
+    def _populate_manager_from_ui(self, manager: nowplaying.utils.filters.FilterManager):
+        """Populate a FilterManager with current UI settings (unsaved)"""
+        # Read simple filter settings from the UI table
+        table = self.widgets["filter"].phrases_table
+        phrases = manager.get_all_phrases()
 
+        for row, phrase in enumerate(phrases):
+            for col, format_type in enumerate(["dash", "paren", "bracket", "plain"]):
+                widget = table.cellWidget(row, col + 1)  # Skip phrase name column
+                checkbox = widget.findChild(QCheckBox)
+                enabled = checkbox.isChecked()
+                manager.set_phrase_format(phrase, format_type, enabled)
+
+        # Add custom phrases from the existing manager
+        for phrase in self.simple_filter_manager.custom_phrases:
+            manager.add_custom_phrase(phrase)
+            for format_type in ["dash", "paren", "bracket", "plain"]:
+                enabled = self.simple_filter_manager.get_phrase_format(phrase, format_type)
+                manager.set_phrase_format(phrase, format_type, enabled)
+
+    def _test_complete_filter(self, title: str) -> str | None:
+        """Test title with complete filtering (both simple and complex filters)"""
         if not self.verify_regex_filters():
-            return
+            return None
 
-        title = self.widgets["filter"].test_lineedit.text()
-        striprelist = []
+        # Create a FilterManager with current UI state
+        temp_manager = nowplaying.utils.filters.FilterManager()
+
+        # Load simple filter settings from UI
+        self._populate_manager_from_ui(temp_manager)
+
+        # Load complex regex patterns from UI
+        regex_patterns = []
         rowcount = self.widgets["filter"].regex_list.count()
         for row in range(rowcount):
             item = self.widgets["filter"].regex_list.item(row).text()
-            striprelist.append(re.compile(item))
-        result = nowplaying.utils.titlestripper_advanced(title=title, title_regex_list=striprelist)
-        self.widgets["filter"].result_label.setText(result)
-        result = nowplaying.utils.titlestripper_advanced(
-            title=title, title_regex_list=self.config.getregexlist()
+            regex_patterns.append(re.compile(item))
+        temp_manager.set_regex_patterns(regex_patterns)
+
+        # Apply all filters using the FilterManager
+        return nowplaying.utils.filters.titlestripper_with_manager(temp_manager, title)
+
+    @Slot()
+    def on_filter_test_button(self):
+        """filter test button clicked action"""
+        title = self.widgets["filter"].test_lineedit.text()
+
+        # Test complete filtering (both simple and complex) like real usage
+        result = self._test_complete_filter(title)
+        if result is None:
+            return
+
+        if result != title:
+            self.widgets["filter"].test_result_label.setText(f"Result: {result}")
+        else:
+            self.widgets["filter"].test_result_label.setText("No changes applied")
+
+    @Slot()
+    def on_add_custom_phrase_button(self):
+        """Add custom phrase button clicked action"""
+        phrase_input = self.widgets["filter"].custom_phrase_input
+        phrase_text = phrase_input.text().strip()
+
+        if not phrase_text:
+            return
+
+        success, error_msg = self.simple_filter_manager.add_custom_phrase(phrase_text)
+        if success:
+            phrase_input.clear()
+            # Refresh the table to show the new phrase
+            self._setup_simple_filter_table(self.widgets["filter"])
+            self._update_simple_filter_table()
+        else:
+            logging.warning("Failed to add custom phrase '%s': %s", phrase_text, error_msg)
+            # Show error message to user
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setWindowTitle("Custom Phrase Error")
+            msg_box.setText(f"Failed to add custom phrase: {error_msg}")
+            msg_box.exec()
+
+    @Slot()
+    def on_remove_custom_phrase_button(self):
+        """Remove custom phrase button clicked action"""
+        table = self.widgets["filter"].phrases_table
+        current_row = table.currentRow()
+
+        if current_row < 0:
+            return
+
+        # Get the phrase name from the first column
+        phrase_item = table.item(current_row, 0)
+        if not phrase_item:
+            return
+
+        phrase = phrase_item.text()
+
+        # Only allow removal of custom phrases
+        if self.simple_filter_manager.is_custom_phrase(phrase):
+            if self.simple_filter_manager.remove_custom_phrase(phrase):
+                # Refresh the table
+                self._setup_simple_filter_table(self.widgets["filter"])
+                self._update_simple_filter_table()
+
+    @Slot()
+    def on_reset_to_defaults_button(self):
+        """Reset all filters (simple and complex) to defaults button clicked action"""
+        # Show confirmation dialog
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Question)
+        msg_box.setWindowTitle("Reset to Defaults")
+        msg_box.setText(
+            "This will reset simple filters to defaults, remove all custom phrases, "
+            "and clear all complex patterns. Are you sure?"
         )
-        self.widgets["filter"].existing_label.setText(result)
-        self.widgets["filter"].result_label.update()
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.setDefaultButton(QMessageBox.No)
+
+        if msg_box.exec() == QMessageBox.Yes:
+            # Reset simple filters to defaults
+            self.simple_filter_manager.reset_to_defaults()
+            # Refresh the simple filter table
+            self._setup_simple_filter_table(self.widgets["filter"])
+            self._update_simple_filter_table()
+
+            # Clear all complex regex patterns (leave empty)
+            self.widgets["filter"].regex_list.clear()
 
     @Slot()
     def on_filter_add_recommended_button(self):
-        """load some recommended settings"""
-        stripworldlist = ["clean", "dirty", "explicit", "official music video"]
-        joinlist = "|".join(stripworldlist)
+        """load number filtering patterns"""
+        self._filter_regex_load(r" \(\d+\)")  # (123)
+        self._filter_regex_load(r" \[\d+\]")  # [123]
 
-        self._filter_regex_load(f" \\((?i:{joinlist})\\)")
-        self._filter_regex_load(f" - (?i:{joinlist}$)")
-        self._filter_regex_load(f" \\[(?i:{joinlist})\\]")
+    def _setup_simple_filter_table(self, qobject):
+        """Set up the simple filter table with phrases and checkboxes"""
+
+        table = qobject.phrases_table
+        phrases = self.simple_filter_manager.get_all_phrases()
+
+        # Set up table
+        table.setRowCount(len(phrases))
+        table.setColumnCount(5)
+
+        # Populate table
+        for row, phrase in enumerate(phrases):
+            # Phrase name (read-only)
+            phrase_item = QTableWidgetItem(phrase)
+            phrase_item.setFlags(Qt.ItemIsEnabled)
+            table.setItem(row, 0, phrase_item)
+
+            # Checkboxes for each format
+            for col, format_type in enumerate(["dash", "paren", "bracket", "plain"], 1):
+                checkbox = QCheckBox()
+                checkbox.stateChanged.connect(
+                    functools.partial(self._on_simple_filter_checkbox_changed, phrase, format_type)
+                )
+
+                # Center the checkbox
+                widget = QWidget()
+                layout = QHBoxLayout(widget)
+                layout.addWidget(checkbox)
+                layout.setAlignment(Qt.AlignCenter)
+                layout.setContentsMargins(0, 0, 0, 0)
+
+                table.setCellWidget(row, col, widget)
+
+        # Adjust column widths
+        table.resizeColumnsToContents()
+
+    def _on_simple_filter_checkbox_changed(self, phrase: str, format_type: str, state: int):
+        """Handle checkbox state change in simple filter table"""
+        enabled = state == Qt.CheckState.Checked.value
+        self.simple_filter_manager.set_phrase_format(phrase, format_type, enabled)
+
+    def _update_simple_filter_table(self):
+        """Update checkboxes in the table based on current settings"""
+
+        table = self.widgets["filter"].phrases_table
+        phrases = self.simple_filter_manager.get_all_phrases()
+
+        for row, phrase in enumerate(phrases):
+            for col, format_type in enumerate(["dash", "paren", "bracket", "plain"], 1):
+                if (widget := table.cellWidget(row, col)) and (
+                    checkbox := widget.findChild(QCheckBox)
+                ):
+                    enabled = self.simple_filter_manager.get_phrase_format(phrase, format_type)
+                    checkbox.setChecked(enabled)
 
     @Slot()
     def on_cancel_button(self):
