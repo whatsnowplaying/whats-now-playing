@@ -50,6 +50,7 @@ import nowplaying.metadata
 import nowplaying.oauth2
 import nowplaying.twitch.oauth2
 import nowplaying.utils
+import nowplaying.webserver.shutdown
 from nowplaying.types import TrackMetadata
 
 INDEXREFRESH = (
@@ -198,7 +199,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
         try:
             while (
-                not nowplaying.utils.safe_stopevent_check(self.stopevent)
+                not nowplaying.webserver.shutdown.safe_stopevent_check_websocket(self.stopevent)
                 and not endloop
                 and not websocket.closed
             ):
@@ -269,7 +270,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         await asyncio.sleep(1)
         metadata = None
         while not metadata and not websocket.closed:
-            if nowplaying.utils.safe_stopevent_check(self.stopevent):
+            if nowplaying.webserver.shutdown.safe_stopevent_check_websocket(self.stopevent):
                 return time.time()
             metadata = await database.read_last_meta_async()
             await asyncio.sleep(1)
@@ -295,11 +296,14 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         try:
             mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
             while (
-                not nowplaying.utils.safe_stopevent_check(self.stopevent) and not websocket.closed
+                not nowplaying.webserver.shutdown.safe_stopevent_check_websocket(self.stopevent)
+                and not websocket.closed
             ):
                 while mytime > request.app[
                     WATCHER_KEY
-                ].updatetime and not nowplaying.utils.safe_stopevent_check(self.stopevent):
+                ].updatetime and not nowplaying.webserver.shutdown.safe_stopevent_check_websocket(
+                    self.stopevent
+                ):
                     await asyncio.sleep(1)
 
                 mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
@@ -535,6 +539,8 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
     def forced_stop(self, signum=None, frame=None):  # pylint: disable=unused-argument
         """caught an int signal so tell the world to stop"""
+        # Enable forced shutdown mode for WebSocket connections
+        nowplaying.webserver.shutdown.force_websocket_shutdown()
         try:
             logging.debug("telling webserver to stop via http")
             requests.get(f"http://localhost:{self.port}/{self.magicstopurl}", timeout=5)
