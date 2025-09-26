@@ -183,7 +183,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 metadata[key] = nowplaying.utils.TRANSPARENT_PNG_BIN
         return self._base64ifier(metadata)
 
-    async def websocket_artistfanart_streamer(self, request: web.Request):
+    async def websocket_artistfanart_streamer(self, request: web.Request):  # pylint: disable=too-many-branches
         """handle continually streamed updates"""
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
@@ -208,8 +208,8 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 # Log warning if shutdown is delayed beyond 30 seconds
                 if time.time() - loop_start_time > 30:
                     logging.warning(
-                        "Session %s: Artistfanart WebSocket shutdown delayed for more than 30 seconds",
-                        session_id,
+                        "Artistfanart WebSocket shutdown delayed for more than %d seconds",
+                        30,
                     )
                     loop_start_time = time.time()  # Reset timer to avoid repeated warnings
                 metadata = await request.app[METADB_KEY].read_last_meta_async()

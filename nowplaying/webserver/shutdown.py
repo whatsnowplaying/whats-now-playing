@@ -4,7 +4,7 @@
 import logging
 
 # Global flag to track if WebServer is in forced shutdown mode
-_websocket_forced_shutdown = False
+_WEBSOCKET_FORCED_SHUTDOWN = False
 
 
 def safe_stopevent_check_websocket(stopevent):
@@ -15,9 +15,7 @@ def safe_stopevent_check_websocket(stopevent):
     since they might be temporary issues rather than actual shutdown signals.
     Only treat repeated pipe errors as actual shutdown.
     """
-    global _websocket_forced_shutdown  # pylint: disable=global-statement
-
-    if _websocket_forced_shutdown:
+    if _WEBSOCKET_FORCED_SHUTDOWN:
         return True
 
     try:
@@ -42,12 +40,12 @@ def safe_stopevent_check_websocket(stopevent):
 
 def force_websocket_shutdown():
     """Enable forced shutdown mode for WebSocket connections"""
-    global _websocket_forced_shutdown  # pylint: disable=global-statement
-    _websocket_forced_shutdown = True
+    global _WEBSOCKET_FORCED_SHUTDOWN  # pylint: disable=global-statement
+    _WEBSOCKET_FORCED_SHUTDOWN = True
     logging.info("Enabled forced WebSocket shutdown mode")
 
 
 def reset_websocket_shutdown():
     """Reset WebSocket shutdown state for testing"""
-    global _websocket_forced_shutdown  # pylint: disable=global-statement
-    _websocket_forced_shutdown = False
+    global _WEBSOCKET_FORCED_SHUTDOWN  # pylint: disable=global-statement
+    _WEBSOCKET_FORCED_SHUTDOWN = False
