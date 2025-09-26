@@ -1,4 +1,4 @@
-This project uses PySide2 and the Qt Toolkit under the
+This project uses PySide6 and the Qt Toolkit under the
 terms of the GNU LGPLv3, noted below.
 
 Source for PySide2: https://code.qt.io/cgit/pyside/pyside-setup.git/tree/

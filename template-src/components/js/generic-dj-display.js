@@ -34,14 +34,14 @@ function updateDisplay(data) {
         titleElement.style.display = 'none';
     }
 
-    // Update record label
+    // Update record label (prioritize album over label)
     const labelElement = document.getElementById('record-label');
-    if (data.label) {
-        labelElement.textContent = data.label;
-        labelElement.style.display = 'block';
-    } else if (data.album) {
-        // Fallback to album name if no label
+    if (data.album) {
         labelElement.textContent = data.album;
+        labelElement.style.display = 'block';
+    } else if (data.label) {
+        // Fallback to label if no album
+        labelElement.textContent = data.label;
         labelElement.style.display = 'block';
     } else {
         labelElement.style.display = 'none';

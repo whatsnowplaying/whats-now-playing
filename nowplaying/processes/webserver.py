@@ -50,6 +50,7 @@ import nowplaying.metadata
 import nowplaying.oauth2
 import nowplaying.twitch.oauth2
 import nowplaying.utils
+import nowplaying.webserver.shutdown
 from nowplaying.types import TrackMetadata
 
 INDEXREFRESH = (
@@ -182,7 +183,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 metadata[key] = nowplaying.utils.TRANSPARENT_PNG_BIN
         return self._base64ifier(metadata)
 
-    async def websocket_artistfanart_streamer(self, request: web.Request):
+    async def websocket_artistfanart_streamer(self, request: web.Request):  # pylint: disable=too-many-branches
         """handle continually streamed updates"""
         websocket = web.WebSocketResponse()
         await websocket.prepare(request)
@@ -197,11 +198,20 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         )
 
         try:
+            # Track loop start time for shutdown delay monitoring
+            loop_start_time = time.time()
             while (
-                not nowplaying.utils.safe_stopevent_check(self.stopevent)
+                not nowplaying.webserver.shutdown.safe_stopevent_check_websocket(self.stopevent)
                 and not endloop
                 and not websocket.closed
             ):
+                # Log warning if shutdown is delayed beyond 30 seconds
+                if time.time() - loop_start_time > 30:
+                    logging.warning(
+                        "Artistfanart WebSocket shutdown delayed for more than %d seconds",
+                        30,
+                    )
+                    loop_start_time = time.time()  # Reset timer to avoid repeated warnings
                 metadata = await request.app[METADB_KEY].read_last_meta_async()
                 if not metadata or not metadata.get("artist"):
                     await asyncio.sleep(5)
@@ -269,7 +279,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         await asyncio.sleep(1)
         metadata = None
         while not metadata and not websocket.closed:
-            if nowplaying.utils.safe_stopevent_check(self.stopevent):
+            if nowplaying.webserver.shutdown.safe_stopevent_check_websocket(self.stopevent):
                 return time.time()
             metadata = await database.read_last_meta_async()
             await asyncio.sleep(1)
@@ -294,12 +304,24 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
         try:
             mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
+            # Track loop start time for shutdown delay monitoring
+            loop_start_time = time.time()
             while (
-                not nowplaying.utils.safe_stopevent_check(self.stopevent) and not websocket.closed
+                not nowplaying.webserver.shutdown.safe_stopevent_check_websocket(self.stopevent)
+                and not websocket.closed
             ):
+                # Log warning if shutdown is delayed beyond 30 seconds
+                if time.time() - loop_start_time > 30:
+                    logging.warning(
+                        "Session %s: WebSocket shutdown delayed for more than 30 seconds",
+                        session_id,
+                    )
+                    loop_start_time = time.time()  # Reset timer to avoid repeated warnings
                 while mytime > request.app[
                     WATCHER_KEY
-                ].updatetime and not nowplaying.utils.safe_stopevent_check(self.stopevent):
+                ].updatetime and not nowplaying.webserver.shutdown.safe_stopevent_check_websocket(
+                    self.stopevent
+                ):
                     await asyncio.sleep(1)
 
                 mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
@@ -535,6 +557,8 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
     def forced_stop(self, signum=None, frame=None):  # pylint: disable=unused-argument
         """caught an int signal so tell the world to stop"""
+        # Enable forced shutdown mode for WebSocket connections
+        nowplaying.webserver.shutdown.force_websocket_shutdown()
         try:
             logging.debug("telling webserver to stop via http")
             requests.get(f"http://localhost:{self.port}/{self.magicstopurl}", timeout=5)
