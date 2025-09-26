@@ -198,11 +198,20 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         )
 
         try:
+            # Track loop start time for shutdown delay monitoring
+            loop_start_time = time.time()
             while (
                 not nowplaying.webserver.shutdown.safe_stopevent_check_websocket(self.stopevent)
                 and not endloop
                 and not websocket.closed
             ):
+                # Log warning if shutdown is delayed beyond 30 seconds
+                if time.time() - loop_start_time > 30:
+                    logging.warning(
+                        "Session %s: Artistfanart WebSocket shutdown delayed for more than 30 seconds",
+                        session_id,
+                    )
+                    loop_start_time = time.time()  # Reset timer to avoid repeated warnings
                 metadata = await request.app[METADB_KEY].read_last_meta_async()
                 if not metadata or not metadata.get("artist"):
                     await asyncio.sleep(5)
@@ -295,10 +304,19 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
         try:
             mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
+            # Track loop start time for shutdown delay monitoring
+            loop_start_time = time.time()
             while (
                 not nowplaying.webserver.shutdown.safe_stopevent_check_websocket(self.stopevent)
                 and not websocket.closed
             ):
+                # Log warning if shutdown is delayed beyond 30 seconds
+                if time.time() - loop_start_time > 30:
+                    logging.warning(
+                        "Session %s: WebSocket shutdown delayed for more than 30 seconds",
+                        session_id,
+                    )
+                    loop_start_time = time.time()  # Reset timer to avoid repeated warnings
                 while mytime > request.app[
                     WATCHER_KEY
                 ].updatetime and not nowplaying.webserver.shutdown.safe_stopevent_check_websocket(
