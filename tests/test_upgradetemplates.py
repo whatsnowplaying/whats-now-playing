@@ -14,6 +14,7 @@ import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.config  # pylint: disable=import-error
 import nowplaying.upgrades.templates  # pylint: disable=import-error
 import nowplaying.utils.checksum  # pylint: disable=import-error
+from nowplaying.utils.checksum import EXCLUDED_FILES  # pylint: disable=import-error
 
 
 @pytest.fixture
@@ -99,6 +100,10 @@ def _compare_directory_recursive(srcdir, destdir, conflict=None):
         destfn = os.path.join(destdir, filename)
 
         if ".new" in filename:
+            continue
+
+        # Skip files that are excluded from processing
+        if filename in EXCLUDED_FILES:
             continue
 
         # Handle directories recursively
