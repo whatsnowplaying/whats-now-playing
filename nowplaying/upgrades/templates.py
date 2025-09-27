@@ -12,8 +12,8 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
 )
 from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
 
-# Import unified checksum function
-from nowplaying.utils.checksum import checksum
+# Import unified checksum function and exclusion list
+from nowplaying.utils.checksum import checksum, EXCLUDED_FILES
 
 
 class UpgradeTemplates:
@@ -97,7 +97,7 @@ class UpgradeTemplates:
 
         for apppath in pathlib.Path(app_dir).iterdir():
             # Skip files/directories that shouldn't be copied
-            if apppath.name in {".gitignore", ".DS_Store", "Thumbs.db", ".git"}:
+            if apppath.name in EXCLUDED_FILES:
                 continue
 
             if apppath.is_dir():
@@ -119,7 +119,12 @@ class UpgradeTemplates:
             apphash = checksum(apppath)
             userhash = checksum(userpath)
 
-            if apphash == userhash:
+            # If either checksum failed, treat as different to trigger replacement
+            if apphash is None or userhash is None:
+                logging.warning(
+                    "Checksum failed for %s or %s, treating as different", apppath, userpath
+                )
+            elif apphash == userhash:
                 continue
 
             # Use relative path for hash lookup
@@ -133,8 +138,10 @@ class UpgradeTemplates:
             destpath = userpath.with_suffix(".new")
             if destpath.exists():
                 userhash = checksum(destpath)
-                if apphash == userhash:
+                # Only skip if both checksums succeeded and match
+                if apphash is not None and userhash is not None and apphash == userhash:
                     continue
+                # If we can't checksum the .new file, or checksums don't match, overwrite it
                 destpath.unlink()
 
             self.alert = True

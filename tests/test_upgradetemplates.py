@@ -248,14 +248,11 @@ def test_template_version_identification_with_line_endings(getroot):  # pylint: 
     with open(windows_file, "rb") as windows_fh:
         windows_raw = windows_fh.read()
 
-    # Determine if files have different line endings
+    # Verify files have different line endings (for test validity)
     unix_has_crlf = b"\r\n" in unix_raw
     windows_has_crlf = b"\r\n" in windows_raw
-
-    print(f"Unix file ({os.path.basename(unix_file)}) has CRLF: {unix_has_crlf}")
-    print(f"Windows file ({os.path.basename(windows_file)}) has CRLF: {windows_has_crlf}")
-    print(f"Unix checksum: {unix_checksum}")
-    print(f"Windows checksum: {windows_checksum}")
+    assert not unix_has_crlf, "Unix test file should not have CRLF line endings"
+    assert windows_has_crlf, "Windows test file should have CRLF line endings"
 
     # Load the existing SHA database to see if we can match these checksums
     # This simulates the upgrade process trying to identify template versions
@@ -275,33 +272,13 @@ def test_template_version_identification_with_line_endings(getroot):  # pylint: 
                 if sha == windows_checksum:
                     windows_matches.append((template_name, version))
 
-        print(f"Unix file matches: {unix_matches}")
-        print(f"Windows file matches: {windows_matches}")
-
-        # Test specific version identification based on known checksums
-        # basic-web.htm should match version 4.1.0-rc3
-        expected_unix_version = ("basic-web.htm", "4.1.0-rc3")
-        assert expected_unix_version in unix_matches, (
-            f"Expected {expected_unix_version} in unix_matches: {unix_matches}"
-        )
-
-        # ws-mtv-cover-fade.htm should match version 3.1.2
-        expected_windows_version = ("ws-mtv-cover-fade.htm", "3.1.2")
-        assert expected_windows_version in windows_matches, (
-            f"Expected {expected_windows_version} in windows_matches: {windows_matches}"
-        )
-
-        # Assert the specific versions were identified correctly
+        # Verify specific version identification
         assert ("basic-web.htm", "4.1.0-rc3") in unix_matches, (
-            "basic-web.htm should be identified as version 4.1.0-rc3"
+            f"basic-web.htm should be identified as version 4.1.0-rc3, got: {unix_matches}"
         )
         assert ("ws-mtv-cover-fade.htm", "3.1.2") in windows_matches, (
-            "ws-mtv-cover-fade.htm should be identified as version 3.1.2"
+            f"ws-mtv-cover-fade.htm should be identified as version 3.1.2, got: {windows_matches}"
         )
-
-        print("✓ Successfully identified basic-web.htm as version 4.1.0-rc3")
-        print("✓ Successfully identified ws-mtv-cover-fade.htm as version 3.1.2")
-        print("✓ Checksum normalization working correctly despite different line endings")
     else:
         # If no SHA database exists, just verify the checksums are different
         # (since these are different template files)

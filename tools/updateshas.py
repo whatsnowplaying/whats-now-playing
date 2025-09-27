@@ -8,7 +8,7 @@ import logging
 import pathlib
 import sys
 
-from nowplaying.utils.checksum import checksum
+from nowplaying.utils.checksum import checksum, EXCLUDED_FILES
 
 
 def main():  # pylint: disable=too-many-statements
@@ -69,7 +69,7 @@ def _process_template_directory(base_dir, current_dir, oldshas, version):
 
     for apppath in current_dir.iterdir():
         # Skip files/directories that shouldn't be processed
-        if apppath.name in {".gitignore", ".DS_Store", "Thumbs.db", ".git"}:
+        if apppath.name in EXCLUDED_FILES:
             continue
 
         if apppath.is_dir():
