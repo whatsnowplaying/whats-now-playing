@@ -222,7 +222,7 @@ def test_upgrade_subdirectories(upgrade_bootstrap):  # pylint: disable=redefined
         assert src_content == dest_content, f"Content mismatch for {expected_file}"
 
 
-def test_template_version_identification_with_line_endings(getroot):
+def test_template_version_identification_with_line_endings(getroot):  # pylint: disable=too-many-locals
     """test that we can identify template versions regardless of line endings"""
     # Test the template files you added with potentially different line endings
     unix_file = os.path.join(getroot, "tests", "templates", "basic-web.htm")
@@ -243,10 +243,10 @@ def test_template_version_identification_with_line_endings(getroot):
     assert len(windows_checksum) == 128, f"SHA512 should be 128 chars, got {len(windows_checksum)}"
 
     # Read raw binary content to check for line ending differences
-    with open(unix_file, "rb") as f:
-        unix_raw = f.read()
-    with open(windows_file, "rb") as f:
-        windows_raw = f.read()
+    with open(unix_file, "rb") as unix_fh:
+        unix_raw = unix_fh.read()
+    with open(windows_file, "rb") as windows_fh:
+        windows_raw = windows_fh.read()
 
     # Determine if files have different line endings
     unix_has_crlf = b"\r\n" in unix_raw
@@ -259,10 +259,10 @@ def test_template_version_identification_with_line_endings(getroot):
 
     # Load the existing SHA database to see if we can match these checksums
     # This simulates the upgrade process trying to identify template versions
-    shas_file = os.path.join(getroot, "nowplaying", "upgrades", "updateshas.json")
+    shas_file = os.path.join(getroot, "nowplaying", "resources", "updateshas.json")
     if os.path.exists(shas_file):
-        with open(shas_file, encoding="utf-8") as f:
-            shas_data = json.load(f)
+        with open(shas_file, encoding="utf-8") as shas_fh:
+            shas_data = json.load(shas_fh)
 
         # Look for matches in the SHA database
         unix_matches = []
@@ -299,9 +299,9 @@ def test_template_version_identification_with_line_endings(getroot):
             "ws-mtv-cover-fade.htm should be identified as version 3.1.2"
         )
 
-        print(f"✓ Successfully identified basic-web.htm as version 4.1.0-rc3")
-        print(f"✓ Successfully identified ws-mtv-cover-fade.htm as version 3.1.2")
-        print(f"✓ Checksum normalization working correctly despite different line endings")
+        print("✓ Successfully identified basic-web.htm as version 4.1.0-rc3")
+        print("✓ Successfully identified ws-mtv-cover-fade.htm as version 3.1.2")
+        print("✓ Checksum normalization working correctly despite different line endings")
     else:
         # If no SHA database exists, just verify the checksums are different
         # (since these are different template files)
