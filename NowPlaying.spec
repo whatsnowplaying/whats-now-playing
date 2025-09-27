@@ -31,7 +31,7 @@ def collect_all_nowplaying_modules():
             init_file = os.path.join(subdir_path, '__init__.py')
 
             if os.path.isdir(subdir_path) and os.path.exists(init_file):
-                # Skip vendor directory and other non-plugin directories
+                # Skip non-plugin directories
                 if item not in ['vendor', '__pycache__', 'htmlcov']:
                     plugin_packages.append(f'nowplaying.{item}')
 
@@ -146,7 +146,10 @@ for execname, execpy in executables.items():
                  hiddenimports=ALL_PLUGIN_MODULES,
                  hookspath=[('nowplaying/__pyinstaller')],
                  runtime_hooks=[],
-                 excludes=[],
+                 excludes=[
+                     'tkinter', '_tkinter', 'Tkinter',
+                     'tcl', 'tk', '_tcl', '_tk',
+                 ],
                  win_no_prefer_redirects=False,
                  win_private_assemblies=False,
                  cipher=block_cipher,

@@ -53,7 +53,7 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
         logging.debug("setting up watcher")
         self.event_handler = PatternMatchingEventHandler(
             patterns=["master*"],
-            ignore_patterns=[".DS_Store"],
+            ignore_patterns=[".DS_Store", "*.sqlite-shm"],
             ignore_directories=True,
             case_sensitive=False,
         )

@@ -124,9 +124,10 @@ class StaticContentHandler:
             return web.Response(status=403, text="Invalid template name")
 
         config = request.app[self.config_key]
-        template_path = config.getbundledir().joinpath("templates", template_name)
+        template_path = config.templatedir.joinpath(template_name)
 
         if not template_path.exists():
+            logging.debug("Cannot load %s as a template", template_path.absolute())
             return web.Response(status=404, text="Template not found")
 
         try:
