@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Template upgrade logic"""
 
-import hashlib
 import json
 import logging
 import pathlib
@@ -12,6 +11,9 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QStandardPaths,
 )
 from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
+
+# Import unified checksum function
+from nowplaying.utils.checksum import checksum
 
 
 class UpgradeTemplates:
@@ -95,7 +97,7 @@ class UpgradeTemplates:
 
         for apppath in pathlib.Path(app_dir).iterdir():
             # Skip files/directories that shouldn't be copied
-            if apppath.name in {'.gitignore', '.DS_Store', 'Thumbs.db', '.git'}:
+            if apppath.name in {".gitignore", ".DS_Store", "Thumbs.db", ".git"}:
                 continue
 
             if apppath.is_dir():
@@ -139,12 +141,3 @@ class UpgradeTemplates:
             logging.info("New version of %s copied to %s", relative_path, destpath)
             shutil.copyfile(apppath, destpath)
             self.copied.append(str(relative_path))
-
-
-def checksum(filename: str | pathlib.Path) -> str:
-    """generate sha512 . See also build-update-sha.py"""
-    hashfunc = hashlib.sha512()
-    with open(filename, "rb") as fileh:
-        while chunk := fileh.read(128 * hashfunc.block_size):
-            hashfunc.update(chunk)
-    return hashfunc.hexdigest()
