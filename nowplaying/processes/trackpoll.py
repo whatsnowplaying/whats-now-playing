@@ -528,7 +528,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         self.imagecache = nowplaying.imagecache.ImageCache(
             sizelimit=sizelimit, stopevent=self.stopevent
         )
-        self.config.cparser.setValue("artistextras/cachedbfile", self.imagecache.databasefile)
+        self.config.cparser.setValue("artistextras/cachedbfile", str(self.imagecache.databasefile))
 
         # Vacuum the imagecache database on startup to reclaim space from previous session
         try:
