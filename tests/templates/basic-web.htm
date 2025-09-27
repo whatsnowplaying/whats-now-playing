@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" http-equiv="refresh" content="30">
+    <title>Titlecard</title>
+    <style>
+        div {
+            margin: 3px;
+            width: 1600px;
+            display: none;
+            height: 300px;
+            float: right;
+            font-size: 48px;
+            font-family: sans-serif;
+        }
+
+        #titlecard {
+            background-color: #fff;
+            color: #000;
+            text-indent: 5%;
+        }
+
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.1.js"></script>
+</head>
+
+<body>
+    <div id="titlecard">
+        {% if title %}
+        <p>Title: {{ title }}</p>
+        {% endif %}
+        {% if artist %}
+        <p>Artist: {{ artist }}</p>
+        {% endif %}
+    </div>
+    <script>
+        $(document).ready(function() {
+            $('#titlecard').delay(1000).fadeIn(2000);
+            $('#titlecard').delay(6000).fadeOut(2000);
+        });
+
+    </script>
+</body>
+
+</html>

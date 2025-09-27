@@ -291,7 +291,6 @@ async def test_stripre_cleandash(bootstrap):
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
     config.cparser.setValue("settings/stripextras", True)
-    nowplaying.upgrades.config.UpgradeConfig._upgrade_filters(config.cparser)  # pylint: disable=protected-access
     metadatain = {"title": "Test - Clean"}
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
@@ -306,7 +305,6 @@ async def test_stripre_nocleandash(bootstrap):
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
     config.cparser.setValue("settings/stripextras", False)
-    nowplaying.upgrades.config.UpgradeConfig._upgrade_filters(config.cparser)  # pylint: disable=protected-access
     metadatain = {"title": "Test - Clean"}
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
@@ -321,7 +319,6 @@ async def test_stripre_cleanparens(bootstrap):
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
     config.cparser.setValue("settings/stripextras", True)
-    nowplaying.upgrades.config.UpgradeConfig._upgrade_filters(config.cparser)  # pylint: disable=protected-access
     metadatain = {"title": "Test (Clean)"}
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
@@ -336,7 +333,6 @@ async def test_stripre_cleanextraparens(bootstrap):
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
     config.cparser.setValue("settings/stripextras", True)
-    nowplaying.upgrades.config.UpgradeConfig._upgrade_filters(config.cparser)  # pylint: disable=protected-access
     metadatain = {"title": "Test (Clean) (Single Mix)"}
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
@@ -351,7 +347,6 @@ async def test_publisher_not_label(bootstrap):
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
     config.cparser.setValue("settings/stripextras", False)
-    nowplaying.upgrades.config.UpgradeConfig._upgrade_filters(config.cparser)  # pylint: disable=protected-access
     metadatain = {"publisher": "Cool Music Publishing"}
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
