@@ -94,6 +94,10 @@ class UpgradeTemplates:
         """recursively process template directories"""
 
         for apppath in pathlib.Path(app_dir).iterdir():
+            # Skip files/directories that shouldn't be copied
+            if apppath.name in {'.gitignore', '.DS_Store', 'Thumbs.db', '.git'}:
+                continue
+
             if apppath.is_dir():
                 # Handle subdirectories recursively
                 user_subdir = user_dir / apppath.name
