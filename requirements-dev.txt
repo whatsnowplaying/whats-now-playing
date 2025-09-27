@@ -3,7 +3,7 @@
 #
 basedpyright
 pip-upgrader
-pylint==2.17.5
+pylint==3.3.8
 PyYAML==6.0.2
 sourcery
 ruff
