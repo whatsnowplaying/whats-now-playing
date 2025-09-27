@@ -17,7 +17,18 @@ def checksum(filename: str | pathlib.Path):
     hashfunc = hashlib.sha512()
 
     # Check if file is likely a text file based on extension
-    text_extensions = {".htm", ".html", ".css", ".js", ".txt", ".md", ".json", ".xml", ".yaml", ".yml"}
+    text_extensions = {
+        ".htm",
+        ".html",
+        ".css",
+        ".js",
+        ".txt",
+        ".md",
+        ".json",
+        ".xml",
+        ".yaml",
+        ".yml",
+    }
     file_ext = os.path.splitext(str(filename))[1].lower()
 
     if file_ext in text_extensions:
