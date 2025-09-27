@@ -122,10 +122,6 @@ class UpgradeConfig:
 
         rawconfig = QSettings(str(sourcepath), self.qsettingsformat)
 
-        # Run version-specific upgrades
-        if oldversstr in {"3.1.0", "3.1.1"}:
-            self._upgrade_filters(rawconfig)
-
         if int(oldversstr[0]) < 4 and config.value("settings/input") == "m3u":
             self._upgrade_m3u(rawconfig)
 
@@ -312,6 +308,14 @@ class UpgradeConfig:
         # The FilterManager will automatically set up defaults when no simple filter config exists
         # This ensures the default-on phrases are properly enabled
 
+        config.remove("artistextras/cachedir")
+        config.remove("artistextras/cachedbfile")
+        config.remove("beam/enabled")
+        config.remove("beam/remote_key")
+        config.remove("remote_port")
+        config.remove("remote_server")
+        config.remove("control/beam")
+
     def _cleanup_old_backup_files(self) -> None:
         """Clean up old .bak backup files from pre-5.0.0-preview5"""
         if self.testdir:
@@ -347,16 +351,6 @@ class UpgradeConfig:
             )
         else:
             logging.debug("No old backup files found to clean up")
-
-    @staticmethod
-    def _upgrade_filters(config: QSettings) -> None:
-        """setup the recommended filters (3.1.0/3.1.1)"""
-        if config.value("settings/stripextras", type=bool) and not config.value("regex_filter/0"):
-            stripworldlist = ["clean", "dirty", "explicit", "official music video"]
-            joinlist = "|".join(stripworldlist)
-            config.setValue("regex_filter/0", f" \\((?i:{joinlist})\\)")
-            config.setValue("regex_filter/1", f" - (?i:{joinlist}$)")
-            config.setValue("regex_filter/2", f" \\[(?i:{joinlist})\\]")
 
     def _upgrade_m3u(self, config: QSettings) -> None:
         """convert m3u to virtualdj and maybe other stuff in the future?"""
