@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """test m3u"""
 
+import json
 import logging
 import os
 import pathlib
@@ -12,6 +13,8 @@ import pytest
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.config  # pylint: disable=import-error
 import nowplaying.upgrades.templates  # pylint: disable=import-error
+import nowplaying.utils.checksum  # pylint: disable=import-error
+from nowplaying.utils.checksum import EXCLUDED_FILES  # pylint: disable=import-error
 
 
 @pytest.fixture
@@ -97,6 +100,10 @@ def _compare_directory_recursive(srcdir, destdir, conflict=None):
         destfn = os.path.join(destdir, filename)
 
         if ".new" in filename:
+            continue
+
+        # Skip files that are excluded from processing
+        if filename in EXCLUDED_FILES:
             continue
 
         # Handle directories recursively
@@ -218,3 +225,68 @@ def test_upgrade_subdirectories(upgrade_bootstrap):  # pylint: disable=redefined
         with open(oauth_file_path, encoding="utf-8") as dest_file:
             dest_content = dest_file.read()
         assert src_content == dest_content, f"Content mismatch for {expected_file}"
+
+
+def test_template_version_identification_with_line_endings(getroot):  # pylint: disable=too-many-locals
+    """test that we can identify template versions regardless of line endings"""
+    # Test the template files you added with potentially different line endings
+    unix_file = os.path.join(getroot, "tests", "templates", "basic-web.htm")
+    windows_file = os.path.join(getroot, "tests", "templates", "ws-mtv-cover-fade.htm")
+
+    # Verify files exist
+    assert os.path.exists(unix_file), f"Test file {unix_file} not found"
+    assert os.path.exists(windows_file), f"Test file {windows_file} not found"
+
+    # Calculate checksums using our normalized function
+    unix_checksum = nowplaying.utils.checksum.checksum(unix_file)
+    windows_checksum = nowplaying.utils.checksum.checksum(windows_file)
+
+    # Verify checksums are valid SHA512 hashes
+    assert isinstance(unix_checksum, str), "Unix file checksum should be a string"
+    assert isinstance(windows_checksum, str), "Windows file checksum should be a string"
+    assert len(unix_checksum) == 128, f"SHA512 should be 128 chars, got {len(unix_checksum)}"
+    assert len(windows_checksum) == 128, f"SHA512 should be 128 chars, got {len(windows_checksum)}"
+
+    # Read raw binary content to check for line ending differences
+    with open(unix_file, "rb") as unix_fh:
+        unix_raw = unix_fh.read()
+    with open(windows_file, "rb") as windows_fh:
+        windows_raw = windows_fh.read()
+
+    # Verify files have different line endings (for test validity)
+    unix_has_crlf = b"\r\n" in unix_raw
+    windows_has_crlf = b"\r\n" in windows_raw
+    assert not unix_has_crlf, "Unix test file should not have CRLF line endings"
+    assert windows_has_crlf, "Windows test file should have CRLF line endings"
+
+    # Load the existing SHA database to see if we can match these checksums
+    # This simulates the upgrade process trying to identify template versions
+    shas_file = os.path.join(getroot, "nowplaying", "resources", "updateshas.json")
+    if os.path.exists(shas_file):
+        with open(shas_file, encoding="utf-8") as shas_fh:
+            shas_data = json.load(shas_fh)
+
+        # Look for matches in the SHA database
+        unix_matches = []
+        windows_matches = []
+
+        for template_name, versions in shas_data.items():
+            for version, sha in versions.items():
+                if sha == unix_checksum:
+                    unix_matches.append((template_name, version))
+                if sha == windows_checksum:
+                    windows_matches.append((template_name, version))
+
+        # Verify specific version identification
+        assert ("basic-web.htm", "4.1.0-rc3") in unix_matches, (
+            f"basic-web.htm should be identified as version 4.1.0-rc3, got: {unix_matches}"
+        )
+        assert ("ws-mtv-cover-fade.htm", "3.1.2") in windows_matches, (
+            f"ws-mtv-cover-fade.htm should be identified as version 3.1.2, got: {windows_matches}"
+        )
+    else:
+        # If no SHA database exists, just verify the checksums are different
+        # (since these are different template files)
+        assert unix_checksum != windows_checksum, (
+            "These are different template files, so checksums should differ"
+        )

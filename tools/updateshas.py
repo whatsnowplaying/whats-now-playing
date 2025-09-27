@@ -1,22 +1,14 @@
 #!/usr/bin/env python3
 """build a new upgradetable.py"""
 
+import os
 import argparse
-import hashlib
 import json
 import logging
-import os
 import pathlib
 import sys
 
-
-def checksum(filename):
-    """generate sha512"""
-    hashfunc = hashlib.sha512()
-    with open(filename, "rb") as fileh:
-        while chunk := fileh.read(128 * hashfunc.block_size):
-            hashfunc.update(chunk)
-    return hashfunc.hexdigest()
+from nowplaying.utils.checksum import checksum, EXCLUDED_FILES
 
 
 def main():  # pylint: disable=too-many-statements
@@ -76,6 +68,10 @@ def _process_template_directory(base_dir, current_dir, oldshas, version):
     """recursively process template directories"""
 
     for apppath in current_dir.iterdir():
+        # Skip files/directories that shouldn't be processed
+        if apppath.name in EXCLUDED_FILES:
+            continue
+
         if apppath.is_dir():
             # Recursively process subdirectories
             _process_template_directory(base_dir, apppath, oldshas, version)
