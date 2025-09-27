@@ -312,8 +312,8 @@ class UpgradeConfig:
         config.remove("artistextras/cachedbfile")
         config.remove("beam/enabled")
         config.remove("beam/remote_key")
-        config.remove("remote_port")
-        config.remove("remote_server")
+        config.remove("beam/remote_port")
+        config.remove("beam/remote_server")
         config.remove("control/beam")
 
     def _cleanup_old_backup_files(self) -> None:
