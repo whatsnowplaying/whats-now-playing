@@ -69,7 +69,6 @@ class TrackMetadata(TypedDict, total=False):
 
     # Comments and descriptions
     comments: str
-    comment: str
 
     # Host and streaming metadata
     httpport: int

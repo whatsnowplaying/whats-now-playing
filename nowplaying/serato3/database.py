@@ -76,7 +76,7 @@ class SeratoDatabaseV2Reader(SeratoRuleMatchingMixin, SeratoBaseReader):
             "tlbl": lambda v: {"label": v},
             "trmx": lambda v: {"remixer": v},
             "tyea": lambda v: {"year": struct.unpack(">I", v)[0] if len(v) >= 4 else None},
-            "tcmt": lambda v: {"comment": v},
+            "tcmt": lambda v: {"comments": v},
         }
 
         for tag, value in track_data:

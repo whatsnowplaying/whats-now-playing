@@ -177,7 +177,7 @@ class IcecastProtocol(asyncio.Protocol):
             "discnumber": "disc",
             "totaldiscs": "disc_total",
             "genre": "genre",
-            "description": "comment",
+            "description": "comments",
         }
 
         logging.debug("Processing vorbis comment")
