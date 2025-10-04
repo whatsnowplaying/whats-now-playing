@@ -3,6 +3,7 @@
 
 # pylint: disable=protected-access
 
+import asyncio
 import logging
 import pytest
 
@@ -63,9 +64,55 @@ EDGE_CASE_TEST_CASES = [
 ]
 
 
+# Test cases for common DJ music collaboration formats
+DJ_COLLABORATION_CASES = [
+    # Hip-hop
+    ("Kendrick Lamar feat. SZA", ["Kendrick Lamar", "SZA"]),
+    ("Drake ft. Future", ["Drake", "Future"]),
+    ("Jay-Z featuring Beyoncé", ["Jay-Z", "Beyoncé"]),
+    # Electronic/House/Techno
+    ("Calvin Harris x Dua Lipa", ["Calvin Harris", "Dua Lipa"]),
+    ("Disclosure vs. London Grammar", ["Disclosure", "London Grammar"]),
+    ("Skrillex & Diplo", ["Skrillex", "Diplo"]),
+    ("Martin Garrix feat. Usher", ["Martin Garrix", "Usher"]),
+    # Beatport/Spotify style comma lists (first-comma splitting only)
+    ("Armin van Buuren, Vini Vici, Alok", ["Armin van Buuren", "Vini Vici, Alok"]),
+    ("David Guetta, Bebe Rexha, J Balvin", ["David Guetta", "Bebe Rexha, J Balvin"]),
+    ("Tiësto, Jonas Blue, Rita Ora", ["Tiësto", "Jonas Blue, Rita Ora"]),
+]
+
+# Test cases for artists that should NOT be split (single entities in MusicBrainz)
+SINGLE_ARTIST_WITH_DELIMITERS = [
+    "Dick Dale & His Del-Tones",
+    "DJ Jazzy Jeff & the Fresh Prince",
+    "Prince & the Revolution",
+    "Emerson, Lake & Palmer",
+    "Crosby, Stills & Nash",
+    "Blood, Sweat & Tears",
+    "Earth, Wind & Fire",
+    "MC 900 Ft Jesus",
+    "MC 900 Ft, Jesus",  # Same artist as above, different punctuation
+    # Conservative cases that should not split even if not found in MB
+    "Smith, John",  # Likely LastName, FirstName pattern
+    "Producer A, Vocalist B",  # Ambiguous 2-part name
+    "Xyz Unlikely Artist, Name With Comma",  # Extremely unlikely to have real matches
+]
+
+# Test cases for collaborations that SHOULD be split into multiple artists
+COLLABORATION_CASES = [
+    ("DjeuhDjoah, Lieutenant Nicholson", ["DjeuhDjoah", "Lieutenant Nicholson"]),
+    (
+        "MISHA, cocabona, Joya Mooi, Derrick McKenzie",
+        ["MISHA", "cocabona", "Joya Mooi", "Derrick McKenzie"],
+    ),
+    ("A$AP Rocky, Tyler, The Creator", ["A$AP Rocky", "Tyler, The Creator"]),
+]
+
 @pytest.mark.parametrize("artist_string,expected", SPLITTING_TEST_CASES)
-def test_split_artist_string(bootstrap, artist_string, expected):
+@pytest.mark.asyncio
+async def test_split_artist_string(bootstrap, artist_string, expected):
     """Test artist string splitting with various formats"""
+    await asyncio.sleep(.5)
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
     helper = nowplaying.musicbrainz.helper.MusicBrainzHelper(config=config)
@@ -74,16 +121,18 @@ def test_split_artist_string(bootstrap, artist_string, expected):
 
 
 @pytest.mark.parametrize("artist_string,expected", EDGE_CASE_TEST_CASES)
-def test_split_artist_string_edge_cases(bootstrap, artist_string, expected):
+@pytest.mark.asyncio
+async def test_split_artist_string_edge_cases(bootstrap, artist_string, expected):
     """Test artist string splitting edge cases"""
+    await asyncio.sleep(.5)
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
     helper = nowplaying.musicbrainz.helper.MusicBrainzHelper(config=config)
     result = helper._split_artist_string(artist_string)
     assert result == expected
 
-
-def test_collaboration_delimiters_constant():
+@pytest.mark.asyncio
+async def test_collaboration_delimiters_constant():
     """Test that collaboration delimiter constants are properly defined"""
 
     # Should contain common collaboration delimiters organized by specificity
@@ -104,28 +153,11 @@ def test_collaboration_delimiters_constant():
     )
     assert list(COLLABORATION_DELIMITERS_BY_PRIORITY) == all_delimiters
 
-
-# Test cases for common DJ music collaboration formats
-DJ_COLLABORATION_CASES = [
-    # Hip-hop
-    ("Kendrick Lamar feat. SZA", ["Kendrick Lamar", "SZA"]),
-    ("Drake ft. Future", ["Drake", "Future"]),
-    ("Jay-Z featuring Beyoncé", ["Jay-Z", "Beyoncé"]),
-    # Electronic/House/Techno
-    ("Calvin Harris x Dua Lipa", ["Calvin Harris", "Dua Lipa"]),
-    ("Disclosure vs. London Grammar", ["Disclosure", "London Grammar"]),
-    ("Skrillex & Diplo", ["Skrillex", "Diplo"]),
-    ("Martin Garrix feat. Usher", ["Martin Garrix", "Usher"]),
-    # Beatport/Spotify style comma lists (first-comma splitting only)
-    ("Armin van Buuren, Vini Vici, Alok", ["Armin van Buuren", "Vini Vici, Alok"]),
-    ("David Guetta, Bebe Rexha, J Balvin", ["David Guetta", "Bebe Rexha, J Balvin"]),
-    ("Tiësto, Jonas Blue, Rita Ora", ["Tiësto", "Jonas Blue, Rita Ora"]),
-]
-
-
 @pytest.mark.parametrize("artist_string,expected", DJ_COLLABORATION_CASES)
-def test_dj_collaboration_formats(bootstrap, artist_string, expected):
+@pytest.mark.asyncio
+async def test_dj_collaboration_formats(bootstrap, artist_string, expected):
     """Test common DJ/electronic music collaboration formats"""
+    await asyncio.sleep(.5)
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
     helper = nowplaying.musicbrainz.helper.MusicBrainzHelper(config=config)
@@ -253,38 +285,11 @@ async def test_integration_hierarchical_breakdown(bootstrap):
     )
 
 
-# Test cases for artists that should NOT be split (single entities in MusicBrainz)
-SINGLE_ARTIST_WITH_DELIMITERS = [
-    "Dick Dale & His Del-Tones",
-    "DJ Jazzy Jeff & the Fresh Prince",
-    "Prince & the Revolution",
-    "Emerson, Lake & Palmer",
-    "Crosby, Stills & Nash",
-    "Blood, Sweat & Tears",
-    "Earth, Wind & Fire",
-    "MC 900 Ft Jesus",
-    "MC 900 Ft, Jesus",  # Same artist as above, different punctuation
-    # Conservative cases that should not split even if not found in MB
-    "Smith, John",  # Likely LastName, FirstName pattern
-    "Producer A, Vocalist B",  # Ambiguous 2-part name
-    "Xyz Unlikely Artist, Name With Comma",  # Extremely unlikely to have real matches
-]
-
-# Test cases for collaborations that SHOULD be split into multiple artists
-COLLABORATION_CASES = [
-    ("DjeuhDjoah, Lieutenant Nicholson", ["DjeuhDjoah", "Lieutenant Nicholson"]),
-    (
-        "MISHA, cocabona, Joya Mooi, Derrick McKenzie",
-        ["MISHA", "cocabona", "Joya Mooi", "Derrick McKenzie"],
-    ),
-    ("A$AP Rocky, Tyler, The Creator", ["A$AP Rocky", "Tyler, The Creator"]),
-]
-
-
 @pytest.mark.parametrize("artist_name", SINGLE_ARTIST_WITH_DELIMITERS)
 @pytest.mark.asyncio
 async def test_integration_single_artists_not_split(bootstrap, artist_name):
     """Test that single artists containing delimiters are not split when found in MusicBrainz"""
+    await asyncio.sleep(.5)
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
     processor = nowplaying.metadata.MetadataProcessors(config=config)
@@ -333,6 +338,7 @@ async def test_integration_single_artists_not_split(bootstrap, artist_name):
 @pytest.mark.asyncio
 async def test_integration_collaborations_split(bootstrap, collaboration, expected_artists):
     """Test that collaborations are properly split when individual artists exist in MusicBrainz"""
+    await asyncio.sleep(.5)
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
     processor = nowplaying.metadata.MetadataProcessors(config=config)
@@ -366,12 +372,10 @@ async def test_integration_collaborations_split(bootstrap, collaboration, expect
             )
 
         logging.info("✓ %s correctly split into: %s", collaboration, processor.metadata["artists"])
+    elif processor.metadata.get("musicbrainzartistid"):
+        logging.info("✓ %s found as complete collaboration in MusicBrainz", collaboration)
     else:
-        # Could be that the full collaboration string was found in MusicBrainz
-        if processor.metadata.get("musicbrainzartistid"):
-            logging.info("✓ %s found as complete collaboration in MusicBrainz", collaboration)
-        else:
-            logging.warning("Could not resolve %s - may be due to network issues", collaboration)
+        logging.warning("Could not resolve %s - may be due to network issues", collaboration)
 
 
 @pytest.mark.asyncio
