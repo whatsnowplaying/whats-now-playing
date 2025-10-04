@@ -1074,12 +1074,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 # Refresh the table
                 self._setup_simple_filter_table(self.widgets["filter"])
                 self._update_simple_filter_table()
-        else:
-            # Show message that default filters cannot be removed
-            if self.errormessage:
-                self.errormessage.showMessage(
-                    f"Cannot remove default filter '{phrase}'. You can uncheck it to disable it, but only custom filters can be removed completely."
-                )
+        elif self.errormessage:
+            self.errormessage.showMessage(
+                f"Cannot remove default filter '{phrase}'. You can uncheck it to disable it,"
+                " but only custom filters can be removed completely."
+            )
 
     @Slot()
     def on_reset_to_defaults_button(self):
