@@ -1,0 +1,3 @@
+# Preserve line endings for test files to ensure cross-platform checksum testing
+tests/templates/basic-web.htm text eol=lf
+tests/templates/ws-mtv-cover-fade.htm text eol=crlf
