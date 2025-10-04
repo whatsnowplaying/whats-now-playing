@@ -109,6 +109,7 @@ COLLABORATION_CASES = [
 ]
 
 @pytest.mark.parametrize("artist_string,expected", SPLITTING_TEST_CASES)
+@pytest.mark.asyncio
 async def test_split_artist_string(bootstrap, artist_string, expected):
     """Test artist string splitting with various formats"""
     await asyncio.sleep(.5)
@@ -120,6 +121,7 @@ async def test_split_artist_string(bootstrap, artist_string, expected):
 
 
 @pytest.mark.parametrize("artist_string,expected", EDGE_CASE_TEST_CASES)
+@pytest.mark.asyncio
 async def test_split_artist_string_edge_cases(bootstrap, artist_string, expected):
     """Test artist string splitting edge cases"""
     await asyncio.sleep(.5)
@@ -129,7 +131,7 @@ async def test_split_artist_string_edge_cases(bootstrap, artist_string, expected
     result = helper._split_artist_string(artist_string)
     assert result == expected
 
-
+@pytest.mark.asyncio
 async def test_collaboration_delimiters_constant():
     """Test that collaboration delimiter constants are properly defined"""
 
@@ -152,6 +154,7 @@ async def test_collaboration_delimiters_constant():
     assert list(COLLABORATION_DELIMITERS_BY_PRIORITY) == all_delimiters
 
 @pytest.mark.parametrize("artist_string,expected", DJ_COLLABORATION_CASES)
+@pytest.mark.asyncio
 async def test_dj_collaboration_formats(bootstrap, artist_string, expected):
     """Test common DJ/electronic music collaboration formats"""
     await asyncio.sleep(.5)
