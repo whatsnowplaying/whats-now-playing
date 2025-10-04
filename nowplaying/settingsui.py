@@ -382,8 +382,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         qobject.remove_custom_phrase_button.clicked.connect(self.on_remove_custom_phrase_button)
         qobject.reset_to_defaults_button.clicked.connect(self.on_reset_to_defaults_button)
 
-        # Set up simple filter table
-        self._setup_simple_filter_table(qobject)
+        # Note: Simple filter table setup is done in upd_win() after config is loaded
 
     def _connect_plugins(self):
         """tell config to trigger plugins to update windows"""
@@ -462,7 +461,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         # Load simple filter settings
         self.simple_filter_manager.load_from_config(self.config.cparser)
-        self._update_simple_filter_table()
+
+        # Set up and update the simple filter table (must be after config load)
+        if "filter" in self.widgets:
+            self._setup_simple_filter_table(self.widgets["filter"])
+            self._update_simple_filter_table()
 
     def _upd_win_trackskip(self):
         """update the trackskip settings to match config"""
@@ -1071,6 +1074,12 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 # Refresh the table
                 self._setup_simple_filter_table(self.widgets["filter"])
                 self._update_simple_filter_table()
+        else:
+            # Show message that default filters cannot be removed
+            if self.errormessage:
+                self.errormessage.showMessage(
+                    f"Cannot remove default filter '{phrase}'. You can uncheck it to disable it, but only custom filters can be removed completely."
+                )
 
     @Slot()
     def on_reset_to_defaults_button(self):
