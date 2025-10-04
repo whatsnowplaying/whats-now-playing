@@ -199,7 +199,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             if row:
                 metadata: TrackMetadata = {
                     "artist": str(row["artist"]),
-                    "comment": str(row["comment"]),
+                    "comments": str(row["comment"]),
                     "title": str(row["title"]),
                     "bpm": str(row["bpm"]),
                     "track": str(row["tracknumber"]),

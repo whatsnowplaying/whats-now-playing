@@ -272,7 +272,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
     @staticmethod
     def _isignored(metadata: TrackMetadata) -> bool:
         """bail out if the text NPIGNORE appears in the comment field"""
-        if metadata.get("comments") and "NPIGNORE" in metadata["comments"]:
+        if metadata.get("comments") and "WNPIGNORE" in metadata["comments"]:
             return True
         return False
 
@@ -281,7 +281,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         if not nextmeta:
             return False
 
-        for skiptype in ["comment", "genre"]:
+        for skiptype in ["comments", "genre"]:
             skipdata = self.config.cparser.value(f"trackskip/{skiptype}", defaultValue=None)
             if not skipdata:
                 continue
