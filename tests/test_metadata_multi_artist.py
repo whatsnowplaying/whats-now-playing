@@ -108,11 +108,12 @@ COLLABORATION_CASES = [
     ("A$AP Rocky, Tyler, The Creator", ["A$AP Rocky", "Tyler, The Creator"]),
 ]
 
+
 @pytest.mark.parametrize("artist_string,expected", SPLITTING_TEST_CASES)
 @pytest.mark.asyncio
 async def test_split_artist_string(bootstrap, artist_string, expected):
     """Test artist string splitting with various formats"""
-    await asyncio.sleep(.5)
+    await asyncio.sleep(0.5)
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
     helper = nowplaying.musicbrainz.helper.MusicBrainzHelper(config=config)
@@ -124,12 +125,13 @@ async def test_split_artist_string(bootstrap, artist_string, expected):
 @pytest.mark.asyncio
 async def test_split_artist_string_edge_cases(bootstrap, artist_string, expected):
     """Test artist string splitting edge cases"""
-    await asyncio.sleep(.5)
+    await asyncio.sleep(0.5)
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
     helper = nowplaying.musicbrainz.helper.MusicBrainzHelper(config=config)
     result = helper._split_artist_string(artist_string)
     assert result == expected
+
 
 @pytest.mark.asyncio
 async def test_collaboration_delimiters_constant():
@@ -153,11 +155,12 @@ async def test_collaboration_delimiters_constant():
     )
     assert list(COLLABORATION_DELIMITERS_BY_PRIORITY) == all_delimiters
 
+
 @pytest.mark.parametrize("artist_string,expected", DJ_COLLABORATION_CASES)
 @pytest.mark.asyncio
 async def test_dj_collaboration_formats(bootstrap, artist_string, expected):
     """Test common DJ/electronic music collaboration formats"""
-    await asyncio.sleep(.5)
+    await asyncio.sleep(0.5)
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
     helper = nowplaying.musicbrainz.helper.MusicBrainzHelper(config=config)
@@ -289,7 +292,7 @@ async def test_integration_hierarchical_breakdown(bootstrap):
 @pytest.mark.asyncio
 async def test_integration_single_artists_not_split(bootstrap, artist_name):
     """Test that single artists containing delimiters are not split when found in MusicBrainz"""
-    await asyncio.sleep(.5)
+    await asyncio.sleep(0.5)
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
     processor = nowplaying.metadata.MetadataProcessors(config=config)
@@ -338,7 +341,7 @@ async def test_integration_single_artists_not_split(bootstrap, artist_name):
 @pytest.mark.asyncio
 async def test_integration_collaborations_split(bootstrap, collaboration, expected_artists):
     """Test that collaborations are properly split when individual artists exist in MusicBrainz"""
-    await asyncio.sleep(.5)
+    await asyncio.sleep(0.5)
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
     processor = nowplaying.metadata.MetadataProcessors(config=config)
