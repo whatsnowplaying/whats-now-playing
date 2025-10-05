@@ -13,7 +13,7 @@ import aiohttp
 from PySide6.QtCore import QStandardPaths  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.db
-import nowplaying.version
+import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 from nowplaying.types import TrackMetadata
 
 from . import NotificationPlugin
@@ -53,7 +53,7 @@ def generate_anonymous_key(debug: bool = False) -> str | None:
     )
 
     try:
-        data = json.dumps({"version": nowplaying.version.__VERSION__}).encode("utf-8")
+        data = json.dumps({"version": nowplaying.version.__VERSION__}).encode("utf-8")  # pylint: disable=no-member
         request = urllib.request.Request(url, data=data, method="POST")
         request.add_header("Content-Type", "application/json")
 
@@ -423,7 +423,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
 
         try:
             session = await self._get_session()
-            data = {"version": nowplaying.version.__VERSION__}
+            data = {"version": nowplaying.version.__VERSION__}  # pylint: disable=no-member
             async with session.post(
                 url, json=data, headers={"Content-Type": "application/json"}
             ) as response:
