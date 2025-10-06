@@ -14,7 +14,8 @@ completely fresh.
 
 * **All settings will be lost**: Input sources, output configurations, API keys, templates, and all other settings
 
-* **Documents folder remains**: Your NowPlaying directory in Documents (containing templates, logs, etc.) will not be deleted
+* **Documents folder remains**: Your WhatsNowPlaying directory in Documents (containing templates, logs, etc.) will
+  not be deleted
 
 * **Cannot be undone**: There is no way to recover your configuration after using this feature
 
@@ -49,4 +50,4 @@ After the configuration is destroyed and you restart **What's Now Playing**:
 1. You'll be prompted to set up your input source again
 2. All settings will be at their default values
 3. You'll need to reconfigure all output destinations, API keys, and preferences
-4. Your templates and other files in Documents/NowPlaying will still be available
+4. Your templates and other files in Documents/WhatsNowPlaying will still be available

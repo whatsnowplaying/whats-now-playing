@@ -8,8 +8,31 @@ for any breaking changes and news.
 
 ## Upgrading to 5.0.0
 
+### Automatic Directory Migration
+
+When upgrading to 5.0.0, the application will automatically migrate your Documents directory:
+
+* **Old location**: `Documents/NowPlaying`
+* **New location**: `Documents/WhatsNowPlaying`
+
+**What happens during migration:**
+
+* A dialog will notify you about the migration process
+* All templates, custom files, and directories will be copied to the new location
+* Log files (.log) and temporary files (.new) are excluded from the copy
+* Configuration paths pointing to the old directory are automatically updated
+* Your old `Documents/NowPlaying` directory remains as a backup
+* The migration only runs once - subsequent launches will use the new directory
+
+**After upgrading:**
+
+* You can safely delete the old `Documents/NowPlaying` directory once you've verified everything works
+* If you need to downgrade, your old directory is still available
+
+### Configuration Backup
+
 * Starting with 5.0.0, the system will automatically put an importable
-  copy of your config in the `NowPlaying\configbackup` folder to use for
+  copy of your config in the `WhatsNowPlaying\configbackup` folder to use for
   recovery.  After the upgrade is successful, you should delete this copy
   as necessary.
 

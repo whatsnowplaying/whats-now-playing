@@ -15,10 +15,11 @@ the steps below. Versions before High Sierra have not been verified and are not 
 
 * Do not unzip the downloaded zip package directly to the folder from where you will be
   running it. Instead, unzip it in a location such as the `Downloads` folder and then move
-  the `NowPlaying.app` to your destination folder (e.g., "Applications"). Then run the app from the destination folder.
+  the `WhatsNowPlaying.app` to your destination folder (e.g., "Applications"). Then run the app from the destination
+  folder.
 * If the app fails to open, try holding down the Control key and then double-clicking open.
 * If after following the step above the app does not open, open Terminal
-  and type: `sudo xattr -r -d com.apple.quarantine /path/to/NowPlaying.app`
+  and type: `sudo xattr -r -d com.apple.quarantine /path/to/WhatsNowPlaying.app`
   (replace with the correct path to the app).
 
 ### Windows

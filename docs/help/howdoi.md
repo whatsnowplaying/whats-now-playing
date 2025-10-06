@@ -9,7 +9,7 @@ See the page on [Accuracy](accuracy.md)
 The Twitch commands are all read directly from files. So copying one
 file to another is an easy way to add commands:
 
-1. Copy the `Documents/NowPlaying/templates/twitchbot_track.txt`
+1. Copy the `Documents/WhatsNowPlaying/templates/twitchbot_track.txt`
    file to `twitchbot_song.txt`
 2. Restart **What's Now Playing**
 3. Go into Twitch Chat settings and set the permissions as required.

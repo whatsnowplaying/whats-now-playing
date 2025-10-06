@@ -433,12 +433,12 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     def pause(self) -> None:
         """Pause system"""
         self.cparser.setValue("control/paused", True)
-        logging.warning("NowPlaying is currently paused.")
+        logging.warning("What's Now Playing is currently paused.")
 
     def unpause(self) -> None:
         """unpause system"""
         self.cparser.setValue("control/paused", False)
-        logging.warning("NowPlaying is no longer paused.")
+        logging.warning("What's Now Playing is no longer paused.")
 
     def getpause(self) -> bool | None:
         """Get the pause status"""

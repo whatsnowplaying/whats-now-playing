@@ -2,7 +2,7 @@
  * Now Playing WebSocket Client Library
  * Provides enhanced session tracking, OBS integration, and WebSocket management
  */
-class NowPlayingWebSocket {
+class WhatsNowPlayingWebSocket {
     constructor(options = {}) {
         this.sessionId = options.sessionId || 'unknown';
         this.hostIp = options.hostIp || 'localhost';
@@ -167,17 +167,17 @@ class NowPlayingWebSocket {
             httpPort: templateVars.httpport,
             ...options
         };
-        return new NowPlayingWebSocket(config);
+        return new WhatsNowPlayingWebSocket(config);
     }
 }
 
 /**
  * Specialized WebSocket client for different stream types
  */
-class NowPlayingStreamers {
+class WhatsNowPlayingStreamers {
     // Standard metadata streamer
     static createMetadataStreamer(templateVars, onMessage, options = {}) {
-        return NowPlayingWebSocket.createFromTemplate(templateVars, {
+        return WhatsNowPlayingWebSocket.createFromTemplate(templateVars, {
             endpoint: '/wsstream',
             onMessage: onMessage,
             ...options
@@ -186,7 +186,7 @@ class NowPlayingStreamers {
 
     // Artist fanart streamer
     static createArtistFanartStreamer(templateVars, onMessage, options = {}) {
-        return NowPlayingWebSocket.createFromTemplate(templateVars, {
+        return WhatsNowPlayingWebSocket.createFromTemplate(templateVars, {
             endpoint: '/wsartistfanartstream',
             onMessage: onMessage,
             ...options
@@ -195,7 +195,7 @@ class NowPlayingStreamers {
 
     // Gifwords streamer
     static createGifwordsStreamer(templateVars, onMessage, options = {}) {
-        return NowPlayingWebSocket.createFromTemplate(templateVars, {
+        return WhatsNowPlayingWebSocket.createFromTemplate(templateVars, {
             endpoint: '/wsgifwordsstream',
             onMessage: onMessage,
             ...options
@@ -204,7 +204,7 @@ class NowPlayingStreamers {
 
     // Images WebSocket streamer
     static createImagesStreamer(templateVars, onMessage, options = {}) {
-        return NowPlayingWebSocket.createFromTemplate(templateVars, {
+        return WhatsNowPlayingWebSocket.createFromTemplate(templateVars, {
             endpoint: '/v1/images/ws',
             onMessage: onMessage,
             ...options
@@ -214,8 +214,8 @@ class NowPlayingStreamers {
 
 // Export for both CommonJS and browser globals
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { NowPlayingWebSocket, NowPlayingStreamers };
+    module.exports = { WhatsNowPlayingWebSocket, WhatsNowPlayingStreamers };
 } else {
-    window.NowPlayingWebSocket = NowPlayingWebSocket;
-    window.NowPlayingStreamers = NowPlayingStreamers;
+    window.WhatsNowPlayingWebSocket = WhatsNowPlayingWebSocket;
+    window.WhatsNowPlayingStreamers = WhatsNowPlayingStreamers;
 }

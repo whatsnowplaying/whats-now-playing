@@ -113,7 +113,7 @@
 Examples: setlist-%Y%m%d.txt → setlist-20231215.txt
           show-%Y%m%d-%H%M%S.txt → show-20231215-143022.txt
 
-Files are saved to the NowPlaying/setlists directory.</string>
+Files are saved to the WhatsNowPlaying/setlists directory.</string>
    </property>
    <property name="textFormat">
     <enum>Qt::MarkdownText</enum>

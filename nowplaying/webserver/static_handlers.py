@@ -257,10 +257,10 @@ class StaticContentHandler:
                 txtoutput = ""
         return web.Response(text=txtoutput)
 
-    async def nowplaying_js_handler(self, request: web.Request):
-        """serve the nowplaying WebSocket JavaScript library"""
+    async def whatsnowplaying_js_handler(self, request: web.Request):
+        """serve the What's Now Playing WebSocket JavaScript library"""
         config = request.app[self.config_key]
-        js_path = config.getbundledir().joinpath("templates", "nowplaying-websocket.js")
+        js_path = config.getbundledir().joinpath("templates", "whatsnowplaying-websocket.js")
 
         if js_path.exists():
             with open(js_path, encoding="utf-8") as fhin:

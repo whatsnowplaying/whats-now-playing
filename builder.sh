@@ -35,7 +35,7 @@ case "${SYSTEM}" in
     ;;
 esac
 
-DISTDIR=NowPlaying-"${VERSION}-${SYSTEM}"
+DISTDIR=WhatsNowPlaying-"${VERSION}-${SYSTEM}"
 
 PYTHONBIN=$(command -v "${PYTHON}")
 echo "*****"
@@ -125,11 +125,11 @@ echo "* Making binary with PyInstaller "
 echo "****"
 
 if [[ -x "${PYTHONBINDIR}/pyinstaller" ]]; then
-  "${PYTHONBINDIR}/pyinstaller" NowPlaying.spec
+  "${PYTHONBINDIR}/pyinstaller" WhatsNowPlaying.spec
 else
   rcc=$(command -v pyinstaller)
   echo "Using ${rcc}"
-  pyinstaller NowPlaying.spec
+  pyinstaller WhatsNowPlaying.spec
 fi
 
 echo "*****"
@@ -140,8 +140,7 @@ cp -p CHANGELOG* README* LICENSE.txt NOTICE.txt dist
 mv dist "${DISTDIR}"
 
 if [[ "${SYSTEM}" == "macosx" ]]; then
-  rm -rf "${DISTDIR}"/NowPlaying || true
-  rm -rf "${DISTDIR}"/NowPlayingBeam || true
+  rm -rf "${DISTDIR}"/WhatsNowPlaying || true
 fi
 
 if [[ ${SYSTEM} != "windows" ]]; then

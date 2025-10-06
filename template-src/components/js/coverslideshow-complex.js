@@ -24,14 +24,14 @@ class CoverSlideshow {
     }
 
     async startTrackWebSocket() {
-        // Use NowPlayingWebSocket library for enhanced session tracking
+        // Use WhatsNowPlayingWebSocket library for enhanced session tracking
         const templateVars = {
             session_id: "{{session_id}}",
             hostip: "{{hostip}}",
             httpport: {{httpport}}
         };
 
-        this.trackWsClient = NowPlayingStreamers.createMetadataStreamer(templateVars, (metadata) => {
+        this.trackWsClient = WhatsNowPlayingStreamers.createMetadataStreamer(templateVars, (metadata) => {
             if (metadata.last) {
                 this.log('Received last message from track WebSocket');
                 return;

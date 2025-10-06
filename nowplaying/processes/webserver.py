@@ -464,7 +464,9 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get("/wsartistfanartstream", self.websocket_artistfanart_streamer),
                 web.get("/wsgifwordsstream", self.gifwords_ws_handler.websocket_gifwords_streamer),
                 web.get("/v1/images/ws", self.images_ws_handler.websocket_images_handler),
-                web.get("/nowplaying-websocket.js", self.static_handler.nowplaying_js_handler),
+                web.get(
+                    "/whatsnowplaying-websocket.js", self.static_handler.whatsnowplaying_js_handler
+                ),
                 web.get(r"/{template_name:.+\.htm}", self.static_handler.template_handler),
                 web.get(f"/{self.magicstopurl}", self.stop_server),
             ]

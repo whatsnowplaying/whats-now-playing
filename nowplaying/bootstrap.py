@@ -34,8 +34,8 @@ def already_running():
 
 def set_qt_names(
     app: QCoreApplication | None = None,
-    domain: str = "com.github.whatsnowplaying",
-    appname: str = "NowPlaying",
+    domain: str = "com.whatsnowplaying",
+    appname: str = "WhatsNowPlaying",
 ):
     """bootstrap Qt for configuration"""
     # QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
