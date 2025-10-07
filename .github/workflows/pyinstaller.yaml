@@ -70,4 +70,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-dist
+          # Windows builds create a directory, not a zip (see builder.sh line 146)
           path: "WhatsNowPlaying*windows"
