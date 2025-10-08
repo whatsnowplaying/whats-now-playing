@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """test m3u"""
 
+import base64
+import gzip
 import json
 import logging
 import os
@@ -15,6 +17,29 @@ import nowplaying.config  # pylint: disable=import-error
 import nowplaying.upgrades.templates  # pylint: disable=import-error
 import nowplaying.utils.checksum  # pylint: disable=import-error
 from nowplaying.utils.checksum import EXCLUDED_FILES  # pylint: disable=import-error
+
+# Compressed test template content for line ending tests
+# basic-web.htm with LF endings (version 4.1.0-rc3)
+BASIC_WEB_HTM_GZ = "H4sIAHLi5WgC/41TTXObMBC98ytUJZ7gAx+uW0+GCGZ67KmX/gFFWhmlIBFJpKEe/nsF2DjgQ6uDWO3bt2L3rcgnrpnrGkClq6siIMMHVVQdcwwKF4H3AOVFgPwiNTiKWEmNBZfj1onoEXuiayJ4beVbjg0IA7bEiGnlQPmgfYrPZCddBcXPYWfUcJJMjgm0rrvYw+LyDZ3m07Bqao5SZWjfvD8tgN+SuzJDu0OariEubVPRLkNKK1hCJchj6Xy6W5aoNPWIGQJWiC8qsvIPZOjL4w1tAAWtZeUvtFTZyIKR4hrUB7N55y5dWFX5TNmvo9Gt4hHTlTYZuhNCLC+6AGmaLgEH7y6Sivu+Z+jr5uZmknzoMrHMyMYha1iOBwltliRMc4hfXlswXcx0nUxmtI8P8S5+sbjwKUaaH5RkmouAPGvenXMOskme47k8fJX0tEFSoBFBm352k2YaiQydTme070nSLIiguOd+YE3JqHHSulW2b6NzTHfG/5GPJP63F025xt6H/nm0te/oNja+3i4UrWJOahVuV9Ldhw9XWR+2MQc/euHOq7SNBeXwXYWfh8PTf7AOM+tH69a03tsXPWcxJhEGVcZn/Bd10ME51wMAAA=="
+
+# ws-mtv-cover-fade.htm with CRLF endings (version 3.1.2)
+WS_MTV_COVER_FADE_HTM_GZ = "H4sIAHLi5WgC/6VWW2/rNgx+H7D/wKkbkqAndnLaZG0u3cN2il260wENMAzYiyLTsXpsy7OUpFmR/z5KTpw4jdMWM9DGEr+PpCiS5uibn+5/nPz1xyf4efL73c3XX40ik8T0CwCjCHlQvNpVgoaDiHiu0YzZ3ITtKwY7sZEmxpuJ/S94Hoz8YqOUxzL9AlGO4ZhFxmR64PvB1FMp7eMSp6FKjfaESnzhB9i7CgMxvb76eH3Nv++HQgQXoiOml9jjfdH5IeSJjFfj3/gUYwY5xmOmzSpGHSEaBmaV4ZgZfDK+0Jr5OyccqlzSQxZTw8mFHJ73tgESns9kOoBu9jSsCJYyMNEAPvY6nUNRhHIWGZK9FIWx4iSJMTQHArLf1vJfHMBF/wXLCovDDoAVx60ibPTaW7sXne+qUhuCto54oJYDuMye3N9Zxz1VpFCxygdwdnt7e0SFTANMyUC3on+9H8c0kwmfYV0U3x6QhD+VB+pev+AlMj0l3twOnxt11NWRX02BkRa5zAzoXOzyUqgAvcd/5pivXEYWr+0Lr+91vUfNbkiLozk1I39XJ6OpClb0WqoP5AJEzLUeszLTGMiA0nNbKWw/H/cJm5AWcKEWxCTLBKgQshvHsRieG6nNFjTyszqgs/0GHI+n8+QNuNhl5hHc1t3DcNsKhTEUNfrIF7zYr4TCJsk8FUaqFLShszWpTWglvqB5wJyicacEt9JWNec2j+/DHRqYa1AZpsCB2FDQj8EXPIelJp+oG8GfOH1wyFqTw92Z9p+lpo7m7I1L55stOOqgq7pUqxi9WM2aDbJO6xSFwaDRGh6jrE+ZTVBrW4E7y9DEBdVtvX17aNvWA06tfQy/Ptx/9jLb4AuiZ/ePe3Lg/FaJ5zKrlmLtyWRGpgIl5ok1IXLkBj/FaFdNRlLWqmGTzKM6JXbD2hq46vCzdDacco39yw8NOC+P47mCcZBCOjyh1RXcZ564nNyWXQ3+22bjrKzdRsuLZIDNWpdDOIxN7WU43eysKHTSS9/hJjlXG8wNvqjlDb7xN2ucVw2e273XlGw6x0ZLqaDYfpXsusQLrt19jVo0jkOq2z1Nrd5BgDFfNemz22l5IQ/wl7RYvFtFt1PquJ+b00rWgLHGd11no/G+23znvb0Bv39Vr8Mr13MCvv7ftXKys4lYaax01LqgU9Of5CswiobCTTMFmUIPtF0GuoZGE+1EJqjoyvdsnP7orD9AryY91gd768Oz2bbAyo8Msy4uacZSy2PdoXCDLe1k8vwMkdJGZrBeD+yCJpZM5YaW/lJrQ800Oeyfe9b35pZiXPE38wrNMHbs/w+LPi/iDgwAAA=="
+
+
+@pytest.fixture
+def test_templates_with_line_endings(tmp_path):
+    """Create temporary test template files with specific line endings"""
+    # Decompress and write basic-web.htm with LF endings
+    unix_file = tmp_path / "basic-web.htm"
+    unix_content = gzip.decompress(base64.b64decode(BASIC_WEB_HTM_GZ))
+    unix_file.write_bytes(unix_content)
+
+    # Decompress and write ws-mtv-cover-fade.htm with CRLF endings
+    windows_file = tmp_path / "ws-mtv-cover-fade.htm"
+    windows_content = gzip.decompress(base64.b64decode(WS_MTV_COVER_FADE_HTM_GZ))
+    windows_file.write_bytes(windows_content)
+
+    return {"unix": str(unix_file), "windows": str(windows_file)}
 
 
 @pytest.fixture
@@ -227,15 +252,13 @@ def test_upgrade_subdirectories(upgrade_bootstrap):  # pylint: disable=redefined
         assert src_content == dest_content, f"Content mismatch for {expected_file}"
 
 
-def test_template_version_identification_with_line_endings(getroot):  # pylint: disable=too-many-locals
+def test_template_version_identification_with_line_endings(  # pylint: disable=too-many-locals
+    getroot, test_templates_with_line_endings
+):
     """test that we can identify template versions regardless of line endings"""
-    # Test the template files you added with potentially different line endings
-    unix_file = os.path.join(getroot, "tests", "templates", "basic-web.htm")
-    windows_file = os.path.join(getroot, "tests", "templates", "ws-mtv-cover-fade.htm")
-
-    # Verify files exist
-    assert os.path.exists(unix_file), f"Test file {unix_file} not found"
-    assert os.path.exists(windows_file), f"Test file {windows_file} not found"
+    # Get test template files from fixture
+    unix_file = test_templates_with_line_endings["unix"]
+    windows_file = test_templates_with_line_endings["windows"]
 
     # Calculate checksums using our normalized function
     unix_checksum = nowplaying.utils.checksum.checksum(unix_file)
