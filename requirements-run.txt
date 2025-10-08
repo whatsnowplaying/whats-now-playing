@@ -9,7 +9,7 @@ diskcache==5.6.3
 jinja2==3.1.6
 lxml==6.0.2
 netifaces-plus==0.12.4
-nltk==3.9.1
+nltk==3.9.2
 normality==2.6.1
 pillow==11.3.0
 pillow_avif_plugin==1.5.2
