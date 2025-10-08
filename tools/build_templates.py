@@ -42,7 +42,7 @@ class TemplateBuilder:
 
         if actual_file:
             content = actual_file.read_text()
-            relative_path = actual_file.relative_to(self.src_dir)
+            relative_path = actual_file.relative_to(self.src_dir).as_posix()
 
             # Add source comment based on file type
             if component_type == "css":

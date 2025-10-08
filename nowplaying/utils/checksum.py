@@ -39,10 +39,12 @@ def checksum(filename: str | pathlib.Path):
         file_ext = os.path.splitext(str(filename))[1].lower()
 
         if file_ext in text_extensions:
-            # Text file: normalize line endings
+            # Text file: normalize line endings and path separators
             try:
                 with open(filename, "r", encoding="utf-8") as fileh:
-                    content = fileh.read().replace("\r\n", "\n").replace("\r", "\n")
+                    content = (
+                        fileh.read().replace("\r\n", "\n").replace("\r", "\n").replace("\\", "/")
+                    )
                     hashfunc.update(content.encode("utf-8"))
             except UnicodeDecodeError:
                 # Fall back to binary mode if UTF-8 fails
