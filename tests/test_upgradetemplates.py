@@ -18,6 +18,8 @@ import nowplaying.upgrades.templates  # pylint: disable=import-error
 import nowplaying.utils.checksum  # pylint: disable=import-error
 from nowplaying.utils.checksum import EXCLUDED_FILES  # pylint: disable=import-error
 
+# pylint: disable=line-too-long
+
 # Compressed test template content for line ending tests
 # basic-web.htm with LF endings (version 4.1.0-rc3)
 BASIC_WEB_HTM_GZ = "H4sIAHLi5WgC/41TTXObMBC98ytUJZ7gAx+uW0+GCGZ67KmX/gFFWhmlIBFJpKEe/nsF2DjgQ6uDWO3bt2L3rcgnrpnrGkClq6siIMMHVVQdcwwKF4H3AOVFgPwiNTiKWEmNBZfj1onoEXuiayJ4beVbjg0IA7bEiGnlQPmgfYrPZCddBcXPYWfUcJJMjgm0rrvYw+LyDZ3m07Bqao5SZWjfvD8tgN+SuzJDu0OariEubVPRLkNKK1hCJchj6Xy6W5aoNPWIGQJWiC8qsvIPZOjL4w1tAAWtZeUvtFTZyIKR4hrUB7N55y5dWFX5TNmvo9Gt4hHTlTYZuhNCLC+6AGmaLgEH7y6Sivu+Z+jr5uZmknzoMrHMyMYha1iOBwltliRMc4hfXlswXcx0nUxmtI8P8S5+sbjwKUaaH5RkmouAPGvenXMOskme47k8fJX0tEFSoBFBm352k2YaiQydTme070nSLIiguOd+YE3JqHHSulW2b6NzTHfG/5GPJP63F025xt6H/nm0te/oNja+3i4UrWJOahVuV9Ldhw9XWR+2MQc/euHOq7SNBeXwXYWfh8PTf7AOM+tH69a03tsXPWcxJhEGVcZn/Bd10ME51wMAAA=="
@@ -252,7 +254,7 @@ def test_upgrade_subdirectories(upgrade_bootstrap):  # pylint: disable=redefined
         assert src_content == dest_content, f"Content mismatch for {expected_file}"
 
 
-def test_template_version_identification_with_line_endings(  # pylint: disable=too-many-locals
+def test_template_version_identification_with_line_endings(  # pylint: disable=too-many-locals,redefined-outer-name
     getroot, test_templates_with_line_endings
 ):
     """test that we can identify template versions regardless of line endings"""
