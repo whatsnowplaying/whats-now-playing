@@ -118,13 +118,13 @@ def windows_version_file():
 
     rawmetadata = {
         'output_file': WINVERSFILE,
-        'company_name': 'NowPlaying',
-        'file_description': 'NowPlaying',
-        'internal_name': 'NowPlaying',
+        'company_name': 'WhatsNowPlaying',
+        'file_description': 'WhatsNowPlaying',
+        'internal_name': 'WhatsNowPlaying',
         'legal_copyright':
         f'{__VERSION__} (c) 2020-2021 Ely Miranda, (c) 2021-2025 Allen Wittenauer',
-        'original_filename': 'NowPlaying.exe',
-        'product_name': 'Now Playing',
+        'original_filename': 'WhatsNowPlaying.exe',
+        'product_name': 'WhatsNowPlaying',
         'version': '.'.join(getsplitversion()[:3] + ['0'])
     }
     pyinstaller_versionfile.create_versionfile(**rawmetadata)
@@ -133,7 +133,7 @@ def windows_version_file():
 block_cipher = None
 
 executables = {
-    'NowPlaying': 'nppyi.py',
+    'WhatsNowPlaying': 'wnppyi.py',
 }
 
 for execname, execpy in executables.items():
@@ -194,8 +194,8 @@ for execname, execpy in executables.items():
             icon=f'bincomponents/{geticon()}',
             bundle_identifier=None,
             info_plist={
-                'CFBundleDisplayName': 'NowPlaying',
-                'CFBundleName': 'NowPlaying',
+                'CFBundleDisplayName': "What's Now Playing",
+                'CFBundleName': 'WhatsNowPlaying',
                 'CFBundleShortVersionString': getcfbundleshortversionstring(),
                 'CFBundleVersion': getcfbundleversion(),
                 'LSMinimumSystemVersion': osxminimumversion(),

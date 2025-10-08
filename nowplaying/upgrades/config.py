@@ -4,6 +4,7 @@
 import contextlib
 import logging
 import pathlib
+import shutil
 import sys
 import time
 
@@ -41,6 +42,98 @@ class UpgradeConfig:
             QCoreApplication.applicationName(),
         )
 
+    def _getoldconfig(self) -> QSettings:
+        """Get QSettings for old app name for migration purposes"""
+        return QSettings(
+            self.qsettingsformat,
+            QSettings.UserScope,
+            "whatsnowplaying",  # Same organization name
+            "NowPlaying",  # Old app name
+        )
+
+    def _migrate_documents_directory(self, config: QSettings) -> None:
+        """Migrate Documents/NowPlaying to Documents/WhatsNowPlaying"""
+        docspath = QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
+        old_dir = pathlib.Path(docspath) / "NowPlaying"
+        new_dir = pathlib.Path(docspath) / "WhatsNowPlaying"
+        old_templates = old_dir / "templates"
+        new_templates = new_dir / "templates"
+
+        # Only migrate if old templates exists and new templates doesn't
+        # (new_dir/logs may already exist from logging setup)
+        if old_templates.exists() and not new_templates.exists():
+            logging.info("Migrating Documents directory: %s -> %s", old_dir, new_dir)
+
+            # Show user notification about migration
+            msgbox = QMessageBox()
+            msgbox.setIcon(QMessageBox.Information)
+            msgbox.setWindowTitle("Directory Migration")
+            msgbox.setText(
+                "What's Now Playing is migrating your templates and settings.\n\n"
+                f"Copying: {old_dir}\n"
+                f"To: {new_dir}\n\n"
+                "Your old directory will remain as a backup."
+            )
+            msgbox.setStandardButtons(QMessageBox.Ok)
+            msgbox.exec()
+
+            try:
+                # Copy directory, excluding logs and .new files
+                def ignore_files(directory, files):  # pylint: disable=unused-argument
+                    """Ignore logs and .new files during copy"""
+                    ignored = []
+                    for filename in files:
+                        if filename.endswith('.log') or filename.endswith('.new'):
+                            ignored.append(filename)
+                            logging.debug("Skipping file during migration: %s", filename)
+                    return ignored
+
+                shutil.copytree(old_dir, new_dir, ignore=ignore_files, dirs_exist_ok=True)
+                logging.info("Successfully migrated Documents directory")
+
+                # Rewrite config paths from old to new directory
+                self._rewrite_documents_paths(config, str(old_dir), str(new_dir))
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error("Failed to migrate Documents directory: %s", error)
+                # Don't fail the upgrade, just log the error
+        elif new_templates.exists():
+            logging.debug("WhatsNowPlaying templates already exist, skipping migration")
+
+    @staticmethod
+    def _rewrite_documents_paths(config: QSettings, old_path: str, new_path: str) -> None:
+        """Rewrite config values that contain old Documents path"""
+        # Config keys that may contain template/file paths
+        path_keys = [
+            "acoustidmb/fpcalcexe",
+            "discord/template",
+            "kick/announce",
+            "obsws/template",
+            "realtimesetlist/template",
+            "textoutput/file",
+            "textoutput/txttemplate",
+            "twitchbot/announce",
+            "weboutput/artistbannertemplate",
+            "weboutput/artistfanarttemplate",
+            "weboutput/artistlogotemplate",
+            "weboutput/artistthumbnailtemplate",
+            "weboutput/gifwordstemplate",
+            "weboutput/htmltemplate",
+            "weboutput/requestertemplate",
+        ]
+
+        rewritten_count = 0
+        for key in path_keys:
+            value = config.value(key)
+            if value and isinstance(value, str) and old_path in value:
+                new_value = value.replace(old_path, new_path)
+                config.setValue(key, new_value)
+                rewritten_count += 1
+                logging.debug("Rewrote path for %s: %s -> %s", key, value, new_value)
+
+        if rewritten_count > 0:
+            config.sync()
+            logging.info("Rewrote %d config paths to new Documents directory", rewritten_count)
+
     def backup_config(self) -> None:
         """back up the old config"""
         config = self._getconfig()
@@ -62,9 +155,53 @@ class UpgradeConfig:
             logging.error("Failed to make a backup: %s", error)
             sys.exit(0)
 
-    def upgrade(self) -> None:
+    def upgrade(self) -> None:  # pylint: disable=too-many-statements,too-many-locals,too-many-branches
         """variable re-mapping"""
+        # First, check if we need to migrate from old app name
+        oldconfig = self._getoldconfig()
+        oldpath = pathlib.Path(oldconfig.fileName())
+
         config = self._getconfig()
+        newpath = pathlib.Path(config.fileName())
+
+        # Migrate from NowPlaying to WhatsNowPlaying if old exists and new doesn't
+        if oldpath.exists() and not newpath.exists():
+            logging.info(
+                "Migrating config from NowPlaying to WhatsNowPlaying: %s -> %s",
+                oldpath,
+                newpath,
+            )
+            # Copy app-specific keys from old config to new config
+            # Use childGroups() to avoid copying macOS system preferences
+            copied_count = 0
+
+            # Copy root-level keys (skip system preferences)
+            system_prefixes = ("Apple", "NS", "Web", "AK", "PK", "Nav")
+            for key in oldconfig.childKeys():
+                if not key.startswith(system_prefixes):
+                    config.setValue(key, oldconfig.value(key))
+                    copied_count += 1
+
+            # Copy each group's keys (skip 'com' which has system stuff)
+            for group in oldconfig.childGroups():
+                if group == "com":  # Skip com.apple.* system preferences
+                    continue
+                oldconfig.beginGroup(group)
+                config.beginGroup(group)
+                for key in oldconfig.allKeys():
+                    config.setValue(key, oldconfig.value(key))
+                    copied_count += 1
+                config.endGroup()
+                oldconfig.endGroup()
+
+            config.sync()
+            logging.info(
+                "Config migration completed successfully: copied %d keys",
+                copied_count,
+            )
+
+        # Migrate Documents directory from NowPlaying to WhatsNowPlaying
+        self._migrate_documents_directory(config)
 
         mapping = {
             "acoustidmb/emailaddress": "musicbrainz/emailaddress",

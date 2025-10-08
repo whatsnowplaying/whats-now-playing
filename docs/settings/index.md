@@ -27,7 +27,7 @@
   recognition services.
 
 * **Logging Level** - By default, **What's Now Playing** will write
-  debug logs into your Documents/NowPlaying/Logs directory. This option
+  debug logs into your Documents/WhatsNowPlaying/logs directory. This option
   lets you control the level of logging.
 
 * **Configuration Backup** - Export and import your complete

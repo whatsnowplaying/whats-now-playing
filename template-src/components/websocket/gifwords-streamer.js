@@ -9,7 +9,7 @@ const templateVars = {
 const urlParams = new URLSearchParams(window.location.search);
 const debugMode = urlParams.get('debug') === 'true';
 
-const wsClient = NowPlayingStreamers.createGifwordsStreamer(templateVars, updateDisplay, {
+const wsClient = WhatsNowPlayingStreamers.createGifwordsStreamer(templateVars, updateDisplay, {
     debug: debugMode,
     reconnectDelay: 3000,  // Reconnect after 3 seconds
     maxReconnectAttempts: -1,  // Infinite reconnection attempts

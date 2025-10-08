@@ -3,7 +3,7 @@ requires = ["setuptools >= 60", "versioningit"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "NowPlaying"
+name = "WhatsNowPlaying"
 dynamic = ["version", "dependencies", "optional-dependencies"]
 requires-python = ">=3.10,<3.14"
 
@@ -11,7 +11,7 @@ requires-python = ">=3.10,<3.14"
 hook-dirs = "nowplaying.__pyinstaller:get_hook_dirs"
 
 [project.scripts]
-NowPlaying = "nowplaying.__main__:main"
+WhatsNowPlaying = "nowplaying.__main__:main"
 
 [tool.coverage.run]
 omit = [
