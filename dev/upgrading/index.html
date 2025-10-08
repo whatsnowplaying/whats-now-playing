@@ -371,6 +371,30 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Upgrading to 5.0.0">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automatic-directory-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automatic Directory Migration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-backup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Backup
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1949,9 +1973,30 @@ and the <a href="https://github.com/whatsnowplaying/whats-now-playing/releases">
 notes</a>
 for any breaking changes and news.</p>
 <h2 id="upgrading-to-500">Upgrading to 5.0.0<a class="headerlink" href="#upgrading-to-500" title="Permanent link">&para;</a></h2>
+<h3 id="automatic-directory-migration">Automatic Directory Migration<a class="headerlink" href="#automatic-directory-migration" title="Permanent link">&para;</a></h3>
+<p>When upgrading to 5.0.0, the application will automatically migrate your Documents directory:</p>
+<ul>
+<li><strong>Old location</strong>: <code>Documents/NowPlaying</code></li>
+<li><strong>New location</strong>: <code>Documents/WhatsNowPlaying</code></li>
+</ul>
+<p><strong>What happens during migration:</strong></p>
+<ul>
+<li>A dialog will notify you about the migration process</li>
+<li>All templates, custom files, and directories will be copied to the new location</li>
+<li>Log files (.log) and temporary files (.new) are excluded from the copy</li>
+<li>Configuration paths pointing to the old directory are automatically updated</li>
+<li>Your old <code>Documents/NowPlaying</code> directory remains as a backup</li>
+<li>The migration only runs once - subsequent launches will use the new directory</li>
+</ul>
+<p><strong>After upgrading:</strong></p>
+<ul>
+<li>You can safely delete the old <code>Documents/NowPlaying</code> directory once you've verified everything works</li>
+<li>If you need to downgrade, your old directory is still available</li>
+</ul>
+<h3 id="configuration-backup">Configuration Backup<a class="headerlink" href="#configuration-backup" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Starting with 5.0.0, the system will automatically put an importable
-  copy of your config in the <code>NowPlaying\configbackup</code> folder to use for
+  copy of your config in the <code>WhatsNowPlaying\configbackup</code> folder to use for
   recovery.  After the upgrade is successful, you should delete this copy
   as necessary.</li>
 </ul>
