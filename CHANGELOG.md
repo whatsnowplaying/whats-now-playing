@@ -10,7 +10,7 @@
     * After installing, copy your anonymous key from your client into
       the website to unlock a ton of features!
 
-  * Everyhing renamed to WhatsNowPlaying
+  * Everything renamed to WhatsNowPlaying
     * Quite a few things had already been renamed to use the new
       name.  It was time to finish the job.
     * The rename includes the Documents directory.  As part of the
