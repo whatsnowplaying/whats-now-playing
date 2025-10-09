@@ -47,7 +47,7 @@ def generate_anonymous_key(debug: bool = False) -> str | None:
     Generate an anonymous charts key from the server (standalone function for main process)
     """
     url = (
-        "https://localhost:8000api/v1/request-anonymous-key"
+        "https://localhost:8000/api/v1/request-anonymous-key"
         if debug
         else "https://whatsnowplaying.com/api/v1/request-anonymous-key"
     )
@@ -107,10 +107,16 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         self.key: str | None = None
         self.queue: list[TrackMetadata] = []
         self.queue_file: pathlib.Path | None = None
-        self._queue_lock = asyncio.Lock()
+        self._queue_lock: asyncio.Lock | None = None  # Lazy initialization for event loop
         self._queue_task: asyncio.Task | None = None
         self.base_url = LOCAL_BASE_URL if self.debug else PROD_BASE_URL
         self._session: aiohttp.ClientSession | None = None
+
+    def _get_queue_lock(self) -> asyncio.Lock:
+        """Get or create the queue lock (lazy initialization for event loop compatibility)"""
+        if self._queue_lock is None:
+            self._queue_lock = asyncio.Lock()
+        return self._queue_lock
 
     async def notify_track_change(
         self, metadata: TrackMetadata, imagecache: "nowplaying.imagecache.ImageCache|None" = None
@@ -138,7 +144,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         if "secret" in queue_data:
             del queue_data["secret"]
 
-        async with self._queue_lock:
+        async with self._get_queue_lock():
             # Limit queue size to prevent unbounded growth during server outages
             if len(self.queue) >= self.MAX_QUEUE_SIZE:
                 # Remove oldest item to maintain size limit
@@ -225,12 +231,13 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             cache_dir.mkdir(parents=True, exist_ok=True)
             self.queue_file = cache_dir / "charts_queue.json"
 
-            # Load existing queue
-            await self._load_queue()
+            # Load existing queue (protected by lock to prevent race with _process_queue)
+            async with self._get_queue_lock():
+                await self._load_queue()
 
         if self.enabled != oldenabled:
             logging.info("Charts output enabled for localhost:8000")
-            async with self._queue_lock:
+            async with self._get_queue_lock():
                 if self.enabled and self.queue:
                     # Process any queued items when enabling
                     if self._queue_task is None or self._queue_task.done():
@@ -241,7 +248,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         if self.enabled:
             logging.debug("Charts output notifications stopped")
             # Save any remaining queue items
-            async with self._queue_lock:
+            async with self._get_queue_lock():
                 await self._save_queue()
 
             # Cancel and clean up the queue processing task if running
@@ -266,12 +273,12 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         try:
             with open(self.queue_file, encoding="utf-8") as queue_file:
                 queue_data = json.load(queue_file)
-                async with self._queue_lock:
+                async with self._get_queue_lock():
                     self.queue = queue_data
                     logging.info("Loaded %d queued charts submissions", len(self.queue))
         except Exception as exc:  # pylint: disable=broad-except
             logging.error("Failed to load charts queue: %s", exc)
-            async with self._queue_lock:
+            async with self._get_queue_lock():
                 self.queue = []
 
     async def _save_queue(self) -> None:
@@ -298,7 +305,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             self.key = self.config.cparser.value("charts/charts_key")
 
         while True:
-            async with self._queue_lock:
+            async with self._get_queue_lock():
                 if not self.queue:
                     break
                 queue_item = self.queue[0]  # Get first item
@@ -310,7 +317,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
 
             result = await self._send_to_charts(charts_data)
             if result == "success":
-                async with self._queue_lock:
+                async with self._get_queue_lock():
                     # Remove successfully sent item
                     self.queue.pop(0)
                     await self._save_queue()
@@ -319,7 +326,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                         len(self.queue),
                     )
             elif result == "drop":
-                async with self._queue_lock:
+                async with self._get_queue_lock():
                     # Drop the problematic item and continue
                     dropped_item = self.queue.pop(0)
                     await self._save_queue()
@@ -331,7 +338,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
                     )
             else:  # result == "retry"
                 # Failed to send, leave in queue and stop processing
-                async with self._queue_lock:
+                async with self._get_queue_lock():
                     logging.debug(
                         "Charts submission failed, %d items remaining in queue",
                         len(self.queue),

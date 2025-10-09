@@ -83,7 +83,7 @@ class UpgradeConfig:
                     """Ignore logs and .new files during copy"""
                     ignored = []
                     for filename in files:
-                        if filename.endswith('.log') or filename.endswith('.new'):
+                        if filename.endswith(".log") or filename.endswith(".new"):
                             ignored.append(filename)
                             logging.debug("Skipping file during migration: %s", filename)
                     return ignored
