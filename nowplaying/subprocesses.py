@@ -166,8 +166,8 @@ class SubprocessManager:
         ):
             return
 
-        # Check port availability for webserver before starting
-        if processname == "webserver":
+        # Check port availability for webserver before starting (skip in testmode)
+        if processname == "webserver" and not self.testmode:
             host = self.config.cparser.value("weboutput/httphost", defaultValue="127.0.0.1")
             port = self.config.cparser.value("weboutput/httpport", type=int, defaultValue=8899)
             if not self._check_port_available(host, port):
