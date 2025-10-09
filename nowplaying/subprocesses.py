@@ -5,9 +5,10 @@ import concurrent.futures
 import importlib
 import logging
 import multiprocessing
+import socket
 import typing as t
 
-from PySide6.QtWidgets import QApplication  # pylint: disable=import-error,no-name-in-module
+from PySide6.QtWidgets import QApplication, QMessageBox  # pylint: disable=import-error,no-name-in-module
 
 import nowplaying
 import nowplaying.config
