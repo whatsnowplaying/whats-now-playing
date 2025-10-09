@@ -271,7 +271,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
 
     @staticmethod
     def _isignored(metadata: TrackMetadata) -> bool:
-        """bail out if the text NPIGNORE appears in the comment field"""
+        """bail out if the text WNPIGNORE appears in the comment field"""
         if metadata.get("comments") and "WNPIGNORE" in metadata["comments"]:
             return True
         return False

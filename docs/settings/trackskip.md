@@ -18,6 +18,20 @@ For example:
 * You set the Genre field to `SKIP`
 * When that track is played, it will be skipped and not displayed
 
+### Built-in Skip: WNPIGNORE
+
+In addition to the configurable Comment and Genre filters, What's Now Playing has a built-in skip
+feature. If a track's Comment field contains the text `WNPIGNORE` (case-sensitive), the track will
+be automatically skipped without any configuration needed.
+
+This provides a quick way to mark individual tracks for skipping directly in your DJ software's
+comment field, without needing to configure filters in What's Now Playing.
+
+**Example:**
+
+* Set a track's Comment field to: `WNPIGNORE - Test track`
+* The track will be automatically skipped when played
+
 ## Settings
 
 ### Comment Field Filter

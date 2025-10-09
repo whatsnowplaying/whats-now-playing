@@ -61,11 +61,15 @@ def test_documents_migration():
             )
 
         # Mock QStandardPaths to return our temp directory and mock message box
-        with unittest.mock.patch.object(
-            QStandardPaths, "standardLocations", return_value=[str(mock_docs)]
-        ), unittest.mock.patch.object(
-            nowplaying.upgrades.config.UpgradeConfig, "_getoldconfig", mock_getoldconfig
-        ), unittest.mock.patch("nowplaying.upgrades.config.QMessageBox"):
+        with (
+            unittest.mock.patch.object(
+                QStandardPaths, "standardLocations", return_value=[str(mock_docs)]
+            ),
+            unittest.mock.patch.object(
+                nowplaying.upgrades.config.UpgradeConfig, "_getoldconfig", mock_getoldconfig
+            ),
+            unittest.mock.patch("nowplaying.upgrades.config.QMessageBox"),
+        ):
             # Set up "new" app name for migration target
             nowplaying.bootstrap.set_qt_names(appname="testsuite")
 
@@ -131,15 +135,16 @@ def test_documents_migration_already_exists():
         (new_dir / "templates" / "new.txt").write_text("new")
 
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
-        config = QSettings(
-            qsettingsformat, QSettings.UserScope, "whatsnowplaying", "testsuite"
-        )
+        config = QSettings(qsettingsformat, QSettings.UserScope, "whatsnowplaying", "testsuite")
         config.clear()
 
         # Mock QStandardPaths and message box
-        with unittest.mock.patch.object(
-            QStandardPaths, "standardLocations", return_value=[str(mock_docs)]
-        ), unittest.mock.patch("nowplaying.upgrades.config.QMessageBox"):
+        with (
+            unittest.mock.patch.object(
+                QStandardPaths, "standardLocations", return_value=[str(mock_docs)]
+            ),
+            unittest.mock.patch("nowplaying.upgrades.config.QMessageBox"),
+        ):
             upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)
             upgrade._migrate_documents_directory(config)  # pylint: disable=protected-access
 
@@ -167,15 +172,16 @@ def test_documents_migration_no_old_templates():
         old_dir.mkdir()
 
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
-        config = QSettings(
-            qsettingsformat, QSettings.UserScope, "whatsnowplaying", "testsuite"
-        )
+        config = QSettings(qsettingsformat, QSettings.UserScope, "whatsnowplaying", "testsuite")
         config.clear()
 
         # Mock QStandardPaths and message box
-        with unittest.mock.patch.object(
-            QStandardPaths, "standardLocations", return_value=[str(mock_docs)]
-        ), unittest.mock.patch("nowplaying.upgrades.config.QMessageBox"):
+        with (
+            unittest.mock.patch.object(
+                QStandardPaths, "standardLocations", return_value=[str(mock_docs)]
+            ),
+            unittest.mock.patch("nowplaying.upgrades.config.QMessageBox"),
+        ):
             upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)
             upgrade._migrate_documents_directory(config)  # pylint: disable=protected-access
 
@@ -201,9 +207,7 @@ def test_path_rewriting():
             qsettingsformat = QSettings.NativeFormat
 
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
-        config = QSettings(
-            qsettingsformat, QSettings.UserScope, "whatsnowplaying", "testsuite"
-        )
+        config = QSettings(qsettingsformat, QSettings.UserScope, "whatsnowplaying", "testsuite")
         config.clear()
 
         # Set up config with various path types

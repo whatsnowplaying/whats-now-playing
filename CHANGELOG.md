@@ -10,6 +10,13 @@
     * After installing, copy your anonymous key from your client into
       the website to unlock a ton of features!
 
+  * Everything renamed to WhatsNowPlaying
+    * Quite a few things had already been renamed to use the new
+      name.  It was time to finish the job.
+    * The rename includes the Documents directory.  As part of the
+      upgrade, the new Documents/WhatsNowPlaying directory will
+      have your previous content also copied into it.
+
   * Many UI element upgrades
     * Major overhaul of the UI with many pages getting some clean up
     * On launch, an arrow will show you where the minimized icon is

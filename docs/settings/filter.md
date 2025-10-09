@@ -1,7 +1,5 @@
 # Filter
 
-[![Filter Settings](images/filter.png)](images/filter.png)
-
 Some DJ Pools add extra identifiers to track titles. **What's Now Playing** has
 the ability to remove extra text from the title of a track using two types of
 filters: **Simple** phrase-based filters and **Complex** regex patterns.
@@ -11,6 +9,8 @@ filters: **Simple** phrase-based filters and **Complex** regex patterns.
 **What's Now Playing** provides two filtering approaches:
 
 ### Simple Filters
+
+[![Filter Settings / Simple](images/filter_simple.png)](images/filter_simple.png)
 
 The Simple tab provides an easy-to-use interface for filtering common
 unwanted phrases from track titles. These filters work by matching
@@ -37,6 +37,8 @@ By default, these phrases are enabled for dash/paren/bracket filtering:
 * **Configure formats**: Use checkboxes to enable/disable different matching formats for each phrase
 
 ### Complex Filters
+
+[![Filter Settings / Complex](images/filter_complex.png)](images/filter_complex.png)
 
 The Complex tab allows advanced users to create custom
 [Python-style regular expressions](https://docs.python.org/3/howto/regex.html)
