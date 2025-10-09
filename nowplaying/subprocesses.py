@@ -5,9 +5,10 @@ import concurrent.futures
 import importlib
 import logging
 import multiprocessing
+import socket
 import typing as t
 
-from PySide6.QtWidgets import QApplication  # pylint: disable=import-error,no-name-in-module
+from PySide6.QtWidgets import QApplication, QMessageBox  # pylint: disable=import-error,no-name-in-module
 
 import nowplaying
 import nowplaying.config
@@ -133,6 +134,16 @@ class SubprocessManager:
             self._stop_process_parallel(processname)
         logging.debug("%s should be stopped", processname)
 
+    @staticmethod
+    def _check_port_available(host: str, port: int) -> bool:
+        """Check if a port is available for binding"""
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.bind((host, port))
+                return True
+        except OSError:
+            return False
+
     def start_process(self, processname: str) -> None:
         """Start a specific process"""
         if processname == "twitchbot" and not self.config.cparser.value(
@@ -154,6 +165,22 @@ class SubprocessManager:
             "discord/enabled", type=bool
         ):
             return
+
+        # Check port availability for webserver before starting
+        if processname == "webserver":
+            host = self.config.cparser.value("weboutput/httphost", defaultValue="127.0.0.1")
+            port = self.config.cparser.value("weboutput/httpport", type=int, defaultValue=8899)
+            if not self._check_port_available(host, port):
+                logging.error("Cannot start webserver: port %s:%s is already in use", host, port)
+                QMessageBox.critical(
+                    None,
+                    "Web Server Error",
+                    f"Cannot start web server:\nPort {host}:{port} is already in use.\n\n"
+                    f"Please close any application using this port or change the port in "
+                    f"Settings → Web Server.",
+                )
+                return
+
         # trackpoll always starts - it's the core monitoring process
         self._start_process(processname)
 
