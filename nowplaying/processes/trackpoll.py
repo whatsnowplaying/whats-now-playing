@@ -551,6 +551,10 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         if not self.config.cparser.value("artistextras/enabled", type=bool):
             return
 
+        if not self.imagecache:
+            logging.debug("Artist Extras was enabled without restart; skipping fanart downloads")
+            return
+
         if self.currentmeta.get("artistfanarturls"):
             # imagecache handles deduplication at the database level via UNIQUE constraints
             self.imagecache.fill_queue(
