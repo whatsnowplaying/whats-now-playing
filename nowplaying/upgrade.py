@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 
 from nowplaying.upgrades import UpgradeBinary
 from nowplaying.upgrades.config import UpgradeConfig
+from nowplaying.upgrades.platform import PlatformDetector
 from nowplaying.upgrades.templates import UpgradeTemplates
 
 
@@ -35,13 +36,29 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
         self,
         oldversion,
         newversion,
+        platform_str: str | None = None,
+        asset_info: dict | None = None,
     ) -> None:
         """fill in the upgrade versions and message"""
         messages = [
             f"Your version: {oldversion}",
             f"New version: {newversion}",
-            "Download new version?",
         ]
+
+        if platform_str:
+            messages.append(f"Your platform: {platform_str}")
+
+        if asset_info:
+            messages.append("")  # Blank line
+            messages.append(f"Found: {asset_info['name']}")
+            size_mb = asset_info["size"] / (1024 * 1024)
+            messages.append(f"Size: {size_mb:.1f} MB")
+            messages.append("")  # Blank line
+            messages.append("Download new version?")
+        else:
+            messages.append("")  # Blank line
+            messages.append("No direct download available.")
+            messages.append("Open download page?")
 
         for msg in messages:
             message = QLabel(msg)
@@ -58,10 +75,31 @@ def upgrade(bundledir: str | pathlib.Path | None = None) -> None:
         upgradebin = UpgradeBinary()
 
         if data := upgradebin.get_upgrade_data():
+            # Detect platform and find matching asset
+            platform_info = PlatformDetector.get_platform_info()
+            platform_str = PlatformDetector.get_platform_display_string()
+            asset = PlatformDetector.find_best_matching_asset(data, platform_info)
+
             dialog = UpgradeDialog()
-            dialog.fill_it_in(upgradebin.myversion, data["tag_name"])
+            dialog.fill_it_in(
+                upgradebin.myversion, data["tag_name"], platform_str=platform_str, asset_info=asset
+            )
+
             if dialog.exec():
-                webbrowser.open(data["html_url"])
+                # Open charts download page with platform hint for accurate detection
+                os_type = platform_info.get("os", "unknown")
+                chipset = platform_info.get("chipset", "")
+                macos_version = platform_info.get("macos_version", "")
+
+                url = f"https://whatsnowplaying.com/download?os={os_type}&version={upgradebin.myversion}"
+                if chipset:
+                    url += f"&chipset={chipset}"
+                if macos_version:
+                    url += f"&macos_version={macos_version}"
+
+                logging.info("Opening download page: %s", url)
+                webbrowser.open(url)
+
                 logging.info("User wants to upgrade; exiting")
                 sys.exit(0)
     except Exception as error:  # pylint: disable=broad-except

@@ -43,18 +43,8 @@ Please follow the [developer guide](help/developers.md) to install and run.
 
 Here are the steps to get a basic installation working:
 
-1. Download the appropriate binary:
-
-   {% if git.tag and not '-' in git.tag %}
-   * [This release ({$ git.tag $})](<https://github.com/whatsnowplaying/whats-now-playing/releases/tag/{$ git.tag $}>) -
-     Download binaries for this specific version
-   {% endif %}
-   * [Latest stable release](<https://github.com/whatsnowplaying/whats-now-playing/releases/latest>) -
-     Always points to the newest stable version
-   * [All releases](<https://github.com/whatsnowplaying/whats-now-playing/releases/>) -
-     Browse all versions including pre-releases
-
-   Also of interest: [Current bug list](https://github.com/whatsnowplaying/whats-now-playing/issues?q=is%3Aissue+is%3Aopen+label%3Abug+sort%3Aupdated-desc)
+1. **[Download the application](https://whatsnowplaying.com/download)** - The download page will
+   automatically detect your platform and show you the correct version.
 
 2. Launch the application
 3. The software will attempt to pre-configure itself for whatever software you have

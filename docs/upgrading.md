@@ -1,9 +1,12 @@
 # Upgrading
 
-Be sure to check the
+## Download Latest Version
+
+**[Download the latest version](https://whatsnowplaying.com/download)** - The download page will
+automatically detect your platform and show you the correct version.
+
+Before upgrading, be sure to check the
 [changelog](https://github.com/whatsnowplaying/whats-now-playing/blob/main/CHANGELOG.md)
-and the [release
-notes](https://github.com/whatsnowplaying/whats-now-playing/releases)
 for any breaking changes and news.
 
 ## Upgrading to 5.0.0
