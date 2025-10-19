@@ -91,7 +91,8 @@ def upgrade(bundledir: str | pathlib.Path | None = None) -> None:
                 chipset = platform_info.get("chipset", "")
                 macos_version = platform_info.get("macos_version", "")
 
-                url = f"https://whatsnowplaying.com/download?os={os_type}&version={upgradebin.myversion}"
+                base_url = "https://whatsnowplaying.com/download"
+                url = f"{base_url}?os={os_type}&version={upgradebin.myversion}"
                 if chipset:
                     url += f"&chipset={chipset}"
                 if macos_version:

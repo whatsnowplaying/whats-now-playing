@@ -3,7 +3,6 @@
 
 import logging
 import platform
-import re
 import sys
 import typing as t
 
@@ -150,15 +149,13 @@ class PlatformDetector:
                 )
                 return PlatformDetector._build_asset_dict(intel_assets[0])
             logging.warning("No macOS assets found")
-            return None
 
         # For Intel Macs: use Intel only
-        if chipset == "intel":
+        elif chipset == "intel":
             if intel_assets:
                 logging.info("Found Intel build: %s", intel_assets[0]["name"])
                 return PlatformDetector._build_asset_dict(intel_assets[0])
             logging.warning("No Intel macOS assets found")
-            return None
 
         return None
 
