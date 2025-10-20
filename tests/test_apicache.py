@@ -855,3 +855,28 @@ async def test_cached_fetch_preserves_artist_names(temp_api_cache):  # pylint: d
     finally:
         # Restore original cache instance
         nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+async def test_delete_key(temp_api_cache):  # pylint: disable=redefined-outer-name
+    """Test deleting a specific cache key."""
+    cache = temp_api_cache
+
+    # Put some data in cache
+    await cache.put("testprovider", "Test Artist", "test/endpoint", {"data": "test1"})
+    await cache.put("testprovider", "Another Artist", "test/endpoint", {"data": "test2"})
+
+    # Verify both are cached
+    result1 = await cache.get("testprovider", "Test Artist", "test/endpoint")
+    result2 = await cache.get("testprovider", "Another Artist", "test/endpoint")
+    assert result1 == {"data": "test1"}
+    assert result2 == {"data": "test2"}
+
+    # Delete one key
+    await cache.delete_key("testprovider", "Test Artist", "test/endpoint")
+
+    # Verify first is gone, second still exists
+    result1_after = await cache.get("testprovider", "Test Artist", "test/endpoint")
+    result2_after = await cache.get("testprovider", "Another Artist", "test/endpoint")
+    assert result1_after is None, "Deleted key should return None"
+    assert result2_after == {"data": "test2"}, "Other key should still exist"

@@ -460,6 +460,28 @@ class APIResponseCache:
             logging.error("Database error getting stats: %s", error)
             return {}
 
+    async def delete_key(self, provider: str, artist_name: str, endpoint: str):
+        """Delete a specific cache entry by key.
+
+        Args:
+            provider: Provider name (e.g., 'musicbrainz', 'discogs')
+            artist_name: Artist name
+            endpoint: API endpoint
+        """
+        cache_key = self._make_cache_key(provider, artist_name, endpoint)
+
+        async with self._lock:
+            try:
+                async with aiosqlite.connect(self.db_file) as connection:
+                    await connection.execute(
+                        "DELETE FROM api_responses WHERE cache_key = ?", (cache_key,)
+                    )
+                    await connection.commit()
+                    logging.debug("Deleted cache key: %s", cache_key)
+
+            except sqlite3.Error as error:
+                logging.error("Database error deleting cache key: %s", error)
+
     async def clear_cache(self, provider: str | None = None):
         """Clear cache entries.
 

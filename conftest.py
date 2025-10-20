@@ -156,19 +156,27 @@ def mock_first_install_dialog():
         yield
 
 
+# Global cache directory shared across all tests in the session
+_TEST_CACHE_DIR = None
+
+
 @pytest_asyncio.fixture
-async def temp_api_cache():
-    """Create a temporary API cache for testing."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cache_dir = pathlib.Path(temp_dir)
-        cache = nowplaying.apicache.APIResponseCache(cache_dir=cache_dir)
-        # Wait for initialization to complete
-        await cache._initialize_db()  # pylint: disable=protected-access
-        try:
-            yield cache
-        finally:
-            # Properly close the cache to prevent event loop warnings
-            await cache.close()
+async def temp_api_cache(tmp_path_factory):
+    """Create an API cache for testing in a persistent location with TTL-based expiration."""
+    global _TEST_CACHE_DIR  # pylint: disable=global-statement
+
+    # Create the cache directory once and reuse it for all tests
+    if _TEST_CACHE_DIR is None:
+        _TEST_CACHE_DIR = tmp_path_factory.mktemp("api_cache", numbered=False)
+
+    cache = nowplaying.apicache.APIResponseCache(cache_dir=_TEST_CACHE_DIR)
+    # Wait for initialization to complete
+    await cache._initialize_db()  # pylint: disable=protected-access
+    try:
+        yield cache
+    finally:
+        # Properly close the cache to prevent event loop warnings
+        await cache.close()
 
 
 @pytest.fixture(autouse=True)
