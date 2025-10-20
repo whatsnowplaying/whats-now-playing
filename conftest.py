@@ -209,12 +209,11 @@ async def auto_shared_api_cache_for_artistextras(request, shared_api_cache):  # 
         any(module in request.module.__name__ for module in test_modules)
         and not test_manages_own_cache
     ):
-        original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+        # Set the shared cache instance for this test
         nowplaying.apicache.set_cache_instance(shared_api_cache)
-        try:
-            yield
-        finally:
-            nowplaying.apicache.set_cache_instance(original_cache)
+        yield
+        # Note: We intentionally do NOT restore the original cache instance
+        # to avoid race conditions where async operations might still be using the cache
     else:
         yield
 
