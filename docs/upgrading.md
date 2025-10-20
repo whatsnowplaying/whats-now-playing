@@ -9,11 +9,11 @@ Before upgrading, be sure to check the
 [changelog](https://github.com/whatsnowplaying/whats-now-playing/blob/main/CHANGELOG.md)
 for any breaking changes and news.
 
-## Upgrading to 5.0.0
+## Upgrading from 3.x or 4.x to 5.0.0
 
 ### Automatic Directory Migration
 
-When upgrading to 5.0.0, the application will automatically migrate your Documents directory:
+The application will automatically migrate your Documents directory:
 
 * **Old location**: `Documents/NowPlaying`
 * **New location**: `Documents/WhatsNowPlaying`
@@ -34,15 +34,13 @@ When upgrading to 5.0.0, the application will automatically migrate your Documen
 
 ### Configuration Backup
 
-* Starting with 5.0.0, the system will automatically put an importable
-  copy of your config in the `WhatsNowPlaying\configbackup` folder to use for
-  recovery.  After the upgrade is successful, you should delete this copy
-  as necessary.
+The system will automatically put an importable copy of your config in the
+`WhatsNowPlaying/configbackup` folder for recovery. After the upgrade is successful,
+you should delete this copy as necessary.
 
-## Configuration Recovery (4.2+)
+### Configuration Recovery
 
-If an upgrade fails or settings are lost, you can restore from a
-configuration backup:
+If an upgrade fails or settings are lost, you can restore from a configuration backup:
 
 1. **Export before upgrading** (recommended):
    * Open Settings → General → **Export Configuration**
@@ -57,34 +55,15 @@ configuration backup:
 > settings automatically. Configuration files contain sensitive data -
 > store securely and delete when no longer needed.
 
-## From 3.x.x
+## Upgrading from 2.x to 5.0.0
 
-1. Just install and the software will make the necessary changes.
+**Important**: You must upgrade to version 3.1.2 first, then upgrade to 5.0.0.
 
-If you need to downgrade for any reason, you must downgrade to 3.1.2 or
-higher after upgrading to a 4.x.x release.
+1. Install version 3.1.2 from the releases page
+2. Launch the application - settings will be migrated automatically
+3. Then upgrade to 5.0.0
 
-## From 2.x.x
+## Upgrading from 1.x to 5.0.0
 
-1. Install the last version of 3.x.x from the releases page.
-2. Upon launch, most settings will get copied over to their new homes
-   in the new Settings screen.
-3. Many templates have been added and updated. New templates will be
-   copied into the templates directory. For updated templates, there
-   are two outcomes:
-   * If there have been no changes to the same one in the template
-     directory, the updated template file will overwrite the existing
-     one.
-   * If there have been changes to the one in the template directory,
-     the updated one will be put in as `.new` and will likely require
-     you to take action. The existing one will be left there, however.
-     A pop-up on program launch will also inform you that the conflict
-     has happened.
-
-## From 1.x.x
-
-Welcome aboard!
-
-Unfortunately, 1.x.x wasn't built in a way to make it possible to
-upgrade from one version to another. So none of your settings are
-preserved. You will need to treat it as though it is a fresh install.
+Unfortunately, 1.x.x wasn't built to support upgrades. You will need to treat this as a fresh install -
+none of your settings will be preserved.
