@@ -169,8 +169,7 @@ def mock_first_install_dialog():
         yield
 
 
-# Global cache directory and instance shared across all tests in the session
-_SHARED_CACHE_DIR = None
+# Global cache instance shared across all tests in the session
 _SHARED_CACHE_INSTANCE = None
 
 
@@ -190,17 +189,17 @@ async def isolated_api_cache():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def shared_api_cache(tmp_path_factory):
-    """Create a shared API cache for artistextras tests to reduce API calls."""
-    global _SHARED_CACHE_DIR, _SHARED_CACHE_INSTANCE  # pylint: disable=global-statement
+async def shared_api_cache():
+    """Create a shared API cache for artistextras tests to reduce API calls.
 
-    # Create the cache directory once and reuse it for all tests
-    if _SHARED_CACHE_DIR is None:
-        _SHARED_CACHE_DIR = tmp_path_factory.mktemp("api_cache", numbered=False)
+    Uses Qt standard cache location which is preserved by clear_old_testsuite.
+    """
+    global _SHARED_CACHE_INSTANCE  # pylint: disable=global-statement
 
     # Reuse the same cache instance across all tests
+    # Don't pass cache_dir - let it use Qt standard location
     if _SHARED_CACHE_INSTANCE is None:
-        _SHARED_CACHE_INSTANCE = nowplaying.apicache.APIResponseCache(cache_dir=_SHARED_CACHE_DIR)
+        _SHARED_CACHE_INSTANCE = nowplaying.apicache.APIResponseCache()
         await _SHARED_CACHE_INSTANCE._initialize_db()  # pylint: disable=protected-access
 
     yield _SHARED_CACHE_INSTANCE
