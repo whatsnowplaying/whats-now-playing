@@ -119,8 +119,21 @@ def clear_old_testsuite():
 
     cachedir = pathlib.Path(QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0])
     if "testsuite" in cachedir.name and cachedir.exists():
+        # Preserve api_cache directory for shared cache across tests
+        api_cache_dir = cachedir / "api_cache"
+        temp_api_cache = None
+        if api_cache_dir.exists():
+            # Temporarily move api_cache out of the way
+            temp_api_cache = cachedir.parent / f"api_cache_temp_{os.getpid()}"
+            shutil.move(str(api_cache_dir), str(temp_api_cache))
+
         logging.info("Removing %s", cachedir)
         shutil.rmtree(cachedir)
+
+        # Restore api_cache directory
+        if temp_api_cache and temp_api_cache.exists():
+            cachedir.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(temp_api_cache), str(api_cache_dir))
 
     config = QSettings(
         qsettingsformat,
@@ -156,8 +169,7 @@ def mock_first_install_dialog():
         yield
 
 
-# Global cache directory and instance shared across all tests in the session
-_SHARED_CACHE_DIR = None
+# Global cache instance shared across all tests in the session
 _SHARED_CACHE_INSTANCE = None
 
 
@@ -177,26 +189,26 @@ async def isolated_api_cache():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def shared_api_cache(tmp_path_factory):
-    """Create a shared API cache for artistextras tests to reduce API calls."""
-    global _SHARED_CACHE_DIR, _SHARED_CACHE_INSTANCE  # pylint: disable=global-statement
+async def shared_api_cache():
+    """Create a shared API cache for artistextras tests to reduce API calls.
 
-    # Create the cache directory once and reuse it for all tests
-    if _SHARED_CACHE_DIR is None:
-        _SHARED_CACHE_DIR = tmp_path_factory.mktemp("api_cache", numbered=False)
+    Uses Qt standard cache location which is preserved by clear_old_testsuite.
+    """
+    global _SHARED_CACHE_INSTANCE  # pylint: disable=global-statement
 
     # Reuse the same cache instance across all tests
+    # Don't pass cache_dir - let it use Qt standard location
     if _SHARED_CACHE_INSTANCE is None:
-        _SHARED_CACHE_INSTANCE = nowplaying.apicache.APIResponseCache(cache_dir=_SHARED_CACHE_DIR)
+        _SHARED_CACHE_INSTANCE = nowplaying.apicache.APIResponseCache()
         await _SHARED_CACHE_INSTANCE._initialize_db()  # pylint: disable=protected-access
 
     yield _SHARED_CACHE_INSTANCE
 
 
-@pytest.fixture(autouse=True)
-def auto_shared_api_cache_for_artistextras(request, shared_api_cache):  # pylint: disable=redefined-outer-name
+@pytest_asyncio.fixture(autouse=True)
+async def auto_shared_api_cache_for_artistextras(request, shared_api_cache):  # pylint: disable=redefined-outer-name
     """Automatically use shared API cache for tests that hit
-       external APIs to prevent CI failures.
+    external APIs to prevent CI failures.
     """
     # Auto-apply to artistextras, musicbrainz, and metadata_multi_artist tests
     # Skip tests that explicitly manage their own cache
@@ -209,12 +221,11 @@ def auto_shared_api_cache_for_artistextras(request, shared_api_cache):  # pylint
         any(module in request.module.__name__ for module in test_modules)
         and not test_manages_own_cache
     ):
-        original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+        # Set the shared cache instance for this test
         nowplaying.apicache.set_cache_instance(shared_api_cache)
-        try:
-            yield
-        finally:
-            nowplaying.apicache.set_cache_instance(original_cache)
+        yield
+        # Note: We intentionally do NOT restore the original cache instance
+        # to avoid race conditions where async operations might still be using the cache
     else:
         yield
 
