@@ -85,9 +85,15 @@
    </property>
    <property name="text">
     <string>Charts sends track metadata to the What's Now Playing Charts service.
-Anonymous keys are auto-generated. Copy your key to claim it at whatsnowplaying.com for additional features.</string>
+Anonymous keys are auto-generated. Copy your key to claim it at &lt;a href="https://whatsnowplaying.com/signup"&gt;whatsnowplaying.com/signup&lt;/a&gt; for additional features.</string>
    </property>
    <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+   <property name="textFormat">
+    <enum>Qt::RichText</enum>
+   </property>
+   <property name="openExternalLinks">
     <bool>true</bool>
    </property>
   </widget>

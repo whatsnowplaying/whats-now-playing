@@ -78,6 +78,8 @@
   * Completely revamped documentation website to make it easy to pick your version
   * Upgrade downloads are now sent through whatsnowplaying.com/download so that
     users can be pointed to the correct one, see release notes, etc.
+  * Distribution files now use user-friendly naming (e.g., WhatsNowPlaying-5.0.0-macOS12-AppleSilicon.zip,
+    WhatsNowPlaying-5.0.0-Windows.zip) making it easier to identify the correct download for your platform
 
 * Windows Binary Overhaul
   * The binaries for Windows now come as a directory rather than a single
