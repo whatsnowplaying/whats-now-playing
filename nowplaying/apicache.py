@@ -259,7 +259,9 @@ class APIResponseCache:
                     await self._handle_missing_table_error("get")
                     # Return cache miss - don't retry to avoid infinite recursion
                     return None
-                logging.exception("Database error retrieving cache from %s: %s", self.db_file, error)
+                logging.exception(
+                    "Database error retrieving cache from %s: %s", self.db_file, error
+                )
                 return None
 
     async def put(  # pylint: disable=too-many-arguments

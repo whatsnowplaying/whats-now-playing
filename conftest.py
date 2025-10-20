@@ -119,8 +119,21 @@ def clear_old_testsuite():
 
     cachedir = pathlib.Path(QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0])
     if "testsuite" in cachedir.name and cachedir.exists():
+        # Preserve api_cache directory for shared cache across tests
+        api_cache_dir = cachedir / "api_cache"
+        temp_api_cache = None
+        if api_cache_dir.exists():
+            # Temporarily move api_cache out of the way
+            temp_api_cache = cachedir.parent / f"api_cache_temp_{os.getpid()}"
+            shutil.move(str(api_cache_dir), str(temp_api_cache))
+
         logging.info("Removing %s", cachedir)
         shutil.rmtree(cachedir)
+
+        # Restore api_cache directory
+        if temp_api_cache and temp_api_cache.exists():
+            cachedir.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(temp_api_cache), str(api_cache_dir))
 
     config = QSettings(
         qsettingsformat,
