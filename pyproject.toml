@@ -89,7 +89,7 @@ include = [
 # breaks pytest horribily so force those tests first
 testpaths = ["tests-qt", "tests"]
 markers = [
-  "seratosettings: custom settings for serato ",
+  "serato3settings: custom settings for older serato",
   "templatesettings: custom settings for templates",
 ]
 qt_api = "pyside6"
