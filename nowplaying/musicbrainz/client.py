@@ -66,9 +66,9 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
                 await asyncio.sleep(self.rate_limit_interval - time_since_last)
             self.last_request_time = time.time()
 
-    async def _make_request(  # pylint: disable=too-many-locals
+    async def _make_request(  # pylint: disable=too-many-locals,too-many-branches
         self,
-        url: str,  # pylint: disable=too-many-branches
+        url: str,
         params: dict | None = None,
         timeout: int | None = None,
     ) -> dict[str, Any]:
