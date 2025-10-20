@@ -26,12 +26,9 @@ To access advanced features and view your data online:
 
 1. Navigate to **Settings** → **Output Destinations** → **Charts**
 2. Copy your auto-generated **Secret Key** from the input field
-3. Visit [whatsnowplaying.com](https://whatsnowplaying.com)
-4. Click **Login with Twitch** or **Login with Kick**
-5. Complete the OAuth login process
-6. Go to your **Dashboard**
-7. Enter your copied key in the **Claim Anonymous Key** section
-8. Click **Claim Key** to link it to your account
+3. Visit [whatsnowplaying.com/signup](https://whatsnowplaying.com/signup) to create an account
+4. Sign up using **Twitch** or **Kick** credentials
+5. Once logged in, enter your copied key to claim it and link it to your account
 
 ## Configuration
 

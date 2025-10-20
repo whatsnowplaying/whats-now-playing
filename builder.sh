@@ -35,7 +35,27 @@ case "${SYSTEM}" in
     ;;
 esac
 
-DISTDIR=WhatsNowPlaying-"${VERSION}-${SYSTEM}"
+# Generate user-friendly distribution name
+case "${SYSTEM}" in
+  macosx)
+    # Detect macOS version and architecture
+    MACOS_VERSION=$(sw_vers -productVersion | cut -d. -f1)
+    ARCH=$(uname -m)
+    if [[ "${ARCH}" == "arm64" ]]; then
+      DISTNAME="macOS${MACOS_VERSION}-AppleSilicon"
+    else
+      DISTNAME="macOS${MACOS_VERSION}-Intel"
+    fi
+    ;;
+  windows)
+    DISTNAME="Windows"
+    ;;
+  *)
+    DISTNAME="${SYSTEM}"
+    ;;
+esac
+
+DISTDIR=WhatsNowPlaying-"${VERSION}-${DISTNAME}"
 
 PYTHONBIN=$(command -v "${PYTHON}")
 echo "*****"
