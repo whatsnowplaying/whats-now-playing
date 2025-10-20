@@ -260,11 +260,6 @@ async def test_theaudiodb_api_call_count(bootstrap, temp_api_cache):  # pylint: 
     nowplaying.apicache.set_cache_instance(temp_api_cache)
 
     try:
-        # Clear the specific cache entry to ensure clean test state
-        # TheAudioDB uses "search" for search API calls (first level cache)
-        # The second level cache uses "artist_{id}" but we don't know the ID ahead of time
-        await temp_api_cache.delete_key("theaudiodb", "Madonna", "search")
-
         plugin, imagecache = _setup_theaudiodb_plugin(bootstrap)
 
         # Test with a known artist

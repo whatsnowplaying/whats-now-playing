@@ -774,10 +774,6 @@ async def test_wikimedia_api_call_count(bootstrap, temp_api_cache):  # pylint: d
     nowplaying.apicache.set_cache_instance(temp_api_cache)
 
     try:
-        # Clear the specific cache entry to ensure clean test state
-        # Wikimedia uses "{entity}_{lang}" as the endpoint format
-        await temp_api_cache.delete_key("wikimedia", "Nine Inch Nails", "Q11647_en")
-
         config = bootstrap
         configuresettings("wikimedia", config.cparser)
         imagecaches, plugins = configureplugins(config)
@@ -853,10 +849,6 @@ async def test_wikimedia_failure_cache(bootstrap, temp_api_cache):  # pylint: di
     nowplaying.apicache.set_cache_instance(temp_api_cache)
 
     try:
-        # Clear the specific cache entry to ensure clean test state
-        # Wikimedia uses "{entity}_{lang}" as the endpoint format
-        await temp_api_cache.delete_key("wikimedia", "Nine Inch Nails", "Q11647_en")
-
         config = bootstrap
         configuresettings("wikimedia", config.cparser)
         imagecaches, plugins = configureplugins(config)

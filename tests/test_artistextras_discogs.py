@@ -1075,12 +1075,6 @@ async def test_discogs_api_call_count(bootstrap, temp_api_cache):  # pylint: dis
     nowplaying.apicache.set_cache_instance(temp_api_cache)
 
     try:
-        # Clear the specific cache entry to ensure clean test state
-        # Discogs uses "search_title_{album}" as the endpoint format
-        await temp_api_cache.delete_key(
-            "discogs", "Daft Punk", "search_title_Random Access Memories"
-        )
-
         config = bootstrap
         configuresettings("discogs", config.cparser)
         config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])

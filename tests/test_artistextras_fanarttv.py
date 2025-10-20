@@ -58,12 +58,6 @@ async def test_fanarttv_apicache_api_call_count(bootstrap, temp_api_cache):  # p
     nowplaying.apicache.set_cache_instance(temp_api_cache)
 
     try:
-        # Clear the specific cache entry to ensure clean test state
-        # FanartTV uses "music/{mbid}" as the endpoint format
-        await temp_api_cache.delete_key(
-            "fanarttv", "Nine Inch Nails", "music/b7ffd2af-418f-4be2-bdd1-22f8b48613da"
-        )
-
         plugin, imagecache = _setup_fanarttv_plugin(bootstrap)
 
         await run_api_call_count_test(
@@ -86,12 +80,6 @@ async def test_fanarttv_apicache_api_failure_behavior(bootstrap, temp_api_cache)
     nowplaying.apicache.set_cache_instance(temp_api_cache)
 
     try:
-        # Clear the specific cache entry to ensure clean test state
-        # FanartTV uses "music/{mbid}" as the endpoint format
-        await temp_api_cache.delete_key(
-            "fanarttv", "Test Artist", "music/invalid-mbid-that-will-fail"
-        )
-
         plugin, imagecache = _setup_fanarttv_plugin(bootstrap)
 
         # Use test metadata with invalid MBID to trigger failure
