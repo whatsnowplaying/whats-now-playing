@@ -66,9 +66,9 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
                 await asyncio.sleep(self.rate_limit_interval - time_since_last)
             self.last_request_time = time.time()
 
-    async def _make_request(  # pylint: disable=too-many-locals
+    async def _make_request(  # pylint: disable=too-many-locals,too-many-branches
         self,
-        url: str,  # pylint: disable=too-many-branches
+        url: str,
         params: dict | None = None,
         timeout: int | None = None,
     ) -> dict[str, Any]:
@@ -101,14 +101,21 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
                                 raise ResponseError(
                                     f"XML parsing failed: {parse_error}"
                                 ) from parse_error
-                        elif response.status == 503:
+                        elif response.status in (429, 500, 502, 503):
+                            # MusicBrainz uses 429/500/502/503 for rate limiting and server overload
+                            # For live performance, we retry once with minimal delay
                             if attempt < self.max_retries:
-                                logger.debug(
-                                    "Service unavailable (503), retrying (attempt %d)", attempt + 1
+                                logger.warning(
+                                    "Server error %d (rate limit/overload), retrying (attempt %d)",
+                                    response.status,
+                                    attempt + 1,
                                 )
-                                await asyncio.sleep(1.0)  # Wait longer for 503 errors
+                                await asyncio.sleep(0.5)  # Minimal delay for live performance
                                 continue
-                            raise NetworkError("MusicBrainz service unavailable (503)")
+                            raise NetworkError(
+                                f"MusicBrainz server error {response.status} "
+                                f"(rate limit or overload)"
+                            )
                         else:
                             raise ResponseError(f"HTTP {response.status}: {await response.text()}")
 
@@ -119,10 +126,17 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
                 raise NetworkError(
                     f"Request timeout after {self.max_retries} retries"
                 ) from timeout_error
-            except aiohttp.ClientConnectorError as cert_error:
+            except aiohttp.ClientConnectorError as conn_error:
+                # Connection errors (DNS, SSL handshake, connection reset) should be retried
+                if attempt < self.max_retries:
+                    logger.warning(
+                        "Connection error: %s, retrying (attempt %d)", conn_error, attempt + 1
+                    )
+                    await asyncio.sleep(0.5)
+                    continue
                 raise NetworkError(
-                    f"SSL certificate verification failed: {cert_error}"
-                ) from cert_error
+                    f"Connection failed after {self.max_retries} retries: {conn_error}"
+                ) from conn_error
             except aiohttp.ClientError as client_error:
                 if attempt < self.max_retries:
                     logger.debug(

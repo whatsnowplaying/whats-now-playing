@@ -17,9 +17,9 @@ from nowplaying.apicache import cached_fetch  # pylint: disable=import-error,no-
 
 
 @pytest.mark.asyncio
-async def test_cache_initialization(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_initialization(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test that the cache initializes properly."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     # Check that database file exists
     assert cache.db_file.exists()
@@ -42,9 +42,9 @@ async def test_cache_initialization(temp_api_cache):  # pylint: disable=redefine
 
 
 @pytest.mark.asyncio
-async def test_cache_key_generation(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_key_generation(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test cache key generation."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     # Test basic key generation
     # pylint: disable=protected-access
@@ -77,18 +77,18 @@ async def test_cache_key_generation(temp_api_cache):  # pylint: disable=redefine
 
 
 @pytest.mark.asyncio
-async def test_cache_miss(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_miss(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test cache miss behavior."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     result = await cache.get("discogs", "Nonexistent Artist", "artist_search")
     assert result is None
 
 
 @pytest.mark.asyncio
-async def test_cache_put_and_get(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_put_and_get(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test storing and retrieving data from cache."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     test_data = {
         "artist_id": 12345,
@@ -106,9 +106,9 @@ async def test_cache_put_and_get(temp_api_cache):  # pylint: disable=redefined-o
 
 
 @pytest.mark.asyncio
-async def test_cache_ttl_default(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_ttl_default(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test that TTL defaults work correctly."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     test_data = {"test": "data"}
 
@@ -134,9 +134,9 @@ async def test_cache_ttl_default(temp_api_cache):  # pylint: disable=redefined-o
 
 
 @pytest.mark.asyncio
-async def test_cache_ttl_custom(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_ttl_custom(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test custom TTL values."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     test_data = {"test": "data"}
     custom_ttl = 300  # 5 minutes
@@ -159,9 +159,9 @@ async def test_cache_ttl_custom(temp_api_cache):  # pylint: disable=redefined-ou
 
 
 @pytest.mark.asyncio
-async def test_cache_expiration(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_expiration(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test that expired cache entries are not returned."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     test_data = {"test": "data"}
 
@@ -181,9 +181,9 @@ async def test_cache_expiration(temp_api_cache):  # pylint: disable=redefined-ou
 
 
 @pytest.mark.asyncio
-async def test_cache_access_tracking(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_access_tracking(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test that access count and last accessed are tracked."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     test_data = {"test": "data"}
     await cache.put("discogs", "Test Artist", "search", test_data)
@@ -212,9 +212,9 @@ async def test_cache_access_tracking(temp_api_cache):  # pylint: disable=redefin
 
 
 @pytest.mark.asyncio
-async def test_cache_replacement(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_replacement(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test that storing with same key replaces existing data."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     original_data = {"version": 1, "data": "original"}
     updated_data = {"version": 2, "data": "updated"}
@@ -242,9 +242,9 @@ async def test_cache_replacement(temp_api_cache):  # pylint: disable=redefined-o
 
 
 @pytest.mark.asyncio
-async def test_cache_with_params(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_with_params(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test caching with additional parameters."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     data1 = {"page": 1, "results": ["result1", "result2"]}
     data2 = {"page": 2, "results": ["result3", "result4"]}
@@ -262,9 +262,9 @@ async def test_cache_with_params(temp_api_cache):  # pylint: disable=redefined-o
 
 
 @pytest.mark.asyncio
-async def test_cache_empty_data(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_empty_data(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test that empty data is not cached."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     # Try to cache empty data
     await cache.put("discogs", "Test Artist", "search", {})
@@ -276,9 +276,9 @@ async def test_cache_empty_data(temp_api_cache):  # pylint: disable=redefined-ou
 
 
 @pytest.mark.asyncio
-async def test_cache_invalid_json(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_invalid_json(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test handling of data that can't be serialized to JSON."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     # Data with non-serializable content
     invalid_data = {"function": lambda x: x}  # Functions aren't JSON serializable
@@ -291,9 +291,9 @@ async def test_cache_invalid_json(temp_api_cache):  # pylint: disable=redefined-
 
 
 @pytest.mark.asyncio
-async def test_cache_concurrent_access(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_concurrent_access(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test concurrent access to cache."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     async def store_data(artist_num):
         data = {"artist": f"Artist {artist_num}", "id": artist_num}
@@ -311,9 +311,9 @@ async def test_cache_concurrent_access(temp_api_cache):  # pylint: disable=redef
 
 
 @pytest.mark.asyncio
-async def test_cache_database_error_handling(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_database_error_handling(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test handling of database errors."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     # Store some data first to ensure the database exists
     test_data = {"test": "data"}
@@ -334,9 +334,9 @@ async def test_cache_database_error_handling(temp_api_cache):  # pylint: disable
 
 
 @pytest.mark.asyncio
-async def test_cache_stats_collection(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_stats_collection(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test that cache statistics are collected properly."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     # Store multiple entries
     for i in range(5):
@@ -459,9 +459,9 @@ async def test_cache_provider_ttl_settings():
 
 
 @pytest.mark.asyncio
-async def test_cache_binary_data_round_trip(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_binary_data_round_trip(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test that binary data is properly cached and restored."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     # Test data with binary content (simulating cover art)
     jpeg_header = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00H\x00H\x00\x00"
@@ -510,9 +510,9 @@ async def test_cache_binary_data_round_trip(temp_api_cache):  # pylint: disable=
 
 
 @pytest.mark.asyncio
-async def test_cache_large_binary_data(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_large_binary_data(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test caching of realistically sized binary data (cover art)."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     # Simulate a realistic JPEG cover art size (50-100KB is typical)
     large_binary = b"\xff\xd8\xff\xe0\x00\x10JFIF" + b"x" * 75000  # ~75KB fake JPEG
@@ -537,9 +537,9 @@ async def test_cache_large_binary_data(temp_api_cache):  # pylint: disable=redef
 
 
 @pytest.mark.asyncio
-async def test_cache_mixed_serializable_data(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_mixed_serializable_data(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test caching of complex data with mix of serializable and binary content."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     test_data = {
         "string": "text",
@@ -585,9 +585,9 @@ async def test_cache_mixed_serializable_data(temp_api_cache):  # pylint: disable
 
 
 @pytest.mark.asyncio
-async def test_cache_binary_data_base64_encoding(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_binary_data_base64_encoding(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test that binary data is properly base64 encoded in storage."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     binary_data = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"  # PNG header
     test_data = {"artist": "Test Artist", "coverimageraw": binary_data}
@@ -621,9 +621,9 @@ async def test_cache_binary_data_base64_encoding(temp_api_cache):  # pylint: dis
 
 
 @pytest.mark.asyncio
-async def test_cache_empty_binary_data(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_empty_binary_data(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test handling of empty binary data."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     test_data = {
         "artist": "Test Artist",
@@ -641,9 +641,9 @@ async def test_cache_empty_binary_data(temp_api_cache):  # pylint: disable=redef
 
 
 @pytest.mark.asyncio
-async def test_cache_musicbrainz_realistic_data(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_musicbrainz_realistic_data(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test caching of realistic MusicBrainz data with cover art."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     # Simulate realistic MusicBrainz response with cover art
     jpeg_data = (
@@ -690,10 +690,10 @@ async def test_cache_musicbrainz_realistic_data(temp_api_cache):  # pylint: disa
 
 
 @pytest.mark.asyncio
-async def test_cache_preserves_original_artist_name(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_preserves_original_artist_name(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test that cached responses preserve original artist name casing
     and don't return normalized versions."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     # Test with various artist name casings that could be normalized
     test_cases = [
@@ -747,9 +747,9 @@ async def test_cache_preserves_original_artist_name(temp_api_cache):  # pylint: 
 
 
 @pytest.mark.asyncio
-async def test_cache_theaudiodb_response_format(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cache_theaudiodb_response_format(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test caching of realistic TheAudioDB API response format."""
-    cache = temp_api_cache
+    cache = isolated_api_cache
 
     # Simulate realistic TheAudioDB response (their API returns artist data in 'artists' array)
     theaudiodb_response = {
@@ -784,12 +784,12 @@ async def test_cache_theaudiodb_response_format(temp_api_cache):  # pylint: disa
 
 
 @pytest.mark.asyncio
-async def test_cached_fetch_preserves_artist_names(temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_cached_fetch_preserves_artist_names(isolated_api_cache):  # pylint: disable=redefined-outer-name
     """Test that cached_fetch (used by theaudiodb) preserves original artist names."""
 
     # Use the temporary cache for this test to ensure isolation
     original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(temp_api_cache)
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
     try:
         # Mock API response that includes artist name (like TheAudioDB returns)
         original_artist = "Nine Inch Nails"

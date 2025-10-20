@@ -251,20 +251,28 @@ async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
 
 @pytest.mark.asyncio
 @skip_no_theaudiodb_key
-async def test_theaudiodb_api_call_count(bootstrap):
+async def test_theaudiodb_api_call_count(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
     """test that theaudiodb plugin makes only one API call when cache is used"""
 
-    plugin, imagecache = _setup_theaudiodb_plugin(bootstrap)
+    # Use isolated cache for this test to ensure clean state
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
 
-    # Test with a known artist
-    metadata = {"artist": "Madonna", "imagecacheartist": "madonna"}
+    try:
+        plugin, imagecache = _setup_theaudiodb_plugin(bootstrap)
 
-    await run_api_call_count_test(
-        plugin=plugin,
-        test_metadata=metadata,
-        mock_method_name="_fetch_async",
-        imagecache=imagecache,
-    )
+        # Test with a known artist
+        metadata = {"artist": "Madonna", "imagecacheartist": "madonna"}
+
+        await run_api_call_count_test(
+            plugin=plugin,
+            test_metadata=metadata,
+            mock_method_name="_fetch_async",
+            imagecache=imagecache,
+        )
+    finally:
+        # Restore original cache
+        nowplaying.apicache.set_cache_instance(original_cache)
 
 
 @pytest.mark.asyncio

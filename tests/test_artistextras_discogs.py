@@ -1067,71 +1067,79 @@ def test_discogs_configuration_validation_for_djs(bootstrap):
 
 @pytest.mark.asyncio
 @skip_no_discogs_key
-async def test_discogs_api_call_count(bootstrap):
+async def test_discogs_api_call_count(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
     """test that discogs plugin makes only one API call when cache is used"""
 
-    config = bootstrap
-    configuresettings("discogs", config.cparser)
-    config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
-    imagecaches, plugins = configureplugins(config)
+    # Use isolated cache for this test to ensure clean state
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
 
-    plugin = plugins["discogs"]
+    try:
+        config = bootstrap
+        configuresettings("discogs", config.cparser)
+        config.cparser.setValue("discogs/apikey", os.environ["DISCOGS_API_KEY"])
+        imagecaches, plugins = configureplugins(config)
 
-    # Test with known artist and album
-    metadata = {
-        "artist": "Daft Punk",
-        "album": "Random Access Memories",
-        "imagecacheartist": "daftpunk",
-    }
+        plugin = plugins["discogs"]
 
-    # Mock the actual Discogs client API call to count calls
-    original_search = plugin.client.search_async if plugin.client else None
-    api_call_count = 0
+        # Test with known artist and album
+        metadata = {
+            "artist": "Daft Punk",
+            "album": "Random Access Memories",
+            "imagecacheartist": "daftpunk",
+        }
 
-    async def mock_search_async(*args, **kwargs):
-        nonlocal api_call_count
-        api_call_count += 1
-        logging.debug("Mock Discogs API call #%d", api_call_count)
-        # Call the original method to get real data
-        if original_search:
-            return await original_search(*args, **kwargs)
-        return None
+        # Mock the actual Discogs client API call to count calls
+        original_search = plugin.client.search_async if plugin.client else None
+        api_call_count = 0
 
-    if plugin.client:
-        plugin.client.search_async = mock_search_async
+        async def mock_search_async(*args, **kwargs):
+            nonlocal api_call_count
+            api_call_count += 1
+            logging.debug("Mock Discogs API call #%d", api_call_count)
+            # Call the original method to get real data
+            if original_search:
+                return await original_search(*args, **kwargs)
+            return None
 
-        try:
-            # First call - should hit API and cache result
-            result1 = await plugin.download_async(
-                metadata.copy(), imagecache=imagecaches["discogs"]
-            )
+        if plugin.client:
+            plugin.client.search_async = mock_search_async
 
-            # Verify one API call was made
-            assert api_call_count == 1, (
-                f"Expected 1 API call after first download, got {api_call_count}"
-            )
-
-            # Second call - should use cached result, no additional API call
-            result2 = await plugin.download_async(
-                metadata.copy(), imagecache=imagecaches["discogs"]
-            )
-
-            # Verify still only one API call was made (cache hit)
-            assert api_call_count == 1, (
-                f"Expected 1 API call after second download (cache hit), got {api_call_count}"
-            )
-
-            # Both results should be consistent
-            assert (result1 is None) == (result2 is None)
-            if result1:  # Only test if we got data back
-                logging.info("Discogs API cache verified: 1 API call for 2 downloads")
-                assert result1 == result2
-            else:
-                logging.info(
-                    "Discogs API cache test completed - cache working regardless of data found"
+            try:
+                # First call - should hit API and cache result
+                result1 = await plugin.download_async(
+                    metadata.copy(), imagecache=imagecaches["discogs"]
                 )
 
-        finally:
-            # Restore the original method
-            if original_search:
-                plugin.client.search_async = original_search
+                # Verify one API call was made
+                assert api_call_count == 1, (
+                    f"Expected 1 API call after first download, got {api_call_count}"
+                )
+
+                # Second call - should use cached result, no additional API call
+                result2 = await plugin.download_async(
+                    metadata.copy(), imagecache=imagecaches["discogs"]
+                )
+
+                # Verify still only one API call was made (cache hit)
+                assert api_call_count == 1, (
+                    f"Expected 1 API call after second download (cache hit), got {api_call_count}"
+                )
+
+                # Both results should be consistent
+                assert (result1 is None) == (result2 is None)
+                if result1:  # Only test if we got data back
+                    logging.info("Discogs API cache verified: 1 API call for 2 downloads")
+                    assert result1 == result2
+                else:
+                    logging.info(
+                        "Discogs API cache test completed - cache working regardless of data found"
+                    )
+
+            finally:
+                # Restore the original method
+                if original_search:
+                    plugin.client.search_async = original_search
+    finally:
+        # Restore original cache
+        nowplaying.apicache.set_cache_instance(original_cache)
