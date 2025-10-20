@@ -101,14 +101,21 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
                                 raise ResponseError(
                                     f"XML parsing failed: {parse_error}"
                                 ) from parse_error
-                        elif response.status == 503:
+                        elif response.status in (503, 502, 500):
+                            # MusicBrainz uses 503/502/500 for rate limiting and server overload
+                            # For live performance, we retry once with minimal delay
                             if attempt < self.max_retries:
-                                logger.debug(
-                                    "Service unavailable (503), retrying (attempt %d)", attempt + 1
+                                logger.warning(
+                                    "Server error %d (rate limit/overload), retrying (attempt %d)",
+                                    response.status,
+                                    attempt + 1,
                                 )
-                                await asyncio.sleep(1.0)  # Wait longer for 503 errors
+                                await asyncio.sleep(0.5)  # Minimal delay for live performance
                                 continue
-                            raise NetworkError("MusicBrainz service unavailable (503)")
+                            raise NetworkError(
+                                f"MusicBrainz server error {response.status} "
+                                f"(rate limit or overload)"
+                            )
                         else:
                             raise ResponseError(f"HTTP {response.status}: {await response.text()}")
 

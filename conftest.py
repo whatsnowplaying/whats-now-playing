@@ -173,9 +173,13 @@ async def temp_api_cache():
 
 @pytest.fixture(autouse=True)
 def auto_temp_api_cache_for_artistextras(request, temp_api_cache):  # pylint: disable=redefined-outer-name
-    """Automatically use temp API cache for artistextras tests to prevent random CI failures."""
-    # Only auto-apply to artistextras tests, not apicache tests
-    if "test_artistextras" in request.module.__name__:
+    """Automatically use temp API cache for tests that hit external APIs to prevent CI failures."""
+    # Auto-apply to artistextras, musicbrainz, and metadata_multi_artist tests
+    # Skip tests that explicitly manage their own cache (have temp_api_cache as a parameter)
+    test_modules = ["test_artistextras", "test_musicbrainz", "test_metadata_multi_artist"]
+    test_manages_own_cache = "temp_api_cache" in request.fixturenames
+
+    if any(module in request.module.__name__ for module in test_modules) and not test_manages_own_cache:
         original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
         nowplaying.apicache.set_cache_instance(temp_api_cache)
         try:
