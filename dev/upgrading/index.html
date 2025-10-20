@@ -374,13 +374,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#upgrading-to-500" class="md-nav__link">
+  <a href="#upgrading-from-3x-or-4x-to-500" class="md-nav__link">
     <span class="md-ellipsis">
-      Upgrading to 5.0.0
+      Upgrading from 3.x or 4.x to 5.0.0
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Upgrading to 5.0.0">
+    <nav class="md-nav" aria-label="Upgrading from 3.x or 4.x to 5.0.0">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -401,42 +401,33 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#configuration-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Recovery
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#configuration-recovery-42" class="md-nav__link">
+  <a href="#upgrading-from-2x-to-500" class="md-nav__link">
     <span class="md-ellipsis">
-      Configuration Recovery (4.2+)
+      Upgrading from 2.x to 5.0.0
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#from-3xx" class="md-nav__link">
+  <a href="#upgrading-from-1x-to-500" class="md-nav__link">
     <span class="md-ellipsis">
-      From 3.x.x
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#from-2xx" class="md-nav__link">
-    <span class="md-ellipsis">
-      From 2.x.x
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#from-1xx" class="md-nav__link">
-    <span class="md-ellipsis">
-      From 1.x.x
+      Upgrading from 1.x to 5.0.0
     </span>
   </a>
   
@@ -1982,9 +1973,9 @@ automatically detect your platform and show you the correct version.</p>
 <p>Before upgrading, be sure to check the
 <a href="https://github.com/whatsnowplaying/whats-now-playing/blob/main/CHANGELOG.md">changelog</a>
 for any breaking changes and news.</p>
-<h2 id="upgrading-to-500">Upgrading to 5.0.0<a class="headerlink" href="#upgrading-to-500" title="Permanent link">&para;</a></h2>
+<h2 id="upgrading-from-3x-or-4x-to-500">Upgrading from 3.x or 4.x to 5.0.0<a class="headerlink" href="#upgrading-from-3x-or-4x-to-500" title="Permanent link">&para;</a></h2>
 <h3 id="automatic-directory-migration">Automatic Directory Migration<a class="headerlink" href="#automatic-directory-migration" title="Permanent link">&para;</a></h3>
-<p>When upgrading to 5.0.0, the application will automatically migrate your Documents directory:</p>
+<p>The application will automatically migrate your Documents directory:</p>
 <ul>
 <li><strong>Old location</strong>: <code>Documents/NowPlaying</code></li>
 <li><strong>New location</strong>: <code>Documents/WhatsNowPlaying</code></li>
@@ -2004,15 +1995,11 @@ for any breaking changes and news.</p>
 <li>If you need to downgrade, your old directory is still available</li>
 </ul>
 <h3 id="configuration-backup">Configuration Backup<a class="headerlink" href="#configuration-backup" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Starting with 5.0.0, the system will automatically put an importable
-  copy of your config in the <code>WhatsNowPlaying\configbackup</code> folder to use for
-  recovery.  After the upgrade is successful, you should delete this copy
-  as necessary.</li>
-</ul>
-<h2 id="configuration-recovery-42">Configuration Recovery (4.2+)<a class="headerlink" href="#configuration-recovery-42" title="Permanent link">&para;</a></h2>
-<p>If an upgrade fails or settings are lost, you can restore from a
-configuration backup:</p>
+<p>The system will automatically put an importable copy of your config in the
+<code>WhatsNowPlaying/configbackup</code> folder for recovery. After the upgrade is successful,
+you should delete this copy as necessary.</p>
+<h3 id="configuration-recovery">Configuration Recovery<a class="headerlink" href="#configuration-recovery" title="Permanent link">&para;</a></h3>
+<p>If an upgrade fails or settings are lost, you can restore from a configuration backup:</p>
 <ol>
 <li><strong>Export before upgrading</strong> (recommended):</li>
 <li>Open Settings → General → <strong>Export Configuration</strong></li>
@@ -2028,34 +2015,16 @@ Only import configurations when necessary. Normal upgrades preserve
 settings automatically. Configuration files contain sensitive data -
 store securely and delete when no longer needed.</p>
 </blockquote>
-<h2 id="from-3xx">From 3.x.x<a class="headerlink" href="#from-3xx" title="Permanent link">&para;</a></h2>
+<h2 id="upgrading-from-2x-to-500">Upgrading from 2.x to 5.0.0<a class="headerlink" href="#upgrading-from-2x-to-500" title="Permanent link">&para;</a></h2>
+<p><strong>Important</strong>: You must upgrade to version 3.1.2 first, then upgrade to 5.0.0.</p>
 <ol>
-<li>Just install and the software will make the necessary changes.</li>
+<li>Install version 3.1.2 from the releases page</li>
+<li>Launch the application - settings will be migrated automatically</li>
+<li>Then upgrade to 5.0.0</li>
 </ol>
-<p>If you need to downgrade for any reason, you must downgrade to 3.1.2 or
-higher after upgrading to a 4.x.x release.</p>
-<h2 id="from-2xx">From 2.x.x<a class="headerlink" href="#from-2xx" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Install the last version of 3.x.x from the releases page.</li>
-<li>Upon launch, most settings will get copied over to their new homes
-   in the new Settings screen.</li>
-<li>Many templates have been added and updated. New templates will be
-   copied into the templates directory. For updated templates, there
-   are two outcomes:</li>
-<li>If there have been no changes to the same one in the template
-     directory, the updated template file will overwrite the existing
-     one.</li>
-<li>If there have been changes to the one in the template directory,
-     the updated one will be put in as <code>.new</code> and will likely require
-     you to take action. The existing one will be left there, however.
-     A pop-up on program launch will also inform you that the conflict
-     has happened.</li>
-</ol>
-<h2 id="from-1xx">From 1.x.x<a class="headerlink" href="#from-1xx" title="Permanent link">&para;</a></h2>
-<p>Welcome aboard!</p>
-<p>Unfortunately, 1.x.x wasn't built in a way to make it possible to
-upgrade from one version to another. So none of your settings are
-preserved. You will need to treat it as though it is a fresh install.</p>
+<h2 id="upgrading-from-1x-to-500">Upgrading from 1.x to 5.0.0<a class="headerlink" href="#upgrading-from-1x-to-500" title="Permanent link">&para;</a></h2>
+<p>Unfortunately, 1.x.x wasn't built to support upgrades. You will need to treat this as a fresh install -
+none of your settings will be preserved.</p>
 
 
 
