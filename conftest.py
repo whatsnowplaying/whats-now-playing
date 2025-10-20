@@ -193,10 +193,10 @@ async def shared_api_cache(tmp_path_factory):
     yield _SHARED_CACHE_INSTANCE
 
 
-@pytest.fixture(autouse=True)
-def auto_shared_api_cache_for_artistextras(request, shared_api_cache):  # pylint: disable=redefined-outer-name
+@pytest_asyncio.fixture(autouse=True)
+async def auto_shared_api_cache_for_artistextras(request, shared_api_cache):  # pylint: disable=redefined-outer-name
     """Automatically use shared API cache for tests that hit
-       external APIs to prevent CI failures.
+    external APIs to prevent CI failures.
     """
     # Auto-apply to artistextras, musicbrainz, and metadata_multi_artist tests
     # Skip tests that explicitly manage their own cache
