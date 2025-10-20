@@ -126,10 +126,17 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
                 raise NetworkError(
                     f"Request timeout after {self.max_retries} retries"
                 ) from timeout_error
-            except aiohttp.ClientConnectorError as cert_error:
+            except aiohttp.ClientConnectorError as conn_error:
+                # Connection errors (DNS, SSL handshake, connection reset) should be retried
+                if attempt < self.max_retries:
+                    logger.warning(
+                        "Connection error: %s, retrying (attempt %d)", conn_error, attempt + 1
+                    )
+                    await asyncio.sleep(0.5)
+                    continue
                 raise NetworkError(
-                    f"SSL certificate verification failed: {cert_error}"
-                ) from cert_error
+                    f"Connection failed after {self.max_retries} retries: {conn_error}"
+                ) from conn_error
             except aiohttp.ClientError as client_error:
                 if attempt < self.max_retries:
                     logger.debug(

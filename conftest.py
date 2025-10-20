@@ -179,7 +179,10 @@ def auto_temp_api_cache_for_artistextras(request, temp_api_cache):  # pylint: di
     test_modules = ["test_artistextras", "test_musicbrainz", "test_metadata_multi_artist"]
     test_manages_own_cache = "temp_api_cache" in request.fixturenames
 
-    if any(module in request.module.__name__ for module in test_modules) and not test_manages_own_cache:
+    if (
+        any(module in request.module.__name__ for module in test_modules)
+        and not test_manages_own_cache
+    ):
         original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
         nowplaying.apicache.set_cache_instance(temp_api_cache)
         try:
