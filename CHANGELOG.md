@@ -66,6 +66,7 @@
 
   * Several new template variables
     * discordguild
+    * has_video
     * kickchannel
     * lyricist
     * now
