@@ -1,7 +1,7 @@
 
 # Changelog
 
-## Version 5.0.0 - in-progress
+## Version 5.0.0 - 2025-10-20
 
 * New Features:
   * ANNOUNCING [WHAT'S NOW PLAYING CHARTS](https://whatsnowplaying.com/)!
@@ -46,12 +46,12 @@
     * Support for animated gifs/memes based upon text from Tenor
 
   * Title Filtering Overhaul
-    * A new, simplified filter system for removing text from titles as been
+    * A new, simplified filter system for removing text from titles has been
       implemented. The newer one is much easier to use without having to do
       a lot of extra work.
     * The complex regex-based filter is still present and available, but
-      upgrading to this version will remove existing filters and default on
-      the a default set of useful filters.
+      upgrading to this version will remove existing filters and use
+      a default set of useful filters.
 
   * Web Server changes
     * Removed bundled templates that did not use websockets
@@ -66,6 +66,7 @@
 
   * Several new template variables
     * discordguild
+    * has_video
     * kickchannel
     * lyricist
     * now
@@ -75,6 +76,8 @@
     * twitchchannel
 
   * Completely revamped documentation website to make it easy to pick your version
+  * Upgrade downloads are now sent through whatsnowplaying.com/download so that
+    users can be pointed to the correct one, see release notes, etc.
 
 * Windows Binary Overhaul
   * The binaries for Windows now come as a directory rather than a single
@@ -147,4 +150,4 @@
   * Settings UI now has a new generic tab loading system
   * Major reorganization of core code in lots of places, with many
     classes and modules getting broken up
-  * Switched back to vendored TinyTag :(
+  * Switched back to vendored TinyTag
