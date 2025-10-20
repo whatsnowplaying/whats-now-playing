@@ -101,8 +101,8 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
                                 raise ResponseError(
                                     f"XML parsing failed: {parse_error}"
                                 ) from parse_error
-                        elif response.status in (503, 502, 500):
-                            # MusicBrainz uses 503/502/500 for rate limiting and server overload
+                        elif response.status in (429, 500, 502, 503):
+                            # MusicBrainz uses 429/500/502/503 for rate limiting and server overload
                             # For live performance, we retry once with minimal delay
                             if attempt < self.max_retries:
                                 logger.warning(
