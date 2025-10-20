@@ -156,9 +156,14 @@ def mock_first_install_dialog():
         yield
 
 
+# Global cache directory and instance shared across all tests in the session
+_SHARED_CACHE_DIR = None
+_SHARED_CACHE_INSTANCE = None
+
+
 @pytest_asyncio.fixture
-async def temp_api_cache():
-    """Create a temporary API cache for testing."""
+async def isolated_api_cache():
+    """Create an isolated API cache for testing (one per test)."""
     with tempfile.TemporaryDirectory() as temp_dir:
         cache_dir = pathlib.Path(temp_dir)
         cache = nowplaying.apicache.APIResponseCache(cache_dir=cache_dir)
@@ -171,20 +176,41 @@ async def temp_api_cache():
             await cache.close()
 
 
+@pytest_asyncio.fixture(scope="function")
+async def shared_api_cache(tmp_path_factory):
+    """Create a shared API cache for artistextras tests to reduce API calls."""
+    global _SHARED_CACHE_DIR, _SHARED_CACHE_INSTANCE  # pylint: disable=global-statement
+
+    # Create the cache directory once and reuse it for all tests
+    if _SHARED_CACHE_DIR is None:
+        _SHARED_CACHE_DIR = tmp_path_factory.mktemp("api_cache", numbered=False)
+
+    # Reuse the same cache instance across all tests
+    if _SHARED_CACHE_INSTANCE is None:
+        _SHARED_CACHE_INSTANCE = nowplaying.apicache.APIResponseCache(cache_dir=_SHARED_CACHE_DIR)
+        await _SHARED_CACHE_INSTANCE._initialize_db()  # pylint: disable=protected-access
+
+    yield _SHARED_CACHE_INSTANCE
+
+
 @pytest.fixture(autouse=True)
-def auto_temp_api_cache_for_artistextras(request, temp_api_cache):  # pylint: disable=redefined-outer-name
-    """Automatically use temp API cache for tests that hit external APIs to prevent CI failures."""
+def auto_shared_api_cache_for_artistextras(request, shared_api_cache):  # pylint: disable=redefined-outer-name
+    """Automatically use shared API cache for tests that hit
+       external APIs to prevent CI failures.
+    """
     # Auto-apply to artistextras, musicbrainz, and metadata_multi_artist tests
-    # Skip tests that explicitly manage their own cache (have temp_api_cache as a parameter)
+    # Skip tests that explicitly manage their own cache
     test_modules = ["test_artistextras", "test_musicbrainz", "test_metadata_multi_artist"]
-    test_manages_own_cache = "temp_api_cache" in request.fixturenames
+    test_manages_own_cache = (
+        "shared_api_cache" in request.fixturenames or "isolated_api_cache" in request.fixturenames
+    )
 
     if (
         any(module in request.module.__name__ for module in test_modules)
         and not test_manages_own_cache
     ):
         original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-        nowplaying.apicache.set_cache_instance(temp_api_cache)
+        nowplaying.apicache.set_cache_instance(shared_api_cache)
         try:
             yield
         finally:

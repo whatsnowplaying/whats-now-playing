@@ -79,12 +79,12 @@ async def test_fallback_dansesociety(getmusicbrainz):  # pylint: disable=redefin
 
 
 @pytest.mark.asyncio
-async def test_recordingid_api_cache_call_count(getmusicbrainz, temp_api_cache):  # pylint: disable=redefined-outer-name
+async def test_recordingid_api_cache_call_count(getmusicbrainz, isolated_api_cache):  # pylint: disable=redefined-outer-name
     """test that MusicBrainz recordingid makes only one API call when cache is used"""
 
     # Use the properly initialized temporary cache
     original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
-    nowplaying.apicache.set_cache_instance(temp_api_cache)
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
 
     try:
         mbhelper = getmusicbrainz
