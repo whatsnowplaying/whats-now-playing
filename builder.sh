@@ -157,6 +157,7 @@ echo "* Cleanup "
 echo "****"
 
 cp -p CHANGELOG* README* LICENSE.txt NOTICE.txt dist
+rm -rf "${DISTDIR}" || true
 mv dist "${DISTDIR}"
 
 if [[ "${SYSTEM}" == "macosx" ]]; then
