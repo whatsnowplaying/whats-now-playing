@@ -7,11 +7,8 @@ import tempfile
 
 import pytest
 
-import nowplaying.bootstrap
 import nowplaying.config
 import nowplaying.notifications.charts
-
-nowplaying.bootstrap.set_qt_names(appname="testsuite")
 
 
 @pytest.mark.asyncio
