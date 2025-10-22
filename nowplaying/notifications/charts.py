@@ -266,20 +266,21 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         await self._close_session()
 
     async def _load_queue(self) -> None:
-        """Load queued items from disk"""
+        """Load queued items from disk
+
+        NOTE: Caller must hold self._get_queue_lock() before calling this method
+        """
         if not self.queue_file or not self.queue_file.exists():
             return
 
         try:
             with open(self.queue_file, encoding="utf-8") as queue_file:
                 queue_data = json.load(queue_file)
-                async with self._get_queue_lock():
-                    self.queue = queue_data
-                    logging.info("Loaded %d queued charts submissions", len(self.queue))
+                self.queue = queue_data
+                logging.info("Loaded %d queued charts submissions", len(self.queue))
         except Exception as exc:  # pylint: disable=broad-except
             logging.error("Failed to load charts queue: %s", exc)
-            async with self._get_queue_lock():
-                self.queue = []
+            self.queue = []
 
     async def _save_queue(self) -> None:
         """Save queued items to disk"""
