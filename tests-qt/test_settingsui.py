@@ -44,10 +44,11 @@ class MockTray:
 
     def __init__(self, config=None):
         self.config = config
-        self.settings_action = QAction()
-        self.action_pause = QAction()
+        self.tray = QSystemTrayIcon()  # Create tray first to use as parent
+        # Give QActions a parent for proper Qt memory management
+        self.settings_action = QAction(self.tray)
+        self.action_pause = QAction(self.tray)
         self.subprocesses = MockSubprocesses()
-        self.tray = QSystemTrayIcon()  # Add missing tray attribute
 
     def cleanquit(self):
         """mock"""

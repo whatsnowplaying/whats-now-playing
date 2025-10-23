@@ -136,13 +136,6 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
                         x = tray_center_x - 80
                         y = tray_center_y - 50  # Reduced from 60 to point closer
 
-                    logging.debug(
-                        "Using tray icon position: tray=(%d,%d), arrow=(%d,%d)",
-                        tray_center_x,
-                        tray_center_y,
-                        x,
-                        y,
-                    )
                     return x, y
             except (AttributeError, RuntimeError) as exc:
                 logging.debug("Could not get tray icon geometry: %s", exc)
