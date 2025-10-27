@@ -289,7 +289,7 @@ jobs:
           python3 -m pip install --upgrade pip
           pip install -e ".[test]"
       - name: download coverage files
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           path: artifacts
       - name: display artifacts
