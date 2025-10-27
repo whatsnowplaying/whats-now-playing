@@ -37,7 +37,7 @@ jobs:
           export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
           ./builder.sh
       - name: artifact dist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: macos-latest-dist
           path: "*.zip"
@@ -67,7 +67,7 @@ jobs:
         run: |
           ./builder.sh
       - name: artifact dist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: windows-dist
           # Windows builds create a directory, not a zip (see builder.sh line 146)
