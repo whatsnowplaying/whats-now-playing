@@ -8,7 +8,7 @@ discord.py==2.6.4
 diskcache==5.6.3
 jinja2==3.1.6
 lxml==6.0.2
-netifaces-plus==0.12.4
+netifaces-plus==0.12.5
 nltk==3.9.2
 normality==2.6.1
 pillow==11.3.0
