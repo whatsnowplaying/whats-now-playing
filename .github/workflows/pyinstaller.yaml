@@ -22,7 +22,7 @@ jobs:
           brew update --preinstall || true
           brew install pkg-config icu4c
       - name: checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: update tags
@@ -53,7 +53,7 @@ jobs:
       LC_ALL: en_US.UTF-8
     steps:
       - name: checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: update tags
