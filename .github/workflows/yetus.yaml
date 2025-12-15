@@ -31,7 +31,7 @@ jobs:
           plugins: 'all,-asflicense,-author,-findbugs,-gitlab,-jira,-jshint,-shelldocs'
       - name: Artifact output
         if: ${{ always() }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: apacheyetustestpatchactionout
           path: ${{ github.workspace }}/out
