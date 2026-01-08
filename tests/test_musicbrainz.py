@@ -171,17 +171,20 @@ async def test_fallback_prince_compblue(getmusicbrainz):  # pylint: disable=rede
     assert not newdata.get("musicbrainzartistid")
 
 
-@pytest.mark.asyncio
-async def test_fallback_prince_compblue_purplerain(getmusicbrainz):  # pylint: disable=redefined-outer-name
-    """same, but with album"""
-    mbhelper = getmusicbrainz
-    #
-    # With the album and the new filtering code, this one should also fail
-    # because the only Purple Rain requires The Revolution
-    #
-    metadata = {"artist": "Prince", "title": "Computer Blue", "album": "Purple Rain"}
-    newdata = await mbhelper.lastditcheffort(metadata)
-    assert not newdata
+# an entry has been added with this one so we should drop it for now
+#
+#
+#@pytest.mark.asyncio
+#async def test_fallback_prince_compblue_purplerain(getmusicbrainz):  # pylint: disable=redefined-outer-name
+#    """same, but with album"""
+#    mbhelper = getmusicbrainz
+#    #
+#    # With the album and the new filtering code, this one should also fail
+#    # because the only Purple Rain requires The Revolution
+#    #
+#    metadata = {"artist": "Prince", "title": "Computer Blue", "album": "Purple Rain"}
+#    newdata = await mbhelper.lastditcheffort(metadata)
+#    assert not newdata
 
 
 # def test_fallback_princeandther_compblue_purplerain(getmusicbrainz):  # pylint: disable=redefined-outer-name
