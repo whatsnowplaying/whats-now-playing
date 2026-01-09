@@ -16,6 +16,7 @@ from utils_artistextras import (
     skip_no_theaudiodb_key,
 )
 
+import nowplaying.apicache
 import nowplaying.artistextras.theaudiodb
 
 
@@ -345,31 +346,39 @@ async def test_theaudiodb_other_http_errors(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_theaudiodb_429_not_cached(bootstrap):
+async def test_theaudiodb_429_not_cached(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
     """test that theaudiodb 429 responses are not cached"""
     plugin, _ = _setup_theaudiodb_plugin_no_key(bootstrap)
 
-    # Reset rate limit state
-    nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
+    # Use isolated cache for this test to ensure clean state
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
 
-    with aioresponses() as mockr:
-        # Mock 429 response
-        mockr.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=test", status=429)
-
-        # Cached fetch should handle the rate limit exception and return None
-        result = await plugin._fetch_cached("test_key", "search.php?s=test", "testartist")
-        assert result is None
-
-        # Rate limit should be set
-        assert nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until > time.time()
-
-        # Clear rate limit and add successful response
+    try:
+        # Reset rate limit state
         nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
-        mockr.get(
-            "https://theaudiodb.com/api/v1/json/test_key/search.php?s=test",
-            payload={"test": "data"},
-        )
 
-        # Now it should work and get the real data (not cached 429)
-        result2 = await plugin._fetch_cached("test_key", "search.php?s=test", "testartist")
-        assert result2 == {"test": "data"}
+        with aioresponses() as mockr:
+            # Mock 429 response
+            mockr.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=test", status=429)
+
+            # Cached fetch should handle the rate limit exception and return None
+            result = await plugin._fetch_cached("test_key", "search.php?s=test", "testartist")
+            assert result is None
+
+            # Rate limit should be set
+            assert nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until > time.time()
+
+            # Clear rate limit and add successful response
+            nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
+            mockr.get(
+                "https://theaudiodb.com/api/v1/json/test_key/search.php?s=test",
+                payload={"test": "data"},
+            )
+
+            # Now it should work and get the real data (not cached 429)
+            result2 = await plugin._fetch_cached("test_key", "search.php?s=test", "testartist")
+            assert result2 == {"test": "data"}
+    finally:
+        # Restore original cache
+        nowplaying.apicache.set_cache_instance(original_cache)
