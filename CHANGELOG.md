@@ -1,6 +1,18 @@
 
 # Changelog
 
+## Version 5.1.0 - in development
+
+* Developer Stuff
+  * Dependency updates
+  * Test fixes
+  * Update years to 2026
+
+
+## Version 5.0.1 - 2025-10-22
+
+This release fixes a critical bug in 5.0.0 that causes it to lock up if the Charts submission fails.
+
 ## Version 5.0.0 - 2025-10-20
 
 * New Features:
