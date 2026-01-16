@@ -122,7 +122,7 @@ def windows_version_file():
         'file_description': 'WhatsNowPlaying',
         'internal_name': 'WhatsNowPlaying',
         'legal_copyright':
-        f'{__VERSION__} (c) 2020-2021 Ely Miranda, (c) 2021-2025 Allen Wittenauer',
+        f'{__VERSION__} (c) 2020-2021 Ely Miranda, (c) 2021-2026 Allen Wittenauer',
         'original_filename': 'WhatsNowPlaying.exe',
         'product_name': 'WhatsNowPlaying',
         'version': '.'.join(getsplitversion()[:3] + ['0'])
