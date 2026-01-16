@@ -152,7 +152,7 @@ async def test_check_for_new_track_no_db(bootstrap):
         plugin.djaypro_dir = tmpdir
 
         # Should not crash when database doesn't exist
-        await plugin._check_for_new_track()
+        plugin._check_for_new_track()
 
         # Metadata should remain reset
         assert plugin.metadata["artist"] is None
@@ -177,7 +177,7 @@ async def test_check_for_new_track_empty_db(bootstrap):
         conn.commit()
         conn.close()
 
-        await plugin._check_for_new_track()
+        plugin._check_for_new_track()
 
         # Should handle empty database gracefully
         assert plugin.metadata["artist"] is None
@@ -208,7 +208,7 @@ async def test_check_for_new_track_with_data(bootstrap):
         conn.commit()
         conn.close()
 
-        await plugin._check_for_new_track()
+        plugin._check_for_new_track()
 
         # Should have extracted the metadata
         assert plugin.metadata["artist"] == "Test Artist"
@@ -240,11 +240,11 @@ async def test_check_for_new_track_duplicate(bootstrap):
         conn.close()
 
         # First check
-        await plugin._check_for_new_track()
+        plugin._check_for_new_track()
         assert plugin.metadata["artist"] == "Same Artist"
 
         # Second check - should recognize it's the same track
-        await plugin._check_for_new_track()
+        plugin._check_for_new_track()
         assert plugin.metadata["artist"] == "Same Artist"
 
 
