@@ -132,7 +132,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             return
 
         logging.info("Watching for changes on %s", self.djaypro_dir)
-        # Watch for changes to NowPlaying.txt
+        # Watch for changes to NowPlaying.txt (macOS) or MediaLibrary.db-wal (Windows)
         self.event_handler = FileSystemEventHandler()
         self.event_handler.on_modified = self._fs_event
         self.event_handler.on_created = self._fs_event
@@ -150,19 +150,18 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def _fs_event(self, event):
         if event.is_directory:
             return
-        # Only process NowPlaying.txt changes
-        if not event.src_path.endswith("NowPlaying.txt"):
-            return
 
-        # Read NowPlaying.txt for current track
+        # Check for track changes on any file modification in the directory
+        # macOS: NowPlaying.txt updates
+        # Windows: MediaLibrary.db-wal updates (SQLite WAL mode)
         try:
             loop = asyncio.get_running_loop()
-            task = loop.create_task(self._read_nowplaying_file())
+            task = loop.create_task(self._check_for_new_track())
             self.tasks.add(task)
             task.add_done_callback(self.tasks.discard)
         except RuntimeError:
             loop = asyncio.new_event_loop()
-            loop.run_until_complete(self._read_nowplaying_file())
+            loop.run_until_complete(self._check_for_new_track())
 
     async def _read_nowplaying_file(self):
         """Read NowPlaying.txt file for current track information
@@ -439,7 +438,15 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         return None
 
     async def _check_for_new_track(self):
-        """Check database for new tracks in history"""
+        """Check for new track from NowPlaying.txt (macOS) or database (Windows)"""
+
+        # Try NowPlaying.txt first (macOS)
+        nowplaying_file = pathlib.Path(self.djaypro_dir).joinpath("NowPlaying.txt")
+        if nowplaying_file.exists():
+            await self._read_nowplaying_file()
+            return
+
+        # Fall back to database polling (Windows, or macOS if NowPlaying.txt doesn't exist)
         dbfile = pathlib.Path(self.djaypro_dir).joinpath("MediaLibrary.db")
         if not dbfile.exists():
             return
