@@ -91,6 +91,47 @@ def test_parse_blob_with_source():
     assert result["filename"] is None
 
 
+def test_parse_blob_with_bpm_duration_source():
+    """test blob parsing with bpm, duration, and originSourceID"""
+    blob = (
+        b"TSAF\x00\x00\x00\x00ADCMediaItemLocation\x00"
+        b"test123\x00uuid\x00"
+        b"Test Track\x00title\x00Test Artist\x00artist\x00"
+        b"128.5\x00bpm\x00"
+        b"180\x00duration\x00"
+        b"spotify\x00originSourceID\x00"
+    )
+
+    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+
+    # bpm should be converted to a string
+    assert result["bpm"] == "128.5"
+    # duration should be converted to integer seconds
+    assert result["duration"] == 180
+    # originSourceID should be mapped to source
+    assert result["source"] == "spotify"
+
+
+def test_parse_blob_with_invalid_bpm_duration():
+    """test blob parsing when bpm/duration are non-numeric"""
+    blob = (
+        b"TSAF\x00\x00\x00\x00ADCMediaItemLocation\x00"
+        b"test456\x00uuid\x00"
+        b"Test Track 2\x00title\x00Test Artist 2\x00artist\x00"
+        b"not-a-number\x00bpm\x00"
+        b"NaN\x00duration\x00"
+        b"apple-music\x00originSourceID\x00"
+    )
+
+    # Should not raise, and invalid numeric fields should stay None
+    result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
+
+    assert result["bpm"] is None
+    assert result["duration"] is None
+    # source should still be parsed correctly
+    assert result["source"] == "apple-music"
+
+
 def test_parse_blob_empty():
     """test blob parsing with empty data"""
     blob = b""
@@ -280,8 +321,17 @@ def test_plugin_defaults(bootstrap):
     plugin.defaults(config.cparser)
 
     directory = config.cparser.value("djaypro/directory")
-    assert directory is not None
-    assert "djay" in directory or directory != ""
+    # directory should be a non-empty string
+    assert isinstance(directory, str)
+    assert directory.strip() != ""
+
+    # Validate that the default path looks like a djay media library
+    directory_path = pathlib.Path(directory)
+    expected_suffixes = {
+        "djay Media Library.djayMediaLibrary",
+        "djay Media Library",
+    }
+    assert any(str(directory_path).endswith(suffix) for suffix in expected_suffixes)
 
     scope = config.cparser.value("djaypro/artist_query_scope")
     assert scope == "entire_library"
