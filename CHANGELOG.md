@@ -7,6 +7,10 @@
   * Basic support for djay Pro
     * Currently missing a lot of the more advanced features but the groundwork has been put down
 
+* Serato
+  * Enhance the Serato 4 support for crate search
+  * Changes to better detect when the latest track is playing
+
 * Developer Stuff
   * Dependency updates
   * Test fixes
