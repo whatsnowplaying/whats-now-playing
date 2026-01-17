@@ -418,8 +418,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             return None
 
     async def stop(self):
-        """stop the m3u plugin"""
-        self._reset_meta()
+        """stop the djuced plugin"""
         if self.observer:
             self.observer.stop()
             self.observer.join()

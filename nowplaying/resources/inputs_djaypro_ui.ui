@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>djay Pro</string>
+  </property>
+  <widget class="QWidget" name="horizontalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>100</y>
+     <width>631</width>
+     <height>80</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QLabel" name="dir_label">
+      <property name="text">
+       <string>djay Pro Directory</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="dir_button">
+      <property name="text">
+       <string>Select Dir ...</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="dir_lineedit"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QLabel" name="artist_query_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>190</y>
+     <width>200</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Artist Query Scope</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="djaypro_artist_scope_combo">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>190</y>
+     <width>150</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <item>
+    <property name="text">
+     <string>Entire Library</string>
+    </property>
+   </item>
+   <item>
+    <property name="text">
+     <string>Selected Playlists</string>
+    </property>
+   </item>
+  </widget>
+  <widget class="QLabel" name="playlists_label">
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>190</y>
+     <width>200</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Selected Playlists</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="djaypro_playlists_lineedit">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>220</y>
+     <width>600</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="placeholderText">
+    <string>Comma-separated playlist names (e.g., House, Techno, Favorites)</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="help_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>260</y>
+     <width>601</width>
+     <height>181</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>djay Pro is professional DJ software by Algoriddim for macOS, Windows, and iOS.</string>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
