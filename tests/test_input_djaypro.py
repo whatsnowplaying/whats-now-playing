@@ -296,17 +296,24 @@ async def test_getplayingtrack(bootstrap):
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
 
-    # Set some metadata
-    plugin.metadata = {
-        "artist": "Test Artist",
-        "title": "Test Title",
-        "filename": "/path/to/file.mp3",
-    }
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Set config to valid temporary directory
+        config.cparser.setValue("djaypro/directory", tmpdir)
 
-    result = await plugin.getplayingtrack()
+        # Set some metadata
+        plugin.metadata = {
+            "artist": "Test Artist",
+            "title": "Test Title",
+            "filename": "/path/to/file.mp3",
+        }
 
-    assert result["artist"] == "Test Artist"
-    assert result["title"] == "Test Title"
+        result = await plugin.getplayingtrack()
+
+        assert result["artist"] == "Test Artist"
+        assert result["title"] == "Test Title"
+
+        # Clean up
+        await plugin.stop()
 
 
 def test_reset_meta(bootstrap):

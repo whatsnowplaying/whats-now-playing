@@ -117,6 +117,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             await asyncio.sleep(1)
             return
 
+        # Check if directory exists before trying to watch it
+        if not pathlib.Path(self.djaypro_dir).exists():
+            logging.error("djay Pro directory does not exist: %s", self.djaypro_dir)
+            await asyncio.sleep(1)
+            return
+
         logging.info("Watching for changes on %s", self.djaypro_dir)
         # Watch for changes to NowPlaying.txt (macOS) or MediaLibrary.db-wal (Windows)
         self.event_handler = FileSystemEventHandler()
