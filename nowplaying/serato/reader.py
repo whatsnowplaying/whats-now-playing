@@ -104,3 +104,62 @@ class Serato4SQLiteReader:  # pylint: disable=too-few-public-methods
         except sqlite3.Error as exc:
             logging.error("Failed to query latest tracks per deck: %s", exc)
             return []
+
+
+class Serato4RootReader:  # pylint: disable=too-few-public-methods
+    """SQLite database reader for Serato 4+ root.sqlite files (crates/containers)"""
+
+    def __init__(self, db_path: str | pathlib.Path):
+        self.db_path = pathlib.Path(db_path)
+
+    async def has_artist_in_crates(
+        self, artist_name: str, crate_names: list[str]
+    ) -> bool:
+        """Check if an artist has tracks in any of the specified crates
+
+        Args:
+            artist_name: Artist name to search for (case-insensitive)
+            crate_names: List of crate names to search in
+
+        Returns:
+            True if artist found in any specified crate, False otherwise
+        """
+        if not self.db_path.exists():
+            logging.error("Serato root.sqlite not found at %s", self.db_path)
+            return False
+
+        if not crate_names:
+            return False
+
+        async def _query_crates() -> bool:
+            async with aiosqlite.connect(self.db_path) as connection:
+                connection.row_factory = aiosqlite.Row
+
+                # Build placeholders for crate names
+                placeholders = ",".join("?" * len(crate_names))
+
+                # Query to find artist in specified crates
+                # container_asset links containers (crates) to assets (tracks)
+                query = f"""
+                    SELECT DISTINCT 1
+                    FROM container c
+                    INNER JOIN container_asset ca ON c.id = ca.container_id
+                    INNER JOIN asset a ON ca.asset_id = a.id
+                    WHERE c.name IN ({placeholders})
+                    AND a.artist LIKE ?
+                    LIMIT 1
+                """
+
+                # Prepare parameters: crate names + artist search pattern
+                params = list(crate_names) + [f"%{artist_name}%"]
+
+                cursor = await connection.execute(query, params)
+                row = await cursor.fetchone()
+
+                return row is not None
+
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_query_crates)
+        except sqlite3.Error as exc:
+            logging.error("Failed to query artist in crates: %s", exc)
+            return False

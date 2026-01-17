@@ -52,12 +52,17 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
     async def _setup_watcher(self):
         logging.debug("setting up watcher")
         self.event_handler = PatternMatchingEventHandler(
-            patterns=["master*"],
-            ignore_patterns=[".DS_Store", "*.sqlite-shm"],
+            patterns=["*"],
+            ignore_patterns=[
+                ".DS_Store",
+                "*.sqlite-shm",
+                "*.sqlite-journal",
+            ],
             ignore_directories=True,
             case_sensitive=False,
         )
         self.event_handler.on_modified = self.process_sessions
+        self.event_handler.on_created = self.process_sessions
 
         if self.pollingobserver:
             self.observer = PollingObserver(timeout=self.polling_interval)

@@ -9,13 +9,18 @@ import logging
 import os
 import pathlib
 import platform
+import sqlite3
 from typing import TYPE_CHECKING
 
+import aiosqlite
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 import nowplaying.inputs
+import nowplaying.utils.sqlite
 from nowplaying.types import TrackMetadata
 from .handler import Serato4Handler
+from .reader import Serato4RootReader
 from .remote import SeratoRemoteHandler
 
 
@@ -39,6 +44,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         self.displayname = "Serato DJ"
         self.handler: Serato4Handler | None = None
         self.remote_handler: SeratoRemoteHandler | None = None
+        self.root_reader: Serato4RootReader | None = None
         self.serato_lib_path: pathlib.Path | None = None
         self.mode = "local"  # "local" or "remote"
         self.url: str | None = None
@@ -155,6 +161,15 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         )
         await self.handler.start()
 
+        # Initialize root reader for crate/container queries
+        root_db_path = self.serato_lib_path / "root.sqlite"
+        if root_db_path.exists():
+            self.root_reader = Serato4RootReader(root_db_path)
+        else:
+            logging.warning(
+                "root.sqlite not found at %s - crate filtering unavailable", root_db_path
+            )
+
     async def _start_remote_mode(self) -> None:
         """Start remote web scraping mode"""
         if not self.url:
@@ -213,6 +228,9 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         qsettings.setValue("serato4/local", True)
         qsettings.setValue("serato4/url", "")
         qsettings.setValue("serato4/interval", 30.0)
+        qsettings.setValue("serato4/artist_query_scope", "entire_library")
+        qsettings.setValue("serato4/selected_playlists", "")
+        qsettings.setValue("serato4/additional_libpaths", "")
 
     def desc_settingsui(self, qwidget: "QWidget") -> None:
         """Plugin description for UI"""
@@ -318,6 +336,172 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
 
         return track_metadata
 
+    def _get_all_library_paths(self) -> list[pathlib.Path]:
+        """Get all configured Serato 4 library paths (primary + additional)
+
+        Returns list of paths to check for root.sqlite or location.sqlite files
+        """
+        paths = []
+
+        # Add primary library path (auto-detected)
+        if self.serato_lib_path:
+            paths.append(self.serato_lib_path)
+
+        # Add additional library paths from config
+        if additional_paths := self.config.cparser.value(
+            "serato4/additional_libpaths", defaultValue=""
+        ):
+            # Split by newlines or semicolons, strip whitespace, filter empty
+            extra_paths = [
+                pathlib.Path(path.strip())
+                for path in additional_paths.replace(";", "\n").split("\n")
+                if path.strip()
+            ]
+            paths.extend(extra_paths)
+
+        return paths
+
+    async def has_tracks_by_artist(self, artist_name: str) -> bool:
+        """Check if DJ has any tracks by the specified artist
+
+        This method is used by the artist extras system to filter artists
+        based on whether the DJ has tracks by them in their library.
+
+        Args:
+            artist_name: Artist name to search for
+
+        Returns:
+            True if artist found in library or selected playlists, False otherwise
+        """
+        try:
+            # Only check local library - remote mode doesn't support this
+            if self.mode != "local":
+                logging.debug("Artist query not available - not in local mode")
+                return False
+
+            library_paths = self._get_all_library_paths()
+            if not library_paths:
+                logging.warning("No Serato 4 library paths configured")
+                return False
+
+            # Get query scope configuration
+            scope = self.config.cparser.value(
+                "serato4/artist_query_scope", defaultValue="entire_library"
+            )
+
+            if scope == "selected_playlists":
+                # Check selected crates across all libraries
+                return await self._has_tracks_in_selected_playlists(artist_name, library_paths)
+
+            # Check entire library across all library paths
+            for lib_path in library_paths:
+                if await self._has_tracks_in_entire_library(artist_name, lib_path):
+                    logging.debug("Found artist '%s' in library: %s", artist_name, lib_path)
+                    return True
+            return False
+
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            logging.exception(
+                "Failed to query Serato 4 library for artist %s: %s", artist_name, err
+            )
+            return False
+
+    async def _has_tracks_in_selected_playlists(
+        self, artist_name: str, library_paths: list[pathlib.Path]
+    ) -> bool:
+        """Check for artist tracks in specific playlists/crates across all libraries"""
+        selected_playlists = self.config.cparser.value(
+            "serato4/selected_playlists", defaultValue=""
+        )
+        if not selected_playlists.strip():
+            logging.debug("No playlists selected for artist filtering")
+            return False
+
+        # Parse comma-separated playlist names
+        crate_names = [name.strip() for name in selected_playlists.split(",") if name.strip()]
+        if not crate_names:
+            return False
+
+        logging.debug("Checking artist '%s' in crates: %s", artist_name, crate_names)
+
+        # Check each library path
+        for lib_path in library_paths:
+            # Determine which database file to use
+            root_db = lib_path / "root.sqlite"
+            location_db = lib_path / "Library" / "location.sqlite"
+
+            db_path = None
+            if root_db.exists():
+                db_path = root_db
+            elif location_db.exists():
+                db_path = location_db
+
+            if not db_path:
+                logging.debug("No database found at %s", lib_path)
+                continue
+
+            # Create reader for this library and check for artist
+            reader = Serato4RootReader(db_path)
+            if await reader.has_artist_in_crates(artist_name, crate_names):
+                return True
+
+        return False
+
+    async def _has_tracks_in_entire_library(  # pylint: disable=no-self-use
+        self, artist_name: str, lib_path: pathlib.Path
+    ) -> bool:
+        """Check for artist tracks in entire library at given path
+
+        Uses the asset table in root.sqlite or location.sqlite to search the library.
+        This is more efficient than loading the full master.sqlite database.
+
+        Args:
+            artist_name: Artist name to search for
+            lib_path: Path to Serato library (containing root.sqlite or Library/location.sqlite)
+
+        Returns:
+            True if artist found in this library, False otherwise
+        """
+        # Determine which database file to use
+        root_db = lib_path / "root.sqlite"
+        location_db = lib_path / "Library" / "location.sqlite"
+
+        db_path = None
+        if root_db.exists():
+            db_path = root_db
+        elif location_db.exists():
+            db_path = location_db
+
+        if not db_path:
+            logging.debug("No database found at %s", lib_path)
+            return False
+
+        try:
+            async def _query_library() -> bool:
+                async with aiosqlite.connect(db_path) as connection:
+                    connection.row_factory = aiosqlite.Row
+
+                    # Search asset table for artist
+                    query = """
+                        SELECT DISTINCT 1
+                        FROM asset
+                        WHERE artist LIKE ?
+                        LIMIT 1
+                    """
+
+                    params = [f"%{artist_name}%"]
+                    cursor = await connection.execute(query, params)
+                    row = await cursor.fetchone()
+
+                    return row is not None
+
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_query_library)
+        except sqlite3.Error as exc:
+            logging.error(
+                "Failed to query library at %s for artist %s: %s", lib_path, artist_name, exc
+            )
+            return False
+
     @property
     def pluginname(self) -> str:
         """Plugin name for identification"""
@@ -334,8 +518,37 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         self.uihelp = uihelp
         # New serato plugin uses auto-detection - no directory selection needed
 
+        # Connect library tab button if it exists
+        library_widgets = self.uihelp.find_tab_by_identifier(qwidget, "serato_artist_scope_combo")
+        if library_widgets and hasattr(library_widgets, "add_additional_lib_button"):
+            library_widgets.add_additional_lib_button.clicked.connect(
+                self.on_add_additional_lib_button
+            )
+
+    def on_add_additional_lib_button(self):
+        """Add additional library button clicked action"""
+        library_widgets = self.uihelp.find_tab_by_identifier(
+            self.qwidget, "serato_artist_scope_combo"
+        )
+        startdir = str(pathlib.Path.home())
+        if libdir := QFileDialog.getExistingDirectory(
+            self.qwidget, "Select additional Serato library directory", startdir
+        ):
+            if current_text := library_widgets.additional_libs_textedit.toPlainText().strip():
+                new_text = current_text + "\n" + libdir
+            else:
+                new_text = libdir
+            library_widgets.additional_libs_textedit.setPlainText(new_text)
+
     def load_settingsui(self, qwidget: "QWidget") -> None:
         """Load settings into UI"""
+        self._load_connection_settings(qwidget)
+        self._load_library_settings(qwidget)
+
+    def _load_connection_settings(self, qwidget: "QWidget") -> None:
+        """Load connection tab settings"""
+        connection_widgets = self.uihelp.find_tab_by_identifier(qwidget, "local_button")
+
         # Load connection mode settings
         local_mode = self.config.cparser.value("serato4/local", type=bool, defaultValue=True)
         remote_url = self.config.cparser.value("serato4/url", defaultValue="")
@@ -344,77 +557,110 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         )
 
         # Set radio buttons
-        qwidget.local_button.setChecked(local_mode)
-        qwidget.remote_button.setChecked(not local_mode)
+        connection_widgets.local_button.setChecked(local_mode)
+        connection_widgets.remote_button.setChecked(not local_mode)
 
-        # Update local status
+        # Serato 4 auto-detects library path, but show it in the lineedit if requested
         library_path = self.detected_serato_library_path
-        if library_path:
-            qwidget.local_status_display.setText(f"Auto-detected Serato library at {library_path}")
-        else:
-            qwidget.local_status_display.setText("No Serato 4+ installation found")
+        if library_path and hasattr(connection_widgets, "local_dir_lineedit"):
+            connection_widgets.local_dir_lineedit.setText(str(library_path))
 
         # Load remote settings
-        qwidget.remote_url_lineedit.setText(remote_url)
-        qwidget.remote_poll_lineedit.setText(str(remote_interval))
-
-        # Load mixmode
-        mixmode = self.getmixmode()
-        if mixmode == "oldest":
-            qwidget.oldest_button.setChecked(True)
-        else:
-            qwidget.newest_button.setChecked(True)
+        connection_widgets.remote_url_lineedit.setText(remote_url)
+        connection_widgets.remote_poll_lineedit.setText(str(remote_interval))
 
         # Load deck skip settings
         deckskip = self.config.cparser.value("serato4/deckskip")
 
         # Reset all checkboxes
-        qwidget.deck1_checkbox.setChecked(False)
-        qwidget.deck2_checkbox.setChecked(False)
-        qwidget.deck3_checkbox.setChecked(False)
-        qwidget.deck4_checkbox.setChecked(False)
+        connection_widgets.deck1_checkbox.setChecked(False)
+        connection_widgets.deck2_checkbox.setChecked(False)
+        connection_widgets.deck3_checkbox.setChecked(False)
+        connection_widgets.deck4_checkbox.setChecked(False)
 
         if deckskip:
             if not isinstance(deckskip, list):
                 deckskip = list(deckskip)
 
             if "1" in deckskip:
-                qwidget.deck1_checkbox.setChecked(True)
+                connection_widgets.deck1_checkbox.setChecked(True)
             if "2" in deckskip:
-                qwidget.deck2_checkbox.setChecked(True)
+                connection_widgets.deck2_checkbox.setChecked(True)
             if "3" in deckskip:
-                qwidget.deck3_checkbox.setChecked(True)
+                connection_widgets.deck3_checkbox.setChecked(True)
             if "4" in deckskip:
-                qwidget.deck4_checkbox.setChecked(True)
+                connection_widgets.deck4_checkbox.setChecked(True)
+
+    def _load_library_settings(self, qwidget: "QWidget") -> None:
+        """Load library tab settings"""
+        # Load library/query settings if the tab exists
+        library_widgets = self.uihelp.find_tab_by_identifier(qwidget, "serato_artist_scope_combo")
+        if library_widgets:
+            # Load artist query scope
+            scope = self.config.cparser.value(
+                "serato4/artist_query_scope", defaultValue="entire_library"
+            )
+            if scope == "selected_playlists":
+                library_widgets.serato_artist_scope_combo.setCurrentText("Selected Playlists")
+            else:
+                library_widgets.serato_artist_scope_combo.setCurrentText("Entire Library")
+
+            # Load selected playlists
+            library_widgets.serato_playlists_lineedit.setText(
+                self.config.cparser.value("serato4/selected_playlists", defaultValue="")
+            )
+
+            # Load additional library paths
+            additional_paths = self.config.cparser.value(
+                "serato4/additional_libpaths", defaultValue=""
+            )
+            library_widgets.additional_libs_textedit.setPlainText(additional_paths)
 
     def save_settingsui(self, qwidget: "QWidget") -> None:
         """Save settings from UI"""
+        connection_widgets = self.uihelp.find_tab_by_identifier(qwidget, "local_button")
+
         # Save connection mode settings
-        local_mode = qwidget.local_button.isChecked()
+        local_mode = connection_widgets.local_button.isChecked()
         self.config.cparser.setValue("serato4/local", local_mode)
 
         # Save remote settings
-        remote_url = qwidget.remote_url_lineedit.text().strip()
+        remote_url = connection_widgets.remote_url_lineedit.text().strip()
         self.config.cparser.setValue("serato4/url", remote_url)
 
-        remote_interval = float(qwidget.remote_poll_lineedit.text() or "30.0")
+        remote_interval = float(connection_widgets.remote_poll_lineedit.text() or "30.0")
         self.config.cparser.setValue("serato4/interval", remote_interval)
-
-        # Save mixmode
-        if qwidget.oldest_button.isChecked():
-            self.setmixmode("oldest")
-        else:
-            self.setmixmode("newest")
 
         # Save deck skip settings
         deckskip = []
-        if qwidget.deck1_checkbox.isChecked():
+        if connection_widgets.deck1_checkbox.isChecked():
             deckskip.append("1")
-        if qwidget.deck2_checkbox.isChecked():
+        if connection_widgets.deck2_checkbox.isChecked():
             deckskip.append("2")
-        if qwidget.deck3_checkbox.isChecked():
+        if connection_widgets.deck3_checkbox.isChecked():
             deckskip.append("3")
-        if qwidget.deck4_checkbox.isChecked():
+        if connection_widgets.deck4_checkbox.isChecked():
             deckskip.append("4")
 
         self.config.cparser.setValue("serato4/deckskip", deckskip)
+
+        # Save library/query settings if the tab exists
+        library_widgets = self.uihelp.find_tab_by_identifier(qwidget, "serato_artist_scope_combo")
+        if library_widgets:
+            # Save artist query scope
+            scope = (
+                "selected_playlists"
+                if library_widgets.serato_artist_scope_combo.currentText() == "Selected Playlists"
+                else "entire_library"
+            )
+            self.config.cparser.setValue("serato4/artist_query_scope", scope)
+
+            # Save selected playlists
+            self.config.cparser.setValue(
+                "serato4/selected_playlists",
+                library_widgets.serato_playlists_lineedit.text()
+            )
+
+            # Save additional library paths
+            additional_paths = library_widgets.additional_libs_textedit.toPlainText().strip()
+            self.config.cparser.setValue("serato4/additional_libpaths", additional_paths)
