@@ -3,6 +3,10 @@
 
 ## Version 5.1.0 - in development
 
+* New Features:
+  * Basic support for djay Pro
+    * Currently missing a lot of the more advanced features but the groundwork has been put down
+
 * Developer Stuff
   * Dependency updates
   * Test fixes

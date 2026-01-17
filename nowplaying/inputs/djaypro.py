@@ -49,7 +49,7 @@ if TYPE_CHECKING:
     import nowplaying.uihelp
 
 
-class Plugin(InputPlugin):
+class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     """handler for djay Pro"""
 
     def __init__(
@@ -165,7 +165,8 @@ class Plugin(InputPlugin):
 
             # Query for latest history item
             cursor.execute(
-                "SELECT rowid, data FROM database2 WHERE collection='historySessionItems' ORDER BY rowid DESC LIMIT 1"
+                "SELECT rowid, data FROM database2 "
+                "WHERE collection='historySessionItems' ORDER BY rowid DESC LIMIT 1"
             )
             row = cursor.fetchone()
 
@@ -177,31 +178,34 @@ class Plugin(InputPlugin):
             # Only require title - metadata extraction will handle the rest
             if track_data["title"]:
                 # Check if this is a new track
-                if (self.metadata.get("artist") != track_data["artist"]
-                    or self.metadata.get("title") != track_data["title"]):
-
-                        # If filename not in history blob, try to get it from localMediaItemLocations
-                        if not track_data["filename"]:
-                            filename = self._get_filename_for_track(cursor, track_data["artist"], track_data["title"])
-                            if filename:
-                                track_data["filename"] = filename
-
-                        self.metadata = {
-                            "artist": track_data["artist"],
-                            "title": track_data["title"],
-                            "album": track_data["album"],
-                            "filename": track_data["filename"],
-                            "bpm": track_data["bpm"],
-                            "duration": track_data["duration"],
-                        }
-                        logging.info(
-                            "New track detected: %s - %s%s%s%s",
-                            track_data["artist"],
-                            track_data["title"],
-                            f" (BPM: {track_data['bpm']})" if track_data["bpm"] else "",
-                            f" [{track_data['album']}]" if track_data["album"] else "",
-                            f" - {track_data['filename']}" if track_data["filename"] else ""
+                if (
+                    self.metadata.get("artist") != track_data["artist"]
+                    or self.metadata.get("title") != track_data["title"]
+                ):
+                    # If filename not in history blob, try to get it from localMediaItemLocations
+                    if not track_data["filename"]:
+                        filename = self._get_filename_for_track(
+                            cursor, track_data["artist"], track_data["title"]
                         )
+                        if filename:
+                            track_data["filename"] = filename
+
+                    self.metadata = {
+                        "artist": track_data["artist"],
+                        "title": track_data["title"],
+                        "album": track_data["album"],
+                        "filename": track_data["filename"],
+                        "bpm": track_data["bpm"],
+                        "duration": track_data["duration"],
+                    }
+                    logging.info(
+                        "New track detected: %s - %s%s%s%s",
+                        track_data["artist"],
+                        track_data["title"],
+                        f" (BPM: {track_data['bpm']})" if track_data["bpm"] else "",
+                        f" [{track_data['album']}]" if track_data["album"] else "",
+                        f" - {track_data['filename']}" if track_data["filename"] else "",
+                    )
 
             connection.close()
 
@@ -210,7 +214,7 @@ class Plugin(InputPlugin):
         except (sqlite3.OperationalError, FileNotFoundError) as err:
             logging.debug("Failed to query database: %s", err)
 
-    def _read_nowplaying_file(self):
+    def _read_nowplaying_file(self):  # pylint: disable=too-many-locals,too-many-branches
         """Read NowPlaying.txt file for current track (macOS)"""
         nowplaying_file = pathlib.Path(self.djaypro_dir).joinpath("NowPlaying.txt")
 
@@ -219,9 +223,9 @@ class Plugin(InputPlugin):
 
         # Try UTF-8 first (macOS), then UTF-16 (Windows)
         content = None
-        for encoding in ['utf-8', 'utf-16']:
+        for encoding in ["utf-8", "utf-16"]:
             try:
-                with open(nowplaying_file, 'r', encoding=encoding) as file:
+                with open(nowplaying_file, encoding=encoding) as file:
                     content = file.read().strip()
                 if content:
                     break
@@ -233,19 +237,19 @@ class Plugin(InputPlugin):
 
         # Parse line by line
         track_data = {}
-        for line in content.split('\n'):
+        for line in content.split("\n"):
             line = line.strip()
-            if ':' in line:
-                key, value = line.split(':', 1)
+            if ":" in line:
+                key, value = line.split(":", 1)
                 key = key.strip().lower()
                 value = value.strip()
-                if value and value != 'N/A':
+                if value and value != "N/A":
                     track_data[key] = value
 
-        artist = track_data.get('artist')
-        title = track_data.get('title')
-        album = track_data.get('album')
-        time_str = track_data.get('time')
+        artist = track_data.get("artist")
+        title = track_data.get("title")
+        album = track_data.get("album")
+        time_str = track_data.get("time")
 
         if not artist or not title:
             return
@@ -254,7 +258,7 @@ class Plugin(InputPlugin):
         duration = None
         if time_str:
             try:
-                time_parts = time_str.split(':')
+                time_parts = time_str.split(":")
                 if len(time_parts) == 2:
                     minutes, seconds = time_parts
                     duration = int(minutes) * 60 + int(seconds)
@@ -262,7 +266,7 @@ class Plugin(InputPlugin):
                 pass
 
         # Check if this is a new track
-        if (self.metadata.get("artist") != artist or self.metadata.get("title") != title):
+        if self.metadata.get("artist") != artist or self.metadata.get("title") != title:
             # Try to get filename from database
             filename = self._get_filename_from_db(artist, title)
 
@@ -281,7 +285,7 @@ class Plugin(InputPlugin):
                 title,
                 f" [{album}]" if album else "",
                 f" ({time_str})" if time_str else "",
-                f" - {filename}" if filename else " (no filename found)"
+                f" - {filename}" if filename else " (no filename found)",
             )
 
     def _get_filename_from_db(self, artist: str, title: str) -> str | None:
@@ -306,9 +310,7 @@ class Plugin(InputPlugin):
     def _get_filename_for_track(self, cursor, artist: str, title: str) -> str | None:
         """Query localMediaItemLocations collection for file path"""
         try:
-            cursor.execute(
-                "SELECT data FROM database2 WHERE collection='localMediaItemLocations'"
-            )
+            cursor.execute("SELECT data FROM database2 WHERE collection='localMediaItemLocations'")
             rows = cursor.fetchall()
 
             # Parse each blob looking for matching artist/title
@@ -317,9 +319,12 @@ class Plugin(InputPlugin):
                 parsed = self._parse_blob(blob_data)
 
                 # Case-insensitive comparison
-                if (parsed["artist"] and parsed["title"] and
-                    parsed["artist"].lower() == artist.lower() and
-                    parsed["title"].lower() == title.lower()):
+                if (
+                    parsed["artist"]
+                    and parsed["title"]
+                    and parsed["artist"].lower() == artist.lower()
+                    and parsed["title"].lower() == title.lower()
+                ):
                     if parsed["filename"]:
                         return parsed["filename"]
 
@@ -329,9 +334,9 @@ class Plugin(InputPlugin):
         return None
 
     @staticmethod
-    def _parse_blob(blob_data: bytes) -> dict[str, str | None]:
+    def _parse_blob(blob_data: bytes) -> dict[str, str | None]:  # pylint: disable=too-many-branches
         """Parse binary blob data to extract track metadata"""
-        try:
+        try:  # pylint: disable=too-many-nested-blocks
             # Extract all null-terminated strings from the blob
             decoded = []
             i = 0
@@ -344,7 +349,9 @@ class Plugin(InputPlugin):
 
                     if i > string_start:
                         try:
-                            string = blob_data[string_start:i].decode('utf-8', errors='ignore').strip()
+                            string = (
+                                blob_data[string_start:i].decode("utf-8", errors="ignore").strip()
+                            )
                             if len(string) > 1:
                                 decoded.append(string)
                         except UnicodeDecodeError:
@@ -362,29 +369,29 @@ class Plugin(InputPlugin):
 
             # Parse metadata - value comes BEFORE key in blob format
             for i, string in enumerate(decoded):
-                if string == 'title' and i > 0:
+                if string == "title" and i > 0:
                     title = decoded[i - 1]
-                elif string == 'artist' and i > 0:
+                elif string == "artist" and i > 0:
                     artist = decoded[i - 1]
-                elif string == 'album' and i > 0:
+                elif string == "album" and i > 0:
                     album = decoded[i - 1]
-                elif string == 'originSourceID' and i > 0:
+                elif string == "originSourceID" and i > 0:
                     source = decoded[i - 1]
-                elif string == 'bpm' and i > 0:
+                elif string == "bpm" and i > 0:
                     try:
                         bpm = float(decoded[i - 1])
                     except (ValueError, IndexError):
                         pass
-                elif string == 'duration' and i > 0:
+                elif string == "duration" and i > 0:
                     try:
                         duration = int(float(decoded[i - 1]))
                     except (ValueError, IndexError):
                         pass
-                elif string.startswith('file:///') and len(string) > 8:
+                elif string.startswith("file:///") and len(string) > 8:
                     # Found a file URL (ignore bare "file:///" entries)
                     try:
                         file_path = urllib.parse.unquote(string)
-                        if file_path.startswith('file:///'):
+                        if file_path.startswith("file:///"):
                             file_path = file_path[7:]  # Remove file:// prefix, keep leading /
                     except Exception:  # pylint: disable=broad-exception-caught
                         pass
@@ -426,7 +433,7 @@ class Plugin(InputPlugin):
         await self.start()
         return self.metadata
 
-    async def get_available_playlists(self):
+    async def get_available_playlists(self):  # pylint: disable=no-self-use
         """Get list of all playlists - not implemented yet"""
         return []
 
@@ -454,7 +461,9 @@ class Plugin(InputPlugin):
         """draw the plugin's settings page"""
         qwidget.dir_lineedit.setText(self.config.cparser.value("djaypro/directory"))
 
-        scope = self.config.cparser.value("djaypro/artist_query_scope", defaultValue="entire_library")
+        scope = self.config.cparser.value(
+            "djaypro/artist_query_scope", defaultValue="entire_library"
+        )
         if scope == "selected_playlists":
             qwidget.djaypro_artist_scope_combo.setCurrentText("Selected Playlists")
         else:
@@ -479,7 +488,9 @@ class Plugin(InputPlugin):
         else:
             self.config.cparser.setValue("djaypro/artist_query_scope", "entire_library")
 
-        self.config.cparser.setValue("djaypro/selected_playlists", qwidget.djaypro_playlists_lineedit.text())
+        self.config.cparser.setValue(
+            "djaypro/selected_playlists", qwidget.djaypro_playlists_lineedit.text()
+        )
 
     def on_djaypro_dir_button(self):
         """open file browser to set djay Pro directory"""

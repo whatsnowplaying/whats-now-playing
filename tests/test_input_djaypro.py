@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """test djay Pro input plugin"""
+# pylint: disable=protected-access
 
 import pathlib
 import sqlite3
@@ -26,46 +27,60 @@ def test_parse_blob_with_filepath():
     """test blob parsing with real djay Pro data - local file"""
     # Real blob data from djay Pro database (rowid=229)
     blob = (
-        b'TSAF\x00\x00\x00\x00ADCMediaItemLocation\x001684700398760c88942bd2d0f394b68f\x00'
-        b'uuid\x00ADCMediaItemTitleID\x00Free To Love\x00title\x00Brendan Maclean\x00artist\x00'
-        b'y=C\x00duration\x00titleIDs\x00'
-        b'file:///Users/aw/Music/bandcamp/flac/Brendan%20Maclean%20-%20funbang1%20-%2003%20Free%20To%20Love.flac\x00'
-        b'sourceURIs\x00'
+        b"TSAF\x00\x00\x00\x00ADCMediaItemLocation\x00"
+        b"1684700398760c88942bd2d0f394b68f\x00"
+        b"uuid\x00ADCMediaItemTitleID\x00Free To Love\x00title\x00"
+        b"Brendan Maclean\x00artist\x00"
+        b"y=C\x00duration\x00titleIDs\x00"
+        b"file:///Users/aw/Music/bandcamp/flac/"
+        b"Brendan%20Maclean%20-%20funbang1%20-%2003%20Free%20To%20Love.flac\x00"
+        b"sourceURIs\x00"
     )
 
     result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
 
     assert result["artist"] == "Brendan Maclean"
     assert result["title"] == "Free To Love"
-    assert result["filename"] == "/Users/aw/Music/bandcamp/flac/Brendan Maclean - funbang1 - 03 Free To Love.flac"
+    assert (
+        result["filename"]
+        == "/Users/aw/Music/bandcamp/flac/Brendan Maclean - funbang1 - 03 Free To Love.flac"
+    )
 
 
 def test_parse_blob_with_url_encoding():
     """test blob parsing with URL-encoded special characters"""
     # Real blob data with parentheses in filename (rowid=249)
     blob = (
-        b'TSAF\x00\x00\x00\x00ADCMediaItemLocation\x00846e6dd8a38e2231c6471c91689f57d5\x00'
-        b'uuid\x00ADCMediaItemTitleID\x00On The Door (feat. Amanda Palmer)\x00title\x00'
-        b'Brendan Maclean\x00artist\x00CC\x00duration\x00titleIDs\x00'
-        b'file:///Users/aw/Music/bandcamp/flac/Brendan%20Maclean%20-%20funbang1%20-%2007%20On%20The%20Door%20(feat.%20Amanda%20Palmer).flac\x00'
-        b'sourceURIs\x00'
+        b"TSAF\x00\x00\x00\x00ADCMediaItemLocation\x00"
+        b"846e6dd8a38e2231c6471c91689f57d5\x00"
+        b"uuid\x00ADCMediaItemTitleID\x00On The Door (feat. Amanda Palmer)\x00title\x00"
+        b"Brendan Maclean\x00artist\x00CC\x00duration\x00titleIDs\x00"
+        b"file:///Users/aw/Music/bandcamp/flac/"
+        b"Brendan%20Maclean%20-%20funbang1%20-%2007%20On%20The%20Door%20"
+        b"(feat.%20Amanda%20Palmer).flac\x00"
+        b"sourceURIs\x00"
     )
 
     result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
 
     assert result["artist"] == "Brendan Maclean"
     assert result["title"] == "On The Door (feat. Amanda Palmer)"
-    assert result["filename"] == "/Users/aw/Music/bandcamp/flac/Brendan Maclean - funbang1 - 07 On The Door (feat. Amanda Palmer).flac"
+    assert result["filename"] == (
+        "/Users/aw/Music/bandcamp/flac/"
+        "Brendan Maclean - funbang1 - 07 On The Door (feat. Amanda Palmer).flac"
+    )
 
 
 def test_parse_blob_with_source():
     """test blob parsing with iTunes library track (no file path)"""
     # Real blob data from iTunes library track (rowid=209)
     blob = (
-        b'TSAF\x00\x00\x00\x00ADCMediaItemLocation\x004518010d2b8c6d764351e10f3abc3765\x00'
-        b'uuid\x00ADCMediaItemTitleID\x00We Don\'t Have to Dance\x00title\x00ACTORS\x00artist\x00'
-        b'sC\x00duration\x00titleIDs\x00'
-        b'com.apple.iTunes:15499219261370860655\x00sourceURIs\x00'
+        b"TSAF\x00\x00\x00\x00ADCMediaItemLocation\x00"
+        b"4518010d2b8c6d764351e10f3abc3765\x00"
+        b"uuid\x00ADCMediaItemTitleID\x00We Don't Have to Dance\x00title\x00"
+        b"ACTORS\x00artist\x00"
+        b"sC\x00duration\x00titleIDs\x00"
+        b"com.apple.iTunes:15499219261370860655\x00sourceURIs\x00"
     )
 
     result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
@@ -90,7 +105,7 @@ def test_parse_blob_empty():
 
 def test_parse_blob_malformed():
     """test blob parsing with malformed data"""
-    blob = b"\x00\x00\xFF\xFF\x00\x00"
+    blob = b"\x00\x00\xff\xff\x00\x00"
 
     result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
 
@@ -101,10 +116,7 @@ def test_parse_blob_malformed():
 
 def test_parse_blob_special_characters():
     """test blob parsing with special characters in metadata"""
-    blob = (
-        b"AC/DC\x00artist\x00"
-        b"Back in Black (Live)\x00title\x00"
-    )
+    blob = b"AC/DC\x00artist\x00Back in Black (Live)\x00title\x00"
 
     result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
 
@@ -115,10 +127,7 @@ def test_parse_blob_special_characters():
 def test_parse_blob_unicode():
     """test blob parsing with unicode characters"""
     # UTF-8 encoded unicode
-    blob = (
-        "Björk\x00artist\x00".encode('utf-8') +
-        "Café del Mar\x00title\x00".encode('utf-8')
-    )
+    blob = "Björk\x00artist\x00".encode("utf-8") + "Café del Mar\x00title\x00".encode("utf-8")
 
     result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
 
@@ -131,9 +140,9 @@ def test_parse_blob_ignores_short_file_url():
     """test that bare 'file:///' strings are ignored"""
     # Real blob data contains both full file URL and bare "file:///" marker
     blob = (
-        b'Free To Love\x00title\x00Brendan Maclean\x00artist\x00'
-        b'file:///Users/aw/Music/test.flac\x00sourceURIs\x00'
-        b'file:///\x00'  # This should be ignored (too short)
+        b"Free To Love\x00title\x00Brendan Maclean\x00artist\x00"
+        b"file:///Users/aw/Music/test.flac\x00sourceURIs\x00"
+        b"file:///\x00"  # This should be ignored (too short)
     )
 
     result = nowplaying.inputs.djaypro.Plugin._parse_blob(blob)
@@ -172,7 +181,8 @@ async def test_check_for_new_track_empty_db(bootstrap):
         # Create empty database with proper schema
         conn = sqlite3.connect(dbfile)
         conn.execute(
-            'CREATE TABLE database2 (rowid INTEGER PRIMARY KEY, collection CHAR, key CHAR, data BLOB, metadata BLOB)'
+            "CREATE TABLE database2 (rowid INTEGER PRIMARY KEY, collection CHAR, "
+            "key CHAR, data BLOB, metadata BLOB)"
         )
         conn.commit()
         conn.close()
@@ -196,14 +206,15 @@ async def test_check_for_new_track_with_data(bootstrap):
         # Create database with test data
         conn = sqlite3.connect(dbfile)
         conn.execute(
-            'CREATE TABLE database2 (rowid INTEGER PRIMARY KEY, collection CHAR, key CHAR, data BLOB, metadata BLOB)'
+            "CREATE TABLE database2 (rowid INTEGER PRIMARY KEY, collection CHAR, "
+            "key CHAR, data BLOB, metadata BLOB)"
         )
 
         # Insert a test history item
         blob = b"Test Artist\x00artist\x00Test Song\x00title\x00"
         conn.execute(
             "INSERT INTO database2 (collection, key, data) VALUES (?, ?, ?)",
-            ("historySessionItems", "test-key", blob)
+            ("historySessionItems", "test-key", blob),
         )
         conn.commit()
         conn.close()
@@ -228,13 +239,14 @@ async def test_check_for_new_track_duplicate(bootstrap):
         # Create database
         conn = sqlite3.connect(dbfile)
         conn.execute(
-            'CREATE TABLE database2 (rowid INTEGER PRIMARY KEY, collection CHAR, key CHAR, data BLOB, metadata BLOB)'
+            "CREATE TABLE database2 (rowid INTEGER PRIMARY KEY, collection CHAR, "
+            "key CHAR, data BLOB, metadata BLOB)"
         )
 
         blob = b"Same Artist\x00artist\x00Same Song\x00title\x00"
         conn.execute(
             "INSERT INTO database2 (collection, key, data) VALUES (?, ?, ?)",
-            ("historySessionItems", "test-key", blob)
+            ("historySessionItems", "test-key", blob),
         )
         conn.commit()
         conn.close()
@@ -288,7 +300,7 @@ async def test_getplayingtrack(bootstrap):
     plugin.metadata = {
         "artist": "Test Artist",
         "title": "Test Title",
-        "filename": "/path/to/file.mp3"
+        "filename": "/path/to/file.mp3",
     }
 
     result = await plugin.getplayingtrack()
@@ -306,7 +318,7 @@ def test_reset_meta(bootstrap):
     plugin.metadata = {
         "artist": "Some Artist",
         "title": "Some Title",
-        "filename": "/some/file.mp3"
+        "filename": "/some/file.mp3",
     }
 
     plugin._reset_meta()
