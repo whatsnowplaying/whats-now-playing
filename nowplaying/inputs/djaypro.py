@@ -136,11 +136,15 @@ class Plugin(InputPlugin):
         if event.is_directory:
             return
 
-        # Only process specific files
+        # Log all file events for debugging
         filename = event.src_path
+        logging.debug("File event: %s - %s", event.event_type, filename)
+
+        # Only process specific files
         if not (filename.endswith("NowPlaying.txt") or filename.endswith("MediaLibrary.db-wal")):
             return
 
+        logging.debug("Processing track change for: %s", filename)
         # Do synchronous work directly in this thread
         self._check_for_new_track()
 
