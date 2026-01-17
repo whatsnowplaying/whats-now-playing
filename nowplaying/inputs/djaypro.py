@@ -159,7 +159,10 @@ class Plugin(InputPlugin):
         # Fall back to database polling (Windows)
         dbfile = pathlib.Path(self.djaypro_dir).joinpath("MediaLibrary.db")
         if not dbfile.exists():
+            logging.debug("MediaLibrary.db does not exist at %s", dbfile)
             return
+
+        logging.debug("Querying database at %s", dbfile)
 
         def query_db():
             connection = sqlite3.connect(f"file:{dbfile}?mode=ro", uri=True, timeout=1.0)
@@ -172,12 +175,19 @@ class Plugin(InputPlugin):
             )
             row = cursor.fetchone()
 
-            if row:
-                track_data = self._parse_blob(row["data"])
-                if track_data["artist"] and track_data["title"]:
-                    # Check if this is a new track
-                    if (self.metadata.get("artist") != track_data["artist"]
-                        or self.metadata.get("title") != track_data["title"]):
+            if not row:
+                logging.debug("No historySessionItems found in database")
+                return
+
+            logging.debug("Found historySessionItems row, rowid=%s", row["rowid"])
+            track_data = self._parse_blob(row["data"])
+            logging.debug("Parsed track data: artist=%s, title=%s", track_data.get("artist"), track_data.get("title"))
+
+            if track_data["artist"] and track_data["title"]:
+                # Check if this is a new track
+                logging.debug("Current metadata: artist=%s, title=%s", self.metadata.get("artist"), self.metadata.get("title"))
+                if (self.metadata.get("artist") != track_data["artist"]
+                    or self.metadata.get("title") != track_data["title"]):
 
                         # If filename not in history blob, try to get it from localMediaItemLocations
                         if not track_data["filename"]:
@@ -206,8 +216,9 @@ class Plugin(InputPlugin):
 
         try:
             nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
+            logging.debug("Query completed successfully")
         except (sqlite3.OperationalError, FileNotFoundError) as err:
-            logging.debug("Failed to check for new track: %s", err)
+            logging.error("Failed to check for new track: %s", err)
 
     def _read_nowplaying_file(self):
         """Read NowPlaying.txt file for current track (macOS)"""
