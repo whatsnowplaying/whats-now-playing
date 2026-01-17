@@ -136,15 +136,12 @@ class Plugin(InputPlugin):
         if event.is_directory:
             return
 
-        # Log all file events for debugging
         filename = event.src_path
-        logging.debug("File event: %s - %s", event.event_type, filename)
 
         # Only process specific files
         if not (filename.endswith("NowPlaying.txt") or filename.endswith("MediaLibrary.db-wal")):
             return
 
-        logging.debug("Processing track change for: %s", filename)
         # Do synchronous work directly in this thread
         self._check_for_new_track()
 
@@ -159,10 +156,7 @@ class Plugin(InputPlugin):
         # Fall back to database polling (Windows)
         dbfile = pathlib.Path(self.djaypro_dir).joinpath("MediaLibrary.db")
         if not dbfile.exists():
-            logging.debug("MediaLibrary.db does not exist at %s", dbfile)
             return
-
-        logging.debug("Querying database at %s", dbfile)
 
         def query_db():
             connection = sqlite3.connect(f"file:{dbfile}?mode=ro", uri=True, timeout=1.0)
@@ -176,16 +170,13 @@ class Plugin(InputPlugin):
             row = cursor.fetchone()
 
             if not row:
-                logging.debug("No historySessionItems found in database")
                 return
 
-            logging.debug("Found historySessionItems row, rowid=%s", row["rowid"])
             track_data = self._parse_blob(row["data"])
-            logging.debug("Parsed track data: artist=%s, title=%s", track_data.get("artist"), track_data.get("title"))
 
-            if track_data["artist"] and track_data["title"]:
+            # Only require title - metadata extraction will handle the rest
+            if track_data["title"]:
                 # Check if this is a new track
-                logging.debug("Current metadata: artist=%s, title=%s", self.metadata.get("artist"), self.metadata.get("title"))
                 if (self.metadata.get("artist") != track_data["artist"]
                     or self.metadata.get("title") != track_data["title"]):
 
@@ -216,9 +207,8 @@ class Plugin(InputPlugin):
 
         try:
             nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
-            logging.debug("Query completed successfully")
         except (sqlite3.OperationalError, FileNotFoundError) as err:
-            logging.error("Failed to check for new track: %s", err)
+            logging.debug("Failed to query database: %s", err)
 
     def _read_nowplaying_file(self):
         """Read NowPlaying.txt file for current track (macOS)"""
