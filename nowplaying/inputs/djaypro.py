@@ -165,55 +165,55 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             return
 
         def query_db():
-            connection = sqlite3.connect(f"file:{dbfile}?mode=ro", uri=True, timeout=1.0)
-            connection.row_factory = sqlite3.Row
-            cursor = connection.cursor()
+            with nowplaying.utils.sqlite.sqlite_connection(
+                str(dbfile), timeout=1, row_factory=sqlite3.Row
+            ) as connection:
+                cursor = connection.cursor()
 
-            # Query for latest history item
-            cursor.execute(
-                "SELECT rowid, data FROM database2 "
-                "WHERE collection='historySessionItems' ORDER BY rowid DESC LIMIT 1"
-            )
-            row = cursor.fetchone()
+                # Query for latest history item
+                cursor.execute(
+                    "SELECT rowid, data FROM database2 "
+                    "WHERE collection='historySessionItems' ORDER BY rowid DESC LIMIT 1"
+                )
+                row = cursor.fetchone()
 
-            if not row:
-                return
+                if not row:
+                    return
 
-            track_data = self._parse_blob(row["data"])
+                track_data = self._parse_blob(row["data"])
 
-            # Only require title - metadata extraction will handle the rest
-            if track_data["title"]:
-                # Check if this is a new track
-                if (
-                    self.metadata.get("artist") != track_data["artist"]
-                    or self.metadata.get("title") != track_data["title"]
-                ):
-                    # If filename not in history blob, try to get it from localMediaItemLocations
-                    if not track_data["filename"]:
-                        filename = self._get_filename_for_track(
-                            cursor, track_data["artist"], track_data["title"]
+                # Only require title - metadata extraction will handle the rest
+                if track_data["title"]:
+                    # Check if this is a new track
+                    if (
+                        self.metadata.get("artist") != track_data["artist"]
+                        or self.metadata.get("title") != track_data["title"]
+                    ):
+                        # If filename not in history blob, try to get it from
+                        # localMediaItemLocations
+                        if not track_data["filename"]:
+                            filename = self._get_filename_for_track(
+                                cursor, track_data["artist"], track_data["title"]
+                            )
+                            if filename:
+                                track_data["filename"] = filename
+
+                        self.metadata = {
+                            "artist": track_data["artist"],
+                            "title": track_data["title"],
+                            "album": track_data["album"],
+                            "filename": track_data["filename"],
+                            "bpm": track_data["bpm"],
+                            "duration": track_data["duration"],
+                        }
+                        logging.info(
+                            "New track detected: %s - %s%s%s%s",
+                            track_data["artist"],
+                            track_data["title"],
+                            f" (BPM: {track_data['bpm']})" if track_data["bpm"] else "",
+                            f" [{track_data['album']}]" if track_data["album"] else "",
+                            f" - {track_data['filename']}" if track_data["filename"] else "",
                         )
-                        if filename:
-                            track_data["filename"] = filename
-
-                    self.metadata = {
-                        "artist": track_data["artist"],
-                        "title": track_data["title"],
-                        "album": track_data["album"],
-                        "filename": track_data["filename"],
-                        "bpm": track_data["bpm"],
-                        "duration": track_data["duration"],
-                    }
-                    logging.info(
-                        "New track detected: %s - %s%s%s%s",
-                        track_data["artist"],
-                        track_data["title"],
-                        f" (BPM: {track_data['bpm']})" if track_data["bpm"] else "",
-                        f" [{track_data['album']}]" if track_data["album"] else "",
-                        f" - {track_data['filename']}" if track_data["filename"] else "",
-                    )
-
-            connection.close()
 
         try:
             nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
@@ -301,12 +301,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             return None
 
         def query_db():
-            connection = sqlite3.connect(f"file:{dbfile}?mode=ro", uri=True, timeout=1.0)
-            connection.row_factory = sqlite3.Row
-            cursor = connection.cursor()
-            filename = self._get_filename_for_track(cursor, artist, title)
-            connection.close()
-            return filename
+            with nowplaying.utils.sqlite.sqlite_connection(
+                str(dbfile), timeout=1, row_factory=sqlite3.Row
+            ) as connection:
+                cursor = connection.cursor()
+                filename = self._get_filename_for_track(cursor, artist, title)
+                return filename
 
         try:
             return nowplaying.utils.sqlite.retry_sqlite_operation(query_db)
