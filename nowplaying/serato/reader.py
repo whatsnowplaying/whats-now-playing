@@ -140,19 +140,22 @@ class Serato4RootReader:  # pylint: disable=too-few-public-methods
 
                 # Query to find artist in specified crates
                 # container_asset links containers (crates) to assets (tracks)
+                # Use LOWER() for case-insensitive artist search
+                # Note: f-string only used for placeholder count, all user data passed via params
                 query = f"""
                     SELECT DISTINCT 1
                     FROM container c
                     INNER JOIN container_asset ca ON c.id = ca.container_id
                     INNER JOIN asset a ON ca.asset_id = a.id
                     WHERE c.name IN ({placeholders})
-                    AND a.artist LIKE ?
+                    AND LOWER(a.artist) LIKE LOWER(?)
                     LIMIT 1
                 """
 
                 # Prepare parameters: crate names + artist search pattern
                 params = list(crate_names) + [f"%{artist_name}%"]
 
+                # Safe: all user data in params array, not in query string
                 cursor = await connection.execute(query, params)
                 row = await cursor.fetchone()
 

@@ -44,7 +44,6 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         self.displayname = "Serato DJ"
         self.handler: Serato4Handler | None = None
         self.remote_handler: SeratoRemoteHandler | None = None
-        self.root_reader: Serato4RootReader | None = None
         self.serato_lib_path: pathlib.Path | None = None
         self.mode = "local"  # "local" or "remote"
         self.url: str | None = None
@@ -160,15 +159,6 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
             self.serato_lib_path, pollingobserver=usepoll, polling_interval=polling_interval
         )
         await self.handler.start()
-
-        # Initialize root reader for crate/container queries
-        root_db_path = self.serato_lib_path / "root.sqlite"
-        if root_db_path.exists():
-            self.root_reader = Serato4RootReader(root_db_path)
-        else:
-            logging.warning(
-                "root.sqlite not found at %s - crate filtering unavailable", root_db_path
-            )
 
     async def _start_remote_mode(self) -> None:
         """Start remote web scraping mode"""
@@ -481,11 +471,11 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
                 async with aiosqlite.connect(db_path) as connection:
                     connection.row_factory = aiosqlite.Row
 
-                    # Search asset table for artist
+                    # Search asset table for artist (case-insensitive)
                     query = """
                         SELECT DISTINCT 1
                         FROM asset
-                        WHERE artist LIKE ?
+                        WHERE LOWER(artist) LIKE LOWER(?)
                         LIMIT 1
                     """
 
@@ -527,9 +517,17 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
 
     def on_add_additional_lib_button(self):
         """Add additional library button clicked action"""
+        if not self.qwidget:
+            logging.error("UI widget not initialized")
+            return
+
         library_widgets = self.uihelp.find_tab_by_identifier(
             self.qwidget, "serato_artist_scope_combo"
         )
+        if not library_widgets:
+            logging.error("Library tab not found")
+            return
+
         startdir = str(pathlib.Path.home())
         if libdir := QFileDialog.getExistingDirectory(
             self.qwidget, "Select additional Serato library directory", startdir
