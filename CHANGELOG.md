@@ -6,6 +6,7 @@
 * New Features:
   * Basic support for djay Pro
     * Currently missing a lot of the more advanced features but the groundwork has been put down
+  * Support Klipy as an alternative to Tenor, which is going away
 
 * Serato
   * Enhance the Serato 4 support for crate search
