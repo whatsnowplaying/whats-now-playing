@@ -679,3 +679,173 @@ async def test_twofer(bootstrap, getroot):  # pylint: disable=redefined-outer-na
     data = await trackrequest.get_request(testdata)
     assert data["requester"] == "user1"
     assert data["requestdisplayname"] == "test"
+
+
+@pytest.mark.asyncio
+async def test_gifwords_tenor_request(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """test tenor API gifwords request"""
+    trackrequest = trackrequestbootstrap
+
+    # Mock the aiohttp session for Tenor API
+    mock_response_json = {
+        "results": [
+            {
+                "media_formats": {
+                    "gif": {
+                        "url": "https://example.com/test.gif"
+                    }
+                }
+            }
+        ]
+    }
+
+    mock_gif_content = b"GIF89a test gif content"
+
+    with unittest.mock.patch("aiohttp.ClientSession") as mock_session:
+        # Setup mock for JSON response
+        mock_json_response = unittest.mock.MagicMock()
+        mock_json_response.status = 200
+        mock_json_response.json = unittest.mock.AsyncMock(return_value=mock_response_json)
+        mock_json_response.__aenter__ = unittest.mock.AsyncMock(return_value=mock_json_response)
+        mock_json_response.__aexit__ = unittest.mock.AsyncMock(return_value=None)
+
+        # Setup mock for GIF binary response
+        mock_gif_response = unittest.mock.MagicMock()
+        mock_gif_response.status = 200
+        mock_gif_response.read = unittest.mock.AsyncMock(return_value=mock_gif_content)
+        mock_gif_response.__aenter__ = unittest.mock.AsyncMock(return_value=mock_gif_response)
+        mock_gif_response.__aexit__ = unittest.mock.AsyncMock(return_value=None)
+
+        # Setup mock session context manager
+        mock_session_instance = unittest.mock.MagicMock()
+        mock_session_instance.get = unittest.mock.MagicMock(side_effect=[
+            mock_json_response,
+            mock_gif_response
+        ])
+        mock_session.return_value.__aenter__ = unittest.mock.AsyncMock(return_value=mock_session_instance)
+        mock_session.return_value.__aexit__ = unittest.mock.AsyncMock(return_value=None)
+
+        # Set Tenor API key
+        trackrequest.config.cparser.setValue("gifwords/tenorkey", "test_tenor_key")
+
+        # Call the tenor request method directly
+        result = await trackrequest._tenor_request("funny cat")  # pylint: disable=protected-access
+
+        assert result["keywords"] == "funny cat"
+        assert result["imageurl"] == "https://example.com/test.gif"
+        assert result["image"] == mock_gif_content
+
+
+@pytest.mark.asyncio
+async def test_gifwords_klipy_request(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """test klipy API gifwords request"""
+    trackrequest = trackrequestbootstrap
+
+    # Mock the aiohttp session for Klipy API (same format as Tenor)
+    mock_response_json = {
+        "results": [
+            {
+                "media_formats": {
+                    "gif": {
+                        "url": "https://example.com/klipy-test.gif"
+                    }
+                }
+            }
+        ]
+    }
+
+    mock_gif_content = b"GIF89a klipy test gif content"
+
+    with unittest.mock.patch("aiohttp.ClientSession") as mock_session:
+        # Setup mock for JSON response
+        mock_json_response = unittest.mock.MagicMock()
+        mock_json_response.status = 200
+        mock_json_response.json = unittest.mock.AsyncMock(return_value=mock_response_json)
+        mock_json_response.__aenter__ = unittest.mock.AsyncMock(return_value=mock_json_response)
+        mock_json_response.__aexit__ = unittest.mock.AsyncMock(return_value=None)
+
+        # Setup mock for GIF binary response
+        mock_gif_response = unittest.mock.MagicMock()
+        mock_gif_response.status = 200
+        mock_gif_response.read = unittest.mock.AsyncMock(return_value=mock_gif_content)
+        mock_gif_response.__aenter__ = unittest.mock.AsyncMock(return_value=mock_gif_response)
+        mock_gif_response.__aexit__ = unittest.mock.AsyncMock(return_value=None)
+
+        # Setup mock session context manager
+        mock_session_instance = unittest.mock.MagicMock()
+        mock_session_instance.get = unittest.mock.MagicMock(side_effect=[
+            mock_json_response,
+            mock_gif_response
+        ])
+        mock_session.return_value.__aenter__ = unittest.mock.AsyncMock(return_value=mock_session_instance)
+        mock_session.return_value.__aexit__ = unittest.mock.AsyncMock(return_value=None)
+
+        # Set Klipy API key
+        trackrequest.config.cparser.setValue("gifwords/klipykey", "test_klipy_key")
+
+        # Call the klipy request method directly
+        result = await trackrequest._klipy_request("funny dog")  # pylint: disable=protected-access
+
+        assert result["keywords"] == "funny dog"
+        assert result["imageurl"] == "https://example.com/klipy-test.gif"
+        assert result["image"] == mock_gif_content
+
+
+@pytest.mark.asyncio
+async def test_gifwords_prefers_klipy(trackrequestbootstrap):  # pylint: disable=redefined-outer-name
+    """test that klipy is preferred over tenor when both keys are set"""
+    trackrequest = trackrequestbootstrap
+
+    # Mock the aiohttp session for Klipy API (same format as Tenor)
+    mock_response_json = {
+        "results": [
+            {
+                "media_formats": {
+                    "gif": {
+                        "url": "https://example.com/klipy-preferred.gif"
+                    }
+                }
+            }
+        ]
+    }
+
+    mock_gif_content = b"GIF89a klipy preferred"
+
+    with unittest.mock.patch("aiohttp.ClientSession") as mock_session:
+        # Setup mock for JSON response
+        mock_json_response = unittest.mock.MagicMock()
+        mock_json_response.status = 200
+        mock_json_response.json = unittest.mock.AsyncMock(return_value=mock_response_json)
+        mock_json_response.__aenter__ = unittest.mock.AsyncMock(return_value=mock_json_response)
+        mock_json_response.__aexit__ = unittest.mock.AsyncMock(return_value=None)
+
+        # Setup mock for GIF binary response
+        mock_gif_response = unittest.mock.MagicMock()
+        mock_gif_response.status = 200
+        mock_gif_response.read = unittest.mock.AsyncMock(return_value=mock_gif_content)
+        mock_gif_response.__aenter__ = unittest.mock.AsyncMock(return_value=mock_gif_response)
+        mock_gif_response.__aexit__ = unittest.mock.AsyncMock(return_value=None)
+
+        # Setup mock session context manager
+        mock_session_instance = unittest.mock.MagicMock()
+        mock_session_instance.get = unittest.mock.MagicMock(side_effect=[
+            mock_json_response,
+            mock_gif_response
+        ])
+        mock_session.return_value.__aenter__ = unittest.mock.AsyncMock(return_value=mock_session_instance)
+        mock_session.return_value.__aexit__ = unittest.mock.AsyncMock(return_value=None)
+
+        # Set both API keys
+        trackrequest.config.cparser.setValue("gifwords/tenorkey", "test_tenor_key")
+        trackrequest.config.cparser.setValue("gifwords/klipykey", "test_klipy_key")
+
+        # Call the gifwords request method
+        result = await trackrequest.gifwords_request(
+            {"displayname": "test"}, "testuser", "test keywords"
+        )
+
+        # Should use Klipy when both are set
+        assert result["imageurl"] == "https://example.com/klipy-preferred.gif"
+        assert result["image"] == mock_gif_content
+        assert result["requester"] == "testuser"
+        assert result["keywords"] == "test keywords"
