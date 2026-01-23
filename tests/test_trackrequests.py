@@ -688,15 +688,7 @@ async def test_gifwords_tenor_request(trackrequestbootstrap):  # pylint: disable
 
     # Mock the aiohttp session for Tenor API
     mock_response_json = {
-        "results": [
-            {
-                "media_formats": {
-                    "gif": {
-                        "url": "https://example.com/test.gif"
-                    }
-                }
-            }
-        ]
+        "results": [{"media_formats": {"gif": {"url": "https://example.com/test.gif"}}}]
     }
 
     mock_gif_content = b"GIF89a test gif content"
@@ -718,11 +710,12 @@ async def test_gifwords_tenor_request(trackrequestbootstrap):  # pylint: disable
 
         # Setup mock session context manager
         mock_session_instance = unittest.mock.MagicMock()
-        mock_session_instance.get = unittest.mock.MagicMock(side_effect=[
-            mock_json_response,
-            mock_gif_response
-        ])
-        mock_session.return_value.__aenter__ = unittest.mock.AsyncMock(return_value=mock_session_instance)
+        mock_session_instance.get = unittest.mock.MagicMock(
+            side_effect=[mock_json_response, mock_gif_response]
+        )
+        mock_session.return_value.__aenter__ = unittest.mock.AsyncMock(
+            return_value=mock_session_instance
+        )
         mock_session.return_value.__aexit__ = unittest.mock.AsyncMock(return_value=None)
 
         # Set Tenor API key
@@ -743,15 +736,7 @@ async def test_gifwords_klipy_request(trackrequestbootstrap):  # pylint: disable
 
     # Mock the aiohttp session for Klipy API (same format as Tenor)
     mock_response_json = {
-        "results": [
-            {
-                "media_formats": {
-                    "gif": {
-                        "url": "https://example.com/klipy-test.gif"
-                    }
-                }
-            }
-        ]
+        "results": [{"media_formats": {"gif": {"url": "https://example.com/klipy-test.gif"}}}]
     }
 
     mock_gif_content = b"GIF89a klipy test gif content"
@@ -773,11 +758,12 @@ async def test_gifwords_klipy_request(trackrequestbootstrap):  # pylint: disable
 
         # Setup mock session context manager
         mock_session_instance = unittest.mock.MagicMock()
-        mock_session_instance.get = unittest.mock.MagicMock(side_effect=[
-            mock_json_response,
-            mock_gif_response
-        ])
-        mock_session.return_value.__aenter__ = unittest.mock.AsyncMock(return_value=mock_session_instance)
+        mock_session_instance.get = unittest.mock.MagicMock(
+            side_effect=[mock_json_response, mock_gif_response]
+        )
+        mock_session.return_value.__aenter__ = unittest.mock.AsyncMock(
+            return_value=mock_session_instance
+        )
         mock_session.return_value.__aexit__ = unittest.mock.AsyncMock(return_value=None)
 
         # Set Klipy API key
@@ -798,15 +784,7 @@ async def test_gifwords_prefers_klipy(trackrequestbootstrap):  # pylint: disable
 
     # Mock the aiohttp session for Klipy API (same format as Tenor)
     mock_response_json = {
-        "results": [
-            {
-                "media_formats": {
-                    "gif": {
-                        "url": "https://example.com/klipy-preferred.gif"
-                    }
-                }
-            }
-        ]
+        "results": [{"media_formats": {"gif": {"url": "https://example.com/klipy-preferred.gif"}}}]
     }
 
     mock_gif_content = b"GIF89a klipy preferred"
@@ -828,11 +806,12 @@ async def test_gifwords_prefers_klipy(trackrequestbootstrap):  # pylint: disable
 
         # Setup mock session context manager
         mock_session_instance = unittest.mock.MagicMock()
-        mock_session_instance.get = unittest.mock.MagicMock(side_effect=[
-            mock_json_response,
-            mock_gif_response
-        ])
-        mock_session.return_value.__aenter__ = unittest.mock.AsyncMock(return_value=mock_session_instance)
+        mock_session_instance.get = unittest.mock.MagicMock(
+            side_effect=[mock_json_response, mock_gif_response]
+        )
+        mock_session.return_value.__aenter__ = unittest.mock.AsyncMock(
+            return_value=mock_session_instance
+        )
         mock_session.return_value.__aexit__ = unittest.mock.AsyncMock(return_value=None)
 
         # Set both API keys
