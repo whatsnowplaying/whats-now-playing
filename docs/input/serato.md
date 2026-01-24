@@ -46,6 +46,29 @@ Select **Remote** if **What's Now Playing** runs on a different computer than Se
 
 > **Note:** Remote mode only provides artist and title information.
 
+## Artist Query Configuration
+
+The Serato plugin supports artist-based library queries for the `!hasartist` Twitch chat command and
+roulette playlist features.
+
+### Query Scope
+
+Choose where **What's Now Playing** searches for artists:
+
+* **Entire Library**: Searches all tracks in your Serato library
+* **Selected Playlists/Crates**: Searches only specific playlists or crates (comma-separated list)
+
+### Multiple Library Support
+
+If you have multiple Serato libraries (e.g., separate libraries for different music genres), you can
+configure additional library paths:
+
+1. In the Serato settings, click "Add Library"
+2. Browse to the additional Serato library directory
+3. **What's Now Playing** will search across all configured libraries when querying for artists
+
+This is useful for DJs who organize their music into multiple Serato library databases.
+
 ## Troubleshooting
 
 ### "No Serato 4+ installation found"

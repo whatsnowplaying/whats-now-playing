@@ -30,21 +30,27 @@ output to anything configured such as Twitch.
 1. Open Settings from the **What's Now Playing** icon
 2. Select Output & Display->Remote Output from the left-hand column
 3. Enable it
-4. Set Server to the hostname or IP address of the server computer
-5. Set Port to match the server's webserver port
-6. Set Secret if the server has one configured
-7. Configure your DJ software as usual (Core Settings->Source and Input Sources)
+4. Choose your connection method:
+   * **Auto-discover** (Recommended): Check the "Auto-discover server" checkbox and the client will
+     automatically find the server on your local network using Bonjour/Zeroconf
+   * **Manual**: Enter the server's hostname or IP address and port number
+5. Set Secret if the server has one configured
+6. Configure your DJ software as usual (Core Settings->Source and Input Sources)
 
+> NOTE: Auto-discovery requires both computers to be on the same local network (same subnet) and
+> have mDNS/Bonjour support (built into macOS, Windows 10+, and most Linux distributions). For
+> remote connections across the internet, you must use manual configuration.
+>
 > NOTE: Some content, such as cover art, will not be sent to the remote server.
 
 ## Client Configuration Notes
 
 Turn off these services on client computers to avoid conflicts:
 
-- Artist Extras
-- Discord
-- Kick Chat
-- Twitch (Chat and Requests)
+* Artist Extras
+* Discord
+* Kick Chat
+* Twitch (Chat and Requests)
 
 Recognition services (like AcoustID) must run on the client computer since they need local file access.
 

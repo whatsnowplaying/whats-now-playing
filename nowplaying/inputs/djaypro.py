@@ -447,6 +447,13 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """Get list of all playlists - not implemented yet"""
         return []
 
+    def desc_settingsui(self, qwidget: "QWidget") -> None:
+        """provide a description for the plugins page"""
+        qwidget.setText(
+            "djay Pro is DJ software from Algoriddim. This plugin supports both "
+            "macOS and Windows versions through database monitoring."
+        )
+
     def defaults(self, qsettings: "QSettings"):
         """set the default configuration values for this plugin"""
         # Auto-detect djay Pro directory (macOS vs Windows)

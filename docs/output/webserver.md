@@ -19,6 +19,10 @@ more about WebSockets below.
 4. Change any settings as desired. See below.
 5. Click Save
 
+The webserver automatically advertises itself on the local network using Bonjour/Zeroconf, making it
+discoverable by other **What's Now Playing** instances and compatible applications on the same subnet.
+This feature is built into macOS, Windows 10+, and most Linux distributions.
+
 ## Settings
 
 [![Webserver settings screen](images/webserver.png)](images/webserver.png)

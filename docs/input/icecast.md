@@ -18,7 +18,7 @@ Icecast is best for:
 2. Select Core Settings->Source from the left-hand column
 3. Select Icecast from the list of available input sources
 
-[![icecast-mode-selection-none.png](images/icecast-mode-selection-none.png)](images/icecast-mode-selection-none.png)
+[![icecast-settings.png](images/icecast-settings.png)](images/icecast-settings.png)
 
 1. Select Input Sources->Icecast from the left-hand column
 2. If necessary, change the port from 8000 to another port, such
