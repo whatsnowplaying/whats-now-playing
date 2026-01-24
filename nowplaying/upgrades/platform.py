@@ -99,7 +99,9 @@ class PlatformDetector:
         return None
 
     @staticmethod
-    def _classify_macos_assets(assets: list[dict[str, t.Any]]) -> tuple[
+    def _classify_macos_assets(
+        assets: list[dict[str, t.Any]],
+    ) -> tuple[
         list[tuple[dict[str, t.Any], int | None]], list[tuple[dict[str, t.Any], int | None]]
     ]:
         """
