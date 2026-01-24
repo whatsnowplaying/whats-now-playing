@@ -3,7 +3,7 @@
 **What's Now Playing** has the ability to help manage requests that come
 from Twitch users.
 
-There are four types of requests: generic, twofers, roulette, and gifwords:
+There are four types of requests: generic, twofers, roulette, and Gifwords:
 
 - Generic requests are just that, user may request any track by
   specifying the artist and title.
@@ -161,8 +161,8 @@ GIF image. The GIF can then be displayed on stream via OBS or other streaming so
 
 To enable Gifwords requests, you need an API key from either Klipy (recommended) or Tenor:
 
-* **Klipy** (Recommended): https://klipy.com/docs - Free API that replaces the legacy Tenor service
-* **Tenor**: https://developers.google.com/tenor - Legacy support (being discontinued by Google)
+- **Klipy** (Recommended): <https://klipy.com/docs> - Free API that replaces the legacy Tenor service
+- **Tenor**: <https://developers.google.com/tenor> - Legacy support (being discontinued by Google)
 
 If both API keys are configured, **What's Now Playing** will prefer Klipy over Tenor.
 
@@ -172,11 +172,20 @@ If both API keys are configured, **What's Now Playing** will prefer Klipy over T
 2. Open Settings from the **What's Now Playing** icon
 3. Select Requests from the left-hand column
 4. Enter your API key:
-   * For Klipy: paste into the "Klipy API Key" field
-   * For Tenor: paste into the "Tenor API Key" field
+   - For Klipy: paste into the "Klipy API Key" field
+   - For Tenor: paste into the "Tenor API Key" field
 5. Configure a request entry (chat command or channel redemption) with Gifwords mode
 6. Users submit keywords via the configured command or redemption
-7. The GIF is fetched and can be accessed via the web server or template variables
+7. The GIF is fetched and stored in the requests queue
+
+### Displaying Gifwords in OBS
+
+To display the fetched GIF on your stream, use the WebSocket template `ws-gifwords-fade.htm`:
+
+1. In OBS, add a Browser Source
+2. Set the URL to: `http://localhost:8899/ws-gifwords-fade.htm` (adjust port if needed)
+3. The template automatically displays GIFs from the Gifwords queue with fade transitions
+4. Gifwords are delivered via WebSocket, so the display updates in real-time as requests come in
 
 > NOTE: Gifwords requests do not require track information - users only need to provide keywords
 > describing the type of GIF they want.

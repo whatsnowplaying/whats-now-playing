@@ -21,7 +21,7 @@ djay Pro is DJ software by Algoriddim available for macOS and Windows.
 1. Select Input Sources->djay Pro from the left-hand column
 2. Enter or, using the button, select the directory where the djay Pro media library is located
    * macOS: `~/Music/djay/djay Media Library.djayMediaLibrary`
-   * Windows: `%USERPROFILE%/Music/djay/djay Media Library`
+   * Windows: `%USERPROFILE%\Music\djay\djay Media Library`
 3. Click Save
 
 ## How It Works

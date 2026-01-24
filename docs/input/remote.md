@@ -37,19 +37,20 @@ output to anything configured such as Twitch.
 5. Set Secret if the server has one configured
 6. Configure your DJ software as usual (Core Settings->Source and Input Sources)
 
-> NOTE: Auto-discovery only works on the local network. For remote connections across the
-> internet, you must use manual configuration.
-
+> NOTE: Auto-discovery requires both computers to be on the same local network (same subnet) and
+> have mDNS/Bonjour support (built into macOS, Windows 10+, and most Linux distributions). For
+> remote connections across the internet, you must use manual configuration.
+>
 > NOTE: Some content, such as cover art, will not be sent to the remote server.
 
 ## Client Configuration Notes
 
 Turn off these services on client computers to avoid conflicts:
 
-- Artist Extras
-- Discord
-- Kick Chat
-- Twitch (Chat and Requests)
+* Artist Extras
+* Discord
+* Kick Chat
+* Twitch (Chat and Requests)
 
 Recognition services (like AcoustID) must run on the client computer since they need local file access.
 

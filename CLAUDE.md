@@ -459,7 +459,9 @@ and pass markdown linting:
 
 ### Markdown Syntax
 
-- **Lists**: Always use asterisk (*) for unordered lists, never dashes (-)
+- **Lists**: Match the existing list style in each file (asterisk or dash) - use markdownlint to verify consistency
+- **URLs**: Wrap bare URLs in angle brackets: `<https://example.com>` to avoid MD034 violations
+- **Blockquotes**: Separate consecutive blockquote sections with a blank line (add `>` on blank lines)
 - **Line length**: Keep lines under 120 characters, wrap long sentences across multiple lines
 - **Blank lines**: Use single blank lines between sections, avoid consecutive blank lines
 - **Headers**: Add blank lines before and after headers
@@ -475,8 +477,20 @@ and pass markdown linting:
 
 ### Common Linting Rules to Follow
 
-- **MD004**: Use consistent list style (asterisk only)
+- **MD004**: Use consistent list style within each file (check existing style first)
 - **MD013**: Line length limit (120 characters)
 - **MD022**: Headers should be surrounded by blank lines
+- **MD028**: No blank lines inside blockquotes (use `>` on blank lines between NOTE sections)
 - **MD032**: Lists should be surrounded by blank lines
+- **MD034**: No bare URLs (wrap in angle brackets: `<https://example.com>`)
 - **MD047**: Files should end with a single newline
+
+### Before Submitting Documentation Changes
+
+Always run markdownlint to verify formatting:
+
+```bash
+markdownlint docs/path/to/modified/file.md
+```
+
+Fix any issues before committing to ensure documentation consistency across the project.
