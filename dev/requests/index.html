@@ -1771,6 +1771,56 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#gifwords-requests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gifwords Requests
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Gifwords Requests">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuring-api-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuring API Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup Instructions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#displaying-gifwords-in-obs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Displaying Gifwords in OBS
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2308,7 +2358,7 @@
 <h1 id="user-track-requests">User Track Requests<a class="headerlink" href="#user-track-requests" title="Permanent link">&para;</a></h1>
 <p><strong>What's Now Playing</strong> has the ability to help manage requests that come
 from Twitch users.</p>
-<p>There are three types of requests, generic, twofers, and roulette:</p>
+<p>There are four types of requests: generic, twofers, roulette, and Gifwords:</p>
 <ul>
 <li>Generic requests are just that, user may request any track by
   specifying the artist and title.</li>
@@ -2316,6 +2366,8 @@ from Twitch users.</p>
   and (optionally) a particular track may be selected.</li>
 <li>Roulette requests will pick a random song from the specified
   playlist/crate as the request.</li>
+<li>Gifwords requests allow users to submit keywords and <strong>What's Now Playing</strong>
+  will fetch a related GIF image to display.</li>
 </ul>
 <p><a href="../images/requests_generic.png"><img alt="Request Window" src="../images/requests_generic.png" /></a></p>
 <p>If <strong>What's Now Playing</strong> detects the song has been played, it will be
@@ -2443,6 +2495,40 @@ it will still offer up a duplicate artist.</p>
 <p>NOTE: There is no notification to users that Respin has been selected.</p>
 <p>NOTE: For Traktor and Virtual DJ, Roulette requests require local
 files.</p>
+</blockquote>
+<h2 id="gifwords-requests">Gifwords Requests<a class="headerlink" href="#gifwords-requests" title="Permanent link">&para;</a></h2>
+<p>Gifwords requests allow viewers to submit keywords that <strong>What's Now Playing</strong> uses to fetch a related
+GIF image. The GIF can then be displayed on stream via OBS or other streaming software.</p>
+<h3 id="configuring-api-keys">Configuring API Keys<a class="headerlink" href="#configuring-api-keys" title="Permanent link">&para;</a></h3>
+<p>To enable Gifwords requests, you need an API key from either Klipy (recommended) or Tenor:</p>
+<ul>
+<li><strong>Klipy</strong> (Recommended): <a href="https://klipy.com/docs">https://klipy.com/docs</a> - Free API that replaces the legacy Tenor service</li>
+<li><strong>Tenor</strong>: <a href="https://developers.google.com/tenor">https://developers.google.com/tenor</a> - Legacy support (being discontinued by Google)</li>
+</ul>
+<p>If both API keys are configured, <strong>What's Now Playing</strong> will prefer Klipy over Tenor.</p>
+<h3 id="setup-instructions">Setup Instructions<a class="headerlink" href="#setup-instructions" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Obtain an API key from Klipy or Tenor (see links above)</li>
+<li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
+<li>Select Requests from the left-hand column</li>
+<li>Enter your API key:</li>
+<li>For Klipy: paste into the "Klipy API Key" field</li>
+<li>For Tenor: paste into the "Tenor API Key" field</li>
+<li>Configure a request entry (chat command or channel redemption) with Gifwords mode</li>
+<li>Users submit keywords via the configured command or redemption</li>
+<li>The GIF is fetched and stored in the requests queue</li>
+</ol>
+<h3 id="displaying-gifwords-in-obs">Displaying Gifwords in OBS<a class="headerlink" href="#displaying-gifwords-in-obs" title="Permanent link">&para;</a></h3>
+<p>To display the fetched GIF on your stream, use the WebSocket template <code>ws-gifwords-fade.htm</code>:</p>
+<ol>
+<li>In OBS, add a Browser Source</li>
+<li>Set the URL to: <code>http://localhost:8899/ws-gifwords-fade.htm</code> (adjust port if needed)</li>
+<li>The template automatically displays GIFs from the Gifwords queue with fade transitions</li>
+<li>Gifwords are delivered via WebSocket, so the display updates in real-time as requests come in</li>
+</ol>
+<blockquote>
+<p>NOTE: Gifwords requests do not require track information - users only need to provide keywords
+describing the type of GIF they want.</p>
 </blockquote>
 
 

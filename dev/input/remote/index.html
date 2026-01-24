@@ -2390,12 +2390,17 @@ output to anything configured such as Twitch.</p>
 <li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
 <li>Select Output &amp; Display-&gt;Remote Output from the left-hand column</li>
 <li>Enable it</li>
-<li>Set Server to the hostname or IP address of the server computer</li>
-<li>Set Port to match the server's webserver port</li>
+<li>Choose your connection method:</li>
+<li><strong>Auto-discover</strong> (Recommended): Check the "Auto-discover server" checkbox and the client will
+     automatically find the server on your local network using Bonjour/Zeroconf</li>
+<li><strong>Manual</strong>: Enter the server's hostname or IP address and port number</li>
 <li>Set Secret if the server has one configured</li>
 <li>Configure your DJ software as usual (Core Settings-&gt;Source and Input Sources)</li>
 </ol>
 <blockquote>
+<p>NOTE: Auto-discovery requires both computers to be on the same local network (same subnet) and
+have mDNS/Bonjour support (built into macOS, Windows 10+, and most Linux distributions). For
+remote connections across the internet, you must use manual configuration.</p>
 <p>NOTE: Some content, such as cover art, will not be sent to the remote server.</p>
 </blockquote>
 <h2 id="client-configuration-notes">Client Configuration Notes<a class="headerlink" href="#client-configuration-notes" title="Permanent link">&para;</a></h2>
