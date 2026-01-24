@@ -99,25 +99,18 @@ class PlatformDetector:
         return None
 
     @staticmethod
-    def _find_macos_asset(
-        assets: list[dict[str, t.Any]], platform_info: dict[str, t.Any]
-    ) -> dict[str, t.Any] | None:
+    def _classify_macos_assets(assets: list[dict[str, t.Any]]) -> tuple[
+        list[tuple[dict[str, t.Any], int | None]], list[tuple[dict[str, t.Any], int | None]]
+    ]:
         """
-        Find best macOS asset based on chipset and OS version.
+        Classify macOS assets into ARM and Intel lists with version info.
 
-        Strategy:
-        - Pick the highest macOS version build that is <= user's macOS version
-        - ARM Macs: Prefer ARM build, fall back to Intel (Rosetta 2 compatibility)
-        - Intel Macs: Use Intel builds only (cannot run ARM)
+        Args:
+            assets: List of GitHub asset dicts
+
+        Returns:
+            Tuple of (arm_assets, intel_assets) where each is a list of (asset, version) tuples
         """
-        chipset = platform_info.get("chipset")
-        user_macos_version = platform_info.get("macos_version")
-
-        if not chipset:
-            logging.error("Cannot determine macOS chipset")
-            return None
-
-        # Find all macOS assets with parsed version info
         arm_assets = []
         intel_assets = []
 
@@ -142,9 +135,33 @@ class PlatformDetector:
             elif "Intel" in name or "_intel" in name:
                 intel_assets.append((asset, macos_version))
 
+        return arm_assets, intel_assets
+
+    @staticmethod
+    def _find_macos_asset(
+        assets: list[dict[str, t.Any]], platform_info: dict[str, t.Any]
+    ) -> dict[str, t.Any] | None:
+        """
+        Find best macOS asset based on chipset and OS version.
+
+        Strategy:
+        - Pick the highest macOS version build that is <= user's macOS version
+        - ARM Macs: Prefer ARM build, fall back to Intel (Rosetta 2 compatibility)
+        - Intel Macs: Use Intel builds only (cannot run ARM)
+        """
+        chipset = platform_info.get("chipset")
+        user_macos_version = platform_info.get("macos_version")
+
+        if not chipset:
+            logging.error("Cannot determine macOS chipset")
+            return None
+
+        # Classify assets into ARM and Intel lists with version info
+        arm_assets, intel_assets = PlatformDetector._classify_macos_assets(assets)
+
         # Filter to compatible versions (build version <= user version)
         # If user_macos_version is None, include all versions
-        if user_macos_version:
+        if user_macos_version is not None:
             arm_assets = [
                 (asset, ver)
                 for asset, ver in arm_assets
