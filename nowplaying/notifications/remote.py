@@ -222,7 +222,8 @@ class Plugin(NotificationPlugin):
             self.config.cparser.setValue("remote/remote_port", port)
         self.config.cparser.setValue("remote/remote_key", qwidget.secret_lineedit.text())
 
-    def _update_field_states(self, qwidget: "QWidget"):
+    @staticmethod
+    def _update_field_states(qwidget: "QWidget"):
         """Enable/disable server and port fields based on autodiscover checkbox"""
         autodiscover = qwidget.autodiscover_checkbox.isChecked()
         qwidget.server_lineedit.setEnabled(not autodiscover)

@@ -170,10 +170,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 addrs = netifaces.ifaddresses(interface)
                 if netifaces.AF_INET in addrs:
                     for addr_info in addrs[netifaces.AF_INET]:
-                        ip = addr_info.get("addr")
+                        ip_addr = addr_info.get("addr")
                         # Skip loopback addresses
-                        if ip and not ip.startswith("127."):
-                            addresses.append(socket.inet_aton(ip))
+                        if ip_addr and not ip_addr.startswith("127."):
+                            addresses.append(socket.inet_aton(ip_addr))
 
             # Fallback to localhost if no network interfaces found
             if not addresses:

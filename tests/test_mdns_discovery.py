@@ -73,15 +73,15 @@ async def test_discover_whatsnowplaying_services_success():
         mock_zeroconf_class.return_value = mock_zc
 
         # Mock the listener to simulate finding a service
-        def create_browser(zc, service_type, listener):
+        def create_browser(mock_zeroconf, service_type, listener):
             # Simulate finding a service
             mock_info = MagicMock()
             mock_info.server = "testhost.local."
             mock_info.port = 8899
             mock_info.addresses = [b"\xc0\xa8\x01\x64"]
             mock_info.properties = {}
-            zc.get_service_info.return_value = mock_info
-            listener.add_service(zc, service_type, "TestService")
+            mock_zeroconf.get_service_info.return_value = mock_info
+            listener.add_service(mock_zeroconf, service_type, "TestService")
             return MagicMock()
 
         mock_browser_class.side_effect = create_browser
@@ -117,7 +117,7 @@ async def test_discover_whatsnowplaying_services_exception():
 
         services = nowplaying.mdns_discovery.discover_whatsnowplaying_services(timeout=0.1)
 
-        assert services == []
+        assert not services
 
 
 @pytest.mark.asyncio
