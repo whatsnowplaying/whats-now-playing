@@ -45,11 +45,24 @@
     <string>Enable</string>
    </property>
   </widget>
+  <widget class="QCheckBox" name="autodiscover_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>90</y>
+     <width>200</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Auto-discover server</string>
+   </property>
+  </widget>
   <widget class="QLabel" name="server_label">
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>100</y>
+     <y>120</y>
      <width>67</width>
      <height>16</height>
     </rect>
@@ -62,20 +75,20 @@
    <property name="geometry">
     <rect>
      <x>110</x>
-     <y>100</y>
+     <y>120</y>
      <width>200</width>
      <height>22</height>
     </rect>
    </property>
    <property name="placeholderText">
-    <string>remotehost</string>
+    <string>hostname or IP</string>
    </property>
   </widget>
   <widget class="QLabel" name="port_label">
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>140</y>
+     <y>150</y>
      <width>67</width>
      <height>16</height>
     </rect>
@@ -88,7 +101,7 @@
    <property name="geometry">
     <rect>
      <x>110</x>
-     <y>140</y>
+     <y>150</y>
      <width>100</width>
      <height>22</height>
     </rect>
@@ -132,12 +145,12 @@
      <x>40</x>
      <y>220</y>
      <width>500</width>
-     <height>60</height>
+     <height>80</height>
     </rect>
    </property>
    <property name="text">
     <string>Remote Output sends track metadata to a remote What's Now Playing instance.
-Configure the server hostname/IP, port, and optional secret key.
+Enable auto-discover to find services on your local network automatically, or manually configure the server hostname/IP, port, and optional secret key.
 The remote server must be running with the webserver enabled.</string>
    </property>
    <property name="wordWrap">

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import aiohttp
 
 import nowplaying.db
+import nowplaying.mdns_discovery
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.types import TrackMetadata
 
@@ -141,6 +142,9 @@ class Plugin(NotificationPlugin):
             self.enabled = self.config.cparser.value(
                 "remote/enabled", type=bool, defaultValue=False
             )
+            autodiscover = self.config.cparser.value(
+                "remote/autodiscover", type=bool, defaultValue=False
+            )
             self.server = self.config.cparser.value(
                 "remote/remote_server", defaultValue="remotehost"
             )
@@ -148,6 +152,21 @@ class Plugin(NotificationPlugin):
                 "remote/remote_port", type=int, defaultValue=8899
             )
             self.key = self.config.cparser.value("remote/remote_key")
+
+            # Auto-discovery if checkbox is enabled
+            if autodiscover:
+                service = nowplaying.mdns_discovery.get_first_whatsnowplaying_service()
+                if service:
+                    self.server = service.addresses[0] if service.addresses else service.host
+                    self.port = service.port
+                    logging.info(
+                        "Auto-discovered WhatsNowPlaying service at %s:%d", self.server, self.port
+                    )
+                else:
+                    logging.warning(
+                        "Auto-discovery enabled but no WhatsNowPlaying service found on network"
+                    )
+                    self.enabled = False
 
         if self.enabled != oldenabled:
             logging.info("Remote output enabled for %s:%d", self.server, self.port)
@@ -160,6 +179,7 @@ class Plugin(NotificationPlugin):
     def defaults(self, qsettings: "QSettings"):
         """Set default configuration values"""
         qsettings.setValue("remote/enabled", False)
+        qsettings.setValue("remote/autodiscover", False)
         qsettings.setValue("remote/remote_server", "remotehost")
         qsettings.setValue("remote/remote_port", 8899)
         qsettings.setValue("remote/remote_key", "")
@@ -168,6 +188,9 @@ class Plugin(NotificationPlugin):
         """Load settings into UI"""
         qwidget.enable_checkbox.setChecked(
             self.config.cparser.value("remote/enabled", type=bool, defaultValue=False)
+        )
+        qwidget.autodiscover_checkbox.setChecked(
+            self.config.cparser.value("remote/autodiscover", type=bool, defaultValue=False)
         )
         qwidget.server_lineedit.setText(
             self.config.cparser.value("remote/remote_server", defaultValue="remotehost")
@@ -179,28 +202,48 @@ class Plugin(NotificationPlugin):
             self.config.cparser.value("remote/remote_key", defaultValue="")
         )
 
+        # Connect autodiscover checkbox to enable/disable fields
+        qwidget.autodiscover_checkbox.stateChanged.connect(
+            lambda: self._update_field_states(qwidget)
+        )
+
+        # Disable server/port fields when autodiscover is enabled
+        self._update_field_states(qwidget)
+
     def save_settingsui(self, qwidget: "QWidget"):
         """Save settings from UI"""
         self.config.cparser.setValue("remote/enabled", qwidget.enable_checkbox.isChecked())
+        self.config.cparser.setValue(
+            "remote/autodiscover", qwidget.autodiscover_checkbox.isChecked()
+        )
         self.config.cparser.setValue("remote/remote_server", qwidget.server_lineedit.text())
         with contextlib.suppress(ValueError):
             port = int(qwidget.port_lineedit.text())
             self.config.cparser.setValue("remote/remote_port", port)
         self.config.cparser.setValue("remote/remote_key", qwidget.secret_lineedit.text())
 
+    def _update_field_states(self, qwidget: "QWidget"):
+        """Enable/disable server and port fields based on autodiscover checkbox"""
+        autodiscover = qwidget.autodiscover_checkbox.isChecked()
+        qwidget.server_lineedit.setEnabled(not autodiscover)
+        qwidget.port_lineedit.setEnabled(not autodiscover)
+
     def verify_settingsui(self, qwidget: "QWidget"):
         """Verify settings"""
         if qwidget.enable_checkbox.isChecked():
-            if not qwidget.server_lineedit.text().strip():
-                raise PluginVerifyError(
-                    "Remote server address is required when remote output is enabled"
-                )
-            try:
-                port = int(qwidget.port_lineedit.text())
-                if not 1 <= port <= 65535:
-                    raise PluginVerifyError("Remote port must be between 1 and 65535")
-            except ValueError as err:
-                raise PluginVerifyError("Remote port must be a valid number") from err
+            # Only require server/port if autodiscover is not enabled
+            if not qwidget.autodiscover_checkbox.isChecked():
+                if not qwidget.server_lineedit.text().strip():
+                    raise PluginVerifyError(
+                        "Remote server address is required when remote output is enabled "
+                        "(or enable auto-discover)"
+                    )
+                try:
+                    port = int(qwidget.port_lineedit.text())
+                    if not 1 <= port <= 65535:
+                        raise PluginVerifyError("Remote port must be between 1 and 65535")
+                except ValueError as err:
+                    raise PluginVerifyError("Remote port must be a valid number") from err
         return True
 
     def desc_settingsui(self, qwidget: "QWidget"):
