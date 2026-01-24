@@ -20,10 +20,11 @@ import weakref
 import aiohttp
 import aiosqlite
 import jinja2
+import netifaces
 import requests
 from aiohttp import WSCloseCode, web
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
-from zeroconf import IPVersion, ServiceInfo, Zeroconf
+from zeroconf import IPVersion
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
 from nowplaying.webserver.gifwords_websocket import GifwordsWebSocketHandler
@@ -162,15 +163,30 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             service_name = "WhatsNowPlaying"
             service_type = "_whatsnowplaying._tcp.local."
 
-            # Get local IP addresses
+            # Get all non-loopback IPv4 addresses from network interfaces
+            addresses = []
+            # pylint: disable=no-member
+            for interface in netifaces.interfaces():
+                addrs = netifaces.ifaddresses(interface)
+                if netifaces.AF_INET in addrs:
+                    for addr_info in addrs[netifaces.AF_INET]:
+                        ip = addr_info.get("addr")
+                        # Skip loopback addresses
+                        if ip and not ip.startswith("127."):
+                            addresses.append(socket.inet_aton(ip))
+
+            # Fallback to localhost if no network interfaces found
+            if not addresses:
+                logging.warning("No network interfaces found, using localhost")
+                addresses = [socket.inet_aton("127.0.0.1")]
+
             hostname = socket.gethostname()
-            local_ip = socket.gethostbyname(hostname)
 
             # Create service info
             info = AsyncServiceInfo(
                 service_type,
                 f"{service_name}.{service_type}",
-                addresses=[socket.inet_aton(local_ip)],
+                addresses=addresses,
                 port=self.port,
                 properties={
                     "path": "/",
@@ -185,8 +201,13 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             await self.aiozc.async_register_service(info)
             self.service_info = info
 
+            # Convert addresses back to readable format for logging
+            readable_addrs = [socket.inet_ntoa(addr) for addr in addresses]
             logging.info(
-                "mDNS service registered: %s on %s:%s", service_name, local_ip, self.port
+                "mDNS service registered: %s on %s:%s",
+                service_name,
+                ", ".join(readable_addrs),
+                self.port,
             )
         except Exception as error:  # pylint: disable=broad-except
             logging.warning("Failed to register mDNS service: %s", error)
@@ -197,6 +218,9 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             if self.service_info and self.aiozc:
                 await self.aiozc.async_unregister_service(self.service_info)
                 await self.aiozc.async_close()
+                # Clear references so subsequent calls are no-ops
+                self.service_info = None
+                self.aiozc = None
                 logging.info("mDNS service unregistered")
         except Exception as error:  # pylint: disable=broad-except
             logging.warning("Failed to unregister mDNS service: %s", error)
@@ -207,6 +231,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             await asyncio.sleep(0.5)
         # Unregister mDNS service before stopping
         await self._unregister_mdns_service()
+        # Note: forced_stop() is sync (signal handler), not async - don't await
         self.forced_stop()
 
     async def config_refresh_task(self, app: web.Application):

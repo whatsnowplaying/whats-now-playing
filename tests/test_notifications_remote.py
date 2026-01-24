@@ -65,11 +65,13 @@ async def test_remote_notification_start_autodiscover_found(remote_notification_
     mock_service.host = "discovered.local."
     mock_service.port = 8899
 
-    with patch(
-        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service"
-    ) as mock_discover:
-        mock_discover.return_value = mock_service
+    async def mock_async_discover():
+        return mock_service
 
+    with patch(
+        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async",
+        side_effect=mock_async_discover,
+    ):
         await plugin.start()
 
         assert plugin.enabled is True
@@ -86,11 +88,13 @@ async def test_remote_notification_start_autodiscover_not_found(remote_notificat
 
     plugin = nowplaying.notifications.remote.Plugin(config=config)
 
-    with patch(
-        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service"
-    ) as mock_discover:
-        mock_discover.return_value = None
+    async def mock_async_discover():
+        return None
 
+    with patch(
+        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async",
+        side_effect=mock_async_discover,
+    ):
         await plugin.start()
 
         # Should disable plugin when autodiscover fails
@@ -111,11 +115,13 @@ async def test_remote_notification_start_autodiscover_fallback_to_host(remote_no
     mock_service.host = "fallback.local."
     mock_service.port = 8899
 
-    with patch(
-        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service"
-    ) as mock_discover:
-        mock_discover.return_value = mock_service
+    async def mock_async_discover():
+        return mock_service
 
+    with patch(
+        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async",
+        side_effect=mock_async_discover,
+    ):
         await plugin.start()
 
         assert plugin.enabled is True
@@ -164,6 +170,8 @@ async def test_remote_notification_load_settingsui(remote_notification_bootstrap
     mock_qwidget.server_lineedit.setText.assert_called_once_with("testhost")
     mock_qwidget.port_lineedit.setText.assert_called_once_with("8899")
     mock_qwidget.secret_lineedit.setText.assert_called_once_with("secret")
+    # Verify signal connection is set up
+    mock_qwidget.autodiscover_checkbox.stateChanged.connect.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -255,7 +263,7 @@ async def test_remote_notification_verify_settingsui_manual_invalid_server():
 
 @pytest.mark.asyncio
 async def test_remote_notification_verify_settingsui_manual_invalid_port():
-    """test verify_settingsui with manual config and invalid port"""
+    """test verify_settingsui with manual config and non-numeric port"""
     plugin = nowplaying.notifications.remote.Plugin()
 
     mock_qwidget = MagicMock()
@@ -268,3 +276,21 @@ async def test_remote_notification_verify_settingsui_manual_invalid_port():
         plugin.verify_settingsui(mock_qwidget)
 
     assert "port must be a valid number" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("port_value", ["0", "65536", "-1", "100000"])
+async def test_remote_notification_verify_settingsui_manual_port_out_of_range(port_value):
+    """test verify_settingsui with manual config and out-of-range port"""
+    plugin = nowplaying.notifications.remote.Plugin()
+
+    mock_qwidget = MagicMock()
+    mock_qwidget.enable_checkbox.isChecked.return_value = True
+    mock_qwidget.autodiscover_checkbox.isChecked.return_value = False
+    mock_qwidget.server_lineedit.text.return_value = "testhost"
+    mock_qwidget.port_lineedit.text.return_value = port_value
+
+    with pytest.raises(Exception) as exc_info:
+        plugin.verify_settingsui(mock_qwidget)
+
+    assert "Remote port must be between 1 and 65535" in str(exc_info.value)

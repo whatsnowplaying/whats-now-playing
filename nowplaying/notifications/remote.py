@@ -155,7 +155,7 @@ class Plugin(NotificationPlugin):
 
             # Auto-discovery if checkbox is enabled
             if autodiscover:
-                service = nowplaying.mdns_discovery.get_first_whatsnowplaying_service()
+                service = await nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async()
                 if service:
                     self.server = service.addresses[0] if service.addresses else service.host
                     self.port = service.port

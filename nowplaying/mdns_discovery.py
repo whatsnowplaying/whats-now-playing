@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """mDNS/Bonjour service discovery helper"""
 
+import asyncio
 import logging
 import socket
 import time
@@ -81,6 +82,32 @@ def get_first_whatsnowplaying_service() -> DiscoveredService | None:
         First discovered service or None
     """
     services = discover_whatsnowplaying_services()
+    if services:
+        return services[0]
+    return None
+
+
+async def discover_whatsnowplaying_services_async(timeout: float = 3.0) -> list[DiscoveredService]:
+    """
+    Async version: Discover WhatsNowPlaying services without blocking the event loop
+
+    Args:
+        timeout: How long to search for services (seconds)
+
+    Returns:
+        List of discovered services
+    """
+    return await asyncio.to_thread(discover_whatsnowplaying_services, timeout)
+
+
+async def get_first_whatsnowplaying_service_async() -> DiscoveredService | None:
+    """
+    Async convenience function to get the first discovered WhatsNowPlaying service
+
+    Returns:
+        First discovered service or None
+    """
+    services = await discover_whatsnowplaying_services_async()
     if services:
         return services[0]
     return None
