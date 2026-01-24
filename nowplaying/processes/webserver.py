@@ -10,6 +10,7 @@ import os
 import pathlib
 import secrets
 import signal
+import socket
 import string
 import sys
 import threading
@@ -19,9 +20,12 @@ import weakref
 import aiohttp
 import aiosqlite
 import jinja2
+import netifaces
 import requests
 from aiohttp import WSCloseCode, web
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
+from zeroconf import IPVersion
+from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
 from nowplaying.webserver.gifwords_websocket import GifwordsWebSocketHandler
 from nowplaying.webserver.images_websocket import ImagesWebSocketHandler
@@ -92,6 +96,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         self._init_webdb()
         self.stopevent = stopevent
 
+        # mDNS/Bonjour service registration
+        self.aiozc: AsyncZeroconf | None = None
+        self.service_info: AsyncServiceInfo | None = None
+
         # Initialize WebSocket handlers
         self.images_ws_handler = ImagesWebSocketHandler(
             stopevent=self.stopevent,
@@ -148,11 +156,83 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
         self.databasefile.parent.mkdir(parents=True, exist_ok=True)
 
+    async def _register_mdns_service(self, config: nowplaying.config.ConfigFile):
+        """Register the webserver via mDNS/Bonjour for autodiscovery"""
+        try:
+            # Use a consistent service name and custom service type
+            service_name = "WhatsNowPlaying"
+            service_type = "_whatsnowplaying._tcp.local."
+
+            # Get all non-loopback IPv4 addresses from network interfaces
+            addresses = []
+            # pylint: disable=no-member
+            for interface in netifaces.interfaces():
+                addrs = netifaces.ifaddresses(interface)
+                if netifaces.AF_INET in addrs:
+                    for addr_info in addrs[netifaces.AF_INET]:
+                        ip_addr = addr_info.get("addr")
+                        # Skip loopback addresses
+                        if ip_addr and not ip_addr.startswith("127."):
+                            addresses.append(socket.inet_aton(ip_addr))
+
+            # Fallback to localhost if no network interfaces found
+            if not addresses:
+                logging.warning("No network interfaces found, using localhost")
+                addresses = [socket.inet_aton("127.0.0.1")]
+
+            hostname = socket.gethostname()
+
+            # Create service info
+            info = AsyncServiceInfo(
+                service_type,
+                f"{service_name}.{service_type}",
+                addresses=addresses,
+                port=self.port,
+                properties={
+                    "path": "/",
+                    "version": config.version,
+                    "app": "WhatsNowPlaying",
+                },
+                server=f"{hostname}.",
+            )
+
+            # Register the service
+            self.aiozc = AsyncZeroconf(ip_version=IPVersion.V4Only)
+            await self.aiozc.async_register_service(info)
+            self.service_info = info
+
+            # Convert addresses back to readable format for logging
+            readable_addrs = [socket.inet_ntoa(addr) for addr in addresses]
+            logging.info(
+                "mDNS service registered: %s on %s:%s",
+                service_name,
+                ", ".join(readable_addrs),
+                self.port,
+            )
+        except Exception as error:  # pylint: disable=broad-except
+            logging.warning("Failed to register mDNS service: %s", error)
+
+    async def _unregister_mdns_service(self):
+        """Unregister the mDNS/Bonjour service"""
+        try:
+            if self.service_info and self.aiozc:
+                await self.aiozc.async_unregister_service(self.service_info)
+                await self.aiozc.async_close()
+                # Clear references so subsequent calls are no-ops
+                self.service_info = None
+                self.aiozc = None
+                logging.info("mDNS service unregistered")
+        except Exception as error:  # pylint: disable=broad-except
+            logging.warning("Failed to unregister mDNS service: %s", error)
+
     async def stopeventtask(self):
         """task to wait for the stop event"""
         while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(0.5)
-        await self.forced_stop()
+        # Unregister mDNS service before stopping
+        await self._unregister_mdns_service()
+        # Note: forced_stop() is sync (signal handler), not async - don't await
+        self.forced_stop()
 
     async def config_refresh_task(self, app: web.Application):
         """Background task to periodically refresh config from main process"""
@@ -496,6 +576,9 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
         await site.start()
 
+        # Register mDNS/Bonjour service after server starts
+        await self._register_mdns_service(runner.app[CONFIG_KEY])
+
     async def on_startup(self, app: web.Application):
         """setup app connections"""
         app[CONFIG_KEY] = nowplaying.config.ConfigFile(testmode=self.testmode)
@@ -541,9 +624,11 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         for websocket in set(app[WS_KEY]):
             await websocket.close(code=WSCloseCode.GOING_AWAY, message="Server shutdown")
 
-    @staticmethod
-    async def on_cleanup(app: web.Application):
+    async def on_cleanup(self, app: web.Application):
         """cleanup the app"""
+        # Unregister mDNS service
+        await self._unregister_mdns_service()
+
         await app["statedb"].close()
         app[WATCHER_KEY].stop()
         app[IC_KEY].close()
