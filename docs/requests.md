@@ -3,7 +3,7 @@
 **What's Now Playing** has the ability to help manage requests that come
 from Twitch users.
 
-There are three types of requests, generic, twofers, and roulette:
+There are four types of requests: generic, twofers, roulette, and gifwords:
 
 - Generic requests are just that, user may request any track by
   specifying the artist and title.
@@ -11,6 +11,8 @@ There are three types of requests, generic, twofers, and roulette:
   and (optionally) a particular track may be selected.
 - Roulette requests will pick a random song from the specified
   playlist/crate as the request.
+- Gifwords requests allow users to submit keywords and **What's Now Playing**
+  will fetch a related GIF image to display.
 
 [![Request Window](images/requests_generic.png)](images/requests_generic.png)
 
@@ -149,3 +151,32 @@ it will still offer up a duplicate artist.
 >
 > NOTE: For Traktor and Virtual DJ, Roulette requests require local
 > files.
+
+## Gifwords Requests
+
+Gifwords requests allow viewers to submit keywords that **What's Now Playing** uses to fetch a related
+GIF image. The GIF can then be displayed on stream via OBS or other streaming software.
+
+### Configuring API Keys
+
+To enable Gifwords requests, you need an API key from either Klipy (recommended) or Tenor:
+
+* **Klipy** (Recommended): https://klipy.com/docs - Free API that replaces the legacy Tenor service
+* **Tenor**: https://developers.google.com/tenor - Legacy support (being discontinued by Google)
+
+If both API keys are configured, **What's Now Playing** will prefer Klipy over Tenor.
+
+### Setup Instructions
+
+1. Obtain an API key from Klipy or Tenor (see links above)
+2. Open Settings from the **What's Now Playing** icon
+3. Select Requests from the left-hand column
+4. Enter your API key:
+   * For Klipy: paste into the "Klipy API Key" field
+   * For Tenor: paste into the "Tenor API Key" field
+5. Configure a request entry (chat command or channel redemption) with Gifwords mode
+6. Users submit keywords via the configured command or redemption
+7. The GIF is fetched and can be accessed via the web server or template variables
+
+> NOTE: Gifwords requests do not require track information - users only need to provide keywords
+> describing the type of GIF they want.

@@ -6,10 +6,16 @@
 * New Features:
   * Basic support for djay Pro
     * Currently missing a lot of the more advanced features but the groundwork has been put down
-  * Support Klipy as an alternative to Tenor, which is going away
+  * Support Klipy as an alternative to the EOLing Tenor
+    * Klipy is preferred when both API keys are configured
+  * Add support for autodiscovery using Bonjour/Zeroconf for Remote Output and for
+    some upcoming feature support
 
 * Serato
-  * Enhance the Serato 4 support for crate search
+  * Add artist-based library query support for Serato 4
+    * Search entire library or selected playlists/crates for artist tracks
+    * Support for multiple library paths including additional user-specified directories
+    * Enhanced crate search and metadata querying capabilities
   * Changes to better detect when the latest track is playing
 
 * Developer Stuff

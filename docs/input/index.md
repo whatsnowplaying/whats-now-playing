@@ -12,6 +12,7 @@ Professional DJ software with direct integration:
 - **[Serato 3.x](serato3.md)** - Legacy Serato DJ integration with smart crate support
 - **[Traktor](traktor.md)** - Native Instruments Traktor with Icecast streaming + database enhancement
 - **[Virtual DJ](virtualdj.md)** - Virtual DJ software with history file monitoring
+- **[djay Pro](djaypro.md)** - Algoriddim djay Pro with database and file monitoring (basic support)
 - **[DJUCED](djuced.md)** - Hercules DJUCED software integration
 - **[Denon](denon.md)** - Denon DJ software integration
 
