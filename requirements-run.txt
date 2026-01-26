@@ -24,7 +24,7 @@ simpleobsws==1.4.3
 twitchAPI==4.5.0
 url_normalize==2.2.1
 watchdog==6.0.0
-zeroconf==0.141.0
+zeroconf==0.148.0
 
 #
 # required to install
