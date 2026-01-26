@@ -12,7 +12,7 @@ netifaces-plus==0.12.5
 nltk==3.9.2
 normality==2.6.1
 pillow==12.1.0
-pillow_avif_plugin==1.5.2
+pillow_avif_plugin==1.5.5
 puremagic==1.30
 pyacoustid==1.3.0
 pypresence==4.6.1
