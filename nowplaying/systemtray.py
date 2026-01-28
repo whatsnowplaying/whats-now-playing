@@ -139,6 +139,13 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self._configure_newold_menu()
         self.menu.addSeparator()
 
+        # Guess Game toggle
+        self.action_guessgame = QAction("Guess Game")
+        self.action_guessgame.setCheckable(True)
+        self.action_guessgame.triggered.connect(self.toggle_guessgame)
+        self.menu.addAction(self.action_guessgame)
+        self.menu.addSeparator()
+
         # Pause and Exit actions
         self.action_pause = QAction()
         self._configure_pause_menu()
@@ -164,6 +171,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.action_pause.setText("Pause")
         self.action_pause.setEnabled(True)
         self.fix_mixmode_menu()
+        self.fix_guessgame_menu()
 
         # Settings and process startup
         self._update_startup_progress("Initializing settings...")
@@ -307,6 +315,19 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.config.pause()
         self.action_pause.setText("Resume")
         self.action_pause.triggered.connect(self.unpause)
+
+    def toggle_guessgame(self) -> None:
+        """toggle guess game enabled state"""
+        current = self.config.cparser.value("guessgame/enabled", type=bool, defaultValue=False)
+        self.config.cparser.setValue("guessgame/enabled", not current)
+        self.config.cparser.sync()
+        self.fix_guessgame_menu()
+        logging.info("Guess game %s via system tray", "enabled" if not current else "disabled")
+
+    def fix_guessgame_menu(self) -> None:
+        """update the guess game menu based on config"""
+        enabled = self.config.cparser.value("guessgame/enabled", type=bool, defaultValue=False)
+        self.action_guessgame.setChecked(enabled)
 
     def fix_mixmode_menu(self) -> None:
         """update the mixmode based upon current rules"""

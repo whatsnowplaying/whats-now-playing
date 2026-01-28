@@ -1,0 +1,17 @@
+{% if guess_error -%}
+{{ guess_error }}
+{%- elif guess_already_guessed -%}
+@{{ guess_user }} You already guessed "{{ guess_text }}"!
+{%- elif guess_already_solved -%}
+@{{ guess_user }} That part is already solved!
+{%- elif guess_solved and guess_solve_type == "both" -%}
+@{{ guess_user }} 🎉 GAME COMPLETE! +{{ guess_points }} points! The answer was: {{ guess_masked_track }} by {{ guess_masked_artist }}
+{%- elif guess_solve_type == "track" -%}
+@{{ guess_user }} 🎵 TRACK SOLVED! +{{ guess_points }} points! Now guess the artist: {{ guess_masked_artist }}
+{%- elif guess_solve_type == "artist" -%}
+@{{ guess_user }} 🎤 ARTIST SOLVED! +{{ guess_points }} points! Now guess the track: {{ guess_masked_track }}
+{%- elif guess_correct -%}
+@{{ guess_user }} ✓ Correct! +{{ guess_points }} points | Track: {{ guess_masked_track }} | Artist: {{ guess_masked_artist }}
+{%- else -%}
+@{{ guess_user }} ✗ Not quite! | Track: {{ guess_masked_track }} | Artist: {{ guess_masked_artist }}
+{%- endif -%}

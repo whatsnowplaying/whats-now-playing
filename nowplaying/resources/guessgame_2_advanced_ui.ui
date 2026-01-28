@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>guessgame_advanced_form</class>
+ <widget class="QWidget" name="guessgame_advanced_form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>650</width>
+    <height>380</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Advanced</string>
+  </property>
+  <property name="displayName" stdset="0">
+   <string>Advanced</string>
+  </property>
+
+  <!-- Scoring Configuration Section -->
+  <widget class="QLabel" name="scoring_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>200</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>**Scoring Configuration**</string>
+   </property>
+   <property name="textFormat">
+    <enum>Qt::MarkdownText</enum>
+   </property>
+  </widget>
+
+  <!-- Left Column -->
+  <widget class="QLabel" name="points_common_letter_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>50</y>
+     <width>180</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Common Letter Points</string>
+   </property>
+  </widget>
+
+  <widget class="QSpinBox" name="points_common_letter_spinbox">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>50</y>
+     <width>80</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>0</number>
+   </property>
+   <property name="maximum">
+    <number>100</number>
+   </property>
+   <property name="value">
+    <number>1</number>
+   </property>
+  </widget>
+
+  <widget class="QLabel" name="points_uncommon_letter_label">
+   <property name="geometry">
+    <rect>
+     <x>310</x>
+     <y>50</y>
+     <width>180</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Uncommon Letter Points</string>
+   </property>
+  </widget>
+
+  <widget class="QSpinBox" name="points_uncommon_letter_spinbox">
+   <property name="geometry">
+    <rect>
+     <x>500</x>
+     <y>50</y>
+     <width>80</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>0</number>
+   </property>
+   <property name="maximum">
+    <number>100</number>
+   </property>
+   <property name="value">
+    <number>2</number>
+   </property>
+  </widget>
+
+  <widget class="QLabel" name="points_rare_letter_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>85</y>
+     <width>180</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Rare Letter Points (Q,X,Z,J)</string>
+   </property>
+  </widget>
+
+  <widget class="QSpinBox" name="points_rare_letter_spinbox">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>85</y>
+     <width>80</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>0</number>
+   </property>
+   <property name="maximum">
+    <number>100</number>
+   </property>
+   <property name="value">
+    <number>3</number>
+   </property>
+  </widget>
+
+  <widget class="QLabel" name="points_correct_word_label">
+   <property name="geometry">
+    <rect>
+     <x>310</x>
+     <y>85</y>
+     <width>180</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Correct Word Points</string>
+   </property>
+  </widget>
+
+  <widget class="QSpinBox" name="points_correct_word_spinbox">
+   <property name="geometry">
+    <rect>
+     <x>500</x>
+     <y>85</y>
+     <width>80</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>0</number>
+   </property>
+   <property name="maximum">
+    <number>500</number>
+   </property>
+   <property name="value">
+    <number>10</number>
+   </property>
+  </widget>
+
+  <widget class="QLabel" name="points_wrong_word_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>120</y>
+     <width>180</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Wrong Word Penalty</string>
+   </property>
+  </widget>
+
+  <widget class="QSpinBox" name="points_wrong_word_spinbox">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>120</y>
+     <width>80</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>-100</number>
+   </property>
+   <property name="maximum">
+    <number>0</number>
+   </property>
+   <property name="value">
+    <number>-1</number>
+   </property>
+  </widget>
+
+  <widget class="QLabel" name="points_complete_solve_label">
+   <property name="geometry">
+    <rect>
+     <x>310</x>
+     <y>120</y>
+     <width>180</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Complete Solve Points</string>
+   </property>
+  </widget>
+
+  <widget class="QSpinBox" name="points_complete_solve_spinbox">
+   <property name="geometry">
+    <rect>
+     <x>500</x>
+     <y>120</y>
+     <width>80</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>0</number>
+   </property>
+   <property name="maximum">
+    <number>1000</number>
+   </property>
+   <property name="value">
+    <number>100</number>
+   </property>
+  </widget>
+
+  <widget class="QLabel" name="points_first_solver_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>155</y>
+     <width>180</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>First Solver Bonus</string>
+   </property>
+  </widget>
+
+  <widget class="QSpinBox" name="points_first_solver_spinbox">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>155</y>
+     <width>80</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>0</number>
+   </property>
+   <property name="maximum">
+    <number>1000</number>
+   </property>
+   <property name="value">
+    <number>50</number>
+   </property>
+  </widget>
+
+  <widget class="QPushButton" name="clear_leaderboards_button">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>205</y>
+     <width>200</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Clear All Leaderboards</string>
+   </property>
+  </widget>
+
+  <!-- Advanced Options -->
+  <widget class="QLabel" name="advanced_label">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>255</y>
+     <width>200</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>**Advanced Options**</string>
+   </property>
+   <property name="textFormat">
+    <enum>Qt::MarkdownText</enum>
+   </property>
+  </widget>
+
+  <widget class="QCheckBox" name="auto_reveal_common_words_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>290</y>
+     <width>620</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Auto-reveal common words (the, a, remix, feat, etc.)</string>
+   </property>
+  </widget>
+
+  <widget class="QCheckBox" name="time_bonus_enabled_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>330</y>
+     <width>620</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enable time bonus (faster solves = more points)</string>
+   </property>
+  </widget>
+
+ </widget>
+ <resources/>
+ <connections/>
+
+</ui>

@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 
 import nowplaying.config
 import nowplaying.firstinstall
+import nowplaying.guessgamesettings
 import nowplaying.hostmeta
 import nowplaying.musicbrainz.plugin
 import nowplaying.settings.categories
@@ -77,6 +78,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "kick": nowplaying.kick.settings.KickSettings(),
             "kickchat": nowplaying.kick.settings.KickChatSettings(),
             "requests": nowplaying.trackrequests.TrackRequestSettings(),
+            "guessgame": nowplaying.guessgamesettings.GuessGameSettings(),
             "recognition_musicbrainz": nowplaying.musicbrainz.plugin.Plugin(config=self.config),
         }
 
@@ -104,6 +106,14 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         if self.config.initialized:
             self.settingsclasses["twitchchat"].update_twitchbot_commands(self.config)
             self.settingsclasses["kickchat"].update_kickbot_commands(self.config)
+
+            # Reload command tables to show newly discovered commands
+            self.settingsclasses["twitchchat"].load(
+                self.config, self.widgets["twitchchat"], self.uihelp
+            )
+            self.settingsclasses["kickchat"].load(
+                self.config, self.widgets["kickchat"], self.uihelp
+            )
 
             # Validate stored OAuth2 tokens and update UI status
             self._validate_all_oauth_tokens()
@@ -153,6 +163,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "kick",
             "kickchat",
             "requests",
+            "guessgame",
             "artistextras",
             "obsws",
             "discordbot",
@@ -194,6 +205,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "kick",
             "kickchat",
             "requests",
+            "guessgame",
         ]:
             self.settingsclasses[key].load(self.config, self.widgets[key], self.uihelp)
             self.settingsclasses[key].connect(self.uihelp, self.widgets[key])
@@ -290,7 +302,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 logging.debug("Tab widget '%s' is empty, skipping", tab_group.name)
 
         # Add standalone items in streaming category
-        for item_name in ["requests", "discordbot"]:
+        for item_name in ["requests", "guessgame", "discordbot"]:
             if item_name in self.widgets and self.widgets[item_name]:
                 display_name = self._get_display_name(item_name, self.widgets[item_name])
                 child_item = QTreeWidgetItem([display_name])
@@ -421,6 +433,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "twitchchat",
             "kick",
             "requests",
+            "guessgame",
         ]:
             self.settingsclasses[key].load(self.config, self.widgets[key], self.uihelp)
 
@@ -668,6 +681,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "kick",
             "kickchat",
             "requests",
+            "guessgame",
         ]:
             self.settingsclasses[key].save(self.config, self.widgets[key], self.tray.subprocesses)
 
@@ -1230,9 +1244,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "kick",
             "kickchat",
             "requests",
+            "guessgame",
         ]:
             try:
-                self.settingsclasses[key].verify(self.widgets[key])
+                if hasattr(self.settingsclasses[key], 'verify'):
+                    self.settingsclasses[key].verify(self.widgets[key])
             except PluginVerifyError as error:
                 if self.errormessage:
                     self.errormessage.showMessage(error.message)

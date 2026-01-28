@@ -6,6 +6,7 @@ import importlib
 import logging
 import multiprocessing
 import socket
+import sys
 import typing as t
 
 from PySide6.QtWidgets import QApplication, QMessageBox  # pylint: disable=import-error,no-name-in-module
@@ -139,6 +140,12 @@ class SubprocessManager:
         """Check if a port is available for binding"""
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                # Set SO_REUSEADDR to match webserver behavior (allows binding to TIME_WAIT ports)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                # On Windows, also set SO_EXCLUSIVEADDRUSE to prevent multiple binds
+                # (Windows SO_REUSEADDR is more permissive than Unix)
+                if sys.platform == "win32":
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
                 sock.bind((host, port))
                 return True
         except OSError:
