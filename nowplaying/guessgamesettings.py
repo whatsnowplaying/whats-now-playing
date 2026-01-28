@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Guess Game Settings UI integration"""
 
-import asyncio
 import logging
 import sys
 
@@ -207,9 +206,9 @@ class GuessGameSettings:
             config = self.uihelp.config if self.uihelp else None
             guessgame = nowplaying.guessgame.GuessGame(config=config)
 
-            # Call async method
+            # Clear leaderboards (synchronous)
             try:
-                success = asyncio.run(guessgame.clear_leaderboards())
+                success = guessgame.clear_leaderboards()
 
                 if success:
                     QMessageBox.information(

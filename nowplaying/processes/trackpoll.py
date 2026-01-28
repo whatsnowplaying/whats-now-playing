@@ -445,7 +445,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             self.guessgame
             and self.currentmeta.get("artist")
             and self.currentmeta.get("title")
-            and self.guessgame._is_enabled()  # pylint: disable=protected-access
+            and self.guessgame.is_enabled()
         )
 
         if should_start_game:
@@ -457,8 +457,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             # Start new game and buffer metadata (suppress announcements)
             try:
                 await self.guessgame.start_new_game(
-                    track=self.currentmeta["title"],
-                    artist=self.currentmeta["artist"]
+                    track=self.currentmeta["title"], artist=self.currentmeta["artist"]
                 )
                 self.buffered_metadata = self.currentmeta.copy()
                 logging.debug("Metadata buffered for guess game, suppressing announcements")
@@ -481,9 +480,11 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         if not self.buffered_metadata:
             return
 
-        logging.info("Flushing buffered metadata: %s - %s",
-                     self.buffered_metadata.get("artist"),
-                     self.buffered_metadata.get("title"))
+        logging.info(
+            "Flushing buffered metadata: %s - %s",
+            self.buffered_metadata.get("artist"),
+            self.buffered_metadata.get("title"),
+        )
 
         if not self.testmode:
             metadb = nowplaying.db.MetadataDB()
@@ -709,7 +710,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             return
 
         # Check if guess game was disabled mid-game
-        if not self.guessgame._is_enabled():  # pylint: disable=protected-access
+        if not self.guessgame.is_enabled():
             logging.info("Guess game disabled, flushing buffered metadata")
             await self._flush_buffered_metadata()
             return
@@ -718,8 +719,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         game_state = await self.guessgame.get_current_state()
         if game_state and game_state.get("status") in ("solved", "timeout"):
             logging.info(
-                "Guess game completed (%s), flushing buffered metadata",
-                game_state.get("status")
+                "Guess game completed (%s), flushing buffered metadata", game_state.get("status")
             )
             await self._flush_buffered_metadata()
         elif not game_state or game_state.get("status") == "waiting":

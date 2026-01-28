@@ -313,7 +313,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             return self.config.cparser.value(full_key, type=value_type, defaultValue=default)
         return self.config.cparser.value(full_key, defaultValue=default)
 
-    def _is_enabled(self) -> bool:
+    def is_enabled(self) -> bool:
         """Check if guess game is enabled"""
         return self._get_config("enabled", False, bool)
 
@@ -462,7 +462,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         Returns:
             True if game started successfully
         """
-        if not self._is_enabled():
+        if not self.is_enabled():
             logging.debug("Guess game disabled, not starting new game")
             return False
 
@@ -561,7 +561,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 'already_guessed': bool
             }
         """
-        if not self._is_enabled():
+        if not self.is_enabled():
             return None
 
         if not username or not guess_text:
@@ -822,13 +822,13 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 )
 
                 # Update current game state
+                # Note: difficulty_bonus is preserved from game start - not updated per guess
                 await cursor.execute(
                     """
                     UPDATE current_game SET
                         masked_track = ?,
                         masked_artist = ?,
                         revealed_letters = ?,
-                        difficulty_bonus = 0,
                         track_solved = ?,
                         artist_solved = ?
                     WHERE id = 1
@@ -923,7 +923,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         Returns:
             True if game ended successfully
         """
-        if not self._is_enabled():
+        if not self.is_enabled():
             return False
 
         try:
@@ -982,7 +982,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         Returns:
             Dict with game state or None if no active game
         """
-        if not self._is_enabled():
+        if not self.is_enabled():
             return None
 
         try:
@@ -1073,27 +1073,36 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         Returns:
             List of dicts with rank, username, score, solves
         """
-        if not self._is_enabled():
+        if not self.is_enabled():
             return None
 
-        score_col = "session_score" if leaderboard_type == "session" else "alltime_score"
-        solves_col = "session_solves" if leaderboard_type == "session" else "alltime_solves"
+        # Whitelist column names to prevent SQL injection
+        column_mapping = {
+            "session": ("session_score", "session_solves"),
+            "alltime": ("alltime_score", "alltime_solves"),
+        }
+
+        if leaderboard_type not in column_mapping:
+            logging.error("Invalid leaderboard_type: %s", leaderboard_type)
+            return None
+
+        score_col, solves_col = column_mapping[leaderboard_type]
 
         try:
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
 
-                await cursor.execute(
-                    f"""
+                # Use validated column names (not from user input directly)
+                query = f"""
                     SELECT username, {score_col} as score, {solves_col} as solves
                     FROM user_scores
                     WHERE {score_col} > 0
                     ORDER BY {score_col} DESC, {solves_col} DESC
                     LIMIT ?
-                """,
-                    (limit,),
-                )
+                """
+
+                await cursor.execute(query, (limit,))
 
                 rows = await cursor.fetchall()
 
@@ -1125,7 +1134,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         Returns:
             Dict with user stats or None if not found
         """
-        if not self._is_enabled():
+        if not self.is_enabled():
             return None
 
         try:
@@ -1167,7 +1176,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         Returns:
             True if reset successful
         """
-        if not self._is_enabled():
+        if not self.is_enabled():
             return False
 
         try:
@@ -1212,7 +1221,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         Returns:
             True if game was timed out, False if still active or no game
         """
-        if not self._is_enabled():
+        if not self.is_enabled():
             return False
 
         try:
@@ -1244,7 +1253,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             logging.error("Failed to check game timeout: %s", error)
             return False
 
-    async def clear_leaderboards(self) -> bool:
+    def clear_leaderboards(self) -> bool:
         """
         Clear all user scores from the leaderboards.
         This deletes all entries from the user_scores table.
@@ -1253,13 +1262,15 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             True if cleared successfully, False on error
         """
         try:
-            async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
-                cursor = await connection.cursor()
+            with nowplaying.utils.sqlite.sqlite_connection(
+                str(self.databasefile), timeout=30
+            ) as connection:
+                cursor = connection.cursor()
 
                 # Delete all user scores
-                await cursor.execute("DELETE FROM user_scores")
+                cursor.execute("DELETE FROM user_scores")
 
-                await connection.commit()
+                connection.commit()
                 logging.info("All leaderboards cleared")
                 return True
 
