@@ -28,6 +28,7 @@ from zeroconf import IPVersion
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
 from nowplaying.webserver.gifwords_websocket import GifwordsWebSocketHandler
+from nowplaying.webserver.guessgame_websocket import GuessgameWebSocketHandler
 from nowplaying.webserver.images_websocket import ImagesWebSocketHandler
 from nowplaying.webserver.static_handlers import StaticContentHandler
 
@@ -86,6 +87,8 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         threading.current_thread().name = "WebServer"
         self.tasks = set()
         self.testmode = testmode
+        self.runner: web.AppRunner | None = None
+        self.site: web.TCPSite | None = None
         if not config:
             config = nowplaying.config.ConfigFile(bundledir=bundledir, testmode=testmode)
         self.port: int = config.cparser.value("weboutput/httpport", type=int)
@@ -111,6 +114,11 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         )
 
         self.gifwords_ws_handler = GifwordsWebSocketHandler(
+            stopevent=self.stopevent,
+            config_key=CONFIG_KEY,
+        )
+
+        self.guessgame_ws_handler = GuessgameWebSocketHandler(
             stopevent=self.stopevent,
             config_key=CONFIG_KEY,
         )
@@ -543,6 +551,9 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get("/wsstream", self.websocket_streamer),
                 web.get("/wsartistfanartstream", self.websocket_artistfanart_streamer),
                 web.get("/wsgifwordsstream", self.gifwords_ws_handler.websocket_gifwords_streamer),
+                web.get(
+                    "/wsguessgamestream", self.guessgame_ws_handler.websocket_guessgame_streamer
+                ),
                 web.get("/v1/images/ws", self.images_ws_handler.websocket_images_handler),
                 web.get(
                     "/whatsnowplaying-websocket.js", self.static_handler.whatsnowplaying_js_handler
@@ -555,29 +566,74 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
     async def start_server(self, host: str = "127.0.0.1", port: int = 8899):
         """start our server"""
-        runner = self.create_runner()
-        await runner.setup()
-        site = web.TCPSite(runner, host, port)
+        self.runner = self.create_runner()
+        await self.runner.setup()
+        self.site = web.TCPSite(self.runner, host, port, reuse_address=True)
 
         # Start background tasks
         stop_task = asyncio.create_task(self.stopeventtask())
         self.tasks.add(stop_task)
         stop_task.add_done_callback(self.tasks.discard)
 
-        config_task = asyncio.create_task(self.config_refresh_task(runner.app))
+        config_task = asyncio.create_task(self.config_refresh_task(self.runner.app))
         self.tasks.add(config_task)
         config_task.add_done_callback(self.tasks.discard)
 
         gifwords_task = asyncio.create_task(
-            self.gifwords_ws_handler.gifwords_broadcast_task(runner.app)
+            self.gifwords_ws_handler.gifwords_broadcast_task(self.runner.app)
         )
         self.tasks.add(gifwords_task)
         gifwords_task.add_done_callback(self.tasks.discard)
 
-        await site.start()
+        guessgame_task = asyncio.create_task(
+            self.guessgame_ws_handler.guessgame_broadcast_task(self.runner.app)
+        )
+        self.tasks.add(guessgame_task)
+        guessgame_task.add_done_callback(self.tasks.discard)
+
+        # Retry port binding with exponential backoff
+        max_retries = 5
+        retry_delay = 0.5  # Start with 0.5 seconds
+        last_error = None
+
+        for attempt in range(max_retries):
+            try:
+                await self.site.start()
+                if attempt > 0:
+                    logging.info(
+                        "Successfully bound to port %s:%s after %s attempts",
+                        host,
+                        port,
+                        attempt + 1,
+                    )
+                break
+            except OSError as error:
+                last_error = error
+                if attempt < max_retries - 1:
+                    logging.warning(
+                        "Port %s:%s binding attempt %s/%s failed: %s. Retrying in %.1fs...",
+                        host,
+                        port,
+                        attempt + 1,
+                        max_retries,
+                        error,
+                        retry_delay,
+                    )
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    # Final attempt failed
+                    logging.error(
+                        "Failed to bind to port %s:%s after %s attempts: %s",
+                        host,
+                        port,
+                        max_retries,
+                        error,
+                    )
+                    raise last_error from error
 
         # Register mDNS/Bonjour service after server starts
-        await self._register_mdns_service(runner.app[CONFIG_KEY])
+        await self._register_mdns_service(self.runner.app[CONFIG_KEY])
 
     async def on_startup(self, app: web.Application):
         """setup app connections"""
@@ -632,6 +688,12 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         await app["statedb"].close()
         app[WATCHER_KEY].stop()
         app[IC_KEY].close()
+
+        # Cleanup runner last (site cleanup happens automatically)
+        if self.runner:
+            await self.runner.cleanup()
+            self.runner = None
+            self.site = None
 
     async def stop_server(self, request: web.Request):
         """stop our server"""

@@ -40,6 +40,7 @@ from twitchAPI.type import AuthScope  # pylint: disable=import-error
 
 import nowplaying.config
 import nowplaying.db
+import nowplaying.guessgame
 import nowplaying.inputs
 import nowplaying.pluginimporter
 import nowplaying.trackrequests
@@ -67,6 +68,7 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         self.stopevent = stopevent
         self.watcher = None
         self.requests = nowplaying.trackrequests.Requests(config=config, stopevent=stopevent)
+        self.guessgame = nowplaying.guessgame.GuessGame(config=config, stopevent=stopevent)
         self.metadb = nowplaying.db.MetadataDB()
         self.templatedir = pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.DocumentsLocation)[0]
@@ -225,6 +227,14 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
 
         if nowplaying.utils.safe_stopevent_check(self.stopevent):
             return
+
+        # Reset guess game session scores
+        if self.guessgame:
+            try:
+                await self.guessgame.reset_session()
+                logging.info("Guess game session reset")
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error("Failed to reset guess game session: %s", error)
 
         loggedin = False
         while not nowplaying.utils.safe_stopevent_check(self.stopevent):
@@ -480,6 +490,21 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         if not self.check_command_perms(msg.user.badges, commandlist[0]):
             return
 
+        # Handle guess game commands
+        guess_command = self.config.cparser.value(
+            "guessgame/command", defaultValue="guess", type=str
+        )
+        stats_command = self.config.cparser.value(
+            "guessgame/statscommand", defaultValue="mystats", type=str
+        )
+
+        if commandlist[0].lower() == guess_command.lower() and not is_help_request:
+            if reply := await self.handle_guess(commandlist[1:], msg.user.display_name):
+                metadata |= reply
+        elif commandlist[0].lower() == stats_command.lower() and not is_help_request:
+            if reply := await self.handle_guessstats(msg.user.display_name):
+                metadata |= reply
+
         # Only process track requests if this is NOT a help request
         if (
             not is_help_request
@@ -529,6 +554,70 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
                 logging.debug("Calling artist_query_request for %s", commandlist)
                 reply = await self.requests.artist_query_request(setting, username, commandlist)
         return reply
+
+    async def handle_guess(self, params: list, username: str) -> dict | None:
+        """Handle guess game command"""
+        if not self.guessgame:
+            return None
+
+        if not params:
+            return {
+                'guess_error': 'Please provide a guess (letter or word)'
+            }
+
+        guess_text = " ".join(params)
+        result = await self.guessgame.process_guess(username, guess_text)
+
+        if not result:
+            return {
+                'guess_error': 'No active game right now'
+            }
+
+        # Build response metadata for template
+        response = {
+            'guess_user': username,
+            'guess_text': guess_text,
+            'guess_correct': result['correct'],
+            'guess_points': result['points'],
+            'guess_type': result['guess_type'],
+            'guess_masked_track': result['masked_track'],
+            'guess_masked_artist': result['masked_artist'],
+            'guess_solved': result['solved'],
+            'guess_solve_type': result.get('solve_type'),
+            'guess_track_solved': result.get('track_solved', False),
+            'guess_artist_solved': result.get('artist_solved', False)
+        }
+
+        if result.get('already_guessed'):
+            response['guess_already_guessed'] = True
+
+        if result['guess_type'] == 'already_solved':
+            response['guess_already_solved'] = True
+
+        return response
+
+    async def handle_guessstats(self, username: str) -> dict | None:
+        """Handle stats request command"""
+        if not self.guessgame:
+            return None
+
+        stats = await self.guessgame.get_user_stats(username)
+
+        if not stats:
+            return {
+                'stats_user': username,
+                'stats_none': True
+            }
+
+        return {
+            'stats_user': username,
+            'stats_session_score': stats['session_score'],
+            'stats_alltime_score': stats['alltime_score'],
+            'stats_session_solves': stats['session_solves'],
+            'stats_alltime_solves': stats['alltime_solves'],
+            'stats_session_guesses': stats['session_guesses'],
+            'stats_alltime_guesses': stats['alltime_guesses']
+        }
 
     @staticmethod
     def _finalize(variable: Any) -> Any | str:

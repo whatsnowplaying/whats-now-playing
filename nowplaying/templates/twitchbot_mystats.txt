@@ -1,0 +1,5 @@
+{% if stats_none -%}
+@{{ stats_user }} You haven't played yet! Type !guess to start playing.
+{%- else -%}
+@{{ stats_user }} Session: {{ stats_session_score }} pts ({{ stats_session_solves }} solves, {{ stats_session_guesses }} guesses) | All-Time: {{ stats_alltime_score }} pts ({{ stats_alltime_solves }} solves)
+{%- endif -%}

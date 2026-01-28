@@ -6,6 +6,7 @@
 
 - **[Charts](charts.md)** - Submit track data to What's Now Playing Charts service
 - **[Discord](discord.md)** - Discord rich presence integration
+- **[Guess Game](guessgame.md)** - Interactive hangman-style game for Twitch chat
 - **[Kick Bot](kickbot.md)** - Kick streaming platform bot
 - **[OBS WebSocket](obswebsocket.md)** - Direct integration with OBS Studio
 - **[Text Output](textoutput.md)** - Simple text file output
