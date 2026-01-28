@@ -119,6 +119,7 @@ nav:
       - Discord: output/discord.md
       - Kick Bot: output/kickbot.md
       - Twitch Bot: output/twitchbot.md
+      - Guess Game: output/guessgame.md
   - Requests: requests.md
   - Help:
       - Overview: help/index.md
