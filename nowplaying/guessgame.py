@@ -251,11 +251,11 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     CREATE TABLE IF NOT EXISTS user_scores (
                         username TEXT COLLATE NOCASE PRIMARY KEY,
                         session_score INTEGER DEFAULT 0,
-                        alltime_score INTEGER DEFAULT 0,
+                        all_time_score INTEGER DEFAULT 0,
                         session_solves INTEGER DEFAULT 0,
-                        alltime_solves INTEGER DEFAULT 0,
+                        all_time_solves INTEGER DEFAULT 0,
                         session_guesses INTEGER DEFAULT 0,
-                        alltime_guesses INTEGER DEFAULT 0,
+                        all_time_guesses INTEGER DEFAULT 0,
                         last_updated INTEGER NOT NULL
                     )
                 """)
@@ -876,8 +876,9 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             logging.error("Failed to process guess: %s", error)
             return None
 
+    @staticmethod
     async def _update_user_scores(  # pylint: disable=too-many-arguments
-        self, cursor: aiosqlite.Cursor, username: str, points: int, solves: int, timestamp: int
+        cursor: aiosqlite.Cursor, username: str, points: int, solves: int, timestamp: int
     ):
         """Update user scores in database (helper method)"""
         # Check if user exists
@@ -890,11 +891,11 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 """
                 UPDATE user_scores SET
                     session_score = session_score + ?,
-                    alltime_score = alltime_score + ?,
+                    all_time_score = all_time_score + ?,
                     session_solves = session_solves + ?,
-                    alltime_solves = alltime_solves + ?,
+                    all_time_solves = all_time_solves + ?,
                     session_guesses = session_guesses + 1,
-                    alltime_guesses = alltime_guesses + 1,
+                    all_time_guesses = all_time_guesses + 1,
                     last_updated = ?
                 WHERE username = ?
             """,
@@ -905,8 +906,8 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             await cursor.execute(
                 """
                 INSERT INTO user_scores
-                (username, session_score, alltime_score, session_solves,
-                 alltime_solves, session_guesses, alltime_guesses, last_updated)
+                (username, session_score, all_time_score, session_solves,
+                 all_time_solves, session_guesses, all_time_guesses, last_updated)
                 VALUES (?, ?, ?, ?, ?, 1, 1, ?)
             """,
                 (username, points, points, solves, solves, timestamp),
@@ -1067,7 +1068,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         Get leaderboard rankings.
 
         Args:
-            leaderboard_type: 'session' or 'alltime'
+            leaderboard_type: 'session' or 'all_time'
             limit: Number of top entries to return
 
         Returns:
@@ -1079,7 +1080,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         # Whitelist column names to prevent SQL injection
         column_mapping = {
             "session": ("session_score", "session_solves"),
-            "alltime": ("alltime_score", "alltime_solves"),
+            "all_time": ("all_time_score", "all_time_solves"),
         }
 
         if leaderboard_type not in column_mapping:
@@ -1157,11 +1158,11 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 return {
                     "username": row["username"],
                     "session_score": row["session_score"],
-                    "alltime_score": row["alltime_score"],
+                    "all_time_score": row["all_time_score"],
                     "session_solves": row["session_solves"],
-                    "alltime_solves": row["alltime_solves"],
+                    "all_time_solves": row["all_time_solves"],
                     "session_guesses": row["session_guesses"],
-                    "alltime_guesses": row["alltime_guesses"],
+                    "all_time_guesses": row["all_time_guesses"],
                 }
 
         except sqlite3.Error as error:

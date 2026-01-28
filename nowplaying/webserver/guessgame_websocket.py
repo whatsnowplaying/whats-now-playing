@@ -125,15 +125,15 @@ class GuessgameWebSocketHandler:
                     session_leaderboard = await guessgame.get_leaderboard(
                         leaderboard_type="session", limit=leaderboard_size
                     )
-                    alltime_leaderboard = await guessgame.get_leaderboard(
-                        leaderboard_type="alltime", limit=leaderboard_size
+                    all_time_leaderboard = await guessgame.get_leaderboard(
+                        leaderboard_type="all_time", limit=leaderboard_size
                     )
 
                     # Build broadcast data
                     broadcast_data = {
                         **game_state,  # Include all game state fields
                         "session_leaderboard": session_leaderboard or [],
-                        "alltime_leaderboard": alltime_leaderboard or [],
+                        "all_time_leaderboard": all_time_leaderboard or [],
                     }
 
                     await self._broadcast_to_guessgame_sessions(app, broadcast_data)

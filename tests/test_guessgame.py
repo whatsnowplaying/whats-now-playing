@@ -455,8 +455,8 @@ async def test_reset_session(guessgame_with_active_game):  # pylint: disable=red
     assert stats_after["session_score"] == 0
     assert stats_after["session_guesses"] == 0
     # All-time stats should remain
-    assert stats_after["alltime_score"] > 0
-    assert stats_after["alltime_guesses"] == 2
+    assert stats_after["all_time_score"] > 0
+    assert stats_after["all_time_guesses"] == 2
 
 
 @pytest.mark.asyncio

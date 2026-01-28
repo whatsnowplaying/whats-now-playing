@@ -561,38 +561,34 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
             return None
 
         if not params:
-            return {
-                'guess_error': 'Please provide a guess (letter or word)'
-            }
+            return {"guess_error": "Please provide a guess (letter or word)"}
 
         guess_text = " ".join(params)
         result = await self.guessgame.process_guess(username, guess_text)
 
         if not result:
-            return {
-                'guess_error': 'No active game right now'
-            }
+            return {"guess_error": "No active game right now"}
 
         # Build response metadata for template
         response = {
-            'guess_user': username,
-            'guess_text': guess_text,
-            'guess_correct': result['correct'],
-            'guess_points': result['points'],
-            'guess_type': result['guess_type'],
-            'guess_masked_track': result['masked_track'],
-            'guess_masked_artist': result['masked_artist'],
-            'guess_solved': result['solved'],
-            'guess_solve_type': result.get('solve_type'),
-            'guess_track_solved': result.get('track_solved', False),
-            'guess_artist_solved': result.get('artist_solved', False)
+            "guess_user": username,
+            "guess_text": guess_text,
+            "guess_correct": result["correct"],
+            "guess_points": result["points"],
+            "guess_type": result["guess_type"],
+            "guess_masked_track": result["masked_track"],
+            "guess_masked_artist": result["masked_artist"],
+            "guess_solved": result["solved"],
+            "guess_solve_type": result.get("solve_type"),
+            "guess_track_solved": result.get("track_solved", False),
+            "guess_artist_solved": result.get("artist_solved", False),
         }
 
-        if result.get('already_guessed'):
-            response['guess_already_guessed'] = True
+        if result.get("already_guessed"):
+            response["guess_already_guessed"] = True
 
-        if result['guess_type'] == 'already_solved':
-            response['guess_already_solved'] = True
+        if result["guess_type"] == "already_solved":
+            response["guess_already_solved"] = True
 
         return response
 
@@ -604,19 +600,16 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         stats = await self.guessgame.get_user_stats(username)
 
         if not stats:
-            return {
-                'stats_user': username,
-                'stats_none': True
-            }
+            return {"stats_user": username, "stats_none": True}
 
         return {
-            'stats_user': username,
-            'stats_session_score': stats['session_score'],
-            'stats_alltime_score': stats['alltime_score'],
-            'stats_session_solves': stats['session_solves'],
-            'stats_alltime_solves': stats['alltime_solves'],
-            'stats_session_guesses': stats['session_guesses'],
-            'stats_alltime_guesses': stats['alltime_guesses']
+            "stats_user": username,
+            "stats_session_score": stats["session_score"],
+            "stats_all_time_score": stats["all_time_score"],
+            "stats_session_solves": stats["session_solves"],
+            "stats_all_time_solves": stats["all_time_solves"],
+            "stats_session_guesses": stats["session_guesses"],
+            "stats_all_time_guesses": stats["all_time_guesses"],
         }
 
     @staticmethod

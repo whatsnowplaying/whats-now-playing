@@ -191,7 +191,7 @@ Time: {{ time_remaining }}s{% if game_solved %} | SOLVED!{% endif %}
 
 ```jinja2
 @{{ cmduser }}: Session: {{ session_score }} points, {{ session_guesses }} guesses |
-All-Time: {{ alltime_score }} points, {{ alltime_guesses }} guesses, {{ alltime_solves }} solves
+All-Time: {{ all_time_score }} points, {{ all_time_guesses }} guesses, {{ all_time_solves }} solves
 ```
 
 ### Template Variables
@@ -211,9 +211,9 @@ The Guess Game adds these variables for templating:
 | `guess_already_guessed` | Boolean: true if letter/word was already guessed |
 | `session_score` | User's score for current stream session |
 | `session_guesses` | User's guess count for current stream session |
-| `alltime_score` | User's all-time score |
-| `alltime_guesses` | User's all-time guess count |
-| `alltime_solves` | User's all-time solve count |
+| `all_time_score` | User's all-time score |
+| `all_time_guesses` | User's all-time guess count |
+| `all_time_solves` | User's all-time solve count |
 
 ## Troubleshooting
 
