@@ -7,6 +7,7 @@ leaderboard system to track top performers across your stream session and all-ti
 ## What It Provides
 
 * **Interactive Chat Game**: Viewers type commands like `!guess e` or `!guess house` to play
+* **Automatic Announcements**: Bot announces new games in chat when tracks change
 * **Real-time OBS Display**: Shows masked track/artist names and game state in your stream overlay
 * **Leaderboard System**: Tracks both session and all-time scores with configurable size
 * **Flexible Solve Modes**: Configure whether viewers must guess track, artist, or both
@@ -135,13 +136,14 @@ Shows top players for session or all-time:
 ### Game Flow
 
 1. **Track Changes**: When a new track starts playing, the Guess Game automatically begins
-2. **Chat Commands**: Viewers type `!guess <letter or word>` in Twitch chat
-3. **Guess Processing**:
+2. **Chat Announcement**: An automatic announcement is sent to Twitch chat when the game starts
+3. **Chat Commands**: Viewers type `!guess <letter or word>` in Twitch chat
+4. **Guess Processing**:
     * **Single letters**: Revealed if present in track/artist, points awarded by frequency
     * **Words**: Checked against track/artist name, bonus points if correct
     * **Complete matches**: If track/artist fully matches, that objective is solved
-4. **Game Ends**: When solved or time expires, game ends and scores are saved
-5. **Next Track**: Process repeats for the next song
+5. **Game Ends**: When solved or time expires, game ends and scores are saved
+6. **Next Track**: Process repeats for the next song
 
 ### Guess Normalization
 
@@ -194,14 +196,23 @@ Time: {{ time_remaining }}s{% if game_solved %} | SOLVED!{% endif %}
 All-Time: {{ all_time_score }} points, {{ all_time_guesses }} guesses, {{ all_time_solves }} solves
 ```
 
+**twitchbot_gamestart.txt**: Automatic announcement when a new game starts
+
+```jinja2
+🎮 New guess game! Type !{{ guess_command }} <letter or word> to play | Track: {{ masked_track }} |
+Artist: {{ masked_artist }}
+```
+
 ### Template Variables
 
 The Guess Game adds these variables for templating:
 
 | Variable | Description |
 |----------|-------------|
+| `guess_command` | Configured guess command (default: `guess`) - for game start announcements |
 | `masked_track` | Track name with unguessed letters as underscores |
 | `masked_artist` | Artist name with unguessed letters as underscores |
+| `time_limit` | Maximum game duration in seconds - for game start announcements |
 | `time_remaining` | Seconds remaining in current game |
 | `guessed_letters` | List of letters already guessed |
 | `game_status` | Current game state: `active`, `solved`, `timeout`, or `waiting` |
@@ -243,8 +254,64 @@ The Guess Game adds these variables for templating:
 
 ## Tips for Stream Engagement
 
-* **Announce the game**: Create a chat command explaining how to play
-* **Show the leaderboard**: Display top players between songs
-* **Adjust difficulty**: Shorter timeouts and harder solve modes increase challenge
-* **Create incentives**: Reward top leaderboard players with channel points or other prizes
-* **Test first**: Try the game offline to ensure everything works before going live
+### Getting Started
+
+* **Test offline first**: Run through several tracks before going live to verify setup and timing
+* **Explain clearly**: When you first enable it, take 30 seconds to explain the rules to your chat
+* **Start simple**: Use "Separate Solves" mode initially - easier for new players to understand
+* **Make it visible**: Position the OBS overlay prominently so viewers notice when games start
+
+### Building Participation
+
+* **Call out new games**: Even though auto-announcements happen, verbally mention "new game starting!"
+  when you notice tracks changing
+* **Celebrate solvers**: Give shout-outs when someone solves a track - viewers love recognition
+* **Give hints**: If a game is going unsolved, drop subtle hints ("This artist is from Detroit...")
+* **Welcome newcomers**: When someone plays for the first time, acknowledge them and explain briefly
+
+### Leaderboard Strategies
+
+* **Show it between sets**: Display the leaderboard overlay during breaks or between mixing sessions
+* **Weekly/monthly resets**: Clear session scores regularly to give everyone fresh chances to compete
+* **Call out the leaders**: Mention top 3 players periodically to create friendly competition
+* **Track all-time legends**: Keep all-time leaderboards running for long-term community engagement
+
+### Incentives and Rewards
+
+* **Channel points**: Award bonus points to top session performers
+* **Discord roles**: Give leaderboard leaders special roles in your community Discord
+* **Shout-outs**: Feature top players in social media posts or stream recaps
+* **Track requests**: Let weekly winners pick a track for your next stream
+* **Merchandise**: Run monthly contests with prizes for cumulative top scores
+
+### Difficulty and Balance
+
+* **Adjust timeout duration**: Shorter durations (60-90s) create urgency; longer (3-5 min) allow
+  casual participation
+* **Consider your music**: Obscure tracks are harder but more rewarding to solve
+* **Match your audience**: Electronic music fans might struggle with mainstream pop (and vice versa)
+* **Use "Either" mode**: For very difficult tracks, allow solving just track OR artist to maintain momentum
+* **Auto-reveal common words**: Enable this setting if your track titles have many filler words
+  (the, and, of, etc.)
+
+### Technical Tips
+
+* **OBS layout**: Place game display near your track info - viewers naturally look there
+* **Font sizing**: Make masked text large enough to read on mobile devices (many viewers watch on phones)
+* **Leaderboard placement**: Side panels or overlays during transitions work well
+* **Test on mobile**: Check how your overlays look on smaller screens
+
+### Advanced Engagement
+
+* **Themed streams**: "Guess the 90s house track" nights with appropriate difficulty settings
+* **Team competitions**: Track scores manually for "regulars vs newcomers" friendly rivalries
+* **Streak tracking**: Manually recognize players who solve multiple games in a row
+* **Custom announcements**: Edit `twitchbot_gamestart.txt` to match your stream's personality
+* **Integration**: Mention game stats in your post-stream recaps or YouTube highlights
+
+### Common Pitfalls to Avoid
+
+* **Don't make it mandatory**: Let viewers choose to participate - forced engagement backfires
+* **Avoid extreme difficulty**: If nobody solves games for 30+ minutes, decrease timeout or change mode
+* **Don't ignore participants**: Always acknowledge guesses and solvers, even if you're focused on mixing
+* **Balance attention**: Keep focus on your music - the game enhances your stream, it shouldn't dominate it

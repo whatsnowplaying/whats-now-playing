@@ -1010,6 +1010,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 remaining = max(0, game_row["max_duration"] - elapsed)
 
                 state = {
+                    "game_id": game_row["game_id"],
                     "status": game_row["status"],
                     "masked_track": game_row["masked_track"],
                     "masked_artist": game_row["masked_artist"],

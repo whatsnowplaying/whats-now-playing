@@ -84,6 +84,8 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         self.starttime = datetime.datetime.now(datetime.timezone.utc)
         self.timeout = aiohttp.ClientTimeout(total=60)
         self.modernmeerkat_greeted = False
+        self.last_announced_game_id: int | None = None
+        self.game_announce_lock = asyncio.Lock()
 
         self.input: nowplaying.inputs.InputPlugin | None = None
         self.previousinput: str | None = None
@@ -615,6 +617,65 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
             "stats_all_time_guesses": stats["all_time_guesses"],
         }
 
+    async def _check_and_announce_new_game(self):
+        """Check if a new game has started and announce it in chat"""
+        if not self.guessgame or not self.chat:
+            return
+
+        # Use lock to prevent race condition where multiple checks happen simultaneously
+        async with self.game_announce_lock:
+            try:
+                state = await self.guessgame.get_current_state()
+                if not state or state.get("status") != "active":
+                    return
+
+                game_id = state.get("game_id")
+                if game_id and game_id != self.last_announced_game_id:
+                    # New game detected - announce it
+                    logging.info("Announcing new guess game (id=%s)", game_id)
+                    self.last_announced_game_id = game_id
+
+                    # Build announcement metadata
+                    metadata = {
+                        "masked_track": state["masked_track"],
+                        "masked_artist": state["masked_artist"],
+                        "time_limit": state.get("time_remaining", 180),
+                        "guess_command": self.config.cparser.value(
+                            "guessgame/command", defaultValue="guess", type=str
+                        ),
+                    }
+
+                    # Send announcement using template
+                    await self._send_game_announcement(metadata)
+
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error("Error checking/announcing new game: %s", error)
+
+    async def _send_game_announcement(self, metadata: dict):
+        """Send game start announcement to chat"""
+        try:
+            template_file = self.templatedir / "twitchbot_gamestart.txt"
+            if not template_file.exists():
+                # Fallback default message if template doesn't exist
+                message = (
+                    f"🎮 New guess game started! Type !{metadata['guess_command']} "
+                    f"<letter or word> to play. "
+                    f"Track: {metadata['masked_track']} | Artist: {metadata['masked_artist']}"
+                )
+            else:
+                # Render template
+                template = self.jinja2.get_template("twitchbot_gamestart.txt")
+                message = template.render(metadata)
+                message = message.strip()
+
+            if message:
+                channel = self.config.cparser.value("twitchbot/channel")
+                await self.chat.send_message(channel, message)
+                logging.info("Game start announcement sent to chat")
+
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error("Failed to send game announcement: %s", error)
+
     @staticmethod
     def _finalize(variable: Any) -> Any | str:
         """helper routine to avoid NoneType exceptions"""
@@ -641,6 +702,8 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         await self._async_announce_track()
         while not nowplaying.utils.safe_stopevent_check(self.stopevent):
             await asyncio.sleep(1)
+            # Check for new guess games to announce
+            await self._check_and_announce_new_game()
 
         logging.debug("watcher stop event received")
         if self.watcher:

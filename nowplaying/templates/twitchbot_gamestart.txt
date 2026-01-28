@@ -1,0 +1,1 @@
+🎮 New guess game! Type !{{ guess_command }} <letter or word> to play | Track: {{ masked_track }} | Artist: {{ masked_artist }}
