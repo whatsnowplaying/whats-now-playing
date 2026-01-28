@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=too-many-lines
 """Guess game handling for Twitch chat interaction"""
 
 import asyncio

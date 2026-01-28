@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=too-many-lines
 """handle twitch chat"""
 
 import asyncio
@@ -460,7 +461,9 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
             return False
         return True
 
-    async def do_command(self, msg: ChatMessage):  # pylint: disable=unused-argument
+    async def do_command(  # pylint: disable=unused-argument,too-many-branches
+        self, msg: ChatMessage
+    ):
         """process a command"""
 
         commandchar = self.config.cparser.value("twitchbot/commandchar") or "!"
