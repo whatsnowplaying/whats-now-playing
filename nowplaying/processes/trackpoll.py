@@ -207,6 +207,12 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
     async def stop(self):
         """stop trackpoll thread gracefully"""
         logging.debug("Stopping trackpoll")
+
+        # Flush any buffered metadata from active guess game before shutdown
+        if self.buffered_metadata:
+            logging.info("Flushing buffered metadata on shutdown")
+            await self._flush_buffered_metadata()
+
         self.stopevent.set()
         if self.imagecache:
             logging.debug("stopping imagecache")
