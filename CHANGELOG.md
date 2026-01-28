@@ -10,6 +10,7 @@
     * Klipy is preferred when both API keys are configured
   * Add support for autodiscovery using Bonjour/Zeroconf for Remote Output and for
     some upcoming feature support
+  * Add a new guessing game based upon the current track
 
 * Serato
   * Add artist-based library query support for Serato 4
