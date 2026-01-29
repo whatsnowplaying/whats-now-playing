@@ -6,10 +6,13 @@ import asyncio
 import json
 import logging
 import pathlib
+import re
 import sqlite3
 import string
 import time
 from typing import TYPE_CHECKING
+
+import normality
 
 import aiosqlite
 from PySide6.QtCore import (  # pylint: disable=import-error,no-name-in-module
@@ -76,6 +79,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         self.config = config
         self.stopevent = stopevent
         self.testmode = testmode
+        self.last_game_end_time: float | None = None
 
         # Database location in persistent app data directory
         self.databasefile = pathlib.Path(
@@ -323,7 +327,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         """
         Normalize text for guess matching.
         Treats &, 'n', 'n, and 'and' as equivalent.
-        Strips censoring characters (*, _, -) to handle censored/uncensored variations.
+        Uses normality module for proper Unicode normalization.
 
         Args:
             text: Text to normalize
@@ -331,7 +335,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         Returns:
             Normalized text for matching
         """
-        # Replace & with 'and' for consistent matching
+        # Replace & with 'and' for consistent matching (before normality processing)
         normalized = text.replace("&", "and")
 
         # Handle 'n' and 'n as abbreviations for 'and' (rock 'n' roll, rock 'n roll, rock n roll)
@@ -339,17 +343,135 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         normalized = normalized.replace(" 'n ", " and ")
         normalized = normalized.replace(" n ", " and ")
 
-        # Strip censoring and punctuation characters to handle variations
-        # (e.g., "f***k" matches "fuck", "N.W.A" matches "NWA")
+        # Remove apostrophes and hyphens before normality processing
+        # Apostrophes: "I'm" becomes "Im" not "I m"
+        # Hyphens: "Alt-J" becomes "AltJ" not "Alt J"
+        normalized = normalized.replace("'", "")  # Apostrophe (U+0027)
+        normalized = normalized.replace("'", "")  # Left single quotation mark (U+2018)
+        normalized = normalized.replace("'", "")  # Right single quotation mark (U+2019)
+        normalized = normalized.replace("ʼ", "")  # Modifier letter apostrophe (U+02BC)
+        normalized = normalized.replace("`", "")  # Grave accent (U+0060)
+        normalized = normalized.replace("´", "")  # Acute accent (U+00B4)
+        normalized = normalized.replace("-", "")  # Regular hyphen
+        normalized = normalized.replace("‐", "")  # Hyphen (U+2010)
+        normalized = normalized.replace("‑", "")  # Non-breaking hyphen (U+2011)
+        normalized = normalized.replace("–", "")  # En dash (U+2013)
+        normalized = normalized.replace("—", "")  # Em dash (U+2014)
+        normalized = normalized.replace("−", "")  # Minus sign (U+2212)
+
+        # Use normality to handle Unicode normalization, case folding, and punctuation removal
+        # This handles various other punctuation, quotes, brackets, etc.
+        normalized = normality.normalize(normalized, lowercase=True, collapse=True)
+
+        # After normality, fix any remaining cases like "o connor" -> "oconnor"
+        # This handles cases where normality inserted spaces for unhandled punctuation
+        # Pattern: single letter + space + word (common in Irish names like O'Connor)
+        normalized = re.sub(r'\b([a-z])\s+([a-z])', r'\1\2', normalized)
+
+        # normality may return None for empty/invalid strings
+        if normalized is None:
+            return ""
+
+        # Strip remaining censoring characters that normality might preserve
         normalized = normalized.replace("*", "")
         normalized = normalized.replace("_", "")
-        normalized = normalized.replace("-", "")
-        normalized = normalized.replace(".", "")
 
-        # Clean up multiple spaces
-        normalized = normalized.replace("  ", " ").strip()
+        # Remove spaces between digits to handle cases like "10,000" -> "10000"
+        normalized = re.sub(r'(\d)\s+(\d)', r'\1\2', normalized)
 
-        return normalized
+        return normalized.strip()
+
+    @staticmethod
+    def _is_word_match(guess: str, text: str) -> bool:
+        """
+        Check if guess matches as a complete word in text (not just substring).
+
+        Args:
+            guess: The normalized guess text
+            text: The normalized text to search in
+
+        Returns:
+            True if guess is found as a complete word with word boundaries
+        """
+        if not guess or not text:
+            return False
+
+        # Escape the guess for regex and create word boundary pattern
+        # \b matches word boundaries (start/end of word)
+        pattern = r'\b' + re.escape(guess) + r'\b'
+        return bool(re.search(pattern, text))
+
+    def _reveal_matching_word_letters(
+        self,
+        guess_normalized: str,
+        original_text: str,
+        normalized_text: str,
+        revealed_letters: set[str],
+    ) -> None:
+        """
+        Reveal letters from the word(s) in original_text that match guess_normalized.
+
+        This handles accented characters - when a user guesses "sinead", it reveals
+        all letters from "Sinéad" including the "é". Also handles multi-word guesses
+        like "road to" matching in "the road to mandalay".
+
+        Args:
+            guess_normalized: The normalized guess text (may be multiple words)
+            original_text: The original text (may contain accents, special chars)
+            normalized_text: The normalized version of original_text
+            revealed_letters: Set to add revealed letters to (modified in place)
+        """
+        # Split both texts into words
+        original_words = original_text.split()
+        normalized_words = normalized_text.split()
+        guess_words = guess_normalized.split()
+
+        # Handle single-word guesses (original behavior)
+        if len(guess_words) == 1:
+            self._reveal_single_word_match(
+                guess_normalized, original_words, normalized_words, revealed_letters
+            )
+            return
+
+        # Handle multi-word guesses by finding the sequence
+        self._reveal_multi_word_match(
+            guess_words, original_words, normalized_words, revealed_letters
+        )
+
+    def _reveal_single_word_match(
+        self,
+        guess_normalized: str,
+        original_words: list[str],
+        normalized_words: list[str],
+        revealed_letters: set[str],
+    ) -> None:
+        """Helper to reveal letters for single-word guesses."""
+        for i, norm_word in enumerate(normalized_words):
+            if not self._is_word_match(guess_normalized, norm_word):
+                continue
+            if i >= len(original_words):
+                continue
+            for char in original_words[i]:
+                if char.isalpha():
+                    revealed_letters.add(char.lower())
+
+    @staticmethod
+    def _reveal_multi_word_match(
+        guess_words: list[str],
+        original_words: list[str],
+        normalized_words: list[str],
+        revealed_letters: set[str],
+    ) -> None:
+        """Helper to reveal letters for multi-word guesses."""
+        for i in range(len(normalized_words) - len(guess_words) + 1):
+            sequence = normalized_words[i : i + len(guess_words)]
+            if sequence != guess_words:
+                continue
+            # Reveal all letters from the corresponding original words
+            for j in range(i, min(i + len(guess_words), len(original_words))):
+                for char in original_words[j]:
+                    if char.isalpha():
+                        revealed_letters.add(char.lower())
 
     @staticmethod
     def _mask_text(text: str, revealed_letters: set[str], auto_reveal_words: bool = False) -> str:
@@ -474,7 +596,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         logging.info("Starting new guess game: %s - %s", artist, track)
 
         auto_reveal_words = self._get_config("auto_reveal_common_words", False, bool)
-        max_duration = self._get_config("maxduration", 180, int)
+        max_duration = self._get_config("maxduration", 120, int)
         difficulty_threshold = self._get_config("difficulty_threshold", 0.70, float)
 
         # Initial revealed letters (empty set)
@@ -638,6 +760,13 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     guess_normalized = self._normalize_for_matching(guess_text)
                     track_normalized = self._normalize_for_matching(track_lower)
                     artist_normalized = self._normalize_for_matching(artist_lower)
+                    logging.debug(
+                        "Guess normalization: guess=%s->%s, artist=%s->%s",
+                        repr(guess_text),
+                        repr(guess_normalized),
+                        repr(artist),
+                        repr(artist_normalized),
+                    )
                     track_match = guess_normalized == track_normalized
                     artist_match = guess_normalized == artist_normalized
 
@@ -657,16 +786,33 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                             result["solved"] = True
                             result["solve_type"] = "both"
                         elif (
-                            guess_normalized in track_normalized
-                            or guess_normalized in artist_normalized
+                            self._is_word_match(guess_normalized, track_normalized)
+                            or self._is_word_match(guess_normalized, artist_normalized)
                         ):
-                            # Correct word within track/artist
-                            result["correct"] = True
-                            result["guess_type"] = "word"
-                            for char in guess_text:
-                                if char.isalpha():
-                                    revealed_letters.add(char)
-                            result["points"] = self._calculate_points(guess_text, "word")
+                            # Correct word within track/artist - check if it reveals new letters
+                            letters_before = revealed_letters.copy()
+                            # Reveal letters from the matched word in the original text
+                            # This ensures accented characters like "é" in "Sinéad" are revealed
+                            # when user guesses "sinead"
+                            if self._is_word_match(guess_normalized, track_normalized):
+                                self._reveal_matching_word_letters(
+                                    guess_normalized, track, track_normalized, revealed_letters
+                                )
+                            if self._is_word_match(guess_normalized, artist_normalized):
+                                self._reveal_matching_word_letters(
+                                    guess_normalized, artist, artist_normalized, revealed_letters
+                                )
+                            # Only award points if new letters were revealed
+                            if revealed_letters != letters_before:
+                                result["correct"] = True
+                                result["guess_type"] = "word"
+                                result["points"] = self._calculate_points(guess_text, "word")
+                            else:
+                                # All letters already revealed - no points
+                                result["correct"] = False
+                                result["guess_type"] = "already_guessed"
+                                result["already_guessed"] = True
+                                result["points"] = 0
                         else:
                             result["correct"] = False
                             result["guess_type"] = "wrong"
@@ -691,16 +837,33 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                             result["solved"] = True
                             result["solve_type"] = "both"
                         elif (
-                            guess_normalized in track_normalized
-                            or guess_normalized in artist_normalized
+                            self._is_word_match(guess_normalized, track_normalized)
+                            or self._is_word_match(guess_normalized, artist_normalized)
                         ):
-                            # Correct word within track/artist
-                            result["correct"] = True
-                            result["guess_type"] = "word"
-                            for char in guess_text:
-                                if char.isalpha():
-                                    revealed_letters.add(char)
-                            result["points"] = self._calculate_points(guess_text, "word")
+                            # Correct word within track/artist - check if it reveals new letters
+                            letters_before = revealed_letters.copy()
+                            # Reveal letters from the matched word in the original text
+                            # This ensures accented characters like "é" in "Sinéad" are revealed
+                            # when user guesses "sinead"
+                            if self._is_word_match(guess_normalized, track_normalized):
+                                self._reveal_matching_word_letters(
+                                    guess_normalized, track, track_normalized, revealed_letters
+                                )
+                            if self._is_word_match(guess_normalized, artist_normalized):
+                                self._reveal_matching_word_letters(
+                                    guess_normalized, artist, artist_normalized, revealed_letters
+                                )
+                            # Only award points if new letters were revealed
+                            if revealed_letters != letters_before:
+                                result["correct"] = True
+                                result["guess_type"] = "word"
+                                result["points"] = self._calculate_points(guess_text, "word")
+                            else:
+                                # All letters already revealed - no points
+                                result["correct"] = False
+                                result["guess_type"] = "already_guessed"
+                                result["already_guessed"] = True
+                                result["points"] = 0
                         else:
                             result["correct"] = False
                             result["guess_type"] = "wrong"
@@ -766,16 +929,33 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                             result["guess_type"] = "already_solved"
                             result["points"] = 0
                         elif (
-                            guess_normalized in track_normalized
-                            or guess_normalized in artist_normalized
+                            self._is_word_match(guess_normalized, track_normalized)
+                            or self._is_word_match(guess_normalized, artist_normalized)
                         ):
-                            # Correct word within track/artist
-                            result["correct"] = True
-                            result["guess_type"] = "word"
-                            for char in guess_text:
-                                if char.isalpha():
-                                    revealed_letters.add(char)
-                            result["points"] = self._calculate_points(guess_text, "word")
+                            # Correct word within track/artist - check if it reveals new letters
+                            letters_before = revealed_letters.copy()
+                            # Reveal letters from the matched word in the original text
+                            # This ensures accented characters like "é" in "Sinéad" are revealed
+                            # when user guesses "sinead"
+                            if self._is_word_match(guess_normalized, track_normalized):
+                                self._reveal_matching_word_letters(
+                                    guess_normalized, track, track_normalized, revealed_letters
+                                )
+                            if self._is_word_match(guess_normalized, artist_normalized):
+                                self._reveal_matching_word_letters(
+                                    guess_normalized, artist, artist_normalized, revealed_letters
+                                )
+                            # Only award points if new letters were revealed
+                            if revealed_letters != letters_before:
+                                result["correct"] = True
+                                result["guess_type"] = "word"
+                                result["points"] = self._calculate_points(guess_text, "word")
+                            else:
+                                # All letters already revealed - no points
+                                result["correct"] = False
+                                result["guess_type"] = "already_guessed"
+                                result["already_guessed"] = True
+                                result["points"] = 0
                         else:
                             result["correct"] = False
                             result["guess_type"] = "wrong"
@@ -970,6 +1150,9 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
                 await connection.commit()
                 logging.info("Game ended: %s (game_id=%s)", reason, game_id)
+
+                # Track when game ended for announcement coordination
+                self.last_game_end_time = time.time()
                 return True
 
         except sqlite3.Error as error:

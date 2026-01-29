@@ -55,7 +55,7 @@ Before enabling the Guess Game, you must have:
 |---------|-------------|---------|
 | Guess Command | Chat command viewers use to submit guesses | `guess` |
 | Stats Command | Chat command viewers use to check their statistics | `mystats` |
-| Game Duration | Maximum time in seconds before game times out | `180` (3 minutes) |
+| Game Duration | Maximum time in seconds before game times out | `120` (2 minutes) |
 | Leaderboard Size | Number of top players shown on leaderboard | `10` |
 | First Solver Bonus Threshold | Difficulty threshold (0.0-1.0) for awarding first solver bonus | `0.70` |
 | Solve Mode | How the game determines completion (see below) | Separate Solves |
@@ -102,9 +102,9 @@ The Guess Game provides two OBS browser sources for displaying game information 
 Shows the current game state with masked track/artist names:
 
 1. Add a **Browser** source in OBS
-2. Set URL to: `http://localhost:8899/guessgame.htm`
+2. Set URL to: `http://localhost:8899/guessgame/guessgame.htm`
 3. Set dimensions: `1920x200` (or adjust to your layout)
-4. Customize the display by editing `templates/guessgame.htm`
+4. Customize the display by editing `templates/guessgame/guessgame.htm`
 
 **Display Shows:**
 
@@ -116,20 +116,32 @@ Shows the current game state with masked track/artist names:
 
 ### Leaderboard Display
 
-Shows top players for session or all-time:
+Shows top players for session or all-time. Two leaderboard pages are available:
+
+#### Session Leaderboard
+
+Displays scores for the current streaming session:
 
 1. Add a **Browser** source in OBS
-2. Set URL to: `http://localhost:8899/guessgame-leaderboard.htm`
+2. Set URL to: `http://localhost:8899/guessgame/guessgame-leaderboard.htm`
 3. Set dimensions: `600x800` (or adjust to your layout)
-4. Customize the display by editing `templates/guessgame-leaderboard.htm`
+4. Customize the display by editing `templates/guessgame/guessgame-leaderboard.htm`
 
-**Leaderboard Shows:**
+#### All-Time Leaderboard
 
-* Rank
+Displays cumulative scores across all sessions:
+
+1. Add a **Browser** source in OBS
+2. Set URL to: `http://localhost:8899/guessgame/guessgame-alltime-leaderboard.htm`
+3. Set dimensions: `600x800` (or adjust to your layout)
+4. Customize the display by editing `templates/guessgame/guessgame-alltime-leaderboard.htm`
+
+**Both Leaderboards Show:**
+
+* Rank (with gold/silver/bronze styling for top 3)
 * Username
 * Total score
-* Number of correct guesses
-* Configurable to show session or all-time stats
+* Number of solves
 
 ## How It Works
 

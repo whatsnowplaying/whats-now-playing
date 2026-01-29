@@ -10,6 +10,7 @@ import os
 import pathlib
 import platform
 import socket
+import time
 import traceback
 from typing import Any
 
@@ -85,6 +86,7 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         self.timeout = aiohttp.ClientTimeout(total=60)
         self.modernmeerkat_greeted = False
         self.last_announced_game_id: int | None = None
+        self.last_game_end_time: float | None = None
         self.game_announce_lock = asyncio.Lock()
 
         self.input: nowplaying.inputs.InputPlugin | None = None
@@ -631,6 +633,19 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
 
                 game_id = state.get("game_id")
                 if game_id and game_id != self.last_announced_game_id:
+                    # Check if a game recently ended and track announcements are enabled
+                    # If so, wait to avoid race with track announcement
+                    announce_template = self.config.cparser.value("twitchbot/announce")
+                    if (
+                        announce_template
+                        and self.guessgame.last_game_end_time
+                        and time.time() - self.guessgame.last_game_end_time < 2.0
+                    ):
+                        logging.debug(
+                            "Game recently ended, delaying new game announcement (id=%s)", game_id
+                        )
+                        return
+
                     # New game detected - announce it
                     logging.info("Announcing new guess game (id=%s)", game_id)
                     self.last_announced_game_id = game_id

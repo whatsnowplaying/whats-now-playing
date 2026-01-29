@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Guess Game All-Time Leaderboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+            color: #ffffff;
+            padding: 20px;
+        }
+
+        .leaderboard-container {
+            max-width: 500px;
+            background: linear-gradient(135deg, rgba(30, 50, 30, 0.95), rgba(50, 80, 50, 0.95));
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+        }
+
+        .leaderboard-container.hidden {
+            display: none;
+        }
+
+        .leaderboard-title {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #aaffaa;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .leaderboard-table th {
+            text-align: left;
+            padding: 12px 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+            color: #aaffaa;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .leaderboard-table th:first-child {
+            width: 50px;
+            text-align: center;
+        }
+
+        .leaderboard-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 16px;
+        }
+
+        .leaderboard-table tr:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .leaderboard-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .rank {
+            font-weight: bold;
+            font-size: 18px;
+            text-align: center;
+            color: #aaffaa;
+        }
+
+        .rank-1 {
+            color: #ffd700;
+            font-size: 22px;
+        }
+
+        .rank-2 {
+            color: #c0c0c0;
+            font-size: 20px;
+        }
+
+        .rank-3 {
+            color: #cd7f32;
+            font-size: 20px;
+        }
+
+        .player-name {
+            font-weight: 600;
+        }
+
+        .score {
+            text-align: right;
+            font-weight: bold;
+            color: #aaffaa;
+        }
+
+        .solves {
+            text-align: right;
+            color: #aaaaaa;
+            font-size: 14px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #888;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="leaderboard-container" id="leaderboardContainer">
+        <div class="leaderboard-title">🏆 All-Time Leaderboard</div>
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Player</th>
+                    <th style="text-align: right;">Score</th>
+                    <th style="text-align: right;">Solves</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardBody">
+                <tr>
+                    <td colspan="4" class="empty-state">No scores yet</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let ws;
+        const containerEl = document.getElementById('leaderboardContainer');
+        const leaderboardBodyEl = document.getElementById('leaderboardBody');
+
+        function connect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const port = urlParams.get('port') || '8899';
+            const sessionId = 'alltime_leaderboard_' + Date.now();
+
+            ws = new WebSocket(`ws://localhost:${port}/wsguessgamestream?session_id=${sessionId}`);
+
+            ws.onopen = () => {
+                console.log('Connected to guess game WebSocket');
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    updateLeaderboard(data);
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onclose = () => {
+                console.log('Disconnected, reconnecting in 5 seconds...');
+                setTimeout(connect, 5000);
+            };
+        }
+
+        function updateLeaderboard(data) {
+            // Hide if no leaderboard data
+            if (!data.all_time_leaderboard || data.all_time_leaderboard.length === 0) {
+                leaderboardBodyEl.innerHTML = '<tr><td colspan="4" class="empty-state">No scores yet</td></tr>';
+                return;
+            }
+
+            // Show leaderboard
+            containerEl.classList.remove('hidden');
+
+            // Build leaderboard HTML
+            leaderboardBodyEl.innerHTML = data.all_time_leaderboard.map(entry => `
+                <tr>
+                    <td class="rank rank-${entry.rank}">${entry.rank}</td>
+                    <td class="player-name">${entry.username}</td>
+                    <td class="score">${entry.score}</td>
+                    <td class="solves">${entry.solves}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Connect on page load
+        connect();
+    </script>
+</body>
+</html>
