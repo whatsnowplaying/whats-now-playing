@@ -199,7 +199,7 @@ All-Time: {{ all_time_score }} points, {{ all_time_guesses }} guesses, {{ all_ti
 **twitchbot_gamestart.txt**: Automatic announcement when a new game starts
 
 ```jinja2
-🎮 New guess game! Type !{{ guess_command }} <letter or word> to play | Track: {{ masked_track }} |
+🎮 New guessing game! Type !{{ guess_command }} <letter or word> to play | Track: {{ masked_track }} |
 Artist: {{ masked_artist }}
 ```
 

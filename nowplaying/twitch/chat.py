@@ -639,7 +639,9 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
                     metadata = {
                         "masked_track": state["masked_track"],
                         "masked_artist": state["masked_artist"],
-                        "time_limit": state.get("time_remaining", 180),
+                        "time_limit": self.config.cparser.value(
+                            "guessgame/maxduration", type=int, defaultValue=180
+                        ),
                         "guess_command": self.config.cparser.value(
                             "guessgame/command", defaultValue="guess", type=str
                         ),
@@ -658,14 +660,14 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
             if not template_file.exists():
                 # Fallback default message if template doesn't exist
                 message = (
-                    f"🎮 New guess game started! Type !{metadata['guess_command']} "
+                    f"🎮 New guessing game started! Type !{metadata['guess_command']} "
                     f"<letter or word> to play. "
                     f"Track: {metadata['masked_track']} | Artist: {metadata['masked_artist']}"
                 )
             else:
                 # Render template
                 template = self.jinja2.get_template("twitchbot_gamestart.txt")
-                message = template.render(metadata)
+                message = template.render(**metadata)
                 message = message.strip()
 
             if message:
