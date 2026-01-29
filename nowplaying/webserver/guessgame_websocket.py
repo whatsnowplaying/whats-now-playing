@@ -138,7 +138,7 @@ class GuessgameWebSocketHandler:
 
                     await self._broadcast_to_guessgame_sessions(app, broadcast_data)
 
-                await asyncio.sleep(5)  # Check every 5 seconds
+                await asyncio.sleep(1)  # Check every second for responsive game updates
 
         except asyncio.CancelledError:
             logging.info("Guess game broadcast task cancelled")

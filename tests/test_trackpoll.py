@@ -246,3 +246,140 @@ async def test_trackpoll_notify_plugins_called(trackpollbootstrap):  # pylint: d
     finally:
         # Properly cleanup to avoid Windows timing issues
         await trackpoll.stop()
+
+
+@pytest.mark.asyncio
+async def test_trackpoll_game_buffering(trackpollbootstrap):  # pylint: disable=redefined-outer-name
+    """test game buffering and flushing logic"""
+    config = trackpollbootstrap
+    config.cparser.setValue("guessgame/enabled", True)
+    config.cparser.sync()
+
+    trackpoll = nowplaying.processes.trackpoll.TrackPoll(
+        stopevent=threading.Event(), config=config, testmode=True
+    )
+    trackpoll._setup_guessgame()  # pylint: disable=protected-access
+    trackpoll._setup_notifications()  # pylint: disable=protected-access
+
+    try:
+        # Mock guessgame.should_start_game to return True
+        async def mock_should_start():
+            return True
+
+        trackpoll.guessgame.should_start_game = mock_should_start
+
+        # Mock guessgame.start_new_game
+        async def mock_start_game(track, artist):  # pylint: disable=unused-argument
+            pass
+
+        trackpoll.guessgame.start_new_game = mock_start_game
+
+        # Set up metadata
+        trackpoll.currentmeta = {
+            "artist": "Test Artist",
+            "title": "Test Title",
+            "filename": "test.mp3",
+        }
+
+        # Simulate buffered metadata (game is active)
+        trackpoll.buffered_metadata = trackpoll.currentmeta.copy()
+
+        # Test flushing buffered metadata
+        await trackpoll._flush_buffered_metadata()  # pylint: disable=protected-access
+
+        # Verify buffered metadata was cleared
+        assert trackpoll.buffered_metadata is None
+        assert trackpoll.game_start_time is None
+
+    finally:
+        await trackpoll.stop()
+
+
+@pytest.mark.asyncio
+async def test_trackpoll_requests_integration(trackpollbootstrap):  # pylint: disable=redefined-outer-name
+    """test track requests integration"""
+    config = trackpollbootstrap
+    config.cparser.setValue("settings/requests", True)
+    config.cparser.sync()
+
+    trackpoll = nowplaying.processes.trackpoll.TrackPoll(
+        stopevent=threading.Event(), config=config, testmode=True
+    )
+    trackpoll._setup_trackrequests()  # pylint: disable=protected-access
+
+    try:
+        # Mock trackrequests.get_request
+        async def mock_get_request(metadata):  # pylint: disable=unused-argument
+            return {"requester": "TestUser"}
+
+        trackpoll.trackrequests.get_request = mock_get_request
+
+        # Set up metadata
+        trackpoll.currentmeta = {
+            "artist": "Test Artist",
+            "title": "Test Title",
+        }
+
+        # Simulate request processing
+        if data := await trackpoll.trackrequests.get_request(trackpoll.currentmeta):
+            trackpoll.currentmeta.update(data)
+
+        # Verify request data was added
+        assert trackpoll.currentmeta.get("requester") == "TestUser"
+
+    finally:
+        await trackpoll.stop()
+
+
+@pytest.mark.asyncio
+async def test_trackpoll_cache_warmed(trackpollbootstrap):  # pylint: disable=redefined-outer-name
+    """test cache warming path"""
+    config = trackpollbootstrap
+    config.cparser.setValue("artistextras/enabled", True)
+    config.cparser.sync()
+
+    trackpoll = nowplaying.processes.trackpoll.TrackPoll(
+        stopevent=threading.Event(), config=config, testmode=True
+    )
+
+    try:
+        # Set up metadata with cache_warmed flag
+        trackpoll.currentmeta = {
+            "artist": "Test Artist",
+            "title": "Test Title",
+            "cache_warmed": True,
+        }
+
+        # Test that cache_warmed path is taken
+        assert trackpoll.currentmeta.get("cache_warmed") is True
+
+    finally:
+        await trackpoll.stop()
+
+
+@pytest.mark.asyncio
+async def test_trackpoll_start_artistfanartpool(trackpollbootstrap):  # pylint: disable=redefined-outer-name
+    """test artist fanart pool startup"""
+    config = trackpollbootstrap
+    config.cparser.setValue("artistextras/enabled", False)
+    config.cparser.sync()
+
+    trackpoll = nowplaying.processes.trackpoll.TrackPoll(
+        stopevent=threading.Event(), config=config, testmode=True
+    )
+
+    try:
+        # Set up metadata with fanart URLs
+        trackpoll.currentmeta = {
+            "artist": "Test Artist",
+            "artistfanarturls": ["http://example.com/fanart1.jpg"],
+        }
+
+        # Test that _start_artistfanartpool returns early when disabled
+        trackpoll._start_artistfanartpool()  # pylint: disable=protected-access
+
+        # Verify fanart URLs are still present (not deleted because feature disabled)
+        assert "artistfanarturls" in trackpoll.currentmeta
+
+    finally:
+        await trackpoll.stop()

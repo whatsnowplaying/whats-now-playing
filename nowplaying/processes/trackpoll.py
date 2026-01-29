@@ -54,6 +54,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             self.config = nowplaying.config.ConfigFile()
         self.currentmeta: TrackMetadata = {}
         self.buffered_metadata: TrackMetadata | None = None
+        self.game_start_time: float | None = None
         try:
             self.loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -279,12 +280,17 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         if not self.currentmeta:
             return False
 
+        # When a game is active (buffered_metadata exists), compare against
+        # buffered_metadata to check if it's the same track as the active game.
+        # Otherwise, compare against currentmeta.
+        comparison_target = self.buffered_metadata if self.buffered_metadata else self.currentmeta
+
         for key in COREMETA:
             fetched = f"fetched{key}"
             if (
                 key in metadata
-                and fetched in self.currentmeta
-                and metadata[key] != self.currentmeta[fetched]
+                and fetched in comparison_target
+                and metadata[key] != comparison_target[fetched]
             ):
                 return False
         return True
@@ -407,6 +413,37 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             logging.info("Skipping %s / %s", self.currentmeta["artist"], self.currentmeta["title"])
             return
 
+        # Check if guess game should start - do this BEFORE delay when enabled
+        # DJs with game enabled are being precise with track changes
+        should_start_game = (
+            self.guessgame
+            and self.currentmeta.get("artist")
+            and self.currentmeta.get("title")
+            and self.guessgame.is_enabled()
+        )
+
+        if should_start_game:
+            # Check if there's an active game (track changed mid-game)
+            if self.buffered_metadata:
+                logging.info("Track changed during active game, flushing buffered metadata")
+                await self._flush_buffered_metadata()
+
+            # Start game immediately - enrichment will happen during gameplay
+            try:
+                await self.guessgame.start_new_game(
+                    track=self.currentmeta["title"], artist=self.currentmeta["artist"]
+                )
+                self.buffered_metadata = self.currentmeta.copy()
+                self.game_start_time = time.time()
+                logging.info(
+                    "Started guess game for: %s - %s",
+                    self.currentmeta.get("artist"),
+                    self.currentmeta.get("title"),
+                )
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error("Failed to start guess game: %s", error)
+                should_start_game = False  # Fall back to normal metadata write
+
         # Get configured delay for optimization calculations
         try:
             configured_delay = self.config.cparser.value(
@@ -435,6 +472,8 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         nextcheck = await self.input.getplayingtrack() or {}
         if not self._ismetaempty(nextcheck) and not self._ismetasame(nextcheck):
             logging.info("Track changed during delay, skipping")
+            # If game was started, it will be flushed when next track starts a new game
+            # (handled by logic at line 421-423)
             self.currentmeta = oldmeta
             return
 
@@ -446,36 +485,12 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             self._start_artistfanartpool()
         self._artfallbacks()
 
-        # Check if guess game should start for this track
-        should_start_game = (
-            self.guessgame
-            and self.currentmeta.get("artist")
-            and self.currentmeta.get("title")
-            and self.guessgame.is_enabled()
-        )
-
-        if should_start_game:
-            # Check if there's an active game (track changed mid-game)
-            if self.buffered_metadata:
-                logging.info("Track changed during active guess game, flushing old metadata")
-                await self._flush_buffered_metadata()
-
-            # Start new game and buffer metadata (suppress announcements)
-            try:
-                await self.guessgame.start_new_game(
-                    track=self.currentmeta["title"], artist=self.currentmeta["artist"]
-                )
-                self.buffered_metadata = self.currentmeta.copy()
-                logging.debug("Metadata buffered for guess game, suppressing announcements")
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error("Failed to start guess game: %s", error)
-                # If game failed to start, write metadata normally
-                if not self.testmode:
-                    metadb = nowplaying.db.MetadataDB()
-                    await metadb.write_to_metadb(metadata=self.currentmeta)
-                await self._notify_plugins()
+        # Handle metadata write based on game state
+        if should_start_game and self.buffered_metadata:
+            # Game started successfully - update buffered metadata with enriched data
+            self.buffered_metadata = self.currentmeta.copy()
         else:
-            # No active game or game disabled - write metadata normally
+            # No game running or game failed to start - write metadata normally
             if not self.testmode:
                 metadb = nowplaying.db.MetadataDB()
                 await metadb.write_to_metadb(metadata=self.currentmeta)
@@ -486,7 +501,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         if not self.buffered_metadata:
             return
 
-        logging.info(
+        logging.debug(
             "Flushing buffered metadata: %s - %s",
             self.buffered_metadata.get("artist"),
             self.buffered_metadata.get("title"),
@@ -503,6 +518,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         self.currentmeta = saved_current
 
         self.buffered_metadata = None
+        self.game_start_time = None
 
     def _setup_notifications(self):
         """Initialize notification plugins"""
@@ -729,14 +745,18 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             )
             await self._flush_buffered_metadata()
         elif not game_state or game_state.get("status") == "waiting":
-            # Game not active but we have buffered metadata (shouldn't happen)
+            # Game not active but we have buffered metadata
+            # Wait at least 3 seconds after game start to avoid race condition
+            if self.game_start_time and (time.time() - self.game_start_time) < 3.0:
+                logging.debug("Game just started, waiting before flush check")
+                return
             logging.warning("No active game but metadata is buffered, flushing")
             await self._flush_buffered_metadata()
 
     async def _monitor_guessgame_timer(self):
         """Monitor guess game state and flush buffered metadata when game completes"""
         while not nowplaying.utils.safe_stopevent_check(self.stopevent):
-            await asyncio.sleep(5)  # Check every 5 seconds
+            await asyncio.sleep(1)  # Check every second for responsive game completion
             if self.guessgame:
                 try:
                     # Check for game timeout
