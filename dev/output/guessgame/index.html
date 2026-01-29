@@ -2009,6 +2009,100 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Tips for Stream Engagement">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Started
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#building-participation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Building Participation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leaderboard-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Leaderboard Strategies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#incentives-and-rewards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Incentives and Rewards
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#difficulty-and-balance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Difficulty and Balance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technical-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Tips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-engagement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Engagement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#common-pitfalls-to-avoid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Pitfalls to Avoid
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -2627,6 +2721,7 @@ leaderboard system to track top performers across your stream session and all-ti
 <h2 id="what-it-provides">What It Provides<a class="headerlink" href="#what-it-provides" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Interactive Chat Game</strong>: Viewers type commands like <code>!guess e</code> or <code>!guess house</code> to play</li>
+<li><strong>Automatic Announcements</strong>: Bot announces new games in chat when tracks change</li>
 <li><strong>Real-time OBS Display</strong>: Shows masked track/artist names and game state in your stream overlay</li>
 <li><strong>Leaderboard System</strong>: Tracks both session and all-time scores with configurable size</li>
 <li><strong>Flexible Solve Modes</strong>: Configure whether viewers must guess track, artist, or both</li>
@@ -2825,6 +2920,7 @@ leaderboard system to track top performers across your stream session and all-ti
 <h3 id="game-flow">Game Flow<a class="headerlink" href="#game-flow" title="Permanent link">&para;</a></h3>
 <ol>
 <li><strong>Track Changes</strong>: When a new track starts playing, the Guess Game automatically begins</li>
+<li><strong>Chat Announcement</strong>: An automatic announcement is sent to Twitch chat when the game starts</li>
 <li><strong>Chat Commands</strong>: Viewers type <code>!guess &lt;letter or word&gt;</code> in Twitch chat</li>
 <li><strong>Guess Processing</strong>:<ul>
 <li><strong>Single letters</strong>: Revealed if present in track/artist, points awarded by frequency</li>
@@ -2872,6 +2968,10 @@ Time: {{ time_remaining }}s
 <div class="highlight"><pre><span></span><code>@{{ cmduser }}: Session: {{ session_score }} points, {{ session_guesses }} guesses |
 All-Time: {{ all_time_score }} points, {{ all_time_guesses }} guesses, {{ all_time_solves }} solves
 </code></pre></div>
+<p><strong>twitchbot_gamestart.txt</strong>: Automatic announcement when a new game starts</p>
+<div class="highlight"><pre><span></span><code>🎮 New guessing game! Type !{{ guess_command }} &lt;letter or word&gt; to play | Track: {{ masked_track }} |
+Artist: {{ masked_artist }}
+</code></pre></div>
 <h3 id="template-variables">Template Variables<a class="headerlink" href="#template-variables" title="Permanent link">&para;</a></h3>
 <p>The Guess Game adds these variables for templating:</p>
 <table>
@@ -2883,12 +2983,20 @@ All-Time: {{ all_time_score }} points, {{ all_time_guesses }} guesses, {{ all_ti
 </thead>
 <tbody>
 <tr>
+<td><code>guess_command</code></td>
+<td>Configured guess command (default: <code>guess</code>) - for game start announcements</td>
+</tr>
+<tr>
 <td><code>masked_track</code></td>
 <td>Track name with unguessed letters as underscores</td>
 </tr>
 <tr>
 <td><code>masked_artist</code></td>
 <td>Artist name with unguessed letters as underscores</td>
+</tr>
+<tr>
+<td><code>time_limit</code></td>
+<td>Maximum game duration in seconds - for game start announcements</td>
 </tr>
 <tr>
 <td><code>time_remaining</code></td>
@@ -2966,12 +3074,67 @@ All-Time: {{ all_time_score }} points, {{ all_time_guesses }} guesses, {{ all_ti
 <li>Try clearing leaderboards and restarting</li>
 </ul>
 <h2 id="tips-for-stream-engagement">Tips for Stream Engagement<a class="headerlink" href="#tips-for-stream-engagement" title="Permanent link">&para;</a></h2>
+<h3 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Announce the game</strong>: Create a chat command explaining how to play</li>
-<li><strong>Show the leaderboard</strong>: Display top players between songs</li>
-<li><strong>Adjust difficulty</strong>: Shorter timeouts and harder solve modes increase challenge</li>
-<li><strong>Create incentives</strong>: Reward top leaderboard players with channel points or other prizes</li>
-<li><strong>Test first</strong>: Try the game offline to ensure everything works before going live</li>
+<li><strong>Test offline first</strong>: Run through several tracks before going live to verify setup and timing</li>
+<li><strong>Explain clearly</strong>: When you first enable it, take 30 seconds to explain the rules to your chat</li>
+<li><strong>Start simple</strong>: Use "Separate Solves" mode initially - easier for new players to understand</li>
+<li><strong>Make it visible</strong>: Position the OBS overlay prominently so viewers notice when games start</li>
+</ul>
+<h3 id="building-participation">Building Participation<a class="headerlink" href="#building-participation" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Call out new games</strong>: Even though auto-announcements happen, verbally mention "new game starting!"
+  when you notice tracks changing</li>
+<li><strong>Celebrate solvers</strong>: Give shout-outs when someone solves a track - viewers love recognition</li>
+<li><strong>Give hints</strong>: If a game is going unsolved, drop subtle hints ("This artist is from Detroit...")</li>
+<li><strong>Welcome newcomers</strong>: When someone plays for the first time, acknowledge them and explain briefly</li>
+</ul>
+<h3 id="leaderboard-strategies">Leaderboard Strategies<a class="headerlink" href="#leaderboard-strategies" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Show it between sets</strong>: Display the leaderboard overlay during breaks or between mixing sessions</li>
+<li><strong>Weekly/monthly resets</strong>: Clear session scores regularly to give everyone fresh chances to compete</li>
+<li><strong>Call out the leaders</strong>: Mention top 3 players periodically to create friendly competition</li>
+<li><strong>Track all-time legends</strong>: Keep all-time leaderboards running for long-term community engagement</li>
+</ul>
+<h3 id="incentives-and-rewards">Incentives and Rewards<a class="headerlink" href="#incentives-and-rewards" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Channel points</strong>: Award bonus points to top session performers</li>
+<li><strong>Discord roles</strong>: Give leaderboard leaders special roles in your community Discord</li>
+<li><strong>Shout-outs</strong>: Feature top players in social media posts or stream recaps</li>
+<li><strong>Track requests</strong>: Let weekly winners pick a track for your next stream</li>
+<li><strong>Merchandise</strong>: Run monthly contests with prizes for cumulative top scores</li>
+</ul>
+<h3 id="difficulty-and-balance">Difficulty and Balance<a class="headerlink" href="#difficulty-and-balance" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Adjust timeout duration</strong>: Shorter durations (60-90s) create urgency; longer (3-5 min) allow
+  casual participation</li>
+<li><strong>Consider your music</strong>: Obscure tracks are harder but more rewarding to solve</li>
+<li><strong>Match your audience</strong>: Electronic music fans might struggle with mainstream pop (and vice versa)</li>
+<li><strong>Use "Either" mode</strong>: For very difficult tracks, allow solving just track OR artist to maintain momentum</li>
+<li><strong>Auto-reveal common words</strong>: Enable this setting if your track titles have many filler words
+  (the, and, of, etc.)</li>
+</ul>
+<h3 id="technical-tips">Technical Tips<a class="headerlink" href="#technical-tips" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>OBS layout</strong>: Place game display near your track info - viewers naturally look there</li>
+<li><strong>Font sizing</strong>: Make masked text large enough to read on mobile devices (many viewers watch on phones)</li>
+<li><strong>Leaderboard placement</strong>: Side panels or overlays during transitions work well</li>
+<li><strong>Test on mobile</strong>: Check how your overlays look on smaller screens</li>
+</ul>
+<h3 id="advanced-engagement">Advanced Engagement<a class="headerlink" href="#advanced-engagement" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Themed streams</strong>: "Guess the 90s house track" nights with appropriate difficulty settings</li>
+<li><strong>Team competitions</strong>: Track scores manually for "regulars vs newcomers" friendly rivalries</li>
+<li><strong>Streak tracking</strong>: Manually recognize players who solve multiple games in a row</li>
+<li><strong>Custom announcements</strong>: Edit <code>twitchbot_gamestart.txt</code> to match your stream's personality</li>
+<li><strong>Integration</strong>: Mention game stats in your post-stream recaps or YouTube highlights</li>
+</ul>
+<h3 id="common-pitfalls-to-avoid">Common Pitfalls to Avoid<a class="headerlink" href="#common-pitfalls-to-avoid" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Don't make it mandatory</strong>: Let viewers choose to participate - forced engagement backfires</li>
+<li><strong>Avoid extreme difficulty</strong>: If nobody solves games for 30+ minutes, decrease timeout or change mode</li>
+<li><strong>Don't ignore participants</strong>: Always acknowledge guesses and solvers, even if you're focused on mixing</li>
+<li><strong>Balance attention</strong>: Keep focus on your music - the game enhances your stream, it shouldn't dominate it</li>
 </ul>
 
 
