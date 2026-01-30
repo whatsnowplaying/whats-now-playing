@@ -86,7 +86,6 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         self.timeout = aiohttp.ClientTimeout(total=60)
         self.modernmeerkat_greeted = False
         self.last_announced_game_id: int | None = None
-        self.last_game_end_time: float | None = None
         self.game_announce_lock = asyncio.Lock()
 
         self.input: nowplaying.inputs.InputPlugin | None = None
