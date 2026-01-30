@@ -58,7 +58,7 @@ class GuessGameSettings:
 
         # Game settings
         widget.findChild(QSpinBox, "maxduration_spinbox").setValue(
-            config.cparser.value("guessgame/maxduration", type=int, defaultValue=180)
+            config.cparser.value("guessgame/maxduration", type=int, defaultValue=120)
         )
         widget.findChild(QSpinBox, "leaderboard_size_spinbox").setValue(
             config.cparser.value("guessgame/leaderboard_size", type=int, defaultValue=10)

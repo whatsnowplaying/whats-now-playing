@@ -556,3 +556,251 @@ async def test_guess_whitespace_only(
 
     # Should return None or handle gracefully
     assert result is None or result["correct"] is False
+
+
+@pytest.mark.asyncio
+async def test_word_boundary_matching(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test that word guesses match only at word boundaries, not as substrings."""
+    game = isolated_guessgame
+
+    # Start game with "Simple Minds" / "Out on the Catwalk"
+    # The word "in" appears as a substring in "Minds" but should only match as a word
+    await game.start_new_game(track="Out on the Catwalk", artist="Simple Minds")
+
+    # Guess "in" - should NOT match because "in" is not a complete word in "Minds"
+    result = await game.process_guess(username="testuser", guess_text="in")
+
+    # Should be rejected as wrong guess (not found as complete word)
+    assert result is not None
+    assert result["correct"] is False
+    assert result["guess_type"] == "wrong"
+
+    # Guess "on" - should match as complete word in "Out on the Catwalk"
+    result = await game.process_guess(username="testuser", guess_text="on")
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["guess_type"] == "word"
+    # Letters 'o' and 'n' should be revealed
+    assert "o" in result["masked_track"].lower() or "o" in result["masked_artist"].lower()
+    assert "n" in result["masked_track"].lower() or "n" in result["masked_artist"].lower()
+
+
+@pytest.mark.asyncio
+async def test_quotes_in_artist_name(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test that artists with quotes in their name match correctly without quotes in guess."""
+    game = isolated_guessgame
+
+    # Start game with artist that has quotes in the name
+    await game.start_new_game(track="Amish Paradise", artist='"Weird Al" Yankovic')
+
+    # Guess without quotes should match
+    result = await game.process_guess(username="testuser", guess_text="weird al yankovic")
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["guess_type"] == "solve"
+    assert result["artist_solved"] is True
+
+    # Also test word matching
+    game2 = isolated_guessgame
+    await game2.start_new_game(track="Amish Paradise", artist='"Weird Al" Yankovic')
+
+    # Guess "weird al" as a word should match
+    result = await game2.process_guess(username="testuser", guess_text="weird al")
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["guess_type"] == "word"
+
+
+@pytest.mark.asyncio
+async def test_parentheses_in_track_name(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test that tracks with parentheses match correctly without parentheses in guess."""
+    game = isolated_guessgame
+
+    # Start game with track that has parentheses (and apostrophe)
+    await game.start_new_game(
+        track="(I'm always touched) by your presence, dear", artist="Blondie"
+    )
+
+    # Guess without parentheses or apostrophe should match
+    result = await game.process_guess(
+        username="testuser", guess_text="im always touched by your presence dear"
+    )
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["guess_type"] == "solve"
+    assert result["track_solved"] is True
+
+    # Test with square brackets too
+    game2 = isolated_guessgame
+    await game2.start_new_game(track="[Bonus Track] Amazing Song", artist="Test Artist")
+
+    result = await game2.process_guess(username="testuser", guess_text="bonus track amazing song")
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["guess_type"] == "solve"
+
+
+@pytest.mark.asyncio
+async def test_hyphenated_artist_name(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test that artists with hyphens like Alt-J match correctly."""
+    game = isolated_guessgame
+
+    # Start game with hyphenated artist
+    await game.start_new_game(track="Breezeblocks", artist="Alt-J")
+
+    # Guess with hyphen should match
+    result = await game.process_guess(username="testuser", guess_text="alt-j")
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["guess_type"] == "solve"
+    assert result["artist_solved"] is True
+
+    # Test without hyphen should also match
+    game2 = isolated_guessgame
+    await game2.start_new_game(track="Breezeblocks", artist="Alt-J")
+
+    result = await game2.process_guess(username="testuser", guess_text="altj")
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["guess_type"] == "solve"
+
+    # Test as word match (not full artist name)
+    game3 = isolated_guessgame
+    await game3.start_new_game(track="Some Track", artist="Alt-J")
+
+    result = await game3.process_guess(username="testuser", guess_text="alt")
+
+    # "alt" is only part of "altj" after normalization, should NOT match as word
+    assert result is not None
+    assert result["correct"] is False
+
+
+@pytest.mark.asyncio
+async def test_accented_characters_in_name(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test that accented characters like é are revealed when user guesses without accent."""
+    game = isolated_guessgame
+
+    # Start game with accented name
+    await game.start_new_game(track="Nothing Compares 2 U", artist="Sinéad O'Connor")
+
+    # Guess "sinead" without accent should reveal "Sinéad" including the é
+    result = await game.process_guess(username="testuser", guess_text="sinead")
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["guess_type"] == "word"
+    # Check that the é was revealed in the masked artist
+    assert "sinéad" in result["masked_artist"].lower()
+    # Should not have underscores in the first word anymore
+    assert not any(c == "_" for c in result["masked_artist"].split()[0])
+
+    # Now guess "oconnor" - should also work
+    result2 = await game.process_guess(username="testuser", guess_text="oconnor")
+
+    assert result2 is not None
+    assert result2["correct"] is True
+    assert result2["guess_type"] == "word"
+    # Check that O'Connor was fully revealed
+    assert "o'connor" in result2["masked_artist"].lower()
+
+    # Test with apostrophe
+    game2 = isolated_guessgame
+    await game2.start_new_game(track="Nothing Compares 2 U", artist="Sinéad O'Connor")
+    result3 = await game2.process_guess(username="testuser", guess_text="o'connor")
+
+    assert result3 is not None
+    assert result3["correct"] is True
+    assert result3["guess_type"] == "word"
+
+    # Test with the actual track that has quotes and parentheses
+    game3 = isolated_guessgame
+    await game3.start_new_game(
+        track='"The Emperor\'s New Clothes (Live in 1990)"', artist="Sinéad O'Connor"
+    )
+    result4 = await game3.process_guess(username="testuser", guess_text="oconnor")
+
+    assert result4 is not None
+    assert result4["correct"] is True, f"Expected correct, got {result4}"
+    assert result4["guess_type"] == "word"
+
+
+@pytest.mark.asyncio
+async def test_comma_in_numbers(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test that commas in numbers are handled correctly (10,000 matches 10000)."""
+    game = isolated_guessgame
+
+    # Start game with comma in artist name
+    await game.start_new_game(track="Because the Night", artist="10,000 Maniacs")
+
+    # Guess without comma should match
+    result = await game.process_guess(username="testuser", guess_text="10000 maniacs")
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["guess_type"] == "solve"
+    assert result["artist_solved"] is True
+
+
+@pytest.mark.asyncio
+async def test_multi_word_guess(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test that multi-word guesses reveal all letters in the matched words."""
+    game = isolated_guessgame
+
+    # Start game with a track
+    await game.start_new_game(track="The Road to Mandalay", artist="Robbie Williams")
+
+    # Guess "road to" should reveal letters from both "Road" and "to"
+    result = await game.process_guess(username="testuser", guess_text="road to")
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["guess_type"] == "word"
+    # Check that both "road" and "to" are revealed in masked track
+    masked = result["masked_track"].lower()
+    assert "road" in masked
+    assert " to " in masked or masked.endswith(" to")
+    # Verify no underscores in "road" or "to"
+    words = result["masked_track"].split()
+    for i, word in enumerate(words):
+        if word.lower() in ["road", "to"]:
+            assert "_" not in word, f"Word '{word}' at position {i} should be fully revealed"
+
+
+@pytest.mark.asyncio
+async def test_no_points_for_already_revealed_words(
+    isolated_guessgame,
+):  # pylint: disable=redefined-outer-name
+    """Test that guessing already-revealed words doesn't award points."""
+    game = isolated_guessgame
+
+    # Start game with a track
+    await game.start_new_game(track="The Road to Mandalay", artist="Robbie Williams")
+
+    # First guess "road" - should award points
+    result1 = await game.process_guess(username="testuser", guess_text="road")
+
+    assert result1 is not None
+    assert result1["correct"] is True
+    assert result1["guess_type"] == "word"
+    assert result1["points"] == 10  # Default word points
+
+    # Guess all letters in "road" individually
+    await game.process_guess(username="testuser", guess_text="r")
+    await game.process_guess(username="testuser", guess_text="o")
+    await game.process_guess(username="testuser", guess_text="a")
+    await game.process_guess(username="testuser", guess_text="d")
+
+    # Now guess "road" again - should NOT award points since all letters revealed
+    result2 = await game.process_guess(username="testuser", guess_text="road")
+
+    assert result2 is not None
+    assert result2["correct"] is False
+    assert result2["already_guessed"] is True
+    assert result2["points"] == 0

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Guess Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: transparent;
+            color: #ffffff;
+            padding: 20px;
+        }
+
+        .game-container {
+            max-width: 600px;
+            background: linear-gradient(135deg, rgba(30, 30, 50, 0.95), rgba(50, 30, 80, 0.95));
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+        }
+
+        .game-container.solved {
+            background: linear-gradient(135deg, rgba(30, 80, 30, 0.95), rgba(50, 120, 50, 0.95));
+        }
+
+        .game-container.timeout {
+            background: linear-gradient(135deg, rgba(80, 30, 30, 0.95), rgba(120, 50, 50, 0.95));
+        }
+
+        .game-container.hidden {
+            display: none;
+        }
+
+        .track-section {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .track-label {
+            font-size: 14px;
+            color: #aaaaff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .track-text {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            color: #ffffff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            min-height: 48px;
+            line-height: 48px;
+        }
+
+        .timer {
+            text-align: center;
+            font-size: 28px;
+            color: #ffaa00;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .timer.low {
+            color: #ff4444;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .status-message {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .status-message.solved {
+            color: #44ff44;
+            background: rgba(68, 255, 68, 0.2);
+        }
+
+        .status-message.timeout {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer">
+        <div class="track-section">
+            <div class="track-label">Track</div>
+            <div class="track-text" id="trackText">_ _ _ _ _</div>
+        </div>
+
+        <div class="track-section">
+            <div class="track-label">Artist</div>
+            <div class="track-text" id="artistText">_ _ _ _</div>
+        </div>
+
+        <div class="timer" id="timer">0:00</div>
+
+        <div class="status-message" id="statusMessage" style="display: none;"></div>
+    </div>
+
+    <script>
+        let ws;
+        const containerEl = document.getElementById('gameContainer');
+        const trackTextEl = document.getElementById('trackText');
+        const artistTextEl = document.getElementById('artistText');
+        const timerEl = document.getElementById('timer');
+        const statusMessageEl = document.getElementById('statusMessage');
+
+        function connect() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const port = urlParams.get('port') || '8899';
+            const sessionId = 'browser_' + Date.now();
+
+            ws = new WebSocket(`ws://localhost:${port}/wsguessgamestream?session_id=${sessionId}`);
+
+            ws.onopen = () => {
+                console.log('Connected to guess game WebSocket');
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    updateGameState(data);
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onclose = () => {
+                console.log('Disconnected, reconnecting in 5 seconds...');
+                setTimeout(connect, 5000);
+            };
+        }
+
+        function updateGameState(data) {
+            const status = data.status;
+
+            // Hide if waiting for game
+            if (status === 'waiting') {
+                containerEl.classList.add('hidden');
+                return;
+            }
+
+            // Show container
+            containerEl.classList.remove('hidden');
+
+            // Update styling based on status
+            containerEl.classList.remove('solved', 'timeout');
+            if (status === 'solved' || status === 'timeout') {
+                containerEl.classList.add(status);
+            }
+
+            // Update track/artist
+            if (status === 'active') {
+                trackTextEl.textContent = data.masked_track || '_ _ _ _ _';
+                artistTextEl.textContent = data.masked_artist || '_ _ _ _';
+            } else {
+                // Show full answer when solved/timeout
+                trackTextEl.textContent = data.revealed_track || data.masked_track;
+                artistTextEl.textContent = data.revealed_artist || data.masked_artist;
+            }
+
+            // Update timer
+            const minutes = Math.floor(data.time_remaining / 60);
+            const seconds = data.time_remaining % 60;
+            timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            timerEl.className = 'timer' + (data.time_remaining < 30 ? ' low' : '');
+
+            // Update status message
+            if (status === 'solved') {
+                statusMessageEl.textContent = `🎉 SOLVED by ${data.current_solver || 'someone'}!`;
+                statusMessageEl.className = 'status-message solved';
+                statusMessageEl.style.display = 'block';
+            } else if (status === 'timeout') {
+                statusMessageEl.textContent = "⏰ Time's Up!";
+                statusMessageEl.className = 'status-message timeout';
+                statusMessageEl.style.display = 'block';
+            } else {
+                statusMessageEl.style.display = 'none';
+            }
+        }
+
+        // Connect on page load
+        connect();
+    </script>
+</body>
+</html>

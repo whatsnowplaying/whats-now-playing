@@ -425,8 +425,13 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         if should_start_game:
             # Check if there's an active game (track changed mid-game)
             if self.buffered_metadata:
-                logging.info("Track changed during active game, flushing buffered metadata")
+                logging.info("Track changed during active game, ending previous game")
+                # End the previous game first (marks it as ended in DB)
+                await self.guessgame.end_game(reason="track_change")
+                # Then flush buffered metadata to send track announcement
                 await self._flush_buffered_metadata()
+                # Brief delay to ensure previous track announcement is sent before new game starts
+                await asyncio.sleep(0.5)
 
             # Start game immediately - enrichment will happen during gameplay
             try:
