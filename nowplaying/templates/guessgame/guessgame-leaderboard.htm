@@ -176,22 +176,54 @@
         function updateLeaderboard(data) {
             // Hide if no leaderboard data
             if (!data.session_leaderboard || data.session_leaderboard.length === 0) {
-                leaderboardBodyEl.innerHTML = '<tr><td colspan="4" class="empty-state">No scores yet</td></tr>';
+                // Clear and show empty state using DOM manipulation
+                leaderboardBodyEl.innerHTML = '';
+                const emptyRow = document.createElement('tr');
+                const emptyCell = document.createElement('td');
+                emptyCell.setAttribute('colspan', '4');
+                emptyCell.className = 'empty-state';
+                emptyCell.textContent = 'No scores yet';
+                emptyRow.appendChild(emptyCell);
+                leaderboardBodyEl.appendChild(emptyRow);
                 return;
             }
 
             // Show leaderboard
             containerEl.classList.remove('hidden');
 
-            // Build leaderboard HTML
-            leaderboardBodyEl.innerHTML = data.session_leaderboard.map(entry => `
-                <tr>
-                    <td class="rank rank-${entry.rank}">${entry.rank}</td>
-                    <td class="player-name">${entry.username}</td>
-                    <td class="score">${entry.score}</td>
-                    <td class="solves">${entry.solves}</td>
-                </tr>
-            `).join('');
+            // Clear existing rows
+            leaderboardBodyEl.innerHTML = '';
+
+            // Build leaderboard using DOM manipulation
+            data.session_leaderboard.forEach(entry => {
+                const row = document.createElement('tr');
+
+                // Rank cell
+                const rankCell = document.createElement('td');
+                rankCell.className = `rank rank-${entry.rank}`;
+                rankCell.textContent = entry.rank;
+                row.appendChild(rankCell);
+
+                // Player name cell
+                const nameCell = document.createElement('td');
+                nameCell.className = 'player-name';
+                nameCell.textContent = entry.username;
+                row.appendChild(nameCell);
+
+                // Score cell
+                const scoreCell = document.createElement('td');
+                scoreCell.className = 'score';
+                scoreCell.textContent = entry.score;
+                row.appendChild(scoreCell);
+
+                // Solves cell
+                const solvesCell = document.createElement('td');
+                solvesCell.className = 'solves';
+                solvesCell.textContent = entry.solves;
+                row.appendChild(solvesCell);
+
+                leaderboardBodyEl.appendChild(row);
+            });
         }
 
         // Connect on page load
