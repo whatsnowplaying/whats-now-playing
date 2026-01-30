@@ -116,25 +116,29 @@ Shows the current game state with masked track/artist names:
 
 ### Leaderboard Display
 
-Shows top players for session or all-time. Two leaderboard pages are available:
+Shows top players for session or all-time using a single unified template with URL parameters:
 
 #### Session Leaderboard
 
 Displays scores for the current streaming session:
 
 1. Add a **Browser** source in OBS
-2. Set URL to: `http://localhost:8899/guessgame/guessgame-leaderboard.htm`
+2. Set URL to: `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session`
 3. Set dimensions: `600x800` (or adjust to your layout)
-4. Customize the display by editing `templates/guessgame/guessgame-leaderboard.htm`
 
 #### All-Time Leaderboard
 
 Displays cumulative scores across all sessions:
 
 1. Add a **Browser** source in OBS
-2. Set URL to: `http://localhost:8899/guessgame/guessgame-alltime-leaderboard.htm`
+2. Set URL to: `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=alltime`
 3. Set dimensions: `600x800` (or adjust to your layout)
-4. Customize the display by editing `templates/guessgame/guessgame-alltime-leaderboard.htm`
+
+**Customization:**
+
+Both leaderboards use the same template file (`templates/guessgame/guessgame-leaderboard.htm`), making it easy
+to maintain consistent styling. The `?type=session` or `?type=alltime` URL parameter controls which data is
+displayed and which color scheme is used (purple/orange for session, green for all-time).
 
 **Both Leaderboards Show:**
 

@@ -19,10 +19,51 @@
 
         .leaderboard-container {
             max-width: 500px;
-            background: linear-gradient(135deg, rgba(30, 30, 50, 0.95), rgba(50, 30, 80, 0.95));
             border-radius: 12px;
             padding: 25px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Session leaderboard styling (purple/orange) */
+        .leaderboard-container.session {
+            background: linear-gradient(135deg, rgba(30, 30, 50, 0.95), rgba(50, 30, 80, 0.95));
+        }
+
+        .leaderboard-container.session .leaderboard-title {
+            color: #ffaa00;
+        }
+
+        .leaderboard-container.session .rank {
+            color: #ffaa00;
+        }
+
+        .leaderboard-container.session .score {
+            color: #ffdd66;
+        }
+
+        .leaderboard-container.session th {
+            color: #aaaaff;
+        }
+
+        /* All-time leaderboard styling (green) */
+        .leaderboard-container.alltime {
+            background: linear-gradient(135deg, rgba(30, 50, 30, 0.95), rgba(50, 80, 50, 0.95));
+        }
+
+        .leaderboard-container.alltime .leaderboard-title {
+            color: #aaffaa;
+        }
+
+        .leaderboard-container.alltime .rank {
+            color: #aaffaa;
+        }
+
+        .leaderboard-container.alltime .score {
+            color: #aaffaa;
+        }
+
+        .leaderboard-container.alltime th {
+            color: #aaffaa;
         }
 
         .leaderboard-container.hidden {
@@ -34,7 +75,6 @@
             font-weight: bold;
             text-align: center;
             margin-bottom: 20px;
-            color: #ffaa00;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         }
 
@@ -47,7 +87,6 @@
             text-align: left;
             padding: 12px 10px;
             border-bottom: 2px solid rgba(255, 255, 255, 0.4);
-            color: #aaaaff;
             font-size: 14px;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -76,7 +115,6 @@
             font-weight: bold;
             font-size: 18px;
             text-align: center;
-            color: #ffaa00;
         }
 
         .rank-1 {
@@ -101,7 +139,6 @@
         .score {
             text-align: right;
             font-weight: bold;
-            color: #ffdd66;
         }
 
         .solves {
@@ -120,7 +157,7 @@
 </head>
 <body>
     <div class="leaderboard-container" id="leaderboardContainer">
-        <div class="leaderboard-title">🏆 Leaderboard</div>
+        <div class="leaderboard-title" id="leaderboardTitle">🏆 Leaderboard</div>
         <table class="leaderboard-table">
             <thead>
                 <tr>
@@ -139,15 +176,31 @@
     </div>
 
     <script>
-        let ws;
+        // Configuration based on URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const leaderboardType = urlParams.get('type') || 'session'; // 'session' or 'alltime'
+        const port = urlParams.get('port') || '8899';
+
+        // Configure UI based on leaderboard type
         const containerEl = document.getElementById('leaderboardContainer');
+        const titleEl = document.getElementById('leaderboardTitle');
         const leaderboardBodyEl = document.getElementById('leaderboardBody');
 
-        function connect() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const port = urlParams.get('port') || '8899';
-            const sessionId = 'leaderboard_' + Date.now();
+        let leaderboardDataField;
+        if (leaderboardType === 'alltime') {
+            containerEl.classList.add('alltime');
+            titleEl.textContent = '🏆 All-Time Leaderboard';
+            leaderboardDataField = 'all_time_leaderboard';
+        } else {
+            containerEl.classList.add('session');
+            titleEl.textContent = '🏆 Leaderboard';
+            leaderboardDataField = 'session_leaderboard';
+        }
 
+        let ws;
+
+        function connect() {
+            const sessionId = `${leaderboardType}_leaderboard_${Date.now()}`;
             ws = new WebSocket(`ws://localhost:${port}/wsguessgamestream?session_id=${sessionId}`);
 
             ws.onopen = () => {
@@ -174,8 +227,11 @@
         }
 
         function updateLeaderboard(data) {
+            // Get the appropriate leaderboard data based on type
+            const leaderboardData = data[leaderboardDataField];
+
             // Hide if no leaderboard data
-            if (!data.session_leaderboard || data.session_leaderboard.length === 0) {
+            if (!leaderboardData || leaderboardData.length === 0) {
                 // Clear and show empty state using DOM manipulation
                 leaderboardBodyEl.innerHTML = '';
                 const emptyRow = document.createElement('tr');
@@ -195,7 +251,7 @@
             leaderboardBodyEl.innerHTML = '';
 
             // Build leaderboard using DOM manipulation
-            data.session_leaderboard.forEach(entry => {
+            leaderboardData.forEach(entry => {
                 const row = document.createElement('tr');
 
                 // Rank cell

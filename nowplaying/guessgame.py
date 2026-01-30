@@ -368,10 +368,10 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             return ""
 
         # After normality, fix any remaining cases like "o connor" -> "oconnor"
-        # This handles cases where normality inserted spaces for unhandled punctuation
-        # Pattern: known single-letter prefixes (O', D', Mc, Mac) + space + word
-        # Restricts to common Irish/Scottish name prefixes to avoid over-merging
-        normalized = re.sub(r'\b([odm])\s+([a-z]{2,})', r'\1\2', normalized)
+        # This handles cases where normality inserted spaces for unhandled punctuation.
+        # Pattern: known Irish/Scottish name prefixes ("o", "d", "mc", "mac") + space + word.
+        # Restricts to these common prefixes to avoid over-merging unrelated words.
+        normalized = re.sub(r'\b(o|d|mc|mac)\s+([a-z]{2,})', r'\1\2', normalized)
 
         # Strip remaining censoring characters that normality might preserve
         normalized = normalized.replace("*", "")
