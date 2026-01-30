@@ -46,23 +46,23 @@
         }
 
         /* All-time leaderboard styling (green) */
-        .leaderboard-container.alltime {
+        .leaderboard-container.all_time {
             background: linear-gradient(135deg, rgba(30, 50, 30, 0.95), rgba(50, 80, 50, 0.95));
         }
 
-        .leaderboard-container.alltime .leaderboard-title {
+        .leaderboard-container.all_time .leaderboard-title {
             color: #aaffaa;
         }
 
-        .leaderboard-container.alltime .rank {
+        .leaderboard-container.all_time .rank {
             color: #aaffaa;
         }
 
-        .leaderboard-container.alltime .score {
+        .leaderboard-container.all_time .score {
             color: #aaffaa;
         }
 
-        .leaderboard-container.alltime th {
+        .leaderboard-container.all_time th {
             color: #aaffaa;
         }
 
@@ -178,7 +178,7 @@
     <script>
         // Configuration based on URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        const leaderboardType = urlParams.get('type') || 'session'; // 'session' or 'alltime'
+        const leaderboardType = urlParams.get('type') || 'session'; // 'session' or 'all_time'
         const port = urlParams.get('port') || '8899';
 
         // Configure UI based on leaderboard type
@@ -187,8 +187,8 @@
         const leaderboardBodyEl = document.getElementById('leaderboardBody');
 
         let leaderboardDataField;
-        if (leaderboardType === 'alltime') {
-            containerEl.classList.add('alltime');
+        if (leaderboardType === 'all_time') {
+            containerEl.classList.add('all_time');
             titleEl.textContent = '🏆 All-Time Leaderboard';
             leaderboardDataField = 'all_time_leaderboard';
         } else {

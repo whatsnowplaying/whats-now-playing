@@ -131,13 +131,13 @@ Displays scores for the current streaming session:
 Displays cumulative scores across all sessions:
 
 1. Add a **Browser** source in OBS
-2. Set URL to: `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=alltime`
+2. Set URL to: `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=all_time`
 3. Set dimensions: `600x800` (or adjust to your layout)
 
 **Customization:**
 
 Both leaderboards use the same template file (`templates/guessgame/guessgame-leaderboard.htm`), making it easy
-to maintain consistent styling. The `?type=session` or `?type=alltime` URL parameter controls which data is
+to maintain consistent styling. The `?type=session` or `?type=all_time` URL parameter controls which data is
 displayed and which color scheme is used (purple/orange for session, green for all-time).
 
 **Both Leaderboards Show:**
