@@ -1832,6 +1832,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Leaderboard Display">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#session-leaderboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Leaderboard
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#all-time-leaderboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All-Time Leaderboard
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -2782,7 +2810,7 @@ leaderboard system to track top performers across your stream session and all-ti
 <tr>
 <td>Game Duration</td>
 <td>Maximum time in seconds before game times out</td>
-<td><code>180</code> (3 minutes)</td>
+<td><code>120</code> (2 minutes)</td>
 </tr>
 <tr>
 <td>Leaderboard Size</td>
@@ -2888,9 +2916,9 @@ leaderboard system to track top performers across your stream session and all-ti
 <p>Shows the current game state with masked track/artist names:</p>
 <ol>
 <li>Add a <strong>Browser</strong> source in OBS</li>
-<li>Set URL to: <code>http://localhost:8899/guessgame.htm</code></li>
+<li>Set URL to: <code>http://localhost:8899/guessgame/guessgame.htm</code></li>
 <li>Set dimensions: <code>1920x200</code> (or adjust to your layout)</li>
-<li>Customize the display by editing <code>templates/guessgame.htm</code></li>
+<li>Customize the display by editing <code>templates/guessgame/guessgame.htm</code></li>
 </ol>
 <p><strong>Display Shows:</strong></p>
 <ul>
@@ -2901,20 +2929,31 @@ leaderboard system to track top performers across your stream session and all-ti
 <li>Game status (Active, Solved, Timeout, Waiting)</li>
 </ul>
 <h3 id="leaderboard-display">Leaderboard Display<a class="headerlink" href="#leaderboard-display" title="Permanent link">&para;</a></h3>
-<p>Shows top players for session or all-time:</p>
+<p>Shows top players for session or all-time using a single unified template with URL parameters:</p>
+<h4 id="session-leaderboard">Session Leaderboard<a class="headerlink" href="#session-leaderboard" title="Permanent link">&para;</a></h4>
+<p>Displays scores for the current streaming session:</p>
 <ol>
 <li>Add a <strong>Browser</strong> source in OBS</li>
-<li>Set URL to: <code>http://localhost:8899/guessgame-leaderboard.htm</code></li>
+<li>Set URL to: <code>http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session</code></li>
 <li>Set dimensions: <code>600x800</code> (or adjust to your layout)</li>
-<li>Customize the display by editing <code>templates/guessgame-leaderboard.htm</code></li>
 </ol>
-<p><strong>Leaderboard Shows:</strong></p>
+<h4 id="all-time-leaderboard">All-Time Leaderboard<a class="headerlink" href="#all-time-leaderboard" title="Permanent link">&para;</a></h4>
+<p>Displays cumulative scores across all sessions:</p>
+<ol>
+<li>Add a <strong>Browser</strong> source in OBS</li>
+<li>Set URL to: <code>http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=all_time</code></li>
+<li>Set dimensions: <code>600x800</code> (or adjust to your layout)</li>
+</ol>
+<p><strong>Customization:</strong></p>
+<p>Both leaderboards use the same template file (<code>templates/guessgame/guessgame-leaderboard.htm</code>), making it easy
+to maintain consistent styling. The <code>?type=session</code> or <code>?type=all_time</code> URL parameter controls which data is
+displayed and which color scheme is used (purple/orange for session, green for all-time).</p>
+<p><strong>Both Leaderboards Show:</strong></p>
 <ul>
-<li>Rank</li>
+<li>Rank (with gold/silver/bronze styling for top 3)</li>
 <li>Username</li>
 <li>Total score</li>
-<li>Number of correct guesses</li>
-<li>Configurable to show session or all-time stats</li>
+<li>Number of solves</li>
 </ul>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <h3 id="game-flow">Game Flow<a class="headerlink" href="#game-flow" title="Permanent link">&para;</a></h3>
