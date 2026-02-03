@@ -181,6 +181,20 @@ class UpgradeTemplates:
 
             shutil.copyfile(apppath, destpath)
 
+            # Windows file caching workaround: force file to be readable and synced
+            # This ensures the file is fully written before we checksum it
+            import os
+            import time
+            try:
+                # Force a sync by opening and closing the file
+                with open(destpath, 'rb') as f:
+                    f.read(1)  # Read one byte to ensure file is accessible
+                    os.fsync(f.fileno())  # Force sync to disk
+                # Small delay to ensure filesystem cache is updated
+                time.sleep(0.01)
+            except (OSError, IOError) as e:
+                logging.debug("%s: file sync warning: %s", relative_path, e)
+
             # Verify the hash immediately after copying
             dest_size = destpath.stat().st_size
             verify_hash = checksum(destpath)
