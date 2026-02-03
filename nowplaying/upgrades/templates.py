@@ -165,4 +165,13 @@ class UpgradeTemplates:
             self.alert = True
             logging.info("New version of %s copied to %s", relative_path, destpath)
             shutil.copyfile(apppath, destpath)
+            # Verify the hash immediately after copying
+            verify_hash = checksum(destpath)
+            logging.debug(
+                "%s: verified .new file after copy (app=%s, new=%s, match=%s)",
+                relative_path,
+                apphash,
+                verify_hash,
+                apphash == verify_hash,
+            )
             self.copied.append(str(relative_path))
