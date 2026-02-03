@@ -568,7 +568,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         """start our server"""
         self.runner = self.create_runner()
         await self.runner.setup()
-        self.site = web.TCPSite(self.runner, host, port, reuse_address=True)
+        self.site = web.TCPSite(self.runner, host, port)
 
         # Start background tasks
         stop_task = asyncio.create_task(self.stopeventtask())
@@ -591,46 +591,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         self.tasks.add(guessgame_task)
         guessgame_task.add_done_callback(self.tasks.discard)
 
-        # Retry port binding with exponential backoff
-        max_retries = 5
-        retry_delay = 0.5  # Start with 0.5 seconds
-        last_error = None
-
-        for attempt in range(max_retries):
-            try:
-                await self.site.start()
-                if attempt > 0:
-                    logging.info(
-                        "Successfully bound to port %s:%s after %s attempts",
-                        host,
-                        port,
-                        attempt + 1,
-                    )
-                break
-            except OSError as error:
-                last_error = error
-                if attempt < max_retries - 1:
-                    logging.warning(
-                        "Port %s:%s binding attempt %s/%s failed: %s. Retrying in %.1fs...",
-                        host,
-                        port,
-                        attempt + 1,
-                        max_retries,
-                        error,
-                        retry_delay,
-                    )
-                    await asyncio.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
-                else:
-                    # Final attempt failed
-                    logging.error(
-                        "Failed to bind to port %s:%s after %s attempts: %s",
-                        host,
-                        port,
-                        max_retries,
-                        error,
-                    )
-                    raise last_error from error
+        await self.site.start()
 
         # Register mDNS/Bonjour service after server starts
         await self._register_mdns_service(self.runner.app[CONFIG_KEY])
@@ -647,9 +608,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             path=staticdir,
         )
 
-        # Add static file serving for vendor files only
+        # Add static file serving for vendor files and guessgame templates
         template_dir = app[CONFIG_KEY].getbundledir().joinpath("templates")
         app.router.add_static("/vendor/", path=template_dir / "vendor", name="vendor")
+        app.router.add_static("/guessgame/", path=template_dir / "guessgame", name="guessgame")
         app[METADB_KEY] = nowplaying.db.MetadataDB()
         app[IC_KEY] = nowplaying.imagecache.ImageCache()
         app[WATCHER_KEY] = app[METADB_KEY].watcher()
