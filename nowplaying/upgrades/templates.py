@@ -119,29 +119,42 @@ class UpgradeTemplates:
             apphash = checksum(apppath)
             userhash = checksum(userpath)
 
+            # Use relative path for logging/lookup
+            relative_path = apppath.relative_to(self.apptemplatedir)
+
             # If either checksum failed, treat as different to trigger replacement
             if apphash is None or userhash is None:
                 logging.warning(
                     "Checksum failed for %s or %s, treating as different", apppath, userpath
                 )
             elif apphash == userhash:
+                logging.debug("%s: user file matches current template, skipping", relative_path)
                 continue
 
-            # Use relative path for hash lookup
-            relative_path = apppath.relative_to(self.apptemplatedir)
+            logging.debug("%s: user file differs from current template", relative_path)
+
+            # Check if user's file matches a known old version - if so, replace it
             if version := self.check_preload(str(relative_path), userhash):
                 userpath.unlink()
                 shutil.copyfile(apppath, userpath)
-                logging.info("Replaced %s from %s with %s", relative_path, version, user_dir)
+                logging.info("Replaced %s from %s with current version", relative_path, version)
                 continue
 
+            logging.debug("%s: user file is customized (not a known version)", relative_path)
+
+            # Check if .new file already exists and matches current template
             destpath = userpath.with_suffix(".new")
             if destpath.exists():
-                userhash = checksum(destpath)
+                logging.debug("%s: .new file exists, checking if current", relative_path)
+                newhash = checksum(destpath)
                 # Only skip if both checksums succeeded and match
-                if apphash is not None and userhash is not None and apphash == userhash:
+                if apphash is not None and newhash is not None and apphash == newhash:
+                    logging.debug(
+                        "%s: .new file already has current template, skipping alert", relative_path
+                    )
                     continue
                 # If we can't checksum the .new file, or checksums don't match, overwrite it
+                logging.debug("%s: .new file outdated, will overwrite", relative_path)
                 destpath.unlink()
 
             self.alert = True
