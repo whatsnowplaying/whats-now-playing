@@ -156,7 +156,8 @@ class UpgradeTemplates:
             destpath = userpath.with_suffix(".new")
             if destpath.exists():
                 logging.debug("%s: .new file exists, checking if current", relative_path)
-                newhash = checksum(destpath)
+                # Pass original file extension so .new file is checksummed the same way as template
+                newhash = checksum(destpath, treat_as_extension=apppath.suffix)
                 # Only skip if both checksums succeeded and match
                 if apphash is not None and newhash is not None and apphash == newhash:
                     logging.debug(
@@ -197,7 +198,8 @@ class UpgradeTemplates:
 
             # Verify the hash immediately after copying
             dest_size = destpath.stat().st_size
-            verify_hash = checksum(destpath)
+            # Pass original file extension so .new file is checksummed the same way as template
+            verify_hash = checksum(destpath, treat_as_extension=apppath.suffix)
             logging.debug(
                 "%s: verified .new file after copy (apppath=%s, destpath=%s, app=%s, new=%s, match=%s, app_size=%s, dest_size=%s)",
                 relative_path,

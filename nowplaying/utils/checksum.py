@@ -10,13 +10,18 @@ import pathlib
 EXCLUDED_FILES = {".gitignore", ".DS_Store", "Thumbs.db", ".git"}
 
 
-def checksum(filename: str | pathlib.Path):
+def checksum(filename: str | pathlib.Path, treat_as_extension: str | None = None):
     """
     Generate SHA512 hash, normalizing line endings for text files.
 
     This function is shared between tools/updateshas.py and
     nowplaying/upgrades/templates.py to ensure consistent hashing
     across platforms and use cases.
+
+    Args:
+        filename: Path to the file to checksum
+        treat_as_extension: Optional extension to use for determining file type
+                          (e.g., ".htm" for a .new file that should be treated as HTML)
 
     Returns None if the file cannot be read or processed.
     """
@@ -36,7 +41,11 @@ def checksum(filename: str | pathlib.Path):
             ".yaml",
             ".yml",
         }
-        file_ext = os.path.splitext(str(filename))[1].lower()
+        # Use explicitly provided extension, or detect from filename
+        if treat_as_extension:
+            file_ext = treat_as_extension.lower()
+        else:
+            file_ext = os.path.splitext(str(filename))[1].lower()
 
         if file_ext in text_extensions:
             # Text file: normalize line endings and path separators
@@ -46,7 +55,12 @@ def checksum(filename: str | pathlib.Path):
                         fileh.read().replace("\r\n", "\n").replace("\r", "\n").replace("\\", "/")
                     )
                     hashfunc.update(content.encode("utf-8"))
-                    logging.debug("checksum: %s read as UTF-8 text", filename)
+                    if treat_as_extension:
+                        logging.debug(
+                            "checksum: %s read as UTF-8 text (treated as %s)", filename, file_ext
+                        )
+                    else:
+                        logging.debug("checksum: %s read as UTF-8 text", filename)
             except UnicodeDecodeError as e:
                 # Fall back to binary mode if UTF-8 fails
                 logging.debug("checksum: %s failed UTF-8, using binary: %s", filename, e)
