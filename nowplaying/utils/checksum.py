@@ -46,8 +46,10 @@ def checksum(filename: str | pathlib.Path):
                         fileh.read().replace("\r\n", "\n").replace("\r", "\n").replace("\\", "/")
                     )
                     hashfunc.update(content.encode("utf-8"))
-            except UnicodeDecodeError:
+                    logging.debug("checksum: %s read as UTF-8 text", filename)
+            except UnicodeDecodeError as e:
                 # Fall back to binary mode if UTF-8 fails
+                logging.debug("checksum: %s failed UTF-8, using binary: %s", filename, e)
                 with open(filename, "rb") as fileh:
                     while chunk := fileh.read(128 * hashfunc.block_size):
                         hashfunc.update(chunk)
