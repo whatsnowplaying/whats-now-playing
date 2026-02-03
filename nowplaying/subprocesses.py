@@ -9,6 +9,7 @@ import socket
 import sys
 import typing as t
 
+from PySide6.QtCore import Qt  # pylint: disable=import-error,no-name-in-module
 from PySide6.QtWidgets import QApplication, QMessageBox  # pylint: disable=import-error,no-name-in-module
 
 import nowplaying
@@ -140,12 +141,6 @@ class SubprocessManager:
         """Check if a port is available for binding"""
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                # Set SO_REUSEADDR to match webserver behavior (allows binding to TIME_WAIT ports)
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                # On Windows, also set SO_EXCLUSIVEADDRUSE to prevent multiple binds
-                # (Windows SO_REUSEADDR is more permissive than Unix)
-                if sys.platform == "win32":
-                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
                 sock.bind((host, port))
                 return True
         except OSError:
@@ -179,13 +174,17 @@ class SubprocessManager:
             port = self.config.cparser.value("weboutput/httpport", type=int, defaultValue=8899)
             if not self._check_port_available(host, port):
                 logging.error("Cannot start webserver: port %s:%s is already in use", host, port)
-                QMessageBox.critical(
-                    None,
+                dialog = QMessageBox(
+                    QMessageBox.Critical,
                     "Web Server Error",
                     f"Cannot start web server:\nPort {host}:{port} is already in use.\n\n"
                     f"Please close any application using this port or change the port in "
                     f"Settings → Web Server.",
+                    QMessageBox.Ok,
+                    QApplication.activeWindow(),
                 )
+                dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowStaysOnTopHint)
+                dialog.exec()
                 return
 
         # trackpoll always starts - it's the core monitoring process
