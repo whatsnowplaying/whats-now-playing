@@ -1336,7 +1336,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
     async def get_user_stats(self, username: str) -> dict | None:
         """
         Get individual user statistics.
-        Called by TwitchBot for !mystats command.
+        Called by TwitchBot for !mypoints command.
 
         Args:
             username: Username to look up

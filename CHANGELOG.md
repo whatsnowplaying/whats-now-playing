@@ -19,6 +19,11 @@
     * Enhanced crate search and metadata querying capabilities
   * Changes to better detect when the latest track is playing
 
+* Bug Fixes
+  * Found an issue where in some cases changed templates would always trigger an 'update'
+    on program launch despite the `.new` file actually being correct.
+  * Icecast docs had the old images
+
 * Developer Stuff
   * Dependency updates
   * Test fixes

@@ -13,7 +13,7 @@ leaderboard system to track top performers across your stream session and all-ti
 * **Flexible Solve Modes**: Configure whether viewers must guess track, artist, or both
 * **Smart Scoring**: Points awarded based on letter frequency (rare letters = more points)
 * **Automatic Games**: New games start when your track changes and end after a configurable duration
-* **User Statistics**: Players can check their stats with a customizable command (default: `!mystats`)
+* **User Statistics**: Players can check their stats with a customizable command (default: `!mypoints`)
 
 ## Setup
 
@@ -54,7 +54,7 @@ Before enabling the Guess Game, you must have:
 | Setting | Description | Default |
 |---------|-------------|---------|
 | Guess Command | Chat command viewers use to submit guesses | `guess` |
-| Stats Command | Chat command viewers use to check their statistics | `mystats` |
+| Stats Command | Chat command viewers use to check their statistics | `mypoints` |
 | Game Duration | Maximum time in seconds before game times out | `120` (2 minutes) |
 | Leaderboard Size | Number of top players shown on leaderboard | `10` |
 | First Solver Bonus Threshold | Difficulty threshold (0.0-1.0) for awarding first solver bonus | `0.70` |
@@ -205,7 +205,7 @@ The Guess Game uses Jinja2 templates for chat responses and OBS display:
 Time: {{ time_remaining }}s{% if game_solved %} | SOLVED!{% endif %}
 ```
 
-**twitchbot_mystats.txt**: Response when a viewer checks their stats
+**twitchbot_mypoints.txt**: Response when a viewer checks their stats
 
 ```jinja2
 @{{ cmduser }}: Session: {{ session_score }} points, {{ session_guesses }} guesses |
@@ -253,7 +253,7 @@ The Guess Game adds these variables for templating:
 ### Chat Commands Not Working
 
 * Confirm chat permissions are set in Twitch settings
-* Check that template files exist: `twitchbot_guess.txt` and `twitchbot_mystats.txt`
+* Check that template files exist: `twitchbot_guess.txt` and `twitchbot_mypoints.txt`
 * Verify bot has proper OAuth authentication
 
 ### OBS Display Not Updating

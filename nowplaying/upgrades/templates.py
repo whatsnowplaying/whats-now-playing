@@ -175,58 +175,5 @@ class UpgradeTemplates:
 
             self.alert = True
             logging.info("New version of %s copied to %s", relative_path, destpath)
-
-            # Debug: check file sizes before copy
-            app_size = apppath.stat().st_size
-            logging.debug("%s: app file size = %s bytes", relative_path, app_size)
-
             shutil.copyfile(apppath, destpath)
-
-            # Windows file caching workaround: force file to be readable and synced
-            # This ensures the file is fully written before we checksum it
-            import os
-            import time
-            try:
-                # Force a sync by opening and closing the file
-                with open(destpath, 'rb') as f:
-                    f.read(1)  # Read one byte to ensure file is accessible
-                    os.fsync(f.fileno())  # Force sync to disk
-                # Small delay to ensure filesystem cache is updated
-                time.sleep(0.01)
-            except (OSError, IOError) as e:
-                logging.debug("%s: file sync warning: %s", relative_path, e)
-
-            # Verify the hash immediately after copying
-            dest_size = destpath.stat().st_size
-            # Pass original file extension so .new file is checksummed the same way as template
-            verify_hash = checksum(destpath, treat_as_extension=apppath.suffix)
-            logging.debug(
-                "%s: verified .new file after copy (apppath=%s, destpath=%s, app=%s, new=%s, match=%s, app_size=%s, dest_size=%s)",
-                relative_path,
-                apppath,
-                destpath,
-                apphash,
-                verify_hash,
-                apphash == verify_hash,
-                app_size,
-                dest_size,
-            )
-
-            # If hashes don't match, try reading both files to see what's different
-            if apphash != verify_hash:
-                try:
-                    with open(apppath, "rb") as f:
-                        app_bytes = f.read()
-                    with open(destpath, "rb") as f:
-                        dest_bytes = f.read()
-                    logging.warning(
-                        "%s: files differ after copy! app has %s bytes, dest has %s bytes, first diff at byte %s",
-                        relative_path,
-                        len(app_bytes),
-                        len(dest_bytes),
-                        next((i for i, (a, b) in enumerate(zip(app_bytes, dest_bytes)) if a != b), -1)
-                    )
-                except Exception as e:  # pylint: disable=broad-except
-                    logging.warning("%s: couldn't compare file contents: %s", relative_path, e)
-
             self.copied.append(str(relative_path))
