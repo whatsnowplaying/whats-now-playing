@@ -122,6 +122,16 @@ class UpgradeTemplates:
             # Use relative path for logging/lookup
             relative_path = apppath.relative_to(self.apptemplatedir)
 
+            # Debug: log actual paths being hashed
+            logging.debug(
+                "%s: apppath=%s (hash=%s), userpath=%s (hash=%s)",
+                relative_path,
+                apppath,
+                apphash,
+                userpath,
+                userhash,
+            )
+
             # If either checksum failed, treat as different to trigger replacement
             if apphash is None or userhash is None:
                 logging.warning(
@@ -175,8 +185,10 @@ class UpgradeTemplates:
             dest_size = destpath.stat().st_size
             verify_hash = checksum(destpath)
             logging.debug(
-                "%s: verified .new file after copy (app=%s, new=%s, match=%s, app_size=%s, dest_size=%s)",
+                "%s: verified .new file after copy (apppath=%s, destpath=%s, app=%s, new=%s, match=%s, app_size=%s, dest_size=%s)",
                 relative_path,
+                apppath,
+                destpath,
                 apphash,
                 verify_hash,
                 apphash == verify_hash,
