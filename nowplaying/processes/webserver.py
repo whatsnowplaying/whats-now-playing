@@ -87,6 +87,8 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         threading.current_thread().name = "WebServer"
         self.tasks = set()
         self.testmode = testmode
+        self.runner: web.AppRunner | None = None
+        self.site: web.TCPSite | None = None
         if not config:
             config = nowplaying.config.ConfigFile(bundledir=bundledir, testmode=testmode)
         self.port: int = config.cparser.value("weboutput/httpport", type=int)
@@ -564,35 +566,35 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
     async def start_server(self, host: str = "127.0.0.1", port: int = 8899):
         """start our server"""
-        runner = self.create_runner()
-        await runner.setup()
-        site = web.TCPSite(runner, host, port)
+        self.runner = self.create_runner()
+        await self.runner.setup()
+        self.site = web.TCPSite(self.runner, host, port)
 
         # Start background tasks
         stop_task = asyncio.create_task(self.stopeventtask())
         self.tasks.add(stop_task)
         stop_task.add_done_callback(self.tasks.discard)
 
-        config_task = asyncio.create_task(self.config_refresh_task(runner.app))
+        config_task = asyncio.create_task(self.config_refresh_task(self.runner.app))
         self.tasks.add(config_task)
         config_task.add_done_callback(self.tasks.discard)
 
         gifwords_task = asyncio.create_task(
-            self.gifwords_ws_handler.gifwords_broadcast_task(runner.app)
+            self.gifwords_ws_handler.gifwords_broadcast_task(self.runner.app)
         )
         self.tasks.add(gifwords_task)
         gifwords_task.add_done_callback(self.tasks.discard)
 
         guessgame_task = asyncio.create_task(
-            self.guessgame_ws_handler.guessgame_broadcast_task(runner.app)
+            self.guessgame_ws_handler.guessgame_broadcast_task(self.runner.app)
         )
         self.tasks.add(guessgame_task)
         guessgame_task.add_done_callback(self.tasks.discard)
 
-        await site.start()
+        await self.site.start()
 
         # Register mDNS/Bonjour service after server starts
-        await self._register_mdns_service(runner.app[CONFIG_KEY])
+        await self._register_mdns_service(self.runner.app[CONFIG_KEY])
 
     async def on_startup(self, app: web.Application):
         """setup app connections"""
@@ -648,6 +650,12 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         await app["statedb"].close()
         app[WATCHER_KEY].stop()
         app[IC_KEY].close()
+
+        # Cleanup runner last (site cleanup happens automatically)
+        if self.runner:
+            await self.runner.cleanup()
+            self.runner = None
+            self.site = None
 
     async def stop_server(self, request: web.Request):
         """stop our server"""
