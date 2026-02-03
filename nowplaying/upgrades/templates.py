@@ -154,7 +154,12 @@ class UpgradeTemplates:
                     )
                     continue
                 # If we can't checksum the .new file, or checksums don't match, overwrite it
-                logging.debug("%s: .new file outdated, will overwrite", relative_path)
+                logging.debug(
+                    "%s: .new file outdated, will overwrite (app=%s, new=%s)",
+                    relative_path,
+                    apphash,
+                    newhash,
+                )
                 destpath.unlink()
 
             self.alert = True
