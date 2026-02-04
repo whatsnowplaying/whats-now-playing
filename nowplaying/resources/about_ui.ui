@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="settings.qrc">
-    <normaloff>:/resources/icon.ico</normaloff>:/resources/icon.ico</iconset>
+    <normaloff>:/resources/wnp_logo.svg</normaloff>:/resources/wnp_logo.svg</iconset>
   </property>
   <widget class="QWidget" name="horizontalLayoutWidget">
    <property name="geometry">
@@ -29,14 +29,26 @@
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
      <widget class="QLabel" name="image_label">
+      <property name="minimumSize">
+       <size>
+        <width>200</width>
+        <height>200</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>200</width>
+        <height>200</height>
+       </size>
+      </property>
       <property name="frameShape">
        <enum>QFrame::NoFrame</enum>
       </property>
       <property name="pixmap">
-       <pixmap resource="settings.qrc">:/resources/icon.ico</pixmap>
+       <pixmap resource="settings.qrc">:/resources/wnp_logo.svg</pixmap>
       </property>
       <property name="scaledContents">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
