@@ -66,9 +66,11 @@ async def test_service_discovery_listener_add_service_no_info():
 @pytest.mark.asyncio
 async def test_discover_whatsnowplaying_services_success():
     """test discover_whatsnowplaying_services with successful discovery"""
-    with patch("nowplaying.mdns_discovery.Zeroconf") as mock_zeroconf_class, patch(
-        "nowplaying.mdns_discovery.ServiceBrowser"
-    ) as mock_browser_class, patch("nowplaying.mdns_discovery.time.sleep"):
+    with (
+        patch("nowplaying.mdns_discovery.Zeroconf") as mock_zeroconf_class,
+        patch("nowplaying.mdns_discovery.ServiceBrowser") as mock_browser_class,
+        patch("nowplaying.mdns_discovery.time.sleep"),
+    ):
         mock_zc = MagicMock()
         mock_zeroconf_class.return_value = mock_zc
 
@@ -97,9 +99,11 @@ async def test_discover_whatsnowplaying_services_success():
 @pytest.mark.asyncio
 async def test_discover_whatsnowplaying_services_no_services():
     """test discover_whatsnowplaying_services when no services found"""
-    with patch("nowplaying.mdns_discovery.Zeroconf") as mock_zeroconf_class, patch(
-        "nowplaying.mdns_discovery.ServiceBrowser"
-    ), patch("nowplaying.mdns_discovery.time.sleep"):
+    with (
+        patch("nowplaying.mdns_discovery.Zeroconf") as mock_zeroconf_class,
+        patch("nowplaying.mdns_discovery.ServiceBrowser"),
+        patch("nowplaying.mdns_discovery.time.sleep"),
+    ):
         mock_zc = MagicMock()
         mock_zeroconf_class.return_value = mock_zc
 
@@ -123,9 +127,7 @@ async def test_discover_whatsnowplaying_services_exception():
 @pytest.mark.asyncio
 async def test_get_first_whatsnowplaying_service_found():
     """test get_first_whatsnowplaying_service when service is found"""
-    with patch(
-        "nowplaying.mdns_discovery.discover_whatsnowplaying_services"
-    ) as mock_discover:
+    with patch("nowplaying.mdns_discovery.discover_whatsnowplaying_services") as mock_discover:
         mock_service = nowplaying.mdns_discovery.DiscoveredService(
             name="TestService._whatsnowplaying._tcp.local.",
             host="testhost.local.",
@@ -143,9 +145,7 @@ async def test_get_first_whatsnowplaying_service_found():
 @pytest.mark.asyncio
 async def test_get_first_whatsnowplaying_service_not_found():
     """test get_first_whatsnowplaying_service when no service is found"""
-    with patch(
-        "nowplaying.mdns_discovery.discover_whatsnowplaying_services"
-    ) as mock_discover:
+    with patch("nowplaying.mdns_discovery.discover_whatsnowplaying_services") as mock_discover:
         mock_discover.return_value = []
 
         service = nowplaying.mdns_discovery.get_first_whatsnowplaying_service()

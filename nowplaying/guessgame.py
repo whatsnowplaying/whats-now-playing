@@ -371,14 +371,14 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         # This handles cases where normality inserted spaces for unhandled punctuation.
         # Pattern: known Irish/Scottish name prefixes ("o", "d", "mc", "mac") + space + word.
         # Restricts to these common prefixes to avoid over-merging unrelated words.
-        normalized = re.sub(r'\b(o|d|mc|mac)\s+([a-z]{2,})', r'\1\2', normalized)
+        normalized = re.sub(r"\b(o|d|mc|mac)\s+([a-z]{2,})", r"\1\2", normalized)
 
         # Strip remaining censoring characters that normality might preserve
         normalized = normalized.replace("*", "")
         normalized = normalized.replace("_", "")
 
         # Remove spaces between digits to handle cases like "10,000" -> "10000"
-        normalized = re.sub(r'(\d)\s+(\d)', r'\1\2', normalized)
+        normalized = re.sub(r"(\d)\s+(\d)", r"\1\2", normalized)
 
         return normalized.strip()
 
@@ -399,7 +399,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
         # Escape the guess for regex and create word boundary pattern
         # \b matches word boundaries (start/end of word)
-        pattern = r'\b' + re.escape(guess) + r'\b'
+        pattern = r"\b" + re.escape(guess) + r"\b"
         return bool(re.search(pattern, text))
 
     def _reveal_matching_word_letters(
@@ -858,10 +858,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                                 result,
                             )
                             # If not correct and not already_guessed, mark as wrong
-                            if (
-                                not result["correct"]
-                                and result["guess_type"] != "already_guessed"
-                            ):
+                            if not result["correct"] and result["guess_type"] != "already_guessed":
                                 result["correct"] = False
                                 result["guess_type"] = "wrong"
                                 result["points"] = self._calculate_points(guess_text, "wrong")
@@ -897,10 +894,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                                 result,
                             )
                             # If not correct and not already_guessed, mark as wrong
-                            if (
-                                not result["correct"]
-                                and result["guess_type"] != "already_guessed"
-                            ):
+                            if not result["correct"] and result["guess_type"] != "already_guessed":
                                 result["correct"] = False
                                 result["guess_type"] = "wrong"
                                 result["points"] = self._calculate_points(guess_text, "wrong")
@@ -977,10 +971,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                                 result,
                             )
                             # If not correct and not already_guessed, mark as wrong
-                            if (
-                                not result["correct"]
-                                and result["guess_type"] != "already_guessed"
-                            ):
+                            if not result["correct"] and result["guess_type"] != "already_guessed":
                                 result["correct"] = False
                                 result["guess_type"] = "wrong"
                                 result["points"] = self._calculate_points(guess_text, "wrong")

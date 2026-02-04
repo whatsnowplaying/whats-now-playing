@@ -1247,7 +1247,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             "guessgame",
         ]:
             try:
-                if hasattr(self.settingsclasses[key], 'verify'):
+                if hasattr(self.settingsclasses[key], "verify"):
                     self.settingsclasses[key].verify(self.widgets[key])
             except PluginVerifyError as error:
                 if self.errormessage:
