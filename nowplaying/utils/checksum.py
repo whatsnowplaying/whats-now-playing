@@ -61,9 +61,9 @@ def checksum(filename: str | pathlib.Path, treat_as_extension: str | None = None
                         )
                     else:
                         logging.debug("checksum: %s read as UTF-8 text", filename)
-            except UnicodeDecodeError as e:
+            except UnicodeDecodeError as err:
                 # Fall back to binary mode if UTF-8 fails
-                logging.debug("checksum: %s failed UTF-8, using binary: %s", filename, e)
+                logging.debug("checksum: %s failed UTF-8, using binary: %s", filename, err)
                 with open(filename, "rb") as fileh:
                     while chunk := fileh.read(128 * hashfunc.block_size):
                         hashfunc.update(chunk)
@@ -75,6 +75,6 @@ def checksum(filename: str | pathlib.Path, treat_as_extension: str | None = None
 
         return hashfunc.hexdigest()
 
-    except (OSError, IOError, PermissionError) as error:
+    except (OSError, IOError) as error:
         logging.warning("Failed to checksum file %s: %s", filename, error)
         return None
