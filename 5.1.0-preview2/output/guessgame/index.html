@@ -1,0 +1,3256 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A tool to retrieve current/last played song in DJ software">
+      
+      
+      
+        <link rel="canonical" href="http://whatsnowplaying.github.io/5.1.0-preview2/output/guessgame/">
+      
+      
+        <link rel="prev" href="../twitchbot/">
+      
+      
+        <link rel="next" href="../../requests/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Guess Game - What's Now Playing</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#guess-game" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="What&#39;s Now Playing" class="md-header__button md-logo" aria-label="What's Now Playing" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            What's Now Playing
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Guess Game
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/whatsnowplaying/whats-now-playing" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    whatsnowplaying/whats-now-playing
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="What&#39;s Now Playing" class="md-nav__button md-logo" aria-label="What's Now Playing" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    What's Now Playing
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/whatsnowplaying/whats-now-playing" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    whatsnowplaying/whats-now-playing
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../upgrading/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Upgrading
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Settings
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Settings
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    General
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../settings/filter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Filters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../settings/trackskip/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Track Skip
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../settings/quirks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quirks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../settings/destroy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Destroy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Input Sources
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Input Sources
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    General
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/denon/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Denon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/djuced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DJUCED
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/icecast/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Icecast
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/jriver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JRiver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/m3u/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    M3U
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/mpris2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MPRIS2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/remote/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Remote
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/serato/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Serato
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/serato3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Serato (Legacy)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/traktor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Traktor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/virtualdj/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Virtual DJ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../input/winmedia/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Windows Media
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recognition
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Recognition
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../recognition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../recognition/acoustid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AcoustID
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../recognition/musicbrainz/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MusicBrainz
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Artist Data
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Artist Data
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../extras/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../extras/discogs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Discogs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../extras/fanarttv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FanArt.TV
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../extras/theaudiodb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TheAudioDB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../extras/wikimedia/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wikimedia
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output & Display
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Output & Display
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../charts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Charts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../obswebsocket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OBS WebSocket
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../textoutput/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Text Output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../webserver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Web Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Streaming & Chat
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Streaming & Chat
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../discord/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Discord
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kickbot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kick Bot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../twitchbot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Twitch Bot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guess Game
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guess Game
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-provides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Provides
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enabling-the-guess-game" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enabling the Guess Game
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-settings-tab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Settings Tab
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-tab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Tab
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#obs-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OBS Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OBS Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#game-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Game Display
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leaderboard-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Leaderboard Display
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Leaderboard Display">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#session-leaderboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Leaderboard
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#all-time-leaderboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All-Time Leaderboard
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How It Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#game-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Game Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#guess-normalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Guess Normalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scoring-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#difficulty-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Difficulty Calculation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Templates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#chat-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chat Templates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#template-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Template Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#game-not-starting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Game Not Starting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chat-commands-not-working" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chat Commands Not Working
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#obs-display-not-updating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OBS Display Not Updating
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scores-not-saving" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scores Not Saving
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tips-for-stream-engagement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tips for Stream Engagement
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tips for Stream Engagement">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Started
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#building-participation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Building Participation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#leaderboard-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Leaderboard Strategies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#incentives-and-rewards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Incentives and Rewards
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#difficulty-and-balance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Difficulty and Balance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technical-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Tips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-engagement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced Engagement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#common-pitfalls-to-avoid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Pitfalls to Avoid
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Requests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_12" id="__nav_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Help
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Help
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../help/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../help/howdoi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How Do I?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../help/accuracy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Accuracy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../help/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../help/bugreports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bug Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../help/opensource/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Open Source
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../help/developers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_13" id="__nav_13_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/templatevariables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template Variables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/comparisons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparisons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gallery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contact/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contact
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../.." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../discord/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Streaming & Chat
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="guess-game">Guess Game<a class="headerlink" href="#guess-game" title="Permanent link">&para;</a></h1>
+<p><strong>What's Now Playing</strong> includes an interactive hangman-style game that runs in your Twitch chat, allowing
+viewers to guess the currently playing track and artist. Players earn points for correct guesses, with a
+leaderboard system to track top performers across your stream session and all-time.</p>
+<h2 id="what-it-provides">What It Provides<a class="headerlink" href="#what-it-provides" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Interactive Chat Game</strong>: Viewers type commands like <code>!guess e</code> or <code>!guess house</code> to play</li>
+<li><strong>Automatic Announcements</strong>: Bot announces new games in chat when tracks change</li>
+<li><strong>Real-time OBS Display</strong>: Shows masked track/artist names and game state in your stream overlay</li>
+<li><strong>Leaderboard System</strong>: Tracks both session and all-time scores with configurable size</li>
+<li><strong>Flexible Solve Modes</strong>: Configure whether viewers must guess track, artist, or both</li>
+<li><strong>Smart Scoring</strong>: Points awarded based on letter frequency (rare letters = more points)</li>
+<li><strong>Automatic Games</strong>: New games start when your track changes and end after a configurable duration</li>
+<li><strong>User Statistics</strong>: Players can check their stats with a customizable command (default: <code>!mypoints</code>)</li>
+</ul>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
+<h3 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h3>
+<p>Before enabling the Guess Game, you must have:</p>
+<ol>
+<li><strong>Twitch Bot configured</strong>: See <a href="../twitchbot/">TwitchBot</a> for authentication setup</li>
+<li><strong>Webserver enabled</strong>: See <a href="../webserver/">Webserver</a> for configuration</li>
+</ol>
+<h3 id="enabling-the-guess-game">Enabling the Guess Game<a class="headerlink" href="#enabling-the-guess-game" title="Permanent link">&para;</a></h3>
+<p><strong>macOS:</strong></p>
+<ol>
+<li>Click the <strong>What's Now Playing</strong> menu bar icon</li>
+<li>Check <strong>Enable Guess Game</strong></li>
+</ol>
+<p><strong>Windows:</strong></p>
+<ol>
+<li>Right-click the <strong>What's Now Playing</strong> system tray icon</li>
+<li>Check <strong>Enable Guess Game</strong></li>
+</ol>
+<p><strong>Linux:</strong></p>
+<ol>
+<li>Click the <strong>What's Now Playing</strong> system tray icon</li>
+<li>Check <strong>Enable Guess Game</strong></li>
+</ol>
+<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Open Settings from the <strong>What's Now Playing</strong> menu/tray icon</li>
+<li>Select <strong>Guess Game</strong> from the list of settings available</li>
+<li>Configure the settings on each tab:</li>
+</ol>
+<h4 id="basic-settings-tab">Basic Settings Tab<a class="headerlink" href="#basic-settings-tab" title="Permanent link">&para;</a></h4>
+<p><a href="../images/guessgame_basic.png"><img alt="Guess Game Basic Settings" src="../images/guessgame_basic.png" /></a></p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Guess Command</td>
+<td>Chat command viewers use to submit guesses</td>
+<td><code>guess</code></td>
+</tr>
+<tr>
+<td>Stats Command</td>
+<td>Chat command viewers use to check their statistics</td>
+<td><code>mypoints</code></td>
+</tr>
+<tr>
+<td>Game Duration</td>
+<td>Maximum time in seconds before game times out</td>
+<td><code>120</code> (2 minutes)</td>
+</tr>
+<tr>
+<td>Leaderboard Size</td>
+<td>Number of top players shown on leaderboard</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td>First Solver Bonus Threshold</td>
+<td>Difficulty threshold (0.0-1.0) for awarding first solver bonus</td>
+<td><code>0.70</code></td>
+</tr>
+<tr>
+<td>Solve Mode</td>
+<td>How the game determines completion (see below)</td>
+<td>Separate Solves</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Solve Modes:</strong></p>
+<ul>
+<li><strong>Separate Solves</strong>: Track and artist are independent objectives (players can solve one without the other)</li>
+<li><strong>Either</strong>: Exact match of track OR artist wins the entire game</li>
+<li><strong>Both Required</strong>: Players must guess both track AND artist together to win</li>
+</ul>
+<h4 id="advanced-tab">Advanced Tab<a class="headerlink" href="#advanced-tab" title="Permanent link">&para;</a></h4>
+<p><a href="../images/guessgame_advanced.png"><img alt="Guess Game Advanced Settings" src="../images/guessgame_advanced.png" /></a></p>
+<p><strong>Scoring Configuration:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Common Letter Points</td>
+<td>Points for guessing common letters (e, a, o, etc.)</td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>Uncommon Letter Points</td>
+<td>Points for guessing uncommon letters (d, h, etc.)</td>
+<td><code>2</code></td>
+</tr>
+<tr>
+<td>Rare Letter Points</td>
+<td>Points for guessing rare letters (x, z, q, etc.)</td>
+<td><code>3</code></td>
+</tr>
+<tr>
+<td>Correct Word Points</td>
+<td>Points for guessing a correct word in track/artist</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td>Wrong Word Points</td>
+<td>Penalty for guessing an incorrect word</td>
+<td><code>-1</code></td>
+</tr>
+<tr>
+<td>Complete Solve Points</td>
+<td>Bonus for completely solving track or artist</td>
+<td><code>100</code></td>
+</tr>
+<tr>
+<td>First Solver Bonus</td>
+<td>Additional bonus for being first to solve (on difficult tracks)</td>
+<td><code>50</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Advanced Options:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Auto Reveal Common Words</td>
+<td>Automatically reveal very common words (the, and, of, etc.)</td>
+<td>Disabled</td>
+</tr>
+<tr>
+<td>Time Bonus Enabled</td>
+<td>Award bonus points for solving quickly</td>
+<td>Disabled</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Leaderboard Management:</strong></p>
+<ul>
+<li><strong>Clear All Leaderboards</strong> button: Permanently deletes all user scores (session and all-time)</li>
+</ul>
+<h2 id="obs-integration">OBS Integration<a class="headerlink" href="#obs-integration" title="Permanent link">&para;</a></h2>
+<p>The Guess Game provides two OBS browser sources for displaying game information on your stream:</p>
+<h3 id="game-display">Game Display<a class="headerlink" href="#game-display" title="Permanent link">&para;</a></h3>
+<p>Shows the current game state with masked track/artist names:</p>
+<ol>
+<li>Add a <strong>Browser</strong> source in OBS</li>
+<li>Set URL to: <code>http://localhost:8899/guessgame/guessgame.htm</code></li>
+<li>Set dimensions: <code>1920x200</code> (or adjust to your layout)</li>
+<li>Customize the display by editing <code>templates/guessgame/guessgame.htm</code></li>
+</ol>
+<p><strong>Display Shows:</strong></p>
+<ul>
+<li>Masked track name (e.g., <code>h___e __ _he ___i__ s__</code>)</li>
+<li>Masked artist name (e.g., <code>_he __i__ls</code>)</li>
+<li>Time remaining in seconds</li>
+<li>Guessed letters list</li>
+<li>Game status (Active, Solved, Timeout, Waiting)</li>
+</ul>
+<h3 id="leaderboard-display">Leaderboard Display<a class="headerlink" href="#leaderboard-display" title="Permanent link">&para;</a></h3>
+<p>Shows top players for session or all-time using a single unified template with URL parameters:</p>
+<h4 id="session-leaderboard">Session Leaderboard<a class="headerlink" href="#session-leaderboard" title="Permanent link">&para;</a></h4>
+<p>Displays scores for the current streaming session:</p>
+<ol>
+<li>Add a <strong>Browser</strong> source in OBS</li>
+<li>Set URL to: <code>http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session</code></li>
+<li>Set dimensions: <code>600x800</code> (or adjust to your layout)</li>
+</ol>
+<h4 id="all-time-leaderboard">All-Time Leaderboard<a class="headerlink" href="#all-time-leaderboard" title="Permanent link">&para;</a></h4>
+<p>Displays cumulative scores across all sessions:</p>
+<ol>
+<li>Add a <strong>Browser</strong> source in OBS</li>
+<li>Set URL to: <code>http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=all_time</code></li>
+<li>Set dimensions: <code>600x800</code> (or adjust to your layout)</li>
+</ol>
+<p><strong>Customization:</strong></p>
+<p>Both leaderboards use the same template file (<code>templates/guessgame/guessgame-leaderboard.htm</code>), making it easy
+to maintain consistent styling. The <code>?type=session</code> or <code>?type=all_time</code> URL parameter controls which data is
+displayed and which color scheme is used (purple/orange for session, green for all-time).</p>
+<p><strong>Both Leaderboards Show:</strong></p>
+<ul>
+<li>Rank (with gold/silver/bronze styling for top 3)</li>
+<li>Username</li>
+<li>Total score</li>
+<li>Number of solves</li>
+</ul>
+<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
+<h3 id="game-flow">Game Flow<a class="headerlink" href="#game-flow" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Track Changes</strong>: When a new track starts playing, the Guess Game automatically begins</li>
+<li><strong>Chat Announcement</strong>: An automatic announcement is sent to Twitch chat when the game starts</li>
+<li><strong>Chat Commands</strong>: Viewers type <code>!guess &lt;letter or word&gt;</code> in Twitch chat</li>
+<li><strong>Guess Processing</strong>:<ul>
+<li><strong>Single letters</strong>: Revealed if present in track/artist, points awarded by frequency</li>
+<li><strong>Words</strong>: Checked against track/artist name, bonus points if correct</li>
+<li><strong>Complete matches</strong>: If track/artist fully matches, that objective is solved</li>
+</ul>
+</li>
+<li><strong>Game Ends</strong>: When solved or time expires, game ends and scores are saved</li>
+<li><strong>Next Track</strong>: Process repeats for the next song</li>
+</ol>
+<h3 id="guess-normalization">Guess Normalization<a class="headerlink" href="#guess-normalization" title="Permanent link">&para;</a></h3>
+<p>The game intelligently handles variations in guesses:</p>
+<ul>
+<li><strong>Case insensitive</strong>: <code>HOUSE</code>, <code>house</code>, and <code>House</code> are all equivalent</li>
+<li><strong>Ampersand variants</strong>: <code>&amp;</code>, <code>and</code>, and <code>n</code> are treated as interchangeable</li>
+<li><strong>Punctuation</strong>: Periods in artist names (e.g., <code>N.W.A</code> vs <code>NWA</code>) are handled</li>
+</ul>
+<h3 id="scoring-system">Scoring System<a class="headerlink" href="#scoring-system" title="Permanent link">&para;</a></h3>
+<p>Points are awarded based on guess type and letter frequency:</p>
+<ul>
+<li><strong>Common letters</strong> (e, a, o, i, n, t, s, r, h, l): 1 point each</li>
+<li><strong>Uncommon letters</strong> (d, c, u, m, p, f, g, w, y, b): 2 points each</li>
+<li><strong>Rare letters</strong> (v, k, x, j, q, z): 3 points each</li>
+<li><strong>Correct words</strong>: 10 points</li>
+<li><strong>Wrong words</strong>: -1 point (penalty)</li>
+<li><strong>Complete solve</strong>: 100 point bonus</li>
+<li><strong>First solver bonus</strong>: 50 additional points (on difficult tracks with threshold above configured value)</li>
+</ul>
+<h3 id="difficulty-calculation">Difficulty Calculation<a class="headerlink" href="#difficulty-calculation" title="Permanent link">&para;</a></h3>
+<p>The game calculates difficulty based on:</p>
+<ul>
+<li>Total number of unique letters in track and artist</li>
+<li>Length of track and artist names</li>
+<li>Tracks with difficulty above the configured threshold award first solver bonus</li>
+</ul>
+<h2 id="templates">Templates<a class="headerlink" href="#templates" title="Permanent link">&para;</a></h2>
+<p>The Guess Game uses Jinja2 templates for chat responses and OBS display:</p>
+<h3 id="chat-templates">Chat Templates<a class="headerlink" href="#chat-templates" title="Permanent link">&para;</a></h3>
+<p><strong>twitchbot_guess.txt</strong>: Response when a viewer makes a guess</p>
+<div class="highlight"><pre><span></span><code>@{{ cmduser }}: Wrong guess. {{ guess_points }} points.
+ Track: {{ masked_track }} | Artist: {{ masked_artist }} |
+Time: {{ time_remaining }}s
+</code></pre></div>
+<p><strong>twitchbot_mypoints.txt</strong>: Response when a viewer checks their stats</p>
+<div class="highlight"><pre><span></span><code>@{{ cmduser }}: Session: {{ session_score }} points, {{ session_guesses }} guesses |
+All-Time: {{ all_time_score }} points, {{ all_time_guesses }} guesses, {{ all_time_solves }} solves
+</code></pre></div>
+<p><strong>twitchbot_gamestart.txt</strong>: Automatic announcement when a new game starts</p>
+<div class="highlight"><pre><span></span><code>🎮 New guessing game! Type !{{ guess_command }} &lt;letter or word&gt; to play | Track: {{ masked_track }} |
+Artist: {{ masked_artist }}
+</code></pre></div>
+<h3 id="template-variables">Template Variables<a class="headerlink" href="#template-variables" title="Permanent link">&para;</a></h3>
+<p>The Guess Game adds these variables for templating:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>guess_command</code></td>
+<td>Configured guess command (default: <code>guess</code>) - for game start announcements</td>
+</tr>
+<tr>
+<td><code>masked_track</code></td>
+<td>Track name with unguessed letters as underscores</td>
+</tr>
+<tr>
+<td><code>masked_artist</code></td>
+<td>Artist name with unguessed letters as underscores</td>
+</tr>
+<tr>
+<td><code>time_limit</code></td>
+<td>Maximum game duration in seconds - for game start announcements</td>
+</tr>
+<tr>
+<td><code>time_remaining</code></td>
+<td>Seconds remaining in current game</td>
+</tr>
+<tr>
+<td><code>guessed_letters</code></td>
+<td>List of letters already guessed</td>
+</tr>
+<tr>
+<td><code>game_status</code></td>
+<td>Current game state: <code>active</code>, <code>solved</code>, <code>timeout</code>, or <code>waiting</code></td>
+</tr>
+<tr>
+<td><code>game_solved</code></td>
+<td>Boolean: true if game is completely solved</td>
+</tr>
+<tr>
+<td><code>guess_correct</code></td>
+<td>Boolean: true if last guess was correct</td>
+</tr>
+<tr>
+<td><code>guess_points</code></td>
+<td>Points awarded/deducted for last guess</td>
+</tr>
+<tr>
+<td><code>guess_already_guessed</code></td>
+<td>Boolean: true if letter/word was already guessed</td>
+</tr>
+<tr>
+<td><code>session_score</code></td>
+<td>User's score for current stream session</td>
+</tr>
+<tr>
+<td><code>session_guesses</code></td>
+<td>User's guess count for current stream session</td>
+</tr>
+<tr>
+<td><code>all_time_score</code></td>
+<td>User's all-time score</td>
+</tr>
+<tr>
+<td><code>all_time_guesses</code></td>
+<td>User's all-time guess count</td>
+</tr>
+<tr>
+<td><code>all_time_solves</code></td>
+<td>User's all-time solve count</td>
+</tr>
+</tbody>
+</table>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="game-not-starting">Game Not Starting<a class="headerlink" href="#game-not-starting" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Verify Twitch bot is connected (test with <code>!whatsnowplayingversion</code>)</li>
+<li>Check that Guess Game is enabled in the menu/tray icon</li>
+<li>Ensure a track is actually playing (game starts on track changes)</li>
+</ul>
+<h3 id="chat-commands-not-working">Chat Commands Not Working<a class="headerlink" href="#chat-commands-not-working" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Confirm chat permissions are set in Twitch settings</li>
+<li>Check that template files exist: <code>twitchbot_guess.txt</code> and <code>twitchbot_mypoints.txt</code></li>
+<li>Verify bot has proper OAuth authentication</li>
+</ul>
+<h3 id="obs-display-not-updating">OBS Display Not Updating<a class="headerlink" href="#obs-display-not-updating" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Confirm webserver is enabled and running on correct port</li>
+<li>Check browser source URL matches your webserver port</li>
+<li>Try refreshing the browser source in OBS</li>
+</ul>
+<h3 id="scores-not-saving">Scores Not Saving<a class="headerlink" href="#scores-not-saving" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Check logs for database errors</li>
+<li>Verify write permissions in <strong>What's Now Playing</strong> cache directory</li>
+<li>Try clearing leaderboards and restarting</li>
+</ul>
+<h2 id="tips-for-stream-engagement">Tips for Stream Engagement<a class="headerlink" href="#tips-for-stream-engagement" title="Permanent link">&para;</a></h2>
+<h3 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Test offline first</strong>: Run through several tracks before going live to verify setup and timing</li>
+<li><strong>Explain clearly</strong>: When you first enable it, take 30 seconds to explain the rules to your chat</li>
+<li><strong>Start simple</strong>: Use "Separate Solves" mode initially - easier for new players to understand</li>
+<li><strong>Make it visible</strong>: Position the OBS overlay prominently so viewers notice when games start</li>
+</ul>
+<h3 id="building-participation">Building Participation<a class="headerlink" href="#building-participation" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Call out new games</strong>: Even though auto-announcements happen, verbally mention "new game starting!"
+  when you notice tracks changing</li>
+<li><strong>Celebrate solvers</strong>: Give shout-outs when someone solves a track - viewers love recognition</li>
+<li><strong>Give hints</strong>: If a game is going unsolved, drop subtle hints ("This artist is from Detroit...")</li>
+<li><strong>Welcome newcomers</strong>: When someone plays for the first time, acknowledge them and explain briefly</li>
+</ul>
+<h3 id="leaderboard-strategies">Leaderboard Strategies<a class="headerlink" href="#leaderboard-strategies" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Show it between sets</strong>: Display the leaderboard overlay during breaks or between mixing sessions</li>
+<li><strong>Weekly/monthly resets</strong>: Clear session scores regularly to give everyone fresh chances to compete</li>
+<li><strong>Call out the leaders</strong>: Mention top 3 players periodically to create friendly competition</li>
+<li><strong>Track all-time legends</strong>: Keep all-time leaderboards running for long-term community engagement</li>
+</ul>
+<h3 id="incentives-and-rewards">Incentives and Rewards<a class="headerlink" href="#incentives-and-rewards" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Channel points</strong>: Award bonus points to top session performers</li>
+<li><strong>Discord roles</strong>: Give leaderboard leaders special roles in your community Discord</li>
+<li><strong>Shout-outs</strong>: Feature top players in social media posts or stream recaps</li>
+<li><strong>Track requests</strong>: Let weekly winners pick a track for your next stream</li>
+<li><strong>Merchandise</strong>: Run monthly contests with prizes for cumulative top scores</li>
+</ul>
+<h3 id="difficulty-and-balance">Difficulty and Balance<a class="headerlink" href="#difficulty-and-balance" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Adjust timeout duration</strong>: Shorter durations (60-90s) create urgency; longer (3-5 min) allow
+  casual participation</li>
+<li><strong>Consider your music</strong>: Obscure tracks are harder but more rewarding to solve</li>
+<li><strong>Match your audience</strong>: Electronic music fans might struggle with mainstream pop (and vice versa)</li>
+<li><strong>Use "Either" mode</strong>: For very difficult tracks, allow solving just track OR artist to maintain momentum</li>
+<li><strong>Auto-reveal common words</strong>: Enable this setting if your track titles have many filler words
+  (the, and, of, etc.)</li>
+</ul>
+<h3 id="technical-tips">Technical Tips<a class="headerlink" href="#technical-tips" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>OBS layout</strong>: Place game display near your track info - viewers naturally look there</li>
+<li><strong>Font sizing</strong>: Make masked text large enough to read on mobile devices (many viewers watch on phones)</li>
+<li><strong>Leaderboard placement</strong>: Side panels or overlays during transitions work well</li>
+<li><strong>Test on mobile</strong>: Check how your overlays look on smaller screens</li>
+</ul>
+<h3 id="advanced-engagement">Advanced Engagement<a class="headerlink" href="#advanced-engagement" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Themed streams</strong>: "Guess the 90s house track" nights with appropriate difficulty settings</li>
+<li><strong>Team competitions</strong>: Track scores manually for "regulars vs newcomers" friendly rivalries</li>
+<li><strong>Streak tracking</strong>: Manually recognize players who solve multiple games in a row</li>
+<li><strong>Custom announcements</strong>: Edit <code>twitchbot_gamestart.txt</code> to match your stream's personality</li>
+<li><strong>Integration</strong>: Mention game stats in your post-stream recaps or YouTube highlights</li>
+</ul>
+<h3 id="common-pitfalls-to-avoid">Common Pitfalls to Avoid<a class="headerlink" href="#common-pitfalls-to-avoid" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Don't make it mandatory</strong>: Let viewers choose to participate - forced engagement backfires</li>
+<li><strong>Avoid extreme difficulty</strong>: If nobody solves games for 30+ minutes, decrease timeout or change mode</li>
+<li><strong>Don't ignore participants</strong>: Always acknowledge guesses and solvers, even if you're focused on mixing</li>
+<li><strong>Balance attention</strong>: Keep focus on your music - the game enhances your stream, it shouldn't dominate it</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/whatsnowplaying/whats-now-playing" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.path", "navigation.top", "navigation.tracking", "search.highlight", "search.share", "search.suggest", "content.code.copy", "toc.follow", "toc.integrate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike", "warning": [{"text": "\u26a0\ufe0f Development version - features may be unstable", "url": "../latest/", "version": "dev"}]}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
