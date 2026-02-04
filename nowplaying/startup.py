@@ -195,11 +195,11 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
         with contextlib.suppress(ImportError, AttributeError):
             nowplaying_dir = pathlib.Path(nowplaying.__file__).parent
             search_dirs.extend([nowplaying_dir / "resources", nowplaying_dir.parent / "resources"])
-        # Search for icon files
+        # Search for icon files (same order as ConfigFile.find_icon_file)
         for testdir in search_dirs:
             if not testdir.exists():
                 continue
-            for testfilename in ["wnp_logo.svg", "logo.png", "icon.ico", "windows.ico"]:
+            for testfilename in ["wnp_logo.svg", "icon.ico", "windows.ico"]:
                 testfile = testdir / testfilename
                 if testfile.exists():
                     logging.debug("Found icon file at %s", testfile)

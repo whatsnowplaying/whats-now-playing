@@ -173,18 +173,16 @@ def generate_png_logos(svg_path, output_dir):
     return success
 
 
-def generate_icon_files(svg_path, temp_dir, output_dir):
-    """Generate Windows .ico and macOS .icns files.
+def generate_icon_pngs(svg_path, temp_dir):
+    """Generate PNG files at all required icon sizes.
 
     Args:
         svg_path: Path to source SVG file
         temp_dir: Temporary directory for intermediate files
-        output_dir: Base output directory
 
     Returns:
-        True if all icons generated successfully, False otherwise
+        Tuple of (icon_pngs dict, success bool)
     """
-    # Generate icon sizes for .ico and .icns files
     logging.info("Generating icon sizes...")
     icon_sizes = [16, 32, 48, 64, 128, 256, 512, 1024]
     icon_pngs = {}
@@ -197,46 +195,107 @@ def generate_icon_files(svg_path, temp_dir, output_dir):
         else:
             success = False
 
-    # Generate Windows .ico files
-    if icon_pngs:
-        logging.info("Generating Windows .ico files...")
-        ico_sizes = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
-        ico_files = [
-            output_dir / "bincomponents/windows.ico",
-            output_dir / "nowplaying/resources/icon.ico",
-        ]
+    return icon_pngs, success
 
-        # Use highest resolution source (1024x1024) for better quality when scaling down
-        for ico_path in ico_files:
-            ico_path.parent.mkdir(parents=True, exist_ok=True)
-            if not create_ico_file(icon_pngs[1024], ico_path, ico_sizes):
-                success = False
 
-    # Generate macOS .icns file
-    if icon_pngs:
-        logging.info("Generating macOS .icns file...")
-        icns_path = output_dir / "bincomponents/osx.icns"
-        icns_path.parent.mkdir(parents=True, exist_ok=True)
+def generate_ico_files(icon_pngs, output_dir):
+    """Generate Windows .ico files from icon PNGs.
 
-        # Map iconset names to PNG paths
-        iconset_files = {
-            "icon_16x16.png": icon_pngs[16],
-            "icon_16x16@2x.png": icon_pngs[32],
-            "icon_32x32.png": icon_pngs[32],
-            "icon_32x32@2x.png": icon_pngs[64],
-            "icon_128x128.png": icon_pngs[128],
-            "icon_128x128@2x.png": icon_pngs[256],
-            "icon_256x256.png": icon_pngs[256],
-            "icon_256x256@2x.png": icon_pngs[512],
-            "icon_512x512.png": icon_pngs[512],
-            "icon_512x512@2x.png": icon_pngs[1024],
-        }
+    Args:
+        icon_pngs: Dict mapping sizes to PNG paths
+        output_dir: Base output directory
 
-        if not create_icns_file(temp_dir, iconset_files, icns_path):
-            # Non-fatal on non-macOS systems
-            logging.warning("Skipped .icns generation")
+    Returns:
+        True if successful, False otherwise
+    """
+    if not icon_pngs:
+        return True
+
+    if 1024 not in icon_pngs:
+        logging.error("Missing 1024x1024 PNG, cannot generate .ico files")
+        return False
+
+    logging.info("Generating Windows .ico files...")
+    ico_sizes = [(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+    ico_files = [
+        output_dir / "bincomponents/windows.ico",
+        output_dir / "nowplaying/resources/icon.ico",
+    ]
+
+    success = True
+    for ico_path in ico_files:
+        ico_path.parent.mkdir(parents=True, exist_ok=True)
+        if not create_ico_file(icon_pngs[1024], ico_path, ico_sizes):
+            success = False
 
     return success
+
+
+def generate_icns_file(icon_pngs, temp_dir, output_dir):
+    """Generate macOS .icns file from icon PNGs.
+
+    Args:
+        icon_pngs: Dict mapping sizes to PNG paths
+        temp_dir: Temporary directory for iconset
+        output_dir: Base output directory
+
+    Returns:
+        True if successful, False otherwise
+    """
+    if not icon_pngs:
+        return True
+
+    logging.info("Generating macOS .icns file...")
+    icns_path = output_dir / "bincomponents/osx.icns"
+    icns_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Map iconset names to PNG paths, only for sizes that were successfully generated
+    iconset_mapping = {
+        16: "icon_16x16.png",
+        32: ["icon_16x16@2x.png", "icon_32x32.png"],
+        64: "icon_32x32@2x.png",
+        128: "icon_128x128.png",
+        256: ["icon_128x128@2x.png", "icon_256x256.png"],
+        512: ["icon_256x256@2x.png", "icon_512x512.png"],
+        1024: "icon_512x512@2x.png",
+    }
+
+    iconset_files = {}
+    for size, names in iconset_mapping.items():
+        if size in icon_pngs:
+            if isinstance(names, list):
+                for name in names:
+                    iconset_files[name] = icon_pngs[size]
+            else:
+                iconset_files[names] = icon_pngs[size]
+
+    if not iconset_files:
+        logging.error("No valid icon sizes generated for .icns file")
+        return False
+
+    if not create_icns_file(temp_dir, iconset_files, icns_path):
+        # Non-fatal on non-macOS systems
+        logging.warning("Skipped .icns generation")
+
+    return True
+
+
+def generate_icon_files(svg_path, temp_dir, output_dir):
+    """Generate Windows .ico and macOS .icns files.
+
+    Args:
+        svg_path: Path to source SVG file
+        temp_dir: Temporary directory for intermediate files
+        output_dir: Base output directory
+
+    Returns:
+        True if all icons generated successfully, False otherwise
+    """
+    icon_pngs, pngs_success = generate_icon_pngs(svg_path, temp_dir)
+    ico_success = generate_ico_files(icon_pngs, output_dir)
+    icns_success = generate_icns_file(icon_pngs, temp_dir, output_dir)
+
+    return pngs_success and ico_success and icns_success
 
 
 def main():
