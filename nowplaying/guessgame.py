@@ -633,6 +633,19 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         # Wrong guess penalty
         return self._get_config("points_wrong_word", -1, int)
 
+    def _mark_guess_as_wrong(self, result: dict, guess_text: str) -> None:
+        """
+        Mark a guess result as wrong if it's not already correct or already_guessed.
+
+        Args:
+            result: The result dictionary to modify
+            guess_text: The original guess text for point calculation
+        """
+        if not result["correct"] and result["guess_type"] != "already_guessed":
+            result["correct"] = False
+            result["guess_type"] = "wrong"
+            result["points"] = self._calculate_points(guess_text, "wrong")
+
     async def start_new_game(self, track: str, artist: str) -> bool:  # pylint: disable=too-many-locals
         """
         Start a new game for the given track and artist.
@@ -857,11 +870,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                                 revealed_letters,
                                 result,
                             )
-                            # If not correct and not already_guessed, mark as wrong
-                            if not result["correct"] and result["guess_type"] != "already_guessed":
-                                result["correct"] = False
-                                result["guess_type"] = "wrong"
-                                result["points"] = self._calculate_points(guess_text, "wrong")
+                            self._mark_guess_as_wrong(result, guess_text)
 
                     elif solve_mode == "both_required":
                         # Must have both track and artist in the guess to win
@@ -893,11 +902,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                                 revealed_letters,
                                 result,
                             )
-                            # If not correct and not already_guessed, mark as wrong
-                            if not result["correct"] and result["guess_type"] != "already_guessed":
-                                result["correct"] = False
-                                result["guess_type"] = "wrong"
-                                result["points"] = self._calculate_points(guess_text, "wrong")
+                            self._mark_guess_as_wrong(result, guess_text)
 
                     else:  # separate_solves (default)
                         # Track and artist are independent objectives
@@ -970,11 +975,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                                 revealed_letters,
                                 result,
                             )
-                            # If not correct and not already_guessed, mark as wrong
-                            if not result["correct"] and result["guess_type"] != "already_guessed":
-                                result["correct"] = False
-                                result["guess_type"] = "wrong"
-                                result["points"] = self._calculate_points(guess_text, "wrong")
+                            self._mark_guess_as_wrong(result, guess_text)
 
                 # Update masked strings
                 result["masked_track"] = self._mask_text(

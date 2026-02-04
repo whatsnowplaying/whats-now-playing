@@ -20,8 +20,9 @@ def checksum(filename: str | pathlib.Path, treat_as_extension: str | None = None
 
     Args:
         filename: Path to the file to checksum
-        treat_as_extension: Optional extension to use for determining file type
-                          (e.g., ".htm" for a .new file that should be treated as HTML)
+        treat_as_extension: Optional extension to use for determining file type.
+                          Can be with or without leading dot (e.g., ".htm" or "htm").
+                          Used for .new files that should be treated as their base type.
 
     Returns None if the file cannot be read or processed.
     """
@@ -44,6 +45,9 @@ def checksum(filename: str | pathlib.Path, treat_as_extension: str | None = None
         # Use explicitly provided extension, or detect from filename
         if treat_as_extension:
             file_ext = treat_as_extension.lower()
+            # Normalize to ensure leading dot
+            if not file_ext.startswith("."):
+                file_ext = f".{file_ext}"
         else:
             file_ext = os.path.splitext(str(filename))[1].lower()
 
