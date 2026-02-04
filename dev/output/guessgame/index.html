@@ -2755,7 +2755,7 @@ leaderboard system to track top performers across your stream session and all-ti
 <li><strong>Flexible Solve Modes</strong>: Configure whether viewers must guess track, artist, or both</li>
 <li><strong>Smart Scoring</strong>: Points awarded based on letter frequency (rare letters = more points)</li>
 <li><strong>Automatic Games</strong>: New games start when your track changes and end after a configurable duration</li>
-<li><strong>User Statistics</strong>: Players can check their stats with a customizable command (default: <code>!mystats</code>)</li>
+<li><strong>User Statistics</strong>: Players can check their stats with a customizable command (default: <code>!mypoints</code>)</li>
 </ul>
 <h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
 <h3 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h3>
@@ -2805,7 +2805,7 @@ leaderboard system to track top performers across your stream session and all-ti
 <tr>
 <td>Stats Command</td>
 <td>Chat command viewers use to check their statistics</td>
-<td><code>mystats</code></td>
+<td><code>mypoints</code></td>
 </tr>
 <tr>
 <td>Game Duration</td>
@@ -3003,7 +3003,7 @@ displayed and which color scheme is used (purple/orange for session, green for a
  Track: {{ masked_track }} | Artist: {{ masked_artist }} |
 Time: {{ time_remaining }}s
 </code></pre></div>
-<p><strong>twitchbot_mystats.txt</strong>: Response when a viewer checks their stats</p>
+<p><strong>twitchbot_mypoints.txt</strong>: Response when a viewer checks their stats</p>
 <div class="highlight"><pre><span></span><code>@{{ cmduser }}: Session: {{ session_score }} points, {{ session_guesses }} guesses |
 All-Time: {{ all_time_score }} points, {{ all_time_guesses }} guesses, {{ all_time_solves }} solves
 </code></pre></div>
@@ -3097,7 +3097,7 @@ Artist: {{ masked_artist }}
 <h3 id="chat-commands-not-working">Chat Commands Not Working<a class="headerlink" href="#chat-commands-not-working" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Confirm chat permissions are set in Twitch settings</li>
-<li>Check that template files exist: <code>twitchbot_guess.txt</code> and <code>twitchbot_mystats.txt</code></li>
+<li>Check that template files exist: <code>twitchbot_guess.txt</code> and <code>twitchbot_mypoints.txt</code></li>
 <li>Verify bot has proper OAuth authentication</li>
 </ul>
 <h3 id="obs-display-not-updating">OBS Display Not Updating<a class="headerlink" href="#obs-display-not-updating" title="Permanent link">&para;</a></h3>
