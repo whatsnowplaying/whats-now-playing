@@ -199,7 +199,7 @@ class StartupWindow(QDialog):  # pylint: disable=too-many-instance-attributes
         for testdir in search_dirs:
             if not testdir.exists():
                 continue
-            for testfilename in ["icon.ico", "windows.ico"]:
+            for testfilename in ["wnp_logo.svg", "logo.png", "icon.ico", "windows.ico"]:
                 testfile = testdir / testfilename
                 if testfile.exists():
                     logging.debug("Found icon file at %s", testfile)

@@ -1,5 +1,5 @@
 <RCC>
     <qresource prefix="/resources">
-        <file>icon.ico</file>
+        <file>wnp_logo.svg</file>
     </qresource>
 </RCC>

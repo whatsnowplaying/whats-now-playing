@@ -393,7 +393,7 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             ConfigFile.BUNDLEDIR.joinpath("bin"),
             ConfigFile.BUNDLEDIR.joinpath("resources"),
         ]:
-            for testfilename in ["icon.ico", "windows.ico"]:
+            for testfilename in ["wnp_logo.svg", "icon.ico", "windows.ico"]:
                 testfile = testdir.joinpath(testfilename)
                 if testfile.exists():
                     logging.debug("iconfile at %s", testfile)
