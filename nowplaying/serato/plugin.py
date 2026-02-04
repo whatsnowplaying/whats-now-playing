@@ -467,6 +467,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
             return False
 
         try:
+
             async def _query_library() -> bool:
                 async with aiosqlite.connect(db_path) as connection:
                     connection.row_factory = aiosqlite.Row
@@ -655,8 +656,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
 
             # Save selected playlists
             self.config.cparser.setValue(
-                "serato4/selected_playlists",
-                library_widgets.serato_playlists_lineedit.text()
+                "serato4/selected_playlists", library_widgets.serato_playlists_lineedit.text()
             )
 
             # Save additional library paths

@@ -108,7 +108,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>mystats</string>
+    <string>mypoints</string>
    </property>
   </widget>
 
@@ -291,7 +291,7 @@
 &lt;p&gt;&lt;b&gt;Guess Game&lt;/b&gt; creates a hangman-style interactive game for your Twitch chat.&lt;/p&gt;
 &lt;p&gt;Viewers type &lt;b&gt;!guess &amp;lt;letter/word&amp;gt;&lt;/b&gt; to play and earn points for correct guesses.&lt;/p&gt;
 &lt;p&gt;Games start automatically when a new track plays and end when solved or time expires.&lt;/p&gt;
-&lt;p&gt;Default templates: &lt;b&gt;twitchbot_guess.txt&lt;/b&gt; and &lt;b&gt;twitchbot_mystats.txt&lt;/b&gt; (customize in templates folder).&lt;/p&gt;
+&lt;p&gt;Default templates: &lt;b&gt;twitchbot_guess.txt&lt;/b&gt; and &lt;b&gt;twitchbot_mypoints.txt&lt;/b&gt; (customize in templates folder).&lt;/p&gt;
 &lt;p&gt;OBS Browser Sources: &lt;b&gt;http://localhost:8899/guessgame.htm&lt;/b&gt; (game display) and &lt;b&gt;guessgame-leaderboard.htm&lt;/b&gt; (leaderboard).&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</string>
    </property>

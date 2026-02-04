@@ -6,7 +6,6 @@ import importlib
 import logging
 import multiprocessing
 import socket
-import sys
 import typing as t
 
 from PySide6.QtCore import Qt  # pylint: disable=import-error,no-name-in-module

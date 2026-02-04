@@ -501,7 +501,7 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
             "guessgame/command", defaultValue="guess", type=str
         )
         stats_command = self.config.cparser.value(
-            "guessgame/statscommand", defaultValue="mystats", type=str
+            "guessgame/statscommand", defaultValue="mypoints", type=str
         )
 
         if commandlist[0].lower() == guess_command.lower() and not is_help_request:

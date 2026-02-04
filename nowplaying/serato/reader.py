@@ -112,9 +112,7 @@ class Serato4RootReader:  # pylint: disable=too-few-public-methods
     def __init__(self, db_path: str | pathlib.Path):
         self.db_path = pathlib.Path(db_path)
 
-    async def has_artist_in_crates(
-        self, artist_name: str, crate_names: list[str]
-    ) -> bool:
+    async def has_artist_in_crates(self, artist_name: str, crate_names: list[str]) -> bool:
         """Check if an artist has tracks in any of the specified crates
 
         Args:

@@ -53,7 +53,7 @@ class GuessGameSettings:
             config.cparser.value("guessgame/command", defaultValue="guess")
         )
         widget.findChild(QLineEdit, "statscommand_lineedit").setText(
-            config.cparser.value("guessgame/statscommand", defaultValue="mystats")
+            config.cparser.value("guessgame/statscommand", defaultValue="mypoints")
         )
 
         # Game settings
