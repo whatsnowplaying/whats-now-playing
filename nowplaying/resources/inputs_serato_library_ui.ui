@@ -111,55 +111,29 @@
      <x>10</x>
      <y>110</y>
      <width>621</width>
-     <height>120</height>
+     <height>100</height>
     </rect>
    </property>
    <property name="title">
-    <string>Additional Library Paths</string>
+    <string>Library Paths (Auto-Discovered)</string>
    </property>
-   <widget class="QTextEdit" name="additional_libs_textedit">
+   <widget class="QLabel" name="autodiscovery_status_label">
     <property name="geometry">
      <rect>
       <x>10</x>
       <y>25</y>
-      <width>501</width>
-      <height>60</height>
-     </rect>
-    </property>
-    <property name="toolTip">
-     <string>Additional Serato library paths (one per line). Used for external drives and multiple music collections.</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="add_additional_lib_button">
-    <property name="geometry">
-     <rect>
-      <x>520</x>
-      <y>25</y>
-      <width>90</width>
-      <height>30</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Add Path...</string>
-    </property>
-    <property name="toolTip">
-     <string>Browse for additional Serato library directory</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="additional_libs_help_label">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>90</y>
       <width>600</width>
-      <height>25</height>
+      <height>70</height>
      </rect>
     </property>
     <property name="text">
-     <string>Enter additional _Serato_ folder paths (one per line) for external drives or multiple libraries.</string>
+     <string>Library paths are automatically discovered from Serato's database. All external drives and music collections that Serato knows about will be used for artist queries automatically - no manual configuration needed!</string>
+    </property>
+    <property name="wordWrap">
+     <bool>true</bool>
     </property>
     <property name="styleSheet">
-     <string>color: #666;</string>
+     <string>color: #333; padding: 10px; background-color: #f0f0f0; border-radius: 5px;</string>
     </property>
    </widget>
   </widget>

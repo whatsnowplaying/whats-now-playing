@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 
 import aiosqlite
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
-from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 import nowplaying.inputs
 import nowplaying.utils.sqlite
@@ -220,7 +219,6 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         qsettings.setValue("serato4/interval", 30.0)
         qsettings.setValue("serato4/artist_query_scope", "entire_library")
         qsettings.setValue("serato4/selected_playlists", "")
-        qsettings.setValue("serato4/additional_libpaths", "")
 
     def desc_settingsui(self, qwidget: "QWidget") -> None:
         """Plugin description for UI"""
@@ -258,8 +256,11 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         if not track_data:
             return None
 
+        # Get location mappings for path resolution
+        location_mappings = await self.handler.get_location_mappings()
+
         # Convert Serato 4 database format to TrackMetadata format
-        return self._convert_local_track_data(track_data)
+        return self._convert_local_track_data(track_data, location_mappings)
 
     async def _get_remote_track(self) -> TrackMetadata | None:
         """Get track from remote web scraping"""
@@ -275,8 +276,15 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         return self._convert_remote_track_data(track_data)
 
     @staticmethod
-    def _convert_local_track_data(track_data: dict[str, any]) -> TrackMetadata:
-        """Convert local SQLite track data to TrackMetadata format"""
+    def _convert_local_track_data(  # pylint: disable=too-many-branches
+        track_data: dict[str, any], location_mappings: dict[int, pathlib.Path] | None = None
+    ) -> TrackMetadata:
+        """Convert local SQLite track data to TrackMetadata format
+
+        Args:
+            track_data: Track data from Serato SQLite database
+            location_mappings: Optional mapping of location_id to base file path
+        """
         track_metadata: TrackMetadata = {}
 
         # Basic track information
@@ -304,7 +312,26 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
             track_metadata["duration"] = int(track_data["duration"])
 
         # Handle file path for local tracks
-        if track_data.get("file_name"):
+        # Construct full path from location_id + portable_id
+        if track_data.get("portable_id") and track_data.get("location_id"):
+            portable_id = str(track_data["portable_id"])
+            location_id = track_data["location_id"]
+
+            # Try to get base path from location mappings
+            if location_mappings and location_id in location_mappings:
+                base_path = location_mappings[location_id]
+                full_path = base_path / portable_id
+                track_metadata["filename"] = str(full_path)
+            else:
+                # Fallback: just use portable_id as-is
+                track_metadata["filename"] = portable_id
+                logging.warning(
+                    "No location mapping for location_id=%s, using portable_id as-is: %s",
+                    location_id,
+                    portable_id,
+                )
+        elif track_data.get("file_name"):
+            # Fallback to just filename if no portable_id
             track_metadata["filename"] = str(track_data["file_name"])
 
         # Store deck info in the standard 'deck' field
@@ -326,30 +353,17 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
 
         return track_metadata
 
-    def _get_all_library_paths(self) -> list[pathlib.Path]:
-        """Get all configured Serato 4 library paths (primary + additional)
+    async def _get_all_library_database_paths(self) -> list[pathlib.Path]:
+        """Get all Serato library database paths (auto-discovered)
 
-        Returns list of paths to check for root.sqlite or location.sqlite files
+        Returns list of paths to root.sqlite or location.sqlite files
+        for querying library/crates.
         """
-        paths = []
+        if not self.handler:
+            return []
 
-        # Add primary library path (auto-detected)
-        if self.serato_lib_path:
-            paths.append(self.serato_lib_path)
-
-        # Add additional library paths from config
-        if additional_paths := self.config.cparser.value(
-            "serato4/additional_libpaths", defaultValue=""
-        ):
-            # Split by newlines or semicolons, strip whitespace, filter empty
-            extra_paths = [
-                pathlib.Path(path.strip())
-                for path in additional_paths.replace(";", "\n").split("\n")
-                if path.strip()
-            ]
-            paths.extend(extra_paths)
-
-        return paths
+        # Auto-discover all library database paths from location_connections
+        return await self.handler.get_library_database_paths()
 
     async def has_tracks_by_artist(self, artist_name: str) -> bool:
         """Check if DJ has any tracks by the specified artist
@@ -369,9 +383,10 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
                 logging.debug("Artist query not available - not in local mode")
                 return False
 
-            library_paths = self._get_all_library_paths()
-            if not library_paths:
-                logging.warning("No Serato 4 library paths configured")
+            # Auto-discover all library database paths
+            db_paths = await self._get_all_library_database_paths()
+            if not db_paths:
+                logging.warning("No Serato 4 library databases found")
                 return False
 
             # Get query scope configuration
@@ -381,12 +396,12 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
 
             if scope == "selected_playlists":
                 # Check selected crates across all libraries
-                return await self._has_tracks_in_selected_playlists(artist_name, library_paths)
+                return await self._has_tracks_in_selected_playlists(artist_name, db_paths)
 
-            # Check entire library across all library paths
-            for lib_path in library_paths:
-                if await self._has_tracks_in_entire_library(artist_name, lib_path):
-                    logging.debug("Found artist '%s' in library: %s", artist_name, lib_path)
+            # Check entire library across all library databases
+            for db_path in db_paths:
+                if await self._has_tracks_in_entire_library(artist_name, db_path):
+                    logging.debug("Found artist '%s' in library: %s", artist_name, db_path)
                     return True
             return False
 
@@ -397,7 +412,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
             return False
 
     async def _has_tracks_in_selected_playlists(
-        self, artist_name: str, library_paths: list[pathlib.Path]
+        self, artist_name: str, db_paths: list[pathlib.Path]
     ) -> bool:
         """Check for artist tracks in specific playlists/crates across all libraries"""
         selected_playlists = self.config.cparser.value(
@@ -414,22 +429,8 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
 
         logging.debug("Checking artist '%s' in crates: %s", artist_name, crate_names)
 
-        # Check each library path
-        for lib_path in library_paths:
-            # Determine which database file to use
-            root_db = lib_path / "root.sqlite"
-            location_db = lib_path / "Library" / "location.sqlite"
-
-            db_path = None
-            if root_db.exists():
-                db_path = root_db
-            elif location_db.exists():
-                db_path = location_db
-
-            if not db_path:
-                logging.debug("No database found at %s", lib_path)
-                continue
-
+        # Check each library database
+        for db_path in db_paths:
             # Create reader for this library and check for artist
             reader = Serato4RootReader(db_path)
             if await reader.has_artist_in_crates(artist_name, crate_names):
@@ -438,34 +439,19 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         return False
 
     async def _has_tracks_in_entire_library(  # pylint: disable=no-self-use
-        self, artist_name: str, lib_path: pathlib.Path
+        self, artist_name: str, db_path: pathlib.Path
     ) -> bool:
-        """Check for artist tracks in entire library at given path
+        """Check for artist tracks in entire library database
 
         Uses the asset table in root.sqlite or location.sqlite to search the library.
-        This is more efficient than loading the full master.sqlite database.
 
         Args:
             artist_name: Artist name to search for
-            lib_path: Path to Serato library (containing root.sqlite or Library/location.sqlite)
+            db_path: Path to library database file (root.sqlite or location.sqlite)
 
         Returns:
             True if artist found in this library, False otherwise
         """
-        # Determine which database file to use
-        root_db = lib_path / "root.sqlite"
-        location_db = lib_path / "Library" / "location.sqlite"
-
-        db_path = None
-        if root_db.exists():
-            db_path = root_db
-        elif location_db.exists():
-            db_path = location_db
-
-        if not db_path:
-            logging.debug("No database found at %s", lib_path)
-            return False
-
         try:
 
             async def _query_library() -> bool:
@@ -489,7 +475,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
             return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_query_library)
         except sqlite3.Error as exc:
             logging.error(
-                "Failed to query library at %s for artist %s: %s", lib_path, artist_name, exc
+                "Failed to query library at %s for artist %s: %s", db_path, artist_name, exc
             )
             return False
 
@@ -507,14 +493,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         """Connect UI elements"""
         self.qwidget = qwidget
         self.uihelp = uihelp
-        # New serato plugin uses auto-detection - no directory selection needed
-
-        # Connect library tab button if it exists
-        library_widgets = self.uihelp.find_tab_by_identifier(qwidget, "serato_artist_scope_combo")
-        if library_widgets and hasattr(library_widgets, "add_additional_lib_button"):
-            library_widgets.add_additional_lib_button.clicked.connect(
-                self.on_add_additional_lib_button
-            )
+        # Serato 4 plugin uses auto-detection for all libraries - no manual configuration needed
 
     def on_add_additional_lib_button(self):
         """Add additional library button clicked action"""
@@ -529,15 +508,10 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
             logging.error("Library tab not found")
             return
 
-        startdir = str(pathlib.Path.home())
-        if libdir := QFileDialog.getExistingDirectory(
-            self.qwidget, "Select additional Serato library directory", startdir
-        ):
-            if current_text := library_widgets.additional_libs_textedit.toPlainText().strip():
-                new_text = current_text + "\n" + libdir
-            else:
-                new_text = libdir
-            library_widgets.additional_libs_textedit.setPlainText(new_text)
+        # DEPRECATED: Libraries are now auto-discovered from Serato database
+        logging.info(
+            "Additional library paths are auto-discovered - manual configuration not needed"
+        )
 
     def load_settingsui(self, qwidget: "QWidget") -> None:
         """Load settings into UI"""
@@ -609,11 +583,8 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
                 self.config.cparser.value("serato4/selected_playlists", defaultValue="")
             )
 
-            # Load additional library paths
-            additional_paths = self.config.cparser.value(
-                "serato4/additional_libpaths", defaultValue=""
-            )
-            library_widgets.additional_libs_textedit.setPlainText(additional_paths)
+            # Additional library paths are now auto-discovered
+            # UI shows informational message, no loading needed
 
     def save_settingsui(self, qwidget: "QWidget") -> None:
         """Save settings from UI"""
@@ -659,6 +630,4 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
                 "serato4/selected_playlists", library_widgets.serato_playlists_lineedit.text()
             )
 
-            # Save additional library paths
-            additional_paths = library_widgets.additional_libs_textedit.toPlainText().strip()
-            self.config.cparser.setValue("serato4/additional_libpaths", additional_paths)
+            # Additional library paths are now auto-discovered, no need to save
