@@ -512,8 +512,10 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
                 metadata |= reply
 
         # Only process track requests if this is NOT a help request
+        # Skip request handling for guess game commands
         if (
             not is_help_request
+            and commandlist[0].lower() not in [guess_command.lower(), stats_command.lower()]
             and self.config.cparser.value("settings/requests", type=bool)
             and self.config.cparser.value("twitchbot/chatrequests", type=bool)
         ):
