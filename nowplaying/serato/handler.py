@@ -44,6 +44,7 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
         self._db_change_debounce_delay: float = 0.5  # 500ms debounce
         self._db_needs_refresh: bool = True  # Flag set by watchdog, checked by async methods
         self._cached_deck_tracks: list[dict[str, t.Any]] = []  # Cache all deck data
+        self._cached_location_mappings: dict[int, pathlib.Path] | None = None  # Cache locations
 
     async def start(self):
         """perform any startup tasks"""
@@ -98,9 +99,8 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
 
         self.tasks.clear()
 
-    def process_sessions(self, event):
+    def process_sessions(self, event):  # pylint: disable=unused-argument
         """handle incoming session file updates"""
-        logging.debug("processing %s", event)
         # Simple synchronous processing - just set a flag that async methods can check
         self._db_needs_refresh = True
 
@@ -176,3 +176,16 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
             selected_track = max(deck_tracks, key=lambda t: t.get("start_time", 0))
 
         return selected_track
+
+    async def get_location_mappings(self) -> dict[int, pathlib.Path]:
+        """Get mapping of location_id to base file path from the SQLite reader
+
+        Results are cached to avoid repeated database queries.
+        """
+        if self._cached_location_mappings is None:
+            self._cached_location_mappings = await self.sqlite_reader.get_location_mappings()
+        return self._cached_location_mappings
+
+    async def get_library_database_paths(self) -> list[pathlib.Path]:
+        """Get all library database paths for artist filtering"""
+        return await self.sqlite_reader.get_library_database_paths()

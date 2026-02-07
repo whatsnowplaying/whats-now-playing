@@ -42,6 +42,8 @@ def serato_master_db():
                         id INTEGER PRIMARY KEY,
                         session_id INTEGER,
                         file_name TEXT,
+                        portable_id TEXT,
+                        location_id INTEGER,
                         artist TEXT,
                         name TEXT,
                         album TEXT,
@@ -60,6 +62,46 @@ def serato_master_db():
                     )
                 """)
 
+                # Create location table and location_connections view for path resolution
+                conn.execute("""
+                    CREATE TABLE location (
+                        id INTEGER PRIMARY KEY,
+                        uuid BLOB,
+                        path TEXT
+                    )
+                """)
+
+                conn.execute("""
+                    CREATE TABLE connection (
+                        location_id INTEGER,
+                        database_uri TEXT,
+                        show_when_disconnected INTEGER
+                    )
+                """)
+
+                conn.execute("""
+                    CREATE VIEW location_connections AS
+                    SELECT l.id as location_id, l.uuid, c.database_uri, c.show_when_disconnected
+                    FROM location l
+                    LEFT OUTER JOIN connection c ON l.id = c.location_id
+                """)
+
+                # Insert test location (local library)
+                conn.execute(
+                    """
+                    INSERT INTO location (id, uuid, path)
+                    VALUES (1, X'1234567890ABCDEF', '')  -- pragma: allowlist secret
+                """
+                )
+
+                conn.execute(
+                    """
+                    INSERT INTO connection (location_id, database_uri, show_when_disconnected)
+                    VALUES (1, ?, 0)
+                """,
+                    (str(library_dir / "root.sqlite"),),
+                )
+
                 # Insert test session (end_time = -1 means active session)
                 current_time = 1693125000
                 conn.execute(
@@ -76,7 +118,9 @@ def serato_master_db():
                     (
                         1,
                         1,
-                        "/music/track1.mp3",
+                        "track1.mp3",
+                        "music/track1.mp3",
+                        1,
                         "Artist One",
                         "Track One",
                         "Album One",
@@ -96,7 +140,9 @@ def serato_master_db():
                     (
                         2,
                         1,
-                        "/music/track2.mp3",
+                        "track2.mp3",
+                        "music/track2.mp3",
+                        1,
                         "Artist Two",
                         "Track Two",
                         "Album Two",
@@ -116,7 +162,9 @@ def serato_master_db():
                     (
                         3,
                         1,
-                        "/music/track3.mp3",
+                        "track3.mp3",
+                        "music/track3.mp3",
+                        1,
                         "Artist Three",
                         "Track Three",
                         "Album Three",
@@ -136,7 +184,9 @@ def serato_master_db():
                     (
                         4,
                         1,
-                        "/music/track4.mp3",
+                        "track4.mp3",
+                        "music/track4.mp3",
+                        1,
                         "Artist Four",
                         "Track Four",
                         "Album Four",
@@ -158,10 +208,10 @@ def serato_master_db():
                     conn.execute(
                         """
                         INSERT INTO history_entry
-                        (id, session_id, file_name, artist, name, album, genre, bpm, key, year,
-                         length_sec, start_time, played, deck, file_size,
+                        (id, session_id, file_name, portable_id, location_id, artist, name, album,
+                         genre, bpm, key, year, length_sec, start_time, played, deck, file_size,
                          file_sample_rate, file_bit_rate)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                         track,
                     )
