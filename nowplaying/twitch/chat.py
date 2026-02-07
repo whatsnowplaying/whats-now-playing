@@ -499,21 +499,28 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
         # Handle guess game commands
         guess_command = self.config.cparser.value(
             "guessgame/command", defaultValue="guess", type=str
-        )
+        ).lower()
         stats_command = self.config.cparser.value(
             "guessgame/statscommand", defaultValue="mypoints", type=str
-        )
+        ).lower()
 
-        if commandlist[0].lower() == guess_command.lower() and not is_help_request:
+        # Commands that should skip track request handling
+        skip_request_commands = {guess_command, stats_command}
+
+        received_command = commandlist[0].lower()
+
+        if received_command == guess_command and not is_help_request:
             if reply := await self.handle_guess(commandlist[1:], msg.user.display_name):
                 metadata |= reply
-        elif commandlist[0].lower() == stats_command.lower() and not is_help_request:
+        elif received_command == stats_command and not is_help_request:
             if reply := await self.handle_guessstats(msg.user.display_name):
                 metadata |= reply
 
         # Only process track requests if this is NOT a help request
+        # Skip request handling for game commands
         if (
             not is_help_request
+            and received_command not in skip_request_commands
             and self.config.cparser.value("settings/requests", type=bool)
             and self.config.cparser.value("twitchbot/chatrequests", type=bool)
         ):
