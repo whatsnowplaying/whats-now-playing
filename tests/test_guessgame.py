@@ -814,7 +814,7 @@ async def test_no_points_for_already_revealed_words(
 async def test_send_game_state_disabled_when_config_off(
     isolated_guessgame,
 ):  # pylint: disable=redefined-outer-name
-    """Test that send_game_state_to_server respects guessgame/send_to_server config"""
+    """Test that _send_single_update respects guessgame/send_to_server config"""
     game = isolated_guessgame
 
     # Disable sending to server
@@ -827,18 +827,12 @@ async def test_send_game_state_disabled_when_config_off(
 
     # Mock aiohttp to verify it's NOT called
     with patch("aiohttp.ClientSession") as mock_session:
-        # Run the sender for a short time
-        task = asyncio.create_task(game.send_game_state_to_server())
+        # Call _send_single_update directly
+        success, sleep_duration = await game._send_single_update()  # pylint: disable=protected-access
 
-        # Let it run briefly
-        await asyncio.sleep(0.1)
-
-        # Cancel task
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+        # Verify it returned False (not sent) and a reasonable sleep duration
+        assert success is False
+        assert sleep_duration == 5
 
         # Verify no HTTP calls were made
         mock_session.assert_not_called()
@@ -848,7 +842,7 @@ async def test_send_game_state_disabled_when_config_off(
 async def test_send_game_state_requires_api_key(
     isolated_guessgame,
 ):  # pylint: disable=redefined-outer-name
-    """Test that send_game_state_to_server requires charts/charts_key to be configured"""
+    """Test that _send_single_update requires charts/charts_key to be configured"""
     game = isolated_guessgame
 
     # Enable sending but no API key
@@ -860,18 +854,12 @@ async def test_send_game_state_requires_api_key(
 
     # Mock aiohttp to verify it's NOT called
     with patch("aiohttp.ClientSession") as mock_session:
-        # Run the sender for a short time
-        task = asyncio.create_task(game.send_game_state_to_server())
+        # Call _send_single_update directly
+        success, sleep_duration = await game._send_single_update()  # pylint: disable=protected-access
 
-        # Let it run briefly
-        await asyncio.sleep(0.1)
-
-        # Cancel task
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+        # Verify it returned False (not sent) and a longer sleep duration
+        assert success is False
+        assert sleep_duration == 10
 
         # Verify no HTTP calls were made (no valid API key)
         mock_session.assert_not_called()
@@ -881,7 +869,7 @@ async def test_send_game_state_requires_api_key(
 async def test_send_game_state_sends_correct_payload(
     isolated_guessgame,
 ):  # pylint: disable=redefined-outer-name
-    """Test that send_game_state_to_server sends correct payload format"""
+    """Test that _send_single_update sends correct payload format"""
     game = isolated_guessgame
 
     # Configure for sending
@@ -901,22 +889,15 @@ async def test_send_game_state_sends_correct_payload(
 
     mock_session = MagicMock()
     mock_session.post = MagicMock(return_value=mock_response)
-    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-    mock_session.__aexit__ = AsyncMock(return_value=None)
+    mock_session.closed = False
 
     with patch("aiohttp.ClientSession", return_value=mock_session):
-        # Run the sender for a short time
-        task = asyncio.create_task(game.send_game_state_to_server())
+        # Call _send_single_update directly
+        success, sleep_duration = await game._send_single_update()  # pylint: disable=protected-access
 
-        # Let it run long enough to make at least one request
-        await asyncio.sleep(0.2)
-
-        # Cancel task
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+        # Verify it returned True (sent) and sleep duration for active game
+        assert success is True
+        assert sleep_duration == 2
 
         # Verify HTTP call was made
         assert mock_session.post.called
@@ -962,21 +943,17 @@ async def test_send_game_state_handles_http_errors(
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
     mock_session.__aexit__ = AsyncMock(return_value=None)
 
+    mock_session.closed = False
+
     with patch("aiohttp.ClientSession", return_value=mock_session):
-        # Run the sender for a short time
-        task = asyncio.create_task(game.send_game_state_to_server())
+        # Call _send_single_update directly - it should handle the error gracefully
+        success, sleep_duration = await game._send_single_update()  # pylint: disable=protected-access
 
-        # Let it run long enough to make at least one request
-        await asyncio.sleep(0.2)
+        # Verify it completed successfully despite HTTP 500 error
+        assert success is True  # Still returns True because request was sent
+        assert sleep_duration == 2  # Active game sleep duration
 
-        # Cancel task
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
-
-        # Verify HTTP call was made despite error (task shouldn't crash)
+        # Verify HTTP call was made despite error (shouldn't crash)
         assert mock_session.post.called
 
 
@@ -1006,22 +983,15 @@ async def test_send_game_state_includes_leaderboards(
 
     mock_session = MagicMock()
     mock_session.post = MagicMock(return_value=mock_response)
-    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-    mock_session.__aexit__ = AsyncMock(return_value=None)
+    mock_session.closed = False
 
     with patch("aiohttp.ClientSession", return_value=mock_session):
-        # Run the sender for a short time
-        task = asyncio.create_task(game.send_game_state_to_server())
+        # Call _send_single_update directly
+        success, sleep_duration = await game._send_single_update()  # pylint: disable=protected-access
 
-        # Let it run long enough to make at least one request
-        await asyncio.sleep(0.2)
-
-        # Cancel task
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+        # Verify it succeeded
+        assert success is True
+        assert sleep_duration == 2
 
         # Verify leaderboard data is included
         assert mock_session.post.called

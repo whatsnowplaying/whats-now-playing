@@ -202,7 +202,7 @@ This web-based display shows:
 **Benefits:**
 
 * **Share with viewers**: Post the link in your chat for viewers who want a dedicated game view
-* **Mobile friendly**: Viewers on mobile devices can follow along without watching the stream
+* **Mobile-friendly**: Viewers on mobile devices can follow along without watching the stream
 * **No OBS required**: Provides game display even if you don't use OBS overlays
 * **Always synchronized**: Updates every 2 seconds during active games
 
