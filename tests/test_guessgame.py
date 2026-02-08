@@ -821,6 +821,7 @@ async def test_send_game_state_disabled_when_config_off(
 
     # Disable sending to server
     game.config.cparser.setValue("guessgame/send_to_server", False)
+    # pragma: allowlist secret
     game.config.cparser.setValue("charts/secret", "test_secret_key_12345")
 
     # Start game
@@ -887,6 +888,7 @@ async def test_send_game_state_sends_correct_payload(
 
     # Configure for sending
     game.config.cparser.setValue("guessgame/send_to_server", True)
+    # pragma: allowlist secret
     game.config.cparser.setValue("charts/secret", "test_secret_key_12345")
 
     # Start game
@@ -928,6 +930,7 @@ async def test_send_game_state_sends_correct_payload(
         # Check payload structure
         payload = call_args[1]["json"]
         assert "secret" in payload
+        # pragma: allowlist secret
         assert payload["secret"] == "test_secret_key_12345"
         assert "game_status" in payload
         assert payload["game_status"] == "active"
@@ -942,6 +945,7 @@ async def test_send_game_state_handles_http_errors(
 
     # Configure for sending
     game.config.cparser.setValue("guessgame/send_to_server", True)
+    # pragma: allowlist secret
     game.config.cparser.setValue("charts/secret", "test_secret_key_12345")
 
     # Start game
@@ -986,6 +990,7 @@ async def test_send_game_state_includes_leaderboards(
 
     # Configure for sending
     game.config.cparser.setValue("guessgame/send_to_server", True)
+    # pragma: allowlist secret
     game.config.cparser.setValue("charts/secret", "test_secret_key_12345")
 
     # Start game and create some user activity

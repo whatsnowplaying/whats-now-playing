@@ -81,6 +81,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         self.stopevent = stopevent
         self.testmode = testmode
         self.last_game_end_time: float | None = None
+        self._http_session: aiohttp.ClientSession | None = None
 
         # Database location in persistent app data directory
         self.databasefile = pathlib.Path(
@@ -93,6 +94,12 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         else:
             # Migrate leaderboard tables if needed, recreate ephemeral tables
             self._migrate_database()
+
+    async def cleanup(self):
+        """Clean up resources (e.g., HTTP session)"""
+        if self._http_session is not None and not self._http_session.closed:
+            await self._http_session.close()
+            self._http_session = None
 
     def _migrate_database(self):
         """Migrate leaderboard tables if needed, recreate ephemeral tables"""
@@ -914,13 +921,9 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                         track_solved = True
                         result["track_solved"] = True
                         # Reveal all track letters
-                        revealed_letters.update(
-                            char.lower() for char in track if char.isalpha()
-                        )
+                        revealed_letters.update(char.lower() for char in track if char.isalpha())
                         # Award partial solve points
-                        complete_solve_points = self._get_config(
-                            "points_complete_solve", 100, int
-                        )
+                        complete_solve_points = self._get_config("points_complete_solve", 100, int)
                         result["points"] = complete_solve_points // 2
                         # Check if game is now complete
                         if artist_solved:
@@ -940,13 +943,9 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                         artist_solved = True
                         result["artist_solved"] = True
                         # Reveal all artist letters
-                        revealed_letters.update(
-                            char.lower() for char in artist if char.isalpha()
-                        )
+                        revealed_letters.update(char.lower() for char in artist if char.isalpha())
                         # Award partial solve points
-                        complete_solve_points = self._get_config(
-                            "points_complete_solve", 100, int
-                        )
+                        complete_solve_points = self._get_config("points_complete_solve", 100, int)
                         result["points"] = complete_solve_points // 2
                         # Check if game is now complete
                         if track_solved:
@@ -1514,10 +1513,10 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     await asyncio.sleep(5)
                     continue
 
-                # Check if charts is configured (need API key)
+                # Check if charts is configured (need valid API key)
                 charts_secret = self.config.cparser.value("charts/secret", defaultValue="")
-                if not charts_secret or not charts_secret.strip():
-                    # No API key configured, skip sending
+                if not nowplaying.utils.charts_api.is_valid_api_key(charts_secret):
+                    # No valid API key configured, skip sending
                     await asyncio.sleep(10)
                     continue
 
@@ -1576,22 +1575,44 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     payload["current_track"] = state.get("revealed_track", "")
                     payload["current_artist"] = state.get("revealed_artist", "")
 
-                # Build URL
-                url = f"{nowplaying.utils.charts_api.PROD_BASE_URL}/api/guessgame/update"
+                # Determine base URL (support debug mode like charts.py)
+                # Default to production; can be overridden via config for testing
+                debug_mode = self.config.cparser.value(
+                    "guessgame/debug", defaultValue=False, type=bool
+                )
+                base_url = (
+                    nowplaying.utils.charts_api.LOCAL_BASE_URL
+                    if debug_mode
+                    else nowplaying.utils.charts_api.PROD_BASE_URL
+                )
+                url = f"{base_url}/api/guessgame/update"
+
+                # Reuse HTTP session for efficiency
+                if self._http_session is None or self._http_session.closed:
+                    self._http_session = aiohttp.ClientSession()
 
                 # Send to server
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                        url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
-                    ) as response:
-                        # Use shared HTTP response handler
-                        try:
-                            response_text = await response.text()
-                        except Exception:  # pylint: disable=broad-exception-caught
-                            response_text = ""
-                        nowplaying.utils.charts_api.handle_http_response(
-                            response.status, response_text
+                # pylint: disable=not-async-context-manager
+                async with self._http_session.post(
+                    url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    # Use shared HTTP response handler
+                    try:
+                        response_text = await response.text()
+                    except Exception:  # pylint: disable=broad-exception-caught
+                        response_text = ""
+                    action = nowplaying.utils.charts_api.handle_http_response(
+                        response.status, response_text
+                    )
+
+                    # Log action for future adaptive behavior
+                    if action == "drop":
+                        logging.warning(
+                            "Server indicated to drop game state update (status %d)",
+                            response.status,
                         )
+                    elif action == "retry":
+                        logging.debug("Server indicated retry for game state update")
 
                 # Wait before next update
                 # Send more frequently during active games
@@ -1606,3 +1627,6 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             except Exception as error:  # pylint: disable=broad-exception-caught
                 logging.error("Failed to send game state to server: %s", error)
                 await asyncio.sleep(5)
+
+        # Clean up HTTP session when loop exits
+        await self.cleanup()

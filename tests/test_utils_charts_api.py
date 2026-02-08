@@ -39,6 +39,7 @@ def test_http_status_actions_structure():
     "status,expected_action",
     [
         (200, "success"),
+        (302, "retry"),  # Redirect (3xx) currently treated as retry
         (400, "drop"),
         (401, "retry"),
         (403, "retry"),
@@ -84,14 +85,14 @@ def test_handle_http_response_logging(caplog):
 @pytest.mark.parametrize(
     "key,expected_valid",
     [
-        ("wnp_charts_1234567890abcdef", True),  # Valid key
+        ("wnp_charts_1234567890abcdef", True),  # pragma: allowlist secret
         ("valid_key_12345", True),  # Valid key with minimum length
         ("short", False),  # Too short
         ("", False),  # Empty
         ("   ", False),  # Whitespace only
         (None, False),  # None type
         (123456, False),  # Not a string
-        ("a" * 100, True),  # Long key is fine
+        ("a" * 100, True),  # pragma: allowlist secret
     ],
 )
 def test_is_valid_api_key(key, expected_valid):
