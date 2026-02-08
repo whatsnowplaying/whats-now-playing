@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>650</width>
-    <height>380</height>
+    <height>420</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -331,6 +331,23 @@
    </property>
    <property name="text">
     <string>Enable time bonus (faster solves = more points)</string>
+   </property>
+  </widget>
+
+  <widget class="QCheckBox" name="send_to_server_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>370</y>
+     <width>620</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Send game state to charts server (for live display on profile)</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
    </property>
   </widget>
 
