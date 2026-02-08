@@ -106,6 +106,9 @@ class GuessGameSettings:
         widget.findChild(QCheckBox, "time_bonus_enabled_checkbox").setChecked(
             config.cparser.value("guessgame/time_bonus_enabled", type=bool, defaultValue=False)
         )
+        widget.findChild(QCheckBox, "send_to_server_checkbox").setChecked(
+            config.cparser.value("guessgame/send_to_server", type=bool, defaultValue=True)
+        )
 
         logging.debug("Guess game settings loaded")
 
@@ -180,6 +183,10 @@ class GuessGameSettings:
         config.cparser.setValue(
             "guessgame/time_bonus_enabled",
             widget.findChild(QCheckBox, "time_bonus_enabled_checkbox").isChecked(),
+        )
+        config.cparser.setValue(
+            "guessgame/send_to_server",
+            widget.findChild(QCheckBox, "send_to_server_checkbox").isChecked(),
         )
 
         logging.info("Guess game settings saved")
