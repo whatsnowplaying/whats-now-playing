@@ -911,7 +911,7 @@ async def test_send_game_state_sends_correct_payload(
         # pragma: allowlist secret
         assert "secret" in payload
         # pragma: allowlist secret
-        assert payload["secret"] == "test_secret_key_12345"
+        assert payload["secret"] == "test_secret_key_12345"  # pragma: allowlist secret
         assert "game_status" in payload
         assert payload["game_status"] == "active"
 
