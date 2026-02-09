@@ -142,6 +142,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             task = self.loop.create_task(self._monitor_guessgame_timer())
             task.add_done_callback(self.tasks.discard)
             self.tasks.add(task)
+            task = self.loop.create_task(self.guessgame.send_game_state_to_server())
+            task.add_done_callback(self.tasks.discard)
+            self.tasks.add(task)
 
     async def switch_input_plugin(self):
         """handle user switching source input while running"""

@@ -13,6 +13,7 @@ import aiohttp
 from PySide6.QtCore import QStandardPaths  # pylint: disable=import-error, no-name-in-module
 
 import nowplaying.db
+import nowplaying.utils.charts_api
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 from nowplaying.types import TrackMetadata
 
@@ -26,31 +27,17 @@ if TYPE_CHECKING:
     import nowplaying.imagecache
 
 
-# Base URLs for charts service
-LOCAL_BASE_URL = "http://localhost:8000"
-PROD_BASE_URL = "https://whatsnowplaying.com"
-
-# HTTP status code handling for charts submissions
-HTTP_STATUS_ACTIONS = {
-    200: ("success", "debug", "Charts server accepted submission"),
-    400: ("drop", "error", "Charts server rejected malformed data"),
-    401: ("retry", "error", "Charts server authentication failed"),
-    403: ("retry", "error", "Charts server authentication failed"),
-    404: ("drop", "error", "Charts server endpoint not found"),
-    405: ("drop", "error", "Charts server method not allowed"),
-    429: ("retry", "warning", "Charts server rate limited"),
-}
-
-
-def generate_anonymous_key(debug: bool = False) -> str | None:
+def generate_anonymous_key(
+    config: "nowplaying.config.ConfigFile | None" = None,
+) -> str | None:
     """
     Generate an anonymous charts key from the server (standalone function for main process)
+
+    Args:
+        config: Optional config to determine debug mode. If None, uses production URL.
     """
-    url = (
-        "https://localhost:8000/api/v1/request-anonymous-key"
-        if debug
-        else "https://whatsnowplaying.com/api/v1/request-anonymous-key"
-    )
+    base_url = nowplaying.utils.charts_api.get_charts_base_url(config)
+    url = f"{base_url}/api/v1/request-anonymous-key"
 
     try:
         data = json.dumps({"version": nowplaying.version.__VERSION__}).encode("utf-8")  # pylint: disable=no-member
@@ -100,7 +87,6 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         config: "nowplaying.config.ConfigFile | None" = None,
         qsettings: "QWidget | None" = None,
     ):
-        self.debug = False  # Initialize before super() since defaults() needs it
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Charts"
         self.enabled = True  # Default enabled
@@ -109,7 +95,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         self.queue_file: pathlib.Path | None = None
         self._queue_lock: asyncio.Lock | None = None  # Lazy initialization for event loop
         self._queue_task: asyncio.Task | None = None
-        self.base_url = LOCAL_BASE_URL if self.debug else PROD_BASE_URL
+        self.base_url = nowplaying.utils.charts_api.get_charts_base_url(self.config)
         self._session: aiohttp.ClientSession | None = None
 
     def _get_queue_lock(self) -> asyncio.Lock:
@@ -479,28 +465,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         Returns:
             str: Action to take ("success", "retry", "drop")
         """
-        # Check for specific status codes first
-        if status in HTTP_STATUS_ACTIONS:
-            action, log_level, message = HTTP_STATUS_ACTIONS[status]
-            full_message = f"{message} ({status}): {response_text}"
-
-            if log_level == "warning":
-                logging.warning(full_message)
-            elif log_level == "error":
-                logging.error(full_message)
-            elif log_level == "info":
-                logging.info(full_message)
-            elif log_level == "debug":
-                logging.debug(full_message)
-
-            return action
-
-        # Handle ranges for unlisted status codes
-        if 400 <= status < 500:
-            logging.error("Charts server client error %d: %s", status, response_text)
-            return "drop"  # Client errors won't resolve by retrying
-        logging.error("Charts server error %d: %s", status, response_text)
-        return "retry"  # Server errors may recover
+        return nowplaying.utils.charts_api.handle_http_response(status, response_text)
 
     @staticmethod
     def _is_valid_api_key(key: str) -> bool:
@@ -513,8 +478,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         Returns:
             bool: True if key format is valid
         """
-        # API keys should be non-empty strings with reasonable length
-        return isinstance(key, str) and len(key.strip()) >= 10
+        return nowplaying.utils.charts_api.is_valid_api_key(key)
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session"""

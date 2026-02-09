@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=too-many-lines
 """
 Unit tests for the Guess Game system
 """
@@ -6,6 +7,7 @@ Unit tests for the Guess Game system
 import asyncio
 import pathlib
 import tempfile
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiosqlite
 import pytest
@@ -23,11 +25,13 @@ async def isolated_guessgame(bootstrap):  # pylint: disable=redefined-outer-name
 
     with tempfile.TemporaryDirectory() as temp_dir:
         db_path = pathlib.Path(temp_dir) / "test_guessgame.db"
-        game = nowplaying.guessgame.GuessGame(config=bootstrap, testmode=True)
+        stopevent = asyncio.Event()
+        game = nowplaying.guessgame.GuessGame(config=bootstrap, stopevent=stopevent, testmode=True)
         # Override database location for testing
         game.databasefile = db_path
         game.setupdb()
         yield game
+        stopevent.set()  # Signal stop when test completes
 
 
 @pytest_asyncio.fixture
@@ -804,3 +808,196 @@ async def test_no_points_for_already_revealed_words(
     assert result2["correct"] is False
     assert result2["already_guessed"] is True
     assert result2["points"] == 0
+
+
+@pytest.mark.asyncio
+async def test_send_game_state_disabled_when_config_off(
+    isolated_guessgame,
+):  # pylint: disable=redefined-outer-name
+    """Test that _send_single_update respects guessgame/send_to_server config"""
+    game = isolated_guessgame
+
+    # Disable sending to server
+    game.config.cparser.setValue("guessgame/send_to_server", False)
+    # pragma: allowlist secret
+    game.config.cparser.setValue("charts/charts_key", "test_secret_key_12345")
+
+    # Start game
+    await game.start_new_game(track="Test Song", artist="Test Artist")
+
+    # Mock aiohttp to verify it's NOT called
+    with patch("aiohttp.ClientSession") as mock_session:
+        # Call _send_single_update directly
+        success, sleep_duration = await game._send_single_update()  # pylint: disable=protected-access
+
+        # Verify it returned False (not sent) and a reasonable sleep duration
+        assert success is False
+        assert sleep_duration == 5
+
+        # Verify no HTTP calls were made
+        mock_session.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_send_game_state_requires_api_key(
+    isolated_guessgame,
+):  # pylint: disable=redefined-outer-name
+    """Test that _send_single_update requires charts/charts_key to be configured"""
+    game = isolated_guessgame
+
+    # Enable sending but no API key
+    game.config.cparser.setValue("guessgame/send_to_server", True)
+    game.config.cparser.setValue("charts/charts_key", "")  # Empty key
+
+    # Start game
+    await game.start_new_game(track="Test Song", artist="Test Artist")
+
+    # Mock aiohttp to verify it's NOT called
+    with patch("aiohttp.ClientSession") as mock_session:
+        # Call _send_single_update directly
+        success, sleep_duration = await game._send_single_update()  # pylint: disable=protected-access
+
+        # Verify it returned False (not sent) and a longer sleep duration
+        assert success is False
+        assert sleep_duration == 10
+
+        # Verify no HTTP calls were made (no valid API key)
+        mock_session.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_send_game_state_sends_correct_payload(
+    isolated_guessgame,
+):  # pylint: disable=redefined-outer-name
+    """Test that _send_single_update sends correct payload format"""
+    game = isolated_guessgame
+
+    # Configure for sending
+    game.config.cparser.setValue("guessgame/send_to_server", True)
+    # pragma: allowlist secret
+    game.config.cparser.setValue("charts/charts_key", "test_secret_key_12345")
+
+    # Start game
+    await game.start_new_game(track="Test Song", artist="Test Artist")
+
+    # Mock aiohttp
+    mock_response = AsyncMock()
+    mock_response.status = 200
+    mock_response.text = AsyncMock(return_value="")
+    mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+    mock_response.__aexit__ = AsyncMock(return_value=None)
+
+    mock_session = MagicMock()
+    mock_session.post = MagicMock(return_value=mock_response)
+    mock_session.closed = False
+
+    with patch("aiohttp.ClientSession", return_value=mock_session):
+        # Call _send_single_update directly
+        success, sleep_duration = await game._send_single_update()  # pylint: disable=protected-access
+
+        # Verify it returned True (sent) and sleep duration for active game
+        assert success is True
+        assert sleep_duration == 2
+
+        # Verify HTTP call was made
+        assert mock_session.post.called
+        call_args = mock_session.post.call_args
+
+        # Check URL
+        assert "/api/guessgame/update" in call_args[0][0]
+
+        # Check payload structure
+        payload = call_args[1]["json"]
+        # pragma: allowlist secret
+        assert "secret" in payload
+        # pragma: allowlist secret
+        assert payload["secret"] == "test_secret_key_12345"  # pragma: allowlist secret
+        assert "game_status" in payload
+        assert payload["game_status"] == "active"
+
+
+@pytest.mark.asyncio
+async def test_send_game_state_handles_http_errors(
+    isolated_guessgame,
+):  # pylint: disable=redefined-outer-name
+    """Test that send_game_state_to_server handles HTTP errors gracefully"""
+    game = isolated_guessgame
+
+    # Configure for sending
+    game.config.cparser.setValue("guessgame/send_to_server", True)
+    # pragma: allowlist secret
+    game.config.cparser.setValue("charts/charts_key", "test_secret_key_12345")
+
+    # Start game
+    await game.start_new_game(track="Test Song", artist="Test Artist")
+
+    # Mock aiohttp with error response
+    mock_response = AsyncMock()
+    mock_response.status = 500  # Server error
+    mock_response.text = AsyncMock(return_value="Internal Server Error")
+    mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+    mock_response.__aexit__ = AsyncMock(return_value=None)
+
+    mock_session = MagicMock()
+    mock_session.post = MagicMock(return_value=mock_response)
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock(return_value=None)
+
+    mock_session.closed = False
+
+    with patch("aiohttp.ClientSession", return_value=mock_session):
+        # Call _send_single_update directly - it should handle the error gracefully
+        success, sleep_duration = await game._send_single_update()  # pylint: disable=protected-access
+
+        # Verify it completed successfully despite HTTP 500 error
+        assert success is True  # Still returns True because request was sent
+        assert sleep_duration == 2  # Active game sleep duration
+
+        # Verify HTTP call was made despite error (shouldn't crash)
+        assert mock_session.post.called
+
+
+@pytest.mark.asyncio
+async def test_send_game_state_includes_leaderboards(
+    isolated_guessgame,
+):  # pylint: disable=redefined-outer-name
+    """Test that send_game_state_to_server includes leaderboard data"""
+    game = isolated_guessgame
+
+    # Configure for sending
+    game.config.cparser.setValue("guessgame/send_to_server", True)
+    # pragma: allowlist secret
+    game.config.cparser.setValue("charts/charts_key", "test_secret_key_12345")
+
+    # Start game and create some user activity
+    await game.start_new_game(track="Test Song", artist="Test Artist")
+    await game.process_guess(username="player1", guess_text="e")
+    await game.process_guess(username="player2", guess_text="t")
+
+    # Mock aiohttp
+    mock_response = AsyncMock()
+    mock_response.status = 200
+    mock_response.text = AsyncMock(return_value="")
+    mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+    mock_response.__aexit__ = AsyncMock(return_value=None)
+
+    mock_session = MagicMock()
+    mock_session.post = MagicMock(return_value=mock_response)
+    mock_session.closed = False
+
+    with patch("aiohttp.ClientSession", return_value=mock_session):
+        # Call _send_single_update directly
+        success, sleep_duration = await game._send_single_update()  # pylint: disable=protected-access
+
+        # Verify it succeeded
+        assert success is True
+        assert sleep_duration == 2
+
+        # Verify leaderboard data is included
+        assert mock_session.post.called
+        payload = mock_session.post.call_args[1]["json"]
+
+        assert "game_state" in payload
+        game_state = payload["game_state"]
+        assert "session_leaderboard" in game_state
+        assert "all_time_leaderboard" in game_state

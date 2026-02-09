@@ -9,6 +9,7 @@ leaderboard system to track top performers across your stream session and all-ti
 * **Interactive Chat Game**: Viewers type commands like `!guess e` or `!guess house` to play
 * **Automatic Announcements**: Bot announces new games in chat when tracks change
 * **Real-time OBS Display**: Shows masked track/artist names and game state in your stream overlay
+* **Online Game Board**: Optional web display at whatsnowplaying.com with Charts API integration
 * **Leaderboard System**: Tracks both session and all-time scores with configurable size
 * **Flexible Solve Modes**: Configure whether viewers must guess track, artist, or both
 * **Smart Scoring**: Points awarded based on letter frequency (rare letters = more points)
@@ -88,6 +89,7 @@ Before enabling the Guess Game, you must have:
 |---------|-------------|---------|
 | Auto Reveal Common Words | Automatically reveal very common words (the, and, of, etc.) | Disabled |
 | Time Bonus Enabled | Award bonus points for solving quickly | Disabled |
+| Send to Server | Enable online game board at whatsnowplaying.com (requires Charts API key) | Enabled |
 
 **Leaderboard Management:**
 
@@ -180,6 +182,35 @@ Points are awarded based on guess type and letter frequency:
 * **Wrong words**: -1 point (penalty)
 * **Complete solve**: 100 point bonus
 * **First solver bonus**: 50 additional points (on difficult tracks with threshold above configured value)
+
+## Online Game Board
+
+If you have a **Charts API key** configured and have enabled **Send to Server** in the Guess Game settings,
+an online copy of your game board is available at:
+
+```text
+https://whatsnowplaying.com/guessgame/(your-twitch-username)
+```
+
+This web-based display shows:
+
+* Current masked track and artist
+* Time remaining
+* Live leaderboards (session and all-time)
+* Game status updates in real-time
+
+**Benefits:**
+
+* **Share with viewers**: Post the link in your chat for viewers who want a dedicated game view
+* **Mobile-friendly**: Viewers on mobile devices can follow along without watching the stream
+* **No OBS required**: Provides game display even if you don't use OBS overlays
+* **Always synchronized**: Updates every 2 seconds during active games
+
+**Requirements:**
+
+1. **Charts Account**: Sign up at <https://whatsnowplaying.com> and obtain an API key
+2. **Configure API Key**: Add your Charts API key in Settings > Charts
+3. **Enable Sync**: Ensure "Send to Server" is enabled in Settings > Guess Game
 
 ### Difficulty Calculation
 

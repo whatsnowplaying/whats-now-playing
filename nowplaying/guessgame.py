@@ -12,14 +12,15 @@ import string
 import time
 from typing import TYPE_CHECKING
 
-import normality
-
+import aiohttp
 import aiosqlite
+import normality
 from PySide6.QtCore import (  # pylint: disable=import-error,no-name-in-module
     QStandardPaths,
 )
 
 import nowplaying.utils
+import nowplaying.utils.charts_api
 import nowplaying.utils.sqlite
 
 if TYPE_CHECKING:
@@ -80,6 +81,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         self.stopevent = stopevent
         self.testmode = testmode
         self.last_game_end_time: float | None = None
+        self._http_session: aiohttp.ClientSession | None = None
 
         # Database location in persistent app data directory
         self.databasefile = pathlib.Path(
@@ -92,6 +94,12 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         else:
             # Migrate leaderboard tables if needed, recreate ephemeral tables
             self._migrate_database()
+
+    async def cleanup(self):
+        """Clean up resources (e.g., HTTP session)"""
+        if self._http_session is not None and not self._http_session.closed:
+            await self._http_session.close()
+            self._http_session = None
 
     def _migrate_database(self):
         """Migrate leaderboard tables if needed, recreate ephemeral tables"""
@@ -142,6 +150,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             cursor.execute("DROP TABLE IF EXISTS current_game")
             cursor.execute("DROP TABLE IF EXISTS guesses")
             cursor.execute("DROP TABLE IF EXISTS sessions")
+            connection.commit()
 
             # Recreate ephemeral tables with current schema
             cursor.execute("""
@@ -904,78 +913,69 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                             )
                             self._mark_guess_as_wrong(result, guess_text)
 
-                    else:  # separate_solves (default)
-                        # Track and artist are independent objectives
-                        if track_match and not track_solved:
-                            # Solved the track
-                            result["correct"] = True
-                            result["guess_type"] = "solve"
-                            result["solve_type"] = "track"
-                            track_solved = True
-                            result["track_solved"] = True
-                            # Reveal all track letters
-                            revealed_letters.update(
-                                char.lower() for char in track if char.isalpha()
-                            )
-                            # Award partial solve points
-                            complete_solve_points = self._get_config(
-                                "points_complete_solve", 100, int
-                            )
-                            result["points"] = complete_solve_points // 2
-                            # Check if game is now complete
-                            if artist_solved:
-                                result["solved"] = True
-                                result["solve_type"] = "both"
-                                # Award completion bonus
-                                is_first_solver = difficulty_bonus == 1
-                                if is_first_solver:
-                                    result["points"] += self._get_config(
-                                        "points_first_solver", 50, int
-                                    )
-                        elif artist_match and not artist_solved:
-                            # Solved the artist
-                            result["correct"] = True
-                            result["guess_type"] = "solve"
-                            result["solve_type"] = "artist"
-                            artist_solved = True
-                            result["artist_solved"] = True
-                            # Reveal all artist letters
-                            revealed_letters.update(
-                                char.lower() for char in artist if char.isalpha()
-                            )
-                            # Award partial solve points
-                            complete_solve_points = self._get_config(
-                                "points_complete_solve", 100, int
-                            )
-                            result["points"] = complete_solve_points // 2
-                            # Check if game is now complete
-                            if track_solved:
-                                result["solved"] = True
-                                result["solve_type"] = "both"
-                                # Award completion bonus
-                                is_first_solver = difficulty_bonus == 1
-                                if is_first_solver:
-                                    result["points"] += self._get_config(
-                                        "points_first_solver", 50, int
-                                    )
-                        elif (track_match and track_solved) or (artist_match and artist_solved):
-                            # Already solved this part
-                            result["correct"] = False
-                            result["guess_type"] = "already_solved"
-                            result["points"] = 0
-                        else:
-                            # Try word/phrase match
-                            self._process_word_guess(
-                                guess_text,
-                                guess_normalized,
-                                track,
-                                artist,
-                                track_normalized,
-                                artist_normalized,
-                                revealed_letters,
-                                result,
-                            )
-                            self._mark_guess_as_wrong(result, guess_text)
+                    # Track and artist are independent objectives
+                    elif track_match and not track_solved:
+                        # Solved the track
+                        result["correct"] = True
+                        result["guess_type"] = "solve"
+                        result["solve_type"] = "track"
+                        track_solved = True
+                        result["track_solved"] = True
+                        # Reveal all track letters
+                        revealed_letters.update(char.lower() for char in track if char.isalpha())
+                        # Award partial solve points
+                        complete_solve_points = self._get_config("points_complete_solve", 100, int)
+                        result["points"] = complete_solve_points // 2
+                        # Check if game is now complete
+                        if artist_solved:
+                            result["solved"] = True
+                            result["solve_type"] = "both"
+                            # Award completion bonus
+                            is_first_solver = difficulty_bonus == 1
+                            if is_first_solver:
+                                result["points"] += self._get_config(
+                                    "points_first_solver", 50, int
+                                )
+                    elif artist_match and not artist_solved:
+                        # Solved the artist
+                        result["correct"] = True
+                        result["guess_type"] = "solve"
+                        result["solve_type"] = "artist"
+                        artist_solved = True
+                        result["artist_solved"] = True
+                        # Reveal all artist letters
+                        revealed_letters.update(char.lower() for char in artist if char.isalpha())
+                        # Award partial solve points
+                        complete_solve_points = self._get_config("points_complete_solve", 100, int)
+                        result["points"] = complete_solve_points // 2
+                        # Check if game is now complete
+                        if track_solved:
+                            result["solved"] = True
+                            result["solve_type"] = "both"
+                            # Award completion bonus
+                            is_first_solver = difficulty_bonus == 1
+                            if is_first_solver:
+                                result["points"] += self._get_config(
+                                    "points_first_solver", 50, int
+                                )
+                    elif (track_match and track_solved) or (artist_match and artist_solved):
+                        # Already solved this part
+                        result["correct"] = False
+                        result["guess_type"] = "already_solved"
+                        result["points"] = 0
+                    else:
+                        # Try word/phrase match
+                        self._process_word_guess(
+                            guess_text,
+                            guess_normalized,
+                            track,
+                            artist,
+                            track_normalized,
+                            artist_normalized,
+                            revealed_letters,
+                            result,
+                        )
+                        self._mark_guess_as_wrong(result, guess_text)
 
                 # Update masked strings
                 result["masked_track"] = self._mask_text(
@@ -1479,3 +1479,197 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         except sqlite3.Error as error:
             logging.error("Failed to clear leaderboards: %s", error)
             return False
+
+    async def _serialize_leaderboards(self) -> dict[str, list[dict[str, int | str]]]:
+        """
+        Fetch and serialize leaderboards for server transmission.
+
+        Returns:
+            Dictionary with session_leaderboard and all_time_leaderboard keys
+        """
+        result: dict[str, list[dict[str, int | str]]] = {}
+
+        session_leaderboard = await self.get_leaderboard("session", limit=10)
+        all_time_leaderboard = await self.get_leaderboard("all_time", limit=10)
+
+        if session_leaderboard:
+            result["session_leaderboard"] = [
+                {
+                    "username": entry["username"],
+                    "score": entry["score"],
+                    "solves": entry["solves"],
+                }
+                for entry in session_leaderboard
+            ]
+
+        if all_time_leaderboard:
+            result["all_time_leaderboard"] = [
+                {
+                    "username": entry["username"],
+                    "score": entry["score"],
+                    "solves": entry["solves"],
+                }
+                for entry in all_time_leaderboard
+            ]
+
+        return result
+
+    async def _build_server_payload(self, state: dict, charts_key: str) -> dict[str, str | dict]:
+        """
+        Build payload for server transmission based on game state.
+
+        Args:
+            state: Current game state from get_current_state()
+            charts_key: Charts API key
+
+        Returns:
+            Payload dictionary ready for JSON transmission
+        """
+        payload: dict[str, str | dict] = {
+            "secret": charts_key,
+            "game_status": state["status"],
+        }
+
+        if state["status"] == "active":
+            # For active games, include masked info
+            game_state = {
+                "masked_track": state.get("masked_track", ""),
+                "masked_artist": state.get("masked_artist", ""),
+                "time_remaining": state.get("time_remaining", 0),
+                "time_elapsed": state.get("time_elapsed", 0),
+            }
+
+            # Add leaderboards
+            leaderboards = await self._serialize_leaderboards()
+            game_state.update(leaderboards)
+
+            payload["game_state"] = game_state
+
+        elif state["status"] in ("solved", "timeout"):
+            # For ended games, include revealed answers and final leaderboards
+            payload["current_track"] = state.get("revealed_track", "")
+            payload["current_artist"] = state.get("revealed_artist", "")
+
+            # Add final leaderboards
+            game_state = await self._serialize_leaderboards()
+            payload["game_state"] = game_state
+
+        return payload
+
+    async def _send_single_update(  # pylint: disable=too-many-return-statements
+        self,
+    ) -> tuple[bool, int]:
+        """
+        Send a single game state update to the server.
+
+        Returns:
+            Tuple of (success, sleep_duration):
+            - success: True if update was sent, False if skipped
+            - sleep_duration: Recommended sleep time in seconds before next update
+        """
+        # Check if game is enabled
+        if not self.is_enabled():
+            logging.debug("Game state sender: guess game not enabled, sleeping")
+            return (False, 5)
+
+        # Check if sending to server is enabled
+        if not self.config:
+            logging.debug("Game state sender: no config, sleeping")
+            return (False, 5)
+
+        send_to_server = self.config.cparser.value(
+            "guessgame/send_to_server", defaultValue=True, type=bool
+        )
+        if not send_to_server:
+            logging.debug("Game state sender: send_to_server disabled, sleeping")
+            return (False, 5)
+
+        # Check if charts is configured (need valid API key)
+        charts_key = self.config.cparser.value("charts/charts_key", defaultValue="")
+        if not nowplaying.utils.charts_api.is_valid_api_key(charts_key):
+            # No valid API key configured, skip sending
+            logging.debug(
+                "Game state sender: no valid charts API key (length=%d), sleeping",
+                len(charts_key) if charts_key else 0,
+            )
+            return (False, 10)
+
+        # Get current game state
+        state = await self.get_current_state()
+        if not state:
+            return (False, 5)
+
+        # Build payload using helper
+        payload = await self._build_server_payload(state, charts_key)
+
+        base_url = nowplaying.utils.charts_api.get_charts_base_url(self.config)
+        url = f"{base_url}/api/guessgame/update"
+
+        # Reuse HTTP session for efficiency
+        if self._http_session is None or self._http_session.closed:
+            self._http_session = aiohttp.ClientSession()
+
+        # Send to server
+        # pylint: disable=not-async-context-manager
+        async with self._http_session.post(
+            url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
+        ) as response:
+            # Use shared HTTP response handler
+            try:
+                response_text = await response.text()
+            except Exception:  # pylint: disable=broad-exception-caught
+                response_text = ""
+            action = nowplaying.utils.charts_api.handle_http_response(
+                response.status, response_text
+            )
+
+            # Use action to determine sleep duration
+            # For auth errors (401/403), pause longer since user needs to fix API key
+            if response.status in (401, 403):
+                logging.warning(
+                    "Authentication failed (status %d). Pausing for 60s. "
+                    "Check your Charts API key configuration.",
+                    response.status,
+                )
+                return (False, 60)
+
+            # Log action for other cases
+            if action == "drop":
+                logging.warning(
+                    "Server indicated to drop game state update (status %d)",
+                    response.status,
+                )
+            elif action == "retry":
+                logging.debug("Server indicated retry for game state update")
+
+        # Return success and sleep duration based on game state
+        # Send more frequently during active games
+        sleep_duration = 2 if state["status"] == "active" else 10
+        return (True, sleep_duration)
+
+    async def send_game_state_to_server(self):
+        """
+        Periodically send game state to charts server for live display.
+
+        This task runs continuously while the guess game is enabled and sends:
+        - Game status (active/waiting)
+        - Current track and artist info
+        - Masked strings and revealed letters
+        - Time remaining/elapsed
+        - Leaderboards (session and all-time)
+
+        Respects the guessgame/send_to_server config option.
+        """
+        while not self.stopevent.is_set():
+            try:
+                _success, sleep_duration = await self._send_single_update()
+                await asyncio.sleep(sleep_duration)
+            except asyncio.CancelledError:
+                logging.debug("Game state sender task cancelled")
+                break
+            except Exception as error:  # pylint: disable=broad-exception-caught
+                logging.error("Failed to send game state to server: %s", error)
+                await asyncio.sleep(5)
+
+        # Clean up HTTP session when loop exits
+        await self.cleanup()
