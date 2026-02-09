@@ -1912,6 +1912,23 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#online-game-board" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Online Game Board
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Online Game Board">
+      <ul class="md-nav__list">
+        
           <li class="md-nav__item">
   <a href="#difficulty-calculation" class="md-nav__link">
     <span class="md-ellipsis">
@@ -2751,6 +2768,7 @@ leaderboard system to track top performers across your stream session and all-ti
 <li><strong>Interactive Chat Game</strong>: Viewers type commands like <code>!guess e</code> or <code>!guess house</code> to play</li>
 <li><strong>Automatic Announcements</strong>: Bot announces new games in chat when tracks change</li>
 <li><strong>Real-time OBS Display</strong>: Shows masked track/artist names and game state in your stream overlay</li>
+<li><strong>Online Game Board</strong>: Optional web display at whatsnowplaying.com with Charts API integration</li>
 <li><strong>Leaderboard System</strong>: Tracks both session and all-time scores with configurable size</li>
 <li><strong>Flexible Solve Modes</strong>: Configure whether viewers must guess track, artist, or both</li>
 <li><strong>Smart Scoring</strong>: Points awarded based on letter frequency (rare letters = more points)</li>
@@ -2904,6 +2922,11 @@ leaderboard system to track top performers across your stream session and all-ti
 <td>Award bonus points for solving quickly</td>
 <td>Disabled</td>
 </tr>
+<tr>
+<td>Send to Server</td>
+<td>Enable online game board at whatsnowplaying.com (requires Charts API key)</td>
+<td>Enabled</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Leaderboard Management:</strong></p>
@@ -2988,6 +3011,31 @@ displayed and which color scheme is used (purple/orange for session, green for a
 <li><strong>Complete solve</strong>: 100 point bonus</li>
 <li><strong>First solver bonus</strong>: 50 additional points (on difficult tracks with threshold above configured value)</li>
 </ul>
+<h2 id="online-game-board">Online Game Board<a class="headerlink" href="#online-game-board" title="Permanent link">&para;</a></h2>
+<p>If you have a <strong>Charts API key</strong> configured and have enabled <strong>Send to Server</strong> in the Guess Game settings,
+an online copy of your game board is available at:</p>
+<div class="highlight"><pre><span></span><code>https://whatsnowplaying.com/guessgame/(your-twitch-username)
+</code></pre></div>
+<p>This web-based display shows:</p>
+<ul>
+<li>Current masked track and artist</li>
+<li>Time remaining</li>
+<li>Live leaderboards (session and all-time)</li>
+<li>Game status updates in real-time</li>
+</ul>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li><strong>Share with viewers</strong>: Post the link in your chat for viewers who want a dedicated game view</li>
+<li><strong>Mobile-friendly</strong>: Viewers on mobile devices can follow along without watching the stream</li>
+<li><strong>No OBS required</strong>: Provides game display even if you don't use OBS overlays</li>
+<li><strong>Always synchronized</strong>: Updates every 2 seconds during active games</li>
+</ul>
+<p><strong>Requirements:</strong></p>
+<ol>
+<li><strong>Charts Account</strong>: Sign up at <a href="https://whatsnowplaying.com">https://whatsnowplaying.com</a> and obtain an API key</li>
+<li><strong>Configure API Key</strong>: Add your Charts API key in Settings &gt; Charts</li>
+<li><strong>Enable Sync</strong>: Ensure "Send to Server" is enabled in Settings &gt; Guess Game</li>
+</ol>
 <h3 id="difficulty-calculation">Difficulty Calculation<a class="headerlink" href="#difficulty-calculation" title="Permanent link">&para;</a></h3>
 <p>The game calculates difficulty based on:</p>
 <ul>
