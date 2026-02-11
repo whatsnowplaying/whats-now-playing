@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiosqlite
 import pytest
 import pytest_asyncio
+from freezegun import freeze_time
 
 import nowplaying.guessgame
 
@@ -1013,16 +1014,20 @@ async def test_grace_period_accepts_guesses(
     # Set a 10 second grace period
     game.config.cparser.setValue("guessgame/grace_period", 10)
 
-    # Start and end a game
-    await game.start_new_game(track="Test Song", artist="Test Artist")
-    await game.end_game(reason="timeout")
+    # Start and end a game at t=1000
+    with freeze_time("2024-01-01 12:00:00") as frozen_time:
+        await game.start_new_game(track="Test Song", artist="Test Artist")
+        await game.end_game(reason="timeout")
 
-    # Immediately try to guess (within grace period)
-    result = await game.process_guess(username="player1", guess_text="e")
+        # Move forward 5 seconds (within 10s grace period)
+        frozen_time.tick(delta=5)
 
-    # Should accept the guess
-    assert result is not None
-    assert "correct" in result
+        # Try to guess
+        result = await game.process_guess(username="player1", guess_text="e")
+
+        # Should accept the guess
+        assert result is not None
+        assert "correct" in result
 
 
 @pytest.mark.asyncio
@@ -1032,41 +1037,68 @@ async def test_grace_period_rejects_after_expiry(
     """Test that guesses are rejected after grace period expires"""
     game = isolated_guessgame
 
-    # Set a very short grace period (1 second)
-    game.config.cparser.setValue("guessgame/grace_period", 1)
+    # Set a 10 second grace period
+    game.config.cparser.setValue("guessgame/grace_period", 10)
 
-    # Start and end a game
-    await game.start_new_game(track="Test Song", artist="Test Artist")
-    await game.end_game(reason="timeout")
+    # Start and end a game at t=1000
+    with freeze_time("2024-01-01 12:00:00") as frozen_time:
+        await game.start_new_game(track="Test Song", artist="Test Artist")
+        await game.end_game(reason="timeout")
 
-    # Wait for grace period to expire
-    await asyncio.sleep(1.1)
+        # Move forward 15 seconds (beyond 10s grace period)
+        frozen_time.tick(delta=15)
 
-    # Try to guess after grace period
-    result = await game.process_guess(username="player1", guess_text="e")
+        # Try to guess
+        result = await game.process_guess(username="player1", guess_text="e")
 
-    # Should reject the guess
-    assert result is None
+        # Should reject the guess
+        assert result is None
 
 
 @pytest.mark.asyncio
 async def test_grace_period_default_value(
     isolated_guessgame,
 ):  # pylint: disable=redefined-outer-name
-    """Test that grace period defaults to 20 seconds"""
+    """Test that grace period defaults to 5 seconds"""
     game = isolated_guessgame
 
-    # Don't set grace_period - should use default of 20
+    # Don't set grace_period - should use default of 5
 
     # Start and end a game
     await game.start_new_game(track="Test Song", artist="Test Artist")
     await game.end_game(reason="timeout")
 
-    # Wait 5 seconds (well within default 20s grace period)
-    await asyncio.sleep(0.1)  # Using small delay for test speed
-
-    # Try to guess
+    # Immediately try to guess (within default 5s grace period)
     result = await game.process_guess(username="player1", guess_text="e")
 
     # Should accept the guess (within default grace period)
     assert result is not None
+
+
+@pytest.mark.asyncio
+async def test_grace_period_handles_clock_skew(
+    isolated_guessgame,
+):  # pylint: disable=redefined-outer-name
+    """Test that grace period handles clock skew where end_time is in the future"""
+    game = isolated_guessgame
+
+    # Set a 10 second grace period
+    game.config.cparser.setValue("guessgame/grace_period", 10)
+
+    # Start and end a game at t=2000
+    with freeze_time("2024-01-01 12:00:00") as frozen_time:
+        frozen_time.tick(delta=2000)
+        await game.start_new_game(track="Test Song", artist="Test Artist")
+        await game.end_game(reason="timeout")
+
+        # Move backward in time to t=1995 (simulating clock skew where end_time is in future)
+        frozen_time.move_to("2024-01-01 12:00:00")
+        frozen_time.tick(delta=1995)
+
+        # Try to guess - even though end_time is 5 seconds in the future,
+        # clamping should make elapsed_since_end=0, so we're within grace period
+        result = await game.process_guess(username="player1", guess_text="e")
+
+        # Should accept the guess (elapsed clamped to 0, within grace period)
+        assert result is not None
+        assert "correct" in result

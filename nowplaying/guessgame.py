@@ -804,7 +804,8 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                         return None
 
                     current_time = int(time.time())
-                    elapsed_since_end = current_time - end_time
+                    # Clamp to 0 to handle clock skew where end_time is in the future
+                    elapsed_since_end = max(0, current_time - end_time)
 
                     if elapsed_since_end >= grace_period:
                         logging.debug(
