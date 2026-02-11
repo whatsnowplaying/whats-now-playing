@@ -90,6 +90,7 @@ Before enabling the Guess Game, you must have:
 | Auto Reveal Common Words | Automatically reveal very common words (the, and, of, etc.) | Disabled |
 | Time Bonus Enabled | Award bonus points for solving quickly | Disabled |
 | Send to Server | Enable online game board at whatsnowplaying.com (requires Charts API key) | Enabled |
+| Grace Period | Seconds after game ends to still accept guesses (accounts for Twitch stream delay) | 5 |
 
 **Leaderboard Management:**
 
@@ -170,6 +171,22 @@ The game intelligently handles variations in guesses:
 * **Case insensitive**: `HOUSE`, `house`, and `House` are all equivalent
 * **Ampersand variants**: `&`, `and`, and `n` are treated as interchangeable
 * **Punctuation**: Periods in artist names (e.g., `N.W.A` vs `NWA`) are handled
+
+### Grace Period for Stream Delay
+
+Viewers watching your Twitch stream experience a delay (typically 5-15+ seconds), meaning they're hearing tracks
+behind real-time. To ensure fair gameplay, the Guess Game includes a configurable **Grace Period**:
+
+* **After a game ends** (solved, timeout, or track change), guesses are still accepted for the configured grace
+  period (default: 5 seconds)
+* **Viewers see the ended game** with revealed answers, but their "late" guesses from stream delay are still
+  processed and scored
+* **Leaderboards reflect reality**: Scores account for what viewers actually experienced on their delayed streams
+* **Configurable**: Adjust the grace period (0-60 seconds) in Settings > Guess Game > Advanced to match your
+  stream's typical delay
+
+This ensures viewers on delayed streams aren't penalized and get credit for guesses they made while the game was
+still active on their screen.
 
 ### Scoring System
 

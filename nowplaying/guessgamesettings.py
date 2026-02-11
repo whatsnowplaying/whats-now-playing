@@ -41,11 +41,13 @@ class GuessGameSettings:
         # Set platform-specific info label
         info_label = widget.findChild(QLabel, "info_label")
         if sys.platform == "darwin":
-            info_text = "**To enable/disable the Guess Game, use the menu bar menu**"
+            info_text = "Enable/disable via menu bar menu • Games start when tracks change"
         elif sys.platform == "win32":
-            info_text = "**To enable/disable the Guess Game, right-click the system tray icon**"
+            info_text = (
+                "Enable/disable via system tray (right-click) • Games start when tracks change"
+            )
         else:  # Linux and others
-            info_text = "**To enable/disable the Guess Game, click the system tray icon**"
+            info_text = "Enable/disable via system tray menu • Games start when tracks change"
         info_label.setText(info_text)
 
         # Commands
@@ -108,6 +110,9 @@ class GuessGameSettings:
         )
         widget.findChild(QCheckBox, "send_to_server_checkbox").setChecked(
             config.cparser.value("guessgame/send_to_server", type=bool, defaultValue=True)
+        )
+        widget.findChild(QSpinBox, "grace_period_spinbox").setValue(
+            config.cparser.value("guessgame/grace_period", type=int, defaultValue=5)
         )
 
         logging.debug("Guess game settings loaded")
@@ -187,6 +192,10 @@ class GuessGameSettings:
         config.cparser.setValue(
             "guessgame/send_to_server",
             widget.findChild(QCheckBox, "send_to_server_checkbox").isChecked(),
+        )
+        config.cparser.setValue(
+            "guessgame/grace_period",
+            widget.findChild(QSpinBox, "grace_period_spinbox").value(),
         )
 
         logging.info("Guess game settings saved")

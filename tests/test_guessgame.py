@@ -1001,3 +1001,72 @@ async def test_send_game_state_includes_leaderboards(
         game_state = payload["game_state"]
         assert "session_leaderboard" in game_state
         assert "all_time_leaderboard" in game_state
+
+
+@pytest.mark.asyncio
+async def test_grace_period_accepts_guesses(
+    isolated_guessgame,
+):  # pylint: disable=redefined-outer-name
+    """Test that guesses are accepted during grace period after game ends"""
+    game = isolated_guessgame
+
+    # Set a 10 second grace period
+    game.config.cparser.setValue("guessgame/grace_period", 10)
+
+    # Start and end a game
+    await game.start_new_game(track="Test Song", artist="Test Artist")
+    await game.end_game(reason="timeout")
+
+    # Immediately try to guess (within grace period)
+    result = await game.process_guess(username="player1", guess_text="e")
+
+    # Should accept the guess
+    assert result is not None
+    assert "correct" in result
+
+
+@pytest.mark.asyncio
+async def test_grace_period_rejects_after_expiry(
+    isolated_guessgame,
+):  # pylint: disable=redefined-outer-name
+    """Test that guesses are rejected after grace period expires"""
+    game = isolated_guessgame
+
+    # Set a very short grace period (1 second)
+    game.config.cparser.setValue("guessgame/grace_period", 1)
+
+    # Start and end a game
+    await game.start_new_game(track="Test Song", artist="Test Artist")
+    await game.end_game(reason="timeout")
+
+    # Wait for grace period to expire
+    await asyncio.sleep(1.1)
+
+    # Try to guess after grace period
+    result = await game.process_guess(username="player1", guess_text="e")
+
+    # Should reject the guess
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_grace_period_default_value(
+    isolated_guessgame,
+):  # pylint: disable=redefined-outer-name
+    """Test that grace period defaults to 20 seconds"""
+    game = isolated_guessgame
+
+    # Don't set grace_period - should use default of 20
+
+    # Start and end a game
+    await game.start_new_game(track="Test Song", artist="Test Artist")
+    await game.end_game(reason="timeout")
+
+    # Wait 5 seconds (well within default 20s grace period)
+    await asyncio.sleep(0.1)  # Using small delay for test speed
+
+    # Try to guess
+    result = await game.process_guess(username="player1", guess_text="e")
+
+    # Should accept the guess (within default grace period)
+    assert result is not None
