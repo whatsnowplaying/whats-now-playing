@@ -162,6 +162,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     masked_artist TEXT NOT NULL,
                     revealed_letters TEXT NOT NULL,
                     start_time INTEGER NOT NULL,
+                    end_time INTEGER,
                     status TEXT DEFAULT 'active',
                     max_duration INTEGER DEFAULT 180,
                     game_id INTEGER,
@@ -236,6 +237,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                         masked_artist TEXT NOT NULL,
                         revealed_letters TEXT NOT NULL,
                         start_time INTEGER NOT NULL,
+                        end_time INTEGER,
                         status TEXT DEFAULT 'active',
                         max_duration INTEGER DEFAULT 180,
                         game_id INTEGER,
@@ -786,9 +788,39 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 await cursor.execute("SELECT * FROM current_game WHERE id = 1")
                 game_row = await cursor.fetchone()
 
-                if not game_row or game_row["status"] != "active":
-                    logging.debug("No active game for guess from %s", username)
+                if not game_row:
+                    logging.debug("No game for guess from %s", username)
                     return None
+
+                # Check if game is active or within grace period
+                if game_row["status"] != "active":
+                    # Game has ended - check if we're within grace period
+                    grace_period = self._get_config("grace_period", 5, int)
+                    end_time = game_row["end_time"]
+
+                    if not end_time:
+                        # Game ended but no end_time recorded (shouldn't happen)
+                        logging.debug("Game ended but no end_time for guess from %s", username)
+                        return None
+
+                    current_time = int(time.time())
+                    # Clamp to 0 to handle clock skew where end_time is in the future
+                    elapsed_since_end = max(0, current_time - end_time)
+
+                    if elapsed_since_end >= grace_period:
+                        logging.debug(
+                            "Game ended %ds ago (grace period: %ds), rejecting guess from %s",
+                            elapsed_since_end,
+                            grace_period,
+                            username,
+                        )
+                        return None
+
+                    logging.debug(
+                        "Accepting guess from %s during grace period (%ds remaining)",
+                        username,
+                        grace_period - elapsed_since_end,
+                    )
 
                 track = game_row["track"]
                 artist = game_row["artist"]
@@ -1144,13 +1176,13 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
                 timestamp = int(time.time())
 
-                # Update game status
+                # Update game status and end_time
                 await cursor.execute(
                     """
-                    UPDATE current_game SET status = ?
+                    UPDATE current_game SET status = ?, end_time = ?
                     WHERE id = 1
                 """,
-                    (reason,),
+                    (reason, timestamp),
                 )
 
                 # Update game history
