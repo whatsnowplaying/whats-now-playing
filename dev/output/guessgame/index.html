@@ -1902,6 +1902,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#grace-period-for-stream-delay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grace Period for Stream Delay
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#scoring-system" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2927,6 +2938,11 @@ leaderboard system to track top performers across your stream session and all-ti
 <td>Enable online game board at whatsnowplaying.com (requires Charts API key)</td>
 <td>Enabled</td>
 </tr>
+<tr>
+<td>Grace Period</td>
+<td>Seconds after game ends to still accept guesses (accounts for Twitch stream delay)</td>
+<td>5</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Leaderboard Management:</strong></p>
@@ -3000,6 +3016,20 @@ displayed and which color scheme is used (purple/orange for session, green for a
 <li><strong>Ampersand variants</strong>: <code>&amp;</code>, <code>and</code>, and <code>n</code> are treated as interchangeable</li>
 <li><strong>Punctuation</strong>: Periods in artist names (e.g., <code>N.W.A</code> vs <code>NWA</code>) are handled</li>
 </ul>
+<h3 id="grace-period-for-stream-delay">Grace Period for Stream Delay<a class="headerlink" href="#grace-period-for-stream-delay" title="Permanent link">&para;</a></h3>
+<p>Viewers watching your Twitch stream experience a delay (typically 5-15+ seconds), meaning they're hearing tracks
+behind real-time. To ensure fair gameplay, the Guess Game includes a configurable <strong>Grace Period</strong>:</p>
+<ul>
+<li><strong>After a game ends</strong> (solved, timeout, or track change), guesses are still accepted for the configured grace
+  period (default: 5 seconds)</li>
+<li><strong>Viewers see the ended game</strong> with revealed answers, but their "late" guesses from stream delay are still
+  processed and scored</li>
+<li><strong>Leaderboards reflect reality</strong>: Scores account for what viewers actually experienced on their delayed streams</li>
+<li><strong>Configurable</strong>: Adjust the grace period (0-60 seconds) in Settings &gt; Guess Game &gt; Advanced to match your
+  stream's typical delay</li>
+</ul>
+<p>This ensures viewers on delayed streams aren't penalized and get credit for guesses they made while the game was
+still active on their screen.</p>
 <h3 id="scoring-system">Scoring System<a class="headerlink" href="#scoring-system" title="Permanent link">&para;</a></h3>
 <p>Points are awarded based on guess type and letter frequency:</p>
 <ul>
