@@ -97,6 +97,22 @@ Anonymous keys are auto-generated. Copy your key to claim it at &lt;a href="http
     <bool>true</bool>
    </property>
   </widget>
+  <widget class="QCheckBox" name="link_platform_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>220</y>
+     <width>500</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Link streaming platform account (Twitch) to charts profile</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>

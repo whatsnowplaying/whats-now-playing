@@ -24,6 +24,7 @@ import nowplaying.settingsui
 import nowplaying.subprocesses
 import nowplaying.trackrequests
 import nowplaying.twitch.chat
+import nowplaying.utils.charts_api
 
 LASTANNOUNCED: dict[str, str | None] = {"artist": None, "title": None}
 
@@ -188,6 +189,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # Check if reminder dialog should be shown for returning users
         self._check_reminder_dialog()
 
+        # Link Twitch account to charts if authenticated
+        self._link_twitch_to_charts()
+
     def _handle_installer_dialogs(self) -> None:
         """Handle installer dialogs that may require window hiding."""
         if self.startup_window:
@@ -220,6 +224,13 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             nowplaying.firstinstall.show_first_install_dialog(
                 config=self.config, is_reminder=True, tray_icon=self.tray
             )
+
+    def _link_twitch_to_charts(self) -> None:
+        """Link Twitch account to charts if authenticated."""
+        twitch_token = self.config.cparser.value("twitchbot/accesstoken", defaultValue="")
+        if twitch_token:
+            logging.debug("Linking Twitch account to charts on startup")
+            nowplaying.utils.charts_api.link_platform_account(self.config, "twitch", twitch_token)
 
     @staticmethod
     def _show_installation_error(ui_file: str) -> None:
