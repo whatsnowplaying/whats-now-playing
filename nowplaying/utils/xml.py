@@ -16,6 +16,8 @@ import defusedxml.sax
 import nowplaying.utils.sqlite
 
 
+
+
 # pylint: disable=missing-function-docstring,invalid-name
 class XMLHandler(Protocol):
     """Protocol for XML SAX handlers"""
@@ -173,9 +175,18 @@ class BackgroundXMLProcessor:  # pylint: disable=too-many-instance-attributes
             parser = defusedxml.sax.make_parser()
             parser.setContentHandler(handler)
 
-            with open(xml_file, "rb") as xmlfile:
-                parser.parse(xmlfile)
+            try:
+                with open(xml_file, "rb") as xmlfile:
+                    parser.parse(xmlfile)
+            except xml.sax.SAXParseException as exc:
+                # XML corruption after valid data (common when DJ software crashes)
+                # Parser has already extracted all valid entries before the corruption
+                logging.warning(
+                    "XML file has trailing corruption (likely from software crash): %s", exc
+                )
+                logging.info("Continuing with parsed data - check logs if entries seem incomplete")
 
+            # Commit whatever data was successfully parsed
             connection.commit()
 
     def _atomic_swap_inner(self) -> None:
