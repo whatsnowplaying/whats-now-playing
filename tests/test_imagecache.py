@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import pytest_asyncio
 import requests
+from diskcache.core import MODE_PICKLE, MODE_RAW
 from freezegun import freeze_time
 
 import nowplaying.imagecache  # pylint: disable=import-error
@@ -934,3 +935,28 @@ async def test_queue_processing_success_recovery_integration(imagecache_with_dir
     finally:
         # Restore original method
         imagecache_with_dir.image_dl = original_image_dl
+
+
+@pytest.mark.asyncio
+async def test_securedisk_blocks_pickle_mode(imagecache_with_dir):
+    """Test that SecureDisk prevents MODE_PICKLE from being used (CVE-2025-69872)"""
+    # Test 1: Normal byte storage and retrieval should work
+    test_bytes = b"\x89PNG\r\n\x1a\n" * 100
+    imagecache_with_dir.cache["test_image"] = test_bytes
+    result = imagecache_with_dir.cache["test_image"]
+    assert result == test_bytes, "Normal cache operations should work with SecureDisk"
+
+    # Test 2: Verify it's using SecureDisk
+    assert isinstance(
+        imagecache_with_dir.cache._disk,  # pylint: disable=protected-access
+        nowplaying.imagecache.SecureDisk,
+    ), "Cache should be using SecureDisk"
+
+    # Test 3: SecureDisk should block MODE_PICKLE fetch attempts
+    disk = imagecache_with_dir.cache._disk  # pylint: disable=protected-access
+    with pytest.raises(ValueError, match="Pickle mode not allowed for security reasons"):
+        disk.fetch(MODE_PICKLE, "fake.val", b"malicious_data", False)
+
+    # Test 4: Other modes should still work (MODE_RAW)
+    raw_result = disk.fetch(MODE_RAW, None, test_bytes, False)
+    assert raw_result == test_bytes, "MODE_RAW should work normally"
