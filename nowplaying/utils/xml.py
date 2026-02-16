@@ -16,8 +16,6 @@ import defusedxml.sax
 import nowplaying.utils.sqlite
 
 
-
-
 # pylint: disable=missing-function-docstring,invalid-name
 class XMLHandler(Protocol):
     """Protocol for XML SAX handlers"""

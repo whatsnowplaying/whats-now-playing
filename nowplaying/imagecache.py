@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 import aiosqlite
 import diskcache
 import requests_cache
+from diskcache.core import MODE_PICKLE
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.bootstrap
@@ -27,6 +28,28 @@ if TYPE_CHECKING:
     import nowplaying.config
 
 MAX_FANART_DOWNLOADS = 50
+
+
+class SecureDisk(diskcache.Disk):
+    """Disk subclass that refuses to unpickle for security.
+
+    Prevents CVE-2025-69872 by refusing to unpickle any data, even if an
+    attacker modifies the cache database to set mode=MODE_PICKLE.
+    """
+
+    def fetch(self, mode, filename, value, read):
+        """Fetch value but refuse to unpickle.
+
+        :param int mode: value mode raw, binary, text, or pickle
+        :param str filename: filename of corresponding value
+        :param value: database value
+        :param bool read: when True, return an open file handle
+        :return: corresponding Python value
+        :raises ValueError: if mode is MODE_PICKLE
+        """
+        if mode == MODE_PICKLE:
+            raise ValueError("Pickle mode not allowed for security reasons")
+        return super().fetch(mode, filename, value, read)
 
 
 class ImageCache:
@@ -66,6 +89,7 @@ class ImageCache:
             timeout=30,
             eviction_policy="least-frequently-used",
             size_limit=sizelimit * 1024 * 1024 * 1024,
+            disk=SecureDisk,
         )
         if initialize:
             self.setup_sql(initialize=True)
