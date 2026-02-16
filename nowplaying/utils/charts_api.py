@@ -7,12 +7,6 @@ import urllib.error
 import urllib.request
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt  # pylint: disable=import-error,no-name-in-module
-from PySide6.QtWidgets import (  # pylint: disable=import-error,no-name-in-module
-    QApplication,
-    QMessageBox,
-)
-
 if TYPE_CHECKING:
     import nowplaying.config
 
@@ -102,35 +96,9 @@ def is_valid_api_key(key: str) -> bool:
     return isinstance(key, str) and len(key.strip()) >= 10
 
 
-def _show_platform_conflict_dialog(platform: str) -> None:
-    """
-    Show error dialog for platform account conflict (409 error).
-    Must be called from Qt main thread.
-
-    Args:
-        platform: Platform name (e.g., "Twitch")
-    """
-    dialog = QMessageBox(
-        QMessageBox.Icon.Warning,
-        f"{platform} Account Already Linked",
-        f"Your {platform} account is already linked to an existing charts profile.<br><br>"
-        f"To merge your current data with that profile:<br>"
-        f"1. Go to <a href='https://whatsnowplaying.com/dashboard'>"
-        f"whatsnowplaying.com/dashboard</a><br>"
-        f"2. Log in using {platform} (this logs you into your existing account)<br>"
-        f"3. Use the claim form to enter your current charts API key<br>"
-        f"4. Your data will be merged and your key will be linked",
-        QMessageBox.StandardButton.Ok,
-        QApplication.activeWindow(),
-    )
-    dialog.setTextFormat(Qt.TextFormat.RichText)
-    dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
-    dialog.exec()
-
-
-def link_platform_account(  # pylint: disable=too-many-locals
+def link_platform_account(  # pylint: disable=too-many-locals,too-many-return-statements
     config: "nowplaying.config.ConfigFile", platform: str, platform_token: str
-) -> tuple[bool, dict | None]:
+) -> tuple[str, dict | None]:
     """
     Link streaming platform account to charts API key.
 
@@ -140,19 +108,30 @@ def link_platform_account(  # pylint: disable=too-many-locals
         platform_token: OAuth access token for the platform
 
     Returns:
-        Tuple of (success: bool, response_data: dict | None)
-        response_data contains: status, platform, platform_username, profile_slug
+        Tuple of (status: str, response_data: dict | None)
+
+        Status values:
+        - "success": Account successfully linked
+        - "disabled": Platform linking is disabled in config
+        - "no_key": No valid charts API key configured
+        - "bad_request": Invalid request or expired token (400)
+        - "auth_failed": Authentication failed (401)
+        - "blocked": Account blocked from API (403)
+        - "conflict": Platform account already linked to different user (409)
+        - "server_error": Server error or network failure
+
+        response_data contains: platform, platform_username, profile_slug (on success)
     """
     # Check if platform linking is enabled
     link_enabled = config.cparser.value("charts/link_platform", type=bool, defaultValue=True)
     if not link_enabled:
         logging.debug("Platform linking disabled, skipping %s account link", platform)
-        return (False, None)
+        return ("disabled", None)
 
     charts_key = config.cparser.value("charts/charts_key", defaultValue="")
     if not is_valid_api_key(charts_key):
         logging.debug("No valid charts API key, skipping %s account link", platform)
-        return (False, None)
+        return ("no_key", None)
 
     base_url = get_charts_base_url(config)
     url = f"{base_url}/api/auth/link-platform"
@@ -177,10 +156,10 @@ def link_platform_account(  # pylint: disable=too-many-locals
                     platform_username,
                     profile_slug,
                 )
-                return (True, result)
+                return ("success", result)
 
         # urllib raises HTTPError for non-2xx status codes, so this shouldn't be reached
-        return (False, None)
+        return ("server_error", None)
 
     except urllib.error.HTTPError as exc:
         # Handle HTTP errors with status codes
@@ -188,8 +167,9 @@ def link_platform_account(  # pylint: disable=too-many-locals
             error_data = exc.read()
             error_response = json.loads(error_data)
             error_detail = error_response.get("detail", "Unknown error")
-        except Exception:  # pylint: disable=broad-except
+        except (json.JSONDecodeError, KeyError) as parse_error:
             error_detail = str(exc)
+            logging.debug("Failed to parse error response: %s", parse_error)
 
         # Handle specific status codes
         if exc.code == 400:
@@ -199,39 +179,47 @@ def link_platform_account(  # pylint: disable=too-many-locals
                 platform,
                 error_detail,
             )
-        elif exc.code == 401:
+            return ("bad_request", None)
+        if exc.code == 401:
             # Missing or invalid API key
             logging.error(
                 "Failed to link %s account to charts (authentication failed): %s",
                 platform,
                 error_detail,
             )
-        elif exc.code == 403:
+            return ("auth_failed", None)
+        if exc.code == 403:
             # Account blocked from using API
             logging.error(
                 "Failed to link %s account to charts (account blocked): %s",
                 platform,
                 error_detail,
             )
-        elif exc.code == 409:
+            return ("blocked", None)
+        if exc.code == 409:
             # Platform account already linked to different user
             logging.error(
                 "%s account already linked to existing charts profile: %s",
                 platform.capitalize(),
                 error_detail,
             )
-            # Show error dialog (already in Qt main thread)
-            _show_platform_conflict_dialog(platform.capitalize())
-        else:
-            # Unexpected error
-            logging.error(
-                "Failed to link %s account to charts (%d): %s",
-                platform,
-                exc.code,
-                error_detail,
-            )
-        return (False, None)
+            return ("conflict", None)
+
+        # Unexpected HTTP error
+        logging.error(
+            "Failed to link %s account to charts (%d): %s", platform, exc.code, error_detail
+        )
+        return ("server_error", None)
+
+    except urllib.error.URLError as exc:
+        # Network/connection errors
+        logging.error(
+            "Network error linking %s account to charts: %s", platform, exc, exc_info=True
+        )
+        return ("server_error", None)
 
     except Exception as exc:  # pylint: disable=broad-except
-        logging.error("Error linking %s account to charts: %s", platform, exc)
-        return (False, None)
+        logging.error(
+            "Unexpected error linking %s account to charts: %s", platform, exc, exc_info=True
+        )
+        return ("server_error", None)

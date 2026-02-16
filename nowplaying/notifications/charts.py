@@ -662,12 +662,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         self.config.cparser.setValue(
             "charts/link_platform", qwidget.link_platform_checkbox.isChecked()
         )
-
-        # Link Twitch account to charts if authenticated
-        twitch_token = self.config.cparser.value("twitchbot/accesstoken", defaultValue="")
-        if twitch_token:
-            logging.debug("Linking Twitch account to charts on settings save")
-            nowplaying.utils.charts_api.link_platform_account(self.config, "twitch", twitch_token)
+        # Note: Twitch account linking happens in settingsui.upd_conf() after sync()
 
     def verify_settingsui(self, qwidget: "QWidget"):
         """Verify settings"""

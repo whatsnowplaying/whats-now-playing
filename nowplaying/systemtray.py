@@ -4,7 +4,12 @@
 import logging
 import sqlite3
 
-from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=no-name-in-module
+from PySide6.QtCore import (  # pylint: disable=no-name-in-module
+    QFileSystemWatcher,
+    QThread,
+    QTimer,
+    Qt,
+)
 from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QApplication,
@@ -38,6 +43,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # Initialize attributes that will be set later
         self.watcher = None
         self.requestswindow = None
+        self.link_thread = None  # QThread for Twitch account linking
 
         # Core initialization
         self._initialize_core_components()
@@ -226,11 +232,61 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             )
 
     def _link_twitch_to_charts(self) -> None:
-        """Link Twitch account to charts if authenticated."""
+        """Link Twitch account to charts if authenticated (runs in background thread)."""
         twitch_token = self.config.cparser.value("twitchbot/accesstoken", defaultValue="")
-        if twitch_token:
-            logging.debug("Linking Twitch account to charts on startup")
-            nowplaying.utils.charts_api.link_platform_account(self.config, "twitch", twitch_token)
+        if not twitch_token:
+            return
+
+        # Create worker thread
+        class LinkThread(QThread):
+            """Thread to link Twitch account in background"""
+
+            def __init__(self, parent_tray, token):
+                super().__init__()
+                self.tray = parent_tray
+                self.token = token
+
+            def run(self):
+                logging.debug("Linking Twitch account to charts on startup")
+                status, _ = nowplaying.utils.charts_api.link_platform_account(
+                    self.tray.config, "twitch", self.token
+                )
+                if status == "conflict":
+                    # Show dialog on main thread using QTimer (thread-safe)
+                    QTimer.singleShot(
+                        0,
+                        lambda: self.tray._show_platform_conflict_dialog("Twitch"),  # pylint: disable=protected-access
+                    )
+
+        # Keep reference to prevent garbage collection while thread is running
+        self.link_thread = LinkThread(self, twitch_token)
+        self.link_thread.finished.connect(lambda: delattr(self, "link_thread"))
+        self.link_thread.start()
+
+    def _show_platform_conflict_dialog(self, platform: str) -> None:
+        """
+        Show error dialog for platform account conflict (409 error).
+        Must be called from Qt main thread.
+
+        Args:
+            platform: Platform name (e.g., "Twitch")
+        """
+        dialog = QMessageBox(
+            QMessageBox.Icon.Warning,
+            f"{platform} Account Already Linked",
+            f"Your {platform} account is already linked to an existing charts profile.<br><br>"
+            f"To merge your current data with that profile:<br>"
+            f"1. Go to <a href='https://whatsnowplaying.com/dashboard'>"
+            f"whatsnowplaying.com/dashboard</a><br>"
+            f"2. Log in using {platform} (this logs you into your existing account)<br>"
+            f"3. Use the claim form to enter your current charts API key<br>"
+            f"4. Your data will be merged and your key will be linked",
+            QMessageBox.StandardButton.Ok,
+            QApplication.activeWindow(),
+        )
+        dialog.setTextFormat(Qt.TextFormat.RichText)
+        dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+        dialog.exec()
 
     @staticmethod
     def _show_installation_error(ui_file: str) -> None:
