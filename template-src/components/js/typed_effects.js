@@ -225,7 +225,7 @@ class TypingEffects {
 }
 
 // Global instance for use with metadata-streaming component
-const typingEffects;
+let typingEffects;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
