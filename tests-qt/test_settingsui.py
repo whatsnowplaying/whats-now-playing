@@ -56,6 +56,9 @@ class MockTray:
     def fix_mixmode_menu(self):
         """mock"""
 
+    def _link_twitch_to_charts(self):
+        """mock"""
+
 
 def test_settingsui_cancel(bootstrap, qtbot):
     """test cancel"""

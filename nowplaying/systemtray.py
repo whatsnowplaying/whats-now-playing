@@ -237,8 +237,13 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         if not twitch_token:
             return
 
+        # Skip if already linking
+        if self.link_thread is not None and self.link_thread.isRunning():
+            logging.debug("Twitch linking already in progress, skipping")
+            return
+
         # Create worker thread
-        class LinkThread(QThread):
+        class LinkThread(QThread):  # pylint: disable=too-few-public-methods
             """Thread to link Twitch account in background"""
 
             def __init__(self, parent_tray, token):
@@ -247,6 +252,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
                 self.token = token
 
             def run(self):
+                """Execute Twitch account linking in background thread"""
                 logging.debug("Linking Twitch account to charts on startup")
                 status, _ = nowplaying.utils.charts_api.link_platform_account(
                     self.tray.config, "twitch", self.token
@@ -263,7 +269,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.link_thread.finished.connect(lambda: delattr(self, "link_thread"))
         self.link_thread.start()
 
-    def _show_platform_conflict_dialog(self, platform: str) -> None:
+    @staticmethod
+    def _show_platform_conflict_dialog(platform: str) -> None:
         """
         Show error dialog for platform account conflict (409 error).
         Must be called from Qt main thread.
