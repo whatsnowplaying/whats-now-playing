@@ -251,10 +251,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             logging.debug("Platform linking already in progress, skipping")
             return
 
-        logging.debug("Starting platform account linking to charts: %s", list(platform_tokens.keys()))
+        logging.debug(
+            "Starting platform account linking to charts: %s", list(platform_tokens.keys())
+        )
 
         # Create worker thread
-        class LinkThread(QThread):
+        class LinkThread(QThread):  # pylint: disable=too-few-public-methods
             """Thread to link platform accounts in background"""
 
             # Define signals for thread-safe communication with main thread
