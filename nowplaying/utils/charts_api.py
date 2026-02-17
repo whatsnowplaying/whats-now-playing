@@ -135,7 +135,6 @@ def link_platform_account(  # pylint: disable=too-many-locals,too-many-return-st
 
     base_url = get_charts_base_url(config)
     url = f"{base_url}/api/auth/link-platform"
-
     payload = {"secret": charts_key, "platform": platform, "platform_token": platform_token}
 
     try:

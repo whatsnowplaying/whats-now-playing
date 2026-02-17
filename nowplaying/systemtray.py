@@ -232,49 +232,60 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             )
 
     def _link_twitch_to_charts(self) -> None:
-        """Link Twitch account to charts if authenticated (runs in background thread)."""
+        """Link platform accounts to charts (Twitch and/or Kick if authenticated)."""
         logging.debug("_link_twitch_to_charts called")
-        twitch_token = self.config.cparser.value("twitchbot/accesstoken", defaultValue="")
-        if not twitch_token:
-            logging.debug("No Twitch token, skipping charts linking")
+
+        # Gather all available platform tokens
+        platform_tokens = {}
+        if twitch_token := self.config.cparser.value("twitchbot/accesstoken", defaultValue=""):
+            platform_tokens["twitch"] = twitch_token
+        if kick_token := self.config.cparser.value("kick/accesstoken", defaultValue=""):
+            platform_tokens["kick"] = kick_token
+
+        if not platform_tokens:
+            logging.debug("No platform tokens available, skipping charts linking")
             return
 
         # Skip if already linking
         if self.link_thread is not None and self.link_thread.isRunning():
-            logging.debug("Twitch linking already in progress, skipping")
+            logging.debug("Platform linking already in progress, skipping")
             return
 
-        logging.debug("Starting Twitch account linking to charts")
+        logging.debug("Starting platform account linking to charts: %s", list(platform_tokens.keys()))
 
         # Create worker thread
         class LinkThread(QThread):
-            """Thread to link Twitch account in background"""
+            """Thread to link platform accounts in background"""
 
             # Define signals for thread-safe communication with main thread
             show_conflict_dialog = Signal(str)  # Emits platform name
             show_invalid_key_dialog = Signal()  # No parameters needed
 
-            def __init__(self, parent_tray, token):
+            def __init__(self, parent_tray, platform_tokens):
                 super().__init__()
                 self.tray = parent_tray
-                self.token = token
+                self.platform_tokens = platform_tokens
 
             def run(self):
-                """Execute Twitch account linking in background thread"""
-                logging.debug("Linking Twitch account to charts")
-                status, _ = nowplaying.utils.charts_api.link_platform_account(
-                    self.tray.config, "twitch", self.token
-                )
-                logging.debug("Charts linking returned status: %s", status)
-                if status == "conflict":
-                    logging.debug("Emitting conflict dialog signal")
-                    self.show_conflict_dialog.emit("Twitch")
-                elif status == "auth_failed":
-                    logging.debug("Emitting invalid API key dialog signal")
-                    self.show_invalid_key_dialog.emit()
+                """Execute platform account linking in background thread"""
+                # Try to link each platform that has a token
+                for platform, token in self.platform_tokens.items():
+                    logging.debug("Linking %s account to charts", platform)
+                    status, _ = nowplaying.utils.charts_api.link_platform_account(
+                        self.tray.config, platform, token
+                    )
+                    logging.debug("%s linking returned status: %s", platform.capitalize(), status)
+                    if status == "conflict":
+                        logging.debug("Emitting conflict dialog signal for %s", platform)
+                        self.show_conflict_dialog.emit(platform.capitalize())
+                    elif status == "auth_failed":
+                        logging.debug("Emitting invalid API key dialog signal")
+                        self.show_invalid_key_dialog.emit()
+                        # Only show API key error once, not for each platform
+                        break
 
         # Keep reference to prevent garbage collection while thread is running
-        self.link_thread = LinkThread(self, twitch_token)
+        self.link_thread = LinkThread(self, platform_tokens)
 
         # Connect signals to dialog methods (thread-safe)
         self.link_thread.show_conflict_dialog.connect(self._show_platform_conflict_dialog)
