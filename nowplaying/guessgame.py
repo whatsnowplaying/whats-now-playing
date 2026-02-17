@@ -1601,7 +1601,6 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         """
         # Check if game is enabled
         if not self.is_enabled():
-            logging.debug("Game state sender: guess game not enabled, sleeping")
             return (False, 5)
 
         # Check if sending to server is enabled

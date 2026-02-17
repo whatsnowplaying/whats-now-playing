@@ -4,7 +4,12 @@
 import logging
 import sqlite3
 
-from PySide6.QtCore import QFileSystemWatcher  # pylint: disable=no-name-in-module
+from PySide6.QtCore import (  # pylint: disable=no-name-in-module
+    QFileSystemWatcher,
+    QThread,
+    Qt,
+    Signal,
+)
 from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QApplication,
@@ -24,6 +29,7 @@ import nowplaying.settingsui
 import nowplaying.subprocesses
 import nowplaying.trackrequests
 import nowplaying.twitch.chat
+import nowplaying.utils.charts_api
 
 LASTANNOUNCED: dict[str, str | None] = {"artist": None, "title": None}
 
@@ -37,6 +43,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # Initialize attributes that will be set later
         self.watcher = None
         self.requestswindow = None
+        self.link_thread = None  # QThread for Twitch account linking
 
         # Core initialization
         self._initialize_core_components()
@@ -188,6 +195,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         # Check if reminder dialog should be shown for returning users
         self._check_reminder_dialog()
 
+        # Link Twitch account to charts if authenticated
+        self._link_twitch_to_charts()
+
     def _handle_installer_dialogs(self) -> None:
         """Handle installer dialogs that may require window hiding."""
         if self.startup_window:
@@ -220,6 +230,120 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             nowplaying.firstinstall.show_first_install_dialog(
                 config=self.config, is_reminder=True, tray_icon=self.tray
             )
+
+    def _link_twitch_to_charts(self) -> None:
+        """Link platform accounts to charts (Twitch and/or Kick if authenticated)."""
+        logging.debug("_link_twitch_to_charts called")
+
+        # Gather all available platform tokens
+        platform_tokens = {}
+        if twitch_token := self.config.cparser.value("twitchbot/accesstoken", defaultValue=""):
+            platform_tokens["twitch"] = twitch_token
+        if kick_token := self.config.cparser.value("kick/accesstoken", defaultValue=""):
+            platform_tokens["kick"] = kick_token
+
+        if not platform_tokens:
+            logging.debug("No platform tokens available, skipping charts linking")
+            return
+
+        # Skip if already linking
+        if self.link_thread is not None and self.link_thread.isRunning():
+            logging.debug("Platform linking already in progress, skipping")
+            return
+
+        logging.debug(
+            "Starting platform account linking to charts: %s", list(platform_tokens.keys())
+        )
+
+        # Create worker thread
+        class LinkThread(QThread):  # pylint: disable=too-few-public-methods
+            """Thread to link platform accounts in background"""
+
+            # Define signals for thread-safe communication with main thread
+            show_conflict_dialog = Signal(str)  # Emits platform name
+            show_invalid_key_dialog = Signal()  # No parameters needed
+
+            def __init__(self, parent_tray, platform_tokens):
+                super().__init__()
+                self.tray = parent_tray
+                self.platform_tokens = platform_tokens
+
+            def run(self):
+                """Execute platform account linking in background thread"""
+                # Try to link each platform that has a token
+                for platform, token in self.platform_tokens.items():
+                    logging.debug("Linking %s account to charts", platform)
+                    status, _ = nowplaying.utils.charts_api.link_platform_account(
+                        self.tray.config, platform, token
+                    )
+                    logging.debug("%s linking returned status: %s", platform.capitalize(), status)
+                    if status == "conflict":
+                        logging.debug("Emitting conflict dialog signal for %s", platform)
+                        self.show_conflict_dialog.emit(platform.capitalize())
+                    elif status == "auth_failed":
+                        logging.debug("Emitting invalid API key dialog signal")
+                        self.show_invalid_key_dialog.emit()
+                        # Only show API key error once, not for each platform
+                        break
+
+        # Keep reference to prevent garbage collection while thread is running
+        self.link_thread = LinkThread(self, platform_tokens)
+
+        # Connect signals to dialog methods (thread-safe)
+        self.link_thread.show_conflict_dialog.connect(self._show_platform_conflict_dialog)
+        self.link_thread.show_invalid_key_dialog.connect(self._show_invalid_api_key_dialog)
+
+        self.link_thread.finished.connect(lambda: setattr(self, "link_thread", None))
+        self.link_thread.start()
+
+    @staticmethod
+    def _show_platform_conflict_dialog(platform: str) -> None:
+        """
+        Show error dialog for platform account conflict (409 error).
+        Must be called from Qt main thread.
+
+        Args:
+            platform: Platform name (e.g., "Twitch")
+        """
+        dialog = QMessageBox(
+            QMessageBox.Icon.Warning,
+            f"{platform} Account Already Linked",
+            f"Your {platform} account is already linked to an existing charts profile.<br><br>"
+            f"To merge your current data with that profile:<br>"
+            f"1. Go to <a href='https://whatsnowplaying.com/dashboard'>"
+            f"whatsnowplaying.com/dashboard</a><br>"
+            f"2. Log in using {platform} (this logs you into your existing account)<br>"
+            f"3. Use the claim form to enter your current charts API key<br>"
+            f"4. Your data will be merged and your key will be linked",
+            QMessageBox.StandardButton.Ok,
+            QApplication.activeWindow(),
+        )
+        dialog.setTextFormat(Qt.TextFormat.RichText)
+        dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+        dialog.exec()
+
+    @staticmethod
+    def _show_invalid_api_key_dialog() -> None:
+        """
+        Show error dialog for invalid charts API key (401 error).
+        Must be called from Qt main thread.
+        """
+        dialog = QMessageBox(
+            QMessageBox.Icon.Critical,
+            "Invalid Charts API Key",
+            "Your charts API key is invalid or has been revoked.<br><br>"
+            "To generate a new API key:<br>"
+            "1. Go to <a href='https://whatsnowplaying.com/dashboard'>"
+            "whatsnowplaying.com/dashboard</a><br>"
+            "2. Log in or create an account<br>"
+            "3. Generate a new API key<br>"
+            "4. Paste it into Settings → Output & Display → Charts",
+            QMessageBox.StandardButton.Ok,
+            QApplication.activeWindow(),
+        )
+        dialog.setTextFormat(Qt.TextFormat.RichText)
+        dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+        dialog.exec()
 
     @staticmethod
     def _show_installation_error(ui_file: str) -> None:

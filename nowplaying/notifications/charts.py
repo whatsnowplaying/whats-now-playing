@@ -641,6 +641,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         """Set default configuration values"""
         qsettings.setValue("charts/enabled", True)
         qsettings.setValue("charts/charts_key", "")
+        qsettings.setValue("charts/link_platform", True)
 
     def load_settingsui(self, qwidget: "QWidget"):
         """Load settings into UI"""
@@ -650,11 +651,18 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         qwidget.secret_lineedit.setText(
             self.config.cparser.value("charts/charts_key", defaultValue="")
         )
+        qwidget.link_platform_checkbox.setChecked(
+            self.config.cparser.value("charts/link_platform", type=bool, defaultValue=True)
+        )
 
     def save_settingsui(self, qwidget: "QWidget"):
         """Save settings from UI"""
         self.config.cparser.setValue("charts/enabled", qwidget.enable_checkbox.isChecked())
         self.config.cparser.setValue("charts/charts_key", qwidget.secret_lineedit.text())
+        self.config.cparser.setValue(
+            "charts/link_platform", qwidget.link_platform_checkbox.isChecked()
+        )
+        # Note: Twitch account linking happens in settingsui.upd_conf() after sync()
 
     def verify_settingsui(self, qwidget: "QWidget"):
         """Verify settings"""

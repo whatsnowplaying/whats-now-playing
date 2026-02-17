@@ -673,6 +673,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self._upd_conf_plugins()
         self.config.cparser.sync()
 
+        # Link Twitch account to charts if authenticated (reuses systemtray logic)
+        self.tray._link_twitch_to_charts()  # pylint: disable=protected-access
+
     def _upd_conf_external_services(self):
         """Update external service configurations (Twitch, Kick, etc.)"""
         for key in [

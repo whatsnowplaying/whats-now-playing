@@ -130,6 +130,7 @@ class TwitchLogin:
                     if new_refresh_token:
                         self.config.cparser.setValue("twitchbot/refreshtoken", new_refresh_token)
                     self.config.save()
+
                 logging.debug("Twitch token refreshed successfully")
                 return True
             logging.debug("No refresh_token available")
