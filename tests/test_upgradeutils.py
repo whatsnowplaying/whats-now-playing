@@ -1,277 +1,137 @@
 #!/usr/bin/env python3
-"""test the upgrade binary features"""
+"""test the upgrade check features"""
 
-import json
-import pathlib
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-import nowplaying.upgrades  # pylint: disable=import-error
+import nowplaying.upgrades
 
 
 @pytest.fixture
-def getreleasedata(getroot):
-    """automated integration test"""
-    releasedata = pathlib.Path(getroot).joinpath("tests", "upgrade", "releasedata.json")
-    with open(releasedata, encoding="utf-8") as fhin:
-        data = json.load(fhin)
-    return data
-
-
-def test_simpletest():
-    """detect current version"""
-    upbin = nowplaying.upgrades.UpgradeBinary(testmode=True)
-    assert upbin.myversion.chunk["major"] is not None
-    assert upbin.myversion.chunk["minor"] is not None
-    assert upbin.myversion.chunk["micro"] is not None
-
-
-def test_simpleveroverride():
-    """override the detected version"""
-    upbin = nowplaying.upgrades.UpgradeBinary(testmode=True)
-    upbin.myversion = nowplaying.upgrades.Version("0.0.0")
-
-    assert upbin.myversion.chunk["major"] == 0
-    assert upbin.myversion.chunk["minor"] == 0
-    assert upbin.myversion.chunk["micro"] == 0
-
-
-def test_version_1():
-    """regular vs rc"""
-    ver1 = nowplaying.upgrades.Version("3.1.3")
-    ver2 = nowplaying.upgrades.Version("3.1.3-rc1")
-
-    assert ver1 > ver2
-    assert ver1 >= ver2
-
-
-def test_version_2():
-    """major comparison"""
-    ver1 = nowplaying.upgrades.Version("3.1.3")
-    ver2 = nowplaying.upgrades.Version("4.0.0")
-
-    assert ver1 < ver2
-    assert ver1 <= ver2
-
-
-def test_version_3():
-    """major vs major w/rc"""
-    ver1 = nowplaying.upgrades.Version("3.1.3")
-    ver2 = nowplaying.upgrades.Version("4.0.0-rc1")
-
-    assert ver1 < ver2
-    assert ver1 <= ver2
-
-
-def test_version_4():
-    """rc vs rc"""
-    ver1 = nowplaying.upgrades.Version("4.0.0-rc1")
-    ver2 = nowplaying.upgrades.Version("4.0.0-rc2")
-
-    assert ver1 < ver2
-    assert ver1 <= ver2
-
-
-def test_version_equality():
-    """test equality operators"""
-    ver1 = nowplaying.upgrades.Version("3.1.3")
-    ver2 = nowplaying.upgrades.Version("3.1.3")
-    ver3 = nowplaying.upgrades.Version("3.1.4")
-
-    # Test equality
-    assert ver1 == ver2
-    assert ver1 != ver3
-
-    # Test inequality
-    assert ver1 != ver3
-    assert ver1 == ver2
-
-
-def test_version_greater_than_equal():
-    """test greater than or equal operators"""
-    ver1 = nowplaying.upgrades.Version("3.1.3")
-    ver2 = nowplaying.upgrades.Version("3.1.3")
-    ver3 = nowplaying.upgrades.Version("3.1.2")
-    ver4 = nowplaying.upgrades.Version("3.1.4")
-
-    # Test greater than or equal (equal case)
-    assert ver1 >= ver2
-    assert ver2 >= ver1
-
-    # Test greater than or equal (greater case)
-    assert ver1 >= ver3
-    assert ver3 < ver1
-
-    # Test greater than or equal (less case)
-    assert ver1 < ver4
-    assert ver4 >= ver1
-
-
-def test_version_less_than_equal():
-    """test less than or equal operators"""
-    ver1 = nowplaying.upgrades.Version("3.1.3")
-    ver2 = nowplaying.upgrades.Version("3.1.3")
-    ver3 = nowplaying.upgrades.Version("3.1.2")
-    ver4 = nowplaying.upgrades.Version("3.1.4")
-
-    # Test less than or equal (equal case)
-    assert ver1 <= ver2
-    assert ver2 <= ver1
-
-    # Test less than or equal (less case)
-    assert ver3 <= ver1
-    assert ver1 > ver3
-
-    # Test less than or equal (greater case)
-    assert ver1 <= ver4
-    assert ver4 > ver1
-
-
-def test_version_greater_than():
-    """test greater than operator"""
-    ver1 = nowplaying.upgrades.Version("3.1.3")
-    ver2 = nowplaying.upgrades.Version("3.1.2")
-    ver3 = nowplaying.upgrades.Version("3.1.3")
-    ver4 = nowplaying.upgrades.Version("3.1.4")
-
-    # Test greater than
-    assert ver1 > ver2
-    assert ver2 <= ver1
-
-    # Test not greater than (equal)
-    assert ver1 <= ver3
-    assert ver3 <= ver1
-
-    # Test not greater than (less)
-    assert ver1 <= ver4
-    assert ver4 > ver1
-
-
-def test_version_equality_with_rc():
-    """test equality with release candidates"""
-    ver1 = nowplaying.upgrades.Version("3.1.3-rc1")
-    ver2 = nowplaying.upgrades.Version("3.1.3-rc1")
-    ver3 = nowplaying.upgrades.Version("3.1.3-rc2")
-    ver4 = nowplaying.upgrades.Version("3.1.3")
-
-    # Test equality with rc
-    assert ver1 == ver2
-    assert ver1 != ver3
-    assert ver1 != ver4
-
-
-def test_version_equality_with_non_version():
-    """test equality with non-Version objects"""
-    ver1 = nowplaying.upgrades.Version("3.1.3")
-
-    # Test equality with non-Version objects
-    assert ver1 != "3.1.3"
-    assert ver1 != 3.13
-    assert ver1 is not None
-
-
-@pytest.mark.xfail(reason="API limit exceeded may happen")
-def test_real_getversion():
-    """fetch from github"""
-    upbin = nowplaying.upgrades.UpgradeBinary()
-    assert upbin.stable
-    assert upbin.stabledata["tag_name"]
-    assert upbin.stabledata["html_url"]
-
-
-def test_fake_getversion_1(getreleasedata):  # pylint: disable=redefined-outer-name
-    """test reading static release data"""
-    releasedata = getreleasedata
-    upbin = nowplaying.upgrades.UpgradeBinary(testmode=True)
-    upbin.get_versions(releasedata)
-    assert str(upbin.stable) == "3.1.3"
-    assert str(upbin.prerelease) == "4.0.0-rc5"
-
-
-def test_fake_getversion_2(getreleasedata):  # pylint: disable=redefined-outer-name
-    """given a stable version, do we get the stable version upgrade"""
-    releasedata = getreleasedata
-    upbin = nowplaying.upgrades.UpgradeBinary(testmode=True)
-    upbin.myversion = nowplaying.upgrades.Version("0.0.0")
-
-    upbin.get_versions(releasedata)
-    data = upbin.get_upgrade_data()
-    assert data["tag_name"] == "3.1.3"
-    assert (
-        data["html_url"]
-        == "https://github.com/whatsnowplaying/whats-now-playing/releases/tag/3.1.3"
-    )
-
-
-def test_fake_getversion_3(getreleasedata):  # pylint: disable=redefined-outer-name
-    """test micro version"""
-    releasedata = getreleasedata
-    upbin = nowplaying.upgrades.UpgradeBinary(testmode=True)
-    upbin.myversion = nowplaying.upgrades.Version("3.1.2")
-
-    upbin.get_versions(releasedata)
-    data = upbin.get_upgrade_data()
-    assert data["tag_name"] == "3.1.3"
-    assert (
-        data["html_url"]
-        == "https://github.com/whatsnowplaying/whats-now-playing/releases/tag/3.1.3"
-    )
-
-
-def test_fake_getversion_4(getreleasedata):  # pylint: disable=redefined-outer-name
-    """test newer stable than release"""
-    releasedata = getreleasedata
-    upbin = nowplaying.upgrades.UpgradeBinary(testmode=True)
-    upbin.myversion = nowplaying.upgrades.Version("4.0.0")
-
-    upbin.get_versions(releasedata)
-    data = upbin.get_upgrade_data()
-    assert data is None
-
-
-def test_fake_getversion_5(getreleasedata):  # pylint: disable=redefined-outer-name
-    """test old rc"""
-    releasedata = getreleasedata
-    upbin = nowplaying.upgrades.UpgradeBinary(testmode=True)
-    upbin.myversion = nowplaying.upgrades.Version("4.0.0-rc1")
-
-    upbin.get_versions(releasedata)
-    data = upbin.get_upgrade_data()
-    assert data["tag_name"] == "4.0.0-rc5"
-    assert (
-        data["html_url"]
-        == "https://github.com/whatsnowplaying/whats-now-playing/releases/tag/4.0.0-rc5"
-    )
-
-
-def test_fake_getversion_6(getreleasedata):  # pylint: disable=redefined-outer-name
-    """test really old major rc"""
-    releasedata = getreleasedata
-    upbin = nowplaying.upgrades.UpgradeBinary(testmode=True)
-    upbin.myversion = nowplaying.upgrades.Version("3.0.0-rc6")
-
-    upbin.get_versions(releasedata)
-    data = upbin.get_upgrade_data()
-    assert data["tag_name"] == "4.0.0-rc5"
-    assert (
-        data["html_url"]
-        == "https://github.com/whatsnowplaying/whats-now-playing/releases/tag/4.0.0-rc5"
-    )
-
-
-def test_fake_getversion_7(getreleasedata):  # pylint: disable=redefined-outer-name
-    """test same version"""
-    releasedata = getreleasedata
-    upbin = nowplaying.upgrades.UpgradeBinary(testmode=True)
-    upbin.myversion = nowplaying.upgrades.Version("3.1.3")
-
-    upbin.get_versions(releasedata)
-    data = upbin.get_upgrade_data()
-    assert data is None
-
-
-def test_fake_getversion_failuretest1():
-    """test same version"""
-    upbin = nowplaying.upgrades.UpgradeBinary(testmode=True)
-    data = upbin.get_upgrade_data()
-    assert data is None
+def update_available_response():
+    """A typical update-available API response"""
+    return {
+        "update_available": True,
+        "latest_version": "5.1.0",
+        "is_prerelease": False,
+        "download_page_url": "https://whatsnowplaying.com/download?version=5.0.1&os=macos&chipset=arm&macos_version=15",
+        "asset_name": "WhatsNowPlaying-5.1.0-macOS15-AppleSilicon.zip",
+        "asset_size_bytes": 26542080,
+    }
+
+
+@pytest.fixture
+def up_to_date_response():
+    """A typical up-to-date API response"""
+    return {
+        "update_available": False,
+        "latest_version": "5.1.0",
+    }
+
+
+def _mock_response(data: dict, status_code: int = 200) -> MagicMock:
+    """Build a mock requests.Response"""
+    mock = MagicMock()
+    mock.status_code = status_code
+    mock.json.return_value = data
+    if status_code >= 400:
+        mock.raise_for_status.side_effect = Exception(f"HTTP {status_code}")
+    else:
+        mock.raise_for_status.return_value = None
+    return mock
+
+
+def test_is_prerelease_stable():
+    """stable versions are not prerelease"""
+    assert not nowplaying.upgrades._is_prerelease("5.1.0")  # pylint: disable=protected-access
+
+
+def test_is_prerelease_rc():
+    """rc versions are prerelease"""
+    assert nowplaying.upgrades._is_prerelease("5.1.0-rc1")  # pylint: disable=protected-access
+
+
+def test_is_prerelease_preview():
+    """preview versions are prerelease"""
+    assert nowplaying.upgrades._is_prerelease("5.1.0-preview2")  # pylint: disable=protected-access
+
+
+def test_is_prerelease_commitnum():
+    """dev builds with commit number are prerelease"""
+    assert nowplaying.upgrades._is_prerelease("5.1.0+42.gabcdef")  # pylint: disable=protected-access
+
+
+def test_check_for_update_available(update_available_response):  # pylint: disable=redefined-outer-name
+    """returns response dict when update is available"""
+    with patch("requests.get", return_value=_mock_response(update_available_response)):
+        platform_info = {"os": "macos", "chipset": "arm", "macos_version": 15}
+        result = nowplaying.upgrades.check_for_update(platform_info)
+
+    assert result is not None
+    assert result["update_available"] is True
+    assert result["latest_version"] == "5.1.0"
+    assert result["asset_name"] == "WhatsNowPlaying-5.1.0-macOS15-AppleSilicon.zip"
+    assert result["asset_size_bytes"] == 26542080
+    assert "download_page_url" in result
+
+
+def test_check_for_update_up_to_date(up_to_date_response):  # pylint: disable=redefined-outer-name
+    """returns None when already up to date"""
+    with patch("requests.get", return_value=_mock_response(up_to_date_response)):
+        platform_info = {"os": "macos", "chipset": "arm", "macos_version": 15}
+        result = nowplaying.upgrades.check_for_update(platform_info)
+
+    assert result is None
+
+
+def test_check_for_update_api_error():
+    """returns None on HTTP error"""
+    with patch("requests.get", return_value=_mock_response({}, status_code=500)):
+        platform_info = {"os": "macos", "chipset": "arm", "macos_version": 15}
+        result = nowplaying.upgrades.check_for_update(platform_info)
+
+    assert result is None
+
+
+def test_check_for_update_network_failure():
+    """returns None on network failure"""
+    with patch("requests.get", side_effect=ConnectionError("network down")):
+        platform_info = {"os": "macos", "chipset": "arm", "macos_version": 15}
+        result = nowplaying.upgrades.check_for_update(platform_info)
+
+    assert result is None
+
+
+@pytest.mark.parametrize(
+    "platform_info,expected_params",
+    [
+        (
+            {"os": "macos", "chipset": "arm", "macos_version": 15},
+            {"os": "macos", "chipset": "arm", "macos_version": 15},
+        ),
+        (
+            {"os": "macos", "chipset": "intel", "macos_version": 13},
+            {"os": "macos", "chipset": "intel", "macos_version": 13},
+        ),
+        (
+            {"os": "windows", "chipset": None, "macos_version": None},
+            {"os": "windows"},
+        ),
+    ],
+)
+def test_check_for_update_sends_correct_params(
+    up_to_date_response, platform_info, expected_params
+):  # pylint: disable=redefined-outer-name
+    """correct query params are sent for each platform"""
+    with patch("requests.get", return_value=_mock_response(up_to_date_response)) as mock_get:
+        nowplaying.upgrades.check_for_update(platform_info)
+        _, kwargs = mock_get.call_args
+        sent_params = kwargs.get("params", {})
+
+    for key, value in expected_params.items():
+        assert sent_params.get(key) == value
+    if "chipset" not in expected_params:
+        assert "chipset" not in sent_params
+    if "macos_version" not in expected_params:
+        assert "macos_version" not in sent_params

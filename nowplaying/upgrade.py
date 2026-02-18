@@ -14,7 +14,8 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QWidget,
 )
 
-from nowplaying.upgrades import UpgradeBinary
+import nowplaying.upgrades
+import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 from nowplaying.upgrades.config import UpgradeConfig
 from nowplaying.upgrades.platform import PlatformDetector
 from nowplaying.upgrades.templates import UpgradeTemplates
@@ -34,10 +35,11 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
 
     def fill_it_in(
         self,
-        oldversion,
-        newversion,
+        oldversion: str,
+        newversion: str,
         platform_str: str | None = None,
-        asset_info: dict | None = None,
+        asset_name: str | None = None,
+        asset_size_bytes: int | None = None,
     ) -> None:
         """fill in the upgrade versions and message"""
         messages = [
@@ -48,15 +50,16 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
         if platform_str:
             messages.append(f"Your platform: {platform_str}")
 
-        if asset_info:
-            messages.append("")  # Blank line
-            messages.append(f"Found: {asset_info['name']}")
-            size_mb = asset_info["size"] / (1024 * 1024)
-            messages.append(f"Size: {size_mb:.1f} MB")
-            messages.append("")  # Blank line
+        if asset_name:
+            messages.append("")
+            messages.append(f"Found: {asset_name}")
+            if asset_size_bytes:
+                size_mb = asset_size_bytes / (1024 * 1024)
+                messages.append(f"Size: {size_mb:.1f} MB")
+            messages.append("")
             messages.append("Download new version?")
         else:
-            messages.append("")  # Blank line
+            messages.append("")
             messages.append("No direct download available.")
             messages.append("Open download page?")
 
@@ -72,35 +75,21 @@ def upgrade(bundledir: str | pathlib.Path | None = None) -> None:
     logging.debug("Called upgrade")
 
     try:
-        upgradebin = UpgradeBinary()
+        platform_info = PlatformDetector.get_platform_info()
+        platform_str = PlatformDetector.get_platform_display_string()
 
-        if data := upgradebin.get_upgrade_data():
-            # Detect platform and find matching asset
-            platform_info = PlatformDetector.get_platform_info()
-            platform_str = PlatformDetector.get_platform_display_string()
-            asset = PlatformDetector.find_best_matching_asset(data, platform_info)
-
+        if data := nowplaying.upgrades.check_for_update(platform_info):
             dialog = UpgradeDialog()
             dialog.fill_it_in(
-                upgradebin.myversion, data["tag_name"], platform_str=platform_str, asset_info=asset
+                nowplaying.version.__VERSION__,  # pylint: disable=no-member
+                data["latest_version"],
+                platform_str=platform_str,
+                asset_name=data.get("asset_name"),
+                asset_size_bytes=data.get("asset_size_bytes"),
             )
 
             if dialog.exec():
-                # Open charts download page with platform hint for accurate detection
-                os_type = platform_info.get("os", "unknown")
-                chipset = platform_info.get("chipset", "")
-                macos_version = platform_info.get("macos_version", "")
-
-                base_url = "https://whatsnowplaying.com/download"
-                url = f"{base_url}?os={os_type}&version={upgradebin.myversion}"
-                if chipset:
-                    url += f"&chipset={chipset}"
-                if macos_version:
-                    url += f"&macos_version={macos_version}"
-
-                logging.info("Opening download page: %s", url)
-                webbrowser.open(url)
-
+                webbrowser.open(data["download_page_url"])
                 logging.info("User wants to upgrade; exiting")
                 sys.exit(0)
     except Exception as error:  # pylint: disable=broad-except
