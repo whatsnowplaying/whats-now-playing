@@ -12,8 +12,8 @@ name: pyinstaller
 on: [push]  # yamllint disable-line rule:truthy
 
 jobs:
-  pyinstaller-macos:
-    runs-on: macos-latest
+  pyinstaller-macos-arm:
+    runs-on: macos-15
     permissions:
       contents: read
     steps:
@@ -39,7 +39,37 @@ jobs:
       - name: artifact dist
         uses: actions/upload-artifact@v6
         with:
-          name: macos-latest-dist
+          name: macos15-arm-dist
+          path: "*.zip"
+
+  pyinstaller-macos-intel:
+    runs-on: macos-15-large
+    permissions:
+      contents: read
+    steps:
+      - name: icu
+        run: |
+          brew update --preinstall || true
+          brew install pkg-config icu4c
+      - name: checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: update tags
+        run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      - name: setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: run builder
+        run: |
+          export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
+          export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
+          ./builder.sh
+      - name: artifact dist
+        uses: actions/upload-artifact@v6
+        with:
+          name: macos15-intel-dist
           path: "*.zip"
 
 

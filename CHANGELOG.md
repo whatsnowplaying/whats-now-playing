@@ -3,31 +3,46 @@
 
 ## Version 5.1.0 - in development
 
-* New Features:
+* New Features
   * Basic support for djay Pro
     * Currently missing a lot of the more advanced features but the groundwork has been put down
   * Support Klipy as an alternative to the EOLing Tenor
     * Klipy is preferred when both API keys are configured
   * Add support for autodiscovery using Bonjour/Zeroconf for Remote Output and for
     some upcoming feature support
-  * Add a new guessing game based upon the current track
+  * Add a new Twitch chat-based guessing game for your audience
+    * Viewers guess the current track via configurable Twitch chat commands
+    * Leaderboards, scoring, and personal stats available via chat
+    * Real-time OBS/WebSocket overlay support to display game state on stream
+    * System tray toggle to enable or disable the game at runtime
+    * Game state and leaderboards can be published to the Charts server for
+      an online game board view (configurable opt-in in settings)
+  * Twitch accounts can now be automatically linked to your Charts profile at startup
+    * A warning is shown if the account is already linked to a different Charts profile
 
 * Serato
   * Add artist-based library query support for Serato 4
     * Search entire library or selected playlists/crates for artist tracks
-    * Support for multiple library paths including additional user-specified directories
     * Enhanced crate search and metadata querying capabilities
+  * Track filename resolution now works correctly using location ID and portable ID mapping
+  * All Serato library database files are now auto-discovered — manual path configuration
+    is no longer needed
   * Changes to better detect when the latest track is playing
 
 * Bug Fixes
   * Found an issue where in some cases changed templates would always trigger an 'update'
     on program launch despite the `.new` file actually being correct.
+  * Traktor and VirtualDJ: partially corrupted XML library files no longer cause a complete
+    import failure — parsing continues with whatever data was successfully read, and a
+    warning is logged so you can investigate
+  * Webserver template assets (including vendor libraries and guess game files) now load correctly
   * Icecast docs had the old images
 
 * Developer Stuff
   * Dependency updates
   * Test fixes
   * Update years to 2026
+  * Getting closer to support Python 3.14
 
 ## Version 5.0.1 - 2025-10-22
 
