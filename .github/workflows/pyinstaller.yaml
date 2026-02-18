@@ -43,7 +43,7 @@ jobs:
           path: "*.zip"
 
   pyinstaller-macos-intel:
-    runs-on: macos-15-large
+    runs-on: macos-15-intel
     permissions:
       contents: read
     steps:
