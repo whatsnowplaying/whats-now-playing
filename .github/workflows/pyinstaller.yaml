@@ -14,12 +14,16 @@ on: [push]  # yamllint disable-line rule:truthy
 jobs:
   pyinstaller-macos-arm:
     uses: ./.github/workflows/macos-build.yml
+    permissions:
+      contents: read
     with:
       runs-on: macos-15
       artifact-name: macos15-arm-dist
 
   pyinstaller-macos-intel:
     uses: ./.github/workflows/macos-build.yml
+    permissions:
+      contents: read
     with:
       runs-on: macos-15-intel
       artifact-name: macos15-intel-dist
