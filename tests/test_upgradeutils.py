@@ -16,7 +16,10 @@ def update_available_response():
         "update_available": True,
         "latest_version": "5.1.0",
         "is_prerelease": False,
-        "download_page_url": "https://whatsnowplaying.com/download?version=5.0.1&os=macos&chipset=arm&macos_version=15",
+        "download_page_url": (
+            "https://whatsnowplaying.com/download"
+            "?version=5.0.1&os=macos&chipset=arm&macos_version=15"
+        ),
         "asset_name": "WhatsNowPlaying-5.1.0-macOS15-AppleSilicon.zip",
         "asset_size_bytes": 26542080,
     }
@@ -140,7 +143,7 @@ def test_check_for_update_sends_correct_params(
 
 def test_check_for_update_prerelease_sends_track_param(monkeypatch, up_to_date_response):  # pylint: disable=redefined-outer-name
     """prerelease builds send track=prerelease and the correct version"""
-    monkeypatch.setattr(nowplaying.version, "__VERSION__", "5.1.0-rc1", raising=False)
+    monkeypatch.setattr(nowplaying.version, "__VERSION__", "5.1.0-rc1", raising=False)  # pylint: disable=no-member
 
     with patch("requests.get", return_value=_mock_response(up_to_date_response)) as mock_get:
         platform_info = {"os": "macos", "chipset": "arm", "macos_version": 15}

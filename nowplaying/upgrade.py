@@ -33,7 +33,7 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
         self.buttonbox.rejected.connect(self.reject)
         self.layout = QVBoxLayout()
 
-    def fill_it_in(
+    def fill_it_in(  # pylint: disable=too-many-arguments
         self,
         oldversion: str,
         newversion: str,
