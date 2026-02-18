@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import nowplaying.upgrades
+import nowplaying.version  # pylint: disable=import-error, no-name-in-module
 
 
 @pytest.fixture
@@ -135,3 +136,17 @@ def test_check_for_update_sends_correct_params(
         assert "chipset" not in sent_params
     if "macos_version" not in expected_params:
         assert "macos_version" not in sent_params
+
+
+def test_check_for_update_prerelease_sends_track_param(monkeypatch, up_to_date_response):  # pylint: disable=redefined-outer-name
+    """prerelease builds send track=prerelease and the correct version"""
+    monkeypatch.setattr(nowplaying.version, "__VERSION__", "5.1.0-rc1", raising=False)
+
+    with patch("requests.get", return_value=_mock_response(up_to_date_response)) as mock_get:
+        platform_info = {"os": "macos", "chipset": "arm", "macos_version": 15}
+        nowplaying.upgrades.check_for_update(platform_info)
+        _, kwargs = mock_get.call_args
+        sent_params = kwargs.get("params", {})
+
+    assert sent_params.get("version") == "5.1.0-rc1"
+    assert sent_params.get("track") == "prerelease"

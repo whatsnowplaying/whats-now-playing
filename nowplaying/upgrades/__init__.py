@@ -46,5 +46,5 @@ def check_for_update(platform_info: dict[str, t.Any]) -> dict[str, t.Any] | None
             return data
         return None
     except Exception:  # pylint: disable=broad-except
-        logging.debug("Update check failed")
+        logging.debug("Update check failed", exc_info=True)
         return None

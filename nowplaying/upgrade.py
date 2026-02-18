@@ -50,12 +50,11 @@ class UpgradeDialog(QDialog):  # pylint: disable=too-few-public-methods
         if platform_str:
             messages.append(f"Your platform: {platform_str}")
 
-        if asset_name:
+        if asset_name and asset_size_bytes:
             messages.append("")
             messages.append(f"Found: {asset_name}")
-            if asset_size_bytes:
-                size_mb = asset_size_bytes / (1024 * 1024)
-                messages.append(f"Size: {size_mb:.1f} MB")
+            size_mb = asset_size_bytes / (1024 * 1024)
+            messages.append(f"Size: {size_mb:.1f} MB")
             messages.append("")
             messages.append("Download new version?")
         else:
