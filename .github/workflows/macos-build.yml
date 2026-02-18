@@ -1,0 +1,49 @@
+# Reusable workflow for macOS PyInstaller builds.
+# Called by pyinstaller.yaml with different runner/artifact-name
+# per architecture.
+
+# yamllint disable rule:line-length
+---
+
+name: macos-build
+
+on:  # yamllint disable-line rule:truthy
+  workflow_call:  # yamllint disable-line rule:truthy
+    inputs:
+      runs-on:
+        required: true
+        type: string
+      artifact-name:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+    steps:
+      - name: icu
+        run: |
+          brew update --preinstall || true
+          brew install pkg-config icu4c
+      - name: checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: update tags
+        run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      - name: setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: run builder
+        run: |
+          export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
+          export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
+          ./builder.sh
+      - name: artifact dist
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: "*.zip"
