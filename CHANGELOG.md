@@ -35,14 +35,14 @@
   * Traktor and VirtualDJ: partially corrupted XML library files no longer cause a complete
     import failure — parsing continues with whatever data was successfully read, and a
     warning is logged so you can investigate
-  * Webserver template assets (including vendor libraries and guess game files) now load correctly
+  * Webserver template assets (including vendor libraries and guessing game files) now load correctly
   * Icecast docs had the old images
 
 * Developer Stuff
   * Dependency updates
   * Test fixes
   * Update years to 2026
-  * Getting closer to support Python 3.14
+  * Getting closer to supporting Python 3.14
 
 ## Version 5.0.1 - 2025-10-22
 
@@ -50,7 +50,7 @@ This release fixes a critical bug in 5.0.0 that causes it to lock up if the Char
 
 ## Version 5.0.0 - 2025-10-20
 
-* New Features:
+* New Features
   * ANNOUNCING [WHAT'S NOW PLAYING CHARTS](https://whatsnowplaying.com/)!
     * Now you can help the community figure out what DJs are ACTUALLY
       PLAYING on their streams!
