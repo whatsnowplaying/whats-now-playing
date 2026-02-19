@@ -57,6 +57,15 @@ class Version:
             if isinstance(value, str) and value.isdigit():
                 self.chunk[key] = int(value)
 
+        # Extract numeric part from commitnum for comparison (e.g., "16.g4b43e790" -> 16)
+        if self.chunk.get("commitnum"):
+            commit_str = str(self.chunk["commitnum"])
+            leading = commit_str.split(".", maxsplit=1)[0]
+            if leading.isdigit():
+                self.chunk["commitnum_number"] = int(leading)
+            else:
+                self.chunk["commitnum_number"] = 0
+
         if (
             self.chunk.get("rc")
             or self.chunk.get("preview")
@@ -119,13 +128,16 @@ class Version:
         # but commitnum > no commitnum at this point
         if self.chunk.get("commitnum") and not other.chunk.get("commitnum"):
             return False
+        if not self.chunk.get("commitnum") and other.chunk.get("commitnum"):
+            return True
 
         if (
             self.chunk.get("commitnum")
             and other.chunk.get("commitnum")
             and self.chunk.get("commitnum") != other.chunk.get("commitnum")
         ):
-            return self.chunk.get("commitnum") < other.chunk.get("commitnum")
+            # Compare numeric part of commitnum
+            return self.chunk.get("commitnum_number", 0) < other.chunk.get("commitnum_number", 0)
 
         return False
 
