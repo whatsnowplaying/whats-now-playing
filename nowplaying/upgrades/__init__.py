@@ -3,14 +3,16 @@
 
 import copy
 import logging
-import os
 import re
-import traceback
 import typing as t
 
 import requests
 
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
+
+UPDATE_CHECK_URL = "https://whatsnowplaying.com/api/v1/check-version"
+
+_PRERELEASE_MARKERS = ("-rc", "-preview", "+")
 
 # regex that support's git describe --tags as well as many semver-type strings
 # based upon the now deprecated distutils version code
@@ -172,74 +174,38 @@ class Version:
         return not self < other
 
 
-class UpgradeBinary:
-    """routines to determine if the binary is out of date"""
+def _is_prerelease(version: str) -> bool:
+    """Return True if the version string indicates a pre-release"""
+    return any(marker in version for marker in _PRERELEASE_MARKERS)
 
-    def __init__(self, testmode: bool = False):
-        self.myversion = Version(nowplaying.version.__VERSION__)  # pylint: disable=no-member
-        self.prerelease = Version("0.0.0-rc0")
-        self.stable = Version("0.0.0")
-        self.predata = None
-        self.stabledata = None
-        if not testmode:
-            self.get_versions()
 
-    def get_versions(self, testdata: list[dict[str, t.Any]] | None = None):  # pylint: disable=too-many-branches
-        """ask github about current versions"""
-        try:
-            if not testdata:
-                headers = {
-                    "X-GitHub-Api-Version": "2022-11-28",
-                    "Accept": "application/vnd.github.v3+json",
-                    "User-Agent": "What's Now Playing/{nowplaying.version.__VERSION__}",
-                }
-                if token := os.getenv("GITHUB_TOKEN"):
-                    logging.debug("Using GITHUB_TOKEN")
-                    headers["Authorization"] = f"Bearer {token}"
-                req = requests.get(
-                    "https://api.github.com/repos/whatsnowplaying/whats-now-playing/releases",
-                    headers=headers,
-                    timeout=100,
-                )
-                req.raise_for_status()
-                jsonreldata: list[dict[str, t.Any]] = req.json()
-            else:
-                jsonreldata = testdata
+def check_for_update(platform_info: dict[str, t.Any]) -> dict[str, t.Any] | None:
+    """Check for updates via whatsnowplaying.com API.
 
-            if not jsonreldata:
-                logging.error("No data from Github. Aborting.")
-                return
+    Sends current version and platform info to the API.
+    Returns the response dict if an update is available, None otherwise.
+    """
+    current_version = nowplaying.version.__VERSION__  # pylint: disable=no-member
 
-            for rel in jsonreldata:
-                if not isinstance(rel, dict):
-                    logging.error(rel)
-                    break
+    params: dict[str, t.Any] = {
+        "version": current_version,
+        "os": platform_info.get("os", "unknown"),
+    }
 
-                if rel.get("draft"):
-                    continue
+    if chipset := platform_info.get("chipset"):
+        params["chipset"] = chipset
+    if macos_version := platform_info.get("macos_version"):
+        params["macos_version"] = macos_version
+    if _is_prerelease(current_version):
+        params["track"] = "prerelease"
 
-                tagname = Version(rel["tag_name"])
-                if rel.get("prerelease"):
-                    if self.prerelease < tagname:
-                        self.prerelease = tagname
-                        self.predata = rel
-                elif self.stable < tagname:
-                    self.stable = tagname
-                    self.stabledata = rel
-
-            if self.stable > self.prerelease:
-                self.prerelease = self.stable
-                self.predata = self.stabledata
-
-        except Exception:  # pylint: disable=broad-except
-            for line in traceback.format_exc().splitlines():
-                logging.error(line)
-
-    def get_upgrade_data(self) -> dict[str, t.Any] | None:
-        """compare our version to fetched version data"""
-        if self.myversion.is_prerelease():
-            if self.myversion < self.prerelease:
-                return self.predata
-        elif self.myversion < self.stable:
-            return self.stabledata
+    try:
+        response = requests.get(UPDATE_CHECK_URL, params=params, timeout=10)
+        response.raise_for_status()
+        data: dict[str, t.Any] = response.json()
+        if data.get("update_available"):
+            return data
+        return None
+    except Exception:  # pylint: disable=broad-except
+        logging.debug("Update check failed", exc_info=True)
         return None
