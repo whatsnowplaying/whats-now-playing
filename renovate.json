@@ -1,0 +1,35 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "labels": ["dependencies"],
+  "reviewers": ["aw-was-here"],
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 10,
+  "packageRules": [
+    {
+      "matchManagers": ["pip_requirements"],
+      "addLabels": ["python"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "addLabels": ["github-actions"]
+    },
+    {
+      "matchFileNames": ["requirements-test.txt"],
+      "groupName": "test dependencies"
+    },
+    {
+      "matchFileNames": ["requirements-dev.txt"],
+      "groupName": "dev dependencies"
+    },
+    {
+      "matchFileNames": ["requirements-docs.txt"],
+      "addLabels": ["documentation"],
+      "groupName": "docs dependencies"
+    },
+    {
+      "matchFileNames": ["requirements-binaries.txt"],
+      "groupName": "binary build dependencies"
+    }
+  ]
+}
