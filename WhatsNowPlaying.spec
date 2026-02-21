@@ -166,11 +166,14 @@ for execname, execpy in executables.items():
                  excludes=[
                      'tkinter', '_tkinter', 'Tkinter',
                      'tcl', 'tk', '_tcl', '_tk',
+                     'setuptools',
                  ],
                  win_no_prefer_redirects=False,
                  win_private_assemblies=False,
                  cipher=block_cipher,
                  noarchive=False)
+
+    a.datas = [x for x in a.datas if '.dist-info' not in x[0]]
 
     # Splash screen disabled for folder mode
     # if sys.platform != 'darwin':
