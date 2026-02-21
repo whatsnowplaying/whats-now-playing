@@ -4,6 +4,7 @@
 # pylint: disable=invalid-name
 
 import datetime
+import glob
 import nltk
 import os
 import platform
@@ -14,6 +15,17 @@ from PyInstaller.utils.hooks import collect_submodules
 sys.path.insert(0, os.path.abspath('.'))
 
 _nltk = next(p for p in nltk.data.path if os.path.exists(os.path.join(p, 'tokenizers')))
+
+
+def _nltk_datas(corpus):
+    """Collect NLTK corpus files excluding zip archives."""
+    src = os.path.join(_nltk, 'tokenizers', corpus)
+    result = []
+    for filepath in glob.glob(os.path.join(src, '**', '*'), recursive=True):
+        if os.path.isfile(filepath) and not filepath.endswith('.zip'):
+            rel_dir = os.path.relpath(os.path.dirname(filepath), _nltk)
+            result.append((filepath, os.path.join('nltk_data', rel_dir)))
+    return result
 
 from nowplaying.version import __VERSION__
 import pyinstaller_versionfile
@@ -145,9 +157,9 @@ for execname, execpy in executables.items():
                  pathex=['.'],
                  binaries=[],
                  datas=[('nowplaying/resources/*', 'resources/'),
-                        ('nowplaying/templates/*', 'templates/'),
-                        (os.path.join(_nltk, 'tokenizers', 'punkt'), 'nltk_data/tokenizers/punkt'),
-                        (os.path.join(_nltk, 'tokenizers', 'punkt_tab'), 'nltk_data/tokenizers/punkt_tab')],
+                        ('nowplaying/templates/*', 'templates/')] +
+                       _nltk_datas('punkt') +
+                       _nltk_datas('punkt_tab'),
                  hiddenimports=ALL_PLUGIN_MODULES,
                  hookspath=[('nowplaying/__pyinstaller')],
                  runtime_hooks=[],
