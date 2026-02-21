@@ -5,6 +5,8 @@ import os
 import ssl
 import sys
 
+import nltk
+
 
 def frozen_init(bundledir: str | None) -> str:
     """do some frozen handling"""
@@ -22,6 +24,7 @@ def frozen_init(bundledir: str | None) -> str:
                 "certifi",
                 "cacert.pem",
             )
+        nltk.data.path.insert(0, os.path.join(bundledir, "nltk_data"))
     elif not bundledir:
         bundledir = os.path.abspath(os.path.dirname(__file__))
     return bundledir
