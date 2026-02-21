@@ -4,6 +4,7 @@
 # pylint: disable=invalid-name
 
 import datetime
+import nltk
 import os
 import platform
 import sys
@@ -11,6 +12,8 @@ import sys
 from PyInstaller.utils.hooks import collect_submodules
 
 sys.path.insert(0, os.path.abspath('.'))
+
+_nltk = next(p for p in nltk.data.path if os.path.exists(os.path.join(p, 'tokenizers')))
 
 from nowplaying.version import __VERSION__
 import pyinstaller_versionfile
@@ -142,7 +145,9 @@ for execname, execpy in executables.items():
                  pathex=['.'],
                  binaries=[],
                  datas=[('nowplaying/resources/*', 'resources/'),
-                        ('nowplaying/templates/*', 'templates/')],
+                        ('nowplaying/templates/*', 'templates/'),
+                        (os.path.join(_nltk, 'tokenizers', 'punkt'), 'nltk_data/tokenizers/punkt'),
+                        (os.path.join(_nltk, 'tokenizers', 'punkt_tab'), 'nltk_data/tokenizers/punkt_tab')],
                  hiddenimports=ALL_PLUGIN_MODULES,
                  hookspath=[('nowplaying/__pyinstaller')],
                  runtime_hooks=[],
