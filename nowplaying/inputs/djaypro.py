@@ -28,6 +28,7 @@ import asyncio
 import logging
 import pathlib
 import sqlite3
+import sys
 import urllib.parse
 from typing import TYPE_CHECKING
 
@@ -326,7 +327,9 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
                 # Case-insensitive comparison
                 if (
-                    parsed["artist"]
+                    artist
+                    and title
+                    and parsed["artist"]
                     and parsed["title"]
                     and parsed["artist"].lower() == artist.lower()
                     and parsed["title"].lower() == title.lower()
@@ -402,7 +405,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                     try:
                         file_path = urllib.parse.unquote(string)
                         if file_path.startswith("file:///"):
-                            file_path = file_path[7:]  # Remove file:// prefix, keep leading /
+                            path = file_path[8:]  # Remove file:///
+                            # Windows paths: file:///C:/... -> C:/...
+                            # Unix paths: file:///Users/... -> /Users/...
+                            file_path = path if sys.platform == "win32" else f"/{path}"
                     except Exception:  # pylint: disable=broad-exception-caught
                         pass
 
