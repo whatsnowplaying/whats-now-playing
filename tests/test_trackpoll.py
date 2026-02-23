@@ -249,8 +249,8 @@ async def test_trackpoll_notify_plugins_called(trackpollbootstrap):  # pylint: d
 
 
 @pytest.mark.asyncio
-async def test_trackpoll_game_buffering(trackpollbootstrap):  # pylint: disable=redefined-outer-name
-    """test game buffering and flushing logic"""
+async def test_trackpoll_game_pending_meta(trackpollbootstrap):  # pylint: disable=redefined-outer-name
+    """test that _pending_meta is published via _publish and then cleared"""
     config = trackpollbootstrap
     config.cparser.setValue("guessgame/enabled", True)
     config.cparser.sync()
@@ -262,34 +262,27 @@ async def test_trackpoll_game_buffering(trackpollbootstrap):  # pylint: disable=
     trackpoll._setup_notifications()  # pylint: disable=protected-access
 
     try:
-        # Mock guessgame.should_start_game to return True
-        async def mock_should_start():
+        # Mock may_publish to report the game has ended
+        async def mock_may_publish():
             return True
 
-        trackpoll.guessgame.should_start_game = mock_should_start
+        trackpoll.guessgame.may_publish = mock_may_publish
 
-        # Mock guessgame.start_new_game
-        async def mock_start_game(track, artist):  # pylint: disable=unused-argument
-            pass
-
-        trackpoll.guessgame.start_new_game = mock_start_game
-
-        # Set up metadata
+        # Set up metadata and simulate a deferred (pending) write
         trackpoll.currentmeta = {
             "artist": "Test Artist",
             "title": "Test Title",
             "filename": "test.mp3",
         }
+        trackpoll._pending_meta = trackpoll.currentmeta.copy()  # pylint: disable=protected-access
 
-        # Simulate buffered metadata (game is active)
-        trackpoll.buffered_metadata = trackpoll.currentmeta.copy()
+        # Simulate the idle-cycle permission check: may_publish → publish → clear
+        if await trackpoll.guessgame.may_publish():
+            await trackpoll._publish(trackpoll._pending_meta)  # pylint: disable=protected-access
+            trackpoll._pending_meta = None  # pylint: disable=protected-access
 
-        # Test flushing buffered metadata
-        await trackpoll._flush_buffered_metadata()  # pylint: disable=protected-access
-
-        # Verify buffered metadata was cleared
-        assert trackpoll.buffered_metadata is None
-        assert trackpoll.game_start_time is None
+        # Verify pending metadata was cleared
+        assert trackpoll._pending_meta is None  # pylint: disable=protected-access
 
     finally:
         await trackpoll.stop()

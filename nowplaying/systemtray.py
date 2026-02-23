@@ -23,6 +23,7 @@ import nowplaying.apicache
 import nowplaying.config
 import nowplaying.db
 import nowplaying.firstinstall
+import nowplaying.guessgame
 import nowplaying.notifications.charts
 import nowplaying.oauth2
 import nowplaying.settingsui
@@ -103,6 +104,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         """Setup database optimization and process manager."""
         self._update_startup_progress("Optimizing database...")
         self._vacuum_databases_on_startup()
+
+        self._update_startup_progress("Initializing guess game database...")
+        nowplaying.guessgame.GuessGame.initialize_database()
 
         self._update_startup_progress("Initializing process manager...")
         self.subprocesses = nowplaying.subprocesses.SubprocessManager(self.config)
@@ -368,6 +372,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             logging.debug("API cache database vacuumed successfully")
         except (sqlite3.Error, OSError) as error:
             logging.error("Error vacuuming API cache: %s", error, exc_info=True)
+
+        # Vacuum guess game database
+        try:
+            nowplaying.guessgame.GuessGame.vacuum_database()
+        except (sqlite3.Error, OSError) as error:
+            logging.error("Error vacuuming guess game database: %s", error, exc_info=True)
 
         # Skip metadata database vacuum - it gets cleared on every startup anyway
 
