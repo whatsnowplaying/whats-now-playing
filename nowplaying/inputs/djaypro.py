@@ -25,6 +25,7 @@ Database Location:
 """
 
 import asyncio
+import contextlib
 import logging
 import pathlib
 import sqlite3
@@ -325,14 +326,14 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 blob_data = row[0]
                 parsed = self._parse_blob(blob_data)
 
-                # Case-insensitive comparison
+                # Case-insensitive, whitespace-normalized comparison
+                artist_norm = artist.strip().lower() if artist else ""
+                title_norm = title.strip().lower() if title else ""
+                if not (artist_norm and title_norm and parsed["artist"] and parsed["title"]):
+                    continue
                 if (
-                    artist
-                    and title
-                    and parsed["artist"]
-                    and parsed["title"]
-                    and parsed["artist"].lower() == artist.lower()
-                    and parsed["title"].lower() == title.lower()
+                    parsed["artist"].strip().lower() == artist_norm
+                    and parsed["title"].strip().lower() == title_norm
                 ):
                     if parsed["filename"]:
                         return parsed["filename"]
@@ -343,34 +344,32 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         return None
 
     @staticmethod
-    def _parse_blob(blob_data: bytes) -> dict[str, str | int | None]:  # pylint: disable=too-many-branches
+    def _extract_strings(blob_data: bytes) -> list[str]:
+        """Extract printable ASCII strings from a binary blob."""
+        decoded = []
+        i = 0
+        while i < len(blob_data) - 1:
+            if 32 <= blob_data[i] <= 126:
+                string_start = i
+                while i < len(blob_data) and blob_data[i] != 0 and blob_data[i] >= 32:
+                    i += 1
+                if i > string_start:
+                    with contextlib.suppress(UnicodeDecodeError):
+                        string = blob_data[string_start:i].decode("utf-8", errors="ignore").strip()
+                        if len(string) > 1:
+                            decoded.append(string)
+            else:
+                i += 1
+        return decoded
+
+    def _parse_blob(self, blob_data: bytes) -> dict[str, str | int | None]:  # pylint: disable=too-many-branches
         """Parse binary blob data to extract track metadata
 
         Returns a dict with string values for most fields, int for duration,
         and None for missing fields.
         """
         try:  # pylint: disable=too-many-nested-blocks
-            # Extract all null-terminated strings from the blob
-            decoded = []
-            i = 0
-            while i < len(blob_data) - 1:
-                # Look for printable ASCII start
-                if 32 <= blob_data[i] <= 126:
-                    string_start = i
-                    while i < len(blob_data) and blob_data[i] != 0 and blob_data[i] >= 32:
-                        i += 1
-
-                    if i > string_start:
-                        try:
-                            string = (
-                                blob_data[string_start:i].decode("utf-8", errors="ignore").strip()
-                            )
-                            if len(string) > 1:
-                                decoded.append(string)
-                        except UnicodeDecodeError:
-                            pass
-                else:
-                    i += 1
+            decoded = self._extract_strings(blob_data)
 
             title = None
             artist = None
@@ -391,27 +390,20 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 elif string == "originSourceID" and i > 0:
                     source = decoded[i - 1]
                 elif string == "bpm" and i > 0:
-                    try:
+                    with contextlib.suppress(ValueError, IndexError):
                         bpm = float(decoded[i - 1])
-                    except (ValueError, IndexError):
-                        pass
                 elif string == "duration" and i > 0:
-                    try:
+                    with contextlib.suppress(ValueError, IndexError):
                         duration = int(float(decoded[i - 1]))
-                    except (ValueError, IndexError):
-                        pass
-                elif string.startswith("file:///") and len(string) > 8:
-                    # Found a file URL (ignore bare "file:///" entries)
-                    try:
-                        file_path = urllib.parse.unquote(string)
-                        if file_path.startswith("file:///"):
-                            path = file_path[8:]  # Remove file:///
-                            # Windows paths: file:///C:/... -> C:/...
-                            # Unix paths: file:///Users/... -> /Users/...
-                            file_path = path if sys.platform == "win32" else f"/{path}"
-                    except Exception:  # pylint: disable=broad-exception-caught
-                        pass
-
+                elif string.startswith("file://"):
+                    with contextlib.suppress(Exception):
+                        parsed_url = urllib.parse.urlparse(string)
+                        path = urllib.parse.unquote(parsed_url.path)
+                        if path and path != "/":
+                            # Windows: urlparse gives /C:/path, strip leading slash
+                            if sys.platform == "win32" and len(path) > 2 and path[2] == ":":
+                                path = path[1:]
+                            file_path = path
             return {
                 "artist": artist,
                 "title": title,
