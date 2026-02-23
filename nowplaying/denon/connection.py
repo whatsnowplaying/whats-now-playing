@@ -71,7 +71,7 @@ class ConnectionManager:
                 local_addr=("0.0.0.0", DISCOVERY_PORT),
                 reuse_port=True,
             )
-        except OSError:
+        except (OSError, ValueError):
             # Fallback binding approaches
             try:
                 transport, _protocol = await loop.create_datagram_endpoint(
