@@ -14,7 +14,7 @@ nltk==3.9.2
 normality==2.6.1
 pillow==12.1.1
 pillow_avif_plugin==1.5.5
-puremagic<2; python_version < "3.12"
+puremagic<3; python_version < "3.12"
 puremagic==2.0.0; python_version >= "3.12"
 pyacoustid==1.3.0
 pypresence==4.6.1
