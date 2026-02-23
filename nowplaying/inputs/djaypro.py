@@ -362,14 +362,15 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
                 i += 1
         return decoded
 
-    def _parse_blob(self, blob_data: bytes) -> dict[str, str | int | None]:  # pylint: disable=too-many-branches
+    @staticmethod
+    def _parse_blob(blob_data: bytes) -> dict[str, str | int | None]:  # pylint: disable=too-many-branches
         """Parse binary blob data to extract track metadata
 
         Returns a dict with string values for most fields, int for duration,
         and None for missing fields.
         """
         try:  # pylint: disable=too-many-nested-blocks
-            decoded = self._extract_strings(blob_data)
+            decoded = Plugin._extract_strings(blob_data)
 
             title = None
             artist = None
