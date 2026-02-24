@@ -10,7 +10,7 @@ import re
 import sqlite3
 import string
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 import aiosqlite
@@ -19,7 +19,6 @@ from PySide6.QtCore import (  # pylint: disable=import-error,no-name-in-module
     QStandardPaths,
 )
 
-import nowplaying.utils
 import nowplaying.utils.charts_api
 import nowplaying.utils.sqlite
 
@@ -71,165 +70,100 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
     and communicates via a shared SQLite database.
     """
 
-    def __init__(
-        self,
-        config: "nowplaying.config.ConfigFile | None" = None,
-        stopevent: asyncio.Event | None = None,
-        testmode: bool = False,
-    ):
-        self.config = config
-        self.stopevent = stopevent
-        self.testmode = testmode
-        self.last_game_end_time: float | None = None
-        self._http_session: aiohttp.ClientSession | None = None
-
-        # Database location in persistent app data directory
-        self.databasefile = pathlib.Path(
+    @staticmethod
+    def _get_database_path() -> pathlib.Path:
+        """Return the path to the guessgame database file."""
+        return pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.AppDataLocation)[0]
         ).joinpath("guessgame", "guessgame.db")
 
-        # Initialize database if needed
-        if not self.databasefile.exists():
-            self.setupdb()
-        else:
-            # Migrate leaderboard tables if needed, recreate ephemeral tables
-            self._migrate_database()
+    @classmethod
+    def initialize_database(cls, databasefile: pathlib.Path | None = None) -> None:
+        """Initialize or migrate the database.
 
-    async def cleanup(self):
-        """Clean up resources (e.g., HTTP session)"""
-        if self._http_session is not None and not self._http_session.closed:
-            await self._http_session.close()
-            self._http_session = None
+        Call once from the main process before subprocesses start.
+        Accepts an optional databasefile path for testing.
+        """
+        if databasefile is None:
+            databasefile = cls._get_database_path()
 
-    def _migrate_database(self):
-        """Migrate leaderboard tables if needed, recreate ephemeral tables"""
-        with nowplaying.utils.sqlite.sqlite_connection(
-            self.databasefile, timeout=30
-        ) as connection:
-            cursor = connection.cursor()
+        logging.debug("Initializing guess game database: %s", databasefile)
+        try:
+            databasefile.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            logging.error("Failed to create guess game database directory: %s", error)
+            return
 
-            # Create schema_version table if it doesn't exist
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS schema_version (
-                    version INTEGER PRIMARY KEY
-                )
-            """)
+        try:
+            with nowplaying.utils.sqlite.sqlite_connection(
+                str(databasefile), timeout=30
+            ) as connection:
+                cursor = connection.cursor()
 
-            # Get current version
-            cursor.execute("SELECT version FROM schema_version")
-            row = cursor.fetchone()
-            current_version = row[0] if row else 0
-
-            # Current target version
-            target_version = 1
-
-            if current_version < target_version:
-                logging.info(
-                    "Migrating guess game database from v%d to v%d",
-                    current_version,
-                    target_version,
-                )
-
-                # Run migrations on preserved tables
-                if current_version < 1:
-                    # Migration 1: Add track_solved/artist_solved to user_scores if needed
-                    # (Currently user_scores doesn't need these, only current_game does)
-                    pass
-
-                # Update version
-                if current_version == 0:
-                    cursor.execute(
-                        "INSERT INTO schema_version (version) VALUES (?)", (target_version,)
-                    )
-                else:
-                    cursor.execute("UPDATE schema_version SET version = ?", (target_version,))
-
-                connection.commit()
-
-            # Always recreate ephemeral tables (current_game, guesses, sessions)
-            cursor.execute("DROP TABLE IF EXISTS current_game")
-            cursor.execute("DROP TABLE IF EXISTS guesses")
-            cursor.execute("DROP TABLE IF EXISTS sessions")
-            connection.commit()
-
-            # Recreate ephemeral tables with current schema
-            cursor.execute("""
-                CREATE TABLE current_game (
-                    id INTEGER PRIMARY KEY DEFAULT 1,
-                    track TEXT NOT NULL,
-                    artist TEXT NOT NULL,
-                    masked_track TEXT NOT NULL,
-                    masked_artist TEXT NOT NULL,
-                    revealed_letters TEXT NOT NULL,
-                    start_time INTEGER NOT NULL,
-                    end_time INTEGER,
-                    status TEXT DEFAULT 'active',
-                    max_duration INTEGER DEFAULT 180,
-                    game_id INTEGER,
-                    difficulty_bonus INTEGER DEFAULT 0,
-                    track_solved INTEGER DEFAULT 0,
-                    artist_solved INTEGER DEFAULT 0,
-                    CHECK (id = 1)
-                )
-            """)
-
-            cursor.execute("""
-                CREATE TABLE guesses (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    game_id INTEGER NOT NULL,
-                    username TEXT COLLATE NOCASE NOT NULL,
-                    guess TEXT NOT NULL,
-                    guess_type TEXT NOT NULL,
-                    correct INTEGER NOT NULL,
-                    points_awarded INTEGER NOT NULL,
-                    timestamp INTEGER NOT NULL
-                )
-            """)
-
-            cursor.execute("""
-                CREATE TABLE sessions (
-                    session_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    start_time INTEGER NOT NULL,
-                    end_time INTEGER
-                )
-            """)
-
-            connection.commit()
-            logging.debug("Guess game database migration complete")
-
-    def setupdb(self):
-        """Setup the database file for game state and scoring"""
-        logging.debug("Setting up guess game database: %s", self.databasefile)
-        self.databasefile.parent.mkdir(parents=True, exist_ok=True)
-
-        # If database exists, try to delete it (fresh start)
-        if self.databasefile.exists():
-            for attempt in range(3):
-                try:
-                    self.databasefile.unlink()
-                    break
-                except OSError as error:
-                    if attempt < 2:
-                        time.sleep(0.5 * (attempt + 1))
-                        continue
-                    logging.warning("Could not delete guessgame.db after 3 attempts: %s", error)
-
-        with nowplaying.utils.sqlite.sqlite_connection(
-            self.databasefile, timeout=30
-        ) as connection:
-            cursor = connection.cursor()
-            try:
-                # Schema version tracking
-                cursor.execute("""
+                # Persistent tables: schema_version tracks migrations
+                _ = cursor.execute("""
                     CREATE TABLE IF NOT EXISTS schema_version (
                         version INTEGER PRIMARY KEY
                     )
                 """)
-                cursor.execute("INSERT INTO schema_version (version) VALUES (1)")
 
-                # Current game state (single row, id=1)
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS current_game (
+                # Get/set schema version and run any pending migrations
+                cursor.execute("SELECT version FROM schema_version")
+                row = cursor.fetchone()
+                current_version = row[0] if row else 0
+                target_version = 1
+
+                if current_version < target_version:
+                    logging.info(
+                        "Migrating guess game database from v%d to v%d",
+                        current_version,
+                        target_version,
+                    )
+                    # Add future migration steps here as needed
+                    if current_version == 0:
+                        _ = cursor.execute(
+                            "INSERT INTO schema_version (version) VALUES (?)", (target_version,)
+                        )
+                    else:
+                        _ = cursor.execute(
+                            "UPDATE schema_version SET version = ?", (target_version,)
+                        )
+                    connection.commit()
+
+                # Persistent tables: survive app restarts
+                _ = cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS user_scores (
+                        username TEXT COLLATE NOCASE PRIMARY KEY,
+                        session_score INTEGER DEFAULT 0,
+                        all_time_score INTEGER DEFAULT 0,
+                        session_solves INTEGER DEFAULT 0,
+                        all_time_solves INTEGER DEFAULT 0,
+                        session_guesses INTEGER DEFAULT 0,
+                        all_time_guesses INTEGER DEFAULT 0,
+                        last_updated INTEGER NOT NULL
+                    )
+                """)
+
+                _ = cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS game_history (
+                        game_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        track TEXT NOT NULL,
+                        artist TEXT NOT NULL,
+                        start_time INTEGER NOT NULL,
+                        end_time INTEGER,
+                        end_reason TEXT,
+                        solver_username TEXT COLLATE NOCASE,
+                        total_guesses INTEGER DEFAULT 0
+                    )
+                """)
+
+                # Ephemeral tables: always recreate on startup to clear previous session state
+                _ = cursor.execute("DROP TABLE IF EXISTS current_game")
+                _ = cursor.execute("DROP TABLE IF EXISTS guesses")
+                _ = cursor.execute("DROP TABLE IF EXISTS sessions")
+
+                _ = cursor.execute("""
+                    CREATE TABLE current_game (
                         id INTEGER PRIMARY KEY DEFAULT 1,
                         track TEXT NOT NULL,
                         artist TEXT NOT NULL,
@@ -248,9 +182,8 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     )
                 """)
 
-                # Historical guesses
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS guesses (
+                _ = cursor.execute("""
+                    CREATE TABLE guesses (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         game_id INTEGER NOT NULL,
                         username TEXT COLLATE NOCASE NOT NULL,
@@ -262,37 +195,8 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     )
                 """)
 
-                # User scores
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS user_scores (
-                        username TEXT COLLATE NOCASE PRIMARY KEY,
-                        session_score INTEGER DEFAULT 0,
-                        all_time_score INTEGER DEFAULT 0,
-                        session_solves INTEGER DEFAULT 0,
-                        all_time_solves INTEGER DEFAULT 0,
-                        session_guesses INTEGER DEFAULT 0,
-                        all_time_guesses INTEGER DEFAULT 0,
-                        last_updated INTEGER NOT NULL
-                    )
-                """)
-
-                # Game history
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS game_history (
-                        game_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        track TEXT NOT NULL,
-                        artist TEXT NOT NULL,
-                        start_time INTEGER NOT NULL,
-                        end_time INTEGER,
-                        end_reason TEXT,
-                        solver_username TEXT COLLATE NOCASE,
-                        total_guesses INTEGER DEFAULT 0
-                    )
-                """)
-
-                # Sessions
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS sessions (
+                _ = cursor.execute("""
+                    CREATE TABLE sessions (
                         session_id INTEGER PRIMARY KEY AUTOINCREMENT,
                         start_time INTEGER NOT NULL,
                         end_time INTEGER
@@ -300,27 +204,40 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 """)
 
                 connection.commit()
-                logging.info("Guess game database created successfully")
+                logging.debug("Guess game database initialization complete")
+        except (OSError, sqlite3.Error) as error:
+            logging.error("Failed to initialize guess game database: %s", error)
 
-            except sqlite3.OperationalError as error:
-                logging.error("Failed to create guess game database: %s", error)
-
-    def vacuum_database(self):
-        """Vacuum the database to reclaim space"""
-        if not self.databasefile.exists():
+    @classmethod
+    def vacuum_database(cls) -> None:
+        """Vacuum the database to reclaim space."""
+        databasefile = cls._get_database_path()
+        if not databasefile.exists():
             return
         try:
             with nowplaying.utils.sqlite.sqlite_connection(
-                self.databasefile, timeout=30
+                str(databasefile), timeout=30
             ) as connection:
                 logging.debug("Vacuuming guess game database...")
-                connection.execute("VACUUM")
+                _ = connection.execute("VACUUM")
                 connection.commit()
                 logging.info("Guess game database vacuumed successfully")
         except sqlite3.Error as error:
             logging.error("Database error during vacuum: %s", error)
 
-    def _get_config(self, key: str, default, value_type=None):
+    def __init__(
+        self,
+        config: "nowplaying.config.ConfigFile | None" = None,
+        stopevent: asyncio.Event | None = None,
+    ):
+        self.config = config
+        self.stopevent = stopevent
+        self.last_game_end_time: float | None = None
+        self._http_session: aiohttp.ClientSession | None = None
+
+        self.databasefile = self._get_database_path()
+
+    def _get_config(self, key: str, default: Any, value_type: type | None = None) -> Any:
         """Helper to get config values with defaults"""
         if not self.config:
             return default
@@ -494,7 +411,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         track_normalized: str,
         artist_normalized: str,
         revealed_letters: set[str],
-        result: dict,
+        result: dict[str, Any],
     ) -> None:
         """
         Process a word/phrase guess and update result with points and revealed letters.
@@ -1447,6 +1364,19 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             logging.error("Failed to reset session: %s", error)
             return False
 
+    async def may_publish(self) -> bool:
+        """Return True if the deferred track can now be published (game ended or no game active).
+
+        Called by TrackPoll during same-track idle cycles when a write is deferred.
+        A disabled game always grants permission to avoid metadata staying deferred indefinitely.
+        """
+        if not self.is_enabled():
+            return True
+        state = await self.get_current_state()
+        if not state or state.get("status") in ("solved", "timeout"):
+            return True
+        return False
+
     async def check_game_timeout(self) -> bool:
         """
         Check if current game has exceeded max duration.
@@ -1487,7 +1417,8 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             logging.error("Failed to check game timeout: %s", error)
             return False
 
-    def clear_leaderboards(self) -> bool:
+    @classmethod
+    def clear_leaderboards(cls) -> bool:
         """
         Clear all user scores from the leaderboards.
         This deletes all entries from the user_scores table.
@@ -1497,13 +1428,10 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         """
         try:
             with nowplaying.utils.sqlite.sqlite_connection(
-                str(self.databasefile), timeout=30
+                str(cls._get_database_path()), timeout=30
             ) as connection:
                 cursor = connection.cursor()
-
-                # Delete all user scores
                 cursor.execute("DELETE FROM user_scores")
-
                 connection.commit()
                 logging.info("All leaderboards cleared")
                 return True
@@ -1703,4 +1631,6 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 await asyncio.sleep(5)
 
         # Clean up HTTP session when loop exits
-        await self.cleanup()
+        if self._http_session is not None and not self._http_session.closed:
+            await self._http_session.close()
+            self._http_session = None

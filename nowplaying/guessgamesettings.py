@@ -218,13 +218,8 @@ class GuessGameSettings:
         )
 
         if reply == QMessageBox.Yes:
-            # Create temporary guessgame instance to access database
-            config = self.uihelp.config if self.uihelp else None
-            guessgame = nowplaying.guessgame.GuessGame(config=config)
-
-            # Clear leaderboards (synchronous)
             try:
-                success = guessgame.clear_leaderboards()
+                success = nowplaying.guessgame.GuessGame.clear_leaderboards()
 
                 if success:
                     QMessageBox.information(

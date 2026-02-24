@@ -6,6 +6,7 @@ Unit tests for the Guess Game system
 
 import asyncio
 import pathlib
+import sqlite3
 import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -27,10 +28,9 @@ async def isolated_guessgame(bootstrap):  # pylint: disable=redefined-outer-name
     with tempfile.TemporaryDirectory() as temp_dir:
         db_path = pathlib.Path(temp_dir) / "test_guessgame.db"
         stopevent = asyncio.Event()
-        game = nowplaying.guessgame.GuessGame(config=bootstrap, stopevent=stopevent, testmode=True)
-        # Override database location for testing
+        nowplaying.guessgame.GuessGame.initialize_database(db_path)
+        game = nowplaying.guessgame.GuessGame(config=bootstrap, stopevent=stopevent)
         game.databasefile = db_path
-        game.setupdb()
         yield game
         stopevent.set()  # Signal stop when test completes
 
@@ -68,6 +68,83 @@ async def test_database_initialization(isolated_guessgame):  # pylint: disable=r
         ]
         for expected_table in expected_tables:
             assert expected_table in table_names
+
+
+def test_initialize_database_creates_schema(tmp_path):
+    """Test that initialize_database creates all expected tables and sets schema_version."""
+    db_path = tmp_path / "test.db"
+    nowplaying.guessgame.GuessGame.initialize_database(db_path)
+
+    assert db_path.exists()
+
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+        table_names = {row[0] for row in cursor.fetchall()}
+    # sqlite_sequence is an internal SQLite table created by AUTOINCREMENT; allow it
+    expected = {
+        "schema_version",
+        "user_scores",
+        "game_history",
+        "current_game",
+        "guesses",
+        "sessions",
+    }
+    assert expected <= table_names
+
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.execute("SELECT version FROM schema_version")
+        assert cursor.fetchone()[0] == 1
+
+
+def test_initialize_database_handles_os_error(tmp_path):
+    """Test that initialize_database logs OS errors instead of crashing."""
+    bad_parent = tmp_path / "not_a_dir.txt"
+    bad_parent.write_text("i am a file, not a directory")
+    bad_db = bad_parent / "database.db"
+
+    # Should not raise; error should be logged gracefully
+    nowplaying.guessgame.GuessGame.initialize_database(bad_db)
+    assert not bad_db.exists()
+
+
+def test_vacuum_database_missing_file(tmp_path):
+    """Test that vacuum_database is a no-op when the DB file does not exist."""
+    missing_db = tmp_path / "nonexistent.db"
+    with patch.object(
+        nowplaying.guessgame.GuessGame, "_get_database_path", return_value=missing_db
+    ):
+        nowplaying.guessgame.GuessGame.vacuum_database()
+    assert not missing_db.exists()
+
+
+def test_vacuum_database_existing(tmp_path):
+    """Test that vacuum_database succeeds when the DB file exists."""
+    db_path = tmp_path / "test.db"
+    nowplaying.guessgame.GuessGame.initialize_database(db_path)
+    with patch.object(nowplaying.guessgame.GuessGame, "_get_database_path", return_value=db_path):
+        nowplaying.guessgame.GuessGame.vacuum_database()
+    assert db_path.exists()
+
+
+def test_clear_leaderboards(tmp_path):
+    """Test that clear_leaderboards empties the user_scores table."""
+    db_path = tmp_path / "test.db"
+    nowplaying.guessgame.GuessGame.initialize_database(db_path)
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            "INSERT INTO user_scores (username, last_updated) VALUES (?, ?)",
+            ("testuser", 1234567890),
+        )
+        conn.commit()
+
+    with patch.object(nowplaying.guessgame.GuessGame, "_get_database_path", return_value=db_path):
+        result = nowplaying.guessgame.GuessGame.clear_leaderboards()
+
+    assert result is True
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.execute("SELECT COUNT(*) FROM user_scores")
+        assert cursor.fetchone()[0] == 0
 
 
 @pytest.mark.asyncio
