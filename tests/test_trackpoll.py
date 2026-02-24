@@ -249,6 +249,43 @@ async def test_trackpoll_notify_plugins_called(trackpollbootstrap):  # pylint: d
 
 
 @pytest.mark.asyncio
+async def test_trackpoll_stop_flushes_pending_meta(trackpollbootstrap):  # pylint: disable=redefined-outer-name
+    """ensure TrackPoll.stop() flushes _pending_meta via end_game and _publish on shutdown"""
+    config = trackpollbootstrap
+    config.cparser.setValue("guessgame/enabled", True)
+    config.cparser.sync()
+
+    trackpoll = nowplaying.processes.trackpoll.TrackPoll(
+        stopevent=threading.Event(), config=config, testmode=True
+    )
+    trackpoll._setup_guessgame()  # pylint: disable=protected-access
+    trackpoll._setup_notifications()  # pylint: disable=protected-access
+
+    trackpoll._pending_meta = {  # pylint: disable=protected-access
+        "artist": "Test Artist",
+        "title": "Test Title",
+    }
+
+    end_game_calls = []
+    publish_calls = []
+
+    async def mock_end_game(reason=None):
+        end_game_calls.append(reason)
+
+    async def mock_publish(metadata):
+        publish_calls.append(metadata)
+
+    trackpoll.guessgame.end_game = mock_end_game
+    trackpoll._publish = mock_publish  # pylint: disable=protected-access
+
+    await trackpoll.stop()
+
+    assert end_game_calls, "end_game should be called when _pending_meta is set on stop()"
+    assert publish_calls, "_publish should be called when _pending_meta is set on stop()"
+    assert trackpoll._pending_meta is None  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
 async def test_trackpoll_game_pending_meta(trackpollbootstrap):  # pylint: disable=redefined-outer-name
     """test that _pending_meta is published via _publish and then cleared"""
     config = trackpollbootstrap

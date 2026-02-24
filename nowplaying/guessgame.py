@@ -1368,7 +1368,10 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         """Return True if the deferred track can now be published (game ended or no game active).
 
         Called by TrackPoll during same-track idle cycles when a write is deferred.
+        A disabled game always grants permission to avoid metadata staying deferred indefinitely.
         """
+        if not self.is_enabled():
+            return True
         state = await self.get_current_state()
         if not state or state.get("status") in ("solved", "timeout"):
             return True
