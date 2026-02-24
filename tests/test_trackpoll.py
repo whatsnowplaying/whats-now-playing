@@ -26,6 +26,7 @@ async def trackpollbootstrap(bootstrap, getroot, tmp_path):  # pylint: disable=r
     config.cparser.setValue("artistextras/enabled", False)
     config.cparser.setValue("control/paused", True)
     config.cparser.setValue("settings/input", "jsonreader")
+    config.cparser.setValue("settings/delay", 0)  # No artificial delay in tests
     config.cparser.setValue("jsoninput/delay", 1)
     config.cparser.setValue("jsoninput/filename", str(jsonfile))
     config.cparser.setValue("textoutput/file", str(txtfile))
