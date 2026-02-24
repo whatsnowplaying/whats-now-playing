@@ -192,8 +192,7 @@ def test_parse_blob_ignores_short_file_url():
     assert result["filename"] == "/Users/aw/Music/test.flac"
 
 
-@pytest.mark.asyncio
-async def test_check_for_new_track_no_db(bootstrap):
+def test_check_for_new_track_no_db(bootstrap):
     """test checking for new track when database doesn't exist"""
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
@@ -209,8 +208,7 @@ async def test_check_for_new_track_no_db(bootstrap):
         assert plugin.metadata["title"] is None
 
 
-@pytest.mark.asyncio
-async def test_check_for_new_track_empty_db(bootstrap):
+def test_check_for_new_track_empty_db(bootstrap):
     """test checking for new track with empty database"""
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
@@ -234,8 +232,7 @@ async def test_check_for_new_track_empty_db(bootstrap):
         assert plugin.metadata["artist"] is None
 
 
-@pytest.mark.asyncio
-async def test_check_for_new_track_with_data(bootstrap):
+def test_check_for_new_track_with_data(bootstrap):
     """test checking for new track with actual data"""
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
@@ -267,8 +264,7 @@ async def test_check_for_new_track_with_data(bootstrap):
         assert plugin.metadata["title"] == "Test Song"
 
 
-@pytest.mark.asyncio
-async def test_check_for_new_track_duplicate(bootstrap):
+def test_check_for_new_track_duplicate(bootstrap):
     """test that duplicate tracks don't update metadata unnecessarily"""
     config = bootstrap
     plugin = nowplaying.inputs.djaypro.Plugin(config=config)
