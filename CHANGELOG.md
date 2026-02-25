@@ -20,10 +20,10 @@
   * Twitch accounts can now be automatically linked to your Charts profile at startup
     * A warning is shown if the account is already linked to a different Charts profile
   * Smarter upgrade logic
-    * Should do a better job of helping getting the correct zip file
+    * Should do a better job of helping you get the correct zip file
 
 * Guess Game
-  * There has been a bunch of changes to the guess game to make it less fragile
+  * There have been several changes to Guess Game to make it less fragile
   * Support for seeing the current game from the whatsnowplaying.com website
   * Fixed the `!mypoints` command interfering with track request processing
 
@@ -49,7 +49,7 @@
     import failure — parsing continues with whatever data was successfully read, and a
     warning is logged so you can investigate
   * Webserver template assets (including vendor libraries and guessing game files) now load correctly
-  * On Windows, Qt SVG support was not always unavailable
+  * Fixed an issue where Qt SVG support was sometimes unavailable on Windows
   * Icecast docs had the old images
 
 * Security
