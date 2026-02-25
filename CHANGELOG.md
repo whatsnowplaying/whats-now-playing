@@ -19,6 +19,19 @@
       an online game board view (configurable opt-in in settings)
   * Twitch accounts can now be automatically linked to your Charts profile at startup
     * A warning is shown if the account is already linked to a different Charts profile
+  * Smarter upgrade logic
+    * Should do a better job of helping getting the correct zip file
+
+* Guess Game
+  * There has been a bunch of changes to the guess game to make it less fragile
+  * Support for seeing the current game from the whatsnowplaying.com website
+  * Fixed the `!mypoints` command interfering with track request processing
+
+* Denon
+  * Fixed a crash on certain network environments during device discovery
+
+* djay Pro
+  * Fixed track filename resolution, including correct conversion of file:// URLs on Windows
 
 * Serato
   * Add artist-based library query support for Serato 4
@@ -36,13 +49,19 @@
     import failure — parsing continues with whatever data was successfully read, and a
     warning is logged so you can investigate
   * Webserver template assets (including vendor libraries and guessing game files) now load correctly
+  * On Windows, Qt SVG support was not always unavailable
   * Icecast docs had the old images
+
+* Security
+  * Fixed CVE-2025-69872: disabled insecure pickle-based deserialization in the image cache
+  * Applied workaround for NLTK CVE-2025-14009
 
 * Developer Stuff
   * Dependency updates
   * Test fixes
   * Update years to 2026
   * Getting closer to supporting Python 3.14
+  * Reduced binary build size by removing unnecessary metadata files
 
 ## Version 5.0.1 - 2025-10-22
 
