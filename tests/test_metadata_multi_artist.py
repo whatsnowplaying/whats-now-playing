@@ -10,13 +10,7 @@ import pytest
 import nowplaying.metadata
 import nowplaying.musicbrainz
 import nowplaying.musicbrainz.helper
-
-from nowplaying.musicbrainz.helper import (
-    HIGH_SPECIFICITY_DELIMITERS,
-    MEDIUM_SPECIFICITY_DELIMITERS,
-    LOW_SPECIFICITY_DELIMITERS,
-    COLLABORATION_DELIMITERS_BY_PRIORITY,
-)
+import nowplaying.utils.artists
 
 # Test data for artist splitting - only genuine collaborations that should be split
 SPLITTING_TEST_CASES = [
@@ -110,61 +104,47 @@ COLLABORATION_CASES = [
 
 
 @pytest.mark.parametrize("artist_string,expected", SPLITTING_TEST_CASES)
-@pytest.mark.asyncio
-async def test_split_artist_string(bootstrap, artist_string, expected):
+def test_split_artist_string(artist_string, expected):
     """Test artist string splitting with various formats"""
-    await asyncio.sleep(0.5)
-    config = bootstrap
-    config.cparser.setValue("musicbrainz/enabled", True)
-    helper = nowplaying.musicbrainz.helper.MusicBrainzHelper(config=config)
-    result = helper._split_artist_string(artist_string)
+    result = nowplaying.utils.artists.split_artist_string(artist_string)
     assert result == expected
 
 
 @pytest.mark.parametrize("artist_string,expected", EDGE_CASE_TEST_CASES)
-@pytest.mark.asyncio
-async def test_split_artist_string_edge_cases(bootstrap, artist_string, expected):
+def test_split_artist_string_edge_cases(artist_string, expected):
     """Test artist string splitting edge cases"""
-    await asyncio.sleep(0.5)
-    config = bootstrap
-    config.cparser.setValue("musicbrainz/enabled", True)
-    helper = nowplaying.musicbrainz.helper.MusicBrainzHelper(config=config)
-    result = helper._split_artist_string(artist_string)
+    result = nowplaying.utils.artists.split_artist_string(artist_string)
     assert result == expected
 
 
-@pytest.mark.asyncio
-async def test_collaboration_delimiters_constant():
+def test_collaboration_delimiters_constant():
     """Test that collaboration delimiter constants are properly defined"""
 
     # Should contain common collaboration delimiters organized by specificity
-    assert " feat. " in HIGH_SPECIFICITY_DELIMITERS
-    assert " featuring " in HIGH_SPECIFICITY_DELIMITERS
-    assert " vs. " in HIGH_SPECIFICITY_DELIMITERS
-    assert " presents " in HIGH_SPECIFICITY_DELIMITERS
+    assert " feat. " in nowplaying.utils.artists.HIGH_SPECIFICITY_DELIMITERS
+    assert " featuring " in nowplaying.utils.artists.HIGH_SPECIFICITY_DELIMITERS
+    assert " vs. " in nowplaying.utils.artists.HIGH_SPECIFICITY_DELIMITERS
+    assert " presents " in nowplaying.utils.artists.HIGH_SPECIFICITY_DELIMITERS
 
-    assert " with " in MEDIUM_SPECIFICITY_DELIMITERS
-    assert " x " in MEDIUM_SPECIFICITY_DELIMITERS
+    assert " with " in nowplaying.utils.artists.MEDIUM_SPECIFICITY_DELIMITERS
+    assert " x " in nowplaying.utils.artists.MEDIUM_SPECIFICITY_DELIMITERS
 
-    assert " & " in LOW_SPECIFICITY_DELIMITERS
-    assert " and " in LOW_SPECIFICITY_DELIMITERS
+    assert " & " in nowplaying.utils.artists.LOW_SPECIFICITY_DELIMITERS
+    assert " and " in nowplaying.utils.artists.LOW_SPECIFICITY_DELIMITERS
 
     # Combined list should contain all delimiters
     all_delimiters = (
-        HIGH_SPECIFICITY_DELIMITERS + MEDIUM_SPECIFICITY_DELIMITERS + LOW_SPECIFICITY_DELIMITERS
+        nowplaying.utils.artists.HIGH_SPECIFICITY_DELIMITERS
+        + nowplaying.utils.artists.MEDIUM_SPECIFICITY_DELIMITERS
+        + nowplaying.utils.artists.LOW_SPECIFICITY_DELIMITERS
     )
-    assert list(COLLABORATION_DELIMITERS_BY_PRIORITY) == all_delimiters
+    assert list(nowplaying.utils.artists.COLLABORATION_DELIMITERS_BY_PRIORITY) == all_delimiters
 
 
 @pytest.mark.parametrize("artist_string,expected", DJ_COLLABORATION_CASES)
-@pytest.mark.asyncio
-async def test_dj_collaboration_formats(bootstrap, artist_string, expected):
+def test_dj_collaboration_formats(artist_string, expected):
     """Test common DJ/electronic music collaboration formats"""
-    await asyncio.sleep(0.5)
-    config = bootstrap
-    config.cparser.setValue("musicbrainz/enabled", True)
-    helper = nowplaying.musicbrainz.helper.MusicBrainzHelper(config=config)
-    result = helper._split_artist_string(artist_string)
+    result = nowplaying.utils.artists.split_artist_string(artist_string)
     assert result == expected
 
 

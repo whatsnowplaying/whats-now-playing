@@ -18,7 +18,9 @@ def test_audio_only_extensions():
         fake_path = pathlib.Path(f"test_audio{ext}")
 
         # Mock puremagic to return empty types (like our MP3 test file)
-        with unittest.mock.patch("nowplaying.metadata.puremagic.magic_file", return_value=[]):
+        with unittest.mock.patch(
+            "nowplaying.metadata.tinytag_runner.puremagic.magic_file", return_value=[]
+        ):
             result = TinyTagRunner._detect_video_content(fake_path)  # pylint: disable=protected-access
             assert result is False, f"Extension {ext} should be detected as audio-only"
 
@@ -30,7 +32,9 @@ def test_video_extensions():
         fake_path = pathlib.Path(f"test_video{ext}")
 
         # Mock puremagic to return empty types
-        with unittest.mock.patch("nowplaying.metadata.puremagic.magic_file", return_value=[]):
+        with unittest.mock.patch(
+            "nowplaying.metadata.tinytag_runner.puremagic.magic_file", return_value=[]
+        ):
             result = TinyTagRunner._detect_video_content(fake_path)  # pylint: disable=protected-access
             assert result is True, f"Extension {ext} should be detected as video"
 
@@ -45,7 +49,7 @@ def test_mp4_ambiguous_container():
     mock_video_type.__str__ = lambda self: "MPEG-4 video"
 
     with unittest.mock.patch(
-        "nowplaying.metadata.puremagic.magic_file", return_value=[mock_video_type]
+        "nowplaying.metadata.tinytag_runner.puremagic.magic_file", return_value=[mock_video_type]
     ):
         result = TinyTagRunner._detect_video_content(mp4_path)  # pylint: disable=protected-access
         assert result is True, "MP4 with video indicator should be detected as video"
@@ -56,7 +60,7 @@ def test_mp4_ambiguous_container():
     mock_audio_type.__str__ = lambda self: "MPEG-4 audio"
 
     with unittest.mock.patch(
-        "nowplaying.metadata.puremagic.magic_file", return_value=[mock_audio_type]
+        "nowplaying.metadata.tinytag_runner.puremagic.magic_file", return_value=[mock_audio_type]
     ):
         result = TinyTagRunner._detect_video_content(mp4_path)  # pylint: disable=protected-access
         # Should be False when puremagic indicates audio content
@@ -68,7 +72,7 @@ def test_mp4_ambiguous_container():
     mock_neutral_type.__str__ = lambda self: "MPEG-4 container"
 
     with unittest.mock.patch(
-        "nowplaying.metadata.puremagic.magic_file", return_value=[mock_neutral_type]
+        "nowplaying.metadata.tinytag_runner.puremagic.magic_file", return_value=[mock_neutral_type]
     ):
         result = TinyTagRunner._detect_video_content(mp4_path)  # pylint: disable=protected-access
         assert result is True, (
@@ -85,7 +89,7 @@ def test_unknown_extension_fallback():
     mock_video_type.__str__ = lambda self: "Some video format"
 
     with unittest.mock.patch(
-        "nowplaying.metadata.puremagic.magic_file", return_value=[mock_video_type]
+        "nowplaying.metadata.tinytag_runner.puremagic.magic_file", return_value=[mock_video_type]
     ):
         result = TinyTagRunner._detect_video_content(unknown_path)  # pylint: disable=protected-access
         assert result is True, "Unknown extension with video type should be detected as video"
@@ -95,7 +99,7 @@ def test_unknown_extension_fallback():
     mock_audio_type.__str__ = lambda self: "Some audio format"
 
     with unittest.mock.patch(
-        "nowplaying.metadata.puremagic.magic_file", return_value=[mock_audio_type]
+        "nowplaying.metadata.tinytag_runner.puremagic.magic_file", return_value=[mock_audio_type]
     ):
         result = TinyTagRunner._detect_video_content(unknown_path)  # pylint: disable=protected-access
         assert result is False, "Unknown extension with audio type should be detected as audio"
@@ -117,7 +121,7 @@ def test_puremagic_exception_handling():
 
     for error_type in exception_types:
         with unittest.mock.patch(
-            "nowplaying.metadata.puremagic.magic_file", side_effect=error_type
+            "nowplaying.metadata.tinytag_runner.puremagic.magic_file", side_effect=error_type
         ):
             result = TinyTagRunner._detect_video_content(unknown_path)  # pylint: disable=protected-access
             assert result is False, f"{type(error_type).__name__} should default to audio-only"
@@ -148,7 +152,7 @@ def test_excludes_audio_containers_from_video_detection():
     # Test .m4a extension
     m4a_path = pathlib.Path("test.m4a")
     with unittest.mock.patch(
-        "nowplaying.metadata.puremagic.magic_file", return_value=[mock_video_type]
+        "nowplaying.metadata.tinytag_runner.puremagic.magic_file", return_value=[mock_video_type]
     ):
         result = TinyTagRunner._detect_video_content(m4a_path)  # pylint: disable=protected-access
         assert result is False, "M4A extension should override video type detection"
@@ -156,7 +160,7 @@ def test_excludes_audio_containers_from_video_detection():
     # Test .f4a extension
     f4a_path = pathlib.Path("test.f4a")
     with unittest.mock.patch(
-        "nowplaying.metadata.puremagic.magic_file", return_value=[mock_video_type]
+        "nowplaying.metadata.tinytag_runner.puremagic.magic_file", return_value=[mock_video_type]
     ):
         result = TinyTagRunner._detect_video_content(f4a_path)  # pylint: disable=protected-access
         assert result is False, "F4A extension should override video type detection"
@@ -172,7 +176,9 @@ def test_puremagic_optimization():
             test_file = tmp_path / f"test{ext}"
             test_file.touch()
 
-            with unittest.mock.patch("nowplaying.metadata.puremagic.magic_file") as mock_puremagic:
+            with unittest.mock.patch(
+                "nowplaying.metadata.tinytag_runner.puremagic.magic_file"
+            ) as mock_puremagic:
                 result = TinyTagRunner._detect_video_content(test_file)  # pylint: disable=protected-access
                 assert result is False, f"Audio extension {ext} should return False"
                 assert not mock_puremagic.called, (
@@ -184,7 +190,9 @@ def test_puremagic_optimization():
             test_file = tmp_path / f"test{ext}"
             test_file.touch()
 
-            with unittest.mock.patch("nowplaying.metadata.puremagic.magic_file") as mock_puremagic:
+            with unittest.mock.patch(
+                "nowplaying.metadata.tinytag_runner.puremagic.magic_file"
+            ) as mock_puremagic:
                 result = TinyTagRunner._detect_video_content(test_file)  # pylint: disable=protected-access
                 assert result is True, f"Video extension {ext} should return True"
                 assert not mock_puremagic.called, (
@@ -196,7 +204,9 @@ def test_puremagic_optimization():
             test_file = tmp_path / f"test{ext}"
             test_file.touch()
 
-            with unittest.mock.patch("nowplaying.metadata.puremagic.magic_file") as mock_puremagic:
+            with unittest.mock.patch(
+                "nowplaying.metadata.tinytag_runner.puremagic.magic_file"
+            ) as mock_puremagic:
                 # Mock to return video content
                 mock_type = unittest.mock.MagicMock()
                 mock_type.extension = ext
@@ -214,7 +224,9 @@ def test_puremagic_optimization():
             test_file = tmp_path / f"test{ext}"
             test_file.touch()
 
-            with unittest.mock.patch("nowplaying.metadata.puremagic.magic_file") as mock_puremagic:
+            with unittest.mock.patch(
+                "nowplaying.metadata.tinytag_runner.puremagic.magic_file"
+            ) as mock_puremagic:
                 # Mock to return non-video content
                 mock_type = unittest.mock.MagicMock()
                 mock_type.__str__ = lambda self: "application/octet-stream"

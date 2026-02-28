@@ -97,7 +97,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             return await nowplaying.apicache.cached_fetch(
                 provider="theaudiodb",
                 artist_name=artist_name,
-                endpoint=api.split(".")[0],  # Use the first part of API call as endpoint
+                endpoint=api,  # Use full API string so MBID is part of the cache key
                 fetch_func=fetch_func,
                 ttl_seconds=None,  # Use provider default from apicache.py
             )
@@ -107,6 +107,10 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
     def _check_artist(self, artdata: dict[str, Any]) -> bool:
         """is this actually the artist we are looking for?"""
+        if not self.fnstr:
+            # Empty artist name = MBID-only lookup mode (e.g. featured artist), trust all results
+            logging.debug("theaudiodb MBID-only mode, trusting %s", artdata.get("strArtist"))
+            return True
         for fieldname in ["strArtist", "strArtistAlternate"]:
             if artdata.get(fieldname) and self.fnstr:
                 normalized = nowplaying.utils.normalize(
@@ -327,8 +331,10 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         if not self.config.cparser.value("theaudiodb/enabled", type=bool):
             return None
 
-        if not metadata or not metadata.get("artist"):
-            logging.debug("No artist; skipping")
+        if not metadata or (
+            not metadata.get("artist") and not metadata.get("musicbrainzartistid")
+        ):
+            logging.debug("No artist or MBID; skipping")
             return None
 
         apikey = self.config.cparser.value("theaudiodb/apikey")

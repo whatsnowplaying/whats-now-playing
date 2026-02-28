@@ -79,8 +79,10 @@ class Plugin(ArtistExtrasPlugin):
         if not apikey or not self.config.cparser.value("fanarttv/enabled", type=bool):
             return False
 
-        if not metadata or not metadata.get("artist"):
-            logging.debug("skipping: no artist")
+        if not metadata or (
+            not metadata.get("artist") and not metadata.get("musicbrainzartistid")
+        ):
+            logging.debug("skipping: no artist or MBID")
             return False
 
         if not imagecache:
