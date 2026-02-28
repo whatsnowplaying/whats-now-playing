@@ -483,12 +483,6 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
         await self.setup_watcher("virtualdj/history")
 
-    def get_source_agent_data(self) -> dict:
-        """Return VirtualDJ source agent data.
-
-        TODO: detect VirtualDJ version from database.xml root element attributes
-        """
-        return super().get_source_agent_data()
 
     async def getplayingtrack(self):
         """wrapper to call getplayingtrack"""
