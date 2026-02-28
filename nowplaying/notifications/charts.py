@@ -202,11 +202,12 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
     @staticmethod
     def _build_source_agent(charts_data: TrackMetadata) -> TrackMetadata:
         """Replace flat source_agent_name/version fields with nested source_agent structure"""
-        name = charts_data.pop("source_agent_name", None)
-        version = charts_data.pop("source_agent_version", None)
+        result = charts_data.copy()
+        name = result.pop("source_agent_name", None)
+        version = result.pop("source_agent_version", None)
         if name or version:
-            charts_data["source_agent"] = {"name": name, "version": version}
-        return charts_data
+            result["source_agent"] = {"name": name, "version": version}
+        return result
 
     async def start(self) -> None:
         """Initialize the charts output notification plugin"""
