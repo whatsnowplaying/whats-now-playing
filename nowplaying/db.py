@@ -66,6 +66,8 @@ METADATALIST = [
     "imagecachealbum",
     "requestdisplayname",
     "requester",
+    "source_agent_name",
+    "source_agent_version",
     "title",
     "track",
     "track_total",

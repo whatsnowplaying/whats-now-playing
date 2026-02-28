@@ -372,6 +372,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
 
         try:
             nextmeta = await self.input.getplayingtrack() or {}
+            for key, value in self.input.get_source_agent_data().items():
+                if key not in nextmeta:
+                    nextmeta[key] = value
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("Failed during getplayingtrack() (%s)", err)
             await asyncio.sleep(1)

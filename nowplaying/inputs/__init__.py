@@ -59,6 +59,18 @@ class InputPlugin(WNPBasePlugin):
 
     #### Data feed methods
 
+    def get_source_agent_data(self) -> dict:
+        """Return source agent identification data for this input plugin.
+
+        Returns a stable machine-readable name derived from the plugin's module,
+        e.g. 'virtualdj', 'traktor', 'serato'. Override in subclasses to also
+        provide source_agent_version when the DJ software version can be detected.
+        """
+        module = type(self).__module__
+        parts = module.split(".")
+        name = parts[-2] if parts[-1] == "plugin" else parts[-1]
+        return {"source_agent_name": name}
+
     async def getplayingtrack(self) -> TrackMetadata | None:
         """Get the currently playing track"""
         raise NotImplementedError

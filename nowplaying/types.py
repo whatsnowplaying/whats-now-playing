@@ -85,6 +85,10 @@ class TrackMetadata(TypedDict, total=False):
     requestdisplayname: str
     requesterimageraw: bytes
 
+    # Source agent metadata (identifies the software that submitted this track)
+    source_agent_name: str
+    source_agent_version: str
+
     # Processing metadata
     previoustrack: list[dict[str, str]]
     dbid: int

@@ -122,6 +122,7 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
 
         # Prepare metadata for charts submission
         charts_data = self._strip_blobs_metadata(metadata)
+        charts_data = self._build_source_agent(charts_data)
         if self.key:
             charts_data["secret"] = self.key
 
@@ -197,6 +198,16 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
             charts_data.pop(key, None)
 
         return charts_data
+
+    @staticmethod
+    def _build_source_agent(charts_data: TrackMetadata) -> TrackMetadata:
+        """Replace flat source_agent_name/version fields with nested source_agent structure"""
+        result = charts_data.copy()
+        name = result.pop("source_agent_name", None)
+        version = result.pop("source_agent_version", None)
+        if name or version:
+            result["source_agent"] = {"name": name, "version": version}
+        return result
 
     async def start(self) -> None:
         """Initialize the charts output notification plugin"""

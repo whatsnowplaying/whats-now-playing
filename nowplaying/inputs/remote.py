@@ -50,6 +50,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         """remote install"""
         return False
 
+    def get_source_agent_data(self) -> dict:
+        """Remote input preserves source_agent data set by the sender."""
+        return {}
+
     def _reset_meta(self):
         """reset the metadata"""
         self.metadata = {"artist": None, "title": None, "filename": None}
