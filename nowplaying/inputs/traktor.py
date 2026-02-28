@@ -304,6 +304,13 @@ class Plugin(IcecastPlugin):
                 metadata[key] = [row[key]]
         return metadata
 
+    def get_source_agent_data(self) -> dict:
+        """Return Traktor source agent data.
+
+        TODO: detect Traktor version from collection.nml root element attributes
+        """
+        return {"source_agent_name": self.displayname}
+
     #### Data feed methods
 
     async def getplayingtrack(self):

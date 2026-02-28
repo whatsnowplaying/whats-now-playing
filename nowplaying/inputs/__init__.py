@@ -59,6 +59,14 @@ class InputPlugin(WNPBasePlugin):
 
     #### Data feed methods
 
+    def get_source_agent_data(self) -> dict:
+        """Return source agent identification data for this input plugin.
+
+        Override in subclasses to also provide source_agent_version when
+        the DJ software version can be detected.
+        """
+        return {"source_agent_name": self.displayname}
+
     async def getplayingtrack(self) -> TrackMetadata | None:
         """Get the currently playing track"""
         raise NotImplementedError

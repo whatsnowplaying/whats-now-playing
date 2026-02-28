@@ -60,6 +60,106 @@ async def test_charts_plugin_load_queue_with_lock(bootstrap):
         assert plugin.queue[0]["artist"] == "Test Artist"
 
 
+@pytest.mark.parametrize(
+    "input_data,expected_source_agent,expect_flat_removed",
+    [
+        (
+            {
+                "artist": "Test",
+                "title": "Track",
+                "source_agent_name": "WNPListener",
+                "source_agent_version": "1.2.3",
+            },
+            {"name": "WNPListener", "version": "1.2.3"},
+            True,
+        ),
+        (
+            {"artist": "Test", "title": "Track", "source_agent_name": "WNPListener"},
+            {"name": "WNPListener", "version": None},
+            True,
+        ),
+        (
+            {"artist": "Test", "title": "Track", "source_agent_version": "1.2.3"},
+            {"name": None, "version": "1.2.3"},
+            True,
+        ),
+        (
+            {"artist": "Test", "title": "Track"},
+            None,
+            False,
+        ),
+    ],
+)
+def test_build_source_agent(input_data, expected_source_agent, expect_flat_removed):
+    """Test that flat source_agent fields are replaced with nested structure"""
+    result = nowplaying.notifications.charts.Plugin._build_source_agent(input_data)  # pylint: disable=protected-access
+
+    if expected_source_agent is None:
+        assert "source_agent" not in result
+    else:
+        assert result["source_agent"] == expected_source_agent
+
+    if expect_flat_removed:
+        assert "source_agent_name" not in result
+        assert "source_agent_version" not in result
+
+
+def test_build_source_agent_preserves_other_fields():
+    """Test that _build_source_agent does not disturb unrelated fields"""
+    input_data = {
+        "artist": "Aphex Twin",
+        "title": "Windowlicker",
+        "album": "Windowlicker EP",
+        "source_agent_name": "WNPListener",
+        "source_agent_version": "2.0.0",
+    }
+    result = nowplaying.notifications.charts.Plugin._build_source_agent(input_data)  # pylint: disable=protected-access
+    assert result["artist"] == "Aphex Twin"
+    assert result["title"] == "Windowlicker"
+    assert result["album"] == "Windowlicker EP"
+
+
+def test_strip_blobs_passes_source_agent_fields():
+    """Test that _strip_blobs_metadata does not remove source_agent fields"""
+    input_data = {
+        "artist": "Test",
+        "title": "Track",
+        "source_agent_name": "WNPListener",
+        "source_agent_version": "1.0.0",
+        "coverimageraw": b"binarydata",
+        "hostname": "myhost",
+    }
+    result = nowplaying.notifications.charts.Plugin._strip_blobs_metadata(input_data)  # pylint: disable=protected-access
+    assert result["source_agent_name"] == "WNPListener"
+    assert result["source_agent_version"] == "1.0.0"
+    assert "coverimageraw" not in result
+    assert "hostname" not in result
+
+
+def test_strip_then_build_source_agent():
+    """Test the full pipeline: strip blobs then build source_agent structure"""
+    input_data = {
+        "artist": "Burial",
+        "title": "Archangel",
+        "source_agent_name": "WNPListener",
+        "source_agent_version": "3.1.0",
+        "coverimageraw": b"binarydata",
+        "hostname": "myhost",
+        "filename": "/local/path/track.mp3",
+    }
+    stripped = nowplaying.notifications.charts.Plugin._strip_blobs_metadata(input_data)  # pylint: disable=protected-access
+    result = nowplaying.notifications.charts.Plugin._build_source_agent(stripped)  # pylint: disable=protected-access
+
+    assert result["source_agent"] == {"name": "WNPListener", "version": "3.1.0"}
+    assert "source_agent_name" not in result
+    assert "source_agent_version" not in result
+    assert "coverimageraw" not in result
+    assert "hostname" not in result
+    assert "filename" not in result
+    assert result["artist"] == "Burial"
+    assert result["title"] == "Archangel"
+
+
 @pytest.mark.asyncio
 async def test_charts_plugin_disabled(bootstrap):
     """Test that charts plugin can be disabled"""

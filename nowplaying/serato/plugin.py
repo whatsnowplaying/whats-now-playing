@@ -228,6 +228,13 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
             "Remote mode scrapes Serato Live Playlists from serato.com."
         )
 
+    def get_source_agent_data(self) -> dict:
+        """Return Serato DJ source agent data.
+
+        TODO: detect Serato version from master.sqlite metadata tables
+        """
+        return {"source_agent_name": self.displayname}
+
     async def getplayingtrack(self) -> TrackMetadata | None:
         """Get current track information from local or remote mode"""
         if self.mode == "local":
