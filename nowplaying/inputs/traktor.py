@@ -309,7 +309,7 @@ class Plugin(IcecastPlugin):
 
         TODO: detect Traktor version from collection.nml root element attributes
         """
-        return {"source_agent_name": self.displayname}
+        return super().get_source_agent_data()
 
     #### Data feed methods
 

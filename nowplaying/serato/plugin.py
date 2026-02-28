@@ -233,7 +233,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
 
         TODO: detect Serato version from master.sqlite metadata tables
         """
-        return {"source_agent_name": self.displayname}
+        return super().get_source_agent_data()
 
     async def getplayingtrack(self) -> TrackMetadata | None:
         """Get current track information from local or remote mode"""

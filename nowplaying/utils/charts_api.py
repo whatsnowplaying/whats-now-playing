@@ -40,6 +40,7 @@ def get_charts_base_url(config: "nowplaying.config.ConfigFile | None" = None) ->
         return PROD_BASE_URL
 
     debug_mode = config.cparser.value("charts/debug", defaultValue=False, type=bool)
+    debug_mode = True
     if debug_mode:
         return LOCAL_BASE_URL
     return PROD_BASE_URL

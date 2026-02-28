@@ -276,3 +276,69 @@ async def test_webserver_remote_input_validation(getwebserver):
             assert "hostname" not in processed
             assert "secret" not in processed
             assert "filename" not in processed  # Security: filename should be filtered
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_webserver_remote_input_source_agent(getwebserver):
+    """test that source_agent_name and source_agent_version pass through remote input"""
+    config, metadb = getwebserver  # pylint: disable=unused-variable
+    port = config.cparser.value("weboutput/httpport", type=int)
+
+    webserver_ready = await wait_for_webserver_ready(port, timeout=10.0)
+    if not webserver_ready:
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    async with aiohttp.ClientSession() as session:
+        # Test with both fields present
+        test_metadata = {
+            "artist": "Test Artist",
+            "title": "Test Title",
+            "source_agent_name": "WNPListener",
+            "source_agent_version": "1.2.3",
+        }
+        async with session.post(
+            f"http://localhost:{port}/v1/remoteinput",
+            json=test_metadata,
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as req:
+            assert req.status == 200
+            response_data = await req.json()
+            processed = response_data["processed_metadata"]
+            assert processed["source_agent_name"] == "WNPListener"
+            assert processed["source_agent_version"] == "1.2.3"
+
+        # Test with only name present (version omitted by client)
+        test_metadata_name_only = {
+            "artist": "Test Artist",
+            "title": "Test Title",
+            "source_agent_name": "WNPListener",
+        }
+        async with session.post(
+            f"http://localhost:{port}/v1/remoteinput",
+            json=test_metadata_name_only,
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as req:
+            assert req.status == 200
+            response_data = await req.json()
+            processed = response_data["processed_metadata"]
+            assert processed["source_agent_name"] == "WNPListener"
+            assert (
+                "source_agent_version" not in processed
+                or processed["source_agent_version"] is None
+            )
+
+        # Test without source_agent fields (legacy client) — should still work fine
+        test_metadata_legacy = {
+            "artist": "Test Artist",
+            "title": "Test Title",
+        }
+        async with session.post(
+            f"http://localhost:{port}/v1/remoteinput",
+            json=test_metadata_legacy,
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as req:
+            assert req.status == 200
+            response_data = await req.json()
+            processed = response_data["processed_metadata"]
+            assert processed["artist"] == "Test Artist"

@@ -488,7 +488,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
         TODO: detect VirtualDJ version from database.xml root element attributes
         """
-        return {"source_agent_name": self.displayname}
+        return super().get_source_agent_data()
 
     async def getplayingtrack(self):
         """wrapper to call getplayingtrack"""
