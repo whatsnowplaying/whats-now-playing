@@ -53,6 +53,13 @@ class DenonPlugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         # Cannot auto-detect network devices, user must configure manually
         return False
 
+    def get_source_agent_data(self) -> dict:
+        """Return source agent data including device software version from StagelinQ discovery."""
+        data = super().get_source_agent_data()
+        if self.current_device and self.current_device.software_version:
+            data["source_agent_version"] = self.current_device.software_version
+        return data
+
     def defaults(self, qsettings: "QSettings | None"):
         """Set default configuration values"""
         qsettings.setValue("denon/discovery_timeout", 5.0)

@@ -483,7 +483,6 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
         await self.setup_watcher("virtualdj/history")
 
-
     async def getplayingtrack(self):
         """wrapper to call getplayingtrack"""
         return self.metadata
