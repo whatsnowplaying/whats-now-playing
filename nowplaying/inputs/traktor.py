@@ -304,7 +304,6 @@ class Plugin(IcecastPlugin):
                 metadata[key] = [row[key]]
         return metadata
 
-
     #### Data feed methods
 
     async def getplayingtrack(self):
