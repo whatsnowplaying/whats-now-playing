@@ -556,7 +556,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get("/twitchchatredirect", self.twitchchatredirect_handler),
                 web.get("/request.htm", self.static_handler.requesterlaunch_htm_handler),
                 web.get("/internals", self.internals),
-                web.get("/status", self.status),
+                web.get("/v1/status", self.status),
                 web.get("/ws", self.websocket_handler),
                 web.get("/wsstream", self.websocket_streamer),
                 web.get("/wsartistfanartstream", self.websocket_artistfanart_streamer),
