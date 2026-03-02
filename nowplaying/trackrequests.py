@@ -113,7 +113,7 @@ WEIRDAL_RE = re.compile(r'"weird al"', re.IGNORECASE)
 ARTIST_TITLE_RE = re.compile(r'^\s*(.*?)\s+[-]+\s+"?(.*?)"?\s*(for @.*)*$')
 TITLE_ARTIST_RE = re.compile(r'^\s*"(.*?)"\s+[-by]+\s+(.*?)\s*(for @.*)*$')
 TITLE_RE = re.compile(r'^\s*"(.*?)"\s*(for @.*)*$')
-TWOFERTITLE_RE = re.compile(r'^\s*"?(.*?)"?\s*(for @.*)*$')
+TWOFERTITLE_RE = re.compile(r'^\s*"?(.*?)"?\s*(for @.*)?$')
 
 TENOR_BASE_URL = "https://tenor.googleapis.com/v2/search"
 KLIPY_BASE_URL = "https://api.klipy.com/v2/search"
