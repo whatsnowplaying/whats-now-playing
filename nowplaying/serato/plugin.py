@@ -18,10 +18,10 @@ from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 import nowplaying.inputs
 import nowplaying.utils.sqlite
 from nowplaying.types import TrackMetadata
+
 from .handler import Serato4Handler
 from .reader import Serato4RootReader
 from .remote import SeratoRemoteHandler
-
 
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings  # pylint: disable=no-name-in-module

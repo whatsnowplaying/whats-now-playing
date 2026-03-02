@@ -13,7 +13,7 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
 
 # Import unified checksum function and exclusion list
-from nowplaying.utils.checksum import checksum, EXCLUDED_FILES
+from nowplaying.utils.checksum import EXCLUDED_FILES, checksum
 
 
 class UpgradeTemplates:

@@ -6,8 +6,8 @@ import sqlite3
 
 from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QFileSystemWatcher,
-    QThread,
     Qt,
+    QThread,
     Signal,
 )
 from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module

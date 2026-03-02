@@ -457,6 +457,15 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         return web.json_response(data)
 
     @staticmethod
+    async def status(request: web.Request):
+        """health check endpoint"""
+        data = {
+            "status": "ok",
+            "version": request.app[CONFIG_KEY].version,
+        }
+        return web.json_response(data)
+
+    @staticmethod
     async def _handle_oauth_redirect(request: web.Request, oauth_config: dict) -> web.Response:
         """Generic OAuth2 redirect handler - delegates to base OAuth2 class."""
         # Pass config and jinja2 environment from app context using correct keys
@@ -547,6 +556,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 web.get("/twitchchatredirect", self.twitchchatredirect_handler),
                 web.get("/request.htm", self.static_handler.requesterlaunch_htm_handler),
                 web.get("/internals", self.internals),
+                web.get("/status", self.status),
                 web.get("/ws", self.websocket_handler),
                 web.get("/wsstream", self.websocket_streamer),
                 web.get("/wsartistfanartstream", self.websocket_artistfanart_streamer),
