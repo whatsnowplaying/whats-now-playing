@@ -70,7 +70,7 @@ jobs:
           ls -al .coverage*
           coverage xml
       - name: artifact mac test
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: macos-coverage
@@ -141,7 +141,7 @@ jobs:
           pytest --durations=10 -s tests
           coverage xml
       - name: artifact windows test
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: win-coverage
@@ -242,7 +242,7 @@ jobs:
           pytest --durations=10 -s
           coverage xml
       - name: artifact linux test
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: linux-coverage-${{ matrix.python }}
@@ -289,7 +289,7 @@ jobs:
           python3 -m pip install --upgrade pip
           pip install -e ".[test]"
       - name: download coverage files
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
       - name: display artifacts
@@ -302,7 +302,7 @@ jobs:
           coverage html
           coverage xml
       - name: artifact full tests
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: full-coverage
