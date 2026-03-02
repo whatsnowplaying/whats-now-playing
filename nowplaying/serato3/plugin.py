@@ -19,7 +19,6 @@ from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import QFileDialog  # pylint: disable=no-name-in-module
 
 import nowplaying.serato.plugin
-
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.inputs import InputPlugin
 

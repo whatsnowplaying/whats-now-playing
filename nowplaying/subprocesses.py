@@ -9,7 +9,10 @@ import socket
 import typing as t
 
 from PySide6.QtCore import Qt  # pylint: disable=import-error,no-name-in-module
-from PySide6.QtWidgets import QApplication, QMessageBox  # pylint: disable=import-error,no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=import-error,no-name-in-module
+    QApplication,
+    QMessageBox,
+)
 
 import nowplaying
 import nowplaying.config
