@@ -63,6 +63,7 @@ USERREQUEST_TEXT = [
     "type",
     "playlist",
     "username",
+    "requestedfor",
     "filename",
     "user_input",
     "normalizedartist",
@@ -77,6 +78,7 @@ REQUEST_WINDOW_FIELDS = [
     "type",
     "playlist",
     "username",
+    "requestedfor",
     "filename",
     "timestamp",
     "reqid",
@@ -110,10 +112,10 @@ artist
 """
 
 WEIRDAL_RE = re.compile(r'"weird al"', re.IGNORECASE)
-ARTIST_TITLE_RE = re.compile(r'^\s*(.*?)\s+[-]+\s+"?(.*?)"?\s*(for @.*)*$')
-TITLE_ARTIST_RE = re.compile(r'^\s*"(.*?)"\s+[-by]+\s+(.*?)\s*(for @.*)*$')
-TITLE_RE = re.compile(r'^\s*"(.*?)"\s*(for @.*)*$')
-TWOFERTITLE_RE = re.compile(r'^\s*"?(.*?)"?\s*(for @.*)?$')
+ARTIST_TITLE_RE = re.compile(r'^\s*(.*?)\s+[-]+\s+"?(.*?)"?\s*(?:for @(\S+))?$')
+TITLE_ARTIST_RE = re.compile(r'^\s*"(.*?)"\s+[-by]+\s+(.*?)\s*(?:for @(\S+))?$')
+TITLE_RE = re.compile(r'^\s*"(.*?)"\s*(?:for @(\S+))?$')
+TWOFERTITLE_RE = re.compile(r'^\s*"?(.*?)"?\s*(?:for @(\S+))?$')
 
 TENOR_BASE_URL = "https://tenor.googleapis.com/v2/search"
 KLIPY_BASE_URL = "https://api.klipy.com/v2/search"
@@ -497,6 +499,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                         "requester": row["username"],
                         "requesterimageraw": row["userimage"],
                         "requestdisplayname": row["displayname"],
+                        "requestedfor": row["requestedfor"],
                     }
             return result, row_to_delete, row_to_add_to_dupelist
 
@@ -611,6 +614,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 "requester": best_match["username"],
                 "requesterimageraw": best_match["userimage"],
                 "requestdisplayname": best_match["displayname"],
+                "requestedfor": best_match["requestedfor"],
             }
 
         logging.debug("no fuzzy match found for artist >%s< / title >%s<", artist, title)
@@ -857,6 +861,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         logging.debug("%s generic requested %s", user, user_input)
         artist = None
         title = None
+        requestedfor = None
         weirdal = False
 
         if user_input.count("-") == 1:
@@ -866,11 +871,14 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         if user_input[0] != '"' and (atmatch := ARTIST_TITLE_RE.search(user_input)):
             artist = atmatch.group(1).strip()
             title = atmatch.group(2).strip()
+            requestedfor = atmatch.group(3)
         elif tmatch := TITLE_ARTIST_RE.search(user_input):
             title = tmatch.group(1).strip()
             artist = tmatch.group(2).strip()
+            requestedfor = tmatch.group(3)
         elif tmatch := TITLE_RE.search(user_input):
             title = tmatch.group(1).strip()
+            requestedfor = tmatch.group(2)
         else:
             artist = user_input.strip()
 
@@ -880,6 +888,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             "username": user,
             "artist": artist,
             "title": title,
+            "requestedfor": requestedfor,
             "type": "Generic",
             "displayname": setting.get("displayname"),
             "user_input": user_input,
@@ -891,6 +900,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             "requester": user,
             "requestartist": artist,
             "requesttitle": title,
+            "requestedfor": requestedfor,
             "requestdisplayname": setting.get("displayname"),
         }
         if self.testmode:
@@ -1067,9 +1077,11 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         artist = metadata.get("artist")
         logging.debug("%s twofer request (%s/%s)", user, artist, user_input)
 
+        requestedfor = None
         if user_input:
             if tmatch := TWOFERTITLE_RE.search(user_input):
                 title = tmatch.group(1)
+                requestedfor = tmatch.group(2)
             else:
                 title = user_input
         else:
@@ -1079,6 +1091,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             "username": user,
             "artist": artist,
             "title": title,
+            "requestedfor": requestedfor,
             "type": "Twofer",
             "displayname": setting.get("displayname"),
             "user_input": user_input,
@@ -1090,6 +1103,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             "requester": user,
             "requestartist": artist,
             "requesttitle": title,
+            "requestedfor": requestedfor,
             "requestdisplayname": setting.get("displayname"),
         }
         if self.testmode:
@@ -1114,7 +1128,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         if items := self.widgets.request_table.selectedItems():
             for item in items:
                 row = item.row()
-                reqidlist.append(self.widgets.request_table.item(row, 7).text())
+                reqidlist.append(self.widgets.request_table.item(row, 8).text())
 
         for reqid in reqidlist:
             try:
@@ -1128,7 +1142,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         if items := self.widgets.request_table.selectedItems():
             for item in items:
                 row = item.row()
-                reqidlist.append(self.widgets.request_table.item(row, 7).text())
+                reqidlist.append(self.widgets.request_table.item(row, 8).text())
 
         for reqid in reqidlist:
             try:
