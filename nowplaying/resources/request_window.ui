@@ -79,6 +79,14 @@
       </column>
       <column>
        <property name="text">
+        <string>requestedfor</string>
+       </property>
+       <property name="textAlignment">
+        <set>AlignLeading|AlignVCenter</set>
+       </property>
+      </column>
+      <column>
+       <property name="text">
         <string>filename</string>
        </property>
        <property name="textAlignment">
@@ -88,14 +96,6 @@
       <column>
        <property name="text">
         <string>timestamp</string>
-       </property>
-       <property name="textAlignment">
-        <set>AlignLeading|AlignVCenter</set>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>reqid</string>
        </property>
        <property name="textAlignment">
         <set>AlignLeading|AlignVCenter</set>

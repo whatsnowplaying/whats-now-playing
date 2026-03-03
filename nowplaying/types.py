@@ -83,6 +83,7 @@ class TrackMetadata(TypedDict, total=False):
     # Request system
     requester: str
     requestdisplayname: str
+    requestedfor: str | None
     requesterimageraw: bytes
 
     # Source agent metadata (identifies the software that submitted this track)
@@ -129,6 +130,7 @@ class UserTrackRequest(BaseTrackRequest, total=False):
     displayname: str | None
     playlist: str | None
     username: str
+    requestedfor: str | None
     filename: str | None
     user_input: str
     normalizedartist: str
@@ -156,6 +158,7 @@ class TrackRequestResult(TypedDict, total=False):
 
     requester: str
     requestdisplayname: str | None
+    requestedfor: str | None
     requesterimageraw: bytes | None
     requestartist: str | None
     requesttitle: str | None
