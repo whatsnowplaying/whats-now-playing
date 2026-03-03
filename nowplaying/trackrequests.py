@@ -112,10 +112,14 @@ artist
 """
 
 WEIRDAL_RE = re.compile(r'"weird al"', re.IGNORECASE)
-ARTIST_TITLE_RE = re.compile(r'^\s*(.*?)\s+[-]+\s+"?(.*?)"?\s*(?:for @(\S+))?$')
-TITLE_ARTIST_RE = re.compile(r'^\s*"(.*?)"\s+[-by]+\s+(.*?)\s*(?:for @(\S+))?$')
-TITLE_RE = re.compile(r'^\s*"(.*?)"\s*(?:for @(\S+))?$')
-TWOFERTITLE_RE = re.compile(r'^\s*"?(.*?)"?\s*(?:for @(\S+))?$')
+ARTIST_TITLE_RE = re.compile(
+    r'^\s*(?P<artist>.*?)\s+[-]+\s+"?(?P<title>.*?)"?\s*(?:for @(?P<requestedfor>\S+))?$'
+)
+TITLE_ARTIST_RE = re.compile(
+    r'^\s*"(?P<title>.*?)"\s+[-by]+\s+(?P<artist>.*?)\s*(?:for @(?P<requestedfor>\S+))?$'
+)
+TITLE_RE = re.compile(r'^\s*"(?P<title>.*?)"\s*(?:for @(?P<requestedfor>\S+))?$')
+TWOFERTITLE_RE = re.compile(r'^\s*"?(?P<title>.*?)"?\s*(?:for @(?P<requestedfor>\S+))?$')
 
 TENOR_BASE_URL = "https://tenor.googleapis.com/v2/search"
 KLIPY_BASE_URL = "https://api.klipy.com/v2/search"
@@ -152,8 +156,26 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         self.watcher = None
         if not self.databasefile.exists() or upgrade:
             self.setupdb()
+        else:
+            self._migrate_db()
         if not RAPIDFUZZ_AVAILABLE:
             logging.warning("rapidfuzz not available - fuzzy matching disabled")
+
+    def _migrate_db(self):
+        """add any missing columns to an existing database"""
+        with nowplaying.utils.sqlite.sqlite_connection(
+            self.databasefile, timeout=30
+        ) as connection:
+            cursor = connection.cursor()
+            cursor.execute("PRAGMA table_info(userrequest)")
+            existing_columns = {row[1] for row in cursor.fetchall()}
+            for column in USERREQUEST_TEXT:
+                if column not in existing_columns:
+                    logging.info("Migrating userrequest: adding column %s", column)
+                    cursor.execute(
+                        f"ALTER TABLE userrequest ADD COLUMN {column} TEXT COLLATE NOCASE"
+                    )
+            connection.commit()
 
     def setupdb(self):
         """setup the database file for keeping track of requests"""
@@ -793,12 +815,25 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
 
                 # need to do this outside of the aiosqlite call to avoid DB locks
                 for row_data in rows_to_process:
-                    await self.user_roulette_request(
+                    result = await self.user_roulette_request(
                         {"playlist": row_data["playlist"]},
                         row_data["username"],
                         "",
                         row_data["reqid"],
                     )
+                    if result is None:
+                        logging.warning(
+                            "Respin failed for reqid %s, clearing respin marker",
+                            row_data["reqid"],
+                        )
+                        with nowplaying.utils.sqlite.sqlite_connection(
+                            self.databasefile, timeout=30
+                        ) as connection:
+                            connection.cursor().execute(
+                                "UPDATE userrequest SET filename=NULL WHERE reqid=?",
+                                (row_data["reqid"],),
+                            )
+                            connection.commit()
             except Exception as error:  # pylint: disable=broad-except
                 logging.exception(error)
 
@@ -869,16 +904,16 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         if user_input := WEIRDAL_RE.sub("Weird Al", user_input):
             weirdal = True
         if user_input[0] != '"' and (atmatch := ARTIST_TITLE_RE.search(user_input)):
-            artist = atmatch.group(1).strip()
-            title = atmatch.group(2).strip()
-            requestedfor = atmatch.group(3)
+            artist = atmatch.group("artist").strip()
+            title = atmatch.group("title").strip()
+            requestedfor = atmatch.group("requestedfor")
         elif tmatch := TITLE_ARTIST_RE.search(user_input):
-            title = tmatch.group(1).strip()
-            artist = tmatch.group(2).strip()
-            requestedfor = tmatch.group(3)
+            title = tmatch.group("title").strip()
+            artist = tmatch.group("artist").strip()
+            requestedfor = tmatch.group("requestedfor")
         elif tmatch := TITLE_RE.search(user_input):
-            title = tmatch.group(1).strip()
-            requestedfor = tmatch.group(2)
+            title = tmatch.group("title").strip()
+            requestedfor = tmatch.group("requestedfor")
         else:
             artist = user_input.strip()
 
@@ -1080,8 +1115,8 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         requestedfor = None
         if user_input:
             if tmatch := TWOFERTITLE_RE.search(user_input):
-                title = tmatch.group(1)
-                requestedfor = tmatch.group(2)
+                title = tmatch.group("title")
+                requestedfor = tmatch.group("requestedfor")
             else:
                 title = user_input
         else:
@@ -1124,16 +1159,16 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
 
     def on_respin_button(self):
         """request respin button clicked action"""
-        reqidlist = []
+        seen: set[int] = set()
         if items := self.widgets.request_table.selectedItems():
             for item in items:
                 reqid = self.widgets.request_table.item(item.row(), 0).data(
                     Qt.ItemDataRole.UserRole
                 )
-                if reqid is not None and reqid not in reqidlist:
-                    reqidlist.append(reqid)
+                if reqid is not None:
+                    seen.add(reqid)
 
-        for reqid in reqidlist:
+        for reqid in seen:
             try:
                 self.respin_a_reqid(reqid)
             except Exception as error:  # pylint: disable=broad-except
@@ -1141,16 +1176,16 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
 
     def on_del_button(self):
         """request del button clicked action"""
-        reqidlist = []
+        seen: set[int] = set()
         if items := self.widgets.request_table.selectedItems():
             for item in items:
                 reqid = self.widgets.request_table.item(item.row(), 0).data(
                     Qt.ItemDataRole.UserRole
                 )
-                if reqid is not None and reqid not in reqidlist:
-                    reqidlist.append(reqid)
+                if reqid is not None:
+                    seen.add(reqid)
 
-        for reqid in reqidlist:
+        for reqid in seen:
             try:
                 self.erase_id(reqid)
             except Exception as error:  # pylint: disable=broad-except
@@ -1204,7 +1239,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
 
         first_item = None
         for column, cbtype in enumerate(REQUEST_WINDOW_FIELDS):
-            if kwargs.get(cbtype):
+            if cbtype in kwargs:
                 item = QTableWidgetItem(str(kwargs[cbtype]))
             else:
                 item = QTableWidgetItem("")
