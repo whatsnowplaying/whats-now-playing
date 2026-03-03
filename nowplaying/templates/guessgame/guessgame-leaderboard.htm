@@ -179,7 +179,8 @@
         // Configuration based on URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const leaderboardType = urlParams.get('type') || 'session'; // 'session' or 'all_time'
-        const port = urlParams.get('port') || '8899';
+        const port = urlParams.get('port') || window.location.port || '8899';
+        const host = window.location.hostname;
 
         // Configure UI based on leaderboard type
         const containerEl = document.getElementById('leaderboardContainer');
@@ -201,7 +202,7 @@
 
         function connect() {
             const sessionId = `${leaderboardType}_leaderboard_${Date.now()}`;
-            ws = new WebSocket(`ws://localhost:${port}/wsguessgamestream?session_id=${sessionId}`);
+            ws = new WebSocket(`ws://${host}:${port}/wsguessgamestream?session_id=${sessionId}`);
 
             ws.onopen = () => {
                 console.log('Connected to guess game WebSocket');
