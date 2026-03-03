@@ -101,14 +101,6 @@
         <set>AlignLeading|AlignVCenter</set>
        </property>
       </column>
-      <column>
-       <property name="text">
-        <string>reqid</string>
-       </property>
-       <property name="textAlignment">
-        <set>AlignLeading|AlignVCenter</set>
-       </property>
-      </column>
      </widget>
     </item>
     <item>

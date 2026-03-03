@@ -28,6 +28,7 @@ from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
     QFileSystemWatcher,
     QSettings,
     QStandardPaths,
+    Qt,
     Slot,
 )
 from PySide6.QtUiTools import QUiLoader  # pylint: disable=import-error, no-name-in-module
@@ -81,7 +82,6 @@ REQUEST_WINDOW_FIELDS = [
     "requestedfor",
     "filename",
     "timestamp",
-    "reqid",
 ]
 
 REQUEST_SETTING_MAPPING = {
@@ -1127,8 +1127,11 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         reqidlist = []
         if items := self.widgets.request_table.selectedItems():
             for item in items:
-                row = item.row()
-                reqidlist.append(self.widgets.request_table.item(row, 8).text())
+                reqid = self.widgets.request_table.item(item.row(), 0).data(
+                    Qt.ItemDataRole.UserRole
+                )
+                if reqid is not None and reqid not in reqidlist:
+                    reqidlist.append(reqid)
 
         for reqid in reqidlist:
             try:
@@ -1141,8 +1144,11 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         reqidlist = []
         if items := self.widgets.request_table.selectedItems():
             for item in items:
-                row = item.row()
-                reqidlist.append(self.widgets.request_table.item(row, 8).text())
+                reqid = self.widgets.request_table.item(item.row(), 0).data(
+                    Qt.ItemDataRole.UserRole
+                )
+                if reqid is not None and reqid not in reqidlist:
+                    reqidlist.append(reqid)
 
         for reqid in reqidlist:
             try:
@@ -1196,15 +1202,18 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         row = self.widgets.request_table.rowCount()
         self.widgets.request_table.insertRow(row)
 
+        first_item = None
         for column, cbtype in enumerate(REQUEST_WINDOW_FIELDS):
-            if cbtype == "displayname":
-                continue
             if kwargs.get(cbtype):
-                self.widgets.request_table.setItem(
-                    row, column, QTableWidgetItem(str(kwargs[cbtype]))
-                )
+                item = QTableWidgetItem(str(kwargs[cbtype]))
             else:
-                self.widgets.request_table.setItem(row, column, QTableWidgetItem(""))
+                item = QTableWidgetItem("")
+            self.widgets.request_table.setItem(row, column, item)
+            if first_item is None:
+                first_item = item
+
+        if first_item and kwargs.get("reqid") is not None:
+            first_item.setData(Qt.ItemDataRole.UserRole, kwargs["reqid"])
 
     def update_window(self):
         """redraw the request window"""

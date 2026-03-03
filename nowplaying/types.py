@@ -83,7 +83,7 @@ class TrackMetadata(TypedDict, total=False):
     # Request system
     requester: str
     requestdisplayname: str
-    requestedfor: str
+    requestedfor: str | None
     requesterimageraw: bytes
 
     # Source agent metadata (identifies the software that submitted this track)
