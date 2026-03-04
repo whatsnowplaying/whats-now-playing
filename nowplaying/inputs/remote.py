@@ -2,6 +2,7 @@
 """Beam input plugin"""
 
 import logging
+import os
 import pathlib
 from typing import TYPE_CHECKING
 
@@ -26,18 +27,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     ):
         super().__init__(config=config, qsettings=qsettings)
         self.displayname = "Remote"
-        # Set default path
-        default_path = (
-            pathlib.Path(QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0])
-            .joinpath("remotedb")
-            .joinpath("remote.db")
-        )
-
-        # Use configured path if available, otherwise use default
-        if self.config and self.config.cparser.value("remote/remotedb"):
-            self.remotedbfile = pathlib.Path(self.config.cparser.value("remote/remotedb"))
+        if os.environ.get("WNP_REMOTEDB_TEST_FILE"):
+            self.remotedbfile = pathlib.Path(os.environ["WNP_REMOTEDB_TEST_FILE"])
         else:
-            self.remotedbfile = default_path
+            self.remotedbfile = pathlib.Path(
+                QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
+            ).joinpath("remotedb", "remote.db")
 
         self.remotedb: nowplaying.db.MetadataDB | None = None
         self.mixmode = "newest"

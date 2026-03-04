@@ -10,12 +10,11 @@ import nowplaying.inputs.remote
 
 
 @pytest.fixture
-def remote_bootstrap(bootstrap):
+def remote_bootstrap(bootstrap, monkeypatch):
     """bootstrap test for remote plugin"""
     config = bootstrap
     remotedb_file = config.testdir.joinpath("remote.db")
-    config.cparser.setValue("remote/remotedb", str(remotedb_file))
-    config.cparser.sync()
+    monkeypatch.setenv("WNP_REMOTEDB_TEST_FILE", str(remotedb_file))
     yield config
 
 
@@ -290,20 +289,6 @@ async def test_remote_plugin_with_real_metadatadb(remote_bootstrap):  # pylint: 
     assert plugin.metadata["artist"] == "Test Artist"
     assert plugin.metadata["title"] == "Test Title"
     assert plugin.metadata["filename"] == "test.mp3"
-
-
-@pytest.mark.asyncio
-async def test_remote_plugin_config_missing_remotedb(bootstrap):
-    """test plugin when remotedb config is missing"""
-    config = bootstrap
-    # Don't set remote/remotedb configuration
-
-    plugin = nowplaying.inputs.remote.Plugin(config=config)
-
-    # Plugin now sets a default path via defaults() method
-    # So remotedbfile should contain a valid path, not be None/empty
-    assert plugin.remotedbfile is not None
-    assert "remote.db" in str(plugin.remotedbfile)
 
 
 @pytest.mark.asyncio

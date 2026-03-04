@@ -20,6 +20,10 @@ class Plugin(InputPlugin):
         self.available = False
         self.playlists = None
 
+    @classmethod
+    def get_path_keys(cls) -> frozenset[str]:
+        return frozenset({"jsoninput/filename"})
+
     #### Data feed methods
 
     async def getplayingtrack(self):

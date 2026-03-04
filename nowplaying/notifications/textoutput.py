@@ -35,6 +35,10 @@ class Plugin(NotificationPlugin):
         self.template_file: str | None = None
         self.txttemplatehandler: TemplateHandler | None = None
 
+    @classmethod
+    def get_path_keys(cls) -> frozenset[str]:
+        return frozenset({"textoutput/file", "textoutput/txttemplate"})
+
     async def notify_track_change(
         self, metadata: TrackMetadata, imagecache: "nowplaying.imagecache.ImageCache|None" = None
     ) -> None:

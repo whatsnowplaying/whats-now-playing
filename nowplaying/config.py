@@ -494,6 +494,19 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             logging.error("Filter error with '%s': %s", error.pattern, error.msg)
         return self.striprelist
 
+    def get_path_keys(self) -> frozenset[str]:
+        """Collect filesystem path keys from all loaded plugins plus base process keys."""
+        keys: set[str] = set(nowplaying.utils.config_json.PATH_KEYS)
+        for pluginmodules in self.plugins.values():
+            for plugin_module in pluginmodules.values():
+                plugin_class = getattr(plugin_module, "Plugin", None)
+                if plugin_class is not None:
+                    try:
+                        keys |= plugin_class.get_path_keys()
+                    except Exception:  # pylint: disable=broad-exception-caught
+                        pass
+        return frozenset(keys)
+
     def export_config(self, export_path: pathlib.Path) -> bool:
         """
         Export configuration to JSON file.
@@ -510,7 +523,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
 
         self.cparser.sync()
         return nowplaying.utils.config_json.export_config(
-            export_path=export_path, settings=self.cparser
+            export_path=export_path,
+            settings=self.cparser,
+            extra_path_keys=self.get_path_keys(),
         )
 
     def import_config(self, import_path: pathlib.Path) -> bool:
@@ -534,7 +549,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         )
         settings.clear()
         if settings := nowplaying.utils.config_json.import_config(
-            import_path=import_path, settings=settings
+            import_path=import_path,
+            settings=settings,
+            extra_path_keys=self.get_path_keys(),
         ):
             self.cparser = settings
             self.cparser.sync()

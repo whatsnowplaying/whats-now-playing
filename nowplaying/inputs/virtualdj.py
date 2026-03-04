@@ -439,6 +439,10 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
             connection.commit()
 
+    @classmethod
+    def get_path_keys(cls) -> frozenset[str]:
+        return frozenset({"virtualdj/history", "virtualdj/playlists"})
+
     def install(self) -> bool:
         """locate Virtual DJ"""
         # Check multiple possible VirtualDJ locations

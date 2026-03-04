@@ -78,6 +78,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self._reset_meta()
         self.tasks = set()
 
+    @classmethod
+    def get_path_keys(cls) -> frozenset[str]:
+        return frozenset({"djuced/directory"})
+
     def install(self) -> bool:
         """locate Virtual DJ"""
         djuceddir = self.config.userdocs.joinpath("DJUCED")

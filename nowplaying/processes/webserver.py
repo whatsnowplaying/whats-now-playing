@@ -626,7 +626,12 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         app[IC_KEY] = nowplaying.imagecache.ImageCache()
         app[WATCHER_KEY] = app[METADB_KEY].watcher()
         app[WATCHER_KEY].start()
-        remotedb: str = app[CONFIG_KEY].cparser.value("remote/remotedb", type=str)
+        if os.environ.get("WNP_REMOTEDB_TEST_FILE"):
+            remotedb: pathlib.Path | None = pathlib.Path(os.environ["WNP_REMOTEDB_TEST_FILE"])
+        else:
+            remotedb = pathlib.Path(
+                QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
+            ).joinpath("remotedb", "remote.db")
         app[REMOTEDB_KEY] = nowplaying.db.MetadataDB(databasefile=remotedb)
         app[METADATA_KEY] = nowplaying.metadata.MetadataProcessors(config=app[CONFIG_KEY])
         app["statedb"] = await aiosqlite.connect(self.databasefile)

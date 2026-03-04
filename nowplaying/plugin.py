@@ -36,6 +36,16 @@ class WNPBasePlugin:
 
     #### Settings UI methods
 
+    @classmethod
+    def get_path_keys(cls) -> frozenset[str]:
+        """Return the set of config keys whose values are filesystem paths.
+
+        Override in subclasses to declare plugin-specific path keys so that
+        export/import can apply HOME-token substitution and cross-OS path
+        validation automatically.
+        """
+        return frozenset()
+
     def defaults(self, qsettings: "QSettings") -> None:
         """(re-)set the default configuration values for this plugin"""
 
