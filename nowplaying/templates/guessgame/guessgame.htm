@@ -115,6 +115,7 @@
         <div class="status-message" id="statusMessage" style="display: none;"></div>
     </div>
 
+    <script src="guessgame-websocket.js"></script>
     <script>
         let ws;
         const containerEl = document.getElementById('gameContainer');
@@ -125,10 +126,12 @@
 
         function connect() {
             const urlParams = new URLSearchParams(window.location.search);
-            const port = urlParams.get('port') || '8899';
+            const portOverride = urlParams.get('port');
             const sessionId = 'browser_' + Date.now();
 
-            ws = new WebSocket(`ws://localhost:${port}/wsguessgamestream?session_id=${sessionId}`);
+            ws = new WebSocket(
+                buildWebSocketUrl(`/wsguessgamestream?session_id=${encodeURIComponent(sessionId)}`, portOverride)
+            );
 
             ws.onopen = () => {
                 console.log('Connected to guess game WebSocket');

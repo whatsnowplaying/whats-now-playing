@@ -10,28 +10,26 @@
     * Klipy is preferred when both API keys are configured
   * Add support for autodiscovery using Bonjour/Zeroconf for Remote Output and for
     some upcoming feature support
-  * Add a new Twitch chat-based guessing game for your audience
-    * Viewers guess the current track via configurable Twitch chat commands
-    * Leaderboards, scoring, and personal stats available via chat
-    * Real-time OBS/WebSocket overlay support to display game state on stream
-    * System tray toggle to enable or disable the game at runtime
-    * Game state and leaderboards can be published to the Charts server for
-      an online game board view (configurable opt-in in settings)
+  * Add a new /v1/status webserver endpoint
   * Twitch accounts can now be automatically linked to your Charts profile at startup
     * A warning is shown if the account is already linked to a different Charts profile
   * Smarter upgrade logic
     * Should do a better job of helping you get the correct zip file
+  * Requests now support reporting 'for @user'
 
 * Guess Game
-  * There have been several changes to Guess Game to make it less fragile
-  * Support for seeing the current game from the whatsnowplaying.com website
-  * Fixed the `!mypoints` command interfering with track request processing
+  * Add a new Twitch chat-based guessing game for your audience
+  * System tray toggle to enable or disable the game at runtime
+  * Viewers guess the current track via configurable Twitch chat commands
+  * Leaderboards, scoring, and personal stats available via chat
+  * Real-time OBS overlay support to display game state on stream
+  * Support for seeing the current game and leaderboards from the whatsnowplaying.com website
 
 * Denon
   * Fixed a crash on certain network environments during device discovery
 
-* djay Pro
-  * Fixed track filename resolution, including correct conversion of file:// URLs on Windows
+* Icecast
+  * docs had the old images
 
 * Serato
   * Add artist-based library query support for Serato 4
@@ -42,19 +40,21 @@
     is no longer needed
   * Changes to better detect when the latest track is playing
 
-* Bug Fixes
+  * Traktor
+    * partially corrupted XML library files no longer cause a complete import failure;
+      parsing continues with whatever data was successfully read
+
+  * VirtualDJ
+    * partially corrupted XML library files no longer cause a complete import failure;
+      parsing continues with whatever data was successfully read
+
+* General Bug Fixes
   * Found an issue where in some cases changed templates would always trigger an 'update'
     on program launch despite the `.new` file actually being correct.
-  * Traktor and VirtualDJ: partially corrupted XML library files no longer cause a complete
-    import failure — parsing continues with whatever data was successfully read, and a
-    warning is logged so you can investigate
   * Webserver template assets (including vendor libraries and guessing game files) now load correctly
   * Fixed an issue where Qt SVG support was sometimes unavailable on Windows
-  * Icecast docs had the old images
-
-* Security
-  * Fixed CVE-2025-69872: disabled insecure pickle-based deserialization in the image cache
-  * Applied workaround for NLTK CVE-2025-14009
+  * Respinning a request that doesn't have a playlist assigned no longer crashes parts of the system
+  * Minor graphics cleanup
 
 * Developer Stuff
   * Dependency updates
