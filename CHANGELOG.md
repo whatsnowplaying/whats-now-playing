@@ -23,7 +23,7 @@
   * Viewers guess the current track via configurable Twitch chat commands
   * Leaderboards, scoring, and personal stats available via chat
   * Real-time OBS overlay support to display game state on stream
-  * Support for seeing the current game  and leaderboards from the whatsnowplaying.com website
+  * Support for seeing the current game and leaderboards from the whatsnowplaying.com website
 
 * Denon
   * Fixed a crash on certain network environments during device discovery
