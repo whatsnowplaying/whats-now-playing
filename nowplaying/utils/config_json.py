@@ -28,6 +28,11 @@ IGNORE_KEYS = [
     "cache/",
     "db/",
     "artistextras/cachedbfile",
+    # Legacy keys no longer written by any current code; strip them from configs on export/import.
+    "icecast/traktor-collections",
+    "remote/remotedb",
+    "serato/seratodir",
+    "serato3/libpath",
 ]
 
 # Settings keys whose values are filesystem paths for non-plugin processes.
