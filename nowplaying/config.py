@@ -504,7 +504,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
                     try:
                         keys |= plugin_class.get_path_keys()
                     except Exception:  # pylint: disable=broad-exception-caught
-                        pass
+                        logging.exception(
+                            "Error collecting path keys from plugin %s.%s",
+                            getattr(plugin_module, "__name__", repr(plugin_module)),
+                            getattr(plugin_class, "__name__", repr(plugin_class)),
+                        )
         return frozenset(keys)
 
     def export_config(self, export_path: pathlib.Path) -> bool:

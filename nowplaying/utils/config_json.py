@@ -8,6 +8,7 @@ with proper filtering of runtime/cache data and cross-platform compatibility.
 
 import json
 import logging
+import os
 import pathlib
 import time
 
@@ -33,8 +34,9 @@ IGNORE_KEYS = [
 # Plugin-owned path keys are declared via WNPBasePlugin.get_path_keys() and
 # collected at export/import time via ConfigFile.get_path_keys().
 # On export, the user's home directory is replaced with HOME_TOKEN for portability.
-# On import, HOME_TOKEN is expanded to the current home directory and paths whose
-# parent directory does not exist on this system are silently skipped.
+# On import, HOME_TOKEN is expanded to the current home directory; paths whose
+# parent directory does not exist on this system are logged, reported in a
+# warnings file next to the import file, and skipped.
 PATH_KEYS: frozenset[str] = frozenset(
     {
         "discord/template",
@@ -111,14 +113,16 @@ def export_config(
                     # Convert everything else to string
                     value = str(value)
 
-                # Replace the user's home directory with a portable token in path keys
+                # Replace a leading home directory prefix with HOME_TOKEN in path keys.
+                # Only replaces at the start of the value to avoid corrupting values
+                # where the home path appears elsewhere (e.g. embedded in another dir).
                 if (
                     full_key in effective_path_keys
                     and isinstance(value, str)
                     and home
-                    and home in value
+                    and (value == home or value.startswith(home + os.sep))
                 ):
-                    value = value.replace(home, HOME_TOKEN)
+                    value = HOME_TOKEN + value[len(home) :]
 
                 config_data[full_key] = value
 
