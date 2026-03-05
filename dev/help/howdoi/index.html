@@ -2440,10 +2440,10 @@ file to another is an easy way to add commands:</p>
 <li>Copy the <code>Documents/WhatsNowPlaying/templates/twitchbot_track.txt</code>
    file to <code>twitchbot_song.txt</code></li>
 <li>Restart <strong>What's Now Playing</strong></li>
-<li>Go into Twitch Chat settings and set the permissions as required.</li>
+<li>Go into Streaming &amp; Chat → Twitch and set the permissions as required.</li>
 </ol>
 <h2 id="change-the-time-twitch-announcements-happen">Change the time Twitch announcements happen?<a class="headerlink" href="#change-the-time-twitch-announcements-happen" title="Permanent link">&para;</a></h2>
-<p>Under Settings -&gt; Twitch Chat there is an 'Announce Delay' field that
+<p>Under Streaming &amp; Chat → Twitch there is an 'Announce Delay' field that
 takes number of seconds to wait before announcing to chat. To things to
 keep in mind:</p>
 <ol>
@@ -2470,14 +2470,14 @@ Supported URLs that is listed on the <a href="../../output/webserver/">Webserver
 page.</p>
 <h2 id="stop-autoposting-the-track-info-in-twitch-chat">Stop autoposting the track info in Twitch chat?<a class="headerlink" href="#stop-autoposting-the-track-info-in-twitch-chat" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Under Settings -&gt; Twitch Chat, set the announce template to be empty.</li>
+<li>Under Streaming &amp; Chat → Twitch, set the announce template to be empty.</li>
 <li>Save</li>
 </ol>
 <h2 id="back-up-my-settings-or-transfer-them-to-a-new-machine">Back up my settings or transfer them to a new machine?<a class="headerlink" href="#back-up-my-settings-or-transfer-them-to-a-new-machine" title="Permanent link">&para;</a></h2>
 <ol>
-<li>On the source machine, open Settings → General</li>
+<li>On the source machine, open Core Settings → General</li>
 <li>Click <strong>Export Configuration</strong> and save the JSON file somewhere safe</li>
-<li>On the destination machine, open Settings → General</li>
+<li>On the destination machine, open Core Settings → General</li>
 <li>Click <strong>Import Configuration</strong> and select the JSON file</li>
 <li>Save and restart <strong>What's Now Playing</strong></li>
 </ol>
@@ -2493,7 +2493,7 @@ Store it securely and delete it when no longer needed.</p>
 <ol>
 <li>Make sure <a href="../../output/twitchbot/">TwitchBot</a> is configured and connected</li>
 <li>Make sure the <a href="../../output/webserver/">Webserver</a> is enabled</li>
-<li>Open Settings → Guess Game and configure to your liking, then Save</li>
+<li>Open Streaming &amp; Chat → Guessgame and configure to your liking, then Save</li>
 <li>Enable the game from the menu bar (macOS) or system tray (Windows) by
    clicking <strong>Guess Game</strong></li>
 <li>To show the game state in OBS, add a Browser source pointed at
@@ -2507,9 +2507,9 @@ templates, and customization options.</p>
 <h2 id="show-the-guess-game-online-at-whatsnowplayingcom">Show the Guess Game online at whatsnowplaying.com?<a class="headerlink" href="#show-the-guess-game-online-at-whatsnowplayingcom" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Sign up at <a href="https://whatsnowplaying.com">https://whatsnowplaying.com</a> and copy your API key</li>
-<li>Add the API key under Settings → Charts</li>
+<li>Add the API key under Output &amp; Display → Charts</li>
 <li>Make sure the Guess Game is enabled (see above)</li>
-<li>Under Settings → Guess Game → Advanced, ensure <strong>Send to Server</strong> is enabled</li>
+<li>Under Streaming &amp; Chat → Guessgame → Advanced, ensure <strong>Send to Server</strong> is enabled</li>
 <li>Your game board will be available at
    <code>https://whatsnowplaying.com/guessgame/(your-twitch-username)</code></li>
 </ol>
@@ -2517,7 +2517,7 @@ templates, and customization options.</p>
 <p>Artist extras (biographies, images, etc.) make network calls to external services
 on every track change, which can add several seconds of delay. To disable them:</p>
 <ol>
-<li>Open Settings → Artist Extras</li>
+<li>Open Artist Data → Artist Extras</li>
 <li>Uncheck every service you don't need (Discogs, FanartTV, TheAudioDB, Wikimedia)</li>
 <li>Save</li>
 </ol>
