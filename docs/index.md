@@ -28,14 +28,14 @@ Works with all major platforms. See the full [Input Sources](input/index.md) lis
 ## Stream Platforms
 
 * **Twitch** - Full chat bot with song requests, announcements, and the Guess Game
-* **Kick** - Song announcement and request support
+* **Kick** - Song announcement support
 * **OBS Studio** - Professional track displays and browser sources
 * **Discord** - Community server integration
 
 ## Audience Engagement
 
 * **[Guess Game](output/guessgame.md)** - Twitch chat hangman-style game where viewers guess the current track
-* **[Track Requests](requests.md)** - Let viewers request tracks directly from Twitch or Kick chat
+* **[Track Requests](requests.md)** - Let viewers request tracks directly from Twitch chat
 * **[Charts](output/charts.md)** - Share what you're playing with the whatsnowplaying.com community
 
 ## Enhanced Metadata

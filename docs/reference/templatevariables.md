@@ -80,7 +80,7 @@ data.
 | publisher | Publisher of the media |
 | requestdisplayname | Display name of the viewer who requested this track |
 | requestedfor | Viewer the track was requested for (e.g. from `!track song for @user`) |
-| requester | Twitch/Kick username of the viewer who requested this track |
+| requester | Twitch username of the viewer who requested this track |
 | source_agent_name | Name of the DJ software providing the track (e.g. `traktor`, `serato`) |
 | source_agent_version | Version of the DJ software (if available) |
 | timestamp() | Current date and time in YYYY-MM-DD HH:MM:SS format (function call) |
