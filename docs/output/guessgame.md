@@ -246,49 +246,91 @@ The Guess Game uses Jinja2 templates for chat responses and OBS display:
 **twitchbot_guess.txt**: Response when a viewer makes a guess
 
 ```jinja2
-@{{ cmduser }}: {% if guess_already_guessed %}Already guessed!
-{% elif guess_correct %}Correct! +{{ guess_points }} points.
-{% else %}Wrong guess. {{ guess_points }} points.
-{% endif %} Track: {{ masked_track }} | Artist: {{ masked_artist }} |
-Time: {{ time_remaining }}s{% if game_solved %} | SOLVED!{% endif %}
+{%- raw -%}
+{% if guess_error -%}
+{{ guess_error }}
+{%- elif guess_already_guessed -%}
+@{{ guess_user }} You already guessed "{{ guess_text }}"!
+{%- elif guess_already_solved -%}
+@{{ guess_user }} That part is already solved!
+{%- elif guess_solved and guess_solve_type == "both" -%}
+@{{ guess_user }} 🎉 GAME COMPLETE! +{{ guess_points }} points! The answer was: {{ guess_masked_track }} by {{ guess_masked_artist }}
+{%- elif guess_solve_type == "track" -%}
+@{{ guess_user }} 🎵 TRACK SOLVED! +{{ guess_points }} points! Now guess the artist: {{ guess_masked_artist }}
+{%- elif guess_solve_type == "artist" -%}
+@{{ guess_user }} 🎤 ARTIST SOLVED! +{{ guess_points }} points! Now guess the track: {{ guess_masked_track }}
+{%- elif guess_correct -%}
+@{{ guess_user }} ✓ Correct! +{{ guess_points }} points | Track: {{ guess_masked_track }} | Artist: {{ guess_masked_artist }}
+{%- else -%}
+@{{ guess_user }} ✗ Not quite! | Track: {{ guess_masked_track }} | Artist: {{ guess_masked_artist }}
+{%- endif -%}
+{%- endraw -%}
 ```
 
 **twitchbot_mypoints.txt**: Response when a viewer checks their stats
 
 ```jinja2
-@{{ cmduser }}: Session: {{ session_score }} points, {{ session_guesses }} guesses |
-All-Time: {{ all_time_score }} points, {{ all_time_guesses }} guesses, {{ all_time_solves }} solves
+{%- raw -%}
+{% if stats_none -%}
+@{{ stats_user }} You haven't played yet! Type !guess to start playing.
+{%- else -%}
+@{{ stats_user }} Session: {{ stats_session_score }} pts ({{ stats_session_solves }} solves,
+{{ stats_session_guesses }} guesses) | All-Time: {{ stats_all_time_score }} pts
+({{ stats_all_time_solves }} solves)
+{%- endif -%}
+{%- endraw -%}
 ```
 
 **twitchbot_gamestart.txt**: Automatic announcement when a new game starts
 
 ```jinja2
+{%- raw -%}
 🎮 New guessing game! Type !{{ guess_command }} <letter or word> to play | Track: {{ masked_track }} |
 Artist: {{ masked_artist }}
+{%- endraw -%}
 ```
 
 ### Template Variables
 
-The Guess Game adds these variables for templating:
+#### twitchbot_guess.txt variables
 
 | Variable | Description |
 |----------|-------------|
-| `guess_command` | Configured guess command (default: `guess`) - for game start announcements |
-| `masked_track` | Track name with unguessed letters as underscores |
-| `masked_artist` | Artist name with unguessed letters as underscores |
-| `time_limit` | Maximum game duration in seconds - for game start announcements |
-| `time_remaining` | Seconds remaining in current game |
-| `guessed_letters` | List of letters already guessed |
-| `game_status` | Current game state: `active`, `solved`, `timeout`, or `waiting` |
-| `game_solved` | Boolean: true if game is completely solved |
-| `guess_correct` | Boolean: true if last guess was correct |
-| `guess_points` | Points awarded/deducted for last guess |
-| `guess_already_guessed` | Boolean: true if letter/word was already guessed |
-| `session_score` | User's score for current stream session |
-| `session_guesses` | User's guess count for current stream session |
-| `all_time_score` | User's all-time score |
-| `all_time_guesses` | User's all-time guess count |
-| `all_time_solves` | User's all-time solve count |
+| `guess_user` | Twitch username who made the guess |
+| `guess_text` | The text the viewer submitted |
+| `guess_correct` | Boolean: true if the guess was correct |
+| `guess_points` | Points awarded/deducted for this guess |
+| `guess_masked_track` | Track name with unguessed letters as underscores |
+| `guess_masked_artist` | Artist name with unguessed letters as underscores |
+| `guess_solved` | Boolean: true if the game is now completely solved |
+| `guess_solve_type` | Which part was just solved: `"track"`, `"artist"`, or `"both"` (only set on a solve) |
+| `guess_track_solved` | Boolean: true if the track portion is solved |
+| `guess_artist_solved` | Boolean: true if the artist portion is solved |
+| `guess_already_guessed` | Boolean: true if this letter/word was already guessed |
+| `guess_already_solved` | Boolean: true if this part of the game is already solved |
+| `guess_error` | Error message string (e.g. no active game); only set on errors |
+
+#### twitchbot_mypoints.txt variables
+
+| Variable | Description |
+|----------|-------------|
+| `stats_user` | Twitch username who requested stats |
+| `stats_none` | Boolean: true if the user has never played |
+| `stats_session_score` | User's points in the current session |
+| `stats_session_solves` | User's solve count in the current session |
+| `stats_session_guesses` | User's guess count in the current session |
+| `stats_all_time_score` | User's all-time point total |
+| `stats_all_time_solves` | User's all-time solve count |
+| `stats_all_time_guesses` | User's all-time guess count |
+
+#### twitchbot_gamestart.txt variables
+
+| Variable | Description |
+|----------|-------------|
+| `guess_command` | Configured guess command (default: `guess`) |
+| `masked_track` | Track name with all letters hidden as underscores |
+| `masked_artist` | Artist name with all letters hidden as underscores |
+| `time_limit` | Maximum game duration in seconds |
 
 ## Troubleshooting
 

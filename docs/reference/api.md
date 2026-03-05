@@ -114,6 +114,21 @@ The API includes automatic validation and processing:
 3. **Security Filtering**: Blocks system fields and binary data
 4. **Full Metadata Processing**: Runs complete enrichment including MusicBrainz lookups, artist extras, and recognition services
 
+### GET /v1/status
+
+Health check endpoint. Returns the application status and version number.
+
+**Authentication**: None required
+
+**Response**: JSON object
+
+```json
+{
+  "status": "ok",
+  "version": "<current application version>"
+}
+```
+
 ### GET /v1/images/ws
 
 WebSocket endpoint for real-time image updates (cover art slideshow functionality).

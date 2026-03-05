@@ -1,86 +1,59 @@
 # Developers
 
-> NOTE: For people familiar with Python, it is HIGHLY RECOMMENDED that
-> you use and build with venv due to the restrictive requirements of the
-> tested packages listing. While newer versions MAY work, there is no
-> guarantee that PyInstaller and other utilities will build a proper
-> executable.
+> NOTE: It is HIGHLY RECOMMENDED to use a Python virtual environment (`venv`).
+> The package dependencies are tightly pinned and newer versions may not produce
+> a correct executable when built with PyInstaller.
 
-## Development Requirements
+## Requirements
 
-To locally build and install **What's Now Playing**, you will need the
-following:
+* Python 3.10–3.13 for your operating system (3.14+ is not yet supported)
+* A terminal / development shell
+* `git` installed and working
 
-1. Python for your operating system (3.10 or 3.11 is required. 3.12 has
-   issues)
-2. Access to a development shell (e.g., /Applications/Utility/Terminal
-    on OS X)
-3. `git` installed and working
+## Setup
 
-### Linux Pre-work
+Clone the repository and run the dev setup:
 
-If you are on Linux, it is recommended that you install dbus-python at
-the system level first to get the basic OS requirements put in place
-first. For example, for Debian-style systems:
-
-``` bash
-sudo apt-get install python-dbus
-```
-
-### macOS Pre-work
-
-You will need a working, modern ICU library:
-
-1. `brew install icu4c`
-2. `export PKG_CONFIG_PATH=/usr/homebrew/opt/icu4c/lib/pkgconfig`
-
-## Commands
-
-``` bash
-python -m venv (virtualenv directory)
-source (virtualenv directory)/bin/activate
-git clone https://github.com/whastnowplaying/whats-now-playing.git
+```bash
+git clone https://github.com/whatsnowplaying/whats-now-playing.git
 cd whats-now-playing
-git checkout [version]
-pip install ".[dev,docs,osspecials,test]
+./builder.sh dev
 ```
 
-At this point, you should be able to run the software from the shell:
+This creates a `venv/` directory in the source tree, installs all dependencies
+(including dev and test extras), syncs vendored libraries, writes version info,
+sets up NLTK data, compiles templates, and compiles Qt resources.
 
-``` bash
-NowPlaying
+Re-running `./builder.sh dev` after pulling updates will refresh all of the above
+without recreating the venv from scratch.
+
+## Running from Source
+
+Activate the venv and launch:
+
+```bash
+source venv/bin/activate        # Windows: venv\Scripts\activate
+./wnppyi.py
 ```
+
+## Running Tests
+
+```bash
+pytest
+```
+
+See [CLAUDE.md](https://github.com/whatsnowplaying/whats-now-playing/blob/main/CLAUDE.md)
+for more detail on the test suite layout and code quality tools.
 
 ## Build Executable
 
-To build a stand-alone executable, there is a helper script to do all
-the work:
+To build a stand-alone executable:
 
-- macOS
-
-``` bash
-builder.sh macosx
+```bash
+./builder.sh           # auto-detects platform
+./builder.sh macosx    # explicit platform
+./builder.sh windows
 ```
 
-- Windows
-
-``` bash
-builder.sh windows
-```
-
-- Other
-
-``` bash
-builder.sh
-```
-
-This bash script will:
-
-1. Create a venv
-2. Install the contents of the venv
-3. Run PyInstaller
-
-In the end you should have a zip file with your newly built binary.
-
-There should now be a `dist` directory and inside that directory will be
-either a `NowPlaying.app` on OS X or just a `NowPlaying` single file.
+The script handles the full build pipeline and produces a zip file containing
+the binary in the current directory.

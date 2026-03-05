@@ -11,7 +11,9 @@ features.
 
 For example, in chat, if the user types:
 
-    !track
+``` text
+!track
+```
 
 **What's Now Playing** will read a file called `twitchbot_track.txt` and
 expand any template values in it. The Twitchbot settings section sets
@@ -175,27 +177,41 @@ one command to perform actions on, for example, multiple users.
 
 A simple example. Given this template file:
 
-    @{{ cmduser }} hugs @{{ cmdtarget[0] }}
+``` jinja
+@{{ cmduser }} hugs @{{ cmdtarget[0] }}
+```
 
 a user typing:
 
-    modernmeerkat: !hug twitch
+``` text
+modernmeerkat: !hug twitch
+```
 
 Would result in:
 
-    bot: @modernmeerkat hugs @twitch
+``` text
+bot: @modernmeerkat hugs @twitch
+```
 
 But this can be expanded to do multiple users at once:
 
-    @{{ cmduser }} sends hugs to {% for people in cmdtarget %}@{{ people }} {% endfor %}
+``` jinja
+{%- raw -%}
+@{{ cmduser }} sends hugs to {% for people in cmdtarget %}@{{ people }} {% endfor %}
+{%- endraw -%}
+```
 
 such that:
 
-    modernmeerkat: !hug person1 person2 person3
+``` text
+modernmeerkat: !hug person1 person2 person3
+```
 
 results in:
 
-    bot: @modernmeerkat sends hugs to @person1 @person2 @person3
+``` text
+bot: @modernmeerkat sends hugs to @person1 @person2 @person3
+```
 
 ### Announcing Websites
 
@@ -204,18 +220,22 @@ the Twitchbot track announcement. You can pick and choose which websites
 are printed by taking the following code snippet and modifying as
 necessary:
 
-  {% if artistwebsites %}
-  {% for website in artistwebsites %}
-  {% if 'bandcamp' in website %} |Bandcamp: {{ website }}
-  {% elif 'discogs' in website %} | Discogs: {{ website }}
-  {% elif 'facebook' in website %} | Facebook: {{ website }}
-  {% elif 'instagram' in website %} | IG: {{ website }}
-  {% elif 'last.fm' in website %} | last.fm: {{ website }}
-  {% elif 'musicbrainz' in website %} | MusicBrainz: {{ website }}
-  {% elif 'twitter' in website %} | Twitter: {{ website }}
-  {% elif 'wikipedia' in website %} | Wikipedia: {{ website }}
-  {% elif 'youtube' in website %} | YouTube: {{ website }}
-  {% else %} | Official homepage: {{ website }}
-  {% endif %}
-  {% endfor %}
-  {% endif %}
+``` jinja
+{%- raw -%}
+{% if artistwebsites %}
+{% for website in artistwebsites %}
+{% if 'bandcamp' in website %} |Bandcamp: {{ website }}
+{% elif 'discogs' in website %} | Discogs: {{ website }}
+{% elif 'facebook' in website %} | Facebook: {{ website }}
+{% elif 'instagram' in website %} | IG: {{ website }}
+{% elif 'last.fm' in website %} | last.fm: {{ website }}
+{% elif 'musicbrainz' in website %} | MusicBrainz: {{ website }}
+{% elif 'twitter' in website %} | Twitter: {{ website }}
+{% elif 'wikipedia' in website %} | Wikipedia: {{ website }}
+{% elif 'youtube' in website %} | YouTube: {{ website }}
+{% else %} | Official homepage: {{ website }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{%- endraw -%}
+```

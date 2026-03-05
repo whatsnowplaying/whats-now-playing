@@ -67,10 +67,12 @@ Kick templates support powerful formatting features:
 
 Example announcement template:
 
+{% raw %}
     {% if artist %}{{ artist }} - {% endif %}"{{ title }}"
     {% if album %} from {{ album }}{% endif %}
     {{ startnewmessage }}
     {% if artistshortbio %}{{ artistshortbio }}{% endif %}
+{% endraw %}
 
 ## Configuration
 

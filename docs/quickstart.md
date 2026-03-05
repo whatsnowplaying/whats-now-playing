@@ -29,11 +29,9 @@ the steps below. Versions before High Sierra have not been verified and are not 
 
 ### Linux
 
-Binaries are not provided because of dbus-python, so please follow the
+Binaries are not provided for Linux, so please follow the
 [developer guide](help/developers.md) to install in a Python virtual environment. Note
 that currently, this software does not run headless.
-
-To use MPRIS2, you *must* have dbus-python installed in your Python virtual environment.
 
 ### Other Platforms
 

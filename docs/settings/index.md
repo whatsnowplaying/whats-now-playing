@@ -41,6 +41,12 @@
   * **Import Configuration** - Restores settings from a previously
    exported JSON file. This will overwrite your current settings.
    Cache and runtime settings are automatically excluded and rebuilt.
+   File paths that do not exist on the current machine are skipped
+   automatically; a `_import_warnings.txt` file is generated next to the
+   imported file listing any paths that need to be reconfigured manually.
+  * **Portability**: Exported files use a `{HOME}` placeholder for your
+   home directory so configurations can be shared across different machines
+   or operating systems without manual path editing.
   * **Use Cases**:
     * Back up settings before major version upgrades
     * Transfer settings between installations

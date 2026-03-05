@@ -9,7 +9,20 @@ Before upgrading, be sure to check the
 [changelog](https://github.com/whatsnowplaying/whats-now-playing/blob/main/CHANGELOG.md)
 for any breaking changes and news.
 
-## Upgrading from 3.x or 4.x to 5.0.0
+## Upgrading within 5.x
+
+For users already on 5.0.x, upgrading to a newer 5.x release is straightforward:
+
+1. Download the new version from the link above
+2. Install it over the existing installation
+3. Launch the application — settings are preserved and any necessary config changes are
+   applied automatically on first launch
+
+A timestamped backup of your configuration is saved to
+`Documents/WhatsNowPlaying/configbackup/` before any upgrade runs, so you can recover
+if anything goes wrong.
+
+## Upgrading from 3.x or 4.x to 5.x
 
 ### Automatic Directory Migration
 
@@ -55,15 +68,15 @@ If an upgrade fails or settings are lost, you can restore from a configuration b
 > settings automatically. Configuration files contain sensitive data -
 > store securely and delete when no longer needed.
 
-## Upgrading from 2.x to 5.0.0
+## Upgrading from 2.x to 5.x
 
-**Important**: You must upgrade to version 3.1.2 first, then upgrade to 5.0.0.
+**Important**: You must upgrade to version 3.1.2 first, then upgrade to the current version.
 
 1. Install version 3.1.2 from the releases page
-2. Launch the application - settings will be migrated automatically
-3. Then upgrade to 5.0.0
+2. Launch the application — settings will be migrated automatically
+3. Then upgrade to the current version
 
-## Upgrading from 1.x to 5.0.0
+## Upgrading from 1.x to 5.x
 
-Unfortunately, 1.x.x wasn't built to support upgrades. You will need to treat this as a fresh install -
+Unfortunately, 1.x.x wasn't built to support upgrades. You will need to treat this as a fresh install —
 none of your settings will be preserved.
