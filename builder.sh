@@ -13,9 +13,11 @@ UNAMESYS=$(uname -s)
 check_python_version() {
   local pybin="$1"
   local pyver
+  local IFS='.'
+  local -a PY_VER
   pyver=$("${pybin}" --version 2>&1)
   pyver=${pyver#* }
-  IFS="." read -ra PY_VER <<< "${pyver}"
+  read -ra PY_VER <<< "${pyver}"
   if [[ ${PY_VER[0]} -ne 3 || ${PY_VER[1]} -lt 10 ]]; then
     echo "Python 3.10 or later is required (got ${pyver})."
     exit 1
@@ -51,8 +53,8 @@ if [[ "${SYSTEM}" == "dev" ]]; then
   fi
   # shellcheck disable=SC1090
   source "${ACTIVATE}"
-  PYTHONBIN=$(command -v "${PYTHON}")
-  PYTHONBINDIR=$(dirname "${PYTHONBIN}")
+  PYTHONBINDIR=$(dirname "${ACTIVATE}")
+  PYTHONBIN="${PYTHONBINDIR}/${PYTHON}"
   "${PYTHONBIN}" -m pip install --upgrade pip
   "${PYTHONBIN}" -m pip install -e ".[dev,docs,osspecials,test]"
   "${PYTHONBIN}" -m vendoring sync
