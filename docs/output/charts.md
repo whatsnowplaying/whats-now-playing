@@ -24,7 +24,7 @@ Charts is **enabled by default** and requires no manual configuration. What's No
 
 To access advanced features and view your data online:
 
-1. Navigate to **Settings** → **Output Destinations** → **Charts**
+1. Navigate to **Output & Display** → **Charts**
 2. Copy your auto-generated **Secret Key** from the input field
 3. Visit [whatsnowplaying.com/signup](https://whatsnowplaying.com/signup) to create an account
 4. Sign up using **Twitch** or **Kick** credentials

@@ -12,11 +12,11 @@ file to another is an easy way to add commands:
 1. Copy the `Documents/WhatsNowPlaying/templates/twitchbot_track.txt`
    file to `twitchbot_song.txt`
 2. Restart **What's Now Playing**
-3. Go into Twitch Chat settings and set the permissions as required.
+3. Go into Streaming & Chat → Twitch and set the permissions as required.
 
 ## Change the time Twitch announcements happen?
 
-Under Settings -\> Twitch Chat there is an 'Announce Delay' field that
+Under Streaming & Chat → Twitch there is an 'Announce Delay' field that
 takes number of seconds to wait before announcing to chat. To things to
 keep in mind:
 
@@ -45,14 +45,14 @@ page.
 
 ## Stop autoposting the track info in Twitch chat?
 
-1. Under Settings -\> Twitch Chat, set the announce template to be empty.
+1. Under Streaming & Chat → Twitch, set the announce template to be empty.
 2. Save
 
 ## Back up my settings or transfer them to a new machine?
 
-1. On the source machine, open Settings → General
+1. On the source machine, open Core Settings → General
 2. Click **Export Configuration** and save the JSON file somewhere safe
-3. On the destination machine, open Settings → General
+3. On the destination machine, open Core Settings → General
 4. Click **Import Configuration** and select the JSON file
 5. Save and restart **What's Now Playing**
 
@@ -68,7 +68,7 @@ that need to be reconfigured manually.
 
 1. Make sure [TwitchBot](../output/twitchbot.md) is configured and connected
 2. Make sure the [Webserver](../output/webserver.md) is enabled
-3. Open Settings → Guess Game and configure to your liking, then Save
+3. Open Streaming & Chat → Guessgame and configure to your liking, then Save
 4. Enable the game from the menu bar (macOS) or system tray (Windows) by
    clicking **Guess Game**
 5. To show the game state in OBS, add a Browser source pointed at
@@ -83,9 +83,9 @@ templates, and customization options.
 ## Show the Guess Game online at whatsnowplaying.com?
 
 1. Sign up at <https://whatsnowplaying.com> and copy your API key
-2. Add the API key under Settings → Charts
+2. Add the API key under Output & Display → Charts
 3. Make sure the Guess Game is enabled (see above)
-4. Under Settings → Guess Game → Advanced, ensure **Send to Server** is enabled
+4. Under Streaming & Chat → Guessgame → Advanced, ensure **Send to Server** is enabled
 5. Your game board will be available at
    `https://whatsnowplaying.com/guessgame/(your-twitch-username)`
 
@@ -94,7 +94,7 @@ templates, and customization options.
 Artist extras (biographies, images, etc.) make network calls to external services
 on every track change, which can add several seconds of delay. To disable them:
 
-1. Open Settings → Artist Extras
+1. Open Artist Data → Artist Extras
 2. Uncheck every service you don't need (Discogs, FanartTV, TheAudioDB, Wikimedia)
 3. Save
 

@@ -5,7 +5,7 @@ text in the Comment or Genre fields, that track will be skipped and not displaye
 
 [![Track Skip Settings](images/trackskip.png)](images/trackskip.png)
 
-> **Note**: Track Skip settings are located under System in the settings menu.
+> **Note**: Track Skip settings are located under Core Settings in the settings menu.
 
 ## How It Works
 
