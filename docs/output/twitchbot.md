@@ -104,7 +104,7 @@ account or create and use another account.
 [![Twitch Chat Settings](images/twitchbot_chat.png)](images/twitchbot_chat.png)
 
 1. Open Settings from the **What's Now Playing** icon
-2. Select Twitch Chat from the list of settings available.
+2. Select **Twitch** from the **Streaming & Chat** section.
 3. Check Enable
 4. To have the bot announce new tracks in chat, select the template.
 

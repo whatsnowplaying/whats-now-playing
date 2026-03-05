@@ -104,7 +104,7 @@ To enable Twitch redemptions to be used for requests:
 
 [![Request Settings](images/requests_settings.png)](images/requests_settings.png)
 
-1. Under Settings, select Requests.
+1. Under Streaming & Chat, select Requests.
 2. Enable Requests support
 3. Enable one or both of Twitch Channel Redemption Requests and Twitch
    Chat Requests depending upon your needs.
@@ -170,7 +170,7 @@ If both API keys are configured, **What's Now Playing** will prefer Klipy over T
 
 1. Obtain an API key from Klipy or Tenor (see links above)
 2. Open Settings from the **What's Now Playing** icon
-3. Select Requests from the left-hand column
+3. Select **Requests** from the **Streaming & Chat** section
 4. Enter your API key:
    - For Klipy: paste into the "Klipy API Key" field
    - For Tenor: paste into the "Tenor API Key" field

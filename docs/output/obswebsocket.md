@@ -17,7 +17,7 @@ versions.
 2. Configure OBS to have a Text source, keeping track of the name of
    the source name.
 3. Open Settings from the **What's Now Playing** icon
-4. Select OBS WebSocket from the list of available input sources.
+4. Select **OBS WebSocket** from the **Output & Display** section.
 
 [![OBS WebSocket Plug-in](images/obsws.png)](images/obsws.png)
 

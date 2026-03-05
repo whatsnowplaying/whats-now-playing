@@ -56,10 +56,10 @@ you should delete this copy as necessary.
 If an upgrade fails or settings are lost, you can restore from a configuration backup:
 
 1. **Export before upgrading** (recommended):
-   * Open Settings → General → **Export Configuration**
+   * Open Core Settings → General → **Export Configuration**
    * Save the JSON file to a secure location
 2. **Import if needed** (only if settings are lost):
-   * Open Settings → General → **Import Configuration**
+   * Open Core Settings → General → **Import Configuration**
    * Select your exported JSON file
    * Save and restart the application
 

@@ -19,10 +19,10 @@ to see if any known problems apply to your situation, or join the
 
 ## Tracks Not Updating
 
-* Confirm your DJ software is set as the Source under Settings → Core Settings → Source.
+* Confirm your DJ software is set as the Source under Core Settings → Source.
 * Make sure your DJ software is actually playing — most inputs only detect tracks that
   are actively playing, not just loaded.
-* Try increasing the Write Delay under Settings → General if updates appear too early
+* Try increasing the Write Delay under Core Settings → General if updates appear too early
   in your mix.
 * Some DJ software behaves differently depending on whether a hardware controller
   is connected. If tracks are not being detected, try with and without your controller
@@ -35,8 +35,7 @@ to see if any known problems apply to your situation, or join the
 ## OBS Display Not Updating
 
 * Refresh the Browser source in OBS (right-click → Refresh).
-* Confirm the Webserver is enabled and running on the correct port under Settings →
-  Output & Display → Webserver.
+* Confirm the Webserver is enabled and running on the correct port under Output & Display → Webserver.
 * Make sure the Browser source URL matches your configured port (default: `8899`).
 
 ## Timing and Stream Delay
@@ -53,7 +52,7 @@ to see if any known problems apply to your situation, or join the
 ## Configuration Problems
 
 * If settings appear corrupted or lost, restore from a backup:
-  * Open Settings → General → **Import Configuration**
+  * Open Core Settings → General → **Import Configuration**
   * Select a JSON file from `Documents/WhatsNowPlaying/configbackup/` (created
     automatically before each upgrade) or a manual export you made previously
 * If the app fails to start after an upgrade, check the logs for errors before
@@ -63,4 +62,4 @@ to see if any known problems apply to your situation, or join the
 
 Logs are written to `Documents/WhatsNowPlaying/logs/`. If you are reporting a bug,
 including the relevant log file will help enormously. The logging level can be
-adjusted under Settings → General → Logging Level.
+adjusted under Core Settings → General → Logging Level.
