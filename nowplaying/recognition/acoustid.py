@@ -36,6 +36,10 @@ class Plugin(RecognitionPlugin):
         self.fpcalcexe = None
         self.displayname = "AcoustID"
 
+    @classmethod
+    def get_path_keys(cls) -> frozenset[str]:
+        return frozenset({"acoustidmb/fpcalcexe"})
+
     @staticmethod
     def _fpcalc(filename):
         """run fpcalc against the given filename"""

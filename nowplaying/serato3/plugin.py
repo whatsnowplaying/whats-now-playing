@@ -66,6 +66,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self._crate_count_cache.clear()
         logging.debug("Cleared crate count cache")
 
+    @classmethod
+    def get_path_keys(cls) -> frozenset[str]:
+        return frozenset({"serato/libpath"})
+
     def install(self):
         """auto-install for Serato"""
         seratodir = pathlib.Path(

@@ -40,6 +40,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         self.observer = None
         self._reset_meta()
 
+    @classmethod
+    def get_path_keys(cls) -> frozenset[str]:
+        return frozenset({"m3u/directory"})
+
     def install(self):
         """locate Virtual DJ"""
         return False

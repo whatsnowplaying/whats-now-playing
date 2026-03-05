@@ -143,6 +143,10 @@ class Plugin(IcecastPlugin):
         self.xml_processor = None
         self.tasks = set()
 
+    @classmethod
+    def get_path_keys(cls) -> frozenset[str]:
+        return frozenset({"traktor/collections"})
+
     def install(self):
         """auto-install for Traktor"""
         # Check multiple possible Native Instruments locations

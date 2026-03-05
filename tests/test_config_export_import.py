@@ -8,6 +8,8 @@ import tempfile
 
 import pytest
 
+import nowplaying.utils.config_json
+
 
 @pytest.fixture
 def temp_config(bootstrap):
@@ -107,8 +109,13 @@ def test_export_file_permissions(temp_config):  # pylint: disable=redefined-oute
             assert file_mode == 0o600
 
 
-def test_import_config_basic(temp_config):  # pylint: disable=redefined-outer-name
+def test_import_config_basic(temp_config, tmp_path):  # pylint: disable=redefined-outer-name
     """Test basic import functionality"""
+    # Use real paths so the parent-exists check passes
+    serato_dir = tmp_path / "serato"
+    serato_dir.mkdir()
+    output_file = tmp_path / "output.txt"
+
     with tempfile.TemporaryDirectory() as temp_dir:
         export_path = pathlib.Path(temp_dir) / "test_config.json"
 
@@ -125,9 +132,9 @@ def test_import_config_basic(temp_config):  # pylint: disable=redefined-outer-na
             "settings/loglevel": "WARNING",
             "artistextras/enabled": False,
             "musicbrainz/enabled": True,
-            "serato/libpath": "/imported/path/to/serato",
+            "serato/libpath": str(serato_dir),
             "discogs/apikey": "imported_discogs_key",  # pragma: allowlist secret
-            "textoutput/file": "/imported/output.txt",
+            "textoutput/file": str(output_file),
         }
 
         # Write test data
@@ -143,9 +150,95 @@ def test_import_config_basic(temp_config):  # pylint: disable=redefined-outer-na
         assert temp_config.cparser.value("settings/loglevel") == "WARNING"
         assert temp_config.cparser.value("artistextras/enabled", type=bool) is False
         assert temp_config.cparser.value("musicbrainz/enabled", type=bool) is True
-        assert temp_config.cparser.value("serato/libpath") == "/imported/path/to/serato"
+        assert temp_config.cparser.value("serato/libpath") == str(serato_dir)
         # pragma: allowlist secret
         assert temp_config.cparser.value("discogs/apikey") == "imported_discogs_key"
+
+
+def test_import_skips_nonexistent_paths(temp_config):  # pylint: disable=redefined-outer-name
+    """Paths from another OS that don't exist on this system are skipped on import"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        import_path = pathlib.Path(temp_dir) / "cross_os.json"
+
+        # Unix-style paths: non-absolute on Windows (no drive letter), so always rejected there.
+        # On macOS/Linux they are absolute but the parent directories don't exist.
+        # Windows-style path: non-absolute on macOS/Linux (no leading /), so always rejected there.
+        # On Windows it is absolute, but the parent directory is deterministically non-existent.
+        import_data = {
+            "_export_info": {"version": "5.0.0"},
+            "settings/delay": "1.0",
+            "serato/libpath": "/Users/someuser/Music/Serato",
+            "textoutput/file": "/Users/someuser/Documents/nowplaying.txt",
+            "weboutput/htmltemplate": "C:\\WNPTESTNONEXISTENT\\templates\\np.htm",
+        }
+        import_path.write_text(json.dumps(import_data))
+
+        result = temp_config.import_config(import_path)
+        assert result is True
+
+        temp_config.cparser.sync()
+        # Non-path setting imported normally
+        assert temp_config.cparser.value("settings/delay") == "1.0"
+        # Path settings from another OS are NOT applied (bad cross-OS paths are skipped).
+        # Keys may fall back to system-scope defaults after import clears the user scope;
+        # we only verify the imported values were rejected.
+        assert temp_config.cparser.value("serato/libpath") != "/Users/someuser/Music/Serato"
+        assert (
+            temp_config.cparser.value("textoutput/file")
+            != "/Users/someuser/Documents/nowplaying.txt"
+        )
+        assert (
+            temp_config.cparser.value("weboutput/htmltemplate")
+            != "C:\\WNPTESTNONEXISTENT\\templates\\np.htm"
+        )
+
+        # Warnings file should be written next to the import file
+        warnings_file = import_path.with_name(import_path.stem + "_import_warnings.txt")
+        assert warnings_file.exists()
+        warnings_text = warnings_file.read_text()
+        assert "serato/libpath" in warnings_text
+        assert "textoutput/file" in warnings_text
+
+
+def test_import_expands_home_token(temp_config, tmp_path):  # pylint: disable=redefined-outer-name
+    """HOME token in exported paths is expanded to the current user's home on import"""
+    home = str(pathlib.Path.home())
+    serato_dir = tmp_path / "serato"
+    serato_dir.mkdir()
+
+    # Simulate a path that was exported with {HOME} substitution
+    tokenized_path = str(serato_dir).replace(home, nowplaying.utils.config_json.HOME_TOKEN)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        import_path = pathlib.Path(temp_dir) / "tokenized.json"
+        import_data = {
+            "_export_info": {"version": "5.0.0"},
+            "serato/libpath": tokenized_path,
+        }
+        import_path.write_text(json.dumps(import_data))
+
+        result = temp_config.import_config(import_path)
+        assert result is True
+
+        temp_config.cparser.sync()
+        assert temp_config.cparser.value("serato/libpath") == str(serato_dir)
+
+
+def test_export_uses_home_token(temp_config):  # pylint: disable=redefined-outer-name
+    """Paths under the user's home directory are exported with a HOME token"""
+    home = str(pathlib.Path.home())
+    home_path = str(pathlib.Path.home() / "Music" / "Serato")
+    temp_config.cparser.setValue("serato/libpath", home_path)
+    temp_config.cparser.sync()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        export_path = pathlib.Path(temp_dir) / "export.json"
+        result = temp_config.export_config(export_path)
+        assert result is True
+
+        exported = json.loads(export_path.read_text())
+        assert home not in exported.get("serato/libpath", "")
+        assert nowplaying.utils.config_json.HOME_TOKEN in exported["serato/libpath"]
 
 
 def test_import_nonexistent_file(temp_config):  # pylint: disable=redefined-outer-name

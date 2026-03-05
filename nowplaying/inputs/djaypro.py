@@ -75,6 +75,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
         }
         self._reset_meta()
 
+    @classmethod
+    def get_path_keys(cls) -> frozenset[str]:
+        return frozenset({"djaypro/directory"})
+
     def install(self) -> bool:
         """locate djay Pro database directory"""
         music_dir = self.config.userdocs.parent.joinpath("Music")

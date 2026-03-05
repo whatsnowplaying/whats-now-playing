@@ -284,6 +284,9 @@ class UpgradeConfig:
             self._upgrade_to_5_0_0_preview5(config)
             self._cleanup_old_backup_files()
 
+        if oldversion < Version("5.1.0"):
+            self._upgrade_to_5_1_0(config)
+
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
         config.setValue("settings/configversion", thisverstr)
@@ -452,6 +455,19 @@ class UpgradeConfig:
         config.remove("beam/remote_port")
         config.remove("beam/remote_server")
         config.remove("control/beam")
+
+    @staticmethod
+    def _upgrade_to_5_1_0(config: QSettings) -> None:
+        """Upgrade to 5.1.0 - Remove legacy config keys that are no longer used"""
+        for key in [
+            "icecast/traktor-collections",
+            "remote/remotedb",
+            "serato/seratodir",
+            "serato3/libpath",
+        ]:
+            if config.value(key) is not None:
+                logging.info("Upgrade to 5.1.0: removing legacy key %s", key)
+                config.remove(key)
 
     def _cleanup_old_backup_files(self) -> None:
         """Clean up old .bak backup files from pre-5.0.0-preview5"""

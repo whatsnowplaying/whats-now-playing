@@ -8,6 +8,7 @@ with proper filtering of runtime/cache data and cross-platform compatibility.
 
 import json
 import logging
+import os
 import pathlib
 import time
 
@@ -18,6 +19,8 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
 
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 
+HOME_TOKEN = "{HOME}"
+
 IGNORE_KEYS = [
     "settings/lastsavedate",
     "control/paused",
@@ -25,10 +28,42 @@ IGNORE_KEYS = [
     "cache/",
     "db/",
     "artistextras/cachedbfile",
+    # Legacy keys no longer written by any current code; strip them from configs on export/import.
+    "icecast/traktor-collections",
+    "remote/remotedb",
+    "serato/seratodir",
+    "serato3/libpath",
 ]
 
+# Settings keys whose values are filesystem paths for non-plugin processes.
+# Plugin-owned path keys are declared via WNPBasePlugin.get_path_keys() and
+# collected at export/import time via ConfigFile.get_path_keys().
+# On export, the user's home directory is replaced with HOME_TOKEN for portability.
+# On import, HOME_TOKEN is expanded to the current home directory; paths whose
+# parent directory does not exist on this system are logged, reported in a
+# warnings file next to the import file, and skipped.
+PATH_KEYS: frozenset[str] = frozenset(
+    {
+        "discord/template",
+        "kick/announce",
+        "obsws/template",
+        "twitchbot/announce",
+        "weboutput/artistbannertemplate",
+        "weboutput/artistfanarttemplate",
+        "weboutput/artistlogotemplate",
+        "weboutput/artistthumbnailtemplate",
+        "weboutput/gifwordstemplate",
+        "weboutput/htmltemplate",
+        "weboutput/requestertemplate",
+    }
+)
 
-def export_config(export_path: pathlib.Path, settings: QSettings) -> bool:
+
+def export_config(
+    export_path: pathlib.Path,
+    settings: QSettings,
+    extra_path_keys: frozenset[str] | None = None,
+) -> bool:
     """
     Export configuration to JSON file.
 
@@ -37,6 +72,7 @@ def export_config(export_path: pathlib.Path, settings: QSettings) -> bool:
 
     Args:
         export_path: Path where to save the exported configuration
+        extra_path_keys: Additional filesystem path keys collected from plugins
 
     Returns:
         True if export successful, False otherwise
@@ -48,6 +84,9 @@ def export_config(export_path: pathlib.Path, settings: QSettings) -> bool:
         # Use childGroups() and childKeys() to avoid system preferences contamination
         # that can occur with allKeys() on macOS
         config_data = {}
+
+        home = str(pathlib.Path.home())
+        effective_path_keys = PATH_KEYS | (extra_path_keys or frozenset())
 
         # Get keys from each configuration group (avoids system preferences)
         for group in settings.childGroups():
@@ -78,6 +117,17 @@ def export_config(export_path: pathlib.Path, settings: QSettings) -> bool:
                 else:
                     # Convert everything else to string
                     value = str(value)
+
+                # Replace a leading home directory prefix with HOME_TOKEN in path keys.
+                # Only replaces at the start of the value to avoid corrupting values
+                # where the home path appears elsewhere (e.g. embedded in another dir).
+                if (
+                    full_key in effective_path_keys
+                    and isinstance(value, str)
+                    and home
+                    and (value == home or value.startswith(home + os.sep))
+                ):
+                    value = HOME_TOKEN + value[len(home) :]
 
                 config_data[full_key] = value
 
@@ -116,15 +166,21 @@ def export_config(export_path: pathlib.Path, settings: QSettings) -> bool:
         return False
 
 
-def import_config(import_path: pathlib.Path, settings: QSettings) -> QSettings | None:
+def import_config(
+    import_path: pathlib.Path,
+    settings: QSettings,
+    extra_path_keys: frozenset[str] | None = None,
+) -> QSettings | None:
     """
     Import configuration from JSON file.
 
     This will overwrite current settings with imported values.
-    Runtime state and cache settings are automatically excluded.
+    Runtime state, cache settings, and paths that are inaccessible on this
+    system are automatically excluded.
 
     Args:
         import_path: Path to the JSON configuration file
+        extra_path_keys: Additional filesystem path keys collected from plugins
 
     Returns:
         True if import successful, False otherwise
@@ -159,10 +215,62 @@ def import_config(import_path: pathlib.Path, settings: QSettings) -> QSettings |
         # Remove metadata before processing
         del import_data["_export_info"]
 
+    home = str(pathlib.Path.home())
+    effective_path_keys = PATH_KEYS | (extra_path_keys or frozenset())
+    skipped_paths: list[tuple[str, str]] = []
+
     # Import all settings from the file
     for key, value in import_data.items():
-        if not any(key.startswith(pattern) for pattern in IGNORE_KEYS):
-            settings.setValue(key, value)
+        if any(key.startswith(pattern) for pattern in IGNORE_KEYS):
+            continue
+
+        if key in effective_path_keys and isinstance(value, str) and value:
+            # Expand the home directory token to this system's home
+            if HOME_TOKEN in value:
+                value = value.replace(HOME_TOKEN, home)
+            # Normalize Windows-style separators so cross-OS detection works on Unix.
+            # On Unix, "C:\foo\bar" is treated as a single filename by pathlib (parent="."),
+            # but after replacing "\" with "/" it becomes "C:/foo/bar" which is NOT absolute
+            # on Unix (no leading "/"), so is_absolute() correctly rejects it.
+            normalized = value.replace("\\", "/")
+            path_obj = pathlib.Path(normalized)
+            # Skip paths that are not absolute on this system, or whose parent doesn't exist
+            # (catches Windows paths on Unix and vice versa, and paths from other users/machines)
+            if not path_obj.is_absolute() or not path_obj.parent.exists():
+                logging.warning("Skipping path not accessible on this system: %s = %s", key, value)
+                skipped_paths.append((key, value))
+                continue
+
+        settings.setValue(key, value)
+
+    if skipped_paths:
+        _write_import_warnings(import_path, skipped_paths)
 
     logging.info("Configuration imported successfully from: %s", import_path)
     return settings
+
+
+def _write_import_warnings(
+    import_path: pathlib.Path, skipped_paths: list[tuple[str, str]]
+) -> None:
+    """Write a human-readable warnings file listing paths that could not be imported."""
+    warnings_path = import_path.with_name(import_path.stem + "_import_warnings.txt")
+    lines = [
+        "WhatsNowPlaying - Configuration Import Warnings",
+        "=" * 50,
+        "",
+        "The following path settings could not be imported because they do not",
+        "exist on this system (likely exported from a different operating system).",
+        "Please reconfigure these settings manually after starting the application.",
+        "",
+    ]
+    for key, value in skipped_paths:
+        lines.append(f"  {key}")
+        lines.append(f"    skipped value: {value}")
+        lines.append("")
+
+    try:
+        warnings_path.write_text("\n".join(lines))
+        logging.info("Import warnings written to: %s", warnings_path)
+    except OSError as error:
+        logging.warning("Could not write import warnings file: %s", error)
