@@ -9,36 +9,43 @@ What's Now Playing connects to your DJ software and eliminates the need to manua
 live streams, radio shows, or DJ sets. Focus on your music while your audience stays informed about every track
 you play.
 
-## Perfect for Streaming DJs
+## DJ Software Integration
 
-**DJ Software Integration:**
-
-Works with all major platforms including:
+Works with all major platforms. See the full [Input Sources](input/index.md) list for details.
 
 * Serato DJ
 * Traktor
-* Denon DJ (StagelinQ)
 * Virtual DJ
+* Denon DJ (StagelinQ)
+* djay Pro
 * DJUCED
-* MIXXX
 * JRiver Media Center
-* And many more
+* Icecast streaming servers
+* M3U playlists
+* MPRIS2-compatible players (Linux)
+* Windows Media API (Windows Media Player, Spotify, Amazon Music, and more)
 
-**Stream Platforms:**
+## Stream Platforms
 
-* **Twitch** - Full chat bot with song requests and announcements
-* **Kick** - Song announcement support
+* **Twitch** - Full chat bot with song requests, announcements, and the Guess Game
+* **Kick** - Song announcement and request support
 * **OBS Studio** - Professional track displays and browser sources
 * **Discord** - Community server integration
 
-**Enhanced Metadata:**
+## Audience Engagement
+
+* **[Guess Game](output/guessgame.md)** - Twitch chat hangman-style game where viewers guess the current track
+* **[Track Requests](requests.md)** - Let viewers request tracks directly from Twitch or Kick chat
+* **[Charts](output/charts.md)** - Share what you're playing with the whatsnowplaying.com community
+
+## Enhanced Metadata
 
 * Automatically identify untagged tracks with audio fingerprinting
 * Enrich displays with artist biographies and background information
-* Add high-quality album artwork and images
-* Provide detailed track and artist information
+* Add high-quality album artwork and fan art images
+* Detailed track and artist information from Discogs, MusicBrainz, and more
 
-**Flexible Output:**
+## Flexible Output
 
 * Simple text files for basic integration
 * Custom HTML templates for professional displays
@@ -56,5 +63,4 @@ Check out the [gallery](gallery.md) to see more examples and get inspiration for
 
 ## Get Started
 
-Ready to automate your track displays? Begin with the [Quickstart Guide](quickstart.md) to connect your DJ
-software and start streaming like a pro.
+Begin with the [Quickstart Guide](quickstart.md) to connect your DJ software and get up and running.

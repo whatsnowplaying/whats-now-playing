@@ -47,3 +47,57 @@ page.
 
 1. Under Settings -\> Twitch Chat, set the announce template to be empty.
 2. Save
+
+## Back up my settings or transfer them to a new machine?
+
+1. On the source machine, open Settings → General
+2. Click **Export Configuration** and save the JSON file somewhere safe
+3. On the destination machine, open Settings → General
+4. Click **Import Configuration** and select the JSON file
+5. Save and restart **What's Now Playing**
+
+File paths that don't exist on the new machine are skipped automatically. A
+`_import_warnings.txt` file is created next to the import file listing any paths
+that need to be reconfigured manually.
+
+> [!WARNING]
+> The exported file contains API keys, passwords, and other sensitive data.
+> Store it securely and delete it when no longer needed.
+
+## Set up the Guess Game?
+
+1. Make sure [TwitchBot](../output/twitchbot.md) is configured and connected
+2. Make sure the [Webserver](../output/webserver.md) is enabled
+3. Open Settings → Guess Game and configure to your liking, then Save
+4. Enable the game from the menu bar (macOS) or system tray (Windows) by
+   clicking **Guess Game**
+5. To show the game state in OBS, add a Browser source pointed at
+   `http://localhost:8899/guessgame/guessgame.htm`
+6. To show leaderboards, add a Browser source pointed at
+   `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session`
+   or `?type=all_time`
+
+See the full [Guess Game](../output/guessgame.md) documentation for scoring,
+templates, and customization options.
+
+## Show the Guess Game online at whatsnowplaying.com?
+
+1. Sign up at <https://whatsnowplaying.com> and copy your API key
+2. Add the API key under Settings → Charts
+3. Make sure the Guess Game is enabled (see above)
+4. Under Settings → Guess Game → Advanced, ensure **Send to Server** is enabled
+5. Your game board will be available at
+   `https://whatsnowplaying.com/guessgame/(your-twitch-username)`
+
+## Speed up track changes by disabling artist extras?
+
+Artist extras (biographies, images, etc.) make network calls to external services
+on every track change, which can add several seconds of delay. To disable them:
+
+1. Open Settings → Artist Extras
+2. Uncheck every service you don't need (Discogs, FanartTV, TheAudioDB, Wikimedia)
+3. Save
+
+If you only use artist extras for specific outputs (e.g. a biography in Twitch chat
+but not in OBS), you can leave just that one service enabled and disable the rest to
+reduce the number of API calls made per track.

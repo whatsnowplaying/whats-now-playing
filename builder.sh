@@ -10,6 +10,69 @@ SYSTEM=$1
 VERSION=$(git describe --tags)
 UNAMESYS=$(uname -s)
 
+check_python_version() {
+  local pybin="$1"
+  local pyver
+  local IFS='.'
+  local -a PY_VER
+  pyver=$("${pybin}" --version 2>&1)
+  pyver=${pyver#* }
+  read -ra PY_VER <<< "${pyver}"
+  if [[ ${PY_VER[0]} -ne 3 || ${PY_VER[1]} -lt 10 ]]; then
+    echo "Python 3.10 or later is required (got ${pyver})."
+    exit 1
+  fi
+  if [[ ${PY_VER[1]} -ge 14 ]]; then
+    echo "Python 3.14+ is not yet supported (got ${pyver}). Use Python 3.10–3.13."
+    exit 1
+  fi
+}
+
+if [[ "${SYSTEM}" == "dev" ]]; then
+  case "${UNAMESYS}" in
+    MINGW*)
+      PYTHON=python
+      ACTIVATE="venv/Scripts/activate"
+      ;;
+    *)
+      PYTHON=python3
+      ACTIVATE="venv/bin/activate"
+      ;;
+  esac
+  PYTHONBIN=$(command -v "${PYTHON}")
+  if [[ -z "${PYTHONBIN}" ]]; then
+    echo "Error: '${PYTHON}' not found on PATH. Please install Python 3.10–3.13."
+    exit 1
+  fi
+  check_python_version "${PYTHONBIN}"
+  echo "*****"
+  echo "* Dev setup using ${PYTHONBIN}"
+  echo "****"
+  if [[ ! -d venv ]]; then
+    "${PYTHONBIN}" -m venv venv
+  fi
+  # shellcheck disable=SC1090
+  source "${ACTIVATE}"
+  PYTHONBINDIR=$(dirname "${ACTIVATE}")
+  PYTHONBIN="${PYTHONBINDIR}/${PYTHON}"
+  "${PYTHONBIN}" -m pip install --upgrade pip
+  "${PYTHONBIN}" -m pip install -e ".[dev,docs,osspecials,test]"
+  "${PYTHONBIN}" -m vendoring sync
+  versioningit --write
+  "${PYTHONBIN}" tools/setupnltk.py
+  "${PYTHONBIN}" tools/build_templates.py
+  if [[ -x "${PYTHONBINDIR}/pyside6-rcc" ]]; then
+    "${PYTHONBINDIR}/pyside6-rcc" nowplaying/resources/settings.qrc > nowplaying/qtrc.py
+  else
+    pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
+  fi
+  echo "*****"
+  echo "* Dev setup complete. Activate with: source ${ACTIVATE}"
+  echo "* Then run: ./wnppyi.py"
+  echo "****"
+  exit 0
+fi
+
 if [[ -z "${SYSTEM}" ]]; then
   case "${UNAMESYS}" in
     Darwin)
@@ -63,14 +126,7 @@ echo "* Building on ${SYSTEM} / ${UNAMESYS}"
 echo "* Using ${PYTHONBIN}"
 echo "****"
 
-PYTHON_VERSION=$("${PYTHONBIN}" --version)
-PYTHON_VERSION=${PYTHON_VERSION#* }
-IFS="." read -ra PY_VERSION <<< "${PYTHON_VERSION}"
-
-if [[ ${PY_VERSION[0]} -ne 3 && ${PY_VERSION[1]} -lt 10 ]]; then
-  echo "Building requires at least version Python 3.10."
-  exit 1
-fi
+check_python_version "${PYTHONBIN}"
 
 case "${SYSTEM}" in
   windows)

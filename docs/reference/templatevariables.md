@@ -4,28 +4,27 @@
 templating system](https://jinja2docs.readthedocs.io/) which includes an
 extremely [powerful
 language](https://jinja2docs.readthedocs.io/en/stable/templates.md)
-that enables you a full range of customizing the output.
+that gives you a full range of options for customizing the output.
 
-In general, **What's Now Playing** provides a generic set of variables
-for use in any template. These values are filled based on a few factors:
+**What's Now Playing** provides a generic set of variables for use in any template,
+but **not all variables will be populated in every situation**. What is available
+depends on several factors:
 
-- the input source providing its data
-- media tag quality
-- **What's Now Playing**'s file type and tag compatibility
+- **Input source**: different DJ software exposes different metadata
+- **Media tag quality**: files with missing or incomplete tags will have empty fields
+- **Enabled features**: variables like `requester` are only set when the Requests
+  feature is active; `artistlongbio` only when Artist Extras is configured;
+  `acoustidid` only when AcoustID recognition is enabled
+- **File format compatibility**: some formats have limited tag support
+- **Tag presence**: fields like `originalyear`, `composer`, or `lyricist` are only
+  set when the track's file or DJ software actually provides them
 
-Some examples:
+Unpopulated variables are always set to an empty string rather than being undefined,
+so templates can safely use `{%- raw -%}{% if variable %}{%- endraw -%}` to check before displaying. See the
+[Undefined](#undefined) section below for details.
 
-- An MP3 file missing ID3 tags may only have
-  `title` available.
-- Serato in Remote mode, title, and optionally artist are available.
-- MP4/M4V files have minimal support currently in **What's Now
-  Playing**, so will not have the label
-- VOBS files do not support tagging and will only have information
-  available from the DJ software, if possible
-
-Some outputs (e.g., TwitchBot) may provide additional variables that
-offer other, context-sensitive features. See their pages for more
-information.
+Some outputs (e.g., TwitchBot) provide additional context-specific variables beyond
+this list. See their individual pages for more information.
 
 ## Reminder
 
@@ -41,6 +40,7 @@ data.
 |----|----|
 | album | Album track comes from |
 | albumartist | Artist listed on the album |
+| acoustidid | AcoustID fingerprint identifier (if recognition is enabled) |
 | artist | Artist for the song |
 | artistlongbio | Full biography of the artist (from "Artist Extras") |
 | artistshortbio | First paragraph of the long bio (from "Artist Extras") |
@@ -55,6 +55,7 @@ data.
 | disc | Disc number |
 | discsubtitle | disc subtitle (if there is one) |
 | disc_total | Total number of discs in album |
+| discordguild | Discord guild/server name (if bot is connected) |
 | duration | Total expected track time in seconds |
 | duration_hhmmss | Same as duration but in `HH:MM:SS` format (so 1 minute 30 seconds becomes 01:30) |
 | filename | Local filename of the media |
@@ -64,23 +65,31 @@ data.
 | hostfqdn | Fully qualified hostname of the machine running **What's Now Playing** |
 | hostname | Short hostname of the machine running **What's Now Playing** |
 | httpport | Port number that is running the web server |
-| twitchchannel | Twitch channel name (if configured) |
-| kickchannel | Kick channel name (if configured) |
-| discordguild | Discord guild/server name (if bot is connected) |
 | isrc | List of [International Standard Recording Code](https://isrc.ifpi.org/en/) |
 | key | Key of the song |
+| kickchannel | Kick channel name (if configured) |
 | label | Label of the media. |
 | lang | Language used by the media |
+| lyricist | Lyricist of the song |
 | musicbrainzalbumid | MusicBrainz Album Id |
 | musicbrainzartistid | List of MusicBrainz Artist Ids |
 | musicbrainzrecordingid | MusicBrainz Recording Id |
 | now() | Current time in HH:MM:SS format (function call) |
+| originalyear | Original release year of the song |
 | previoustrack | See below for more details. |
+| publisher | Publisher of the media |
+| requestdisplayname | Display name of the viewer who requested this track |
+| requestedfor | Viewer the track was requested for (e.g. from `!track song for @user`) |
+| requester | Twitch/Kick username of the viewer who requested this track |
+| source_agent_name | Name of the DJ software providing the track (e.g. `traktor`, `serato`) |
+| source_agent_version | Version of the DJ software (if available) |
 | timestamp() | Current date and time in YYYY-MM-DD HH:MM:SS format (function call) |
 | title | Title of the media |
 | today() | Current date in YYYY-MM-DD format (function call) |
 | track | Track number on the disc |
 | track_total | Total tracks on the disc |
+| twitchchannel | Twitch channel name (if configured) |
+| year | Release year of the media |
 
 ## Implementation Notes
 

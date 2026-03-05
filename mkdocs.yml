@@ -88,6 +88,7 @@ nav:
   - Input Sources:
       - General: input/index.md
       - Denon: input/denon.md
+      - djay Pro: input/djaypro.md
       - DJUCED: input/djuced.md
       - Icecast: input/icecast.md
       - JRiver: input/jriver.md
@@ -134,6 +135,6 @@ nav:
       - API Reference: reference/api.md
       - Template Variables: reference/templatevariables.md
       - Template Reference: reference/templates.md
-      - Comparisons: reference/comparisons.md
+
   - Gallery: gallery.md
   - Contact: contact.md

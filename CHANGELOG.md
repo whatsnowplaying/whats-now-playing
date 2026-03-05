@@ -16,6 +16,11 @@
   * Smarter upgrade logic
     * Should do a better job of helping you get the correct zip file
   * Requests now support reporting 'for @user'
+  * Configuration files can now be exported and imported for portability across systems
+    * Filesystem paths are automatically tokenized on export so configs work on any machine
+    * Paths that do not exist on the importing system are skipped gracefully, with a
+      warnings file generated listing what needs to be manually reconfigured
+    * Stale legacy configuration keys from old versions are automatically cleaned up on upgrade
 
 * Guess Game
   * Add a new Twitch chat-based guessing game for your audience

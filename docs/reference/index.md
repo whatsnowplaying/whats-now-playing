@@ -1,10 +1,7 @@
 # Reference
 
-Reference documentation for **What's Now Playing** including template variables and comparisons with other software.
+Reference documentation for **What's Now Playing**.
 
-## Reference Sections
-
-- **[Template Variables](templatevariables.md)** - Complete list of available template variables for customization
-- **[Comparisons](comparisons.md)** - How What's Now Playing compares to other similar software
-
-Click on any reference section above for detailed information.
+- **[API Reference](api.md)** - REST API endpoints for programmatic access and DJ software integration
+- **[Template Variables](templatevariables.md)** - Complete list of variables available in templates
+- **[Template Reference](templates.md)** - All built-in templates organized by category
