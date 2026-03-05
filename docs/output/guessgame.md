@@ -182,7 +182,7 @@ behind real-time. To ensure fair gameplay, the Guess Game includes a configurabl
 * **Viewers see the ended game** with revealed answers, but their "late" guesses from stream delay are still
   processed and scored
 * **Leaderboards reflect reality**: Scores account for what viewers actually experienced on their delayed streams
-* **Configurable**: Adjust the grace period (0-60 seconds) in Streaming & Chat > Guessgame > Advanced to match your
+* **Configurable**: Adjust the grace period (0-60 seconds) in Streaming & Chat → Guessgame → Advanced to match your
   stream's typical delay
 
 This ensures viewers on delayed streams aren't penalized and get credit for guesses they made while the game was
@@ -226,8 +226,8 @@ This web-based display shows:
 **Requirements:**
 
 1. **Charts Account**: Sign up at <https://whatsnowplaying.com> and obtain an API key
-2. **Configure API Key**: Add your Charts API key in Output & Display > Charts
-3. **Enable Sync**: Ensure "Send to Server" is enabled in Streaming & Chat > Guessgame
+2. **Configure API Key**: Add your Charts API key in Output & Display → Charts
+3. **Enable Sync**: Ensure "Send to Server" is enabled in Streaming & Chat → Guessgame
 
 ### Difficulty Calculation
 

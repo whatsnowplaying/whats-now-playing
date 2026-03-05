@@ -12,7 +12,7 @@ file to another is an easy way to add commands:
 1. Copy the `Documents/WhatsNowPlaying/templates/twitchbot_track.txt`
    file to `twitchbot_song.txt`
 2. Restart **What's Now Playing**
-3. Go into Streaming & Chat → Twitch settings and set the permissions as required.
+3. Go into Streaming & Chat → Twitch and set the permissions as required.
 
 ## Change the time Twitch announcements happen?
 
