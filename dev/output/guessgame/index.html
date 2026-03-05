@@ -678,6 +678,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../input/djaypro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    djay Pro
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../input/djuced/" class="md-nav__link">
         
   
@@ -1988,6 +2016,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Template Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#twitchbot_guesstxt-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        twitchbot_guess.txt variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#twitchbot_mypointstxt-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        twitchbot_mypoints.txt variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#twitchbot_gamestarttxt-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        twitchbot_gamestart.txt variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -2613,34 +2680,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/comparisons/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Comparisons
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -3077,20 +3116,142 @@ an online copy of your game board is available at:</p>
 <p>The Guess Game uses Jinja2 templates for chat responses and OBS display:</p>
 <h3 id="chat-templates">Chat Templates<a class="headerlink" href="#chat-templates" title="Permanent link">&para;</a></h3>
 <p><strong>twitchbot_guess.txt</strong>: Response when a viewer makes a guess</p>
-<div class="highlight"><pre><span></span><code>@{{ cmduser }}: Wrong guess. {{ guess_points }} points.
- Track: {{ masked_track }} | Artist: {{ masked_artist }} |
-Time: {{ time_remaining }}s
-</code></pre></div>
+<p><code>jinja2{% if guess_error -%}
+{{ guess_error }}
+{%- elif guess_already_guessed -%}
+@{{ guess_user }} You already guessed "{{ guess_text }}"!
+{%- elif guess_already_solved -%}
+@{{ guess_user }} That part is already solved!
+{%- elif guess_solved and guess_solve_type == "both" -%}
+@{{ guess_user }} 🎉 GAME COMPLETE! +{{ guess_points }} points! The answer was: {{ guess_masked_track }} by {{ guess_masked_artist }}
+{%- elif guess_solve_type == "track" -%}
+@{{ guess_user }} 🎵 TRACK SOLVED! +{{ guess_points }} points! Now guess the artist: {{ guess_masked_artist }}
+{%- elif guess_solve_type == "artist" -%}
+@{{ guess_user }} 🎤 ARTIST SOLVED! +{{ guess_points }} points! Now guess the track: {{ guess_masked_track }}
+{%- elif guess_correct -%}
+@{{ guess_user }} ✓ Correct! +{{ guess_points }} points | Track: {{ guess_masked_track }} | Artist: {{ guess_masked_artist }}
+{%- else -%}
+@{{ guess_user }} ✗ Not quite! | Track: {{ guess_masked_track }} | Artist: {{ guess_masked_artist }}
+{%- endif -%}</code></p>
 <p><strong>twitchbot_mypoints.txt</strong>: Response when a viewer checks their stats</p>
-<div class="highlight"><pre><span></span><code>@{{ cmduser }}: Session: {{ session_score }} points, {{ session_guesses }} guesses |
-All-Time: {{ all_time_score }} points, {{ all_time_guesses }} guesses, {{ all_time_solves }} solves
-</code></pre></div>
+<p><code>jinja2{% if stats_none -%}
+@{{ stats_user }} You haven't played yet! Type !guess to start playing.
+{%- else -%}
+@{{ stats_user }} Session: {{ stats_session_score }} pts ({{ stats_session_solves }} solves,
+{{ stats_session_guesses }} guesses) | All-Time: {{ stats_all_time_score }} pts
+({{ stats_all_time_solves }} solves)
+{%- endif -%}</code></p>
 <p><strong>twitchbot_gamestart.txt</strong>: Automatic announcement when a new game starts</p>
-<div class="highlight"><pre><span></span><code>🎮 New guessing game! Type !{{ guess_command }} &lt;letter or word&gt; to play | Track: {{ masked_track }} |
-Artist: {{ masked_artist }}
-</code></pre></div>
+<p><code>jinja2🎮 New guessing game! Type !{{ guess_command }} &lt;letter or word&gt; to play | Track: {{ masked_track }} |
+Artist: {{ masked_artist }}</code></p>
 <h3 id="template-variables">Template Variables<a class="headerlink" href="#template-variables" title="Permanent link">&para;</a></h3>
-<p>The Guess Game adds these variables for templating:</p>
+<h4 id="twitchbot_guesstxt-variables">twitchbot_guess.txt variables<a class="headerlink" href="#twitchbot_guesstxt-variables" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>guess_user</code></td>
+<td>Twitch username who made the guess</td>
+</tr>
+<tr>
+<td><code>guess_text</code></td>
+<td>The text the viewer submitted</td>
+</tr>
+<tr>
+<td><code>guess_correct</code></td>
+<td>Boolean: true if the guess was correct</td>
+</tr>
+<tr>
+<td><code>guess_points</code></td>
+<td>Points awarded/deducted for this guess</td>
+</tr>
+<tr>
+<td><code>guess_masked_track</code></td>
+<td>Track name with unguessed letters as underscores</td>
+</tr>
+<tr>
+<td><code>guess_masked_artist</code></td>
+<td>Artist name with unguessed letters as underscores</td>
+</tr>
+<tr>
+<td><code>guess_solved</code></td>
+<td>Boolean: true if the game is now completely solved</td>
+</tr>
+<tr>
+<td><code>guess_solve_type</code></td>
+<td>Which part was just solved: <code>"track"</code>, <code>"artist"</code>, or <code>"both"</code> (only set on a solve)</td>
+</tr>
+<tr>
+<td><code>guess_track_solved</code></td>
+<td>Boolean: true if the track portion is solved</td>
+</tr>
+<tr>
+<td><code>guess_artist_solved</code></td>
+<td>Boolean: true if the artist portion is solved</td>
+</tr>
+<tr>
+<td><code>guess_already_guessed</code></td>
+<td>Boolean: true if this letter/word was already guessed</td>
+</tr>
+<tr>
+<td><code>guess_already_solved</code></td>
+<td>Boolean: true if this part of the game is already solved</td>
+</tr>
+<tr>
+<td><code>guess_error</code></td>
+<td>Error message string (e.g. no active game); only set on errors</td>
+</tr>
+</tbody>
+</table>
+<h4 id="twitchbot_mypointstxt-variables">twitchbot_mypoints.txt variables<a class="headerlink" href="#twitchbot_mypointstxt-variables" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stats_user</code></td>
+<td>Twitch username who requested stats</td>
+</tr>
+<tr>
+<td><code>stats_none</code></td>
+<td>Boolean: true if the user has never played</td>
+</tr>
+<tr>
+<td><code>stats_session_score</code></td>
+<td>User's points in the current session</td>
+</tr>
+<tr>
+<td><code>stats_session_solves</code></td>
+<td>User's solve count in the current session</td>
+</tr>
+<tr>
+<td><code>stats_session_guesses</code></td>
+<td>User's guess count in the current session</td>
+</tr>
+<tr>
+<td><code>stats_all_time_score</code></td>
+<td>User's all-time point total</td>
+</tr>
+<tr>
+<td><code>stats_all_time_solves</code></td>
+<td>User's all-time solve count</td>
+</tr>
+<tr>
+<td><code>stats_all_time_guesses</code></td>
+<td>User's all-time guess count</td>
+</tr>
+</tbody>
+</table>
+<h4 id="twitchbot_gamestarttxt-variables">twitchbot_gamestart.txt variables<a class="headerlink" href="#twitchbot_gamestarttxt-variables" title="Permanent link">&para;</a></h4>
 <table>
 <thead>
 <tr>
@@ -3101,67 +3262,19 @@ Artist: {{ masked_artist }}
 <tbody>
 <tr>
 <td><code>guess_command</code></td>
-<td>Configured guess command (default: <code>guess</code>) - for game start announcements</td>
+<td>Configured guess command (default: <code>guess</code>)</td>
 </tr>
 <tr>
 <td><code>masked_track</code></td>
-<td>Track name with unguessed letters as underscores</td>
+<td>Track name with all letters hidden as underscores</td>
 </tr>
 <tr>
 <td><code>masked_artist</code></td>
-<td>Artist name with unguessed letters as underscores</td>
+<td>Artist name with all letters hidden as underscores</td>
 </tr>
 <tr>
 <td><code>time_limit</code></td>
-<td>Maximum game duration in seconds - for game start announcements</td>
-</tr>
-<tr>
-<td><code>time_remaining</code></td>
-<td>Seconds remaining in current game</td>
-</tr>
-<tr>
-<td><code>guessed_letters</code></td>
-<td>List of letters already guessed</td>
-</tr>
-<tr>
-<td><code>game_status</code></td>
-<td>Current game state: <code>active</code>, <code>solved</code>, <code>timeout</code>, or <code>waiting</code></td>
-</tr>
-<tr>
-<td><code>game_solved</code></td>
-<td>Boolean: true if game is completely solved</td>
-</tr>
-<tr>
-<td><code>guess_correct</code></td>
-<td>Boolean: true if last guess was correct</td>
-</tr>
-<tr>
-<td><code>guess_points</code></td>
-<td>Points awarded/deducted for last guess</td>
-</tr>
-<tr>
-<td><code>guess_already_guessed</code></td>
-<td>Boolean: true if letter/word was already guessed</td>
-</tr>
-<tr>
-<td><code>session_score</code></td>
-<td>User's score for current stream session</td>
-</tr>
-<tr>
-<td><code>session_guesses</code></td>
-<td>User's guess count for current stream session</td>
-</tr>
-<tr>
-<td><code>all_time_score</code></td>
-<td>User's all-time score</td>
-</tr>
-<tr>
-<td><code>all_time_guesses</code></td>
-<td>User's all-time guess count</td>
-</tr>
-<tr>
-<td><code>all_time_solves</code></td>
-<td>User's all-time solve count</td>
+<td>Maximum game duration in seconds</td>
 </tr>
 </tbody>
 </table>

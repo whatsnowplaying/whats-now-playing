@@ -678,6 +678,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../input/djaypro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    djay Pro
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../input/djuced/" class="md-nav__link">
         
   
@@ -1854,6 +1882,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -1870,6 +1916,91 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#general-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        General Tips
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tracks-not-updating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracks Not Updating
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#obs-display-not-updating" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OBS Display Not Updating
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timing-and-stream-delay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timing and Stream Delay
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Problems
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#finding-the-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finding the Logs
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -2126,34 +2257,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/comparisons/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Comparisons
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2284,56 +2387,67 @@
 
 
 <h1 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h1>
-<p>Software is made by imperfect humans and thus tends to reflect that
-reality. Here are some tips and tricks to help you out:</p>
+<p>Software is made by imperfect humans and thus tends to reflect that reality.
+Here are some tips and tricks to help you out.</p>
+<p>Also check the current <a href="https://github.com/whatsnowplaying/whats-now-playing/issues?q=is%3Aissue+is%3Aopen+label%3Abug+sort%3Aupdated-desc">Bug List</a>
+to see if any known problems apply to your situation, or join the
+<a href="https://discord.gg/bGdgm64Erb">Discord</a> to get help from the community.</p>
+<h2 id="general-tips">General Tips<a class="headerlink" href="#general-tips" title="Permanent link">&para;</a></h2>
 <ul>
-<li>
-<p>Experience has shown that starting the <strong>What's Now Playing</strong> app as
-  the first piece of software in your stack generally results in a
-  better experience. So, for example:</p>
-</li>
-<li>
-<p><strong>What's Now Playing</strong></p>
-</li>
-<li>Virtual DJ</li>
-<li>OBS</li>
+<li>Start <strong>What's Now Playing</strong> first in your stack, before your DJ software and OBS.
+  By the time OBS is up, both <strong>What's Now Playing</strong> and your DJ software will have
+  finished their housekeeping tasks.</li>
+<li>Shut down <strong>What's Now Playing</strong> between sessions. Because it lives in the menu bar
+  or system tray it is easy to forget it is running.</li>
+<li>Letting the app run when the computer goes to sleep has been shown to cause problems.
+  Restart the app after waking from sleep if things seem stuck.</li>
 </ul>
-<p>By the time OBS is up, <strong>What's Now Playing</strong> and your DJ software
-  should have performed their housekeeping tasks.</p>
+<h2 id="tracks-not-updating">Tracks Not Updating<a class="headerlink" href="#tracks-not-updating" title="Permanent link">&para;</a></h2>
 <ul>
-<li>
-<p>Be sure to remember to shut down <strong>What's Now Playing</strong> between
-  sessions. Because it hangs out in the menu bar, it is easy to forget
-  it is running!</p>
-</li>
-<li>
-<p>Letting the app run when the computer goes to sleep
-  has shown to be problematic as well.</p>
-</li>
-<li>
-<p>Don't forget that there is delay from when your computer starts
-  playing a song and when it finally makes it on-stream. There are also
-  delays between different devices in how the receive content. For
-  example, Apple TV devices may be up to a minute after you streamed
-  your track!</p>
-</li>
-<li>
-<p>Kick and Twitch use different locations worldwide, so you may need
-  different delays per service.</p>
-</li>
-<li>
-<p>You do not need to be streaming to participate in your channel's
-  Twitch chat. This fact means that <strong>What's Now Playing</strong> can be
-  running and sending track information to Twitch but your users won't
-  be alerted. Extremely useful for working out the aforementioned timing
-  issues.</p>
-</li>
-<li>
-<p>Check the current <a href="https://github.com/whatsnowplaying/whats-now-playing/issues?q=is%3Aissue+is%3Aopen+label%3Abug+sort%3Aupdated-desc">Bug
-  List</a>
-  to see if any known problems apply to your situation.</p>
-</li>
+<li>Confirm your DJ software is set as the Source under Settings → Core Settings → Source.</li>
+<li>Make sure your DJ software is actually playing — most inputs only detect tracks that
+  are actively playing, not just loaded.</li>
+<li>Try increasing the Write Delay under Settings → General if updates appear too early
+  in your mix.</li>
+<li>Some DJ software behaves differently depending on whether a hardware controller
+  is connected. If tracks are not being detected, try with and without your controller
+  attached to narrow down the cause.</li>
+<li><strong>What's Now Playing</strong> tries to honor your crossfader position — if the fader is
+  cut to one side, the track on the other deck may not be reported. Make sure the
+  fader is in a position that reflects the track you expect to see.</li>
+<li>Check the logs (see below) for any errors related to your input plugin.</li>
 </ul>
+<h2 id="obs-display-not-updating">OBS Display Not Updating<a class="headerlink" href="#obs-display-not-updating" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Refresh the Browser source in OBS (right-click → Refresh).</li>
+<li>Confirm the Webserver is enabled and running on the correct port under Settings →
+  Output &amp; Display → Webserver.</li>
+<li>Make sure the Browser source URL matches your configured port (default: <code>8899</code>).</li>
+</ul>
+<h2 id="timing-and-stream-delay">Timing and Stream Delay<a class="headerlink" href="#timing-and-stream-delay" title="Permanent link">&para;</a></h2>
+<ul>
+<li>There is inherent delay between when your computer plays a track and when it appears
+  on-stream. Different devices receive content at different times — Apple TV viewers,
+  for example, may see track info up to a minute after you started playing it.</li>
+<li>Kick and Twitch use different CDN locations worldwide, so you may need different
+  announce delays per service under their respective settings.</li>
+<li>You do not need to be streaming to participate in Twitch chat. This means you can
+  run <strong>What's Now Playing</strong> and test chat announcements without going live — useful
+  for dialing in timing.</li>
+</ul>
+<h2 id="configuration-problems">Configuration Problems<a class="headerlink" href="#configuration-problems" title="Permanent link">&para;</a></h2>
+<ul>
+<li>If settings appear corrupted or lost, restore from a backup:</li>
+<li>Open Settings → General → <strong>Import Configuration</strong></li>
+<li>Select a JSON file from <code>Documents/WhatsNowPlaying/configbackup/</code> (created
+    automatically before each upgrade) or a manual export you made previously</li>
+<li>If the app fails to start after an upgrade, check the logs for errors before
+  reinstalling.</li>
+</ul>
+<h2 id="finding-the-logs">Finding the Logs<a class="headerlink" href="#finding-the-logs" title="Permanent link">&para;</a></h2>
+<p>Logs are written to <code>Documents/WhatsNowPlaying/logs/</code>. If you are reporting a bug,
+including the relevant log file will help enormously. The logging level can be
+adjusted under Settings → General → Logging Level.</p>
 
 
 

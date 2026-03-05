@@ -678,6 +678,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../input/djaypro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    djay Pro
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../input/djuced/" class="md-nav__link">
         
   
@@ -1914,6 +1942,50 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#back-up-my-settings-or-transfer-them-to-a-new-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Back up my settings or transfer them to a new machine?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-up-the-guess-game" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set up the Guess Game?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#show-the-guess-game-online-at-whatsnowplayingcom" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Show the Guess Game online at whatsnowplaying.com?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#speed-up-track-changes-by-disabling-artist-extras" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Speed up track changes by disabling artist extras?
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2229,34 +2301,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/comparisons/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Comparisons
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2429,6 +2473,57 @@ page.</p>
 <li>Under Settings -&gt; Twitch Chat, set the announce template to be empty.</li>
 <li>Save</li>
 </ol>
+<h2 id="back-up-my-settings-or-transfer-them-to-a-new-machine">Back up my settings or transfer them to a new machine?<a class="headerlink" href="#back-up-my-settings-or-transfer-them-to-a-new-machine" title="Permanent link">&para;</a></h2>
+<ol>
+<li>On the source machine, open Settings → General</li>
+<li>Click <strong>Export Configuration</strong> and save the JSON file somewhere safe</li>
+<li>On the destination machine, open Settings → General</li>
+<li>Click <strong>Import Configuration</strong> and select the JSON file</li>
+<li>Save and restart <strong>What's Now Playing</strong></li>
+</ol>
+<p>File paths that don't exist on the new machine are skipped automatically. A
+<code>_import_warnings.txt</code> file is created next to the import file listing any paths
+that need to be reconfigured manually.</p>
+<blockquote>
+<p>[!WARNING]
+The exported file contains API keys, passwords, and other sensitive data.
+Store it securely and delete it when no longer needed.</p>
+</blockquote>
+<h2 id="set-up-the-guess-game">Set up the Guess Game?<a class="headerlink" href="#set-up-the-guess-game" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Make sure <a href="../../output/twitchbot/">TwitchBot</a> is configured and connected</li>
+<li>Make sure the <a href="../../output/webserver/">Webserver</a> is enabled</li>
+<li>Open Settings → Guess Game and configure to your liking, then Save</li>
+<li>Enable the game from the menu bar (macOS) or system tray (Windows) by
+   clicking <strong>Guess Game</strong></li>
+<li>To show the game state in OBS, add a Browser source pointed at
+   <code>http://localhost:8899/guessgame/guessgame.htm</code></li>
+<li>To show leaderboards, add a Browser source pointed at
+   <code>http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session</code>
+   or <code>?type=all_time</code></li>
+</ol>
+<p>See the full <a href="../../output/guessgame/">Guess Game</a> documentation for scoring,
+templates, and customization options.</p>
+<h2 id="show-the-guess-game-online-at-whatsnowplayingcom">Show the Guess Game online at whatsnowplaying.com?<a class="headerlink" href="#show-the-guess-game-online-at-whatsnowplayingcom" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Sign up at <a href="https://whatsnowplaying.com">https://whatsnowplaying.com</a> and copy your API key</li>
+<li>Add the API key under Settings → Charts</li>
+<li>Make sure the Guess Game is enabled (see above)</li>
+<li>Under Settings → Guess Game → Advanced, ensure <strong>Send to Server</strong> is enabled</li>
+<li>Your game board will be available at
+   <code>https://whatsnowplaying.com/guessgame/(your-twitch-username)</code></li>
+</ol>
+<h2 id="speed-up-track-changes-by-disabling-artist-extras">Speed up track changes by disabling artist extras?<a class="headerlink" href="#speed-up-track-changes-by-disabling-artist-extras" title="Permanent link">&para;</a></h2>
+<p>Artist extras (biographies, images, etc.) make network calls to external services
+on every track change, which can add several seconds of delay. To disable them:</p>
+<ol>
+<li>Open Settings → Artist Extras</li>
+<li>Uncheck every service you don't need (Discogs, FanartTV, TheAudioDB, Wikimedia)</li>
+<li>Save</li>
+</ol>
+<p>If you only use artist extras for specific outputs (e.g. a biography in Twitch chat
+but not in OBS), you can leave just that one service enabled and disable the rest to
+reduce the number of API calls made per track.</p>
 
 
 

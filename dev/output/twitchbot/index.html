@@ -678,6 +678,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../input/djaypro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    djay Pro
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../input/djuced/" class="md-nav__link">
         
   
@@ -2318,34 +2346,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/comparisons/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Comparisons
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2483,8 +2483,8 @@ the same time.</p>
 <p>The chat bot support includes track announcement as well as interactive
 features.</p>
 <p>For example, in chat, if the user types:</p>
-<pre><code>!track
-</code></pre>
+<div class="highlight"><pre><span></span><code>!track
+</code></pre></div>
 <p><strong>What's Now Playing</strong> will read a file called <code>twitchbot_track.txt</code> and
 expand any template values in it. The Twitchbot settings section sets
 permissions for commands.</p>
@@ -2671,28 +2671,42 @@ will be sent from the bot account for cleaner presentation.</p>
 variable number of targets. This feature allows for your users to use
 one command to perform actions on, for example, multiple users.</p>
 <p>A simple example. Given this template file:</p>
-<pre><code>@{{ cmduser }} hugs @{{ cmdtarget[0] }}
-</code></pre>
+<div class="highlight"><pre><span></span><code><span class="x">@</span><span class="cp">{{</span> <span class="nv">cmduser</span> <span class="cp">}}</span><span class="x"> hugs @</span><span class="cp">{{</span> <span class="nv">cmdtarget</span><span class="o">[</span><span class="m">0</span><span class="o">]</span> <span class="cp">}}</span>
+</code></pre></div>
 <p>a user typing:</p>
-<pre><code>modernmeerkat: !hug twitch
-</code></pre>
+<div class="highlight"><pre><span></span><code>modernmeerkat: !hug twitch
+</code></pre></div>
 <p>Would result in:</p>
-<pre><code>bot: @modernmeerkat hugs @twitch
-</code></pre>
+<div class="highlight"><pre><span></span><code>bot: @modernmeerkat hugs @twitch
+</code></pre></div>
 <p>But this can be expanded to do multiple users at once:</p>
-<pre><code>@{{ cmduser }} sends hugs to
-</code></pre>
+<p><code>jinja@{{ cmduser }} sends hugs to {% for people in cmdtarget %}@{{ people }} {% endfor %}</code></p>
 <p>such that:</p>
-<pre><code>modernmeerkat: !hug person1 person2 person3
-</code></pre>
+<div class="highlight"><pre><span></span><code>modernmeerkat: !hug person1 person2 person3
+</code></pre></div>
 <p>results in:</p>
-<pre><code>bot: @modernmeerkat sends hugs to @person1 @person2 @person3
-</code></pre>
+<div class="highlight"><pre><span></span><code>bot: @modernmeerkat sends hugs to @person1 @person2 @person3
+</code></pre></div>
 <h3 id="announcing-websites">Announcing Websites<a class="headerlink" href="#announcing-websites" title="Permanent link">&para;</a></h3>
 <p>You may want to add support for announcing the website data as part of
 the Twitchbot track announcement. You can pick and choose which websites
 are printed by taking the following code snippet and modifying as
 necessary:</p>
+<p><code>jinja{% if artistwebsites %}
+{% for website in artistwebsites %}
+{% if 'bandcamp' in website %} |Bandcamp: {{ website }}
+{% elif 'discogs' in website %} | Discogs: {{ website }}
+{% elif 'facebook' in website %} | Facebook: {{ website }}
+{% elif 'instagram' in website %} | IG: {{ website }}
+{% elif 'last.fm' in website %} | last.fm: {{ website }}
+{% elif 'musicbrainz' in website %} | MusicBrainz: {{ website }}
+{% elif 'twitter' in website %} | Twitter: {{ website }}
+{% elif 'wikipedia' in website %} | Wikipedia: {{ website }}
+{% elif 'youtube' in website %} | YouTube: {{ website }}
+{% else %} | Official homepage: {{ website }}
+{% endif %}
+{% endfor %}
+{% endif %}</code></p>
 
 
 

@@ -678,6 +678,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../input/djaypro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    djay Pro
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../input/djuced/" class="md-nav__link">
         
   
@@ -2216,6 +2244,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#get-v1status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#get-v1imagesws" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2305,34 +2344,6 @@
     
   
     Template Reference
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../comparisons/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Comparisons
   
 
     
@@ -2562,6 +2573,15 @@ security-sensitive information are automatically removed.</p>
 <li><strong>Security Filtering</strong>: Blocks system fields and binary data</li>
 <li><strong>Full Metadata Processing</strong>: Runs complete enrichment including MusicBrainz lookups, artist extras, and recognition services</li>
 </ol>
+<h3 id="get-v1status">GET /v1/status<a class="headerlink" href="#get-v1status" title="Permanent link">&para;</a></h3>
+<p>Health check endpoint. Returns the application status and version number.</p>
+<p><strong>Authentication</strong>: None required</p>
+<p><strong>Response</strong>: JSON object</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;current application version&gt;&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
 <h3 id="get-v1imagesws">GET /v1/images/ws<a class="headerlink" href="#get-v1imagesws" title="Permanent link">&para;</a></h3>
 <p>WebSocket endpoint for real-time image updates (cover art slideshow functionality).</p>
 <p><strong>Authentication</strong>: None required</p>

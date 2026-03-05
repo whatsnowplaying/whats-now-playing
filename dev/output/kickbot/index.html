@@ -678,6 +678,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../input/djaypro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    djay Pro
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../input/djuced/" class="md-nav__link">
         
   
@@ -2218,34 +2246,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/comparisons/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Comparisons
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2439,10 +2439,10 @@ with your Kick account.</p>
   automatically split at sentence or word boundaries using NLTK</li>
 </ul>
 <p>Example announcement template:</p>
-<pre><code>"{{ title }}"
-
+<p><code>jinja{% if artist %}{{ artist }} - {% endif %}"{{ title }}"
+{% if album %} from {{ album }}{% endif %}
 {{ startnewmessage }}
-</code></pre>
+{% if artistshortbio %}{{ artistshortbio }}{% endif %}</code></p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Enable Kick chat in the Kick settings tab</li>

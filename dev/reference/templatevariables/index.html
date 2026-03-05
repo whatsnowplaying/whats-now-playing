@@ -678,6 +678,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../input/djaypro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    djay Pro
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../input/djuced/" class="md-nav__link">
         
   
@@ -2263,34 +2291,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../comparisons/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Comparisons
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2425,27 +2425,25 @@
 templating system</a> which includes an
 extremely <a href="https://jinja2docs.readthedocs.io/en/stable/templates.md">powerful
 language</a>
-that enables you a full range of customizing the output.</p>
-<p>In general, <strong>What's Now Playing</strong> provides a generic set of variables
-for use in any template. These values are filled based on a few factors:</p>
+that gives you a full range of options for customizing the output.</p>
+<p><strong>What's Now Playing</strong> provides a generic set of variables for use in any template,
+but <strong>not all variables will be populated in every situation</strong>. What is available
+depends on several factors:</p>
 <ul>
-<li>the input source providing its data</li>
-<li>media tag quality</li>
-<li><strong>What's Now Playing</strong>'s file type and tag compatibility</li>
+<li><strong>Input source</strong>: different DJ software exposes different metadata</li>
+<li><strong>Media tag quality</strong>: files with missing or incomplete tags will have empty fields</li>
+<li><strong>Enabled features</strong>: variables like <code>requester</code> are only set when the Requests
+  feature is active; <code>artistlongbio</code> only when Artist Extras is configured;
+  <code>acoustidid</code> only when AcoustID recognition is enabled</li>
+<li><strong>File format compatibility</strong>: some formats have limited tag support</li>
+<li><strong>Tag presence</strong>: fields like <code>originalyear</code>, <code>composer</code>, or <code>lyricist</code> are only
+  set when the track's file or DJ software actually provides them</li>
 </ul>
-<p>Some examples:</p>
-<ul>
-<li>An MP3 file missing ID3 tags may only have
-  <code>title</code> available.</li>
-<li>Serato in Remote mode, title, and optionally artist are available.</li>
-<li>MP4/M4V files have minimal support currently in <strong>What's Now
-  Playing</strong>, so will not have the label</li>
-<li>VOBS files do not support tagging and will only have information
-  available from the DJ software, if possible</li>
-</ul>
-<p>Some outputs (e.g., TwitchBot) may provide additional variables that
-offer other, context-sensitive features. See their pages for more
-information.</p>
+<p>Unpopulated variables are always set to an empty string rather than being undefined,
+so templates can safely use <code>{% if variable %}</code> to check before displaying. See the
+<a href="#undefined">Undefined</a> section below for details.</p>
+<p>Some outputs (e.g., TwitchBot) provide additional context-specific variables beyond
+this list. See their individual pages for more information.</p>
 <h2 id="reminder">Reminder<a class="headerlink" href="#reminder" title="Permanent link">&para;</a></h2>
 <p>In order to perform these look ups, certain data is required to be
 tagged in the media to make the results remotely accurate. More data ==
@@ -2468,6 +2466,10 @@ data.</p>
 <tr>
 <td>albumartist</td>
 <td>Artist listed on the album</td>
+</tr>
+<tr>
+<td>acoustidid</td>
+<td>AcoustID fingerprint identifier (if recognition is enabled)</td>
 </tr>
 <tr>
 <td>artist</td>
@@ -2526,6 +2528,10 @@ data.</p>
 <td>Total number of discs in album</td>
 </tr>
 <tr>
+<td>discordguild</td>
+<td>Discord guild/server name (if bot is connected)</td>
+</tr>
+<tr>
 <td>duration</td>
 <td>Total expected track time in seconds</td>
 </tr>
@@ -2562,18 +2568,6 @@ data.</p>
 <td>Port number that is running the web server</td>
 </tr>
 <tr>
-<td>twitchchannel</td>
-<td>Twitch channel name (if configured)</td>
-</tr>
-<tr>
-<td>kickchannel</td>
-<td>Kick channel name (if configured)</td>
-</tr>
-<tr>
-<td>discordguild</td>
-<td>Discord guild/server name (if bot is connected)</td>
-</tr>
-<tr>
 <td>isrc</td>
 <td>List of <a href="https://isrc.ifpi.org/en/">International Standard Recording Code</a></td>
 </tr>
@@ -2582,12 +2576,20 @@ data.</p>
 <td>Key of the song</td>
 </tr>
 <tr>
+<td>kickchannel</td>
+<td>Kick channel name (if configured)</td>
+</tr>
+<tr>
 <td>label</td>
 <td>Label of the media.</td>
 </tr>
 <tr>
 <td>lang</td>
 <td>Language used by the media</td>
+</tr>
+<tr>
+<td>lyricist</td>
+<td>Lyricist of the song</td>
 </tr>
 <tr>
 <td>musicbrainzalbumid</td>
@@ -2606,8 +2608,36 @@ data.</p>
 <td>Current time in HH:MM:SS format (function call)</td>
 </tr>
 <tr>
+<td>originalyear</td>
+<td>Original release year of the song</td>
+</tr>
+<tr>
 <td>previoustrack</td>
 <td>See below for more details.</td>
+</tr>
+<tr>
+<td>publisher</td>
+<td>Publisher of the media</td>
+</tr>
+<tr>
+<td>requestdisplayname</td>
+<td>Display name of the viewer who requested this track</td>
+</tr>
+<tr>
+<td>requestedfor</td>
+<td>Viewer the track was requested for (e.g. from <code>!track song for @user</code>)</td>
+</tr>
+<tr>
+<td>requester</td>
+<td>Twitch/Kick username of the viewer who requested this track</td>
+</tr>
+<tr>
+<td>source_agent_name</td>
+<td>Name of the DJ software providing the track (e.g. <code>traktor</code>, <code>serato</code>)</td>
+</tr>
+<tr>
+<td>source_agent_version</td>
+<td>Version of the DJ software (if available)</td>
 </tr>
 <tr>
 <td>timestamp()</td>
@@ -2628,6 +2658,14 @@ data.</p>
 <tr>
 <td>track_total</td>
 <td>Total tracks on the disc</td>
+</tr>
+<tr>
+<td>twitchchannel</td>
+<td>Twitch channel name (if configured)</td>
+</tr>
+<tr>
+<td>year</td>
+<td>Release year of the media</td>
 </tr>
 </tbody>
 </table>

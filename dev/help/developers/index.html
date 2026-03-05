@@ -678,6 +678,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../input/djaypro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    djay Pro
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../input/djuced/" class="md-nav__link">
         
   
@@ -1989,49 +2017,43 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#development-requirements" class="md-nav__link">
+  <a href="#requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Development Requirements
+        Requirements
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Development Requirements">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#linux-pre-work" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Linux Pre-work
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#macos-pre-work" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        macOS Pre-work
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#commands" class="md-nav__link">
+  <a href="#setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Commands
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-from-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running from Source
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running Tests
       
     </span>
   </a>
@@ -2224,34 +2246,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/comparisons/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Comparisons
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2383,72 +2377,45 @@
 
 <h1 id="developers">Developers<a class="headerlink" href="#developers" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p>NOTE: For people familiar with Python, it is HIGHLY RECOMMENDED that
-you use and build with venv due to the restrictive requirements of the
-tested packages listing. While newer versions MAY work, there is no
-guarantee that PyInstaller and other utilities will build a proper
-executable.</p>
+<p>NOTE: It is HIGHLY RECOMMENDED to use a Python virtual environment (<code>venv</code>).
+The package dependencies are tightly pinned and newer versions may not produce
+a correct executable when built with PyInstaller.</p>
 </blockquote>
-<h2 id="development-requirements">Development Requirements<a class="headerlink" href="#development-requirements" title="Permanent link">&para;</a></h2>
-<p>To locally build and install <strong>What's Now Playing</strong>, you will need the
-following:</p>
-<ol>
-<li>Python for your operating system (3.10 or 3.11 is required. 3.12 has
-   issues)</li>
-<li>Access to a development shell (e.g., /Applications/Utility/Terminal
-    on OS X)</li>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Python 3.10–3.13 for your operating system (3.14+ is not yet supported)</li>
+<li>A terminal / development shell</li>
 <li><code>git</code> installed and working</li>
-</ol>
-<h3 id="linux-pre-work">Linux Pre-work<a class="headerlink" href="#linux-pre-work" title="Permanent link">&para;</a></h3>
-<p>If you are on Linux, it is recommended that you install dbus-python at
-the system level first to get the basic OS requirements put in place
-first. For example, for Debian-style systems:</p>
-<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>python-dbus
-</code></pre></div>
-<h3 id="macos-pre-work">macOS Pre-work<a class="headerlink" href="#macos-pre-work" title="Permanent link">&para;</a></h3>
-<p>You will need a working, modern ICU library:</p>
-<ol>
-<li><code>brew install icu4c</code></li>
-<li><code>export PKG_CONFIG_PATH=/usr/homebrew/opt/icu4c/lib/pkgconfig</code></li>
-</ol>
-<h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span><span class="o">(</span>virtualenv<span class="w"> </span>directory<span class="o">)</span>
-<span class="nb">source</span><span class="w"> </span><span class="o">(</span>virtualenv<span class="w"> </span>directory<span class="o">)</span>/bin/activate
-git<span class="w"> </span>clone<span class="w"> </span>https://github.com/whastnowplaying/whats-now-playing.git
+</ul>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
+<p>Clone the repository and run the dev setup:</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/whatsnowplaying/whats-now-playing.git
 <span class="nb">cd</span><span class="w"> </span>whats-now-playing
-git<span class="w"> </span>checkout<span class="w"> </span><span class="o">[</span>version<span class="o">]</span>
-pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;.[dev,docs,osspecials,test]</span>
+./builder.sh<span class="w"> </span>dev
 </code></pre></div>
-<p>At this point, you should be able to run the software from the shell:</p>
-<div class="highlight"><pre><span></span><code>NowPlaying
+<p>This creates a <code>venv/</code> directory in the source tree, installs all dependencies
+(including dev and test extras), syncs vendored libraries, writes version info,
+sets up NLTK data, compiles templates, and compiles Qt resources.</p>
+<p>Re-running <code>./builder.sh dev</code> after pulling updates will refresh all of the above
+without recreating the venv from scratch.</p>
+<h2 id="running-from-source">Running from Source<a class="headerlink" href="#running-from-source" title="Permanent link">&para;</a></h2>
+<p>Activate the venv and launch:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>venv/bin/activate<span class="w">        </span><span class="c1"># Windows: venv\Scripts\activate</span>
+./wnppyi.py
 </code></pre></div>
+<h2 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>pytest
+</code></pre></div>
+<p>See <a href="https://github.com/whatsnowplaying/whats-now-playing/blob/main/CLAUDE.md">CLAUDE.md</a>
+for more detail on the test suite layout and code quality tools.</p>
 <h2 id="build-executable">Build Executable<a class="headerlink" href="#build-executable" title="Permanent link">&para;</a></h2>
-<p>To build a stand-alone executable, there is a helper script to do all
-the work:</p>
-<ul>
-<li>macOS</li>
-</ul>
-<div class="highlight"><pre><span></span><code>builder.sh<span class="w"> </span>macosx
+<p>To build a stand-alone executable:</p>
+<div class="highlight"><pre><span></span><code>./builder.sh<span class="w">           </span><span class="c1"># auto-detects platform</span>
+./builder.sh<span class="w"> </span>macosx<span class="w">    </span><span class="c1"># explicit platform</span>
+./builder.sh<span class="w"> </span>windows
 </code></pre></div>
-<ul>
-<li>Windows</li>
-</ul>
-<div class="highlight"><pre><span></span><code>builder.sh<span class="w"> </span>windows
-</code></pre></div>
-<ul>
-<li>Other</li>
-</ul>
-<div class="highlight"><pre><span></span><code>builder.sh
-</code></pre></div>
-<p>This bash script will:</p>
-<ol>
-<li>Create a venv</li>
-<li>Install the contents of the venv</li>
-<li>Run PyInstaller</li>
-</ol>
-<p>In the end you should have a zip file with your newly built binary.</p>
-<p>There should now be a <code>dist</code> directory and inside that directory will be
-either a <code>NowPlaying.app</code> on OS X or just a <code>NowPlaying</code> single file.</p>
+<p>The script handles the full build pipeline and produces a zip file containing
+the binary in the current directory.</p>
 
 
 

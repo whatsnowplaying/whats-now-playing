@@ -398,15 +398,26 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#upgrading-from-3x-or-4x-to-500" class="md-nav__link">
+  <a href="#upgrading-within-5x" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Upgrading from 3.x or 4.x to 5.0.0
+        Upgrading within 5.x
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Upgrading from 3.x or 4.x to 5.0.0">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-from-3x-or-4x-to-5x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrading from 3.x or 4.x to 5.x
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Upgrading from 3.x or 4.x to 5.x">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -448,10 +459,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#upgrading-from-2x-to-500" class="md-nav__link">
+  <a href="#upgrading-from-2x-to-5x" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Upgrading from 2.x to 5.0.0
+        Upgrading from 2.x to 5.x
       
     </span>
   </a>
@@ -459,10 +470,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#upgrading-from-1x-to-500" class="md-nav__link">
+  <a href="#upgrading-from-1x-to-5x" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Upgrading from 1.x to 5.0.0
+        Upgrading from 1.x to 5.x
       
     </span>
   </a>
@@ -788,6 +799,34 @@
     
   
     Denon
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../input/djaypro/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    djay Pro
   
 
     
@@ -2244,34 +2283,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/comparisons/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Comparisons
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2368,7 +2379,18 @@ automatically detect your platform and show you the correct version.</p>
 <p>Before upgrading, be sure to check the
 <a href="https://github.com/whatsnowplaying/whats-now-playing/blob/main/CHANGELOG.md">changelog</a>
 for any breaking changes and news.</p>
-<h2 id="upgrading-from-3x-or-4x-to-500">Upgrading from 3.x or 4.x to 5.0.0<a class="headerlink" href="#upgrading-from-3x-or-4x-to-500" title="Permanent link">&para;</a></h2>
+<h2 id="upgrading-within-5x">Upgrading within 5.x<a class="headerlink" href="#upgrading-within-5x" title="Permanent link">&para;</a></h2>
+<p>For users already on 5.0.x, upgrading to a newer 5.x release is straightforward:</p>
+<ol>
+<li>Download the new version from the link above</li>
+<li>Install it over the existing installation</li>
+<li>Launch the application — settings are preserved and any necessary config changes are
+   applied automatically on first launch</li>
+</ol>
+<p>A timestamped backup of your configuration is saved to
+<code>Documents/WhatsNowPlaying/configbackup/</code> before any upgrade runs, so you can recover
+if anything goes wrong.</p>
+<h2 id="upgrading-from-3x-or-4x-to-5x">Upgrading from 3.x or 4.x to 5.x<a class="headerlink" href="#upgrading-from-3x-or-4x-to-5x" title="Permanent link">&para;</a></h2>
 <h3 id="automatic-directory-migration">Automatic Directory Migration<a class="headerlink" href="#automatic-directory-migration" title="Permanent link">&para;</a></h3>
 <p>The application will automatically migrate your Documents directory:</p>
 <ul>
@@ -2410,15 +2432,15 @@ Only import configurations when necessary. Normal upgrades preserve
 settings automatically. Configuration files contain sensitive data -
 store securely and delete when no longer needed.</p>
 </blockquote>
-<h2 id="upgrading-from-2x-to-500">Upgrading from 2.x to 5.0.0<a class="headerlink" href="#upgrading-from-2x-to-500" title="Permanent link">&para;</a></h2>
-<p><strong>Important</strong>: You must upgrade to version 3.1.2 first, then upgrade to 5.0.0.</p>
+<h2 id="upgrading-from-2x-to-5x">Upgrading from 2.x to 5.x<a class="headerlink" href="#upgrading-from-2x-to-5x" title="Permanent link">&para;</a></h2>
+<p><strong>Important</strong>: You must upgrade to version 3.1.2 first, then upgrade to the current version.</p>
 <ol>
 <li>Install version 3.1.2 from the releases page</li>
-<li>Launch the application - settings will be migrated automatically</li>
-<li>Then upgrade to 5.0.0</li>
+<li>Launch the application — settings will be migrated automatically</li>
+<li>Then upgrade to the current version</li>
 </ol>
-<h2 id="upgrading-from-1x-to-500">Upgrading from 1.x to 5.0.0<a class="headerlink" href="#upgrading-from-1x-to-500" title="Permanent link">&para;</a></h2>
-<p>Unfortunately, 1.x.x wasn't built to support upgrades. You will need to treat this as a fresh install -
+<h2 id="upgrading-from-1x-to-5x">Upgrading from 1.x to 5.x<a class="headerlink" href="#upgrading-from-1x-to-5x" title="Permanent link">&para;</a></h2>
+<p>Unfortunately, 1.x.x wasn't built to support upgrades. You will need to treat this as a fresh install —
 none of your settings will be preserved.</p>
 
 
