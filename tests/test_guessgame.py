@@ -765,6 +765,76 @@ async def test_hyphenated_artist_name(isolated_guessgame):  # pylint: disable=re
 
 
 @pytest.mark.asyncio
+async def test_initialism_artist_name(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test that initialisms like Run‐D.M.C. match when guessed as run-dmc or rundmc.
+
+    Run‐D.M.C. normalizes to "rund m c" (dots become spaces via normality,
+    en-dash removed).  A guess of "run-dmc" normalizes to "rundmc" (hyphen
+    stripped).  The concatenated-sequence match must bridge this gap.
+    """
+    game = isolated_guessgame
+    await game.start_new_game(
+        track="Krush Groovin'",
+        artist=(
+            "Fat Boys, Run\u2010D.M.C., Sheila E. and Kurtis Blow (The Krush Groove All\u2010Stars)"
+        ),
+    )
+
+    # Guess with ASCII hyphen should match the initialism in the artist name
+    result = await game.process_guess(username="testuser", guess_text="run-dmc")
+
+    assert result is not None
+    assert result["correct"] is True
+
+    # Guess without any separator should also match
+    game2 = isolated_guessgame
+    await game2.start_new_game(track="Rock Box", artist="Run\u2010D.M.C.")
+
+    result2 = await game2.process_guess(username="testuser", guess_text="rundmc")
+
+    assert result2 is not None
+    assert result2["correct"] is True
+    assert result2["guess_type"] == "solve"
+    assert result2["artist_solved"] is True
+
+
+@pytest.mark.asyncio
+async def test_multi_artist_word_reveal_alignment(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test that word reveals use correct original words when normalization shifts word counts.
+
+    "Run\u2010D.M.C." (1 original word) normalizes to "rund m c" (3 words), shifting all
+    subsequent normalized-word indices by +2 relative to original-word indices.
+    Without the alignment map, guessing "Kurtis Blow" would reveal letters from
+    the wrong original words ("(The" and "Krush") instead of "Kurtis" and "Blow".
+    """
+    game = isolated_guessgame
+    await game.start_new_game(
+        track="Krush Groovin'",
+        artist=(
+            "Fat Boys, Run\u2010D.M.C., Sheila E. and Kurtis Blow (The Krush Groove All\u2010Stars)"
+        ),
+    )
+
+    result = await game.process_guess(username="testuser", guess_text="Kurtis Blow")
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["guess_type"] == "word"
+
+    # The revealed_letters in the result should include b and w from "Blow".
+    # Access via the display hint: 'b' and 'w' should appear in the artist hint.
+    # We verify indirectly: guess "blow" next and it should say already-guessed letters
+    # are all revealed (no new letters → not awarded points again).
+    result2 = await game.process_guess(username="testuser2", guess_text="blow")
+
+    # "blow" was already part of "Kurtis Blow" guess; all its letters should be revealed.
+    # The game should still return correct=True (word match) but award 0 points since
+    # no *new* letters are revealed.
+    assert result2 is not None
+    assert result2["correct"] is False  # No new letters → no points
+
+
+@pytest.mark.asyncio
 async def test_accented_characters_in_name(isolated_guessgame):  # pylint: disable=redefined-outer-name
     """Test that accented characters like é are revealed when user guesses without accent."""
     game = isolated_guessgame
@@ -1136,16 +1206,16 @@ async def test_grace_period_rejects_after_expiry(
 async def test_grace_period_default_value(
     isolated_guessgame,
 ):  # pylint: disable=redefined-outer-name
-    """Test that grace period defaults to 5 seconds"""
+    """Test that grace period defaults to 10 seconds"""
     game = isolated_guessgame
 
-    # Don't set grace_period - should use default of 5
+    # Don't set grace_period - should use default of 10
 
     # Start and end a game
     await game.start_new_game(track="Test Song", artist="Test Artist")
     await game.end_game(reason="timeout")
 
-    # Immediately try to guess (within default 5s grace period)
+    # Immediately try to guess (within default 10s grace period)
     result = await game.process_guess(username="player1", guess_text="e")
 
     # Should accept the guess (within default grace period)
@@ -1179,3 +1249,45 @@ async def test_grace_period_handles_clock_skew(
         # Should accept the guess (elapsed clamped to 0, within grace period)
         assert result is not None
         assert "correct" in result
+
+
+@pytest.mark.asyncio
+async def test_unicode_apostrophe_in_track(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test that tracks with Unicode apostrophes (U+2019) are matched correctly.
+
+    Regression test for the bug where 'I'm Free' stored with U+2019 would
+    normalize to 'i m free' (two words) instead of 'im free' (one word),
+    causing 'im free' guesses to return Not quite! instead of revealing letters.
+    """
+    game = isolated_guessgame
+
+    # Title uses RIGHT SINGLE QUOTATION MARK (U+2019) as apostrophe
+    await game.start_new_game(
+        track="I\u2019m Free (feat. Junior Reid)",
+        artist="The Soup Dragons",
+    )
+
+    # Guess "im free" (no apostrophe) should reveal letters from "I'm Free"
+    result = await game.process_guess(username="testuser", guess_text="im free")
+
+    assert result is not None
+    assert result["correct"] is True, (
+        f"Expected 'im free' to match 'I\u2019m Free (feat. Junior Reid)', got: {result}"
+    )
+    assert result["guess_type"] == "word"
+
+    # The masked track should show 'I' and 'm' revealed after this guess
+    masked = result["masked_track"]
+    assert "I" in masked or "i" in masked.lower(), f"'I' should be revealed, got: {masked}"
+
+    # Also test that the original apostrophe form works too
+    await game.start_new_game(
+        track="I\u2019m Free (feat. Junior Reid)",
+        artist="The Soup Dragons",
+    )
+    result2 = await game.process_guess(username="testuser", guess_text="i'm free")
+    assert result2 is not None
+    assert result2["correct"] is True, (
+        f'Expected "i\'m free" to match track with U+2019, got: {result2}'
+    )
+    assert result2["guess_type"] == "word"

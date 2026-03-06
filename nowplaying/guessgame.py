@@ -274,9 +274,9 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         # Remove apostrophes and hyphens before normality processing
         # Apostrophes: "I'm" becomes "Im" not "I m"
         # Hyphens: "Alt-J" becomes "AltJ" not "Alt J"
-        normalized = normalized.replace("'", "")  # Apostrophe (U+0027)
-        normalized = normalized.replace("'", "")  # Left single quotation mark (U+2018)
-        normalized = normalized.replace("'", "")  # Right single quotation mark (U+2019)
+        normalized = normalized.replace("\u0027", "")  # Apostrophe (U+0027)
+        normalized = normalized.replace("\u2018", "")  # Left single quotation mark (U+2018)
+        normalized = normalized.replace("\u2019", "")  # Right single quotation mark (U+2019)
         normalized = normalized.replace("ʼ", "")  # Modifier letter apostrophe (U+02BC)
         normalized = normalized.replace("`", "")  # Grave accent (U+0060)
         normalized = normalized.replace("´", "")  # Acute accent (U+00B4)
@@ -311,9 +311,35 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         return normalized.strip()
 
     @staticmethod
+    def _find_concatenated_sequence(guess: str, words: list[str]) -> tuple[int, int] | None:
+        """
+        Find a consecutive window of words that concatenate to equal guess.
+
+        Used to match initialisms like "rundmc" against ["rund", "m", "c"],
+        which arises when "Run‐D.M.C." normalizes differently from "run-dmc"
+        (hyphens removed directly vs dots-as-spaces via normality).
+
+        Args:
+            guess: Single normalized guess word (no spaces)
+            words: List of normalized words to search through
+
+        Returns:
+            (start_index, window_size) tuple if found, None otherwise
+        """
+        max_window = min(len(guess), len(words))
+        for window_size in range(2, max_window + 1):
+            for i in range(len(words) - window_size + 1):
+                if "".join(words[i : i + window_size]) == guess:
+                    return (i, window_size)
+        return None
+
+    @staticmethod
     def _is_word_match(guess: str, text: str) -> bool:
         """
         Check if guess matches as a complete word in text (not just substring).
+
+        Also handles the case where consecutive words in text concatenate to
+        form the guess (e.g. "rundmc" matching "rund m c" from "Run‐D.M.C.").
 
         Args:
             guess: The normalized guess text
@@ -328,7 +354,49 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         # Escape the guess for regex and create word boundary pattern
         # \b matches word boundaries (start/end of word)
         pattern = r"\b" + re.escape(guess) + r"\b"
-        return bool(re.search(pattern, text))
+        if re.search(pattern, text):
+            return True
+
+        # Also match if consecutive words in text concatenate to form the guess.
+        # This handles initialisms: "run-dmc" → "rundmc", "Run‐D.M.C." → "rund m c"
+        return GuessGame._find_concatenated_sequence(guess, text.split()) is not None
+
+    @staticmethod
+    def _build_word_alignment(original_words: list[str], normalized_words: list[str]) -> list[int]:
+        """
+        Build a mapping from normalized-word index → original-word index.
+
+        When one original word (e.g. "Run‐D.M.C.,") normalizes to multiple words
+        ("rund", "m", "c"), each resulting normalized word maps back to that same
+        original index.  This corrects the index drift that would otherwise cause
+        reveals to uncover the wrong letters.
+
+        Falls back to 1:1 index mapping when per-word normalization is inconsistent
+        with the full-string normalization (e.g. " n " → "and" only fires on the
+        full string).
+
+        Args:
+            original_words: Words from the original un-normalized text
+            normalized_words: Words from the fully normalized text
+
+        Returns:
+            alignment list where alignment[i] is the original-word index for
+            normalized_words[i]
+        """
+        alignment: list[int] = []
+        for orig_idx, orig_word in enumerate(original_words):
+            norm = GuessGame._normalize_for_matching(orig_word)
+            parts = norm.split() if norm else []
+            for _ in parts:
+                alignment.append(orig_idx)
+
+        # If per-word normalization produces a different count than the full-string
+        # normalization (e.g. " n "→"and" or Irish-prefix merges), fall back to a
+        # simple 1:1 index mapping to avoid invalid lookups.
+        if len(alignment) != len(normalized_words):
+            alignment = [min(i, len(original_words) - 1) for i in range(len(normalized_words))]
+
+        return alignment
 
     def _reveal_matching_word_letters(
         self,
@@ -355,40 +423,56 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         normalized_words = normalized_text.split()
         guess_words = guess_normalized.split()
 
+        # Build alignment so normalized-word indices map to correct original words
+        # even when one original word normalizes to multiple normalized words.
+        alignment = self._build_word_alignment(original_words, normalized_words)
+
         # Handle single-word guesses (original behavior)
         if len(guess_words) == 1:
             self._reveal_single_word_match(
-                guess_normalized, original_words, normalized_words, revealed_letters
+                guess_normalized, original_words, normalized_words, alignment, revealed_letters
             )
             return
 
         # Handle multi-word guesses by finding the sequence
         self._reveal_multi_word_match(
-            guess_words, original_words, normalized_words, revealed_letters
+            guess_words, original_words, normalized_words, alignment, revealed_letters
         )
 
-    def _reveal_single_word_match(
+    def _reveal_single_word_match(  # pylint: disable=too-many-arguments
         self,
         guess_normalized: str,
         original_words: list[str],
         normalized_words: list[str],
+        alignment: list[int],
         revealed_letters: set[str],
     ) -> None:
         """Helper to reveal letters for single-word guesses."""
         for i, norm_word in enumerate(normalized_words):
             if not self._is_word_match(guess_normalized, norm_word):
                 continue
-            if i >= len(original_words):
-                continue
-            for char in original_words[i]:
+            orig_idx = alignment[i]
+            for char in original_words[orig_idx]:
                 if char.isalpha():
                     revealed_letters.add(char.lower())
+
+        # Also reveal letters from a concatenated-word sequence match.
+        # e.g. guess "rundmc" matches normalized_words ["rund", "m", "c"]
+        seq = self._find_concatenated_sequence(guess_normalized, normalized_words)
+        if seq is not None:
+            start, count = seq
+            orig_indices = {alignment[j] for j in range(start, min(start + count, len(alignment)))}
+            for orig_idx in orig_indices:
+                for char in original_words[orig_idx]:
+                    if char.isalpha():
+                        revealed_letters.add(char.lower())
 
     @staticmethod
     def _reveal_multi_word_match(
         guess_words: list[str],
         original_words: list[str],
         normalized_words: list[str],
+        alignment: list[int],
         revealed_letters: set[str],
     ) -> None:
         """Helper to reveal letters for multi-word guesses."""
@@ -396,9 +480,14 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
             sequence = normalized_words[i : i + len(guess_words)]
             if sequence != guess_words:
                 continue
-            # Reveal all letters from the corresponding original words
-            for j in range(i, min(i + len(guess_words), len(original_words))):
-                for char in original_words[j]:
+            # Reveal all original words that contributed to this normalized sequence.
+            # Using a set of orig_indices handles the case where multiple normalized
+            # words came from the same original word (e.g. "Run‐D.M.C." → 3 words).
+            orig_indices = {
+                alignment[j] for j in range(i, min(i + len(guess_words), len(alignment)))
+            }
+            for orig_idx in orig_indices:
+                for char in original_words[orig_idx]:
                     if char.isalpha():
                         revealed_letters.add(char.lower())
 
@@ -712,7 +801,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 # Check if game is active or within grace period
                 if game_row["status"] != "active":
                     # Game has ended - check if we're within grace period
-                    grace_period = self._get_config("grace_period", 5, int)
+                    grace_period = self._get_config("grace_period", 10, int)
                     end_time = game_row["end_time"]
 
                     if not end_time:
@@ -800,6 +889,17 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     )
                     track_match = guess_normalized == track_normalized
                     artist_match = guess_normalized == artist_normalized
+                    # Also treat a guess as a full artist solve when every word in the
+                    # normalized artist concatenates to form the guess.
+                    # e.g. "rundmc" solves artist "Run‐D.M.C." (normalized "rund m c")
+                    if not artist_match:
+                        artist_words = artist_normalized.split()
+                        seq = self._find_concatenated_sequence(guess_normalized, artist_words)
+                        artist_match = seq == (0, len(artist_words))
+                    if not track_match:
+                        track_words = track_normalized.split()
+                        seq = self._find_concatenated_sequence(guess_normalized, track_words)
+                        track_match = seq == (0, len(track_words))
 
                     # Handle different solve modes
                     if solve_mode == "either":
