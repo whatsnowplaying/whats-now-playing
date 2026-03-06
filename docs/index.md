@@ -20,7 +20,8 @@ Works with all major platforms. See the full [Input Sources](input/index.md) lis
 * djay Pro
 * DJUCED
 * JRiver Media Center
-* Icecast streaming servers
+* Icecast streaming servers — including [MIXXX](input/icecast.md#settings-for-mixxx) and [butt](input/icecast.md#settings-for-butt)
+* Remote input — including [MegaSeg](input/remote.md#megaseg) and [Radiologik](input/remote.md#radiologik)
 * M3U playlists
 * MPRIS2-compatible players (Linux)
 * Windows Media API (Windows Media Player, Spotify, Amazon Music, and more)

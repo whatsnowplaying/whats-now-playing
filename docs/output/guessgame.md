@@ -25,6 +25,19 @@ Before enabling the Guess Game, you must have:
 1. **Twitch Bot configured**: See [TwitchBot](twitchbot.md) for authentication setup
 2. **Webserver enabled**: See [Webserver](webserver.md) for configuration
 
+### Enable the Chat Commands
+
+The Guess Game adds two chat command templates (`twitchbot_guess.txt` and `twitchbot_mypoints.txt`)
+that are **disabled by default**. You must enable them in the Twitch Bot settings:
+
+1. Open Settings from the **What's Now Playing** menu/tray icon
+2. Select **Twitch Bot** from the **Streaming & Chat** section
+3. Find the `guess` and `mypoints` entries in the permissions list and check the appropriate
+   permission levels (e.g. Everyone)
+4. Click Save
+
+See [TwitchBot → Setting Permissions](twitchbot.md#setting-permissions) for details.
+
 ### Enabling the Guess Game
 
 **macOS:**
@@ -90,7 +103,7 @@ Before enabling the Guess Game, you must have:
 | Auto Reveal Common Words | Automatically reveal very common words (the, and, of, etc.) | Disabled |
 | Time Bonus Enabled | Award bonus points for solving quickly | Disabled |
 | Send to Server | Enable online game board at whatsnowplaying.com (requires Charts API key) | Enabled |
-| Grace Period | Seconds after game ends to still accept guesses (accounts for Twitch stream delay) | 5 |
+| Grace Period | Seconds after game ends to still accept guesses (accounts for Twitch stream delay) | 10 |
 
 **Leaderboard Management:**
 
@@ -178,7 +191,7 @@ Viewers watching your Twitch stream experience a delay (typically 5-15+ seconds)
 behind real-time. To ensure fair gameplay, the Guess Game includes a configurable **Grace Period**:
 
 * **After a game ends** (solved, timeout, or track change), guesses are still accepted for the configured grace
-  period (default: 5 seconds)
+  period (default: 10 seconds)
 * **Viewers see the ended game** with revealed answers, but their "late" guesses from stream delay are still
   processed and scored
 * **Leaderboards reflect reality**: Scores account for what viewers actually experienced on their delayed streams
@@ -250,7 +263,7 @@ The Guess Game uses Jinja2 templates for chat responses and OBS display:
 {% if guess_error -%}
 {{ guess_error }}
 {%- elif guess_already_guessed -%}
-@{{ guess_user }} You already guessed "{{ guess_text }}"!
+@{{ guess_user }} "{{ guess_text }}" is already revealed!
 {%- elif guess_already_solved -%}
 @{{ guess_user }} That part is already solved!
 {%- elif guess_solved and guess_solve_type == "both" -%}
@@ -342,7 +355,8 @@ Artist: {{ masked_artist }}
 
 ### Chat Commands Not Working
 
-* Confirm chat permissions are set in Twitch settings
+* **Enable the commands**: In Settings → Twitch Bot, the `guess` and `mypoints` commands must be
+  explicitly enabled — they are disabled by default
 * Check that template files exist: `twitchbot_guess.txt` and `twitchbot_mypoints.txt`
 * Verify bot has proper OAuth authentication
 

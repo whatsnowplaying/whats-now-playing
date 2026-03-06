@@ -93,6 +93,7 @@ nav:
       - Icecast: input/icecast.md
       - JRiver: input/jriver.md
       - M3U: input/m3u.md
+      - MIXXX: input/mixxx.md
       - MPRIS2: input/mpris2.md
       - Remote: input/remote.md
       - Serato: input/serato.md

@@ -1,6 +1,7 @@
 # Icecast
 
 [Icecast](https://icecast.org/) is a popular system to stream audio over the Internet.
+This page also covers **[MIXXX](#settings-for-mixxx)** and **[butt](#settings-for-butt)**.
 
 > NOTE: This source does not support Oldest mix mode.
 

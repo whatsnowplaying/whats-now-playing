@@ -3,7 +3,7 @@
 [MPRIS2](https://mpris2.readthedocs.io/en/latest/) is a specification
 for Linux DBus compatible music software to communicate with each other.
 **What's Now Playing** supports reading track data from MPRIS2 sources,
-including VLC.
+including VLC and MIXXX (Linux builds with MPRIS2 support).
 
 > NOTE: This source does not support Oldest mix mode.
 
