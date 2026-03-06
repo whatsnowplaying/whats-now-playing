@@ -42,6 +42,10 @@ jobs:
           export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
           export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
           ./builder.sh
+      - name: smoke test binary
+        run: |
+          BINARY=$(find WhatsNowPlaying-* -path "*/Contents/MacOS/WhatsNowPlaying" -type f | head -1)
+          "${BINARY}" --smoke-test
       - name: artifact dist
         uses: actions/upload-artifact@v7
         with:
