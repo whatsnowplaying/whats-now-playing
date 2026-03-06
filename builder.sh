@@ -39,7 +39,7 @@ if [[ "${SYSTEM}" == "dev" ]]; then
       ACTIVATE="venv/bin/activate"
       ;;
   esac
-  PYTHONBIN=$(command -v "${PYTHON}")
+  PYTHONBIN="${PYTHONBIN:-$(command -v "${PYTHON}")}"
   if [[ -z "${PYTHONBIN}" ]]; then
     echo "Error: '${PYTHON}' not found on PATH. Please install Python 3.10–3.13."
     exit 1
@@ -120,7 +120,7 @@ esac
 
 DISTDIR=WhatsNowPlaying-"${VERSION}-${DISTNAME}"
 
-PYTHONBIN=$(command -v "${PYTHON}")
+PYTHONBIN="${PYTHONBIN:-$(command -v "${PYTHON}")}"
 echo "*****"
 echo "* Building on ${SYSTEM} / ${UNAMESYS}"
 echo "* Using ${PYTHONBIN}"
