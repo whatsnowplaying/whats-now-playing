@@ -119,7 +119,7 @@ Shows the current game state with masked track/artist names:
 
 1. Add a **Browser** source in OBS
 2. Set URL to: `http://localhost:8899/guessgame/guessgame.htm`
-3. Set dimensions: `1920x200` (or adjust to your layout)
+3. Set dimensions: `640x420` (or adjust to your layout)
 4. Customize the display by editing `templates/guessgame/guessgame.htm`
 
 **Display Shows:**
@@ -140,7 +140,7 @@ Displays scores for the current streaming session:
 
 1. Add a **Browser** source in OBS
 2. Set URL to: `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session`
-3. Set dimensions: `600x800` (or adjust to your layout)
+3. Set dimensions: `560x500` (or adjust to your layout)
 
 #### All-Time Leaderboard
 
@@ -148,7 +148,7 @@ Displays cumulative scores across all sessions:
 
 1. Add a **Browser** source in OBS
 2. Set URL to: `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=all_time`
-3. Set dimensions: `600x800` (or adjust to your layout)
+3. Set dimensions: `560x500` (or adjust to your layout)
 
 **Customization:**
 
