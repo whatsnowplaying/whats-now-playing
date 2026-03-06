@@ -1,5 +1,7 @@
 # Remote Services
 
+This page also covers **[MegaSeg](#megaseg)** and **[Radiologik](#radiologik)**.
+
 A common streaming configuration is to have more than one computer
 involved, such as one computer working as the DJ machine and one computer
 for processing the stream.  In some very advanced configurations, there
@@ -11,6 +13,9 @@ their own app configuration running.  One or more installations on
 DJ computers send the track information to a central one.  That
 central one will then perform any additional lookups and send the
 output to anything configured such as Twitch.
+
+On local networks, client installations can automatically discover the server using
+Bonjour/Zeroconf — no manual IP configuration needed.
 
 ## Instructions
 
