@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>650</width>
-    <height>420</height>
+    <height>575</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -288,12 +288,84 @@
    </property>
   </widget>
 
+  <!-- Remove User from All-Time Leaderboard -->
+  <widget class="QLabel" name="remove_user_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>248</y>
+     <width>250</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Remove User from All-Time Leaderboard:</string>
+   </property>
+  </widget>
+
+  <widget class="QLineEdit" name="remove_user_lineedit">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>273</y>
+     <width>370</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="placeholderText">
+    <string>Twitch username</string>
+   </property>
+  </widget>
+
+  <widget class="QPushButton" name="remove_user_button">
+   <property name="geometry">
+    <rect>
+     <x>400</x>
+     <y>273</y>
+     <width>220</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Remove from All-Time</string>
+   </property>
+  </widget>
+
+  <!-- Excluded from Scoring -->
+  <widget class="QLabel" name="excluded_users_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>313</y>
+     <width>400</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Excluded from scoring (comma-separated usernames):</string>
+   </property>
+  </widget>
+
+  <widget class="QLineEdit" name="excluded_users_lineedit">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>338</y>
+     <width>610</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="placeholderText">
+    <string>e.g. myusername, testbot</string>
+   </property>
+  </widget>
+
   <!-- Advanced Options -->
   <widget class="QLabel" name="advanced_label">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>255</y>
+     <y>378</y>
      <width>200</width>
      <height>20</height>
     </rect>
@@ -310,7 +382,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>290</y>
+     <y>408</y>
      <width>620</width>
      <height>30</height>
     </rect>
@@ -324,7 +396,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>330</y>
+     <y>448</y>
      <width>620</width>
      <height>30</height>
     </rect>
@@ -338,7 +410,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>370</y>
+     <y>488</y>
      <width>620</width>
      <height>30</height>
     </rect>
@@ -355,7 +427,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>410</y>
+     <y>528</y>
      <width>400</width>
      <height>30</height>
     </rect>
@@ -369,7 +441,7 @@
    <property name="geometry">
     <rect>
      <x>430</x>
-     <y>410</y>
+     <y>528</y>
      <width>100</width>
      <height>30</height>
     </rect>
