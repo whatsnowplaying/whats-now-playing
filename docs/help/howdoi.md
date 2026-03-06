@@ -69,11 +69,13 @@ that need to be reconfigured manually.
 1. Make sure [TwitchBot](../output/twitchbot.md) is configured and connected
 2. Make sure the [Webserver](../output/webserver.md) is enabled
 3. Open Streaming & Chat → Guessgame and configure to your liking, then Save
-4. Enable the game from the menu bar (macOS) or system tray (Windows) by
+4. Open Streaming & Chat → Twitch Bot and enable the `guess` and `mypoints` commands
+   (they are disabled by default)
+5. Enable the game from the menu bar (macOS) or system tray (Windows) by
    clicking **Guess Game**
-5. To show the game state in OBS, add a Browser source pointed at
+6. To show the game state in OBS, add a Browser source pointed at
    `http://localhost:8899/guessgame/guessgame.htm`
-6. To show leaderboards, add a Browser source pointed at
+7. To show leaderboards, add a Browser source pointed at
    `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session`
    or `?type=all_time`
 
