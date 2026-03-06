@@ -20,7 +20,7 @@ multiprocessing.freeze_support()
 if __name__ == "__main__":
     from nowplaying.__main__ import main as realmain
 
-    if '--smoke-test' in sys.argv:
+    if "--smoke-test" in sys.argv:
         sys.exit(0)
     realmain()
 sys.stdout.close()

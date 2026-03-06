@@ -962,6 +962,27 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                             )
                             self._mark_guess_as_wrong(result, guess_text)
 
+                    # One-shot solve: guess contains both track and artist
+                    elif (
+                        not track_solved
+                        and not artist_solved
+                        and track_normalized in guess_normalized
+                        and artist_normalized in guess_normalized
+                    ):
+                        result["correct"] = True
+                        result["guess_type"] = "solve"
+                        result["solve_type"] = "both"
+                        result["track_solved"] = True
+                        result["artist_solved"] = True
+                        result["solved"] = True
+                        revealed_letters.update(
+                            char.lower() for char in track + artist if char.isalpha()
+                        )
+                        is_first_solver = difficulty_bonus == 1
+                        result["points"] = self._calculate_points(
+                            guess_text, "solve", is_first_solver
+                        )
+
                     # Track and artist are independent objectives
                     elif track_match and not track_solved:
                         # Solved the track

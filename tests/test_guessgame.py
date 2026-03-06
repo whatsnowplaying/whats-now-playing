@@ -1291,3 +1291,107 @@ async def test_unicode_apostrophe_in_track(isolated_guessgame):  # pylint: disab
         f'Expected "i\'m free" to match track with U+2019, got: {result2}'
     )
     assert result2["guess_type"] == "word"
+
+
+@pytest.mark.asyncio
+async def test_separate_solves_oneshot_track_first(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test one-shot solve with track before artist in separate_solves mode."""
+    game = isolated_guessgame
+    game.config.cparser.setValue("guessgame/solve_mode", "separate_solves")
+
+    await game.start_new_game(
+        track="Babylon Drifter",
+        artist="My Life With the Thrill Kill Kult",
+    )
+
+    result = await game.process_guess(
+        username="testuser",
+        guess_text="babylon drifter my life with the thrill kill kult",
+    )
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["solved"] is True
+    assert result["solve_type"] == "both"
+    assert result["track_solved"] is True
+    assert result["artist_solved"] is True
+
+    state = await game.get_current_state()
+    assert state["status"] == "solved"
+
+
+@pytest.mark.asyncio
+async def test_separate_solves_oneshot_artist_first(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test one-shot solve with artist before track in separate_solves mode."""
+    game = isolated_guessgame
+    game.config.cparser.setValue("guessgame/solve_mode", "separate_solves")
+
+    await game.start_new_game(
+        track="Babylon Drifter",
+        artist="My Life With the Thrill Kill Kult",
+    )
+
+    result = await game.process_guess(
+        username="testuser",
+        guess_text="my life with the thrill kill kult babylon drifter",
+    )
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["solved"] is True
+    assert result["solve_type"] == "both"
+    assert result["track_solved"] is True
+    assert result["artist_solved"] is True
+
+
+@pytest.mark.asyncio
+async def test_separate_solves_oneshot_with_dash(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test one-shot solve with dash separator in separate_solves mode."""
+    game = isolated_guessgame
+    game.config.cparser.setValue("guessgame/solve_mode", "separate_solves")
+
+    await game.start_new_game(
+        track="Babylon Drifter",
+        artist="My Life With the Thrill Kill Kult",
+    )
+
+    result = await game.process_guess(
+        username="testuser",
+        guess_text="my life with the thrill kill kult - babylon drifter",
+    )
+
+    assert result is not None
+    assert result["correct"] is True
+    assert result["solved"] is True
+    assert result["solve_type"] == "both"
+
+
+@pytest.mark.asyncio
+async def test_separate_solves_oneshot_only_when_both_unsolved(isolated_guessgame):  # pylint: disable=redefined-outer-name
+    """Test that one-shot does not trigger if one part is already solved."""
+    game = isolated_guessgame
+    game.config.cparser.setValue("guessgame/solve_mode", "separate_solves")
+
+    await game.start_new_game(track="Babylon Drifter", artist="My Life With the Thrill Kill Kult")
+
+    # Solve the track first
+    track_result = await game.process_guess(username="testuser", guess_text="babylon drifter")
+    assert track_result["solve_type"] == "track"
+
+    # Now try combined guess — track already solved so one-shot path skipped,
+    # combined phrase is not an exact artist match either, so game stays active
+    result = await game.process_guess(
+        username="testuser",
+        guess_text="babylon drifter my life with the thrill kill kult",
+    )
+
+    assert result is not None
+    state = await game.get_current_state()
+    assert state["status"] == "active"
+
+    # Artist can still be solved with an exact guess
+    artist_result = await game.process_guess(
+        username="testuser",
+        guess_text="my life with the thrill kill kult",
+    )
+    assert artist_result["solved"] is True
