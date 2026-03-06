@@ -1,7 +1,7 @@
 {% if guess_error -%}
 {{ guess_error }}
 {%- elif guess_already_guessed -%}
-@{{ guess_user }} You already guessed "{{ guess_text }}"!
+@{{ guess_user }} "{{ guess_text }}" is already revealed!
 {%- elif guess_already_solved -%}
 @{{ guess_user }} That part is already solved!
 {%- elif guess_solved and guess_solve_type == "both" -%}

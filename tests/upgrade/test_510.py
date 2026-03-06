@@ -16,7 +16,7 @@ import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.upgrades.config  # pylint: disable=import-error
 
 
-def make_fake_510_preview3_config():
+def make_fake_510_preview3_config(grace_period=None):
     """Generate a 5.1.0-preview3 config containing legacy keys that should be removed"""
     if sys.platform == "win32":
         qsettingsformat = QSettings.IniFormat
@@ -41,6 +41,8 @@ def make_fake_510_preview3_config():
     settings.setValue("serato3/libpath", "/Users/someone/Music/_Serato_")
     # A real key that should survive
     settings.setValue("settings/delay", "2.5")
+    if grace_period is not None:
+        settings.setValue("guessgame/grace_period", grace_period)
     settings.sync()
     filename = settings.fileName()
     del settings
@@ -57,7 +59,7 @@ def test_upgrade_510_removes_legacy_keys():
         else:
             qsettingsformat = QSettings.NativeFormat
 
-        _oldfilename = make_fake_510_preview3_config()
+        _oldfilename = make_fake_510_preview3_config(grace_period=5)
 
         reboot_macosx_prefs()
         nowplaying.bootstrap.set_qt_names(appname="testsuite")
@@ -80,6 +82,42 @@ def test_upgrade_510_removes_legacy_keys():
 
         # Real settings must survive
         assert config.value("settings/delay") == "2.5"
+
+        # grace_period=5 should have been bumped to 10
+        assert config.value("guessgame/grace_period") in (None, "10", 10)
+
+        config.clear()
+        del config
+        if os.path.exists(newfilename):
+            os.unlink(newfilename)
+        reboot_macosx_prefs()
+
+
+def test_upgrade_510_grace_period_not_changed_if_custom():
+    """Grace period is preserved if user set it to something other than the old default of 5"""
+    with tempfile.TemporaryDirectory() as newpath:
+        if sys.platform == "win32":
+            qsettingsformat = QSettings.IniFormat
+        else:
+            qsettingsformat = QSettings.NativeFormat
+
+        _oldfilename = make_fake_510_preview3_config(grace_period=30)
+
+        reboot_macosx_prefs()
+        nowplaying.bootstrap.set_qt_names(appname="testsuite")
+        _upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
+
+        config = QSettings(
+            qsettingsformat,
+            QSettings.UserScope,
+            QCoreApplication.organizationName(),
+            QCoreApplication.applicationName(),
+        )
+        newfilename = config.fileName()
+        config.sync()
+
+        # Custom grace period must be preserved
+        assert config.value("guessgame/grace_period") in ("30", 30)
 
         config.clear()
         del config
