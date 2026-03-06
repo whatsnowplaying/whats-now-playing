@@ -9,7 +9,8 @@ software and displays it on streams, in chat, or anywhere else you need it.
 
 ## Supported DJ Software
 
-Serato DJ, Traktor, Denon DJ (StagelinQ), Virtual DJ, DJUCED, MIXXX, JRiver Media Center, and more.
+Serato DJ, Traktor, Denon DJ (StagelinQ), Virtual DJ, DJUCED, MIXXX, MegaSeg, Radiologik,
+JRiver Media Center, butt, and more.
 
 ## Download
 

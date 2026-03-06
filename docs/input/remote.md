@@ -56,22 +56,26 @@ Recognition services (like AcoustID) must run on the client computer since they 
 
 ## DJ Software Integration Examples
 
-Some DJ software can send track information directly to What's Now Playing via HTTP requests:
+Some DJ software can send track information directly to What's Now Playing via HTTP requests.
 
-**MegaSeg (Logging → Send track info to server):**
+> Replace `localhost:8899` with your server's hostname and webserver port.
+> If a secret is configured, add `&secret=your_secret_key` to the URL.
+
+### MegaSeg
+
+In MegaSeg, go to **Logging → Send track info to server** and enter:
 
 ```url
 http://localhost:8899/v1/remoteinput?title=%Title%&artist=%Artist%&album=%Album%&year=%Year%&duration=%LengthSeconds%&bpm=%BPM%&composer=%Composer%&lyricist=%Lyricist%&publisher=%Publisher%
 ```
 
-**Radiologik (Publishing → Network & Serial → GET URL):**
+### Radiologik
+
+In Radiologik, go to **Publishing → Network & Serial → GET URL** and enter:
 
 ```url
 http://localhost:8899/v1/remoteinput?title=<t>&artist=<a>&album=<l>&isrc=<i>&composer=<comp>&publisher=<p>&year=<y>&duration=<s>&comment=<c>
 ```
-
-> Replace `localhost:8899` with your server's hostname and webserver port.
-> If a secret is configured, add `&secret=your_secret_key` to the URL.
 
 ## Advanced API Usage
 

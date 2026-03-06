@@ -90,11 +90,17 @@ nav:
       - Denon: input/denon.md
       - djay Pro: input/djaypro.md
       - DJUCED: input/djuced.md
-      - Icecast: input/icecast.md
+      - Icecast:
+          - Overview: input/icecast.md
+          - butt: input/icecast.md#settings-for-butt
+          - MIXXX: input/icecast.md#settings-for-mixxx
       - JRiver: input/jriver.md
       - M3U: input/m3u.md
       - MPRIS2: input/mpris2.md
-      - Remote: input/remote.md
+      - Remote:
+          - Overview: input/remote.md
+          - MegaSeg: input/remote.md#megaseg
+          - Radiologik: input/remote.md#radiologik
       - Serato: input/serato.md
       - Serato (Legacy): input/serato3.md
       - Traktor: input/traktor.md
