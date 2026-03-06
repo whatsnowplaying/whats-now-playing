@@ -818,6 +818,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../input/mixxx/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MIXXX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../input/mpris2/" class="md-nav__link">
         
   
@@ -1767,6 +1795,17 @@
     <span class="md-ellipsis">
       
         Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-chat-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable the Chat Commands
       
     </span>
   </a>
@@ -2832,6 +2871,17 @@ leaderboard system to track top performers across your stream session and all-ti
 <li><strong>Twitch Bot configured</strong>: See <a href="../twitchbot/">TwitchBot</a> for authentication setup</li>
 <li><strong>Webserver enabled</strong>: See <a href="../webserver/">Webserver</a> for configuration</li>
 </ol>
+<h3 id="enable-the-chat-commands">Enable the Chat Commands<a class="headerlink" href="#enable-the-chat-commands" title="Permanent link">&para;</a></h3>
+<p>The Guess Game adds two chat command templates (<code>twitchbot_guess.txt</code> and <code>twitchbot_mypoints.txt</code>)
+that are <strong>disabled by default</strong>. You must enable them in the Twitch Bot settings:</p>
+<ol>
+<li>Open Settings from the <strong>What's Now Playing</strong> menu/tray icon</li>
+<li>Select <strong>Twitch Bot</strong> from the <strong>Streaming &amp; Chat</strong> section</li>
+<li>Find the <code>guess</code> and <code>mypoints</code> entries in the permissions list and check the appropriate
+   permission levels (e.g. Everyone)</li>
+<li>Click Save</li>
+</ol>
+<p>See <a href="../twitchbot/#setting-permissions">TwitchBot → Setting Permissions</a> for details.</p>
 <h3 id="enabling-the-guess-game">Enabling the Guess Game<a class="headerlink" href="#enabling-the-guess-game" title="Permanent link">&para;</a></h3>
 <p><strong>macOS:</strong></p>
 <ol>
@@ -2980,7 +3030,7 @@ leaderboard system to track top performers across your stream session and all-ti
 <tr>
 <td>Grace Period</td>
 <td>Seconds after game ends to still accept guesses (accounts for Twitch stream delay)</td>
-<td>5</td>
+<td>10</td>
 </tr>
 </tbody>
 </table>
@@ -3060,7 +3110,7 @@ displayed and which color scheme is used (purple/orange for session, green for a
 behind real-time. To ensure fair gameplay, the Guess Game includes a configurable <strong>Grace Period</strong>:</p>
 <ul>
 <li><strong>After a game ends</strong> (solved, timeout, or track change), guesses are still accepted for the configured grace
-  period (default: 5 seconds)</li>
+  period (default: 10 seconds)</li>
 <li><strong>Viewers see the ended game</strong> with revealed answers, but their "late" guesses from stream delay are still
   processed and scored</li>
 <li><strong>Leaderboards reflect reality</strong>: Scores account for what viewers actually experienced on their delayed streams</li>
@@ -3119,7 +3169,7 @@ an online copy of your game board is available at:</p>
 <p><code>jinja2{% if guess_error -%}
 {{ guess_error }}
 {%- elif guess_already_guessed -%}
-@{{ guess_user }} You already guessed "{{ guess_text }}"!
+@{{ guess_user }} "{{ guess_text }}" is already revealed!
 {%- elif guess_already_solved -%}
 @{{ guess_user }} That part is already solved!
 {%- elif guess_solved and guess_solve_type == "both" -%}
@@ -3287,7 +3337,8 @@ Artist: {{ masked_artist }}</code></p>
 </ul>
 <h3 id="chat-commands-not-working">Chat Commands Not Working<a class="headerlink" href="#chat-commands-not-working" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Confirm chat permissions are set in Twitch settings</li>
+<li><strong>Enable the commands</strong>: In Settings → Twitch Bot, the <code>guess</code> and <code>mypoints</code> commands must be
+  explicitly enabled — they are disabled by default</li>
 <li>Check that template files exist: <code>twitchbot_guess.txt</code> and <code>twitchbot_mypoints.txt</code></li>
 <li>Verify bot has proper OAuth authentication</li>
 </ul>

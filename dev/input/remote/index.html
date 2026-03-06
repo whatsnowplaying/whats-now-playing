@@ -820,6 +820,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../mixxx/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MIXXX
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../mpris2/" class="md-nav__link">
         
   
@@ -965,6 +993,34 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="DJ Software Integration Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#megaseg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MegaSeg
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#radiologik" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Radiologik
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2393,6 +2449,7 @@
 
 
 <h1 id="remote-services">Remote Services<a class="headerlink" href="#remote-services" title="Permanent link">&para;</a></h1>
+<p>This page also covers <strong><a href="#megaseg">MegaSeg</a></strong> and <strong><a href="#radiologik">Radiologik</a></strong>.</p>
 <p>A common streaming configuration is to have more than one computer
 involved, such as one computer working as the DJ machine and one computer
 for processing the stream.  In some very advanced configurations, there
@@ -2403,6 +2460,8 @@ their own app configuration running.  One or more installations on
 DJ computers send the track information to a central one.  That
 central one will then perform any additional lookups and send the
 output to anything configured such as Twitch.</p>
+<p>On local networks, client installations can automatically discover the server using
+Bonjour/Zeroconf — no manual IP configuration needed.</p>
 <h2 id="instructions">Instructions<a class="headerlink" href="#instructions" title="Permanent link">&para;</a></h2>
 <h3 id="server-side">Server Side<a class="headerlink" href="#server-side" title="Permanent link">&para;</a></h3>
 <p><a href="../images/remote-source-selection.png"><img alt="remote-source-selection" src="../images/remote-source-selection.png" /></a></p>
@@ -2441,17 +2500,19 @@ remote connections across the internet, you must use manual configuration.</p>
 </ul>
 <p>Recognition services (like AcoustID) must run on the client computer since they need local file access.</p>
 <h2 id="dj-software-integration-examples">DJ Software Integration Examples<a class="headerlink" href="#dj-software-integration-examples" title="Permanent link">&para;</a></h2>
-<p>Some DJ software can send track information directly to What's Now Playing via HTTP requests:</p>
-<p><strong>MegaSeg (Logging → Send track info to server):</strong></p>
-<div class="highlight"><pre><span></span><code>http://localhost:8899/v1/remoteinput?title=%Title%&amp;artist=%Artist%&amp;album=%Album%&amp;year=%Year%&amp;duration=%LengthSeconds%&amp;bpm=%BPM%&amp;composer=%Composer%&amp;lyricist=%Lyricist%&amp;publisher=%Publisher%
-</code></pre></div>
-<p><strong>Radiologik (Publishing → Network &amp; Serial → GET URL):</strong></p>
-<div class="highlight"><pre><span></span><code>http://localhost:8899/v1/remoteinput?title=&lt;t&gt;&amp;artist=&lt;a&gt;&amp;album=&lt;l&gt;&amp;isrc=&lt;i&gt;&amp;composer=&lt;comp&gt;&amp;publisher=&lt;p&gt;&amp;year=&lt;y&gt;&amp;duration=&lt;s&gt;&amp;comment=&lt;c&gt;
-</code></pre></div>
+<p>Some DJ software can send track information directly to What's Now Playing via HTTP requests.</p>
 <blockquote>
 <p>Replace <code>localhost:8899</code> with your server's hostname and webserver port.
 If a secret is configured, add <code>&amp;secret=your_secret_key</code> to the URL.</p>
 </blockquote>
+<h3 id="megaseg">MegaSeg<a class="headerlink" href="#megaseg" title="Permanent link">&para;</a></h3>
+<p>In MegaSeg, go to <strong>Logging → Send track info to server</strong> and enter:</p>
+<div class="highlight"><pre><span></span><code>http://localhost:8899/v1/remoteinput?title=%Title%&amp;artist=%Artist%&amp;album=%Album%&amp;year=%Year%&amp;duration=%LengthSeconds%&amp;bpm=%BPM%&amp;composer=%Composer%&amp;lyricist=%Lyricist%&amp;publisher=%Publisher%
+</code></pre></div>
+<h3 id="radiologik">Radiologik<a class="headerlink" href="#radiologik" title="Permanent link">&para;</a></h3>
+<p>In Radiologik, go to <strong>Publishing → Network &amp; Serial → GET URL</strong> and enter:</p>
+<div class="highlight"><pre><span></span><code>http://localhost:8899/v1/remoteinput?title=&lt;t&gt;&amp;artist=&lt;a&gt;&amp;album=&lt;l&gt;&amp;isrc=&lt;i&gt;&amp;composer=&lt;comp&gt;&amp;publisher=&lt;p&gt;&amp;year=&lt;y&gt;&amp;duration=&lt;s&gt;&amp;comment=&lt;c&gt;
+</code></pre></div>
 <h2 id="advanced-api-usage">Advanced API Usage<a class="headerlink" href="#advanced-api-usage" title="Permanent link">&para;</a></h2>
 <p>For detailed API documentation including request/response formats, authentication, and validation details, see the <a href="../../reference/api/#getpost-v1remoteinput">API Reference</a>.</p>
 
