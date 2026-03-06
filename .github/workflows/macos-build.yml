@@ -44,7 +44,7 @@ jobs:
           ./builder.sh
       - name: smoke test binary
         run: |
-          BINARY=$(find WhatsNowPlaying-*.app/Contents/MacOS -name "WhatsNowPlaying" -type f | head -1)
+          BINARY=$(find WhatsNowPlaying-* -path "*/Contents/MacOS/WhatsNowPlaying" -type f | head -1)
           "${BINARY}" --smoke-test
       - name: artifact dist
         uses: actions/upload-artifact@v7
