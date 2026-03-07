@@ -32,7 +32,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: '3.14'
       - name: install homebrew dependencies
         run: |
           brew update --preinstall || true
@@ -114,7 +114,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: '3.14'
       - name: install dependencies
         run: |
           python fix_win_ver.py
@@ -281,7 +281,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: '3.14'
       - name: install dependencies
         run: |
           python3 -m venv /tmp/venv
