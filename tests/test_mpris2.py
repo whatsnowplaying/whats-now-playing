@@ -169,6 +169,42 @@ async def test_getplayingtrack_with_vlc_metadata(getroot):
 
 @pytest.mark.skipif(not DBUS_FAST_AVAILABLE, reason="dbus-fast not available")
 @pytest.mark.asyncio
+@pytest.mark.parametrize("idle_artist", ["AutoDJ is ready!", "No track playing"])
+async def test_getplayingtrack_mixxx_idle_states(idle_artist):
+    """Test that Mixxx idle/system states are filtered out and not treated as real tracks"""
+    with patch("nowplaying.inputs.mpris2.DBUS_STATUS", True):
+        handler = nowplaying.inputs.mpris2.MPRIS2Handler(service="mixxx")  # pylint: disable=no-member
+
+        mock_bus = MagicMock()
+        mock_props_obj = MagicMock()
+        mock_properties = MagicMock()
+
+        handler.bus = mock_bus
+        handler.introspection = MagicMock()
+
+        mock_bus.get_proxy_object.return_value = mock_props_obj
+        mock_props_obj.get_interface.return_value = mock_properties
+
+        response = {
+            "Metadata": Variant(
+                "a{sv}",
+                {
+                    "xesam:title": Variant("s", "Mixxx"),
+                    "xesam:artist": Variant("as", [idle_artist]),
+                },
+            )
+        }
+
+        mock_properties.call_get_all = AsyncMock(return_value=response)
+
+        result = await handler.getplayingtrack()
+
+        assert result["title"] is None
+        assert result["artist"] is None
+
+
+@pytest.mark.skipif(not DBUS_FAST_AVAILABLE, reason="dbus-fast not available")
+@pytest.mark.asyncio
 async def test_getplayingtrack_multiple_artists():
     """Test getplayingtrack with multiple artists"""
     with patch("nowplaying.inputs.mpris2.DBUS_STATUS", True):
