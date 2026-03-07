@@ -330,12 +330,11 @@ async def test_double_detection_same_track_not_suppressed(tmpbiohistory):  # pyl
         "RuPaul",
         None,
         "bio",
-        track_artist="Elton John, RuPaul",
-        track_title="Don't Go Breaking My Heart",
+        track=("Elton John, RuPaul", "Don't Go Breaking My Heart"),
     )
     # Second pipeline run for the SAME track: should NOT be considered "shown" for dedup
     result = await tmpbiohistory.has_been_shown(
-        "RuPaul", None, "Elton John, RuPaul", "Don't Go Breaking My Heart"
+        "RuPaul", None, ("Elton John, RuPaul", "Don't Go Breaking My Heart")
     )
     assert result is False
 
@@ -343,10 +342,8 @@ async def test_double_detection_same_track_not_suppressed(tmpbiohistory):  # pyl
 @pytest.mark.asyncio
 async def test_double_detection_different_track_suppressed(tmpbiohistory):  # pylint: disable=redefined-outer-name
     """Bio shown for a different earlier track IS suppressed (legitimate dedup)."""
-    await tmpbiohistory.record_shown(
-        "RuPaul", None, "bio", track_artist="RuPaul", track_title="Supermodel"
-    )
-    result = await tmpbiohistory.has_been_shown("RuPaul", None, "RuPaul", "Cover Girl")
+    await tmpbiohistory.record_shown("RuPaul", None, "bio", track=("RuPaul", "Supermodel"))
+    result = await tmpbiohistory.has_been_shown("RuPaul", None, ("RuPaul", "Cover Girl"))
     assert result is True
 
 

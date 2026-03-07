@@ -76,23 +76,21 @@ class ArtistBioHistory:
         self,
         artist_name: str,
         mbid: str | None = None,
-        track_artist: str | None = None,
-        track_title: str | None = None,
+        track: tuple[str, str] | None = None,
     ) -> bool:
         """Return True if this artist's bio was shown in the session for a *different* track.
 
-        When ``track_artist`` and ``track_title`` are supplied the query excludes any
-        entry that was recorded for the same track.  This lets a second pipeline run
-        triggered by the same filesystem event (double-detection) pass through
-        without being suppressed.
+        When ``track`` (artist, title) is supplied the query excludes any entry that was
+        recorded for the same track.  This lets a second pipeline run triggered by the
+        same filesystem event (double-detection) pass through without being suppressed.
 
         Checks by MBID first (globally unique), then falls back to artist name.
         When an MBID is provided both are checked so a name-only entry recorded on
         a previous track still counts as seen.
         """
-        ta = track_artist or ""
-        tt = track_title or ""
-        use_track_filter = bool(ta and tt)
+        norm_artist = track[0] if track else ""
+        norm_title = track[1] if track else ""
+        use_track_filter = bool(norm_artist and norm_title)
         try:
             async with aiosqlite.connect(str(self.dbpath)) as conn:
                 if use_track_filter:
@@ -101,14 +99,14 @@ class ArtistBioHistory:
                             """SELECT id FROM bio_history
                                WHERE (mbid = ? OR artist_name = ?) AND session_id = ?
                                  AND NOT (track_artist = ? AND track_title = ?)""",
-                            (mbid, artist_name, self.session_id, ta, tt),
+                            (mbid, artist_name, self.session_id, norm_artist, norm_title),
                         )
                     else:
                         cursor = await conn.execute(
                             """SELECT id FROM bio_history
                                WHERE artist_name = ? AND session_id = ?
                                  AND NOT (track_artist = ? AND track_title = ?)""",
-                            (artist_name, self.session_id, ta, tt),
+                            (artist_name, self.session_id, norm_artist, norm_title),
                         )
                 else:
                     if mbid:
@@ -134,19 +132,27 @@ class ArtistBioHistory:
         artist_name: str,
         mbid: str | None,
         bio_text: str | None,
-        track_artist: str | None = None,
-        track_title: str | None = None,
+        track: tuple[str, str] | None = None,
     ) -> None:
         """Record that this artist's bio was shown in the current session."""
-        ta = track_artist or ""
-        tt = track_title or ""
+        norm_artist = track[0] if track else ""
+        norm_title = track[1] if track else ""
         try:
             async with aiosqlite.connect(str(self.dbpath)) as conn:
                 await conn.execute(
                     """INSERT OR REPLACE INTO bio_history
-                       (artist_name, mbid, session_id, bio_text, shown_at, track_artist, track_title)
+                       (artist_name, mbid, session_id, bio_text, shown_at,
+                        track_artist, track_title)
                        VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                    (artist_name, mbid, self.session_id, bio_text, int(time.time()), ta, tt),
+                    (
+                        artist_name,
+                        mbid,
+                        self.session_id,
+                        bio_text,
+                        int(time.time()),
+                        norm_artist,
+                        norm_title,
+                    ),
                 )
                 await conn.commit()
                 logging.debug("Recorded bio shown for %s (mbid=%s)", artist_name, mbid)

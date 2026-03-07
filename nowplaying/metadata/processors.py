@@ -405,19 +405,16 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if isinstance(mbids, str):
             mbids = [mbids]
 
-        track_artist = self.metadata.get("artist")
-        track_title = self.metadata.get("title")
+        track = (self.metadata.get("artist") or "", self.metadata.get("title") or "")
 
         for i, artist in enumerate(artists):
             mbid = mbids[i] if i < len(mbids) else None
-            if not await self._biohistory.has_been_shown(artist, mbid, track_artist, track_title):
+            if not await self._biohistory.has_been_shown(artist, mbid, track):
                 return (artist, mbid)
 
         # Check extra MBIDs beyond the count of named artists (e.g. featured artist MBIDs)
         for extra_mbid in mbids[len(artists) :]:
-            if not await self._biohistory.has_been_shown(
-                extra_mbid, extra_mbid, track_artist, track_title
-            ):
+            if not await self._biohistory.has_been_shown(extra_mbid, extra_mbid, track):
                 return (None, extra_mbid)
 
         return (None, None)
@@ -483,19 +480,15 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if not self._biohistory:
             return
 
-        track_title = self.metadata.get("title")
+        track = (original_artist or "", self.metadata.get("title") or "")
         if not suppress_bio and bio_artist:
             bio_text = self.metadata.get("artistlongbio")
-            await self._biohistory.record_shown(
-                bio_artist, bio_mbid, bio_text, original_artist, track_title
-            )
+            await self._biohistory.record_shown(bio_artist, bio_mbid, bio_text, track)
             logging.debug("Bio dedup: recorded bio shown for %s", bio_artist)
         elif not suppress_bio and bio_mbid:
             # Extra MBID (featured artist) mode: record by MBID as identifier
             bio_text = self.metadata.get("artistlongbio")
-            await self._biohistory.record_shown(
-                bio_mbid, bio_mbid, bio_text, original_artist, track_title
-            )
+            await self._biohistory.record_shown(bio_mbid, bio_mbid, bio_text, track)
             logging.debug("Bio dedup: recorded extra MBID bio shown for %s", bio_mbid)
 
         if original_artist != self.metadata.get("artist"):
