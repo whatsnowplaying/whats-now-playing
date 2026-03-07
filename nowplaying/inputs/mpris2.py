@@ -32,6 +32,10 @@ from nowplaying.inputs import InputPlugin
 
 MPRIS2_BASE = "org.mpris.MediaPlayer2"
 
+# Mixxx reports these artist strings when no real track is loaded.
+# Title is "Mixxx" (the app name) in all cases.
+MIXXX_IDLE_ARTISTS = frozenset({"AutoDJ is ready!", "No track playing"})
+
 
 class MPRIS2Handler:
     """Read metadata from MPRIS2"""
@@ -74,7 +78,7 @@ class MPRIS2Handler:
         self.meta = None
         self.metadata = {}
 
-    async def getplayingtrack(self):  # pylint: disable=too-many-branches
+    async def getplayingtrack(self):  # pylint: disable=too-many-branches,too-many-statements
         """get the currently playing song"""
 
         # start with a blank slate to prevent
@@ -147,6 +151,14 @@ class MPRIS2Handler:
         if title == filename or title and pathlib.Path(title).exists():
             builddata["title"] = None
             title = None
+
+        # Mixxx reports title="Mixxx" with a system message as the artist when
+        # no real track is loaded (e.g. AutoDJ idle, empty deck). Discard these.
+        artist = builddata.get("artist")
+        if title == "Mixxx" and artist in MIXXX_IDLE_ARTISTS:
+            logging.debug("Ignoring Mixxx idle state: artist=%s", artist)
+            builddata["title"] = None
+            builddata["artist"] = None
 
         # it looks like there is a race condition in mixxx
         # probably should make this an option in the MPRIS2
