@@ -34,6 +34,10 @@ class GuessGameSettings:
         clear_button = widget.findChild(QPushButton, "clear_leaderboards_button")
         clear_button.clicked.connect(self.clear_leaderboards)
 
+        # Connect Remove User button
+        remove_button = widget.findChild(QPushButton, "remove_user_button")
+        remove_button.clicked.connect(self.remove_user_from_alltime)
+
     def load(self, config, widget, uihelp):  # pylint: disable=unused-argument
         """Load guess game settings into UI"""
         self.widget = widget
@@ -113,6 +117,11 @@ class GuessGameSettings:
         )
         widget.findChild(QSpinBox, "grace_period_spinbox").setValue(
             config.cparser.value("guessgame/grace_period", type=int, defaultValue=5)
+        )
+
+        # Leaderboard management
+        widget.findChild(QLineEdit, "excluded_users_lineedit").setText(
+            config.cparser.value("guessgame/excluded_users", defaultValue="")
         )
 
         logging.debug("Guess game settings loaded")
@@ -198,12 +207,56 @@ class GuessGameSettings:
             widget.findChild(QSpinBox, "grace_period_spinbox").value(),
         )
 
+        # Leaderboard management
+        config.cparser.setValue(
+            "guessgame/excluded_users",
+            widget.findChild(QLineEdit, "excluded_users_lineedit").text().strip(),
+        )
+
         logging.info("Guess game settings saved")
 
     def update_guessgame_settings(self, config):  # pylint: disable=unused-argument,no-self-use
         """Update guess game settings (placeholder for future dynamic updates)"""
         # This could be used to validate settings or trigger reloads
         logging.debug("Guess game settings updated")
+
+    def remove_user_from_alltime(self):
+        """Handle Remove User from All-Time Leaderboard button click"""
+        username = self.widget.findChild(QLineEdit, "remove_user_lineedit").text().strip()
+        if not username:
+            QMessageBox.warning(self.widget, "No Username", "Please enter a Twitch username.")
+            return
+
+        reply = QMessageBox.question(
+            self.widget,
+            "Remove User",
+            f"Remove '{username}' from the all-time leaderboard?\n\nThis cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                success = nowplaying.guessgame.GuessGame.remove_user_from_alltime(username)
+                if success:
+                    QMessageBox.information(
+                        self.widget, "Success", f"'{username}' removed from all-time leaderboard."
+                    )
+                    self.widget.findChild(QLineEdit, "remove_user_lineedit").clear()
+                    logging.info(
+                        "Removed user %s from all-time leaderboard via settings UI", username
+                    )
+                else:
+                    QMessageBox.warning(
+                        self.widget, "Error", "Failed to remove user. Check logs for details."
+                    )
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("Failed to remove user from all-time leaderboard")
+                QMessageBox.warning(
+                    self.widget,
+                    "Error",
+                    "An unexpected error occurred while removing the user. Please try again.",
+                )
 
     def clear_leaderboards(self):
         """Handle Clear Leaderboards button click"""

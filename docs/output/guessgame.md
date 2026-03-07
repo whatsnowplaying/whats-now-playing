@@ -119,7 +119,8 @@ Shows the current game state with masked track/artist names:
 
 1. Add a **Browser** source in OBS
 2. Set URL to: `http://localhost:8899/guessgame/guessgame.htm`
-3. Set dimensions: `640x600` (adjust height based on your typical track/artist name lengths — longer names wrap to multiple lines)
+3. Set dimensions: `640x600` (adjust height based on your typical track/artist name lengths —
+   longer names wrap to multiple lines)
 4. Customize the display by editing `templates/guessgame/guessgame.htm`
 
 **Display Shows:**

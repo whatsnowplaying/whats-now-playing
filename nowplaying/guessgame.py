@@ -237,6 +237,11 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
         self.databasefile = self._get_database_path()
 
+        excluded_raw = self._get_config("excluded_users", "")
+        self._excluded_users: frozenset[str] = frozenset(
+            u.strip().lower() for u in excluded_raw.split(",") if u.strip()
+        )
+
     def _get_config(self, key: str, default: Any, value_type: type | None = None) -> Any:
         """Helper to get config values with defaults"""
         if not self.config:
@@ -334,6 +339,15 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         return None
 
     @staticmethod
+    def _phrase_in_guess(phrase: str, guess: str) -> bool:
+        """Check if phrase appears as complete tokens (word boundaries) in guess.
+
+        Prevents false positives where a short phrase is a substring of a
+        longer word (e.g. track 'rift' matching inside 'drifter').
+        """
+        return bool(re.search(r"(?<!\w)" + re.escape(phrase) + r"(?!\w)", guess))
+
+    @staticmethod
     def _is_word_match(guess: str, text: str) -> bool:
         """
         Check if guess matches as a complete word in text (not just substring).
@@ -351,10 +365,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         if not guess or not text:
             return False
 
-        # Escape the guess for regex and create word boundary pattern
-        # \b matches word boundaries (start/end of word)
-        pattern = r"\b" + re.escape(guess) + r"\b"
-        if re.search(pattern, text):
+        if GuessGame._phrase_in_guess(guess, text):
             return True
 
         # Also match if consecutive words in text concatenate to form the guess.
@@ -833,6 +844,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 revealed_letters = set(json.loads(game_row["revealed_letters"]))
                 game_id = game_row["game_id"]
                 difficulty_bonus = game_row["difficulty_bonus"]
+                is_first_solver = bool(difficulty_bonus)
                 track_solved = bool(game_row["track_solved"])
                 artist_solved = bool(game_row["artist_solved"])
                 auto_reveal_words = self._get_config("auto_reveal_common_words", False, bool)
@@ -910,7 +922,6 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                             revealed_letters.update(
                                 char.lower() for char in track + artist if char.isalpha()
                             )
-                            is_first_solver = difficulty_bonus == 1
                             result["points"] = self._calculate_points(
                                 guess_text, "solve", is_first_solver
                             )
@@ -932,17 +943,15 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
                     elif solve_mode == "both_required":
                         # Must have both track and artist in the guess to win
-                        has_both = (
-                            track_normalized in guess_normalized
-                            and artist_normalized in guess_normalized
-                        )
+                        has_both = self._phrase_in_guess(
+                            track_normalized, guess_normalized
+                        ) and self._phrase_in_guess(artist_normalized, guess_normalized)
                         if has_both:
                             result["correct"] = True
                             result["guess_type"] = "solve"
                             revealed_letters.update(
                                 char.lower() for char in track + artist if char.isalpha()
                             )
-                            is_first_solver = difficulty_bonus == 1
                             result["points"] = self._calculate_points(
                                 guess_text, "solve", is_first_solver
                             )
@@ -962,6 +971,26 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                             )
                             self._mark_guess_as_wrong(result, guess_text)
 
+                    # One-shot solve: guess contains both track and artist
+                    elif (
+                        not track_solved
+                        and not artist_solved
+                        and self._phrase_in_guess(track_normalized, guess_normalized)
+                        and self._phrase_in_guess(artist_normalized, guess_normalized)
+                    ):
+                        result["correct"] = True
+                        result["guess_type"] = "solve"
+                        result["solve_type"] = "both"
+                        result["track_solved"] = True
+                        result["artist_solved"] = True
+                        result["solved"] = True
+                        revealed_letters.update(
+                            char.lower() for char in track + artist if char.isalpha()
+                        )
+                        result["points"] = self._calculate_points(
+                            guess_text, "solve", is_first_solver
+                        )
+
                     # Track and artist are independent objectives
                     elif track_match and not track_solved:
                         # Solved the track
@@ -980,7 +1009,6 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                             result["solved"] = True
                             result["solve_type"] = "both"
                             # Award completion bonus
-                            is_first_solver = difficulty_bonus == 1
                             if is_first_solver:
                                 result["points"] += self._get_config(
                                     "points_first_solver", 50, int
@@ -1002,7 +1030,6 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                             result["solved"] = True
                             result["solve_type"] = "both"
                             # Award completion bonus
-                            is_first_solver = difficulty_bonus == 1
                             if is_first_solver:
                                 result["points"] += self._get_config(
                                     "points_first_solver", 50, int
@@ -1037,9 +1064,9 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 # Check if game is now completely solved (no more blanks)
                 if "_" not in result["masked_track"] and "_" not in result["masked_artist"]:
                     result["solved"] = True
+                    result["solve_type"] = "both"
                     if result["guess_type"] != "solve":
                         # Award solve bonus if not already a full solve guess
-                        is_first_solver = difficulty_bonus == 1
                         result["points"] += self._calculate_points("", "solve", is_first_solver)
                         result["guess_type"] = "solve"
 
@@ -1062,10 +1089,11 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     ),
                 )
 
-                # Update user scores
-                await self._update_user_scores(
-                    cursor, username, result["points"], 1 if result["solved"] else 0, timestamp
-                )
+                # Update user scores (skip excluded users)
+                if username.lower() not in self._excluded_users:
+                    await self._update_user_scores(
+                        cursor, username, result["points"], 1 if result["solved"] else 0, timestamp
+                    )
 
                 # Update current game state
                 # Note: difficulty_bonus is preserved from game start - not updated per guess
@@ -1538,6 +1566,35 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
         except sqlite3.Error as error:
             logging.error("Failed to clear leaderboards: %s", error)
+            return False
+
+    @classmethod
+    def remove_user_from_alltime(cls, username: str) -> bool:
+        """
+        Remove a single user from the all-time leaderboard.
+
+        Returns:
+            True if removed successfully (including when user did not exist), False on error
+        """
+        if not username:
+            return False
+        try:
+            with nowplaying.utils.sqlite.sqlite_connection(
+                str(cls._get_database_path()), timeout=30
+            ) as connection:
+                cursor = connection.cursor()
+                cursor.execute(
+                    "DELETE FROM user_scores WHERE username = ? COLLATE NOCASE",
+                    (username,),
+                )
+                connection.commit()
+                if cursor.rowcount > 0:
+                    logging.info("Removed user %s from all-time leaderboard", username)
+                else:
+                    logging.info("User %s not found in all-time leaderboard", username)
+                return True
+        except sqlite3.Error as error:
+            logging.error("Failed to remove user %s from leaderboard: %s", username, error)
             return False
 
     async def _serialize_leaderboards(self) -> dict[str, list[dict[str, int | str]]]:
