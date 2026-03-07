@@ -460,6 +460,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             guiattr = getattr(self.widgets["artistextras"], f"{art}_spin")
             guiattr.setValue(self.config.cparser.value(f"artistextras/{art}", type=int))
 
+        self.widgets["artistextras"].bio_dedup_checkbox.setChecked(
+            self.config.cparser.value("artistextras/bio_dedup", type=bool)
+        )
+
     def _upd_win_filters(self):
         """update the filter settings"""
         self.widgets["filter"].stripextras_checkbox.setChecked(
@@ -719,6 +723,11 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         current = self.widgets["artistextras"].coverart_combobox.currentText()
         self.config.cparser.setValue("artistextras/nocoverfallback", current.lower())
+
+        self.config.cparser.setValue(
+            "artistextras/bio_dedup",
+            self.widgets["artistextras"].bio_dedup_checkbox.isChecked(),
+        )
 
     def _upd_conf_recognition(self):
         self.config.cparser.setValue(
