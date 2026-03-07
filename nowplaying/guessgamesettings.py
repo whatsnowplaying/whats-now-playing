@@ -250,9 +250,13 @@ class GuessGameSettings:
                     QMessageBox.warning(
                         self.widget, "Error", "Failed to remove user. Check logs for details."
                     )
-            except Exception as error:  # pylint: disable=broad-exception-caught
-                logging.error("Exception while removing user from leaderboard: %s", error)
-                QMessageBox.warning(self.widget, "Error", f"Failed to remove user: {error}")
+            except Exception:  # pylint: disable=broad-exception-caught
+                logging.exception("Failed to remove user from all-time leaderboard")
+                QMessageBox.warning(
+                    self.widget,
+                    "Error",
+                    "An unexpected error occurred while removing the user. Please try again.",
+                )
 
     def clear_leaderboards(self):
         """Handle Clear Leaderboards button click"""

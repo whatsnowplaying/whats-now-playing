@@ -237,6 +237,11 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
         self.databasefile = self._get_database_path()
 
+        excluded_raw = self._get_config("excluded_users", "")
+        self._excluded_users: frozenset[str] = frozenset(
+            u.strip().lower() for u in excluded_raw.split(",") if u.strip()
+        )
+
     def _get_config(self, key: str, default: Any, value_type: type | None = None) -> Any:
         """Helper to get config values with defaults"""
         if not self.config:
@@ -360,10 +365,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         if not guess or not text:
             return False
 
-        # Escape the guess for regex and create word boundary pattern
-        # \b matches word boundaries (start/end of word)
-        pattern = r"\b" + re.escape(guess) + r"\b"
-        if re.search(pattern, text):
+        if GuessGame._phrase_in_guess(guess, text):
             return True
 
         # Also match if consecutive words in text concatenate to form the guess.
@@ -1088,9 +1090,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 )
 
                 # Update user scores (skip excluded users)
-                excluded_raw = self._get_config("excluded_users", "")
-                excluded = {u.strip().lower() for u in excluded_raw.split(",") if u.strip()}
-                if username.lower() not in excluded:
+                if username.lower() not in self._excluded_users:
                     await self._update_user_scores(
                         cursor, username, result["points"], 1 if result["solved"] else 0, timestamp
                     )
@@ -1588,7 +1588,10 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     (username,),
                 )
                 connection.commit()
-                logging.info("Removed user %s from all-time leaderboard", username)
+                if cursor.rowcount > 0:
+                    logging.info("Removed user %s from all-time leaderboard", username)
+                else:
+                    logging.info("User %s not found in all-time leaderboard", username)
                 return True
         except sqlite3.Error as error:
             logging.error("Failed to remove user %s from leaderboard: %s", username, error)
