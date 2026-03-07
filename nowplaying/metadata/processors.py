@@ -437,6 +437,11 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         if not self._biohistory:
             return (original_artist, None, False, original_artist, original_mbids)
 
+        # Nothing to track against — let bio through without dedup
+        if not original_artist and not original_mbids:
+            logging.debug("Bio dedup: no artist or MBID to track, passing through")
+            return (original_artist, None, False, original_artist, original_mbids)
+
         bio_artist, bio_mbid = await self._select_bio_artist()
         if bio_artist is None:
             if bio_mbid is None:

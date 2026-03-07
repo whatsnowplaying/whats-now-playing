@@ -11,7 +11,7 @@ from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
 import nowplaying.utils.sqlite
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 1
 
 
 class ArtistBioHistory:
@@ -123,7 +123,8 @@ class ArtistBioHistory:
                                WHERE artist_name = ? AND session_id = ?""",
                             (artist_name, self.session_id),
                         )
-                return await cursor.fetchone() is not None
+                row = await cursor.fetchone()
+                return row is not None
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Error checking artist bio history: %s", error)
             return False
