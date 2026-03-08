@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """Unit tests for nowplaying/metadata/tinytag_runner.py targeting uncovered code paths."""
 
+import base64
+import json
 import pathlib
 import unittest.mock
 
+import puremagic
+
 from nowplaying.metadata.tinytag_runner import TinyTagRunner, _date_calc
+from nowplaying.vendor import tinytag
 
 
 # ---------------------------------------------------------------------------
@@ -207,8 +212,6 @@ def test_decode_musical_key_plain_string():
 
 def test_decode_musical_key_json_dict():
     """JSON dict with 'key' field returns the key value."""
-    import json
-
     key_json = json.dumps({"key": "F#m", "other": "data"})
     result = TinyTagRunner._decode_musical_key(key_json)  # pylint: disable=protected-access
     assert result == "F#m"
@@ -216,9 +219,6 @@ def test_decode_musical_key_json_dict():
 
 def test_decode_musical_key_base64_json():
     """Base64-encoded JSON with 'key' field returns the key value."""
-    import base64
-    import json
-
     key_data = json.dumps({"key": "Cm"})
     encoded = base64.b64encode(key_data.encode("utf-8")).decode("utf-8")
     result = TinyTagRunner._decode_musical_key(encoded)  # pylint: disable=protected-access
@@ -315,7 +315,6 @@ def test_detect_video_unknown_extension_audio_mock():
 
 def test_process_tinytag_exception_returns_metadata():
     """TinyTagException during processing returns metadata without tags."""
-    from nowplaying.vendor import tinytag
 
     runner = TinyTagRunner()
     with unittest.mock.patch.object(
@@ -328,7 +327,6 @@ def test_process_tinytag_exception_returns_metadata():
 
 def test_process_oserror_returns_metadata():
     """OSError during tinytag processing returns metadata without tags."""
-    from nowplaying.vendor import tinytag
 
     runner = TinyTagRunner()
     with unittest.mock.patch.object(
@@ -391,3 +389,276 @@ def test_tt_date_calc_no_dates_returns_none():
     tag.other = {}
     result = TinyTagRunner.tt_date_calc(tag)
     assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Video detection: known video extensions (lines 188-189)
+# ---------------------------------------------------------------------------
+
+
+def test_detect_video_avi_returns_true():
+    """AVI is a known unambiguous video extension, returns True without puremagic."""
+    with unittest.mock.patch("puremagic.magic_file") as mock_magic:
+        fake_path = pathlib.Path("/fake/video.avi")
+        result = TinyTagRunner._detect_video_content(fake_path)  # pylint: disable=protected-access
+        mock_magic.assert_not_called()
+        assert result is True
+
+
+def test_detect_video_mkv_returns_true():
+    """MKV is a known unambiguous video extension, returns True without puremagic."""
+    with unittest.mock.patch("puremagic.magic_file") as mock_magic:
+        fake_path = pathlib.Path("/fake/video.mkv")
+        result = TinyTagRunner._detect_video_content(fake_path)  # pylint: disable=protected-access
+        mock_magic.assert_not_called()
+        assert result is True
+
+
+# ---------------------------------------------------------------------------
+# Video detection: ambiguous container (mp4) (lines 197-216)
+# ---------------------------------------------------------------------------
+
+
+def test_detect_video_mp4_with_video_type():
+    """MP4 file detected as video type returns True."""
+    with unittest.mock.patch("puremagic.magic_file") as mock_magic:
+        video_type = unittest.mock.MagicMock()
+        video_type.__str__ = lambda self: "video/mp4"
+        video_type.extension = ".mp4"
+        mock_magic.return_value = [video_type]
+        fake_path = pathlib.Path("/fake/video.mp4")
+        result = TinyTagRunner._detect_video_content(fake_path)  # pylint: disable=protected-access
+        assert result is True
+
+
+def test_detect_video_mp4_with_audio_indicator():
+    """MP4 file detected as audio type returns False."""
+    with unittest.mock.patch("puremagic.magic_file") as mock_magic:
+        audio_type = unittest.mock.MagicMock()
+        audio_type.__str__ = lambda self: "audio/m4a"
+        audio_type.extension = ".m4a"
+        mock_magic.return_value = [audio_type]
+        fake_path = pathlib.Path("/fake/audio.mp4")
+        result = TinyTagRunner._detect_video_content(fake_path)  # pylint: disable=protected-access
+        assert result is False
+
+
+def test_detect_video_mp4_no_clear_indicator_defaults_to_true():
+    """MP4 with no clear audio or video indicator defaults to True (video)."""
+    with unittest.mock.patch("puremagic.magic_file") as mock_magic:
+        unknown_type = unittest.mock.MagicMock()
+        unknown_type.__str__ = lambda self: "application/octet-stream"
+        unknown_type.extension = ".bin"
+        mock_magic.return_value = [unknown_type]
+        fake_path = pathlib.Path("/fake/mystery.mp4")
+        result = TinyTagRunner._detect_video_content(fake_path)  # pylint: disable=protected-access
+        assert result is True
+
+
+# ---------------------------------------------------------------------------
+# Video detection: puremagic error handlers (lines 229-252)
+# ---------------------------------------------------------------------------
+
+
+def test_detect_video_puremagic_oserror_returns_false():
+    """OSError from puremagic returns False (default to audio)."""
+    with unittest.mock.patch("puremagic.magic_file", side_effect=OSError("permission denied")):
+        fake_path = pathlib.Path("/fake/mystery.mp4")
+        result = TinyTagRunner._detect_video_content(fake_path)  # pylint: disable=protected-access
+        assert result is False
+
+
+def test_detect_video_puremagic_valueerror_returns_false():
+    """ValueError from puremagic (empty file) returns False."""
+    with unittest.mock.patch("puremagic.magic_file", side_effect=ValueError("empty file")):
+        fake_path = pathlib.Path("/fake/mystery.mp4")
+        result = TinyTagRunner._detect_video_content(fake_path)  # pylint: disable=protected-access
+        assert result is False
+
+
+def test_detect_video_puremagic_pureerror_returns_false():
+    """puremagic.PureError returns False."""
+    with unittest.mock.patch(
+        "puremagic.magic_file", side_effect=puremagic.PureError("not a regular file")
+    ):
+        fake_path = pathlib.Path("/fake/mystery.mp4")
+        result = TinyTagRunner._detect_video_content(fake_path)  # pylint: disable=protected-access
+        assert result is False
+
+
+# ---------------------------------------------------------------------------
+# _got_tag: key field, comment->comments, url as str, artistwebsites as str
+# (lines 345, 348-349, 360, 365)
+# ---------------------------------------------------------------------------
+
+
+def test_got_tag_key_field_decoded():
+    """Key field on tag gets decoded through _decode_musical_key."""
+
+    runner = TinyTagRunner()
+    runner.metadata = {}
+    tag = unittest.mock.MagicMock(spec=tinytag.TinyTag)
+    tag.key = "Am"
+    tag.other = {}
+    tag.images = unittest.mock.MagicMock()
+    tag.images.front_cover = None
+    tag.images.as_dict.return_value = {}
+    # Ensure date-related attrs are absent
+    for attr in ["date", "year", "originaldate", "tdor", "originalyear", "tory"]:
+        setattr(tag, attr, None)
+    # Standard tag fields
+    for attr in [
+        "album",
+        "albumartist",
+        "artist",
+        "bitrate",
+        "bpm",
+        "comment",
+        "comments",
+        "composer",
+        "disc",
+        "disc_total",
+        "duration",
+        "genre",
+        "lang",
+        "lyricist",
+        "publisher",
+        "title",
+        "track",
+        "track_total",
+        "label",
+    ]:
+        setattr(tag, attr, None)
+    runner._got_tag(tag)  # pylint: disable=protected-access
+    assert runner.metadata["key"] == "Am"
+
+
+def test_got_tag_comment_becomes_comments():
+    """comment field gets renamed to comments when no comments field is present."""
+
+    runner = TinyTagRunner()
+    runner.metadata = {"comment": "test comment"}
+    tag = unittest.mock.MagicMock(spec=tinytag.TinyTag)
+    tag.key = None
+    tag.other = {}
+    tag.images = unittest.mock.MagicMock()
+    tag.images.front_cover = None
+    tag.images.as_dict.return_value = {}
+    for attr in ["date", "year", "originaldate", "tdor", "originalyear", "tory"]:
+        setattr(tag, attr, None)
+    for attr in [
+        "album",
+        "albumartist",
+        "artist",
+        "bitrate",
+        "bpm",
+        "comment",
+        "comments",
+        "composer",
+        "disc",
+        "disc_total",
+        "duration",
+        "genre",
+        "lang",
+        "lyricist",
+        "publisher",
+        "title",
+        "track",
+        "track_total",
+        "label",
+    ]:
+        setattr(tag, attr, None)
+    runner._got_tag(tag)  # pylint: disable=protected-access
+    assert runner.metadata["comments"] == "test comment"
+    assert "comment" not in runner.metadata
+
+
+def test_got_tag_url_single_http_stored_as_list():
+    """URL in other dict with single http becomes a single-element list."""
+
+    runner = TinyTagRunner()
+    runner.metadata = {}
+    tag = unittest.mock.MagicMock(spec=tinytag.TinyTag)
+    tag.key = None
+    tag.other = {"url": "http://example.com"}
+    tag.images = unittest.mock.MagicMock()
+    tag.images.front_cover = None
+    tag.images.as_dict.return_value = {}
+    for attr in ["date", "year", "originaldate", "tdor", "originalyear", "tory"]:
+        setattr(tag, attr, None)
+    for attr in [
+        "album",
+        "albumartist",
+        "artist",
+        "bitrate",
+        "bpm",
+        "comment",
+        "comments",
+        "composer",
+        "disc",
+        "disc_total",
+        "duration",
+        "genre",
+        "lang",
+        "lyricist",
+        "publisher",
+        "title",
+        "track",
+        "track_total",
+        "label",
+    ]:
+        setattr(tag, attr, None)
+    runner._got_tag(tag)  # pylint: disable=protected-access
+    assert runner.metadata["artistwebsites"] == ["http://example.com"]
+
+
+def test_got_tag_artistwebsites_string_becomes_list():
+    """artistwebsites stored as a plain string gets wrapped in a list."""
+
+    runner = TinyTagRunner()
+    runner.metadata = {"artistwebsites": "https://example.com"}
+    tag = unittest.mock.MagicMock(spec=tinytag.TinyTag)
+    tag.key = None
+    tag.other = {}
+    tag.images = unittest.mock.MagicMock()
+    tag.images.front_cover = None
+    tag.images.as_dict.return_value = {}
+    for attr in ["date", "year", "originaldate", "tdor", "originalyear", "tory"]:
+        setattr(tag, attr, None)
+    for attr in [
+        "album",
+        "albumartist",
+        "artist",
+        "bitrate",
+        "bpm",
+        "comment",
+        "comments",
+        "composer",
+        "disc",
+        "disc_total",
+        "duration",
+        "genre",
+        "lang",
+        "lyricist",
+        "publisher",
+        "title",
+        "track",
+        "track_total",
+        "label",
+    ]:
+        setattr(tag, attr, None)
+    runner._got_tag(tag)  # pylint: disable=protected-access
+    assert runner.metadata["artistwebsites"] == ["https://example.com"]
+
+
+# ---------------------------------------------------------------------------
+# _process_extra: key field via 'key' mapping (line 310)
+# ---------------------------------------------------------------------------
+
+
+def test_process_extra_key_field():
+    """'key' in extra dict goes through _decode_musical_key."""
+    runner = TinyTagRunner()
+    runner.metadata = {}
+    runner._process_extra({"key": "Dm"})  # pylint: disable=protected-access
+    assert runner.metadata["key"] == "Dm"
