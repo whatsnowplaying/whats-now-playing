@@ -29,9 +29,9 @@ the steps below. Versions before High Sierra have not been verified and are not 
 
 ### Linux
 
-Binaries are not provided for Linux, so please follow the
-[developer guide](help/developers.md) to install in a Python virtual environment. Note
-that currently, this software does not run headless.
+* Download the zip file for your architecture, extract it, and run the `WhatsNowPlaying` binary.
+* The binary requires a desktop environment — this software does not run headless.
+* If you need to build from source instead, follow the [developer guide](help/developers.md).
 
 ### Other Platforms
 
