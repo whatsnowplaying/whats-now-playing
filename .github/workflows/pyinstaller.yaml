@@ -51,6 +51,8 @@ jobs:
   pyinstaller-linux-smoke:
     needs: pyinstaller-linux
     runs-on: ubuntu-20.04
+    permissions:
+      contents: read
     steps:
       - name: download artifact
         uses: actions/download-artifact@v4
