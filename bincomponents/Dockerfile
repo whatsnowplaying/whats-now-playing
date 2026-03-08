@@ -1,4 +1,4 @@
-# Use Python 3.11 on Debian Bookworm for a stable glibc base
+# Use Python 3.11 on Debian Bullseye for a stable glibc base
 FROM python:3.11-slim-bullseye
 
 # Install essential build tools and Qt/XCB dependencies
