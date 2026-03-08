@@ -21,6 +21,7 @@
     * Paths that do not exist on the importing system are skipped gracefully, with a
       warnings file generated listing what needs to be manually reconfigured
     * Stale legacy configuration keys from old versions are automatically cleaned up on upgrade
+  * Artist biographies will now deduplicate per session.
 
 * Guess Game
   * Add a new Twitch chat-based guessing game for your audience
@@ -67,6 +68,7 @@
   * Update years to 2026
   * Getting closer to supporting Python 3.14
   * Reduced binary build size by removing unnecessary metadata files
+  * Rewrote the developer docs and improved `builder.sh`
 
 ## Version 5.0.1 - 2025-10-22
 
