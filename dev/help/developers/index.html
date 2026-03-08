@@ -2421,6 +2421,13 @@ a correct executable when built with PyInstaller.</p>
 <span class="nb">cd</span><span class="w"> </span>whats-now-playing
 ./builder.sh<span class="w"> </span>dev
 </code></pre></div>
+<p>If your system default Python is unsupported (e.g. 3.14+) or you have multiple
+versions installed and need to target a specific supported one, set <code>PYTHONBIN</code>
+before running the script:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">PYTHONBIN</span><span class="o">=</span>/usr/local/bin/python3.11<span class="w"> </span>./builder.sh<span class="w"> </span>dev
+</code></pre></div>
+<p><code>builder.sh</code> defaults to <code>python3</code> (or <code>python</code> on Windows) found on <code>PATH</code>.
+<code>PYTHONBIN</code> overrides that for both the venv creation and all subsequent build steps.</p>
 <p>This creates a <code>venv/</code> directory in the source tree, installs all dependencies
 (including dev and test extras), syncs vendored libraries, writes version info,
 sets up NLTK data, compiles templates, and compiles Qt resources.</p>
