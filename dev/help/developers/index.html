@@ -2097,6 +2097,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Build Executable">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#linux-builds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linux Builds
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -2445,12 +2462,28 @@ without recreating the venv from scratch.</p>
 for more detail on the test suite layout and code quality tools.</p>
 <h2 id="build-executable">Build Executable<a class="headerlink" href="#build-executable" title="Permanent link">&para;</a></h2>
 <p>To build a stand-alone executable:</p>
-<div class="highlight"><pre><span></span><code>./builder.sh<span class="w">           </span><span class="c1"># auto-detects platform</span>
-./builder.sh<span class="w"> </span>macosx<span class="w">    </span><span class="c1"># explicit platform</span>
-./builder.sh<span class="w"> </span>windows
+<div class="highlight"><pre><span></span><code>./builder.sh<span class="w">           </span><span class="c1"># auto-detects platform (macOS or Windows)</span>
+./builder.sh<span class="w"> </span>macosx<span class="w">    </span><span class="c1"># explicit macOS build</span>
+./builder.sh<span class="w"> </span>windows<span class="w">   </span><span class="c1"># explicit Windows build</span>
+./builder.sh<span class="w"> </span>linuxbin<span class="w">  </span><span class="c1"># Linux build via Docker (see below)</span>
 </code></pre></div>
 <p>The script handles the full build pipeline and produces a zip file containing
 the binary in the current directory.</p>
+<h3 id="linux-builds">Linux Builds<a class="headerlink" href="#linux-builds" title="Permanent link">&para;</a></h3>
+<p>Linux binaries are built inside a Docker container to ensure compatibility with
+older glibc versions (Debian Bullseye / glibc 2.31). This produces a binary that
+runs on Ubuntu 20.04 and later.</p>
+<p>Requirements:</p>
+<ul>
+<li>Docker installed and running</li>
+<li><code>docker buildx</code> support (included with Docker Desktop and Docker Engine 19.03+)</li>
+</ul>
+<p>Run the build:</p>
+<div class="highlight"><pre><span></span><code>./builder.sh<span class="w"> </span>linuxbin
+</code></pre></div>
+<p>This builds the Docker image automatically, runs the full PyInstaller pipeline
+inside the container, and writes a <code>WhatsNowPlaying-&lt;version&gt;-Linux-&lt;arch&gt;.zip</code>
+file to the current directory. Output files are owned by the current user.</p>
 
 
 
