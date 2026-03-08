@@ -9,7 +9,7 @@ import unittest.mock
 import puremagic
 
 from nowplaying.metadata.tinytag_runner import TinyTagRunner, _date_calc
-from nowplaying.vendor import tinytag
+from nowplaying.vendor import tinytag  # pylint: disable=no-name-in-module
 
 
 # ---------------------------------------------------------------------------
