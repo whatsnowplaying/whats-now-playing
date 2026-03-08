@@ -65,7 +65,7 @@ class Plugin(ArtistExtrasPlugin):
         apikey = self.config.cparser.value("fanarttv/apikey")
         # Process each MusicBrainz artist ID
         for artistid in metadata["musicbrainzartistid"]:
-            artist_data = await self._fetch_cached(apikey, artistid, metadata["artist"])
+            artist_data = await self._fetch_cached(apikey, artistid, metadata.get("artist", ""))
             if not artist_data or artist_data.get("status") == "error":
                 return None  # Match original behavior - fail on first error
             self._process_artist_images(artist_data, metadata, imagecache)
@@ -83,6 +83,11 @@ class Plugin(ArtistExtrasPlugin):
             not metadata.get("artist") and not metadata.get("musicbrainzartistid")
         ):
             logging.debug("skipping: no artist or MBID")
+            return False
+
+        # MBID-only mode (featured artist) requires imagecacheartist to be set
+        if not metadata.get("artist") and not metadata.get("imagecacheartist"):
+            logging.debug("skipping: MBID-only but no imagecacheartist")
             return False
 
         if not imagecache:

@@ -337,6 +337,11 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             logging.debug("No artist or MBID; skipping")
             return None
 
+        # MBID-only mode (featured artist) requires imagecacheartist to be set
+        if not metadata.get("artist") and not metadata.get("imagecacheartist"):
+            logging.debug("No artist or imagecacheartist; skipping")
+            return None
+
         apikey = self.config.cparser.value("theaudiodb/apikey")
         if not apikey:
             logging.debug("No API key.")
