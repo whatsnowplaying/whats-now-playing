@@ -68,14 +68,12 @@ ALL_PLUGIN_MODULES = collect_all_nowplaying_modules()
 def geticon():
     ''' get the icon for this platform '''
     if sys.platform == 'win32':
-        return 'windows.ico'
+        return 'bincomponents/windows.ico'
 
     if sys.platform == 'darwin':
-        return 'osx.icns'
+        return 'bincomponents/osx.icns'
 
-    # go ahead and return the windows icon
-    # and hope for the best
-    return 'windows.ico'
+    return None
 
 
 def getsplitversion():
@@ -196,22 +194,22 @@ for execname, execpy in executables.items():
             debug=False,
             bootloader_ignore_signals=False,
             strip=False,
-            upx=True,
+            upx=False,
             #console=False,
-            icon=f'bincomponents/{geticon()}')
+            icon=geticon())
         coll = COLLECT(  # pylint: disable=undefined-variable
             exe,
             a.binaries,
             a.zipfiles,
             a.datas,
             strip=False,
-            upx=True,
+            upx=False,
             upx_exclude=[],
             name=execname)
         app = BUNDLE( # pylint: disable=undefined-variable
             coll,
             name=f'{execname}.app',
-            icon=f'bincomponents/{geticon()}',
+            icon=geticon(),
             bundle_identifier=None,
             info_plist={
                 'CFBundleDisplayName': "What's Now Playing",
@@ -223,7 +221,7 @@ for execname, execpy in executables.items():
                 'NSHumanReadableCopyright': osxcopyright()
             })
 
-    else:
+    elif sys.platform == 'win32':
         windows_version_file()
         exe = EXE(  # pylint: disable=undefined-variable
             pyz,
@@ -234,17 +232,40 @@ for execname, execpy in executables.items():
             debug=False,
             bootloader_ignore_signals=False,
             strip=False,
-            upx=True,
+            upx=False,
             console=False,
             version=WINVERSFILE,
-            icon=f'bincomponents/{geticon()}')
+            icon=geticon())
         coll = COLLECT(  # pylint: disable=undefined-variable
             exe,
             a.binaries,
             a.zipfiles,
             a.datas,
             strip=False,
-            upx=True,
+            upx=False,
             upx_exclude=[],
             name=execname)
         os.unlink(WINVERSFILE)
+
+    else:
+        exe = EXE(  # pylint: disable=undefined-variable
+            pyz,
+            a.scripts,
+            [],
+            exclude_binaries=True,
+            name=execname,
+            debug=False,
+            bootloader_ignore_signals=False,
+            strip=False,
+            upx=False,
+            console=False,
+            icon=geticon())
+        coll = COLLECT(  # pylint: disable=undefined-variable
+            exe,
+            a.binaries,
+            a.zipfiles,
+            a.datas,
+            strip=False,
+            upx=False,
+            upx_exclude=[],
+            name=execname)

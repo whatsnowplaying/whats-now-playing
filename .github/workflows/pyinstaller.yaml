@@ -29,6 +29,40 @@ jobs:
       artifact-name: macos15-intel-dist
 
 
+  pyinstaller-linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: update tags
+        run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      - name: run builder
+        run: ./builder.sh linuxbin
+      - name: artifact dist
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-dist
+          path: "*.zip"
+
+  pyinstaller-linux-smoke:
+    needs: pyinstaller-linux
+    runs-on: ubuntu-20.04
+    steps:
+      - name: download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-dist
+      - name: smoke test binary
+        run: |
+          unzip "WhatsNowPlaying-*-Linux-*.zip"
+          BINARY=$(find WhatsNowPlaying-*-Linux-* -name "WhatsNowPlaying" -type f | head -1)
+          chmod +x "${BINARY}"
+          "${BINARY}" --smoke-test
+
   pyinstaller-win:
     runs-on: windows-2022
     permissions:
