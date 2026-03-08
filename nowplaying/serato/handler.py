@@ -25,10 +25,13 @@ class Serato4Handler:  # pylint: disable=too-many-instance-attributes
         serato_lib_path: str | pathlib.Path,
         pollingobserver: bool = False,
         polling_interval: float = 1.0,
+        require_played: bool = True,
     ):
         self.serato_lib_path = pathlib.Path(serato_lib_path)
         self.master_db_path = self.serato_lib_path / "master.sqlite"
-        self.sqlite_reader = Serato4SQLiteReader(self.master_db_path)
+        self.sqlite_reader = Serato4SQLiteReader(
+            self.master_db_path, require_played=require_played
+        )
 
         # File watching setup
         self.observer: Observer | None = None

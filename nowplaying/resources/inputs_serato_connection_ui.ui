@@ -192,6 +192,22 @@
     </item>
    </layout>
   </widget>
+  <widget class="QCheckBox" name="require_played_checkbox">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>248</y>
+     <width>611</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Require played flag (disable if tracks are not being detected)</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </widget>
   <widget class="QLabel" name="remoteconfig_label">
    <property name="enabled">
     <bool>false</bool>
@@ -199,7 +215,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>260</y>
+     <y>280</y>
      <width>311</width>
      <height>16</height>
     </rect>
@@ -215,7 +231,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>290</y>
+     <y>310</y>
      <width>611</width>
      <height>80</height>
     </rect>
@@ -502,6 +518,22 @@
     <hint type="destinationlabel">
      <x>552</x>
      <y>220</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>local_button</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>require_played_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>79</x>
+     <y>49</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>310</x>
+     <y>258</y>
     </hint>
    </hints>
   </connection>

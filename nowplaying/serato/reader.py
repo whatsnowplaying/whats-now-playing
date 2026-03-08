@@ -18,8 +18,9 @@ import nowplaying.utils.sqlite
 class Serato4SQLiteReader:
     """SQLite database reader for Serato 4+ master.sqlite files"""
 
-    def __init__(self, db_path: str | pathlib.Path):
+    def __init__(self, db_path: str | pathlib.Path, require_played: bool = True):
         self.db_path = pathlib.Path(db_path)
+        self.require_played = require_played
 
     async def get_location_mappings(self) -> dict[int, pathlib.Path]:
         """Get mapping of location_id to base file path
@@ -129,6 +130,8 @@ class Serato4SQLiteReader:
             logging.error("Serato master.sqlite not found at %s", self.db_path)
             return []
 
+        played_filter = "AND played = 1" if self.require_played else ""
+
         async def _query_tracks() -> list[dict[str, t.Any]]:
             async with aiosqlite.connect(self.db_path) as connection:
                 # Let Serato manage its own journal mode - we're just a read-only client
@@ -137,7 +140,7 @@ class Serato4SQLiteReader:
                 # Get the latest track loaded on each deck from current session
                 # Optimized query using window functions instead of correlated subqueries
                 # Use portable_id which contains the full relative path
-                query = """
+                query = f"""
                     WITH current_session AS (
                         SELECT id FROM history_session
                         WHERE end_time = -1
@@ -169,7 +172,7 @@ class Serato4SQLiteReader:
                             ) as rn
                         FROM history_entry
                         WHERE session_id = (SELECT id FROM current_session)
-                        AND played = 1
+                        {played_filter}
                     )
                     SELECT
                         file_name,
