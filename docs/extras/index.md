@@ -26,6 +26,19 @@ Artist biographies are available in two formats:
 * **artistlongbio** - Full biography content
 * **artistshortbio** - Biography truncated to fit in a single Twitch chat message
 
+#### Preventing Repeated Bios
+
+Enable **Don't repeat artist bios within a session** to avoid sending the same artist's biography
+to chat (Twitch, Kick) more than once per set. Once a bio has been sent for an artist, it is
+suppressed for the rest of the session.
+
+* Playing three Nine Inch Nails tracks in a row sends the NIN bio only on the first track.
+* For collaborations, **What's Now Playing** picks the first artist on the track whose bio has not
+  yet been shown. For example: playing a solo Elton John track sends his bio; then playing
+  "Elton John & RuPaul" skips Elton John (already shown) and sends RuPaul's bio instead.
+
+The session resets when **What's Now Playing** is restarted.
+
 ## Setup
 
 [![Artist Extras Settings](images/artistextras.png)](images/artistextras.png)
