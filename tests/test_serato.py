@@ -443,3 +443,61 @@ async def test_ignores_closed_sessions(bootstrap, serato_master_db):  # pylint: 
 
         finally:
             await plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_require_played_true_filters_unplayed(bootstrap, serato_master_db):  # pylint: disable=redefined-outer-name
+    """Test that require_played=True (default) excludes tracks with played=0"""
+    # Mark the newest track (Artist Three, deck 2) as unplayed
+    with nowplaying.utils.sqlite.sqlite_connection(serato_master_db["db_path"]) as conn:
+        conn.execute("UPDATE history_entry SET played = 0 WHERE artist = 'Artist Three'")
+        conn.commit()
+
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
+
+    with unittest.mock.patch.object(
+        plugin, "_find_serato_library", return_value=serato_master_db["library_path"]
+    ):
+        bootstrap.cparser.setValue("serato4/require_played", True)
+        plugin.configure()
+        plugin.setmixmode("newest")
+        await plugin.start()
+
+        try:
+            track = await plugin.getplayingtrack()
+
+            assert track is not None
+            # Artist Three (unplayed) should be excluded; next newest is Artist Two on deck 1
+            assert track["artist"] == serato_master_db["expected_newest_skip_deck2"]
+
+        finally:
+            await plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_require_played_false_includes_unplayed(bootstrap, serato_master_db):  # pylint: disable=redefined-outer-name
+    """Test that require_played=False includes tracks regardless of played flag"""
+    # Mark the newest track (Artist Three, deck 2) as unplayed
+    with nowplaying.utils.sqlite.sqlite_connection(serato_master_db["db_path"]) as conn:
+        conn.execute("UPDATE history_entry SET played = 0 WHERE artist = 'Artist Three'")
+        conn.commit()
+
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
+
+    with unittest.mock.patch.object(
+        plugin, "_find_serato_library", return_value=serato_master_db["library_path"]
+    ):
+        bootstrap.cparser.setValue("serato4/require_played", False)
+        plugin.configure()
+        plugin.setmixmode("newest")
+        await plugin.start()
+
+        try:
+            track = await plugin.getplayingtrack()
+
+            assert track is not None
+            # Artist Three should still be returned despite played=0
+            assert track["artist"] == serato_master_db["expected_newest"]
+
+        finally:
+            await plugin.stop()

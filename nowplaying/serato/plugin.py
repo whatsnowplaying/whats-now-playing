@@ -148,14 +148,21 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         # Check if polling observer should be used
         usepoll = False
         polling_interval = 1.0
+        require_played = True
         if self.config:
             usepoll = self.config.cparser.value("quirks/pollingobserver", type=bool)
             polling_interval = self.config.cparser.value(
                 "quirks/pollinginterval", type=float, defaultValue=1.0
             )
+            require_played = self.config.cparser.value(
+                "serato4/require_played", type=bool, defaultValue=True
+            )
 
         self.handler = Serato4Handler(
-            self.serato_lib_path, pollingobserver=usepoll, polling_interval=polling_interval
+            self.serato_lib_path,
+            pollingobserver=usepoll,
+            polling_interval=polling_interval,
+            require_played=require_played,
         )
         await self.handler.start()
 
@@ -219,6 +226,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         qsettings.setValue("serato4/interval", 30.0)
         qsettings.setValue("serato4/artist_query_scope", "entire_library")
         qsettings.setValue("serato4/selected_playlists", "")
+        qsettings.setValue("serato4/require_played", True)
 
     def desc_settingsui(self, qwidget: "QWidget") -> None:
         """Plugin description for UI"""
@@ -564,6 +572,11 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
             if "4" in deckskip:
                 connection_widgets.deck4_checkbox.setChecked(True)
 
+        require_played = self.config.cparser.value(
+            "serato4/require_played", type=bool, defaultValue=True
+        )
+        connection_widgets.require_played_checkbox.setChecked(require_played)
+
     def _load_library_settings(self, qwidget: "QWidget") -> None:
         """Load library tab settings"""
         # Load library/query settings if the tab exists
@@ -613,6 +626,10 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
             deckskip.append("4")
 
         self.config.cparser.setValue("serato4/deckskip", deckskip)
+
+        self.config.cparser.setValue(
+            "serato4/require_played", connection_widgets.require_played_checkbox.isChecked()
+        )
 
         # Save library/query settings if the tab exists
         library_widgets = self.uihelp.find_tab_by_identifier(qwidget, "serato_artist_scope_combo")
