@@ -73,6 +73,16 @@ if [[ "${SYSTEM}" == "dev" ]]; then
   exit 0
 fi
 
+if [[ "${SYSTEM}" == "linuxbin" ]]; then
+  docker buildx build --load -t wnp-linux-builder  -f bincomponents/Dockerfile .
+  docker run --rm \
+    --user "$(id -u):$(id -g)" \
+    -e HOME=/tmp \
+    -v "$(pwd):/src" \
+    wnp-linux-builder /src/builder.sh linux
+  exit 0
+fi
+
 if [[ -z "${SYSTEM}" ]]; then
   case "${UNAMESYS}" in
     Darwin)
@@ -90,7 +100,7 @@ case "${SYSTEM}" in
   windows)
     PYTHON=python
     ;;
-  macosx)
+  macosx|linux)
     PYTHON=python3
     ;;
   *)
@@ -112,6 +122,10 @@ case "${SYSTEM}" in
     ;;
   windows)
     DISTNAME="Windows"
+    ;;
+  linux)
+    ARCH=$(uname -m)
+    DISTNAME="Linux-${ARCH}"
     ;;
   *)
     DISTNAME="${SYSTEM}"

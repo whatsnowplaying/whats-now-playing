@@ -61,10 +61,32 @@ for more detail on the test suite layout and code quality tools.
 To build a stand-alone executable:
 
 ```bash
-./builder.sh           # auto-detects platform
-./builder.sh macosx    # explicit platform
-./builder.sh windows
+./builder.sh           # auto-detects platform (macOS or Windows)
+./builder.sh macosx    # explicit macOS build
+./builder.sh windows   # explicit Windows build
+./builder.sh linuxbin  # Linux build via Docker (see below)
 ```
 
 The script handles the full build pipeline and produces a zip file containing
 the binary in the current directory.
+
+### Linux Builds
+
+Linux binaries are built inside a Docker container to ensure compatibility with
+older glibc versions (Debian Bullseye / glibc 2.31). This produces a binary that
+runs on Ubuntu 20.04 and later.
+
+Requirements:
+
+* Docker installed and running
+* `docker buildx` support (included with Docker Desktop and Docker Engine 19.03+)
+
+Run the build:
+
+```bash
+./builder.sh linuxbin
+```
+
+This builds the Docker image automatically, runs the full PyInstaller pipeline
+inside the container, and writes a `WhatsNowPlaying-<version>-Linux-<arch>.zip`
+file to the current directory. Output files are owned by the current user.
