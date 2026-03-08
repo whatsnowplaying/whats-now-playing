@@ -20,6 +20,17 @@ cd whats-now-playing
 ./builder.sh dev
 ```
 
+If your system default Python is unsupported (e.g. 3.14+) or you have multiple
+versions installed and need to target a specific supported one, set `PYTHONBIN`
+before running the script:
+
+```bash
+PYTHONBIN=/usr/local/bin/python3.11 ./builder.sh dev
+```
+
+`builder.sh` defaults to `python3` (or `python` on Windows) found on `PATH`.
+`PYTHONBIN` overrides that for both the venv creation and all subsequent build steps.
+
 This creates a `venv/` directory in the source tree, installs all dependencies
 (including dev and test extras), syncs vendored libraries, writes version info,
 sets up NLTK data, compiles templates, and compiles Qt resources.
