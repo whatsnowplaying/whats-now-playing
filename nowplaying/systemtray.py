@@ -8,9 +8,10 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QFileSystemWatcher,
     Qt,
     QThread,
+    QUrl,
     Signal,
 )
-from PySide6.QtGui import QAction, QActionGroup, QIcon  # pylint: disable=no-name-in-module
+from PySide6.QtGui import QAction, QActionGroup, QDesktopServices, QIcon  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QApplication,
     QErrorMessage,
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 )
 
 import nowplaying.apicache
+import nowplaying.version
 import nowplaying.config
 import nowplaying.db
 import nowplaying.firstinstall
@@ -130,8 +132,19 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self.settingswindow.qtui.activateWindow()
             self.settingswindow.qtui.setFocus()
 
+    def _open_documentation(self) -> None:
+        """Open the documentation for this version in the default browser."""
+        version = nowplaying.version.__CURRENT_TAG__
+        url = QUrl(f"https://whatsnowplaying.com/v1/docs?version={version}")
+        QDesktopServices.openUrl(url)
+
     def _setup_tray_menu(self) -> None:
         """Setup all tray menu actions and structure."""
+        self.docs_action = QAction("Documentation")
+        self.docs_action.triggered.connect(self._open_documentation)
+        self.menu.addAction(self.docs_action)
+        self.menu.addSeparator()
+
         # Settings and Requests actions
         self.settings_action = QAction("Settings")
         self.settings_action.triggered.connect(self._show_settings)
