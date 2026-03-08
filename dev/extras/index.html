@@ -1327,6 +1327,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Biographies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#preventing-repeated-bios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preventing Repeated Bios
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -2638,6 +2655,17 @@ information.</p>
 <li><strong>artistlongbio</strong> - Full biography content</li>
 <li><strong>artistshortbio</strong> - Biography truncated to fit in a single Twitch chat message</li>
 </ul>
+<h4 id="preventing-repeated-bios">Preventing Repeated Bios<a class="headerlink" href="#preventing-repeated-bios" title="Permanent link">&para;</a></h4>
+<p>Enable <strong>Don't repeat artist bios within a session</strong> to avoid sending the same artist's biography
+to chat (Twitch, Kick) more than once per set. Once a bio has been sent for an artist, it is
+suppressed for the rest of the session.</p>
+<ul>
+<li>Playing three Nine Inch Nails tracks in a row sends the NIN bio only on the first track.</li>
+<li>For collaborations, <strong>What's Now Playing</strong> picks the first artist on the track whose bio has not
+  yet been shown. For example: playing a solo Elton John track sends his bio; then playing
+  "Elton John &amp; RuPaul" skips Elton John (already shown) and sends RuPaul's bio instead.</li>
+</ul>
+<p>The session resets when <strong>What's Now Playing</strong> is restarted.</p>
 <h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
 <p><a href="images/artistextras.png"><img alt="Artist Extras Settings" src="images/artistextras.png" /></a></p>
 <blockquote>
