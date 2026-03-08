@@ -17,42 +17,11 @@ import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
 from nowplaying.utils import artist_name_variations, normalize, normalize_text
+import nowplaying.utils.artists
 
 from . import client
 
 REMIX_RE = re.compile(r"^\s*(.*)\s+[\(\[].*[\)\]]$")
-
-# Artist collaboration delimiters for multi-artist resolution
-# High specificity collaboration delimiters - clear indicators, unlikely in band names
-HIGH_SPECIFICITY_DELIMITERS = [
-    " presents ",
-    " feat. ",
-    " featuring ",
-    " ft. ",
-    " feat ",
-    " vs. ",
-    " versus ",
-    " vs ",
-]
-
-# Medium specificity collaboration delimiters - somewhat ambiguous
-MEDIUM_SPECIFICITY_DELIMITERS = [
-    " with ",
-    " w/ ",
-    " x ",
-    " × ",
-]
-
-# Low specificity collaboration delimiters - very ambiguous, many legitimate band names use these
-LOW_SPECIFICITY_DELIMITERS = [
-    " & ",
-    " and ",
-]
-
-# Combined list ordered by specificity (most specific first)
-COLLABORATION_DELIMITERS_BY_PRIORITY = (
-    HIGH_SPECIFICITY_DELIMITERS + MEDIUM_SPECIFICITY_DELIMITERS + LOW_SPECIFICITY_DELIMITERS
-)
 
 
 @functools.lru_cache(maxsize=128, typed=False)
@@ -653,83 +622,6 @@ class MusicBrainzHelper:
         )
         return standard_result or {}
 
-    @staticmethod
-    def _split_artist_string(  # pylint: disable=too-many-locals
-        artist_string: str,
-    ) -> list[str]:
-        """
-        Split artist string using the first delimiter by position, prioritized by specificity.
-
-        Uses positional detection to handle cases like "Artist1, Artist2 & Artist3" correctly
-        by splitting on the comma (earlier position) rather than & (later position).
-        """
-        if not artist_string or not artist_string.strip():
-            return [artist_string]
-
-        # Find all delimiters and their positions, including commas
-        delimiter_positions = []
-
-        # Check collaboration delimiters
-        for delimiter in COLLABORATION_DELIMITERS_BY_PRIORITY:
-            # Use case-insensitive search with word boundary handling
-            pattern = re.compile(r"\s+" + re.escape(delimiter.strip()) + r"\s+", re.IGNORECASE)
-            for match in pattern.finditer(artist_string):
-                delimiter_positions.append((match.start(), delimiter, match))
-
-        # Check comma delimiter separately (handles comma without requiring surrounding whitespace)
-        if "," in artist_string:
-            for i, char in enumerate(artist_string):
-                if char == ",":
-                    # Use a special comma delimiter marker for consistency
-                    delimiter_positions.append((i, " , ", None))
-
-        if not delimiter_positions:
-            return [artist_string]  # No delimiters found
-
-        # Sort by specificity first (higher specificity wins), then by position
-        def sort_key(item):
-            position, delimiter, _ = item
-            if delimiter == " , ":
-                # Comma has medium-high specificity, better than &/and but not better than feat/vs
-                priority = 7  # Between vs and with
-            else:
-                try:
-                    priority = COLLABORATION_DELIMITERS_BY_PRIORITY.index(delimiter)
-                except ValueError:
-                    priority = 999  # Fallback
-            return (priority, position)
-
-        delimiter_positions.sort(key=sort_key)
-
-        # Use the first delimiter by specificity, then position
-        _first_position, first_delimiter, match_obj = delimiter_positions[0]
-
-        if first_delimiter == " , ":
-            # Handle comma splitting - split only on FIRST comma found
-            comma_pos = artist_string.find(",")
-            if comma_pos != -1:
-                parts = [
-                    artist_string[:comma_pos].strip(),
-                    artist_string[comma_pos + 1 :].strip(),
-                ]
-                parts = [p for p in parts if p]  # Remove empty parts
-                if len(parts) > 1 and all(len(p) >= 3 for p in parts):
-                    return parts
-        else:
-            # Handle other delimiters - split only on FIRST occurrence by position
-            if match_obj:
-                # Use the match object to get exact start/end positions for single split
-                split_start = match_obj.start()
-                split_end = match_obj.end()
-
-                part1 = artist_string[:split_start].strip()
-                part2 = artist_string[split_end:].strip()
-
-                if part1 and part2 and len(part1) >= 3 and len(part2) >= 3:
-                    return [part1, part2]
-
-        return [artist_string]  # No valid split found
-
     async def _hierarchical_artist_resolution(
         self,
         candidate_parts: list[str],
@@ -764,7 +656,7 @@ class MusicBrainzHelper:
             else:
                 # Failed to resolve - try splitting this part further
                 logging.debug("Failed to resolve '%s', attempting further breakdown", part)
-                split_parts = self._split_artist_string(part)
+                split_parts = nowplaying.utils.artists.split_artist_string(part)
 
                 if len(split_parts) > 1:
                     # Recursively resolve the split parts
