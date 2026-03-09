@@ -48,6 +48,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         self.serato_lib_path: pathlib.Path | None = None
         self.mode = "local"  # "local" or "remote"
         self.url: str | None = None
+        self._http_session: aiohttp.ClientSession | None = None
 
     @property
     def detected_serato_library_path(self) -> pathlib.Path | None:
@@ -130,6 +131,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
     async def start(self) -> None:
         """Start the plugin in local or remote mode"""
         self.configure()
+        self._http_session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5))
 
         if self.mode == "local":
             await self._start_local_mode()
@@ -192,6 +194,9 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         if self.remote_handler:
             # Remote handler doesn't need async cleanup
             self.remote_handler = None
+        if self._http_session:
+            await self._http_session.close()
+            self._http_session = None
 
     def install(self) -> bool:
         """Auto-install for Serato 4"""
@@ -274,15 +279,13 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
 
         # Download streaming artwork if present
         artwork_url = track_metadata.pop("_streaming_artwork_url", None)
-        if artwork_url:
+        if artwork_url and self._http_session:
             try:
-                timeout = aiohttp.ClientTimeout(total=5)
-                async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.get(artwork_url) as response:
-                        if response.status == 200:
-                            track_metadata["coverimageraw"] = await response.read()
-            except Exception:  # pylint: disable=broad-exception-caught
-                logging.debug("Failed to download streaming artwork from %s", artwork_url)
+                async with self._http_session.get(artwork_url) as response:
+                    if response.status == 200:
+                        track_metadata["coverimageraw"] = await response.read()
+            except aiohttp.ClientError as exc:
+                logging.debug("Failed to download streaming artwork from %s: %s", artwork_url, exc)
 
         return track_metadata
 
@@ -348,8 +351,10 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
                         track_metadata["_streaming_artwork_url"] = str(parsed["cover_id"])
                     if parsed.get("is_video"):
                         track_metadata["has_video"] = True
-                except (json.JSONDecodeError, TypeError):
-                    logging.debug("Failed to parse type_specific_data for streaming track")
+                except (json.JSONDecodeError, TypeError) as exc:
+                    logging.debug(
+                        "Failed to parse type_specific_data for streaming track: %s", exc
+                    )
         elif portable_id and track_data.get("location_id"):
             location_id = track_data["location_id"]
 
