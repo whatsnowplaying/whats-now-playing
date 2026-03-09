@@ -279,9 +279,10 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
 
         # Download streaming artwork if present
         artwork_url = track_metadata.pop("_streaming_artwork_url", None)
-        if artwork_url and self._http_session:
+        session = self._http_session
+        if artwork_url and session:
             try:
-                async with self._http_session.get(artwork_url) as response:
+                async with session.get(artwork_url) as response:
                     if response.status == 200:
                         track_metadata["coverimageraw"] = await response.read()
             except aiohttp.ClientError as exc:
