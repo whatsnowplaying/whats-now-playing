@@ -75,7 +75,7 @@ jobs:
             libxcb-xkb1 \
             libxkbcommon-x11-0
       - name: download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: linux-dist
       - name: smoke test binary
