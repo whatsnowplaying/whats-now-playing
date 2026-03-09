@@ -103,7 +103,7 @@ See [TwitchBot → Setting Permissions](twitchbot.md#setting-permissions) for de
 | Auto Reveal Common Words | Automatically reveal very common words (the, and, of, etc.) | Disabled |
 | Time Bonus Enabled | Award bonus points for solving quickly | Disabled |
 | Send to Server | Enable online game board at whatsnowplaying.com (requires Charts API key) | Enabled |
-| Grace Period | Seconds after game ends to still accept guesses (accounts for Twitch stream delay) | 10 |
+| Grace Period | Seconds after game ends to still accept guesses (accounts for Twitch stream delay) | 5 |
 
 **Leaderboard Management:**
 

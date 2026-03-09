@@ -287,6 +287,9 @@ class UpgradeConfig:
         if oldversion < Version("5.1.0-preview4"):
             self._upgrade_to_5_1_0_preview4(config)
 
+        if oldversion < Version("5.1.0"):
+            self._upgrade_to_5_1_0(config)
+
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
         config.setValue("settings/configversion", thisverstr)
@@ -458,7 +461,7 @@ class UpgradeConfig:
 
     @staticmethod
     def _upgrade_to_5_1_0_preview4(config: QSettings) -> None:
-        """Upgrade to 5.1.0-preview4 - Remove legacy config keys and update grace period"""
+        """Upgrade to 5.1.0-preview4 - Remove legacy config keys"""
         for key in [
             "icecast/traktor-collections",
             "remote/remotedb",
@@ -469,10 +472,13 @@ class UpgradeConfig:
                 logging.info("Upgrade to 5.1.0-preview4: removing legacy key %s", key)
                 config.remove(key)
 
+    @staticmethod
+    def _upgrade_to_5_1_0(config: QSettings) -> None:
+        """Upgrade to 5.1.0 - Reset guessgame grace_period from 10 back to 5"""
         grace_period = config.value("guessgame/grace_period")
-        if grace_period is not None and int(grace_period) == 5:
-            logging.info("Upgrade to 5.1.0-preview4: bumping guessgame grace_period from 5 to 10")
-            config.setValue("guessgame/grace_period", 10)
+        if grace_period is not None and int(grace_period) == 10:
+            logging.info("Upgrade to 5.1.0: resetting guessgame grace_period from 10 to 5")
+            config.setValue("guessgame/grace_period", 5)
 
     def _cleanup_old_backup_files(self) -> None:
         """Clean up old .bak backup files from pre-5.0.0-preview5"""
