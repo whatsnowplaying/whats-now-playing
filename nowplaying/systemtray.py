@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 )
 
 import nowplaying.apicache
-import nowplaying.version
+import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 import nowplaying.config
 import nowplaying.db
 import nowplaying.firstinstall
@@ -132,9 +132,10 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self.settingswindow.qtui.activateWindow()
             self.settingswindow.qtui.setFocus()
 
-    def _open_documentation(self) -> None:
+    @staticmethod
+    def _open_documentation() -> None:
         """Open the documentation for this version in the default browser."""
-        version = nowplaying.version.__CURRENT_TAG__
+        version = nowplaying.version.__CURRENT_TAG__  # pylint: disable=no-member
         url = QUrl(f"https://whatsnowplaying.com/v1/docs?version={version}")
         QDesktopServices.openUrl(url)
 
