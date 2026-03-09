@@ -812,7 +812,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 # Check if game is active or within grace period
                 if game_row["status"] != "active":
                     # Game has ended - check if we're within grace period
-                    grace_period = self._get_config("grace_period", 10, int)
+                    grace_period = self._get_config("grace_period", 5, int)
                     end_time = game_row["end_time"]
 
                     if not end_time:
