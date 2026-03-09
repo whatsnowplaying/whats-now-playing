@@ -281,14 +281,22 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         artwork_url = track_metadata.pop("_streaming_artwork_url", None)
         session = self._http_session
         if artwork_url and session:
-            try:
-                async with session.get(artwork_url) as response:
-                    if response.status == 200:
-                        track_metadata["coverimageraw"] = await response.read()
-            except aiohttp.ClientError as exc:
-                logging.debug("Failed to download streaming artwork from %s: %s", artwork_url, exc)
+            track_metadata["coverimageraw"] = await self._download_artwork(
+                session, str(artwork_url)
+            )
 
         return track_metadata
+
+    @staticmethod
+    async def _download_artwork(session: aiohttp.ClientSession, url: str) -> bytes | None:
+        """Download artwork from a URL using the provided session"""
+        try:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    return await response.read()
+        except aiohttp.ClientError as exc:
+            logging.debug("Failed to download streaming artwork from %s: %s", url, exc)
+        return None
 
     async def _get_remote_track(self) -> TrackMetadata | None:
         """Get track from remote web scraping"""
