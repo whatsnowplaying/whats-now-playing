@@ -10,6 +10,7 @@ import tempfile
 import unittest.mock
 
 import pytest
+from aioresponses import aioresponses
 
 import nowplaying.inputs.serato
 import nowplaying.utils.sqlite
@@ -38,12 +39,23 @@ def serato_master_db():
             """)
 
                 conn.execute("""
+                    CREATE TABLE asset (
+                        id INTEGER PRIMARY KEY,
+                        external_id INTEGER,
+                        location_id INTEGER,
+                        portable_id TEXT,
+                        type_specific_data TEXT
+                    )
+                """)
+
+                conn.execute("""
                     CREATE TABLE history_entry (
                         id INTEGER PRIMARY KEY,
                         session_id INTEGER,
                         file_name TEXT,
                         portable_id TEXT,
                         location_id INTEGER,
+                        asset_id INTEGER,
                         artist TEXT,
                         name TEXT,
                         album TEXT,
@@ -501,3 +513,102 @@ async def test_require_played_false_includes_unplayed(bootstrap, serato_master_d
 
         finally:
             await plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_streaming_track_artwork(bootstrap, serato_master_db):  # pylint: disable=redefined-outer-name
+    """Test that streaming tracks get coverimageraw from type_specific_data, not filename"""
+    artwork_url = "https://example.com/artwork.jpg"
+    type_specific_data = '{"cover_id": "' + artwork_url + '", "is_video": false}'
+
+    with nowplaying.utils.sqlite.sqlite_connection(serato_master_db["db_path"]) as conn:
+        # Add asset table entry for the streaming track
+        conn.execute(
+            """
+            INSERT INTO asset (id, external_id, location_id, portable_id, type_specific_data)
+            VALUES (99, 99, 1, 'streaming://beatport/99999', ?)
+        """,
+            (type_specific_data,),
+        )
+
+        # Replace the newest track with a streaming track
+        conn.execute("""
+            UPDATE history_entry SET
+                portable_id = 'streaming://beatport/99999',
+                artist = 'Streaming Artist',
+                name = 'Streaming Track',
+                asset_id = 99
+            WHERE artist = 'Artist Three'
+        """)
+        conn.commit()
+
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
+
+    with unittest.mock.patch.object(
+        plugin, "_find_serato_library", return_value=serato_master_db["library_path"]
+    ):
+        plugin.configure()
+        plugin.setmixmode("newest")
+        await plugin.start()
+
+        fake_image = b"\x89PNG\r\n\x1a\n"  # PNG magic bytes
+
+        with aioresponses() as mock_resp:
+            mock_resp.get(artwork_url, status=200, body=fake_image)
+
+            try:
+                track = await plugin.getplayingtrack()
+
+                assert track is not None
+                assert track["artist"] == "Streaming Artist"
+                assert "filename" not in track
+                assert "_streaming_artwork_url" not in track
+                assert track.get("coverimageraw") == fake_image
+
+            finally:
+                await plugin.stop()
+
+
+@pytest.mark.asyncio
+async def test_streaming_track_is_video(bootstrap, serato_master_db):  # pylint: disable=redefined-outer-name
+    """Test that streaming tracks with is_video=true set has_video on the track"""
+    type_specific_data = '{"cover_id": "https://example.com/artwork.jpg", "is_video": true}'
+
+    with nowplaying.utils.sqlite.sqlite_connection(serato_master_db["db_path"]) as conn:
+        conn.execute(
+            """
+            INSERT INTO asset (id, external_id, location_id, portable_id, type_specific_data)
+            VALUES (98, 98, 1, 'streaming://beatport/88888', ?)
+        """,
+            (type_specific_data,),
+        )
+        conn.execute("""
+            UPDATE history_entry SET
+                portable_id = 'streaming://beatport/88888',
+                artist = 'Video Artist',
+                name = 'Video Track',
+                asset_id = 98
+            WHERE artist = 'Artist Three'
+        """)
+        conn.commit()
+
+    plugin = nowplaying.inputs.serato.Plugin(config=bootstrap)
+
+    with unittest.mock.patch.object(
+        plugin, "_find_serato_library", return_value=serato_master_db["library_path"]
+    ):
+        plugin.configure()
+        plugin.setmixmode("newest")
+        await plugin.start()
+
+        with aioresponses() as mock_resp:
+            mock_resp.get("https://example.com/artwork.jpg", status=200, body=b"\x89PNG\r\n\x1a\n")
+
+            try:
+                track = await plugin.getplayingtrack()
+
+                assert track is not None
+                assert track.get("has_video") is True
+
+            finally:
+                await plugin.stop()

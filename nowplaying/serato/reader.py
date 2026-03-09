@@ -149,29 +149,31 @@ class Serato4SQLiteReader:
                     ),
                     ranked_tracks AS (
                         SELECT
-                            file_name,
-                            portable_id,
-                            location_id,
-                            artist,
-                            name as title,
-                            album,
-                            genre,
-                            bpm,
-                            key,
-                            year,
-                            length_sec as duration,
-                            start_time,
-                            played,
-                            deck,
-                            file_size as file_bytes,
-                            file_sample_rate as sample_rate,
-                            file_bit_rate as bitrate,
+                            h.file_name,
+                            h.portable_id,
+                            h.location_id,
+                            h.artist,
+                            h.name as title,
+                            h.album,
+                            h.genre,
+                            h.bpm,
+                            h.key,
+                            h.year,
+                            h.length_sec as duration,
+                            h.start_time,
+                            h.played,
+                            h.deck,
+                            h.file_size as file_bytes,
+                            h.file_sample_rate as sample_rate,
+                            h.file_bit_rate as bitrate,
+                            a.type_specific_data,
                             ROW_NUMBER() OVER (
-                                PARTITION BY deck
-                                ORDER BY start_time DESC
+                                PARTITION BY h.deck
+                                ORDER BY h.start_time DESC
                             ) as rn
-                        FROM history_entry
-                        WHERE session_id = (SELECT id FROM current_session)
+                        FROM history_entry h
+                        LEFT JOIN asset a ON h.asset_id = a.id
+                        WHERE h.session_id = (SELECT id FROM current_session)
                         {played_filter}
                     )
                     SELECT
@@ -191,7 +193,8 @@ class Serato4SQLiteReader:
                         deck,
                         file_bytes,
                         sample_rate,
-                        bitrate
+                        bitrate,
+                        type_specific_data
                     FROM ranked_tracks
                     WHERE rn = 1
                 """
