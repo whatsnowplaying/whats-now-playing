@@ -5,6 +5,7 @@ Serato Plugin
 Main plugin class for Serato DJ SQLite database input (4.0+).
 """
 
+import json
 import logging
 import os
 import pathlib
@@ -12,6 +13,7 @@ import platform
 import sqlite3
 from typing import TYPE_CHECKING
 
+import aiohttp
 import aiosqlite
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
 
@@ -46,6 +48,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         self.serato_lib_path: pathlib.Path | None = None
         self.mode = "local"  # "local" or "remote"
         self.url: str | None = None
+        self._http_session: aiohttp.ClientSession | None = None
 
     @property
     def detected_serato_library_path(self) -> pathlib.Path | None:
@@ -128,6 +131,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
     async def start(self) -> None:
         """Start the plugin in local or remote mode"""
         self.configure()
+        self._http_session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5))
 
         if self.mode == "local":
             await self._start_local_mode()
@@ -190,6 +194,9 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         if self.remote_handler:
             # Remote handler doesn't need async cleanup
             self.remote_handler = None
+        if self._http_session:
+            await self._http_session.close()
+            self._http_session = None
 
     def install(self) -> bool:
         """Auto-install for Serato 4"""
@@ -268,7 +275,28 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         location_mappings = await self.handler.get_location_mappings()
 
         # Convert Serato 4 database format to TrackMetadata format
-        return self._convert_local_track_data(track_data, location_mappings)
+        track_metadata = self._convert_local_track_data(track_data, location_mappings)
+
+        # Download streaming artwork if present
+        artwork_url = track_metadata.pop("_streaming_artwork_url", None)
+        session = self._http_session
+        if artwork_url and session:
+            track_metadata["coverimageraw"] = await self._download_artwork(
+                session, str(artwork_url)
+            )
+
+        return track_metadata
+
+    @staticmethod
+    async def _download_artwork(session: aiohttp.ClientSession, url: str) -> bytes | None:
+        """Download artwork from a URL using the provided session"""
+        try:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    return await response.read()
+        except aiohttp.ClientError as exc:
+            logging.debug("Failed to download streaming artwork from %s: %s", url, exc)
+        return None
 
     async def _get_remote_track(self) -> TrackMetadata | None:
         """Get track from remote web scraping"""
@@ -319,10 +347,24 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         if track_data.get("duration"):
             track_metadata["duration"] = int(track_data["duration"])
 
-        # Handle file path for local tracks
-        # Construct full path from location_id + portable_id
-        if track_data.get("portable_id") and track_data.get("location_id"):
-            portable_id = str(track_data["portable_id"])
+        # Handle file path - streaming tracks use portable_id as streaming:// URI
+        portable_id = str(track_data["portable_id"]) if track_data.get("portable_id") else None
+
+        if portable_id and portable_id.startswith("streaming://"):
+            # Streaming track - extract fields from type_specific_data for later download
+            type_specific_data = track_data.get("type_specific_data")
+            if type_specific_data:
+                try:
+                    parsed = json.loads(type_specific_data)
+                    if parsed.get("cover_id"):
+                        track_metadata["_streaming_artwork_url"] = str(parsed["cover_id"])
+                    if parsed.get("is_video"):
+                        track_metadata["has_video"] = True
+                except (json.JSONDecodeError, TypeError) as exc:
+                    logging.debug(
+                        "Failed to parse type_specific_data for streaming track: %s", exc
+                    )
+        elif portable_id and track_data.get("location_id"):
             location_id = track_data["location_id"]
 
             # Try to get base path from location mappings

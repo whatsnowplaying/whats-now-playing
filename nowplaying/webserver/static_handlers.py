@@ -193,7 +193,6 @@ class StaticContentHandler:
         # |       |   NA    |      |  -> send refresh because not ready or something broke
 
         if not metadata or not metadata.get("dbid"):
-            logging.debug("No metadata available or missing dbid, sending refresh")
             return web.Response(status=202, content_type="text/html", text=INDEXREFRESH)
 
         if not template:
