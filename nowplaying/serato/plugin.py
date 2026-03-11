@@ -239,7 +239,7 @@ class Plugin(nowplaying.inputs.InputPlugin):  # pylint: disable=too-many-instanc
         """Plugin description for UI"""
         qwidget.setText(
             "This plugin provides support for Serato DJ 4+. "
-            "Local mode uses SQLite database for real-time track detection. "
+            "Local mode reads from Serato's SQLite databases for real-time track detection. "
             "Remote mode scrapes Serato Live Playlists from serato.com."
         )
 

@@ -79,14 +79,12 @@ nav:
   - Quickstart: quickstart.md
   - Upgrading: upgrading.md
   - Usage: usage.md
-  - Settings:
+  - Core Settings:
       - General: settings/index.md
+      - Source: input/index.md
       - Filters: settings/filter.md
       - Track Skip: settings/trackskip.md
-      - Quirks: settings/quirks.md
-      - Destroy: settings/destroy.md
   - Input Sources:
-      - General: input/index.md
       - Denon: input/denon.md
       - djay Pro: input/djaypro.md
       - DJUCED: input/djuced.md
@@ -122,7 +120,10 @@ nav:
       - Kick Bot: output/kickbot.md
       - Twitch Bot: output/twitchbot.md
       - Guess Game: output/guessgame.md
-  - Requests: requests.md
+      - Requests: requests.md
+  - System:
+      - Quirks: settings/quirks.md
+      - Destroy: settings/destroy.md
   - Help:
       - Overview: help/index.md
       - How Do I?: help/howdoi.md

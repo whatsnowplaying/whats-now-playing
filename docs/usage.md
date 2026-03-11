@@ -12,6 +12,7 @@ will point you to the menu bar icon (macOS) or system tray icon (Windows).
 [![Windows system tray menu](images/menu_win.png)](images/menu_win.png)
 
 * **About What's Now Playing** - Shows version and application information
+* **Documentation** - Opens the documentation for the current version in your default browser
 * **Settings** - Reconfigure the application. See [Settings](settings/index.md) for more information.
 * **Requests** - Open the track requests window
 * **Newest/Oldest** - Toggle mixing mode detection (not supported by all DJ software):

@@ -7,10 +7,18 @@ software and displays it on streams, in chat, or anywhere else you need it.
 
 **[Start here: Complete Documentation & Setup Guide](http://whatsnowplaying.github.io/)**
 
-## Supported DJ Software
+## Supported Software
 
-Serato DJ, Traktor, Denon DJ (StagelinQ), Virtual DJ, DJUCED, MIXXX, MegaSeg, Radiologik,
-JRiver Media Center, butt, and more.
+**DJ Software:** Serato DJ, Traktor, Virtual DJ, Denon DJ (StagelinQ), djay Pro, DJUCED, MIXXX
+
+**Media Players:** JRiver Media Center, Windows Media API (Spotify, Amazon Music, and more),
+MPRIS2-compatible players (Linux)
+
+**Via Icecast:** butt, and other Icecast-compatible sources
+
+**Via Remote API:** MegaSeg, Radiologik, and other apps with HTTP output
+
+**File-based:** M3U playlists
 
 ## Download
 

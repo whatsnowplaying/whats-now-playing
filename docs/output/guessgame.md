@@ -66,7 +66,7 @@ See [TwitchBot → Setting Permissions](twitchbot.md#setting-permissions) for de
 [![Guess Game Basic Settings](images/guessgame_basic.png)](images/guessgame_basic.png)
 
 | Setting | Description | Default |
-|---------|-------------|---------|
+| ------- | ----------- | ------- |
 | Guess Command | Chat command viewers use to submit guesses | `guess` |
 | Stats Command | Chat command viewers use to check their statistics | `mypoints` |
 | Game Duration | Maximum time in seconds before game times out | `120` (2 minutes) |
@@ -87,7 +87,7 @@ See [TwitchBot → Setting Permissions](twitchbot.md#setting-permissions) for de
 **Scoring Configuration:**
 
 | Setting | Description | Default |
-|---------|-------------|---------|
+| ------- | ----------- | ------- |
 | Common Letter Points | Points for guessing common letters (e, a, o, etc.) | `1` |
 | Uncommon Letter Points | Points for guessing uncommon letters (d, h, etc.) | `2` |
 | Rare Letter Points | Points for guessing rare letters (x, z, q, etc.) | `3` |
@@ -99,7 +99,7 @@ See [TwitchBot → Setting Permissions](twitchbot.md#setting-permissions) for de
 **Advanced Options:**
 
 | Setting | Description | Default |
-|---------|-------------|---------|
+| ------- | ----------- | ------- |
 | Auto Reveal Common Words | Automatically reveal very common words (the, and, of, etc.) | Disabled |
 | Time Bonus Enabled | Award bonus points for solving quickly | Disabled |
 | Send to Server | Enable online game board at whatsnowplaying.com (requires Charts API key) | Enabled |
@@ -192,7 +192,7 @@ Viewers watching your Twitch stream experience a delay (typically 5-15+ seconds)
 behind real-time. To ensure fair gameplay, the Guess Game includes a configurable **Grace Period**:
 
 * **After a game ends** (solved, timeout, or track change), guesses are still accepted for the configured grace
-  period (default: 10 seconds)
+  period (default: 5 seconds)
 * **Viewers see the ended game** with revealed answers, but their "late" guesses from stream delay are still
   processed and scored
 * **Leaderboards reflect reality**: Scores account for what viewers actually experienced on their delayed streams
@@ -309,7 +309,7 @@ Artist: {{ masked_artist }}
 #### twitchbot_guess.txt variables
 
 | Variable | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `guess_user` | Twitch username who made the guess |
 | `guess_text` | The text the viewer submitted |
 | `guess_correct` | Boolean: true if the guess was correct |
@@ -327,7 +327,7 @@ Artist: {{ masked_artist }}
 #### twitchbot_mypoints.txt variables
 
 | Variable | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `stats_user` | Twitch username who requested stats |
 | `stats_none` | Boolean: true if the user has never played |
 | `stats_session_score` | User's points in the current session |
@@ -340,7 +340,7 @@ Artist: {{ masked_artist }}
 #### twitchbot_gamestart.txt variables
 
 | Variable | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `guess_command` | Configured guess command (default: `guess`) |
 | `masked_track` | Track name with all letters hidden as underscores |
 | `masked_artist` | Artist name with all letters hidden as underscores |
