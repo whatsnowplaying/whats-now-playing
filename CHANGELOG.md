@@ -4,6 +4,9 @@
 ## Version 5.1.0 - in development
 
 * New Features
+  * Add macOS Music app input source (macOS only)
+    * Reads track title, artist, album, genre, year, BPM, comments, disc/track numbers, and cover art
+    * File path available for locally stored tracks
   * Basic support for djay Pro
     * Currently missing a lot of the more advanced features but the groundwork has been put down
   * Support Klipy as an alternative to the EOLing Tenor
