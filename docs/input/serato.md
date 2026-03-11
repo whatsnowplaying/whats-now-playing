@@ -4,6 +4,8 @@
 
 ## Setup
 
+[![Serato Source Selection](images/serato4-source-selection.png)](images/serato4-source-selection.png)
+
 1. Open Settings from the **What's Now Playing** icon
 2. Select Core Settings->Source from the left-hand column
 3. Select "Serato" from the list of available input sources
@@ -11,9 +13,9 @@
 
 ## Configuration
 
-TODO: put image here
-
 ### Local Mode (Recommended)
+
+[![Local Mode Settings](images/serato4-connection-local.png)](images/serato4-connection-local.png)
 
 Select **Local** if **What's Now Playing** runs on the same computer as Serato:
 
@@ -29,6 +31,8 @@ Select **Local** if **What's Now Playing** runs on the same computer as Serato:
 No other setup is required - the plugin finds your Serato library automatically.
 
 ### Remote Mode
+
+[![Remote Mode Settings](images/serato4-connection-remote.png)](images/serato4-connection-remote.png)
 
 Select **Remote** if **What's Now Playing** runs on a different computer than Serato:
 
@@ -51,26 +55,23 @@ Select **Remote** if **What's Now Playing** runs on a different computer than Se
 
 ## Artist Query Configuration
 
+[![Library and Query Settings](images/serato4-libandquery.png)](images/serato4-libandquery.png)
+
 The Serato plugin supports artist-based library queries for the `!hasartist` Twitch chat command and
 roulette playlist features.
 
-### Query Scope
+### Artist Query Scope
 
 Choose where **What's Now Playing** searches for artists:
 
 * **Entire Library**: Searches all tracks in your Serato library
-* **Selected Playlists/Crates**: Searches only specific playlists or crates (comma-separated list)
+* **Selected Playlists**: Searches only specific crates (enter comma-separated crate names in the field)
 
-### Multiple Library Support
+### Library Paths (Auto-Discovered)
 
-If you have multiple Serato libraries (e.g., separate libraries for different music genres), you can
-configure additional library paths:
-
-1. In the Serato settings, click "Add Library"
-2. Browse to the additional Serato library directory
-3. **What's Now Playing** will search across all configured libraries when querying for artists
-
-This is useful for DJs who organize their music into multiple Serato library databases.
+Library paths are automatically discovered from Serato's database. All external drives and music
+collections that Serato knows about will be used for artist queries automatically — no manual
+configuration needed.
 
 ## Troubleshooting
 

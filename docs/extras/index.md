@@ -43,8 +43,6 @@ The session resets when **What's Now Playing** is restarted.
 
 [![Artist Extras Settings](images/artistextras.png)](images/artistextras.png)
 
-> **Note**: Artist Extras settings are located under Artist Data in the settings menu.
-
 ## How It Works
 
 ### Download Timing

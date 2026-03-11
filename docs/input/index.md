@@ -1,8 +1,11 @@
-# Input Sources
+# Source
+
+[![Source Selection](images/serato4-source-selection.png)](images/serato4-source-selection.png)
 
 For **What's Now Playing** to work, it needs to know what software is playing music.
-In the UI, this setting is called the Source. There are many sources available. Each
-has its own screen to configure them.
+In the UI, this setting is called the Source. There are many sources available — some
+require additional configuration, others work automatically once selected. Click on a
+source below for more information.
 
 ## DJ Software
 
@@ -31,5 +34,3 @@ Network streaming and file-based sources:
 - **[Icecast](icecast.md)** - Icecast streaming server metadata
 - **[M3U](m3u.md)** - M3U playlist file monitoring
 - **[Remote](remote.md)** - Remote input via REST API from other applications
-
-Click on any input source above to see detailed configuration instructions.

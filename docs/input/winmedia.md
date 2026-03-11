@@ -6,7 +6,11 @@ information to the system. WinMedia reads this data as the source.
 This input works with applications that support Windows Media APIs, such as:
 
 - Amazon Music
+- Apple Music
+- SoundCloud
 - Spotify
+- Tidal
+- VLC
 - Windows Media Player
 - Other media applications with Windows integration
 

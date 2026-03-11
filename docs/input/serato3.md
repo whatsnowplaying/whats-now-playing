@@ -19,7 +19,7 @@ data available.
 
 ## Instructions
 
-[![Serato Source Selection](images/serato-source-selection.png)](images/serato-source-selection.png)
+[![Serato Source Selection](images/serato3-source-selection.png)](images/serato3-source-selection.png)
 
 1. Open Settings from the **What's Now Playing** icon
 2. Select Core Settings->Source from the left-hand column
@@ -31,7 +31,7 @@ data available.
 
 #### Local Mode
 
-[![Local Mode Settings](images/serato-connection-local.png)](images/serato-connection-local.png)
+[![Local Mode Settings](images/serato3-connection-local.png)](images/serato3-connection-local.png)
 
 When Local Mode is active, the **What's Now Playing** app runs on the
 same machine as Serato. Configure the Serato Library Path to Serato's
@@ -43,7 +43,7 @@ Ignore Deck(s) allows for tracks on these deck(s) to be ignored.
 
 #### Remote Mode
 
-[![Remote Mode Settings](images/serato-connection-remote.png)](images/serato-connection-remote.png)
+[![Remote Mode Settings](images/serato3-connection-remote.png)](images/serato3-connection-remote.png)
 
 Remote mode is useful when the streaming computer is not the same as the
 Serato DJ computer by utilizing Serato Live Playlists. It should be only
@@ -79,7 +79,7 @@ Mode, that provides a much richer set of data.
 
 ### Library and Query
 
-[![Library and Query Settings](images/serato-libandquery.png)](images/serato-libandquery.png)
+[![Library and Query Settings](images/serato3-libandquery.png)](images/serato3-libandquery.png)
 
 This tab controls how the !hasartist command functions, either the entire database
 or one or more crates.
