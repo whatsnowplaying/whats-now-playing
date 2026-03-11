@@ -11,8 +11,7 @@ software and displays it on streams, in chat, or anywhere else you need it.
 
 **DJ Software:** Serato DJ, Traktor, Virtual DJ, Denon DJ (StagelinQ), djay Pro, DJUCED, MIXXX
 
-**Media Players:** JRiver Media Center, macOS Music app (macOS),
-Windows Media API (Spotify, Amazon Music, and more) (Windows),
+**Media Players:** JRiver Media Center, Windows Media API (Spotify, Amazon Music, and more),
 MPRIS2-compatible players (Linux)
 
 **Via Icecast:** butt, and other Icecast-compatible sources
