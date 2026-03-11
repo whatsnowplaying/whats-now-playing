@@ -83,8 +83,8 @@ def test_upgrade_510_removes_legacy_keys():
         # Real settings must survive
         assert config.value("settings/delay") == "2.5"
 
-        # grace_period=5 should have been bumped to 10
-        assert config.value("guessgame/grace_period") in (None, "10", 10)
+        # grace_period=5 is the default and should be preserved as-is
+        assert config.value("guessgame/grace_period") in (None, "5", 5)
 
         config.clear()
         del config
