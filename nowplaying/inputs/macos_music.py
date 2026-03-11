@@ -64,8 +64,7 @@ class Plugin(InputPlugin):
             "year": str(current.year() or ""),  # type: ignore[union-attr]
         }
         try:
-            location = current.location()  # type: ignore[union-attr]
-            if location:
+            if location := current.location():
                 localfile = urllib.parse.urlparse(str(location)).path
                 if localfile and localfile[0] == "/":
                     newdata["filename"] = urllib.parse.unquote(localfile)
@@ -74,8 +73,7 @@ class Plugin(InputPlugin):
         try:
             artworks = current.artworks()  # type: ignore[union-attr]
             if artworks and artworks.count() > 0:
-                img_data = artworks[0].data()
-                if img_data:
+                if img_data := artworks[0].data():
                     if coverimage := nowplaying.utils.image2png(bytes(img_data)):
                         newdata["coverimageraw"] = coverimage
         except Exception as exc:  # pylint: disable=broad-exception-caught
@@ -100,11 +98,7 @@ class Plugin(InputPlugin):
             if not current:
                 continue
 
-            newdata = self._build_track_metadata(current)
-
-            # avoid expensive image2png call on unchanged tracks
-            if any(value != self.metadata.get(key) for key, value in newdata.items()):
-                self.metadata = newdata
+            self.metadata = self._build_track_metadata(current)
 
     async def getplayingtrack(self):
         """Get the current playing track"""
