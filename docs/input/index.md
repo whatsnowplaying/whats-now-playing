@@ -24,9 +24,8 @@ Professional DJ software with direct integration:
 General media player software:
 
 - **[JRiver](jriver.md)** - JRiver Media Center with REST API integration
-- **[macOS Music](macos_music.md)** - macOS Music app (formerly iTunes) (macOS only)
-- **[Windows Media](winmedia.md)** - Windows Media API (Spotify, Amazon Music, and more) (Windows only)
-- **[MPRIS2](mpris2.md)** - Linux MPRIS2 media player interface (VLC, etc.) (Linux only)
+- **[Windows Media](winmedia.md)** - Windows Media Player integration
+- **[MPRIS2](mpris2.md)** - Linux MPRIS2 media player interface (VLC, etc.)
 
 ## Streaming & Files
 

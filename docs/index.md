@@ -25,8 +25,7 @@ Works with all major platforms. See the full [Input Sources](input/index.md) lis
 * Remote input — including [MegaSeg](input/remote.md#megaseg) and [Radiologik](input/remote.md#radiologik)
 * M3U playlists
 * MPRIS2-compatible players (Linux)
-* macOS Music app — formerly iTunes (macOS)
-* Windows Media API (Windows Media Player, Spotify, SoundCloud, Amazon Music, and more) (Windows)
+* Windows Media API (Windows Media Player, Spotify, SoundCloud, Amazon Music, and more)
 
 ## Stream Platforms
 
