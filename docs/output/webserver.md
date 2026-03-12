@@ -70,6 +70,8 @@ functionality. See the [API Reference](../reference/api.md) for complete endpoin
 
 A continual feed is available via WebSockets. The feed is a JSON-formatted stream that updates on
 every title change — no polling required. Connect using the URL `ws://hostname:port/wsstream`.
+Note: the built-in web server does not support TLS, so `ws://` is used rather than `wss://`.
+This is expected for a local network service.
 
 The bundled templates that begin with `ws-` use WebSockets and are a good starting point for
 custom overlays or integrations that need real-time updates.

@@ -47,8 +47,7 @@ If you need to change the port or other settings, go to **Output & Display → W
    values in the template files in the `templates` folder)
 4. Play a track in your DJ software — track information should appear in OBS
 
-The bundled templates are starting points. Copy and rename them to customize fonts, layout,
-and content. See [Templates](reference/templatevariables.md) for available variables.
+For full details and customization options, see [Web Server](output/webserver.md).
 
 ## Step 5: Announce Tracks in Chat (Optional)
 
