@@ -130,6 +130,8 @@ class TwitchLogin:
                     if new_refresh_token:
                         self.config.cparser.setValue("twitchbot/refreshtoken", new_refresh_token)
                     self.config.save()
+                    oauth_client.access_token = new_access_token
+                    oauth_client.refresh_token = new_refresh_token or refresh_token
 
                 logging.debug("Twitch token refreshed successfully")
                 return True

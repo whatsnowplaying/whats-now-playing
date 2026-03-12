@@ -126,6 +126,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def _show_settings(self) -> None:
         """Show settings window and bring it to the front."""
+        self.config.get()
         self.settingswindow.show()
         if self.settingswindow.qtui:
             self.settingswindow.qtui.raise_()
