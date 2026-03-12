@@ -44,7 +44,7 @@ If you need to change the port or other settings, go to **Output & Display → W
 1. In OBS Studio, add a new **Browser Source**
 2. Set the URL to `http://localhost:8899/`
 3. Set the width and height to match your chosen template (check the `width` and `height`
-   values in the template files in the `templates` folder)
+   values in the template files in `Documents/WhatsNowPlaying/templates`)
 4. Play a track in your DJ software — track information should appear in OBS
 
 For full details and customization options, see [Web Server](output/webserver.md).
