@@ -142,6 +142,7 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
             self.observer = Observer()
         self.observer.schedule(self.event_handler, self.djaypro_dir, recursive=False)
         self.observer.start()
+        self._check_for_new_track()
 
     def _fs_event(self, event):
         """File system event handler - called from watchdog thread"""
