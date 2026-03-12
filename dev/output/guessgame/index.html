@@ -2580,34 +2580,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../help/developers/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Developers
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2788,8 +2760,46 @@
   
   
     <li class="md-nav__item">
-      <a href="../../gallery/" class="md-nav__link">
+      <a href="../../help/developers/" class="md-nav__link">
         
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -2803,7 +2813,135 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/webserver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Webserver Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/obswebsocket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OBS WebSocket
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/unicode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unicode Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -3096,7 +3234,10 @@ that are <strong>disabled by default</strong>. You must enable them in the Twitc
 <h2 id="obs-integration">OBS Integration<a class="headerlink" href="#obs-integration" title="Permanent link">&para;</a></h2>
 <p>The Guess Game provides two OBS browser sources for displaying game information on your stream:</p>
 <h3 id="game-display">Game Display<a class="headerlink" href="#game-display" title="Permanent link">&para;</a></h3>
-<p>Shows the current game state with masked track/artist names:</p>
+<p><a href="../images/guessgame_template.png"><img alt="Active guess game display" src="../images/guessgame_template.png" /></a></p>
+<p><a href="../images/guessgame_failed.png"><img alt="Failed guess game display" src="../images/guessgame_failed.png" /></a></p>
+<p>Shows the current game state with masked track and artist names, time remaining, guessed letters,
+and game status (Active, Solved, Timeout, Waiting).</p>
 <ol>
 <li>Add a <strong>Browser</strong> source in OBS</li>
 <li>Set URL to: <code>http://localhost:8899/guessgame/guessgame.htm</code></li>
@@ -3104,41 +3245,23 @@ that are <strong>disabled by default</strong>. You must enable them in the Twitc
    longer names wrap to multiple lines)</li>
 <li>Customize the display by editing <code>templates/guessgame/guessgame.htm</code></li>
 </ol>
-<p><strong>Display Shows:</strong></p>
-<ul>
-<li>Masked track name (e.g., <code>h___e __ _he ___i__ s__</code>)</li>
-<li>Masked artist name (e.g., <code>_he __i__ls</code>)</li>
-<li>Time remaining in seconds</li>
-<li>Guessed letters list</li>
-<li>Game status (Active, Solved, Timeout, Waiting)</li>
-</ul>
 <h3 id="leaderboard-display">Leaderboard Display<a class="headerlink" href="#leaderboard-display" title="Permanent link">&para;</a></h3>
-<p>Shows top players for session or all-time using a single unified template with URL parameters:</p>
+<p><a href="../images/guessgame_leaderboard.png"><img alt="All-time leaderboard display" src="../images/guessgame_leaderboard.png" /></a></p>
+<p>Shows rank, username, total score, and number of solves with gold/silver/bronze styling for the
+top 3. Both session and all-time leaderboards use the same template — the URL parameter controls
+which data is displayed.</p>
 <h4 id="session-leaderboard">Session Leaderboard<a class="headerlink" href="#session-leaderboard" title="Permanent link">&para;</a></h4>
-<p>Displays scores for the current streaming session:</p>
 <ol>
 <li>Add a <strong>Browser</strong> source in OBS</li>
 <li>Set URL to: <code>http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session</code></li>
 <li>Set dimensions: <code>560x500</code> (or adjust to your layout)</li>
 </ol>
 <h4 id="all-time-leaderboard">All-Time Leaderboard<a class="headerlink" href="#all-time-leaderboard" title="Permanent link">&para;</a></h4>
-<p>Displays cumulative scores across all sessions:</p>
 <ol>
 <li>Add a <strong>Browser</strong> source in OBS</li>
 <li>Set URL to: <code>http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=all_time</code></li>
 <li>Set dimensions: <code>560x500</code> (or adjust to your layout)</li>
 </ol>
-<p><strong>Customization:</strong></p>
-<p>Both leaderboards use the same template file (<code>templates/guessgame/guessgame-leaderboard.htm</code>), making it easy
-to maintain consistent styling. The <code>?type=session</code> or <code>?type=all_time</code> URL parameter controls which data is
-displayed and which color scheme is used (purple/orange for session, green for all-time).</p>
-<p><strong>Both Leaderboards Show:</strong></p>
-<ul>
-<li>Rank (with gold/silver/bronze styling for top 3)</li>
-<li>Username</li>
-<li>Total score</li>
-<li>Number of solves</li>
-</ul>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <h3 id="game-flow">Game Flow<a class="headerlink" href="#game-flow" title="Permanent link">&para;</a></h3>
 <ol>
@@ -3222,34 +3345,37 @@ an online copy of your game board is available at:</p>
 <p>The Guess Game uses Jinja2 templates for chat responses and OBS display:</p>
 <h3 id="chat-templates">Chat Templates<a class="headerlink" href="#chat-templates" title="Permanent link">&para;</a></h3>
 <p><strong>twitchbot_guess.txt</strong>: Response when a viewer makes a guess</p>
-<p><code>jinja2{% if guess_error -%}
-{{ guess_error }}
-{%- elif guess_already_guessed -%}
-@{{ guess_user }} "{{ guess_text }}" is already revealed!
-{%- elif guess_already_solved -%}
-@{{ guess_user }} That part is already solved!
-{%- elif guess_solved and guess_solve_type == "both" -%}
-@{{ guess_user }} 🎉 GAME COMPLETE! +{{ guess_points }} points! The answer was: {{ guess_masked_track }} by {{ guess_masked_artist }}
-{%- elif guess_solve_type == "track" -%}
-@{{ guess_user }} 🎵 TRACK SOLVED! +{{ guess_points }} points! Now guess the artist: {{ guess_masked_artist }}
-{%- elif guess_solve_type == "artist" -%}
-@{{ guess_user }} 🎤 ARTIST SOLVED! +{{ guess_points }} points! Now guess the track: {{ guess_masked_track }}
-{%- elif guess_correct -%}
-@{{ guess_user }} ✓ Correct! +{{ guess_points }} points | Track: {{ guess_masked_track }} | Artist: {{ guess_masked_artist }}
-{%- else -%}
-@{{ guess_user }} ✗ Not quite! | Track: {{ guess_masked_track }} | Artist: {{ guess_masked_artist }}
-{%- endif -%}</code></p>
+<div class="highlight"><pre><span></span><code><span class="cp">{%</span> <span class="k">if</span> <span class="nv">guess_error</span> -<span class="cp">%}</span>
+<span class="cp">{{</span> <span class="nv">guess_error</span> <span class="cp">}}</span>
+<span class="cp">{%</span>- <span class="k">elif</span> <span class="nv">guess_already_guessed</span> -<span class="cp">%}</span>
+<span class="x">@</span><span class="cp">{{</span> <span class="nv">guess_user</span> <span class="cp">}}</span><span class="x"> &quot;</span><span class="cp">{{</span> <span class="nv">guess_text</span> <span class="cp">}}</span><span class="x">&quot; is already revealed!</span>
+<span class="cp">{%</span>- <span class="k">elif</span> <span class="nv">guess_already_solved</span> -<span class="cp">%}</span>
+<span class="x">@</span><span class="cp">{{</span> <span class="nv">guess_user</span> <span class="cp">}}</span><span class="x"> That part is already solved!</span>
+<span class="cp">{%</span>- <span class="k">elif</span> <span class="nv">guess_solved</span> <span class="k">and</span> <span class="nv">guess_solve_type</span> <span class="o">==</span> <span class="s2">&quot;both&quot;</span> -<span class="cp">%}</span>
+<span class="x">@</span><span class="cp">{{</span> <span class="nv">guess_user</span> <span class="cp">}}</span><span class="x"> 🎉 GAME COMPLETE! +</span><span class="cp">{{</span> <span class="nv">guess_points</span> <span class="cp">}}</span><span class="x"> points! The answer was: </span><span class="cp">{{</span> <span class="nv">guess_masked_track</span> <span class="cp">}}</span><span class="x"> by </span><span class="cp">{{</span> <span class="nv">guess_masked_artist</span> <span class="cp">}}</span>
+<span class="cp">{%</span>- <span class="k">elif</span> <span class="nv">guess_solve_type</span> <span class="o">==</span> <span class="s2">&quot;track&quot;</span> -<span class="cp">%}</span>
+<span class="x">@</span><span class="cp">{{</span> <span class="nv">guess_user</span> <span class="cp">}}</span><span class="x"> 🎵 TRACK SOLVED! +</span><span class="cp">{{</span> <span class="nv">guess_points</span> <span class="cp">}}</span><span class="x"> points! Now guess the artist: </span><span class="cp">{{</span> <span class="nv">guess_masked_artist</span> <span class="cp">}}</span>
+<span class="cp">{%</span>- <span class="k">elif</span> <span class="nv">guess_solve_type</span> <span class="o">==</span> <span class="s2">&quot;artist&quot;</span> -<span class="cp">%}</span>
+<span class="x">@</span><span class="cp">{{</span> <span class="nv">guess_user</span> <span class="cp">}}</span><span class="x"> 🎤 ARTIST SOLVED! +</span><span class="cp">{{</span> <span class="nv">guess_points</span> <span class="cp">}}</span><span class="x"> points! Now guess the track: </span><span class="cp">{{</span> <span class="nv">guess_masked_track</span> <span class="cp">}}</span>
+<span class="cp">{%</span>- <span class="k">elif</span> <span class="nv">guess_correct</span> -<span class="cp">%}</span>
+<span class="x">@</span><span class="cp">{{</span> <span class="nv">guess_user</span> <span class="cp">}}</span><span class="x"> ✓ Correct! +</span><span class="cp">{{</span> <span class="nv">guess_points</span> <span class="cp">}}</span><span class="x"> points | Track: </span><span class="cp">{{</span> <span class="nv">guess_masked_track</span> <span class="cp">}}</span><span class="x"> | Artist: </span><span class="cp">{{</span> <span class="nv">guess_masked_artist</span> <span class="cp">}}</span>
+<span class="cp">{%</span>- <span class="k">else</span> -<span class="cp">%}</span>
+<span class="x">@</span><span class="cp">{{</span> <span class="nv">guess_user</span> <span class="cp">}}</span><span class="x"> ✗ Not quite! | Track: </span><span class="cp">{{</span> <span class="nv">guess_masked_track</span> <span class="cp">}}</span><span class="x"> | Artist: </span><span class="cp">{{</span> <span class="nv">guess_masked_artist</span> <span class="cp">}}</span>
+<span class="cp">{%</span>- <span class="k">endif</span> -<span class="cp">%}</span>
+</code></pre></div>
 <p><strong>twitchbot_mypoints.txt</strong>: Response when a viewer checks their stats</p>
-<p><code>jinja2{% if stats_none -%}
-@{{ stats_user }} You haven't played yet! Type !guess to start playing.
-{%- else -%}
-@{{ stats_user }} Session: {{ stats_session_score }} pts ({{ stats_session_solves }} solves,
-{{ stats_session_guesses }} guesses) | All-Time: {{ stats_all_time_score }} pts
-({{ stats_all_time_solves }} solves)
-{%- endif -%}</code></p>
+<div class="highlight"><pre><span></span><code><span class="cp">{%</span> <span class="k">if</span> <span class="nv">stats_none</span> -<span class="cp">%}</span>
+<span class="x">@</span><span class="cp">{{</span> <span class="nv">stats_user</span> <span class="cp">}}</span><span class="x"> You haven&#39;t played yet! Type !guess to start playing.</span>
+<span class="cp">{%</span>- <span class="k">else</span> -<span class="cp">%}</span>
+<span class="x">@</span><span class="cp">{{</span> <span class="nv">stats_user</span> <span class="cp">}}</span><span class="x"> Session: </span><span class="cp">{{</span> <span class="nv">stats_session_score</span> <span class="cp">}}</span><span class="x"> pts (</span><span class="cp">{{</span> <span class="nv">stats_session_solves</span> <span class="cp">}}</span><span class="x"> solves,</span>
+<span class="cp">{{</span> <span class="nv">stats_session_guesses</span> <span class="cp">}}</span><span class="x"> guesses) | All-Time: </span><span class="cp">{{</span> <span class="nv">stats_all_time_score</span> <span class="cp">}}</span><span class="x"> pts</span>
+<span class="x">(</span><span class="cp">{{</span> <span class="nv">stats_all_time_solves</span> <span class="cp">}}</span><span class="x"> solves)</span>
+<span class="cp">{%</span>- <span class="k">endif</span> -<span class="cp">%}</span>
+</code></pre></div>
 <p><strong>twitchbot_gamestart.txt</strong>: Automatic announcement when a new game starts</p>
-<p><code>jinja2🎮 New guessing game! Type !{{ guess_command }} &lt;letter or word&gt; to play | Track: {{ masked_track }} |
-Artist: {{ masked_artist }}</code></p>
+<div class="highlight"><pre><span></span><code><span class="x">🎮 New guessing game! Type !</span><span class="cp">{{</span> <span class="nv">guess_command</span> <span class="cp">}}</span><span class="x"> &lt;letter or word&gt; to play | Track: </span><span class="cp">{{</span> <span class="nv">masked_track</span> <span class="cp">}}</span><span class="x"> |</span>
+<span class="x">Artist: </span><span class="cp">{{</span> <span class="nv">masked_artist</span> <span class="cp">}}</span>
+</code></pre></div>
 <h3 id="template-variables">Template Variables<a class="headerlink" href="#template-variables" title="Permanent link">&para;</a></h3>
 <h4 id="twitchbot_guesstxt-variables">twitchbot_guess.txt variables<a class="headerlink" href="#twitchbot_guesstxt-variables" title="Permanent link">&para;</a></h4>
 <table>

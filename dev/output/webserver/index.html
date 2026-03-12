@@ -1546,10 +1546,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
+  <a href="#setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation
+        Setup
       
     </span>
   </a>
@@ -1568,10 +1568,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#obs-settings" class="md-nav__link">
+  <a href="#obs-browser-source" class="md-nav__link">
     <span class="md-ellipsis">
       
-        OBS Settings
+        OBS Browser Source
       
     </span>
   </a>
@@ -1590,6 +1590,18 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#custom-integrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Integrations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Custom Integrations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#rest-api" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1599,8 +1611,8 @@
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
+        
+          <li class="md-nav__item">
   <a href="#websockets" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1608,6 +1620,11 @@
       
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2146,34 +2163,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../help/developers/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Developers
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2354,8 +2343,46 @@
   
   
     <li class="md-nav__item">
-      <a href="../../gallery/" class="md-nav__link">
+      <a href="../../help/developers/" class="md-nav__link">
         
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -2369,7 +2396,135 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/webserver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Webserver Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/obswebsocket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OBS WebSocket
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/unicode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unicode Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2470,22 +2625,18 @@
 
 
 <h1 id="webserver">Webserver<a class="headerlink" href="#webserver" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> has a built-in web server that allows for a wide
-variety of customization and deployments, including complex ones
-involving multiple hosts. Treat the files in<code>templates</code> as examples; copy them to new
-names and modify them until you are happy. Change the font, change the
-output order, do whatever it is you need to do.</p>
-<p>Using one of the WebSocket examples as your starting point is
-recommended as they are generally more predictable. They update when the
-song updates vs. the others that use a timer to check for updates. See
-more about WebSockets below.</p>
-<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<p><strong>What's Now Playing</strong> has a built-in web server that serves track information to browsers,
+OBS Studio, and custom integrations. It is enabled by default on port <code>8899</code>.</p>
+<p>The <code>Documents/WhatsNowPlaying/templates</code> directory contains bundled WebSocket-based examples — copy
+and rename them to customize fonts, layout, and content.
+See <a href="../../reference/templatevariables/">Templates</a> for available variables.</p>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
-<li>Select OBS WebSocket from the list of available input sources.</li>
-<li>Check Enable</li>
+<li>Select <strong>Output &amp; Display → Web Server</strong> from the left-hand menu</li>
+<li>Check <strong>Enable</strong></li>
 <li>Change any settings as desired. See below.</li>
-<li>Click Save</li>
+<li>Click <strong>Save</strong></li>
 </ol>
 <p>The webserver automatically advertises itself on the local network using Bonjour/Zeroconf, making it
 discoverable by other <strong>What's Now Playing</strong> instances and compatible applications on the same subnet.
@@ -2506,19 +2657,24 @@ This feature is built into macOS, Windows 10+, and most Linux distributions.</p>
 </tr>
 <tr>
 <td>HTML Template</td>
-<td>The <a href="https://jinja.palletsprojects.com/en/3.1.x/templates/">Jinja2 template</a> file to use when fetching index.md. See <a href="../../reference/templatevariables/">Templates</a> for more information.</td>
+<td>The <a href="https://jinja.palletsprojects.com/en/stable/templates/">Jinja2 template</a> file to use when fetching <code>/</code>. See <a href="../../reference/templatevariables/">Templates</a> for more information.</td>
 </tr>
 <tr>
 <td>Once</td>
-<td>Only give index.md once per title, then return an empty refresh page until the next song change. This setting is handy for providing a simple way to do fade-in and fade-out using simple HTML.</td>
+<td>Only serve <code>/</code> once per title, then return an empty refresh page until the next song change. This setting is handy for providing a simple way to do fade-in and fade-out using simple HTML.</td>
 </tr>
 </tbody>
 </table>
-<h2 id="obs-settings">OBS Settings<a class="headerlink" href="#obs-settings" title="Permanent link">&para;</a></h2>
-<p>Once the webserver is enabled, hop into OBS and configure a Browser
-source. Set the size to match the HTML template you are using. (Check
-the <code>width</code> and <code>height</code> values in the bundled templates). Then place
-the OBS source wherever you would like.</p>
+<h2 id="obs-browser-source">OBS Browser Source<a class="headerlink" href="#obs-browser-source" title="Permanent link">&para;</a></h2>
+<p>To display track information as an overlay in OBS Studio, add a Browser Source and point it at
+the webserver:</p>
+<ol>
+<li>In OBS Studio, add a new <strong>Browser Source</strong></li>
+<li>Set the URL to <code>http://localhost:8899/</code></li>
+<li>Set the width and height to match your chosen template (check the <code>width</code> and <code>height</code>
+   values in the template files)</li>
+<li>Place the source wherever you would like in your scene</li>
+</ol>
 <p><a href="../images/obs-browser-settings.png"><img alt="OBS webserver settings screen" src="../images/obs-browser-settings.png" /></a></p>
 <h2 id="supported-urls">Supported URLs<a class="headerlink" href="#supported-urls" title="Permanent link">&para;</a></h2>
 <table>
@@ -2530,42 +2686,44 @@ the OBS source wherever you would like.</p>
 </thead>
 <tbody>
 <tr>
-<td>/index.md (or /index.htm or just /)</td>
-<td>This URL generates either a title card based upon the preconfigured template.</td>
+<td><code>/</code> (or <code>/index.htm</code>)</td>
+<td>Renders the configured HTML template as a title card.</td>
 </tr>
 <tr>
-<td>/index.txt</td>
+<td><code>/index.txt</code></td>
 <td>Same output as the text output in the General settings.</td>
 </tr>
 <tr>
-<td>/cover.png</td>
-<td>This URL will return the cover image, if available.</td>
+<td><code>/cover.png</code></td>
+<td>Returns the cover image, if available.</td>
 </tr>
 <tr>
-<td>/httpstatic/</td>
-<td>Any content in`Documents/WhatsNowPlaying/httpstatic` will get served under this URL.</td>
+<td><code>/httpstatic/</code></td>
+<td>Any content in <code>Documents/WhatsNowPlaying/httpstatic</code> will be served under this URL.</td>
 </tr>
 <tr>
-<td>/template.htm</td>
-<td>Any template.htm file in the templates directory. See below.</td>
+<td><code>/&lt;templatename&gt;.htm</code></td>
+<td>Renders any template file in the <code>templates</code> directory by name.</td>
 </tr>
 </tbody>
 </table>
-<p>Additionally, referencing <code>/&lt;templatename&gt;.htm</code> will also read <code>template.htm</code>  from the <code>templates</code> directory and
-render it.  This feature allows you to use more than one template at a time for advanced setups.</p>
+<p>Referencing <code>/&lt;templatename&gt;.htm</code> allows you to use more than one template at a time for advanced setups.</p>
 <p>See also <a href="../../extras/">Artist Extras</a> for other URLs when that
 set of features is enabled.</p>
-<h2 id="rest-api">REST API<a class="headerlink" href="#rest-api" title="Permanent link">&para;</a></h2>
+<h2 id="custom-integrations">Custom Integrations<a class="headerlink" href="#custom-integrations" title="Permanent link">&para;</a></h2>
+<p>The webserver also exposes interfaces for custom software that needs programmatic access to track data.</p>
+<h3 id="rest-api">REST API<a class="headerlink" href="#rest-api" title="Permanent link">&para;</a></h3>
 <p>The webserver provides REST API endpoints for programmatic access to track information and remote input
 functionality. See the <a href="../../reference/api/">API Reference</a> for complete endpoint documentation.</p>
-<h2 id="websockets">WebSockets<a class="headerlink" href="#websockets" title="Permanent link">&para;</a></h2>
-<p>New with version 3.0.0 is a continual feed via WebSockets. The feed is a
-JSON-formatted stream that will get an update on every title change. To
-connect, use the URL <code>ws://hostname:port/wsstream</code>. The files that begin
-with <code>ws-</code> in the <code>templates</code> directory use WebSockets.</p>
-<p>Variables set should match what is on the
-<a href="../../reference/templatevariables/">Templates</a> page. Be aware that
-values may be null.</p>
+<h3 id="websockets">WebSockets<a class="headerlink" href="#websockets" title="Permanent link">&para;</a></h3>
+<p>A continual feed is available via WebSockets. The feed is a JSON-formatted stream that updates on
+every title change — no polling required. Connect using the URL <code>ws://hostname:port/wsstream</code>.
+Note: the built-in web server does not support TLS, so <code>ws://</code> is used rather than <code>wss://</code>.
+This is expected for a local network service.</p>
+<p>The bundled templates that begin with <code>ws-</code> use WebSockets and are a good starting point for
+custom overlays or integrations that need real-time updates.</p>
+<p>Variables in the stream match what is documented on the
+<a href="../../reference/templatevariables/">Templates</a> page. Be aware that values may be null.</p>
 
 
 

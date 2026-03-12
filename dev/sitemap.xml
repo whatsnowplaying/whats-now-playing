@@ -9,10 +9,6 @@
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>
-         <loc>http://whatsnowplaying.github.io/dev/gallery/</loc>
-         <lastmod>2026-03-12</lastmod>
-    </url>
-    <url>
          <loc>http://whatsnowplaying.github.io/dev/quickstart/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
@@ -46,6 +42,22 @@
     </url>
     <url>
          <loc>http://whatsnowplaying.github.io/dev/extras/wikimedia/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>http://whatsnowplaying.github.io/dev/gallery/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>http://whatsnowplaying.github.io/dev/gallery/obswebsocket/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>http://whatsnowplaying.github.io/dev/gallery/unicode/</loc>
+         <lastmod>2026-03-12</lastmod>
+    </url>
+    <url>
+         <loc>http://whatsnowplaying.github.io/dev/gallery/webserver/</loc>
          <lastmod>2026-03-12</lastmod>
     </url>
     <url>

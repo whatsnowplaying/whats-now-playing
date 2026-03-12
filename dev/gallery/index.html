@@ -13,10 +13,10 @@
         <link rel="canonical" href="http://whatsnowplaying.github.io/dev/gallery/">
       
       
-        <link rel="prev" href="../reference/templates/">
+        <link rel="prev" href="../help/developers/">
       
       
-        <link rel="next" href="../contact/">
+        <link rel="next" href="webserver/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Gallery - What's Now Playing</title>
+        <title>Overview - What's Now Playing</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#gallery-of-templates" class="md-skip">
+        <a href="#gallery" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Gallery
+              Overview
             
           </span>
         </div>
@@ -2031,34 +2031,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../help/developers/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Developers
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2236,6 +2208,82 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../help/developers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gallery
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
     
   
   
@@ -2255,7 +2303,7 @@
   <span class="md-ellipsis">
     
   
-    Gallery
+    Overview
   
 
     
@@ -2264,6 +2312,98 @@
   
 
       </a>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="webserver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Webserver Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="obswebsocket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OBS WebSocket
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="unicode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unicode Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
       
     </li>
   
@@ -2314,6 +2454,46 @@
   
 
 
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href=".." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="./" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Gallery
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
               
               <article class="md-content__inner md-typeset">
                 
@@ -2324,49 +2504,13 @@
   
 
 
-<h1 id="gallery-of-templates">Gallery of Templates<a class="headerlink" href="#gallery-of-templates" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> has quite a bit of flexibility in what kind of
-output you can generate to the point that there are nearly infinite
-possibilities. For a complete list of all available templates with descriptions, see the <a href="../reference/templates/">Template Reference</a>.</p>
-<p>The text versions are meant to be used to feed other
-systems and are rather basic. E.g., the basic text template generates:</p>
-<blockquote>
-<p>Utah Saints - Something Good '08</p>
-</blockquote>
-<p>Picking that template, configuring a text source, configuring a scroll
-filter on that source, and then writing to it via OBS WebSocket allows
-one to do:</p>
-<p><a href="images/videoloop.webp"><img alt="Scroll demo" src="images/videoloop.webp" /></a></p>
-<p>For the HTML templates, there are generally two varieties, one that uses
-WebSockets (start with ws-) and those that do not. WebSocket varieties
-are more likely to get updates closer in sync with the rest of your
-display. However, older software stacks may not support WebSockets.</p>
-<p>AAdditionally, the templates are typically named to have 'fade' or
-'nofade'. 'Nofade' generally stay on the screen for the duration of the
-song. 'Fade' will appear for a while and then disappear, only to
-reappear when the song changes:</p>
-<p><a href="images/mtvfade.webp"><img alt="Fading example" src="images/mtvfade.webp" /></a></p>
-<p>Here are some pictures of the bundled HTML template files being used
-with an OBS stream.</p>
+<h1 id="gallery">Gallery<a class="headerlink" href="#gallery" title="Permanent link">&para;</a></h1>
+<p><strong>What's Now Playing</strong> supports a wide variety of outputs. Here are some examples of each in action.</p>
 <ul>
-<li>cover-title-artist:</li>
+<li><a href="webserver/">Webserver Templates</a> — HTML overlays displayed in OBS via Browser Source</li>
+<li><a href="obswebsocket/">OBS WebSocket</a> — Text output written directly to an OBS text source</li>
+<li><a href="unicode/">Unicode Support</a> — Non-ASCII characters in track metadata</li>
 </ul>
-<p><a href="images/cover-title-artist.png"><img alt="Example cover with just title and artist and solid background Image" src="images/cover-title-artist.png" /></a></p>
-<ul>
-<li>mtv:</li>
-</ul>
-<p><a href="images/mtv-no-publisher.png"><img alt="Example MTV-style with no publisher Image" src="images/mtv-no-publisher.png" /></a></p>
-<ul>
-<li>mtv-cover:</li>
-</ul>
-<p><a href="images/mtv-with-cover.png"><img alt="Example MTV-style with cover Image" src="images/mtv-with-cover.png" /></a></p>
-<p>The software writes output in UTF-8. That covers the vast majority of
-characters that one may hit. Be aware that OBS and other software may
-need to have their settings, such as fonts, changed to support non-ASCII
-characters!</p>
-<p><a href="images/bj%C3%B6rk.png"><img alt="Björk" src="images/bj%C3%B6rk.png" /></a></p>
-<p><a href="images/wham-maxell.png"><img alt="WHAM! Ad in Japanese" src="images/wham-maxell.png" /></a></p>
-<p><a href="images/prince-signotimes.png"><img alt="Prince Peace Sign" src="images/prince-signotimes.png" /></a></p>
 
 
 

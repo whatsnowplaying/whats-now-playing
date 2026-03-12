@@ -2135,34 +2135,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../help/developers/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Developers
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2343,8 +2315,46 @@
   
   
     <li class="md-nav__item">
-      <a href="../../gallery/" class="md-nav__link">
+      <a href="../../help/developers/" class="md-nav__link">
         
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -2358,7 +2368,135 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/webserver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Webserver Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/obswebsocket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OBS WebSocket
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/unicode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unicode Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2522,10 +2660,11 @@ with your Kick account.</p>
   automatically split at sentence or word boundaries using NLTK</li>
 </ul>
 <p>Example announcement template:</p>
-<p><code>jinja{% if artist %}{{ artist }} - {% endif %}"{{ title }}"
-{% if album %} from {{ album }}{% endif %}
-{{ startnewmessage }}
-{% if artistshortbio %}{{ artistshortbio }}{% endif %}</code></p>
+<div class="highlight"><pre><span></span><code><span class="cp">{%</span> <span class="k">if</span> <span class="nv">artist</span> <span class="cp">%}{{</span> <span class="nv">artist</span> <span class="cp">}}</span><span class="x"> - </span><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span><span class="x">&quot;</span><span class="cp">{{</span> <span class="nv">title</span> <span class="cp">}}</span><span class="x">&quot;</span>
+<span class="cp">{%</span> <span class="k">if</span> <span class="nv">album</span> <span class="cp">%}</span><span class="x"> from </span><span class="cp">{{</span> <span class="nv">album</span> <span class="cp">}}{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+<span class="cp">{{</span> <span class="nv">startnewmessage</span> <span class="cp">}}</span>
+<span class="cp">{%</span> <span class="k">if</span> <span class="nv">artistshortbio</span> <span class="cp">%}{{</span> <span class="nv">artistshortbio</span> <span class="cp">}}{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+</code></pre></div>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Enable Kick chat in the Kick settings tab</li>

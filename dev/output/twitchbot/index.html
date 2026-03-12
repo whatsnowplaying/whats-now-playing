@@ -2235,34 +2235,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../help/developers/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Developers
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2443,8 +2415,46 @@
   
   
     <li class="md-nav__item">
-      <a href="../../gallery/" class="md-nav__link">
+      <a href="../../help/developers/" class="md-nav__link">
         
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Developers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_15" id="__nav_15_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -2458,7 +2468,135 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/webserver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Webserver Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/obswebsocket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OBS WebSocket
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gallery/unicode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unicode Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2763,7 +2901,8 @@ one command to perform actions on, for example, multiple users.</p>
 <div class="highlight"><pre><span></span><code>bot: @modernmeerkat hugs @twitch
 </code></pre></div>
 <p>But this can be expanded to do multiple users at once:</p>
-<p><code>jinja@{{ cmduser }} sends hugs to {% for people in cmdtarget %}@{{ people }} {% endfor %}</code></p>
+<div class="highlight"><pre><span></span><code><span class="x">@</span><span class="cp">{{</span> <span class="nv">cmduser</span> <span class="cp">}}</span><span class="x"> sends hugs to </span><span class="cp">{%</span> <span class="k">for</span> <span class="nv">people</span> <span class="k">in</span> <span class="nv">cmdtarget</span> <span class="cp">%}</span><span class="x">@</span><span class="cp">{{</span> <span class="nv">people</span> <span class="cp">}}</span><span class="x"> </span><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</code></pre></div>
 <p>such that:</p>
 <div class="highlight"><pre><span></span><code>modernmeerkat: !hug person1 person2 person3
 </code></pre></div>
@@ -2775,21 +2914,22 @@ one command to perform actions on, for example, multiple users.</p>
 the Twitchbot track announcement. You can pick and choose which websites
 are printed by taking the following code snippet and modifying as
 necessary:</p>
-<p><code>jinja{% if artistwebsites %}
-{% for website in artistwebsites %}
-{% if 'bandcamp' in website %} |Bandcamp: {{ website }}
-{% elif 'discogs' in website %} | Discogs: {{ website }}
-{% elif 'facebook' in website %} | Facebook: {{ website }}
-{% elif 'instagram' in website %} | IG: {{ website }}
-{% elif 'last.fm' in website %} | last.fm: {{ website }}
-{% elif 'musicbrainz' in website %} | MusicBrainz: {{ website }}
-{% elif 'twitter' in website %} | Twitter: {{ website }}
-{% elif 'wikipedia' in website %} | Wikipedia: {{ website }}
-{% elif 'youtube' in website %} | YouTube: {{ website }}
-{% else %} | Official homepage: {{ website }}
-{% endif %}
-{% endfor %}
-{% endif %}</code></p>
+<div class="highlight"><pre><span></span><code><span class="cp">{%</span> <span class="k">if</span> <span class="nv">artistwebsites</span> <span class="cp">%}</span>
+<span class="cp">{%</span> <span class="k">for</span> <span class="nv">website</span> <span class="k">in</span> <span class="nv">artistwebsites</span> <span class="cp">%}</span>
+<span class="cp">{%</span> <span class="k">if</span> <span class="s1">&#39;bandcamp&#39;</span> <span class="k">in</span> <span class="nv">website</span> <span class="cp">%}</span><span class="x"> |Bandcamp: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span> <span class="k">elif</span> <span class="s1">&#39;discogs&#39;</span> <span class="k">in</span> <span class="nv">website</span> <span class="cp">%}</span><span class="x"> | Discogs: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span> <span class="k">elif</span> <span class="s1">&#39;facebook&#39;</span> <span class="k">in</span> <span class="nv">website</span> <span class="cp">%}</span><span class="x"> | Facebook: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span> <span class="k">elif</span> <span class="s1">&#39;instagram&#39;</span> <span class="k">in</span> <span class="nv">website</span> <span class="cp">%}</span><span class="x"> | IG: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span> <span class="k">elif</span> <span class="s1">&#39;last.fm&#39;</span> <span class="k">in</span> <span class="nv">website</span> <span class="cp">%}</span><span class="x"> | last.fm: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span> <span class="k">elif</span> <span class="s1">&#39;musicbrainz&#39;</span> <span class="k">in</span> <span class="nv">website</span> <span class="cp">%}</span><span class="x"> | MusicBrainz: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span> <span class="k">elif</span> <span class="s1">&#39;twitter&#39;</span> <span class="k">in</span> <span class="nv">website</span> <span class="cp">%}</span><span class="x"> | Twitter: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span> <span class="k">elif</span> <span class="s1">&#39;wikipedia&#39;</span> <span class="k">in</span> <span class="nv">website</span> <span class="cp">%}</span><span class="x"> | Wikipedia: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span> <span class="k">elif</span> <span class="s1">&#39;youtube&#39;</span> <span class="k">in</span> <span class="nv">website</span> <span class="cp">%}</span><span class="x"> | YouTube: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span><span class="x"> | Official homepage: </span><span class="cp">{{</span> <span class="nv">website</span> <span class="cp">}}</span>
+<span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+<span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+<span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+</code></pre></div>
 
 
 
