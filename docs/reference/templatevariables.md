@@ -20,7 +20,7 @@ depends on several factors:
   set when the track's file or DJ software actually provides them
 
 Unpopulated variables are always set to an empty string rather than being undefined,
-so templates can safely use `{%- raw -%}{% if variable %}{%- endraw -%}` to check before displaying. See the
+so templates can safely use `{% raw %}{% if variable %}{% endraw %}` to check before displaying. See the
 [Undefined](#undefined) section below for details.
 
 Some outputs (e.g., TwitchBot) provide additional context-specific variables beyond
@@ -106,17 +106,17 @@ variables to the empty string. Instead of having to render a template
 as:
 
 ``` jinja
-{%- raw -%}
+{% raw %}
 {% if variable is defined and variable is not none and variable|length %}
-{%- endraw -%}
+{% endraw %}
 ```
 
 This can be short-cut to:
 
 ``` jinja
-{%- raw -%}
+{% raw %}
 {% if variable %}
-{%- endraw -%}
+{% endraw %}
 ```
 
 since the variable will always be defined. This also means that

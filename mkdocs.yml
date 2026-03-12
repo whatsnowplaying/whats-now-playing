@@ -131,12 +131,16 @@ nav:
       - Troubleshooting: help/troubleshooting.md
       - Bug Reports: help/bugreports.md
       - Open Source: help/opensource.md
-      - Developers: help/developers.md
   - Reference:
       - Overview: reference/index.md
       - API Reference: reference/api.md
       - Template Variables: reference/templatevariables.md
       - Template Reference: reference/templates.md
 
-  - Gallery: gallery.md
+  - Developers: help/developers.md
+  - Gallery:
+      - Overview: gallery/index.md
+      - Webserver Templates: gallery/webserver.md
+      - OBS WebSocket: gallery/obswebsocket.md
+      - Unicode Support: gallery/unicode.md
   - Contact: contact.md

@@ -59,9 +59,9 @@ Works with all major platforms. See the full [Input Sources](input/index.md) lis
 
 Create professional displays that rival music television:
 
-![Example MTV-style with cover Image](gallery/images/mtv-with-cover.png)
+![Example MTV-style with cover Image](gallery/images/ws-mtv-cover-nofade.png)
 
-Check out the [gallery](gallery.md) to see more examples and get inspiration for your setup!
+Check out the [gallery](gallery/index.md) to see more examples and get inspiration for your setup!
 
 ## Get Started
 

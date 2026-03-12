@@ -177,7 +177,7 @@ one command to perform actions on, for example, multiple users.
 
 A simple example. Given this template file:
 
-``` jinja
+```jinja
 @{{ cmduser }} hugs @{{ cmdtarget[0] }}
 ```
 
@@ -195,10 +195,10 @@ bot: @modernmeerkat hugs @twitch
 
 But this can be expanded to do multiple users at once:
 
-``` jinja
-{%- raw -%}
+```jinja
+{% raw %}
 @{{ cmduser }} sends hugs to {% for people in cmdtarget %}@{{ people }} {% endfor %}
-{%- endraw -%}
+{% endraw %}
 ```
 
 such that:
@@ -220,8 +220,8 @@ the Twitchbot track announcement. You can pick and choose which websites
 are printed by taking the following code snippet and modifying as
 necessary:
 
-``` jinja
-{%- raw -%}
+```jinja
+{% raw %}
 {% if artistwebsites %}
 {% for website in artistwebsites %}
 {% if 'bandcamp' in website %} |Bandcamp: {{ website }}
@@ -237,5 +237,5 @@ necessary:
 {% endif %}
 {% endfor %}
 {% endif %}
-{%- endraw -%}
+{% endraw %}
 ```

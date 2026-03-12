@@ -115,7 +115,12 @@ The Guess Game provides two OBS browser sources for displaying game information 
 
 ### Game Display
 
-Shows the current game state with masked track/artist names:
+[![Active guess game display](images/guessgame_template.png)](images/guessgame_template.png)
+
+[![Failed guess game display](images/guessgame_failed.png)](images/guessgame_failed.png)
+
+Shows the current game state with masked track and artist names, time remaining, guessed letters,
+and game status (Active, Solved, Timeout, Waiting).
 
 1. Add a **Browser** source in OBS
 2. Set URL to: `http://localhost:8899/guessgame/guessgame.htm`
@@ -123,21 +128,15 @@ Shows the current game state with masked track/artist names:
    longer names wrap to multiple lines)
 4. Customize the display by editing `templates/guessgame/guessgame.htm`
 
-**Display Shows:**
-
-* Masked track name (e.g., `h___e __ _he ___i__ s__`)
-* Masked artist name (e.g., `_he __i__ls`)
-* Time remaining in seconds
-* Guessed letters list
-* Game status (Active, Solved, Timeout, Waiting)
-
 ### Leaderboard Display
 
-Shows top players for session or all-time using a single unified template with URL parameters:
+[![All-time leaderboard display](images/guessgame_leaderboard.png)](images/guessgame_leaderboard.png)
+
+Shows rank, username, total score, and number of solves with gold/silver/bronze styling for the
+top 3. Both session and all-time leaderboards use the same template — the URL parameter controls
+which data is displayed.
 
 #### Session Leaderboard
-
-Displays scores for the current streaming session:
 
 1. Add a **Browser** source in OBS
 2. Set URL to: `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session`
@@ -145,24 +144,9 @@ Displays scores for the current streaming session:
 
 #### All-Time Leaderboard
 
-Displays cumulative scores across all sessions:
-
 1. Add a **Browser** source in OBS
 2. Set URL to: `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=all_time`
 3. Set dimensions: `560x500` (or adjust to your layout)
-
-**Customization:**
-
-Both leaderboards use the same template file (`templates/guessgame/guessgame-leaderboard.htm`), making it easy
-to maintain consistent styling. The `?type=session` or `?type=all_time` URL parameter controls which data is
-displayed and which color scheme is used (purple/orange for session, green for all-time).
-
-**Both Leaderboards Show:**
-
-* Rank (with gold/silver/bronze styling for top 3)
-* Username
-* Total score
-* Number of solves
 
 ## How It Works
 
@@ -260,7 +244,7 @@ The Guess Game uses Jinja2 templates for chat responses and OBS display:
 **twitchbot_guess.txt**: Response when a viewer makes a guess
 
 ```jinja2
-{%- raw -%}
+{% raw %}
 {% if guess_error -%}
 {{ guess_error }}
 {%- elif guess_already_guessed -%}
@@ -278,13 +262,13 @@ The Guess Game uses Jinja2 templates for chat responses and OBS display:
 {%- else -%}
 @{{ guess_user }} ✗ Not quite! | Track: {{ guess_masked_track }} | Artist: {{ guess_masked_artist }}
 {%- endif -%}
-{%- endraw -%}
+{% endraw %}
 ```
 
 **twitchbot_mypoints.txt**: Response when a viewer checks their stats
 
 ```jinja2
-{%- raw -%}
+{% raw %}
 {% if stats_none -%}
 @{{ stats_user }} You haven't played yet! Type !guess to start playing.
 {%- else -%}
@@ -292,16 +276,16 @@ The Guess Game uses Jinja2 templates for chat responses and OBS display:
 {{ stats_session_guesses }} guesses) | All-Time: {{ stats_all_time_score }} pts
 ({{ stats_all_time_solves }} solves)
 {%- endif -%}
-{%- endraw -%}
+{% endraw %}
 ```
 
 **twitchbot_gamestart.txt**: Automatic announcement when a new game starts
 
 ```jinja2
-{%- raw -%}
+{% raw %}
 🎮 New guessing game! Type !{{ guess_command }} <letter or word> to play | Track: {{ masked_track }} |
 Artist: {{ masked_artist }}
-{%- endraw -%}
+{% endraw %}
 ```
 
 ### Template Variables

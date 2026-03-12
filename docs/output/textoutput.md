@@ -6,7 +6,7 @@ A simple output method that just writes a template to a file and writes
 the entire setlist on exit.
 
 - **Text Template** - The [Jinja2
-  template](https://jinja.palletsprojects.com/en/3.1.x/templates/) file
+  template](https://jinja.palletsprojects.com/en/stable/templates/) file
   that will be used when the song updates. See
   [Templates](../reference/templatevariables.md) for more information.
 - **File to write** - Name of the file where the app will write the

@@ -68,12 +68,12 @@ Kick templates support powerful formatting features:
 Example announcement template:
 
 ``` jinja
-{%- raw -%}
+{% raw %}
 {% if artist %}{{ artist }} - {% endif %}"{{ title }}"
 {% if album %} from {{ album }}{% endif %}
 {{ startnewmessage }}
 {% if artistshortbio %}{{ artistshortbio }}{% endif %}
-{%- endraw -%}
+{% endraw %}
 ```
 
 ## Configuration
