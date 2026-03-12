@@ -30,3 +30,6 @@ versions.
 5. Browse and select the template file that you would like to use as
    output.
 6. Click Save
+
+See the [OBS WebSocket Gallery](../gallery/obswebsocket.md) for an example of the scrolling
+text output in action.

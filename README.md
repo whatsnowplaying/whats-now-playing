@@ -14,7 +14,7 @@ software and displays it on streams, in chat, or anywhere else you need it.
 **Media Players:** JRiver Media Center, Windows Media API (Spotify, Amazon Music, and more),
 MPRIS2-compatible players (Linux)
 
-**Via Icecast:** butt, and other Icecast-compatible sources
+**Via Icecast:** butt and other Icecast-compatible sources
 
 **Via Remote API:** MegaSeg, Radiologik, and other apps with HTTP output
 
