@@ -18,7 +18,7 @@ class PlatformDetector:
         Returns:
             dict with keys:
                 - os: "windows", "macos", or "linux"
-                - chipset: "intel", "arm", or None
+                - chipset: "intel" or "arm" (macOS), raw arch string e.g. "x86_64"/"aarch64" (Linux), or None
                 - macos_version: int (e.g., 12) or None for non-macOS
         """
         info: dict[str, t.Any] = {"os": None, "chipset": None, "macos_version": None}
@@ -45,6 +45,11 @@ class PlatformDetector:
 
         else:
             info["os"] = "linux"
+            machine = platform.machine()  # "x86_64" or "aarch64"
+            if machine:
+                info["chipset"] = machine
+            else:
+                logging.warning("Could not detect Linux machine architecture")
 
         return info
 
@@ -64,6 +69,7 @@ class PlatformDetector:
             return f"macOS ({chipset_name})"
 
         if info["os"] == "linux":
-            return "Linux (no pre-built binaries available)"
+            arch = info.get("chipset") or "unknown"
+            return f"Linux ({arch})"
 
         return "Unknown platform"
