@@ -27,11 +27,11 @@ Once you claim your key (see below), your profile page at
   visibility (public, followers only, subscribers only, or private)
 * **Recent Tracks** — a chronological feed of your latest tracks with artist, album, and timestamp
 
-See your profile page on <https://whatsnowplaying.com> for the full view.
+See your profile page on <https://whatsnowplaying.com/signup> for the full view.
 
 ### Features Requiring a Charts Account
 
-* **[Online Guess Game Board](guessgame.md#online-game-board)** — A public web page at
+* **[Online Guess Game Board](guessgame.md#online-game-board)** — a public web page at
   `https://whatsnowplaying.com/guessgame/(your-username)` that shows your active guess game,
   masked track/artist, live leaderboards, and game status — shareable with your viewers
 

@@ -38,8 +38,8 @@ Works with all major platforms. See the full [Input Sources](input/index.md) lis
 
 * **[Guess Game](output/guessgame.md)** - Twitch chat hangman-style game where viewers guess the current track
 * **[Track Requests](requests.md)** - Let viewers request tracks directly from Twitch chat
-* **[Charts](output/charts.md)** - Track your play history, view listening stats, and unlock the online
-  Guess Game board — sign up at whatsnowplaying.com to claim your account
+* **[Charts](output/charts.md)** — track your play history, view listening stats, and unlock the
+  online Guess Game board — sign up at <https://whatsnowplaying.com/signup>
 
 ## Enhanced Metadata
 
