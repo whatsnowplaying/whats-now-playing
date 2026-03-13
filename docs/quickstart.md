@@ -63,6 +63,8 @@ For full details and customization options, see [Web Server](output/webserver.md
 * **[Track Requests](requests.md)** — let viewers request tracks via Twitch chat
 * **[Guess Game](output/guessgame.md)** — a chat game where viewers guess the current track
 * **[Templates](reference/templatevariables.md)** — customize every aspect of what gets displayed
+* **[Charts](output/charts.md)** — sign up at whatsnowplaying.com to claim your account, view
+  listening stats, and unlock the online Guess Game board shareable with your viewers
 
 ---
 
