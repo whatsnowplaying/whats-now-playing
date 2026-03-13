@@ -31,6 +31,7 @@ def test_platform_display_string_is_nonempty():
         ("x86_64", "x86_64", "Linux (x86_64)"),
         ("aarch64", "aarch64", "Linux (aarch64)"),
         ("riscv64", "riscv64", "Linux (riscv64)"),
+        ("", None, "Linux (unknown)"),
     ],
 )
 def test_linux_platform_detection(machine, expected_chipset, expected_display):
