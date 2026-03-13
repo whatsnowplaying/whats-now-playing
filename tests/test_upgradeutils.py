@@ -122,6 +122,14 @@ def test_check_for_update_network_failure():
             {"os": "windows", "chipset": None, "macos_version": None},
             {"os": "windows"},
         ),
+        (
+            {"os": "linux", "chipset": "x86_64", "macos_version": None},
+            {"os": "linux", "chipset": "x86_64"},
+        ),
+        (
+            {"os": "linux", "chipset": "aarch64", "macos_version": None},
+            {"os": "linux", "chipset": "aarch64"},
+        ),
     ],
 )
 def test_check_for_update_sends_correct_params(

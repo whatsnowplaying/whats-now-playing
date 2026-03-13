@@ -45,6 +45,11 @@ class PlatformDetector:
 
         else:
             info["os"] = "linux"
+            machine = platform.machine()  # "x86_64" or "aarch64"
+            if machine:
+                info["chipset"] = machine
+            else:
+                logging.warning("Could not detect Linux machine architecture")
 
         return info
 
@@ -64,6 +69,7 @@ class PlatformDetector:
             return f"macOS ({chipset_name})"
 
         if info["os"] == "linux":
-            return "Linux (no pre-built binaries available)"
+            arch = platform.machine()
+            return f"Linux ({arch})"
 
         return "Unknown platform"
