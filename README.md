@@ -28,6 +28,8 @@ MPRIS2-compatible players (Linux)
 
 - **[Quickstart Guide](http://whatsnowplaying.github.io/quickstart/)** - Get up and running
 - **[Gallery](http://whatsnowplaying.github.io/gallery/)** - See it in action
+- **[Charts](https://whatsnowplaying.com/signup)** — track your play history, view listening stats,
+  and unlock the online Guess Game board
 - **[Discord Community](https://discord.gg/rgEvcdUHUV)** - Get help and share setups
 
 ---

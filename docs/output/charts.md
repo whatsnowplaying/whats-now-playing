@@ -1,16 +1,39 @@
 # Charts
 
-Charts sends track metadata to the What's Now Playing Charts service for tracking and analytics.
+Charts sends track metadata to the What's Now Playing Charts service for tracking, analytics, and
+access to online features.
 
 ## What it provides
 
-The Charts output automatically submits your track information to the What's Now Playing Charts service,
-allowing you to:
+The Charts output automatically submits your track information to the What's Now Playing Charts service.
+Basic anonymous tracking starts immediately — no account required. Claiming your key at
+whatsnowplaying.com unlocks a public profile page and additional features.
 
-* Track your most played songs and artists
-* View listening statistics and trends
-* Participate in community charts
-* Share your music data with the What's Now Playing ecosystem
+### Anonymous Tracking (No Account Required)
+
+* Play history is recorded immediately after first startup
+* Data is stored anonymously under your auto-generated key
+* No signup needed to start collecting data
+
+### With a Claimed Charts Account
+
+Once you claim your key (see below), your profile page at
+`https://whatsnowplaying.com/profile/(your-username)` shows:
+
+* **Play statistics** — total plays, unique songs, and unique artists since you started streaming
+* **Top 10 Tracks** and **Top 10 Artists** — most-played songs and artists with play counts
+* **DJ Profile** — auto-generated genre analysis with top-level genres and subgenre percentages
+* **DJ Setlists** — downloadable setlists from recent streams in multiple formats, with configurable
+  visibility (public, followers only, subscribers only, or private)
+* **Recent Tracks** — a chronological feed of your latest tracks with artist, album, and timestamp
+
+See your profile page on <https://whatsnowplaying.com/signup> for the full view.
+
+### Features Requiring a Charts Account
+
+* **[Online Guess Game Board](guessgame.md#online-game-board)** — a public web page at
+  `https://whatsnowplaying.com/guessgame/(your-username)` that shows your active guess game,
+  masked track/artist, live leaderboards, and game status — shareable with your viewers
 
 ## Automatic Setup
 
@@ -26,7 +49,7 @@ To access advanced features and view your data online:
 
 1. Navigate to **Output & Display** → **Charts**
 2. Copy your auto-generated **Secret Key** from the input field
-3. Visit [whatsnowplaying.com/signup](https://whatsnowplaying.com/signup) to create an account
+3. Visit <https://whatsnowplaying.com/signup> to create an account
 4. Sign up using **Twitch** or **Kick** credentials
 5. Once logged in, enter your copied key to claim it and link it to your account
 
