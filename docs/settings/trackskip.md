@@ -5,7 +5,7 @@ text in the Comment or Genre fields, that track will be skipped and not displaye
 
 [![Track Skip Settings](images/trackskip.png)](images/trackskip.png)
 
-> **Note**: Track Skip settings are located under Core Settings in the settings menu.
+> **Note**: Track Skip settings are located under Core Settings in the Settings menu.
 
 ## How It Works
 
@@ -20,12 +20,12 @@ For example:
 
 ### Built-in Skip: WNPIGNORE
 
-In addition to the configurable Comment and Genre filters, What's Now Playing has a built-in skip
+In addition to the configurable Comment and Genre filters, **What's Now Playing** has a built-in skip
 feature. If a track's Comment field contains the text `WNPIGNORE` (case-sensitive), the track will
 be automatically skipped without any configuration needed.
 
 This provides a quick way to mark individual tracks for skipping directly in your DJ software's
-comment field, without needing to configure filters in What's Now Playing.
+comment field, without needing to configure filters in **What's Now Playing**.
 
 **Example:**
 

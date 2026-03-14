@@ -66,4 +66,4 @@ Check out the [gallery](gallery/index.md) to see more examples and get inspirati
 
 ## Get Started
 
-Begin with the [Quickstart Guide](quickstart.md) to connect your DJ software and get up and running.
+Begin with the [Quickstart](quickstart.md) to connect your DJ software and get up and running.
