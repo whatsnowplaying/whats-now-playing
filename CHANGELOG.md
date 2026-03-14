@@ -4,24 +4,17 @@
 ## Version 5.1.0 - in development
 
 * New Features
-  * Basic support for djay Pro
-    * Currently missing a lot of the more advanced features but the groundwork has been put down
   * Support Klipy as an alternative to the EOLing Tenor
     * Klipy is preferred when both API keys are configured
   * Add support for autodiscovery using Bonjour/Zeroconf for Remote Output and for
     some upcoming feature support
   * Add a new /v1/status webserver endpoint
-  * Twitch accounts can now be automatically linked to your Charts profile at startup
+  * Twitch accounts will now be automatically linked to your Charts profile at startup
     * A warning is shown if the account is already linked to a different Charts profile
-  * Smarter upgrade logic
-    * Should do a better job of helping you get the correct zip file
   * Requests now support reporting 'for @user'
-  * Configuration files can now be exported and imported for portability across systems
-    * Filesystem paths are automatically tokenized on export so configs work on any machine
-    * Paths that do not exist on the importing system are skipped gracefully, with a
-      warnings file generated listing what needs to be manually reconfigured
-    * Stale legacy configuration keys from old versions are automatically cleaned up on upgrade
-  * Artist biographies will now deduplicate per session.
+  * Artist biographies are now deduplicated per session. The same bio will not be shown twice
+    during a stream. This can be disabled in settings.
+  * Direct link to your version's documentation from the menu bar/system tray
 
 * Guess Game
   * Add a new Twitch chat-based guessing game for your audience
@@ -34,6 +27,9 @@
 * Denon
   * Fixed a crash on certain network environments during device discovery
 
+* djay Pro
+  * Added basic support for djay Pro
+
 * Icecast
   * docs had the old images
 
@@ -42,24 +38,35 @@
     * Search entire library or selected playlists/crates for artist tracks
     * Enhanced crate search and metadata querying capabilities
   * Track filename resolution now works correctly using location ID and portable ID mapping
-  * All Serato library database files are now auto-discovered — manual path configuration
+  * All Serato library database files are now auto-discovered. Manual path configuration
     is no longer needed
   * Changes to better detect when the latest track is playing
 
-  * Traktor
-    * partially corrupted XML library files no longer cause a complete import failure;
-      parsing continues with whatever data was successfully read
+* Traktor
+  * partially corrupted XML library files no longer cause a complete import failure;
+    parsing continues with whatever data was successfully read
 
-  * VirtualDJ
-    * partially corrupted XML library files no longer cause a complete import failure;
-      parsing continues with whatever data was successfully read
+* VirtualDJ
+  * partially corrupted XML library files no longer cause a complete import failure;
+    parsing continues with whatever data was successfully read
 
 * General Bug Fixes
+  * Configuration files can now be exported and imported for portability across systems
+    * The exporting machine's home directory is recorded in the config file so paths are
+      automatically remapped to the importing machine's home directory
+    * Paths that do not exist on the importing system are skipped gracefully, with a
+      warnings file generated listing what needs to be manually reconfigured
+    * Stale legacy configuration keys from old versions are automatically cleaned up on upgrade
+  * Smarter upgrade logic
+    * Should do a better job of helping you get the correct zip file
+    * Linux users now receive correct upgrade notifications
   * Found an issue where in some cases changed templates would always trigger an 'update'
     on program launch despite the `.new` file actually being correct.
+  * Token refreshes for Kick and Twitch would sometimes get lost
   * Webserver template assets (including vendor libraries and guessing game files) now load correctly
   * Fixed an issue where Qt SVG support was sometimes unavailable on Windows
   * Respinning a request that doesn't have a playlist assigned no longer crashes parts of the system
+  * Major documentation overhaul
   * Minor graphics cleanup
 
 * Developer Stuff
@@ -68,7 +75,8 @@
   * Update years to 2026
   * Getting closer to supporting Python 3.14
   * Reduced binary build size by removing unnecessary metadata files
-  * Rewrote the developer docs and improved `builder.sh`
+  * Rewrote the developer docs and improved `builder.sh`, including the ability to create Linux
+    executables.
 
 ## Version 5.0.1 - 2025-10-22
 

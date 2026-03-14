@@ -530,7 +530,6 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         return nowplaying.utils.config_json.export_config(
             export_path=export_path,
             settings=self.cparser,
-            extra_path_keys=self.get_path_keys(),
         )
 
     def import_config(self, import_path: pathlib.Path) -> bool:

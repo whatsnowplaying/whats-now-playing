@@ -200,20 +200,29 @@ def test_import_skips_nonexistent_paths(temp_config):  # pylint: disable=redefin
         assert "textoutput/file" in warnings_text
 
 
-def test_import_expands_home_token(temp_config, tmp_path):  # pylint: disable=redefined-outer-name
-    """HOME token in exported paths is expanded to the current user's home on import"""
+def test_import_remaps_home_path(temp_config):  # pylint: disable=redefined-outer-name
+    """Paths from a different home directory are remapped to the current home on import"""
     home = str(pathlib.Path.home())
-    serato_dir = tmp_path / "serato"
-    serato_dir.mkdir()
 
-    # Simulate a path that was exported with {HOME} substitution
-    tokenized_path = str(serato_dir).replace(home, nowplaying.utils.config_json.HOME_TOKEN)
+    # Build a fake exported path rooted at a fake home — deterministic, not relying on tmp_path
+    # location relative to the real home directory.
+    fake_home = "/home/otheruser"
+    fake_subdir = "Music/Serato"
+    raw_path = f"{fake_home}/{fake_subdir}"
+    expected_path = f"{home}/{fake_subdir}"
+
+    # Create the parent directory so the path-exists check on import passes
+    expected_parent = pathlib.Path(expected_path).parent
+    expected_parent.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        import_path = pathlib.Path(temp_dir) / "tokenized.json"
+        import_path = pathlib.Path(temp_dir) / "remapped.json"
         import_data = {
-            "_export_info": {"version": "5.0.0"},
-            "serato/libpath": tokenized_path,
+            "_export_info": {
+                "version": "5.1.0",
+                nowplaying.utils.config_json.HOME_TOKEN: fake_home,
+            },
+            "serato/libpath": raw_path,
         }
         import_path.write_text(json.dumps(import_data))
 
@@ -221,11 +230,14 @@ def test_import_expands_home_token(temp_config, tmp_path):  # pylint: disable=re
         assert result is True
 
         temp_config.cparser.sync()
-        assert temp_config.cparser.value("serato/libpath") == str(serato_dir)
+        imported = temp_config.cparser.value("serato/libpath")
+        assert imported == expected_path
+        assert imported.startswith(home)
+        assert not imported.startswith(fake_home)
 
 
-def test_export_uses_home_token(temp_config):  # pylint: disable=redefined-outer-name
-    """Paths under the user's home directory are exported with a HOME token"""
+def test_export_records_home_in_export_info(temp_config):  # pylint: disable=redefined-outer-name
+    """Export records the home directory in _export_info and writes raw paths"""
     home = str(pathlib.Path.home())
     home_path = str(pathlib.Path.home() / "Music" / "Serato")
     temp_config.cparser.setValue("serato/libpath", home_path)
@@ -237,8 +249,10 @@ def test_export_uses_home_token(temp_config):  # pylint: disable=redefined-outer
         assert result is True
 
         exported = json.loads(export_path.read_text())
-        assert home not in exported.get("serato/libpath", "")
-        assert nowplaying.utils.config_json.HOME_TOKEN in exported["serato/libpath"]
+        # Raw path written to value (not tokenized)
+        assert exported.get("serato/libpath") == home_path
+        # Home directory recorded in _export_info under HOME_TOKEN key
+        assert exported["_export_info"][nowplaying.utils.config_json.HOME_TOKEN] == home
 
 
 def test_import_nonexistent_file(temp_config):  # pylint: disable=redefined-outer-name
