@@ -13,15 +13,9 @@
   * Add a new /v1/status webserver endpoint
   * Twitch accounts can now be automatically linked to your Charts profile at startup
     * A warning is shown if the account is already linked to a different Charts profile
-  * Smarter upgrade logic
-    * Should do a better job of helping you get the correct zip file
   * Requests now support reporting 'for @user'
-  * Configuration files can now be exported and imported for portability across systems
-    * Filesystem paths are automatically tokenized on export so configs work on any machine
-    * Paths that do not exist on the importing system are skipped gracefully, with a
-      warnings file generated listing what needs to be manually reconfigured
-    * Stale legacy configuration keys from old versions are automatically cleaned up on upgrade
-  * Artist biographies will now deduplicate per session.
+  * Artist biographies will now deduplicate per session by default, may be turned off with an
+    option.
 
 * Guess Game
   * Add a new Twitch chat-based guessing game for your audience
@@ -46,21 +40,30 @@
     is no longer needed
   * Changes to better detect when the latest track is playing
 
-  * Traktor
-    * partially corrupted XML library files no longer cause a complete import failure;
-      parsing continues with whatever data was successfully read
+* Traktor
+  * partially corrupted XML library files no longer cause a complete import failure;
+    parsing continues with whatever data was successfully read
 
-  * VirtualDJ
-    * partially corrupted XML library files no longer cause a complete import failure;
-      parsing continues with whatever data was successfully read
+* VirtualDJ
+  * partially corrupted XML library files no longer cause a complete import failure;
+    parsing continues with whatever data was successfully read
 
 * General Bug Fixes
+  * Configuration files can now be exported and imported for portability across systems
+    * Filesystem paths are automatically tokenized on export so configs work on any machine
+    * Paths that do not exist on the importing system are skipped gracefully, with a
+      warnings file generated listing what needs to be manually reconfigured
+    * Stale legacy configuration keys from old versions are automatically cleaned up on upgrade
+  * Smarter upgrade logic
+    * Should do a better job of helping you get the correct zip file
+    * Linux users now receive correct upgrade notifications
   * Found an issue where in some cases changed templates would always trigger an 'update'
     on program launch despite the `.new` file actually being correct.
   * Webserver template assets (including vendor libraries and guessing game files) now load correctly
   * Fixed an issue where Qt SVG support was sometimes unavailable on Windows
   * Respinning a request that doesn't have a playlist assigned no longer crashes parts of the system
   * Minor graphics cleanup
+
 
 * Developer Stuff
   * Dependency updates

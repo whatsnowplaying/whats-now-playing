@@ -8,9 +8,9 @@ with proper filtering of runtime/cache data and cross-platform compatibility.
 
 import json
 import logging
-import os
 import pathlib
 import time
+import typing as t
 
 from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QCoreApplication,
@@ -62,7 +62,6 @@ PATH_KEYS: frozenset[str] = frozenset(
 def export_config(
     export_path: pathlib.Path,
     settings: QSettings,
-    extra_path_keys: frozenset[str] | None = None,
 ) -> bool:
     """
     Export configuration to JSON file.
@@ -72,21 +71,16 @@ def export_config(
 
     Args:
         export_path: Path where to save the exported configuration
-        extra_path_keys: Additional filesystem path keys collected from plugins
-
     Returns:
         True if export successful, False otherwise
     """
 
     try:
-        # Sync to ensure we have latest settings
-
         # Use childGroups() and childKeys() to avoid system preferences contamination
         # that can occur with allKeys() on macOS
         config_data = {}
 
         home = str(pathlib.Path.home())
-        effective_path_keys = PATH_KEYS | (extra_path_keys or frozenset())
 
         # Get keys from each configuration group (avoids system preferences)
         for group in settings.childGroups():
@@ -118,17 +112,6 @@ def export_config(
                     # Convert everything else to string
                     value = str(value)
 
-                # Replace a leading home directory prefix with HOME_TOKEN in path keys.
-                # Only replaces at the start of the value to avoid corrupting values
-                # where the home path appears elsewhere (e.g. embedded in another dir).
-                if (
-                    full_key in effective_path_keys
-                    and isinstance(value, str)
-                    and home
-                    and (value == home or value.startswith(home + os.sep))
-                ):
-                    value = HOME_TOKEN + value[len(home) :]
-
                 config_data[full_key] = value
 
             settings.endGroup()
@@ -141,6 +124,7 @@ def export_config(
                 "application": QCoreApplication.applicationName(),
                 "organization": QCoreApplication.organizationName(),
                 "warning": "This file contains sensitive data including API keys and passwords",
+                HOME_TOKEN: home,
             }
         }
 
@@ -192,7 +176,7 @@ def import_config(
 
     try:
         # Load the JSON data
-        import_data: dict[str, str | dict[str, str]] = json.loads(import_path.read_text())
+        import_data: dict[str, t.Any] = json.loads(import_path.read_text())
     except json.JSONDecodeError as error:
         logging.error("Invalid JSON in import file: %s", error)
         return None
@@ -204,16 +188,16 @@ def import_config(
     if "_export_info" not in import_data:
         logging.warning("Import file may not be a valid configuration export")
 
-    # Log import info
+    # Extract metadata before processing keys
+    export_home: str | None = None
     if "_export_info" in import_data:
-        export_info: dict[str, str] = import_data["_export_info"]
+        export_info: dict[str, str] = import_data.pop("_export_info")
         logging.info(
             "Importing config from version %s, exported on %s",
             export_info.get("version", "unknown"),
             export_info.get("export_date", "unknown"),
         )
-        # Remove metadata before processing
-        del import_data["_export_info"]
+        export_home = export_info.get(HOME_TOKEN)
 
     home = str(pathlib.Path.home())
     effective_path_keys = PATH_KEYS | (extra_path_keys or frozenset())
@@ -225,9 +209,9 @@ def import_config(
             continue
 
         if key in effective_path_keys and isinstance(value, str) and value:
-            # Expand the home directory token to this system's home
-            if HOME_TOKEN in value:
-                value = value.replace(HOME_TOKEN, home)
+            # Remap the exported home directory to the current machine's home directory.
+            if export_home and value.startswith(export_home):
+                value = home + value[len(export_home) :]
             # Normalize Windows-style separators so cross-OS detection works on Unix.
             # On Unix, "C:\foo\bar" is treated as a single filename by pathlib (parent="."),
             # but after replacing "\" with "/" it becomes "C:/foo/bar" which is NOT absolute
