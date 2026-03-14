@@ -191,13 +191,14 @@ def import_config(
     # Extract metadata before processing keys
     export_home: str | None = None
     if "_export_info" in import_data:
-        export_info: dict[str, str] = import_data.pop("_export_info")
+        export_info: dict[str, t.Any] = import_data.pop("_export_info")
         logging.info(
             "Importing config from version %s, exported on %s",
             export_info.get("version", "unknown"),
             export_info.get("export_date", "unknown"),
         )
-        export_home = export_info.get(HOME_TOKEN)
+        raw_home = export_info.get(HOME_TOKEN)
+        export_home = raw_home if isinstance(raw_home, str) else None
 
     home = str(pathlib.Path.home())
     effective_path_keys = PATH_KEYS | (extra_path_keys or frozenset())
