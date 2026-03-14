@@ -2642,9 +2642,9 @@
 
 
 <h1 id="templates">Templates<a class="headerlink" href="#templates" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> handles almost all output via the <a href="https://jinja2docs.readthedocs.io/">Jinja2
+<p><strong>What's Now Playing</strong> handles almost all output via the <a href="https://jinja.palletsprojects.com/en/stable/">Jinja2
 templating system</a> which includes an
-extremely <a href="https://jinja2docs.readthedocs.io/en/stable/templates.md">powerful
+extremely <a href="https://jinja.palletsprojects.com/en/stable/templates/">powerful
 language</a>
 that gives you a full range of options for customizing the output.</p>
 <p><strong>What's Now Playing</strong> provides a generic set of variables for use in any template,
@@ -2666,11 +2666,9 @@ so templates can safely use <code>{% if variable %}</code> to check before displ
 <p>Some outputs (e.g., TwitchBot) provide additional context-specific variables beyond
 this list. See their individual pages for more information.</p>
 <h2 id="reminder">Reminder<a class="headerlink" href="#reminder" title="Permanent link">&para;</a></h2>
-<p>In order to perform these look ups, certain data is required to be
-tagged in the media to make the results remotely accurate. More data ==
-more better results. Therefore, media with ISRC tags will cause
-MusicBrainz lookups if that service is enabled to fill in any missing
-data.</p>
+<p>In order to perform these lookups, certain data is required to be tagged in the media for a minimum
+level of accuracy. More data == better results. Therefore, media with ISRC tags will cause
+MusicBrainz lookups if that service is enabled to fill in any missing data.</p>
 <h2 id="supported-variables">Supported Variables<a class="headerlink" href="#supported-variables" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2734,7 +2732,7 @@ data.</p>
 </tr>
 <tr>
 <td>deck</td>
-<td>deck # this track is playing on</td>
+<td>Deck # this track is playing on</td>
 </tr>
 <tr>
 <td>disc</td>
@@ -2770,7 +2768,7 @@ data.</p>
 </tr>
 <tr>
 <td>has_video</td>
-<td>True if the file contains video content, False for audio-only files</td>
+<td><code>True</code> if the file contains video content, <code>False</code> for audio-only files</td>
 </tr>
 <tr>
 <td>hostip</td>
@@ -2802,7 +2800,7 @@ data.</p>
 </tr>
 <tr>
 <td>label</td>
-<td>Label of the media.</td>
+<td>Label of the media</td>
 </tr>
 <tr>
 <td>lang</td>
@@ -2834,7 +2832,7 @@ data.</p>
 </tr>
 <tr>
 <td>previoustrack</td>
-<td>See below for more details.</td>
+<td>See <a href="#previous-track-details">Previous Track Details</a> below</td>
 </tr>
 <tr>
 <td>publisher</td>
@@ -2912,12 +2910,12 @@ with an empty string in place of the expected text.</p>
 played tracks in <code>reverse</code> order, starting
 with current track at zero. It currently holds just the artist and the
 title of the track. Some examples:</p>
+<p>To show the current artist playing:</p>
 <div class="highlight"><pre><span></span><code><span class="cp">{{</span> <span class="nv">previoustrack</span><span class="o">[</span><span class="m">0</span><span class="o">]</span><span class="nv">.artist</span> <span class="cp">}}</span>
 </code></pre></div>
-<p>will show the current artist playing.</p>
+<p>To show the previous-to-current artist:</p>
 <div class="highlight"><pre><span></span><code><span class="cp">{{</span> <span class="nv">previoustrack</span><span class="o">[</span><span class="m">1</span><span class="o">]</span><span class="nv">.artist</span> <span class="cp">}}</span>
 </code></pre></div>
-<p>will show the previous-to-current artist.</p>
 <p>To get the title of the track played 2 tracks ago:</p>
 <div class="highlight"><pre><span></span><code><span class="cp">{{</span> <span class="nv">previoustrack</span><span class="o">[</span><span class="m">2</span><span class="o">]</span><span class="nv">.title</span> <span class="cp">}}</span>
 </code></pre></div>

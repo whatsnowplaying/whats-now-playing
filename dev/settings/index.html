@@ -2530,17 +2530,17 @@
 <p>A setting of zero will update the track info on-screen immediately
    as a new track is detected. This time value may be too soon for
    some DJ's mixing style as well as some features. Increasing the
-   write delay allows for much more tuning.</p>
+   write delay allows for more tuning.</p>
 </li>
 <li>
 <p><strong>Recognition Replacement</strong> - By default, if a Music Recognition
-  service is enabled, it will only supplement any missing information.
+  service is enabled, it will only supplement missing information.
   These options forcibly replace title and artist from any enabled
   recognition services.</p>
 </li>
 <li>
 <p><strong>Logging Level</strong> - By default, <strong>What's Now Playing</strong> will write
-  debug logs into your Documents/WhatsNowPlaying/logs directory. This option
+  debug logs into your <code>Documents/WhatsNowPlaying/logs</code> directory. This option
   lets you control the level of logging.</p>
 </li>
 <li>
@@ -2560,9 +2560,9 @@
    File paths that do not exist on the current machine are skipped
    automatically; a <code>_import_warnings.txt</code> file is generated next to the
    imported file listing any paths that need to be reconfigured manually.</li>
-<li><strong>Portability</strong>: Exported files use a <code>{HOME}</code> placeholder for your
-   home directory so configurations can be shared across different machines
-   or operating systems without manual path editing.</li>
+<li><strong>Portability</strong>: The exporting machine's home directory is recorded in
+   the file so paths are automatically remapped when importing on a different
+   machine or operating system.</li>
 <li><strong>Use Cases</strong>:<ul>
 <li>Back up settings before major version upgrades</li>
 <li>Transfer settings between installations</li>
@@ -2574,15 +2574,9 @@
 <p>At the bottom of every page will be the "Reset", "Cancel", and "Save"
 buttons:</p>
 <ul>
-<li>
-<p><strong>Reset</strong> - Change all settings back to default.</p>
-</li>
-<li>
-<p><strong>Cancel</strong> - Close the window without saving.</p>
-</li>
-<li>
-<p><strong>Save</strong> - Save the settings</p>
-</li>
+<li><strong>Reset</strong> - Change all settings back to default</li>
+<li><strong>Cancel</strong> - Close the window without saving</li>
+<li><strong>Save</strong> - Save the settings</li>
 </ul>
 
 
