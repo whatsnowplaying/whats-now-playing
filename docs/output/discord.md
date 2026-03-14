@@ -97,6 +97,10 @@ Paste the bot token into the **Bot Token** field in **What's Now Playing**'s Dis
 settings. Click **Save** and restart. The bot will appear in your server and begin
 updating its presence as tracks change.
 
+> **Note**: Discord enforces a rate limit on presence updates. **What's Now Playing**
+> waits at least 20 seconds between updates to stay within this limit, so there may be
+> a short delay before the bot's status reflects a new track. This is expected behavior.
+
 ## Client Mode Setup
 
 Client Mode updates your own Discord Rich Presence status using the Discord desktop app
@@ -116,3 +120,12 @@ settings. No bot token, no server invite, and no privileged intents are needed f
 Mode.
 
 Click **Save** and restart **What's Now Playing**.
+
+> **Note**: Discord only allows one application to display Rich Presence at a time. If
+> you are playing a game or running another app that also updates Rich Presence,
+> **What's Now Playing** may be suppressed until the other application stops. Close
+> any competing applications if Rich Presence is not appearing.
+>
+> **Note**: Discord enforces a rate limit on presence updates. **What's Now Playing**
+> waits at least 20 seconds between updates to stay within this limit, so there may be
+> a short delay before your status reflects a new track. This is expected behavior.
