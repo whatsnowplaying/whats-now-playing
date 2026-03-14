@@ -30,7 +30,7 @@ streaming and visual displays.
 
 [![FanArt.TV Settings](images/fanarttv.png)](images/fanarttv.png)
 
-> **Note**: FanArt.TV settings are located under Artist Data in the settings menu.
+> **Note**: FanArt.TV settings are located under Artist Data in the Settings menu.
 
 ### API Access
 

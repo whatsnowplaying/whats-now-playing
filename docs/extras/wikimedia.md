@@ -33,7 +33,7 @@ with no API key required.
 
 [![Wikimedia Settings](images/wikimedia.png)](images/wikimedia.png)
 
-> **Note**: Wikimedia settings are located under Artist Data in the settings menu.
+> **Note**: Wikimedia settings are located under Artist Data in the Settings menu.
 
 ### Configuration
 

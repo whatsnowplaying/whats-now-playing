@@ -46,9 +46,9 @@
 
 ### Changing Metadata
 
-If What's Now Playing acts erratic when changing metadata in VirtualDJ:
+If **What's Now Playing** acts erratic when changing metadata in VirtualDJ:
 
-1. Pause What's Now Playing from the menu
+1. Pause **What's Now Playing** from the menu
 2. Make your metadata changes in VirtualDJ
 3. Play the next track
-4. Unpause What's Now Playing
+4. Unpause **What's Now Playing**

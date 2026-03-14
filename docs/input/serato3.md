@@ -88,13 +88,13 @@ Additionally, if you have additional locations where Serato crates and smart cra
 
 ## Smart Crates
 
-What's Now Playing supports Serato Smart Crates in addition to normal crates, but
+**What's Now Playing** supports Serato Smart Crates in addition to normal crates, but
 with limitations on which filters work.  The full filter list is not supported in
 order to keep the RAM requirements lower.
 
 ### Supported Filters
 
-These smart crate filters work with What's Now Playing:
+These smart crate filters work with **What's Now Playing**:
 
 - Song (title)
 - Artist

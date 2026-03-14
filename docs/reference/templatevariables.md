@@ -1,9 +1,9 @@
 # Templates
 
 **What's Now Playing** handles almost all output via the [Jinja2
-templating system](https://jinja2docs.readthedocs.io/) which includes an
+templating system](https://jinja.palletsprojects.com/en/stable/) which includes an
 extremely [powerful
-language](https://jinja2docs.readthedocs.io/en/stable/templates.md)
+language](https://jinja.palletsprojects.com/en/stable/templates/)
 that gives you a full range of options for customizing the output.
 
 **What's Now Playing** provides a generic set of variables for use in any template,
@@ -28,11 +28,9 @@ this list. See their individual pages for more information.
 
 ## Reminder
 
-In order to perform these look ups, certain data is required to be
-tagged in the media to make the results remotely accurate. More data ==
-more better results. Therefore, media with ISRC tags will cause
-MusicBrainz lookups if that service is enabled to fill in any missing
-data.
+In order to perform these lookups, certain data is required to be tagged in the media for a minimum
+level of accuracy. More data == better results. Therefore, media with ISRC tags will cause
+MusicBrainz lookups if that service is enabled to fill in any missing data.
 
 ## Supported Variables
 
@@ -51,7 +49,7 @@ data.
 | composer | Composer of the song |
 | coverurl | Relative location to fetch the cover. Note that this will only work when the webserver is active. |
 | date | Date (either release date or date of the media) |
-| deck | deck \# this track is playing on |
+| deck | Deck # this track is playing on |
 | disc | Disc number |
 | discsubtitle | disc subtitle (if there is one) |
 | disc_total | Total number of discs in album |
@@ -60,7 +58,7 @@ data.
 | duration_hhmmss | Same as duration but in `HH:MM:SS` format (so 1 minute 30 seconds becomes 01:30) |
 | filename | Local filename of the media |
 | genre | Genre of the song |
-| has_video | True if the file contains video content, False for audio-only files |
+| has_video | `True` if the file contains video content, `False` for audio-only files |
 | hostip | IP address of the machine running **What's Now Playing** |
 | hostfqdn | Fully qualified hostname of the machine running **What's Now Playing** |
 | hostname | Short hostname of the machine running **What's Now Playing** |
@@ -68,7 +66,7 @@ data.
 | isrc | List of [International Standard Recording Code](https://isrc.ifpi.org/en/) |
 | key | Key of the song |
 | kickchannel | Kick channel name (if configured) |
-| label | Label of the media. |
+| label | Label of the media |
 | lang | Language used by the media |
 | lyricist | Lyricist of the song |
 | musicbrainzalbumid | MusicBrainz Album Id |
@@ -76,7 +74,7 @@ data.
 | musicbrainzrecordingid | MusicBrainz Recording Id |
 | now() | Current time in HH:MM:SS format (function call) |
 | originalyear | Original release year of the song |
-| previoustrack | See below for more details. |
+| previoustrack | See [Previous Track Details](#previous-track-details) below |
 | publisher | Publisher of the media |
 | requestdisplayname | Display name of the viewer who requested this track |
 | requestedfor | Viewer the track was requested for (e.g. from `!track song for @user`) |
@@ -130,17 +128,17 @@ played tracks in `reverse` order, starting
 with current track at zero. It currently holds just the artist and the
 title of the track. Some examples:
 
+To show the current artist playing:
+
 ``` jinja
 {{ previoustrack[0].artist }}
 ```
 
-will show the current artist playing.
+To show the previous-to-current artist:
 
 ``` jinja
 {{ previoustrack[1].artist }}
 ```
-
-will show the previous-to-current artist.
 
 To get the title of the track played 2 tracks ago:
 

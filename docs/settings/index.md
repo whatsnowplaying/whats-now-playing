@@ -19,15 +19,15 @@
 * A setting of zero will update the track info on-screen immediately
    as a new track is detected. This time value may be too soon for
    some DJ's mixing style as well as some features. Increasing the
-   write delay allows for much more tuning.
+   write delay allows for more tuning.
 
 * **Recognition Replacement** - By default, if a Music Recognition
-  service is enabled, it will only supplement any missing information.
+  service is enabled, it will only supplement missing information.
   These options forcibly replace title and artist from any enabled
   recognition services.
 
 * **Logging Level** - By default, **What's Now Playing** will write
-  debug logs into your Documents/WhatsNowPlaying/logs directory. This option
+  debug logs into your `Documents/WhatsNowPlaying/logs` directory. This option
   lets you control the level of logging.
 
 * **Configuration Backup** - Export and import your complete
@@ -44,9 +44,9 @@
    File paths that do not exist on the current machine are skipped
    automatically; a `_import_warnings.txt` file is generated next to the
    imported file listing any paths that need to be reconfigured manually.
-  * **Portability**: Exported files use a `{HOME}` placeholder for your
-   home directory so configurations can be shared across different machines
-   or operating systems without manual path editing.
+  * **Portability**: The exporting machine's home directory is recorded in
+   the file so paths are automatically remapped when importing on a different
+   machine or operating system.
   * **Use Cases**:
     * Back up settings before major version upgrades
     * Transfer settings between installations
@@ -56,8 +56,6 @@
 At the bottom of every page will be the "Reset", "Cancel", and "Save"
 buttons:
 
-* **Reset** - Change all settings back to default.
-
-* **Cancel** - Close the window without saving.
-
+* **Reset** - Change all settings back to default
+* **Cancel** - Close the window without saving
 * **Save** - Save the settings

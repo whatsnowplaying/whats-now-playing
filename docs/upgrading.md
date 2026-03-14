@@ -42,13 +42,13 @@ The application will automatically migrate your Documents directory:
 
 **After upgrading:**
 
-* You can safely delete the old `Documents/NowPlaying` directory once you've verified everything works
 * If you need to downgrade, your old directory is still available
+* Once you've verified everything works, you can safely delete the old `Documents/NowPlaying` directory
 
 ### Configuration Backup
 
 The system will automatically put an importable copy of your config in the
-`WhatsNowPlaying/configbackup` folder for recovery. After the upgrade is successful,
+`Documents/WhatsNowPlaying/configbackup` folder for recovery. After the upgrade is successful,
 you should delete this copy as necessary.
 
 ### Configuration Recovery

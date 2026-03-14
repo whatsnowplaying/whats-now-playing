@@ -8,7 +8,7 @@ for optimal performance.
 
 [![Quirks Settings](images/quirks.png)](images/quirks.png)
 
-> **Note**: Quirks settings are located under System in the settings menu.
+> **Note**: Quirks settings are located under System in the Settings menu.
 
 ## File System Notification Method
 

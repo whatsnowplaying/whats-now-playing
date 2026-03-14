@@ -28,7 +28,7 @@ Connects directly to Denon DJ equipment over your network to get real-time track
 
 ## How It Works
 
-What's Now Playing monitors all decks and selects the track your audience is actually hearing based on fader
+**What's Now Playing** monitors all decks and selects the track your audience is actually hearing based on fader
 positions, crossfader state, and play status.
 
 ## Troubleshooting
@@ -37,7 +37,7 @@ positions, crossfader state, and play status.
 
 - Verify both devices are on the same network
 - Try increasing the Discovery Timeout setting
-- Restart What's Now Playing
+- Restart **What's Now Playing**
 - Check firewall settings
 
 ### Wrong Track Detected
@@ -50,4 +50,4 @@ positions, crossfader state, and play status.
 
 - Use wired network connection if possible
 - Update Denon DJ firmware
-- What's Now Playing will automatically reconnect
+- **What's Now Playing** will automatically reconnect

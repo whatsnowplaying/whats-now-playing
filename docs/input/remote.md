@@ -61,7 +61,7 @@ Recognition services (like AcoustID) must run on the client computer since they 
 
 ## DJ Software Integration Examples
 
-Some DJ software can send track information directly to What's Now Playing via HTTP requests.
+Some DJ software can send track information directly to **What's Now Playing** via HTTP requests.
 
 > Replace `localhost:8899` with your server's hostname and webserver port.
 > If a secret is configured, add `&secret=your_secret_key` to the URL.

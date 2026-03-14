@@ -37,7 +37,7 @@ See your profile page on <https://whatsnowplaying.com/signup> for the full view.
 
 ## Automatic Setup
 
-Charts is **enabled by default** and requires no manual configuration. What's Now Playing automatically:
+Charts is **enabled by default** and requires no manual configuration. **What's Now Playing** automatically:
 
 * Generates an anonymous API key during first startup
 * Begins tracking your music immediately
@@ -81,7 +81,7 @@ The Charts plugin includes a robust offline queue system:
 
 * **Authentication failed** - Verify your secret key is correct
 * **Connection errors** - Check your internet connection
-* **Invalid request data** - Ensure you're using a supported What's Now Playing version
+* **Invalid request data** - Ensure you're using a supported **What's Now Playing** version
 
 The Charts service processes standard track metadata including artist, title, album, genre, and timing information.
 Personal data like file paths and system information are automatically excluded from submissions.
