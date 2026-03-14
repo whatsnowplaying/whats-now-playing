@@ -9,7 +9,7 @@
     retrieving data.
   * The notification displays the track information after detection.
   * Some software (such as Serato) will not show notifications in
-    full-screen mode. You may need to take it out of full screen node
+    full-screen mode. You may need to take it out of full screen mode
     to see the notification.
 
 * **Write Delay** - The amount of time, in seconds, to delay writing the
@@ -17,9 +17,12 @@
   to 0 seconds.
 
 * A setting of zero will update the track info on-screen immediately
-   as a new track is detected. This time value may be too soon for
-   some DJ's mixing style as well as some features. Increasing the
-   write delay allows for more tuning.
+   as a new track is detected. If you're blending or crossfading, this
+   may be too soon — viewers would see the new track title before they
+   can hear it. A delay of 5–10 seconds gives your mix time to settle
+   before the display updates. Artist Extras also uses this window to
+   download images, so a longer delay means more content is ready when
+   the track appears.
 
 * **Recognition Replacement** - By default, if a Music Recognition
   service is enabled, it will only supplement missing information.

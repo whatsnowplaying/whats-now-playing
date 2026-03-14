@@ -27,10 +27,11 @@ get updates. However, the software will not miss events.
 
 ## Song Path Substitution
 
-Like the previous issue, the DJ software's files may reference a file
-path unlike what **What's Now Playing** has access to on the machine
-where it is running. Setting these values will allow you to do a 'search
-and replace' of any referenced song files.
+This applies when **What's Now Playing** runs on a different machine than your DJ software,
+or when your music files are stored on a network drive. The DJ software reports a file path
+based on how it sees the drive, but **What's Now Playing** may see that same drive mounted
+at a different path. Setting these values tells **What's Now Playing** how to translate the
+DJ software's paths into ones it can actually access.
 
 For example:
 

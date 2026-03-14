@@ -15,7 +15,7 @@ central one will then perform any additional lookups and send the
 output to anything configured such as Twitch.
 
 On local networks, client installations can automatically discover the server using
-Bonjour/Zeroconf — no manual IP configuration needed.
+Bonjour/Zeroconf, so no manual IP configuration is needed.
 
 ## Instructions
 
@@ -46,7 +46,8 @@ Bonjour/Zeroconf — no manual IP configuration needed.
 > have mDNS/Bonjour support (built into macOS, Windows 10+, and most Linux distributions). For
 > remote connections across the internet, you must use manual configuration.
 >
-> NOTE: Some content, such as cover art, will not be sent to the remote server.
+> NOTE: Cover art is not transmitted between server and client. Each instance resolves it
+> independently from local files or Artist Extras.
 
 ## Client Configuration Notes
 

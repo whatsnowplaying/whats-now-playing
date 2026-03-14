@@ -51,7 +51,10 @@ In Traktor's main interface:
 1. Select Input Sources->Traktor from the left-hand column
 2. Set the **Port** to match what you'll configure in Traktor (default: 8000)
 3. **Browse** for your Traktor `collection.nml` file
-   - Usually in `Documents/Native Instruments/Traktor Pro 3/` or similar
+   - The path varies by version. Common locations:
+     - Traktor Pro 3: `Documents/Native Instruments/Traktor Pro 3/`
+     - Traktor Pro 4: `Documents/Native Instruments/Traktor Pro 4/`
+   - If you're not sure, search your Documents folder for `collection.nml`
 4. Click **Re-read** to build the database (may take time for large collections)
 5. Set **Max age** for automatic database refreshes (default: 7 days)
 

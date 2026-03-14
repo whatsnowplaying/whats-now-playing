@@ -18,15 +18,15 @@ See [Platform Notes](#platform-notes) below if you have trouble launching the ap
 On first launch, **What's Now Playing** attempts to auto-detect your DJ software:
 
 * Software-based sources (Serato, Traktor, Virtual DJ, etc.) are detected from files they
-  leave on disk — the software must have been run at least once before auto-detection will work
+  leave on disk, so the software must have been run at least once before auto-detection will work
 * Hardware-based sources (Denon StageLinQ) require the device to be connected and
   actively broadcasting on the network
-* The first detected source wins — if multiple are found, you can change it afterwards
+* The first detected source wins. If multiple are found, you can change it afterwards.
 
 Before launching, make sure your DJ software has been run at least once. For Traktor, first
-launch also includes building a file index — large libraries may take a few minutes.
+launch also includes building a file index, which may take a few minutes for large libraries.
 
-1. Launch **What's Now Playing** — the Settings window will open automatically
+1. Launch **What's Now Playing**. The Settings window will open automatically.
 2. Verify or change the auto-detected source under **Core Settings → Source**
 3. Follow the setup instructions for your source if needed
 
@@ -45,7 +45,7 @@ If you need to change the port or other settings, go to **Output & Display → W
 2. Set the URL to `http://localhost:8899/`
 3. Set the width and height to match your chosen template (check the `width` and `height`
    values in the template files in `Documents/WhatsNowPlaying/templates`)
-4. Play a track in your DJ software — track information should appear in OBS
+4. Play a track in your DJ software. Track information should appear in OBS.
 
 For full details and customization options, see [Web Server](output/webserver.md).
 
@@ -53,17 +53,17 @@ For full details and customization options, see [Web Server](output/webserver.md
 
 **What's Now Playing** can automatically post track announcements to chat when a new song plays.
 
-* **[Twitch Bot](output/twitchbot.md)** — announcements, chat commands (`!track`, `!artist`),
+* **[Twitch Bot](output/twitchbot.md)**: announcements, chat commands (`!track`, `!artist`),
   channel point redemptions, and the Guess Game
-* **[Kick Bot](output/kickbot.md)** — track announcement support
+* **[Kick Bot](output/kickbot.md)**: track announcement support
 
 ## What's Next?
 
-* **[Artist Extras](extras/index.md)** — automatically fetch artist images and biographies
-* **[Track Requests](requests.md)** — let viewers request tracks via Twitch chat
-* **[Guess Game](output/guessgame.md)** — a chat game where viewers guess the current track
-* **[Templates](reference/templatevariables.md)** — customize every aspect of what gets displayed
-* **[Charts](output/charts.md)** — track your play history, view listening stats, and unlock the
+* **[Artist Extras](extras/index.md)**: automatically fetch artist images and biographies
+* **[Track Requests](requests.md)**: let viewers request tracks via Twitch chat
+* **[Guess Game](output/guessgame.md)**: a chat game where viewers guess the current track
+* **[Templates](reference/templatevariables.md)**: customize every aspect of what gets displayed
+* **[Charts](output/charts.md)**: track your play history, view listening stats, and unlock the
   online Guess Game board — sign up at <https://whatsnowplaying.com/signup>
 
 ---
@@ -88,7 +88,7 @@ Due to security measures in macOS, unsigned apps may require extra steps to open
 ### Linux
 
 * Download the zip for your architecture, extract it, and run the `WhatsNowPlaying` binary.
-* A desktop environment is required — this software does not run headless.
+* A desktop environment is required. This software does not run headless.
 * If the binary fails to start, install the following packages (Debian/Ubuntu):
 
 ```bash

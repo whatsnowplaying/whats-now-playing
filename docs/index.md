@@ -21,8 +21,8 @@ Works with all major platforms. See the full [Input Sources](input/index.md) lis
 * DJUCED
 * JRiver Media Center
 * [MIXXX](input/mixxx.md)
-* Icecast streaming servers — including [butt](input/icecast.md#settings-for-butt) and other Icecast sources
-* Remote input — including [MegaSeg](input/remote.md#megaseg) and [Radiologik](input/remote.md#radiologik)
+* Icecast streaming servers, including [butt](input/icecast.md#settings-for-butt) and other Icecast sources
+* Remote input, including [MegaSeg](input/remote.md#megaseg) and [Radiologik](input/remote.md#radiologik)
 * M3U playlists
 * MPRIS2-compatible players (Linux)
 * Windows Media API (Windows Media Player, Spotify, SoundCloud, Amazon Music, and more)
@@ -38,7 +38,7 @@ Works with all major platforms. See the full [Input Sources](input/index.md) lis
 
 * **[Guess Game](output/guessgame.md)** - Twitch chat hangman-style game where viewers guess the current track
 * **[Track Requests](requests.md)** - Let viewers request tracks directly from Twitch chat
-* **[Charts](output/charts.md)** — track your play history, view listening stats, and unlock the
+* **[Charts](output/charts.md)**: track your play history, view listening stats, and unlock the
   online Guess Game board — sign up at <https://whatsnowplaying.com/signup>
 
 ## Enhanced Metadata

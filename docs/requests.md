@@ -70,8 +70,8 @@ someone else:
 
 (Note that the username is not currently saved or processed in any way.)
 
-Unless Twofer is being redeemed, anything else will be considered an
-artist. For example:
+For Generic requests, if text doesn't match any of the formats above,
+the entire input is treated as an artist name. For example:
 
 [![Generic request example](images/generic_request.png)](images/generic_request.png)
 
@@ -86,7 +86,7 @@ To enable Twitch redemptions to be used for requests:
 
 1. Configure and enable Twitch support with Client and Secret IDs.
 
-2. Create a a reward in the Twitch UI. Keep track of the
+2. Create a reward in the Twitch UI. Keep track of the
    _exact_ text used in the reward description.
 
 3. If the channel redemption is not a roulette request, then the reward

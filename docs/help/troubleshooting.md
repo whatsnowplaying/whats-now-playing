@@ -20,14 +20,14 @@ to see if any known problems apply to your situation, or join the
 ## Tracks Not Updating
 
 * Confirm your DJ software is set as the Source under Core Settings → Source.
-* Make sure your DJ software is actually playing — most inputs only detect tracks that
+* Make sure your DJ software is actually playing. Most inputs only detect tracks that
   are actively playing, not just loaded.
 * Try increasing the Write Delay under Core Settings → General if updates appear too early
   in your mix.
 * Some DJ software behaves differently depending on whether a hardware controller
   is connected. If tracks are not being detected, try with and without your controller
   attached to narrow down the cause.
-* **What's Now Playing** tries to honor your crossfader position — if the fader is
+* **What's Now Playing** tries to honor your crossfader position. If the fader is
   cut to one side, the track on the other deck may not be reported. Make sure the
   fader is in a position that reflects the track you expect to see.
 * Check the logs (see below) for any errors related to your input plugin.
@@ -41,12 +41,12 @@ to see if any known problems apply to your situation, or join the
 ## Timing and Stream Delay
 
 * There is inherent delay between when your computer plays a track and when it appears
-  on-stream. Different devices receive content at different times — Apple TV viewers,
+  on-stream. Different devices receive content at different times. Apple TV viewers,
   for example, may see track info up to a minute after you started playing it.
 * Kick and Twitch use different CDN locations worldwide, so you may need different
   announce delays per service under their respective settings.
 * You do not need to be streaming to participate in Twitch chat. This means you can
-  run **What's Now Playing** and test chat announcements without going live — useful
+  run **What's Now Playing** and test chat announcements without going live, which is useful
   for dialing in timing.
 
 ## Configuration Problems

@@ -90,15 +90,24 @@ Control how much content to download per track:
   * Higher = faster downloads but more system load
   * Lower = gentler on system resources but slower downloads
 
-* **Write Delay**: Give more time if images appear "empty" initially
+* **Write Delay**: If the image area shows blank when a track starts, increasing the write
+  delay gives more time for images to download before the display updates. Try 10+ seconds.
 
 ### Fallback Options
 
-When specific image types aren't available:
+When specific image types aren't available, a substitute can be used so the image area
+shows something rather than going blank:
+
+**When artist images are missing:**
 
 * Use cover art for missing fan art
 * Use cover art for missing logos
 * Use cover art for missing thumbnails
+
+**When cover art is missing:**
+
+* Use fan art, logo, or thumbnail as a cover art substitute (configured via
+  the "No Cover Fallback" setting)
 
 ## Requirements for Best Results
 

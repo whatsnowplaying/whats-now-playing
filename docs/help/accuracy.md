@@ -37,8 +37,9 @@ manipulation of the title can yield very different results.
 This example is also important when working with systems such as Deezer,
 Tidal, etc, or even WinMedia as (ultimately) the source of your music.
 In the listing above, we are almost always at \#4 since many pieces of
-the software involved do not provide the album information. Since there
-is no other information, it can sometimes be a bit hit or miss.
+the software involved do not provide the album information. Without album
+data to narrow down the match, results will vary. You may get the right
+artist image and bio but the wrong or missing cover art.
 
 For white labels, mixes, etc, the software will try as much as it can to
 locate something but that isn't always successful. In most cases, artist

@@ -123,10 +123,9 @@ with an empty string in place of the expected text.
 
 ## Previous Track Details
 
-The `previoustrack` variable is a list of
-played tracks in `reverse` order, starting
-with current track at zero. It currently holds just the artist and the
-title of the track. Some examples:
+The `previoustrack` variable is a list of recently played tracks, newest first.
+Index `0` is the current track, index `1` is the one before it, and so on.
+It holds the artist and title of each track. Some examples:
 
 To show the current artist playing:
 
