@@ -23,7 +23,7 @@ Discogs is a comprehensive music database and marketplace that provides artist i
 
 [![Discogs Settings](images/discogs.png)](images/discogs.png)
 
-> **Note**: Discogs settings are located under Artist Data in the settings menu.
+> **Note**: Discogs settings are located under Artist Data in the Settings menu.
 
 ### API Access
 

@@ -8,7 +8,7 @@ to provide rich metadata and playlist access.
 ## How It Works
 
 1. **Traktor broadcasts** basic track info (artist/title) via Icecast stream
-2. **What's Now Playing receives** the Icecast stream
+2. **What's Now Playing** receives the Icecast stream
 3. **Database lookup** enriches the basic stream data with full metadata from your Traktor collection
 4. **Enhanced metadata** includes album, filename, and other details not available in the stream
 
@@ -30,8 +30,8 @@ In Traktor's Preferences, go to Broadcasting:
 
 Under Server Settings:
 
-1. **Address**: 127.0.0.1 (same machine) or IP of What's Now Playing machine
-2. **Port**: Match the port set in What's Now Playing (default: 8000)
+1. **Address**: 127.0.0.1 (same machine) or IP of **What's Now Playing** machine
+2. **Port**: Match the port set in **What's Now Playing** (default: 8000)
 3. **Format**: Ogg Vorbis, 11025 Hz, 32 kBit/s
 
 ### Step 2: Activate Broadcasting
@@ -58,5 +58,5 @@ In Traktor's main interface:
 ## Troubleshooting
 
 - **No enhanced metadata**: Check that collection.nml path is correct and Re-read completed
-- **Connection issues**: Verify port numbers match between Traktor and What's Now Playing
+- **Connection issues**: Verify port numbers match between Traktor and **What's Now Playing**
 - **Slow database building**: Normal for large collections (10,000+ tracks)

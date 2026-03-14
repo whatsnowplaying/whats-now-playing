@@ -33,7 +33,7 @@ and MusicBrainz IDs for maximum flexibility.
 
 [![TheAudioDB Settings](images/theaudiodb.png)](images/theaudiodb.png)
 
-> **Note**: TheAudioDB settings are located under Artist Data in the settings menu.
+> **Note**: TheAudioDB settings are located under Artist Data in the Settings menu.
 
 ### API Access
 

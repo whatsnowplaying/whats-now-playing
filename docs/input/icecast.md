@@ -7,7 +7,7 @@ This page also covers **[MIXXX](#settings-for-mixxx)** and **[butt](#settings-fo
 
 Icecast is best for:
 
-- Software without dedicated What's Now Playing support (like MIXXX)
+- Software without dedicated **What's Now Playing** support (like MIXXX)
 - Generic audio streaming applications (like butt)
 - Custom setups where other inputs don't work
 

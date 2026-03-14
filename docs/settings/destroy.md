@@ -2,7 +2,7 @@
 
 ⚠️ **DANGER**: This is a destructive operation that cannot be undone.
 
-> **Note**: Destroy Configuration is located under System in the settings menu.
+> **Note**: Destroy Configuration is located under System in the Settings menu.
 
 ## What This Does
 
