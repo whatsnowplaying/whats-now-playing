@@ -14,6 +14,6 @@ See [Icecast → Settings For MIXXX](icecast.md#settings-for-mixxx) for setup in
 ## MIXXX with MPRIS2 Support (Linux)
 
 Some Linux builds of MIXXX include MPRIS2 support. If your build supports MPRIS2, use the
-**[MPRIS2](mpris2.md)** input source instead — it provides a more direct integration.
+**[MPRIS2](mpris2.md)** input source instead, which provides a more direct integration.
 
 See [MPRIS2](mpris2.md) for setup instructions.

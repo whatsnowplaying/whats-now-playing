@@ -124,7 +124,7 @@ and game status (Active, Solved, Timeout, Waiting).
 
 1. Add a **Browser** source in OBS
 2. Set URL to: `http://localhost:8899/guessgame/guessgame.htm`
-3. Set dimensions: `640x600` (adjust height based on your typical track/artist name lengths —
+3. Set dimensions: `640x600` (adjust height based on your typical track/artist name lengths;
    longer names wrap to multiple lines)
 4. Customize the display by editing `templates/guessgame/guessgame.htm`
 
@@ -133,7 +133,7 @@ and game status (Active, Solved, Timeout, Waiting).
 [![All-time leaderboard display](images/guessgame_leaderboard.png)](images/guessgame_leaderboard.png)
 
 Shows rank, username, total score, and number of solves with gold/silver/bronze styling for the
-top 3. Both session and all-time leaderboards use the same template — the URL parameter controls
+top 3. Both session and all-time leaderboards use the same template; the URL parameter controls
 which data is displayed.
 
 #### Session Leaderboard
@@ -341,7 +341,7 @@ Artist: {{ masked_artist }}
 ### Chat Commands Not Working
 
 * **Enable the commands**: In Settings → Twitch Bot, the `guess` and `mypoints` commands must be
-  explicitly enabled — they are disabled by default
+  explicitly enabled (they are disabled by default)
 * Check that template files exist: `twitchbot_guess.txt` and `twitchbot_mypoints.txt`
 * Verify bot has proper OAuth authentication
 

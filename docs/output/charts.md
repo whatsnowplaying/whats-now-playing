@@ -6,7 +6,7 @@ access to online features.
 ## What it provides
 
 The Charts output automatically submits your track information to the What's Now Playing Charts service.
-Basic anonymous tracking starts immediately — no account required. Claiming your key at
+Basic anonymous tracking starts immediately. No account is required. Claiming your key at
 whatsnowplaying.com unlocks a public profile page and additional features.
 
 ### Anonymous Tracking (No Account Required)
@@ -20,20 +20,20 @@ whatsnowplaying.com unlocks a public profile page and additional features.
 Once you claim your key (see below), your profile page at
 `https://whatsnowplaying.com/profile/(your-username)` shows:
 
-* **Play statistics** — total plays, unique songs, and unique artists since you started streaming
-* **Top 10 Tracks** and **Top 10 Artists** — most-played songs and artists with play counts
-* **DJ Profile** — auto-generated genre analysis with top-level genres and subgenre percentages
-* **DJ Setlists** — downloadable setlists from recent streams in multiple formats, with configurable
+* **Play statistics**: total plays, unique songs, and unique artists since you started streaming
+* **Top 10 Tracks** and **Top 10 Artists**: most-played songs and artists with play counts
+* **DJ Profile**: auto-generated genre analysis with top-level genres and subgenre percentages
+* **DJ Setlists**: downloadable setlists from recent streams in multiple formats, with configurable
   visibility (public, followers only, subscribers only, or private)
-* **Recent Tracks** — a chronological feed of your latest tracks with artist, album, and timestamp
+* **Recent Tracks**: a chronological feed of your latest tracks with artist, album, and timestamp
 
 See your profile page on <https://whatsnowplaying.com/signup> for the full view.
 
 ### Features Requiring a Charts Account
 
-* **[Online Guess Game Board](guessgame.md#online-game-board)** — a public web page at
+* **[Online Guess Game Board](guessgame.md#online-game-board)**: a public web page at
   `https://whatsnowplaying.com/guessgame/(your-username)` that shows your active guess game,
-  masked track/artist, live leaderboards, and game status — shareable with your viewers
+  masked track/artist, live leaderboards, and game status, shareable with your viewers
 
 ## Automatic Setup
 

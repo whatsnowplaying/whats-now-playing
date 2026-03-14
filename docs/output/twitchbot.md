@@ -6,8 +6,8 @@ the same time.
 
 ## Twitch Chat Support
 
-The chat bot support includes track announcement as well as interactive
-features.
+The chat bot can announce new tracks automatically and respond to viewer
+commands such as `!track`, `!artist`, and any custom commands you create.
 
 For example, in chat, if the user types:
 
@@ -59,8 +59,8 @@ account or create and use another account.
    5. Click on "Register Your Application"
    6. **Name**: Choose a descriptive name (e.g., "YourChannel Now Playing Bot")
    7. **OAuth Redirect URLs**: Enter **both** redirect URIs as shown in **What's Now Playing**'s Twitch settings:
-      * `http://localhost:8899/twitchredirect`
-      * `http://localhost:8899/twitchchatredirect`
+      * `http://localhost:8899/twitchredirect` (used for channel point redemptions)
+      * `http://localhost:8899/twitchchatredirect` (used for chat bot)
    8. **Category**: Chat Bot
    9. Click "Create"
    10. Click on "Manage" and save a copy of the **Client ID**
@@ -96,6 +96,10 @@ account or create and use another account.
   * For **channel point redemptions**: Log in as your **main streaming account** (the channel owner)
   * For **chat functionality**: Log in as your **bot account** (if using a separate bot account)
 
+  If you use both redemptions and a separate chat bot account, you will need to authenticate
+  twice — once for each. Click "Authenticate with Twitch" a second time while logged into
+  the other account.
+
 * **Required Permissions**: Accept the requested permissions (`chat:read` and `chat:edit`) to allow the bot to
   monitor and send messages.
 
@@ -130,8 +134,8 @@ be preserved on every restart.
 
 ### Adding New Commands
 
-Create a new file in **What's Now Playing**'s`templates` directory
-(`Documents/Now Playing/template`) called `twitchbot_yourcommand.txt`
+Create a new file in **What's Now Playing**'s `templates` directory
+(`Documents/WhatsNowPlaying/templates`) called `twitchbot_yourcommand.txt`
 where `yourcommand` is the actual command that will be executed by users
 that have the appropriate template code inside it. Note that all text
 will be smashed together as a single line when sent to Twitch, so be

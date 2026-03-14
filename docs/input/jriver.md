@@ -52,7 +52,7 @@ track.
 2. Select Core Settings->Source from the left-hand column
 3. Select JRiver from the list of available input sources
 
-[![jriver-source-setup](images/jriver-source-setup.png)](images/jriver-source-setup.png
+[![jriver-source-setup](images/jriver-source-setup.png)](images/jriver-source-setup.png)
 
 1. Select **JRiver** from the left-hand column to configure settings
 

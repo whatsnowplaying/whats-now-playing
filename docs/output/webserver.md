@@ -3,7 +3,7 @@
 **What's Now Playing** has a built-in web server that serves track information to browsers,
 OBS Studio, and custom integrations. It is enabled by default on port `8899`.
 
-The `Documents/WhatsNowPlaying/templates` directory contains bundled WebSocket-based examples — copy
+The `Documents/WhatsNowPlaying/templates` directory contains bundled WebSocket-based examples. Copy
 and rename them to customize fonts, layout, and content.
 See [Templates](../reference/templatevariables.md) for available variables.
 
@@ -49,7 +49,7 @@ the webserver:
 | `/` (or `/index.htm`) | Renders the configured HTML template as a title card. |
 | `/index.txt` | Same output as the text output in the General settings. |
 | `/cover.png` | Returns the cover image, if available. |
-| `/httpstatic/` | Any content in `Documents/WhatsNowPlaying/httpstatic` will be served under this URL. |
+| `/httpstatic/` | Any content in `Documents/WhatsNowPlaying/httpstatic` will be served under this URL. Use this to serve custom fonts, images, or CSS files referenced by your templates. |
 | `/<templatename>.htm` | Renders any template file in the `templates` directory by name. |
 
 Referencing `/<templatename>.htm` allows you to use more than one template at a time for advanced setups.
@@ -69,7 +69,7 @@ functionality. See the [API Reference](../reference/api.md) for complete endpoin
 ### WebSockets
 
 A continual feed is available via WebSockets. The feed is a JSON-formatted stream that updates on
-every title change — no polling required. Connect using the URL `ws://hostname:port/wsstream`.
+every title change with no polling required. Connect using the URL `ws://hostname:port/wsstream`.
 Note: the built-in web server does not support TLS, so `ws://` is used rather than `wss://`.
 This is expected for a local network service.
 

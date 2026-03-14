@@ -3,8 +3,8 @@
 [![Source Selection](images/serato4-source-selection.png)](images/serato4-source-selection.png)
 
 For **What's Now Playing** to work, it needs to know what software is playing music.
-In the UI, this setting is called the Source. There are many sources available — some
-require additional configuration, others work automatically once selected. Click on a
+In the UI, this setting is called the Source. There are many sources available. Some
+require additional configuration; others work automatically once selected. Click on a
 source below for more information.
 
 ## DJ Software

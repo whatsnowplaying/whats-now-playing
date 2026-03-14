@@ -1,7 +1,7 @@
 # Usage
 
 Start **What's Now Playing** from wherever you installed it. On first launch,
-a [Settings](settings/index.md) window will appear — configure your DJ software
+a [Settings](settings/index.md) window will appear. Configure your DJ software
 and outputs, then click Save. The app will then run in the background; an arrow
 will point you to the menu bar icon (macOS) or system tray icon (Windows).
 

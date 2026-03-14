@@ -15,8 +15,8 @@ For users already on 5.0.x, upgrading to a newer 5.x release is straightforward:
 
 1. Download the new version from the link above
 2. Install it over the existing installation
-3. Launch the application — settings are preserved and any necessary config changes are
-   applied automatically on first launch
+3. Launch the application. Settings are preserved and any necessary config changes are
+   applied automatically on first launch.
 
 A timestamped backup of your configuration is saved to
 `Documents/WhatsNowPlaying/configbackup/` before any upgrade runs, so you can recover
@@ -35,7 +35,8 @@ The application will automatically migrate your Documents directory:
 
 * A dialog will notify you about the migration process
 * All templates, custom files, and directories will be copied to the new location
-* Log files (.log) and temporary files (.new) are excluded from the copy
+* Log files (.log) and temporary files (.new) are excluded from the copy (new logs will be
+  created in the new location automatically)
 * Configuration paths pointing to the old directory are automatically updated
 * Your old `Documents/NowPlaying` directory remains as a backup
 * The migration only runs once - subsequent launches will use the new directory
@@ -43,7 +44,9 @@ The application will automatically migrate your Documents directory:
 **After upgrading:**
 
 * If you need to downgrade, your old directory is still available
-* Once you've verified everything works, you can safely delete the old `Documents/NowPlaying` directory
+* Once you've confirmed your DJ software is detected, tracks display correctly, and your
+  outputs (OBS, Twitch, etc.) are working, you can safely delete the old `Documents/NowPlaying`
+  directory
 
 ### Configuration Backup
 
@@ -73,10 +76,10 @@ If an upgrade fails or settings are lost, you can restore from a configuration b
 **Important**: You must upgrade to version 3.1.2 first, then upgrade to the current version.
 
 1. Install version 3.1.2 from the releases page
-2. Launch the application — settings will be migrated automatically
+2. Launch the application. Settings will be migrated automatically.
 3. Then upgrade to the current version
 
 ## Upgrading from 1.x to 5.x
 
-Unfortunately, 1.x.x wasn't built to support upgrades. You will need to treat this as a fresh install —
-none of your settings will be preserved.
+Unfortunately, 1.x.x wasn't built to support upgrades. You will need to treat this as a fresh install.
+None of your settings will be preserved.

@@ -3,8 +3,8 @@
 All HTML templates use WebSockets (prefixed with `ws-`) for real-time updates that stay in sync
 with your stream. Templates are typically named with `fade` or `nofade`:
 
-* **nofade** — stays on screen for the duration of the song
-* **fade** — appears when the song changes, then fades out
+* **nofade**: stays on screen for the duration of the song
+* **fade**: appears when the song changes, then fades out
 
 For a complete list of templates, see the [Template Reference](../reference/templates.md).
 

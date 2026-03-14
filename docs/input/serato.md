@@ -22,7 +22,7 @@ Select **Local** if **What's Now Playing** runs on the same computer as Serato:
 * **Database Status**: Shows whether your Serato library was found automatically
 * **Ignore Deck(s)**: Check any decks you want to skip (1, 2, 3, 4)
 * **Require played flag**: When enabled (default), only tracks that Serato has marked as played
-  are detected. Disable this if tracks are loaded onto a deck but are not being detected — some
+  are detected. Disable this if tracks are loaded onto a deck but are not being detected. Some
   Serato configurations do not set the played flag correctly. Requires a restart to take effect.
 * **Mix Mode**:
   * **Newest**: Show the most recently started track
@@ -70,8 +70,8 @@ Choose where **What's Now Playing** searches for artists:
 ### Library Paths (Auto-Discovered)
 
 Library paths are automatically discovered from Serato's database. All external drives and music
-collections that Serato knows about will be used for artist queries automatically — no manual
-configuration needed.
+collections that Serato knows about will be used for artist queries automatically. No manual
+configuration is needed.
 
 ## Troubleshooting
 
@@ -87,7 +87,7 @@ configuration needed.
 * Check that your crossfader isn't cutting off the track
 * Verify your DJ controller is working properly in Serato
 * If tracks are loaded but never detected, try disabling **Require played flag** in the
-  Connection settings — some Serato configurations do not set this flag correctly
+  Connection settings. Some Serato configurations do not set this flag correctly.
 
 ### Tracks updating slowly
 
