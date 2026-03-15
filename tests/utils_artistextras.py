@@ -28,6 +28,10 @@ skip_no_acoustid_key = pytest.mark.skipif(
     not os.environ.get("ACOUSTID_TEST_APIKEY"), reason="AcoustID test API key not available"
 )
 
+skip_no_lastfm_key = pytest.mark.skipif(
+    not os.environ.get("LASTFM_API_KEY"), reason="Last.fm API key not available"
+)
+
 
 class FakeImageCache:  # pylint: disable=too-few-public-methods
     """A fake ImageCache that just keeps track of urls"""
