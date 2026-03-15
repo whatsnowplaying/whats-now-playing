@@ -21,7 +21,8 @@ def mock_config():
         "kick/enabled": True,
         "kick/chat": True,
         "obsws/enabled": True,
-        "discord/enabled": True,
+        "discord/bot_enabled": True,
+        "discord/richpresence_enabled": True,
     }.get(key, kwargs.get("defaultValue", False))
     config.getbundledir.return_value = "/mock/bundle"
     return config
@@ -81,6 +82,40 @@ def test_start_process_disabled(subprocess_manager):
     with patch.object(subprocess_manager, "_start_process") as mock_start:
         subprocess_manager.start_process("twitchbot")
         mock_start.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "bot_enabled,rp_enabled,should_start",
+    [
+        (False, False, False),
+        (True, False, True),
+        (False, True, True),
+        (True, True, True),
+    ],
+)
+def test_start_discordbot_enable_combinations(
+    subprocess_manager, bot_enabled, rp_enabled, should_start
+):
+    """discordbot starts only when at least one discord mode is enabled"""
+    subprocess_manager.processes["discordbot"]["process"] = None
+    subprocess_manager.config.cparser.value.side_effect = lambda key, **kwargs: {
+        "discord/bot_enabled": bot_enabled,
+        "discord/richpresence_enabled": rp_enabled,
+    }.get(key, kwargs.get("defaultValue", False))
+
+    with patch.object(subprocess_manager, "_start_process") as mock_start:
+        subprocess_manager.start_process("discordbot")
+        if should_start:
+            mock_start.assert_called_once_with("discordbot")
+        else:
+            mock_start.assert_not_called()
+
+
+def test_restart_discordbot(subprocess_manager):
+    """restart_discordbot delegates to restart_process"""
+    with patch.object(subprocess_manager, "restart_process") as mock_restart:
+        subprocess_manager.restart_discordbot()
+        mock_restart.assert_called_once_with("discordbot")
 
 
 class MockProcess:  # pylint: disable=too-many-instance-attributes

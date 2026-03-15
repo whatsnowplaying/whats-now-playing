@@ -3,8 +3,11 @@
 # pylint: disable=protected-access,redefined-outer-name,no-member
 
 import asyncio
+import io
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import PIL.Image
 
 import discord
 import pypresence
@@ -474,7 +477,7 @@ def test_start_function():
 async def test_real_bot_client_setup(bootstrap):
     """Test setting up a real Discord bot client"""
     bootstrap.cparser.setValue("discord/token", os.environ["DISCORD_BOT_TOKEN"])
-    bootstrap.cparser.setValue("discord/enabled", True)
+    bootstrap.cparser.setValue("discord/bot_enabled", True)
 
     stopevent = asyncio.Event()
     support = DiscordSupport(config=bootstrap, stopevent=stopevent)
@@ -493,7 +496,7 @@ async def test_real_bot_client_setup(bootstrap):
 async def test_real_ipc_client_setup(bootstrap):
     """Test setting up a real Discord IPC client"""
     bootstrap.cparser.setValue("discord/clientid", os.environ["DISCORD_CLIENT_ID"])
-    bootstrap.cparser.setValue("discord/enabled", True)
+    bootstrap.cparser.setValue("discord/richpresence_enabled", True)
 
     stopevent = asyncio.Event()
     support = DiscordSupport(config=bootstrap, stopevent=stopevent)
@@ -514,7 +517,7 @@ async def test_real_ipc_client_setup(bootstrap):
 async def test_real_bot_update(bootstrap):
     """Test updating bot status with real client"""
     bootstrap.cparser.setValue("discord/token", os.environ["DISCORD_BOT_TOKEN"])
-    bootstrap.cparser.setValue("discord/enabled", True)
+    bootstrap.cparser.setValue("discord/bot_enabled", True)
 
     stopevent = asyncio.Event()
     support = DiscordSupport(config=bootstrap, stopevent=stopevent)
@@ -528,3 +531,174 @@ async def test_real_bot_update(bootstrap):
     finally:
         if support.clients.bot:
             await support.clients.bot.close()
+
+
+# _prepare_channel_image tests
+
+
+def _make_png(width: int, height: int) -> bytes:
+    """Create a minimal PNG image for testing."""
+    img = PIL.Image.new("RGB", (width, height), color="red")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def test_prepare_channel_image_respects_max_dim():
+    """Image is resized to at most max_dim on each side."""
+    rawdata = _make_png(1000, 1000)
+    result = DiscordSupport._prepare_channel_image(rawdata, max_dim=200)
+    assert result is not None
+    result.fp.seek(0)
+    out = PIL.Image.open(result.fp)
+    assert max(out.size) <= 200
+
+
+def test_prepare_channel_image_caps_at_max_dim_constant():
+    """Requested max_dim above CHANNEL_IMAGE_MAX_DIM is clamped to the constant."""
+    rawdata = _make_png(4096, 4096)
+    result = DiscordSupport._prepare_channel_image(rawdata, max_dim=9999)
+    assert result is not None
+    result.fp.seek(0)
+    out = PIL.Image.open(result.fp)
+    assert max(out.size) <= DiscordSupport.CHANNEL_IMAGE_MAX_DIM
+
+
+def test_prepare_channel_image_under_byte_limit():
+    """Result fits within CHANNEL_IMAGE_MAX_BYTES."""
+    rawdata = _make_png(2000, 2000)
+    result = DiscordSupport._prepare_channel_image(rawdata, max_dim=500)
+    assert result is not None
+    data = result.fp.read()
+    assert len(data) <= DiscordSupport.CHANNEL_IMAGE_MAX_BYTES
+
+
+def test_prepare_channel_image_invalid_data_returns_none():
+    """Corrupt/non-image data returns None without raising."""
+    result = DiscordSupport._prepare_channel_image(b"this-is-not-an-image")
+    assert result is None
+
+
+def test_prepare_channel_image_small_image_unchanged_dimensions():
+    """Images already smaller than max_dim are not upscaled."""
+    rawdata = _make_png(50, 50)
+    result = DiscordSupport._prepare_channel_image(rawdata, max_dim=200)
+    assert result is not None
+    result.fp.seek(0)
+    out = PIL.Image.open(result.fp)
+    assert max(out.size) <= 50
+
+
+# _post_to_channel tests
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_skips_when_no_channel_id(discord_support):
+    """_post_to_channel does nothing when channel_id is not configured."""
+    discord_support.clients.bot = MagicMock(spec=discord.Client)
+    # channel_id not set in config — should return early
+    await discord_support._post_to_channel("hello")
+    discord_support.clients.bot.get_channel.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_skips_on_invalid_channel_id(discord_support):
+    """_post_to_channel does nothing when channel_id is not a valid integer."""
+    discord_support.clients.bot = MagicMock(spec=discord.Client)
+    discord_support.config.cparser.setValue("discord/channel_id", "not-an-int")
+    await discord_support._post_to_channel("hello")
+    discord_support.clients.bot.get_channel.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_skips_when_channel_not_found(discord_support):
+    """_post_to_channel does nothing when get_channel returns None."""
+    mock_bot = MagicMock(spec=discord.Client)
+    mock_bot.get_channel.return_value = None
+    discord_support.clients.bot = mock_bot
+    discord_support.config.cparser.setValue("discord/channel_id", "123456789")
+    await discord_support._post_to_channel("hello")
+    mock_bot.get_channel.assert_called_once_with(123456789)
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_skips_non_messageable(discord_support):
+    """_post_to_channel does nothing for non-Messageable channel types."""
+    mock_bot = MagicMock(spec=discord.Client)
+    mock_bot.get_channel.return_value = object()  # not Messageable
+    discord_support.clients.bot = mock_bot
+    discord_support.config.cparser.setValue("discord/channel_id", "123456789")
+    await discord_support._post_to_channel("hello")
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_sends_text(discord_support):
+    """_post_to_channel sends a message to the channel."""
+    mock_channel = AsyncMock(spec=discord.TextChannel)
+    mock_bot = MagicMock(spec=discord.Client)
+    mock_bot.get_channel.return_value = mock_channel
+    discord_support.clients.bot = mock_bot
+    discord_support.config.cparser.setValue("discord/channel_id", "123456789")
+
+    await discord_support._post_to_channel("now playing: Test Track")
+    mock_channel.send.assert_awaited_once_with("now playing: Test Track")
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_attaches_image(discord_support):
+    """_post_to_channel attaches cover image when configured."""
+    mock_channel = AsyncMock(spec=discord.TextChannel)
+    mock_bot = MagicMock(spec=discord.Client)
+    mock_bot.get_channel.return_value = mock_channel
+    discord_support.clients.bot = mock_bot
+    discord_support.config.cparser.setValue("discord/channel_id", "123456789")
+    discord_support.config.cparser.setValue("discord/channel_attach_image", True)
+    discord_support.config.cparser.setValue("discord/channel_image_size", 200)
+
+    metadata = {"coverimageraw": _make_png(500, 500)}
+    await discord_support._post_to_channel("track", metadata)
+
+    assert mock_channel.send.called
+    _, kwargs = mock_channel.send.call_args
+    assert "file" in kwargs
+    assert isinstance(kwargs["file"], discord.File)
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_no_image_when_attach_disabled(discord_support):
+    """_post_to_channel does not attach image when channel_attach_image is False."""
+    mock_channel = AsyncMock(spec=discord.TextChannel)
+    mock_bot = MagicMock(spec=discord.Client)
+    mock_bot.get_channel.return_value = mock_channel
+    discord_support.clients.bot = mock_bot
+    discord_support.config.cparser.setValue("discord/channel_id", "123456789")
+    discord_support.config.cparser.setValue("discord/channel_attach_image", False)
+
+    metadata = {"coverimageraw": _make_png(500, 500)}
+    await discord_support._post_to_channel("track", metadata)
+
+    mock_channel.send.assert_awaited_once_with("track")
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_swallows_forbidden(discord_support):
+    """_post_to_channel does not raise on discord.Forbidden."""
+    mock_channel = AsyncMock(spec=discord.TextChannel)
+    mock_channel.send.side_effect = discord.Forbidden(MagicMock(), "forbidden")
+    mock_bot = MagicMock(spec=discord.Client)
+    mock_bot.get_channel.return_value = mock_channel
+    discord_support.clients.bot = mock_bot
+    discord_support.config.cparser.setValue("discord/channel_id", "123456789")
+    await discord_support._post_to_channel("track")  # must not raise
+
+
+@pytest.mark.asyncio
+async def test_post_to_channel_swallows_http_exception(discord_support):
+    """_post_to_channel does not raise on discord.HTTPException."""
+    mock_channel = AsyncMock(spec=discord.TextChannel)
+    mock_channel.send.side_effect = discord.HTTPException(MagicMock(), "error")
+    mock_bot = MagicMock(spec=discord.Client)
+    mock_bot.get_channel.return_value = mock_channel
+    discord_support.clients.bot = mock_bot
+    discord_support.config.cparser.setValue("discord/channel_id", "123456789")
+    await discord_support._post_to_channel("track")  # must not raise

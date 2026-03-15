@@ -165,8 +165,9 @@ class SubprocessManager:
             return
         if processname == "obsws" and not self.config.cparser.value("obsws/enabled", type=bool):
             return
-        if processname == "discordbot" and not self.config.cparser.value(
-            "discord/enabled", type=bool
+        if processname == "discordbot" and not (
+            self.config.cparser.value("discord/bot_enabled", type=bool)
+            or self.config.cparser.value("discord/richpresence_enabled", type=bool)
         ):
             return
 
@@ -237,3 +238,7 @@ class SubprocessManager:
     def restart_kickbot(self) -> None:
         """Restart the kickbot process"""
         self.restart_process("kickbot")
+
+    def restart_discordbot(self) -> None:
+        """Restart the discordbot process"""
+        self.restart_process("discordbot")

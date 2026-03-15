@@ -372,8 +372,40 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         qobject.template_button.clicked.connect(self.on_html_template_button)
 
     def _connect_discordbot_widget(self, qobject):
-        """connect the artistextras buttons to non-built-ins"""
+        """connect discord widget signals"""
         qobject.template_button.clicked.connect(self.on_discordbot_template_button)
+        qobject.channel_template_button.clicked.connect(self.on_discordbot_channel_template_button)
+        qobject.richpresence_enable_checkbox.toggled.connect(
+            lambda checked: self._update_discordbot_fields(qobject)
+        )
+        qobject.bot_enable_checkbox.toggled.connect(
+            lambda checked: self._update_discordbot_fields(qobject)
+        )
+
+    @staticmethod
+    def _update_discordbot_fields(qobject) -> None:
+        """enable/disable discord fields based on which modes are active"""
+        rp_enabled = qobject.richpresence_enable_checkbox.isChecked()
+        bot_enabled = qobject.bot_enable_checkbox.isChecked()
+        either_enabled = rp_enabled or bot_enabled
+
+        qobject.clientid_label.setEnabled(rp_enabled)
+        qobject.clientid_lineedit.setEnabled(rp_enabled)
+
+        qobject.token_label.setEnabled(bot_enabled)
+        qobject.token_lineedit.setEnabled(bot_enabled)
+        qobject.channel_id_label.setEnabled(bot_enabled)
+        qobject.channel_id_lineedit.setEnabled(bot_enabled)
+        qobject.channel_attach_image_checkbox.setEnabled(bot_enabled)
+        qobject.channel_image_size_label.setEnabled(bot_enabled)
+        qobject.channel_image_size_spinbox.setEnabled(bot_enabled)
+        qobject.channel_template_label.setEnabled(bot_enabled)
+        qobject.channel_template_lineedit.setEnabled(bot_enabled)
+        qobject.channel_template_button.setEnabled(bot_enabled)
+
+        qobject.template_label.setEnabled(either_enabled)
+        qobject.template_lineedit.setEnabled(either_enabled)
+        qobject.template_button.setEnabled(either_enabled)
 
     def _connect_artistextras_widget(self, qobject):
         """connect the artistextras buttons to non-built-ins"""
@@ -565,19 +597,28 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         )
 
     def _upd_win_discordbot(self):
-        """update the obsws settings to match config"""
-        self.widgets["discordbot"].enable_checkbox.setChecked(
-            self.config.cparser.value("discord/enabled", type=bool)
+        """update the discord settings to match config"""
+        widget = self.widgets["discordbot"]
+        widget.richpresence_enable_checkbox.setChecked(
+            self.config.cparser.value("discord/richpresence_enabled", type=bool)
         )
-        self.widgets["discordbot"].clientid_lineedit.setText(
-            self.config.cparser.value("discord/clientid")
+        widget.bot_enable_checkbox.setChecked(
+            self.config.cparser.value("discord/bot_enabled", type=bool)
         )
-        self.widgets["discordbot"].token_lineedit.setText(
-            self.config.cparser.value("discord/token")
+        widget.clientid_lineedit.setText(self.config.cparser.value("discord/clientid") or "")
+        widget.token_lineedit.setText(self.config.cparser.value("discord/token") or "")
+        widget.channel_id_lineedit.setText(self.config.cparser.value("discord/channel_id") or "")
+        widget.channel_attach_image_checkbox.setChecked(
+            self.config.cparser.value("discord/channel_attach_image", type=bool)
         )
-        self.widgets["discordbot"].template_lineedit.setText(
-            self.config.cparser.value("discord/template")
+        widget.channel_image_size_spinbox.setValue(
+            self.config.cparser.value("discord/channel_image_size", type=int) or 200
         )
+        widget.channel_template_lineedit.setText(
+            self.config.cparser.value("discord/channel_template") or ""
+        )
+        widget.template_lineedit.setText(self.config.cparser.value("discord/template") or "")
+        self._update_discordbot_fields(widget)
 
     def _upd_win_quirks(self):
         """update the quirks settings to match config"""
@@ -816,19 +857,31 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def _upd_conf_discordbot(self):
         """update the discord settings"""
+        widget = self.widgets["discordbot"]
 
-        enabled = self.widgets["discordbot"].enable_checkbox.isChecked()
+        old_bot = self.config.cparser.value("discord/bot_enabled", type=bool)
+        old_rp = self.config.cparser.value("discord/richpresence_enabled", type=bool)
+        new_bot = widget.bot_enable_checkbox.isChecked()
+        new_rp = widget.richpresence_enable_checkbox.isChecked()
 
+        self.config.cparser.setValue("discord/richpresence_enabled", new_rp)
+        self.config.cparser.setValue("discord/bot_enabled", new_bot)
+        self.config.cparser.setValue("discord/clientid", widget.clientid_lineedit.text())
+        self.config.cparser.setValue("discord/token", widget.token_lineedit.text())
+        self.config.cparser.setValue("discord/channel_id", widget.channel_id_lineedit.text())
         self.config.cparser.setValue(
-            "discord/clientid", self.widgets["discordbot"].clientid_lineedit.text()
+            "discord/channel_attach_image", widget.channel_attach_image_checkbox.isChecked()
         )
         self.config.cparser.setValue(
-            "discord/token", self.widgets["discordbot"].token_lineedit.text()
+            "discord/channel_image_size", widget.channel_image_size_spinbox.value()
         )
         self.config.cparser.setValue(
-            "discord/template", self.widgets["discordbot"].template_lineedit.text()
+            "discord/channel_template", widget.channel_template_lineedit.text()
         )
-        self.config.cparser.setValue("discord/enabled", enabled)
+        self.config.cparser.setValue("discord/template", widget.template_lineedit.text())
+
+        if old_bot != new_bot or old_rp != new_rp:
+            self.tray.subprocesses.restart_discordbot()
 
     def _upd_conf_kickbot(self):
         """update the kickbot settings"""
@@ -951,9 +1004,17 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     @Slot()
     def on_discordbot_template_button(self):
-        """discordbot template button clicked action"""
+        """discordbot presence template button clicked action"""
         if self.uihelp:
             self.uihelp.template_picker_lineedit(self.widgets["discordbot"].template_lineedit)
+
+    @Slot()
+    def on_discordbot_channel_template_button(self):
+        """discordbot channel template button clicked action"""
+        if self.uihelp:
+            self.uihelp.template_picker_lineedit(
+                self.widgets["discordbot"].channel_template_lineedit
+            )
 
     @Slot()
     def on_obsws_template_button(self):
