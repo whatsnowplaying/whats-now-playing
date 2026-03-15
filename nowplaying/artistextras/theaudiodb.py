@@ -168,11 +168,15 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
             if f"strBiography{lang1}" in artdata:
                 bio += self._filter(artdata[f"strBiography{lang1}"])
-            elif (
-                self.config.cparser.value("theaudiodb/bio_iso_en_fallback", type=bool)
-                and "strBiographyEN" in artdata
-            ):
-                bio += self._filter(artdata["strBiographyEN"])
+            elif lang1 and lang1.upper() == "EN" and artdata.get("strBiography"):
+                # strBiography (no suffix) is TheAudioDB's English bio field;
+                # strBiographyEN is absent from most entries
+                bio += self._filter(artdata["strBiography"])
+            elif self.config.cparser.value("theaudiodb/bio_iso_en_fallback", type=bool):
+                if "strBiographyEN" in artdata:
+                    bio += self._filter(artdata["strBiographyEN"])
+                elif artdata.get("strBiography"):
+                    bio += self._filter(artdata["strBiography"])
 
         return bio
 
