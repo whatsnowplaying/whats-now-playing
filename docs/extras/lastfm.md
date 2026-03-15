@@ -11,7 +11,7 @@ database of artist biographies and metadata.
 ## Requirements
 
 A free API key from [Last.fm](https://www.last.fm/api) is required. Registration is free with no
-rate limits imposed on typical usage.
+rate limits imposed for typical usage.
 
 ## Setup
 

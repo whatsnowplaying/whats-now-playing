@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """support for last.fm artist metadata"""
 
+import asyncio
 import logging
+import re
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
@@ -66,7 +68,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                         logging.info("Last.fm: %s for %s", data.get("message"), artist)
                         return None
                     return data
-        except TimeoutError:
+        except (asyncio.TimeoutError, aiohttp.ClientError):
             logging.error("Last.fm _fetch_async hit timeout for %s", artist)
             return None
         except Exception:  # pragma: no cover pylint: disable=broad-except
@@ -76,12 +78,17 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
     @staticmethod
     def _clean_bio(raw: str) -> str:
         """Strip HTML and Last.fm trailing attribution from bio text"""
+        # Remove the Last.fm attribution link before parsing — the link text may be
+        # localized (e.g. "Mehr bei Last.fm"), so match on the URL rather than the text
+        raw = re.sub(
+            r'<a\s[^>]*href="[^"]*last\.fm[^"]*"[^>]*>.*?</a>',
+            "",
+            raw,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
         htmlfilter = nowplaying.utils.HTMLFilter()
         htmlfilter.feed(raw)
-        text = htmlfilter.text.strip()
-        # Last.fm appends "Read more on Last.fm" — remove it
-        text = text.split("Read more on Last.fm")[0].strip()
-        return text
+        return htmlfilter.text.strip()
 
     async def download_async(
         self, metadata: TrackMetadata | None = None, imagecache: Any = None

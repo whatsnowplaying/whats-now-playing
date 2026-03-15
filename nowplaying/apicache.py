@@ -33,6 +33,7 @@ class APIResponseCache:
         "discogs": 7 * 24 * 60 * 60,  # 7 days for artist info
         "theaudiodb": 7 * 24 * 60 * 60,  # 7 days for artist bios
         "fanarttv": 7 * 24 * 60 * 60,  # 7 days for fanart URLs
+        "lastfm": 7 * 24 * 60 * 60,  # 7 days for artist bios
         "wikimedia": 24 * 60 * 60,  # 24 hours for wiki info
         "default": 24 * 60 * 60,  # 24 hours default
     }
