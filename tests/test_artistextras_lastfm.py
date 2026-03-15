@@ -12,7 +12,7 @@ import nowplaying.apicache
 import nowplaying.artistextras.lastfm
 
 LASTFM_BASE_URL = "https://ws.audioscrobbler.com/2.0/"
-TEST_APIKEY = "testapikey123"
+TEST_APIKEY = "testapikey123"  # pragma: allowlist secret
 
 
 def _artist_url(artist: str, lang: str = "en") -> str:
@@ -267,7 +267,7 @@ async def test_lastfm_lang_returned(bootstrap, isolated_api_cache):  # pylint: d
                 "name": "Nine Inch Nails",
                 "url": "https://www.last.fm/music/Nine+Inch+Nails",
                 "bio": {
-                    "content": "Nine Inch Nails ist eine US-amerikanische Industrialrock-Band."
+                    "content": "Nine Inch Nails ist eine US-amerikanische Industrialrock-Band."  # codespell:ignore
                 },
             }
         }
