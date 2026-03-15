@@ -3,6 +3,7 @@
         "nowplaying/resources/about_ui.ui",
         "nowplaying/resources/artistextras_discogs_ui.ui",
         "nowplaying/resources/artistextras_fanarttv_ui.ui",
+        "nowplaying/resources/artistextras_lastfm_ui.ui",
         "nowplaying/resources/artistextras_theaudiodb_ui.ui",
         "nowplaying/resources/artistextras_ui.ui",
         "nowplaying/resources/artistextras_wikimedia_ui.ui",

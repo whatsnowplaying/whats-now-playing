@@ -129,6 +129,8 @@ Configure specific services for different types of content:
 
 * **[FanArt.TV](fanarttv.md)** - High-quality curated artist artwork
 
+* **[Last.fm](lastfm.md)** - Artist biographies with multilingual support
+
 * **[Wikimedia](wikimedia.md)** - Free artist biographies from Wikipedia
 
 ## Troubleshooting
