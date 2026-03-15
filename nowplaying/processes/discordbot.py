@@ -351,9 +351,13 @@ class DiscordSupport:
         await self._safe_update_client("ipc", self._update_ipc, templateout, metadata)
         if self.config and self.clients.bot:
             channel_template: str | None = self.config.cparser.value("discord/channel_template")
-            if channel_template:
-                channel_out = self._generate_template_output(channel_template, metadata)
-            else:
+            try:
+                if channel_template:
+                    channel_out = self._generate_template_output(channel_template, metadata)
+                else:
+                    channel_out = templateout
+            except Exception:  # pylint: disable=broad-except
+                logging.exception("Failed to render Discord channel template")
                 channel_out = templateout
             await self._post_to_channel(channel_out, metadata)
 
