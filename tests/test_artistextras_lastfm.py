@@ -267,7 +267,8 @@ async def test_lastfm_lang_returned(bootstrap, isolated_api_cache):  # pylint: d
                 "name": "Nine Inch Nails",
                 "url": "https://www.last.fm/music/Nine+Inch+Nails",
                 "bio": {
-                    "content": "Nine Inch Nails ist eine US-amerikanische Industrialrock-Band."  # codespell:ignore
+                    "content": "Nine Inch Nails"
+                    " ist eine US-amerikanische Industrialrock-Band."  # codespell:ignore
                 },
             }
         }
