@@ -15,6 +15,7 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
 )
 from PySide6.QtWidgets import QMessageBox  # pylint: disable=no-name-in-module
 
+import nowplaying.artistextras.theaudiodb
 import nowplaying.trackrequests
 import nowplaying.utils.config_json
 import nowplaying.version  # pylint: disable=import-error, no-name-in-module
@@ -481,8 +482,11 @@ class UpgradeConfig:
             config.setValue("guessgame/grace_period", 5)
 
         if not config.value("theaudiodb/apikey"):
-            logging.info("Upgrade to 5.1.0: setting theaudiodb/apikey to free tier key 123")
-            config.setValue("theaudiodb/apikey", "123")
+            logging.info("Upgrade to 5.1.0: setting theaudiodb/apikey to default free tier key")
+            config.setValue(
+                "theaudiodb/apikey",
+                nowplaying.artistextras.theaudiodb.DEFAULT_THEAUDIODB_API_KEY,
+            )
 
         old_discord_enabled = config.value("discord/enabled")
         if old_discord_enabled is not None:

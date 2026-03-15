@@ -46,7 +46,7 @@
 
 ### Changing Track Tags
 
-If **What's Now Playing** acts erratic when changing track tags in VirtualDJ:
+If **What's Now Playing** acts erratically when changing track tags in VirtualDJ:
 
 1. Pause **What's Now Playing** from the menu
 2. Make your tag changes in VirtualDJ

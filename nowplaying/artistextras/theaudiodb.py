@@ -14,6 +14,10 @@ import nowplaying.config
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
 
+# Public free-tier API key (30 requests/minute). Single source of truth for
+# defaults() and the 5.1.0 upgrade migration.
+DEFAULT_THEAUDIODB_API_KEY = "123"
+
 
 class RateLimitException(Exception):
     """Exception raised when API rate limit is hit - should not be cached"""
@@ -436,6 +440,6 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             qsettings.setValue(f"theaudiodb/{field}", True)
 
         qsettings.setValue("theaudiodb/enabled", True)
-        qsettings.setValue("theaudiodb/apikey", "123")
+        qsettings.setValue("theaudiodb/apikey", DEFAULT_THEAUDIODB_API_KEY)
         qsettings.setValue("theaudiodb/bio_iso", "EN")
         qsettings.setValue("theaudiodb/bio_iso_en_fallback", True)

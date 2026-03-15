@@ -10,7 +10,7 @@ to provide rich track information and playlist access.
 1. **Traktor broadcasts** basic track info (artist/title) via Icecast stream
 2. **What's Now Playing** receives the Icecast stream
 3. **Database lookup** enriches the basic stream data with full track details from your Traktor collection
-4. **Enhanced track details** includes album, filename, and other details not available in the stream
+4. **Enhanced track details** include album, filename, and other details not available in the stream
 
 ## Instructions
 
