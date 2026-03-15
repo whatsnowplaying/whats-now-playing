@@ -55,8 +55,7 @@ def configureplugins(config):
         plugins.append("discogs")
     if os.environ.get("FANARTTV_API_KEY"):
         plugins.append("fanarttv")
-    if os.environ.get("THEAUDIODB_API_KEY"):
-        plugins.append("theaudiodb")
+    plugins.append("theaudiodb")
 
     imagecaches = {}
     plugin_objects = {}

@@ -1,184 +1,72 @@
 # TheAudioDB
 
-TheAudioDB is a community-driven music database that provides comprehensive artist information, high-quality artwork,
-and detailed metadata. It offers excellent coverage across all music genres and works with both artist name searches
-and MusicBrainz IDs for maximum flexibility.
+TheAudioDB is a community-driven database of artist information and images.
 
 ## What TheAudioDB Provides
 
-**Content Types:**
+* Artist banners
+* Artist fan art (background images)
+* Artist logos
+* Artist thumbnails
+* Artist websites and social media links
+* Artist biographies
 
-* Artist banners and promotional images
-* Detailed artist biographies and background information
-* Fan art and background images
-* Artist logos and graphics
-* Artist thumbnails and photos
-* Website links and social media information
+## Requirements
 
-**Strengths:**
-
-* Comprehensive artist coverage across all genres
-* Detailed biographies with rich background information
-* Fallback artist name search when MusicBrainz IDs aren't available
-* Good balance of mainstream and independent artist coverage
-* Multiple image types and variations per artist
-
-**Flexibility:**
-
-* Works with MusicBrainz Artist IDs (preferred for accuracy)
-* Falls back to artist name search when IDs unavailable
-* Good coverage for both popular and lesser-known artists
+An API key from [TheAudioDB](https://www.theaudiodb.com) is required. A free tier is available
+using `123` as the API key, limited to 30 requests per minute. Higher limits are available via
+a Patreon subscription.
 
 ## Setup
 
 [![TheAudioDB Settings](images/theaudiodb.png)](images/theaudiodb.png)
 
-> **Note**: TheAudioDB settings are located under Artist Data in the Settings menu.
+> **Note**: TheAudioDB settings are under **Artist Data** in the Settings menu.
 
-### API Access
+### Getting an API Key
 
-1. Visit [TheAudioDB API Guide](https://www.theaudiodb.com/api_guide.php)
-2. Register for an account and request an API key
-3. Copy your API key once provided
-4. Paste it into the **What's Now Playing** TheAudioDB settings
+1. Subscribe via [TheAudioDB on Patreon](https://www.patreon.com/theaudiodb)
+2. Follow the instructions provided to receive your API key
+3. Paste it into the **TheAudioDB API Key** field in What's Now Playing
 
-### Media Requirements
+### Content Options
 
-TheAudioDB works with minimal requirements:
+Once enabled and an API key is entered, select what to download:
 
-* **Artist name** (minimum requirement)
+* **Biography** — artist background text
+* **Banners** — wide horizontal artist banner images
+* **Fanart** — large background/fan art images
+* **Logos** — artist logo graphics
+* **Thumbnails** — artist photos and thumbnails
+* **Websites** — artist URLs and social media links
 
-* **MusicBrainz Artist ID** (preferred for better accuracy)
+Enable only what your templates actually use.
 
-* **Album/title information** (helps with disambiguation)
+### Biography Language
 
-## How TheAudioDB Works
+When Biography is enabled, you can set a preferred **Language ISO Code** (e.g. `EN`, `DE`, `FR`).
+Enable **Fallback to EN** to use the English biography when your preferred language is not available.
 
-### Lookup Strategy
+## How Matching Works
 
-TheAudioDB uses a two-tier approach for maximum coverage:
-
-1. **Primary lookup**: If MusicBrainz Artist ID is available
-   * Direct lookup using the unique MusicBrainz ID
-   * Highest accuracy and reliability
-   * Preferred method when available
-
-2. **Fallback lookup**: When no MusicBrainz ID is present
-   * Text search using artist name
-   * Good coverage but may require disambiguation
-   * Still provides comprehensive results
-
-### Content Quality
-
-* Community-curated database with quality standards
-* Rich biographical information from multiple sources
-* High-resolution artwork suitable for streaming
-* Regular updates and community contributions
-
-## Configuration Options
-
-### Content Selection
-
-* **Enable biographies**: Download detailed artist background information
-
-* **Enable images**: Download banners, fan art, logos, and thumbnails
-
-* **Enable websites**: Include artist social media and official links
-
-* **MusicBrainz preference**: Prioritize MusicBrainz ID lookups over name search
-
-### Performance Settings
-
-* **Timeout configuration**: Adjustable API request timeouts
-
-* **Caching**: All responses cached to minimize API usage
-
-* **Rate limiting**: Automatic throttling to respect API limits
-
-## Best Practices
-
-### Improve Accuracy
-
-* Enable MusicBrainz recognition for automatic Artist ID population
-* Use well-tagged music files with complete artist information
-* Consider using AcoustID to populate MusicBrainz data automatically
-* Keep consistent artist naming in your music library
-
-### Optimize Coverage
-
-* TheAudioDB excels as a comprehensive fallback service
-* Works well for artists not covered by FanArt.TV
-* Good balance between quality and coverage
-* Effective for both mainstream and independent artists
-
-### Performance Optimization
-
-* Let MusicBrainz run first to populate Artist IDs when possible
-* Fallback name search still provides excellent results
-* Cache settings help reduce API calls during live performances
+TheAudioDB first attempts to look up the artist by **MusicBrainz Artist ID**. If no MBID is
+present in the track tags, it falls back to a text search by artist name. The MBID path
+is more accurate and avoids collisions between artists who share a name.
 
 ## Troubleshooting
 
-### No Results Found
+### No results returned
 
-* **Check artist name spelling**: Verify against TheAudioDB.com manually
+* Verify the API key is correct and your Patreon subscription is active
+* Check that the artist exists on [TheAudioDB.com](https://www.theaudiodb.com) by searching manually
 
-* **Try name variations**: Remove articles like "The", try alternate spellings
+### Wrong artist returned
 
-* **Enable MusicBrainz**: Provides more accurate lookups
+* This typically happens with the name-based fallback when multiple artists share a name
+* Add MusicBrainz Artist IDs to your tracks via audio recognition (Recognition settings)
+  to use the more accurate MBID lookup path
 
-* **Verify API key**: Ensure API key is valid and active
+### No biography or images despite correct match
 
-### Duplicate or Wrong Artists
-
-* **Common artist names**: Names like "Madonna" may return multiple matches
-
-* **Use MusicBrainz IDs**: Eliminates ambiguity with unique identifiers
-
-* **Add album context**: Additional metadata helps disambiguation
-
-* **Check TheAudioDB manually**: Verify correct artist exists in database
-
-### Missing Content Types
-
-* **Artist coverage varies**: Not all artists have complete information
-
-* **Biography availability**: Depends on community contributions
-
-* **Image availability**: Some artists may have limited artwork
-
-* **Recent artists**: Very new artists may not be in database yet
-
-### API Issues
-
-* **Rate limiting**: TheAudioDB has usage limits for API access
-
-* **Network timeouts**: Adjust timeout settings if experiencing issues
-
-* **API key problems**: Verify key is active and has proper permissions
-
-* **Service availability**: Check TheAudioDB service status
-
-## Integration with Other Services
-
-TheAudioDB works excellently alongside other Artist Extras services:
-
-* **Complement FanArt.TV**: TheAudioDB for coverage, FanArt.TV for curated quality
-
-* **Work with Discogs**: Different strengths and artist coverage
-
-* **Enhance with MusicBrainz**: Provides accurate Artist IDs for better matching
-
-* **Fallback strategy**: Excellent as primary or secondary service
-
-## Community and Database
-
-* **Community-driven**: Built and maintained by music enthusiasts
-
-* **Open contributions**: Community members can add and edit information
-
-* **Quality focus**: Balance between comprehensive coverage and quality
-
-* **Regular updates**: Database continuously updated with new artists and information
-
-* **Genre diversity**: Strong coverage across all music genres and eras
+* Not all artists in TheAudioDB have complete information — this is community-contributed content
+* Check the artist page on TheAudioDB.com to confirm the content exists there

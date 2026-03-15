@@ -93,7 +93,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>TheAudioDB is a community driven database of audio metadata.  For integration with MusicBrainz and commercial use, please provide an API key.</string>
+    <string>Use &quot;123&quot; as a free API key (30 requests/minute) or enter your personal key for higher limits. See the Artist Extras documentation for details.</string>
    </property>
    <property name="wordWrap">
     <bool>true</bool>

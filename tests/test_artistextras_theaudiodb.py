@@ -3,7 +3,6 @@
 
 # pylint: disable=protected-access,
 import logging
-import os
 import time
 
 import pytest
@@ -13,18 +12,20 @@ from utils_artistextras import (
     configureplugins,
     configuresettings,
     run_api_call_count_test,
-    skip_no_theaudiodb_key,
 )
 
 import nowplaying.apicache
 import nowplaying.artistextras.theaudiodb
+from nowplaying.artistextras.theaudiodb import DEFAULT_THEAUDIODB_API_KEY
+
+TADB_BASE_URL = f"https://theaudiodb.com/api/v1/json/{DEFAULT_THEAUDIODB_API_KEY}"
 
 
 def _setup_theaudiodb_plugin(bootstrap):
     """Set up TheAudioDB plugin for testing"""
     config = bootstrap
     configuresettings("theaudiodb", config.cparser)
-    config.cparser.setValue("theaudiodb/apikey", os.environ["THEAUDIODB_API_KEY"])
+    config.cparser.setValue("theaudiodb/apikey", DEFAULT_THEAUDIODB_API_KEY)
     imagecaches, plugins = configureplugins(config)
     return plugins["theaudiodb"], imagecaches["theaudiodb"]
 
@@ -33,7 +34,7 @@ def _setup_theaudiodb_plugin_no_key(bootstrap):
     """Set up TheAudioDB plugin for testing without requiring API key"""
     config = bootstrap
     configuresettings("theaudiodb", config.cparser)
-    config.cparser.setValue("theaudiodb/apikey", "test_key")
+    config.cparser.setValue("theaudiodb/apikey", DEFAULT_THEAUDIODB_API_KEY)
     # Directly instantiate the plugin since we don't need real API key
     plugin = nowplaying.artistextras.theaudiodb.Plugin(config=config)
     imagecache = FakeImageCache()
@@ -41,7 +42,6 @@ def _setup_theaudiodb_plugin_no_key(bootstrap):
 
 
 @pytest.mark.asyncio
-@skip_no_theaudiodb_key
 async def test_theaudiodb_artist_name_correction(bootstrap):
     """test theaudiodb artist name correction for name-based vs musicbrainz searches"""
 
@@ -78,7 +78,6 @@ async def test_theaudiodb_artist_name_correction(bootstrap):
 
 
 @pytest.mark.asyncio
-@skip_no_theaudiodb_key
 async def test_theaudiodb_apicache_duplicate_artists(bootstrap):
     """test TheAudioDB two-level caching with duplicate artist names"""
 
@@ -132,7 +131,6 @@ async def test_theaudiodb_apicache_duplicate_artists(bootstrap):
 
 
 @pytest.mark.asyncio
-@skip_no_theaudiodb_key
 async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
     """test theaudiodb plugin falls back to name-based search when MusicBrainz ID is invalid"""
 
@@ -251,7 +249,6 @@ async def test_theaudiodb_invalid_musicbrainz_id_fallback(bootstrap):
 
 
 @pytest.mark.asyncio
-@skip_no_theaudiodb_key
 async def test_theaudiodb_api_call_count(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
     """test that theaudiodb plugin makes only one API call when cache is used"""
 
@@ -287,17 +284,20 @@ async def test_theaudiodb_429_rate_limit_handling(bootstrap):
 
     with aioresponses() as mockr:
         # Mock 429 response
-        mockr.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=test", status=429)
+        mockr.get(
+            f"{TADB_BASE_URL}/search.php?s=test",
+            status=429,
+        )
 
         # First call should trigger rate limit exception
         with pytest.raises(nowplaying.artistextras.theaudiodb.RateLimitException):
-            await plugin._fetch_async("test_key", "search.php?s=test")
+            await plugin._fetch_async(DEFAULT_THEAUDIODB_API_KEY, "search.php?s=test")
 
         # Rate limit should now be set for 60 seconds
         assert nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until > time.time()
 
         # Second call should be blocked without making HTTP request
-        result2 = await plugin._fetch_async("test_key", "search.php?s=test2")
+        result2 = await plugin._fetch_async(DEFAULT_THEAUDIODB_API_KEY, "search.php?s=test2")
         assert result2 is None
 
         # Only one HTTP request should have been made (first one, second was blocked)
@@ -315,11 +315,11 @@ async def test_theaudiodb_429_cooldown_expiry(bootstrap):
     with aioresponses() as mockr:
         # Mock successful response after cooldown
         mockr.get(
-            "https://theaudiodb.com/api/v1/json/test_key/search.php?s=test",
+            f"{TADB_BASE_URL}/search.php?s=test",
             payload={"test": "data"},
         )
 
-        result = await plugin._fetch_async("test_key", "search.php?s=test")
+        result = await plugin._fetch_async(DEFAULT_THEAUDIODB_API_KEY, "search.php?s=test")
         assert result == {"test": "data"}
 
         # HTTP request should have been made (cooldown expired)
@@ -336,9 +336,12 @@ async def test_theaudiodb_other_http_errors(bootstrap):
 
     with aioresponses() as mockr:
         # Mock 404 response
-        mockr.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=notfound", status=404)
+        mockr.get(
+            f"{TADB_BASE_URL}/search.php?s=notfound",
+            status=404,
+        )
 
-        result = await plugin._fetch_async("test_key", "search.php?s=notfound")
+        result = await plugin._fetch_async(DEFAULT_THEAUDIODB_API_KEY, "search.php?s=notfound")
         assert result is None
 
         # Rate limit should NOT be set for non-429 errors
@@ -360,10 +363,15 @@ async def test_theaudiodb_429_not_cached(bootstrap, isolated_api_cache):  # pyli
 
         with aioresponses() as mockr:
             # Mock 429 response
-            mockr.get("https://theaudiodb.com/api/v1/json/test_key/search.php?s=test", status=429)
+            mockr.get(
+                f"{TADB_BASE_URL}/search.php?s=test",
+                status=429,
+            )
 
             # Cached fetch should handle the rate limit exception and return None
-            result = await plugin._fetch_cached("test_key", "search.php?s=test", "testartist")
+            result = await plugin._fetch_cached(
+                DEFAULT_THEAUDIODB_API_KEY, "search.php?s=test", "testartist"
+            )
             assert result is None
 
             # Rate limit should be set
@@ -372,12 +380,14 @@ async def test_theaudiodb_429_not_cached(bootstrap, isolated_api_cache):  # pyli
             # Clear rate limit and add successful response
             nowplaying.artistextras.theaudiodb.Plugin._rate_limit_until = 0
             mockr.get(
-                "https://theaudiodb.com/api/v1/json/test_key/search.php?s=test",
+                f"{TADB_BASE_URL}/search.php?s=test",
                 payload={"test": "data"},
             )
 
             # Now it should work and get the real data (not cached 429)
-            result2 = await plugin._fetch_cached("test_key", "search.php?s=test", "testartist")
+            result2 = await plugin._fetch_cached(
+                DEFAULT_THEAUDIODB_API_KEY, "search.php?s=test", "testartist"
+            )
             assert result2 == {"test": "data"}
     finally:
         # Restore original cache

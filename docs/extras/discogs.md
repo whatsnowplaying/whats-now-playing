@@ -1,128 +1,64 @@
 # Discogs
 
-Discogs is a comprehensive music database and marketplace that provides artist information, album artwork, and metadata for
-**What's Now Playing**. It's particularly strong for electronic music, vinyl releases, and underground/independent artists.
+Discogs is a community-built music database and marketplace covering artists, labels, and releases
+across all genres, with particularly strong coverage of vinyl releases and independent or underground
+artists.
 
 ## What Discogs Provides
 
-**Content Types:**
-
-* Artist biographies and detailed information
-* Album artwork and artist images (fan art, thumbnails)
+* Artist biographies
+* Artist images (fan art, thumbnails)
 * Artist websites and social media links
-* Detailed discographies and release information
 
-**Strengths:**
+## Requirements
 
-* Excellent coverage of electronic music, vinyl, and independent releases
-* Community-driven database with detailed metadata
-* High-quality album artwork, especially for vinyl releases
-* Good coverage of underground and niche artists
+Discogs matching requires **both an artist name and an album title** in your track tags.
+If either field is missing, the lookup is skipped. The album title is also used to disambiguate
+between artists who share the same name.
 
 ## Setup
 
 [![Discogs Settings](images/discogs.png)](images/discogs.png)
 
-> **Note**: Discogs settings are located under Artist Data in the Settings menu.
+> **Note**: Discogs settings are under **Artist Data** in the Settings menu.
 
-### API Access
+### Getting a Token
 
-1. Visit [Discogs Developer Settings](https://www.discogs.com/settings/developers)
-2. Click "Generate new token"
-3. Copy the personal access token
-4. Paste it into the **What's Now Playing** Discogs settings
+A free Discogs account is all that is required.
 
-### Media Tags
+1. Log in to [Discogs](https://www.discogs.com) (create a free account if needed)
+2. Go to **Settings → Developers**
+3. Click **Generate new token**
+4. Copy the token and paste it into the **Discogs Token** field in What's Now Playing
 
-For best results, your music files should have:
+[![Discogs Token Generation](images/discogs_token.png)](images/discogs_token.png)
 
-* **Artist name** (required)
+### Content Options
 
-* **Album title** (required for accurate matching)
+Once enabled and a token is entered, select what to download:
 
-* **Track title** (improves matching accuracy)
+* **Biography** — artist background text
+* **Fanart** — larger artist images
+* **Thumbnails** — smaller artist images
+* **Websites** — artist URLs and social media links
 
-## How Discogs Matching Works
-
-### Search Method
-
-Discogs uses text-based search to find artists and releases:
-
-1. Searches for artist name in the Discogs database
-2. Attempts to match album titles when available
-3. Returns artist information and images from the best match
-
-### Matching Accuracy
-
-* **Good matches**: Well-known artists with standard naming
-
-* **Variable results**: Artists with common names or multiple variations
-
-* **Best results**: When album information helps distinguish between similar artists
-
-## Configuration Options
-
-### Content Selection
-
-* **Enable biographies**: Download artist background information
-
-* **Enable images**: Download artist photos and album artwork
-
-* **Website links**: Include artist websites and social media
-
-### Performance Settings
-
-* **Rate limiting**: Discogs has API rate limits - downloads are automatically throttled
-
-* **Caching**: All responses are cached to minimize API calls
-
-* **Timeout settings**: Configurable timeout for API requests
-
-## Best Practices
-
-### Improve Matching
-
-* Use consistent artist names in your music tags
-* Include album titles when possible
-* Verify artist names match Discogs database entries
-* Consider using MusicBrainz for better artist identification
-
-### API Usage
-
-* Personal access tokens have rate limits - avoid excessive requests
-* Respect Discogs [Terms of Use](https://www.discogs.com/developers)
-* Consider the marketplace nature - some content is user-generated
+Enable only what your templates actually use. Disabling unused types reduces lookup time
+during live sets.
 
 ## Troubleshooting
 
-### No Results Found
+### No results returned
 
-* Verify artist name spelling matches Discogs database
-* Check if artist exists on Discogs.com manually
-* Try simplifying artist names (remove "The", special characters)
-* Ensure API token is valid and has proper permissions
+* Confirm the track has both an **artist** and an **album** tag — both are required
+* Check that the artist exists on [Discogs.com](https://www.discogs.com) by searching manually
+* Verify the token is correct and has not been revoked
 
-### Poor Quality Results
+### Wrong artist returned
 
-* Artist names with common words may return incorrect matches
-* Consider using album information to improve matching
-* Enable MusicBrainz for better artist identification first
+* Discogs matching is text-based — artists with common names can collide
+* Adding or correcting the album title in your track tags helps disambiguate
 
-### Rate Limit Issues
+### No biography or images despite correct match
 
-* Discogs has daily/hourly API limits for personal tokens
-* Reduce download frequency if hitting limits
-* Consider upgrading Discogs API access if needed
-
-### Missing Content Types
-
-* Not all artists have biographies on Discogs
-* Image availability varies by artist popularity
-* Community-driven content means some artists have more complete information
-
-## Privacy and Terms
-
-* Review [Discogs Terms of Use](https://www.discogs.com/developers) before use
-* Personal access tokens are tied to your Discogs account
-* API usage may be subject to Discogs rate limiting and policies
-* Content is sourced from the Discogs community database
+* Not all Discogs artist pages have biographies or images — this is user-contributed content
+* Check the artist page on Discogs.com to confirm the content exists there

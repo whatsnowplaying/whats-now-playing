@@ -9,9 +9,9 @@ from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QCoreApplication,
     QSettings,
 )
-
 from upgradetools import reboot_macosx_prefs  # pylint: disable=import-error
 
+import nowplaying.artistextras.theaudiodb  # pylint: disable=import-error
 import nowplaying.bootstrap  # pylint: disable=import-error
 import nowplaying.upgrades.config  # pylint: disable=import-error
 
@@ -85,6 +85,97 @@ def test_upgrade_510_removes_legacy_keys():
 
         # grace_period=5 is the default and should be preserved as-is
         assert config.value("guessgame/grace_period") in (None, "5", 5)
+
+        config.clear()
+        del config
+        if os.path.exists(newfilename):
+            os.unlink(newfilename)
+        reboot_macosx_prefs()
+
+
+def test_upgrade_510_sets_default_theaudiodb_key_when_missing():
+    """upgrade to 5.1.0 fills in the free-tier key when theaudiodb/apikey is absent"""
+    with tempfile.TemporaryDirectory() as newpath:
+        if sys.platform == "win32":
+            qsettingsformat = QSettings.IniFormat
+        else:
+            qsettingsformat = QSettings.NativeFormat
+
+        nowplaying.bootstrap.set_qt_names(appname="testsuite")
+        settings = QSettings(
+            qsettingsformat,
+            QSettings.UserScope,
+            QCoreApplication.organizationName(),
+            QCoreApplication.applicationName(),
+        )
+        settings.clear()
+        reboot_macosx_prefs()
+        settings.setValue("settings/configversion", "5.1.0-preview2")
+        settings.remove("theaudiodb/apikey")
+        settings.sync()
+        del settings
+        reboot_macosx_prefs()
+
+        nowplaying.bootstrap.set_qt_names(appname="testsuite")
+        _upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
+
+        config = QSettings(
+            qsettingsformat,
+            QSettings.UserScope,
+            QCoreApplication.organizationName(),
+            QCoreApplication.applicationName(),
+        )
+        newfilename = config.fileName()
+        config.sync()
+
+        assert (
+            config.value("theaudiodb/apikey")
+            == nowplaying.artistextras.theaudiodb.DEFAULT_THEAUDIODB_API_KEY
+        )
+
+        config.clear()
+        del config
+        if os.path.exists(newfilename):
+            os.unlink(newfilename)
+        reboot_macosx_prefs()
+
+
+def test_upgrade_510_preserves_existing_theaudiodb_key():
+    """upgrade to 5.1.0 must not overwrite a user-provided theaudiodb/apikey"""
+    with tempfile.TemporaryDirectory() as newpath:
+        if sys.platform == "win32":
+            qsettingsformat = QSettings.IniFormat
+        else:
+            qsettingsformat = QSettings.NativeFormat
+
+        nowplaying.bootstrap.set_qt_names(appname="testsuite")
+        settings = QSettings(
+            qsettingsformat,
+            QSettings.UserScope,
+            QCoreApplication.organizationName(),
+            QCoreApplication.applicationName(),
+        )
+        settings.clear()
+        reboot_macosx_prefs()
+        settings.setValue("settings/configversion", "5.1.0-preview2")
+        settings.setValue("theaudiodb/apikey", "user-provided-key")
+        settings.sync()
+        del settings
+        reboot_macosx_prefs()
+
+        nowplaying.bootstrap.set_qt_names(appname="testsuite")
+        _upgrade = nowplaying.upgrades.config.UpgradeConfig(testdir=newpath)  # pylint: disable=unused-variable
+
+        config = QSettings(
+            qsettingsformat,
+            QSettings.UserScope,
+            QCoreApplication.organizationName(),
+            QCoreApplication.applicationName(),
+        )
+        newfilename = config.fileName()
+        config.sync()
+
+        assert config.value("theaudiodb/apikey") == "user-provided-key"
 
         config.clear()
         del config

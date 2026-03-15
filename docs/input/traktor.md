@@ -3,14 +3,14 @@
 > NOTE: This source does not support Oldest mix mode.
 
 Traktor support combines Icecast streaming with local database enhancement
-to provide rich metadata and playlist access.
+to provide rich track information and playlist access.
 
 ## How It Works
 
 1. **Traktor broadcasts** basic track info (artist/title) via Icecast stream
 2. **What's Now Playing** receives the Icecast stream
-3. **Database lookup** enriches the basic stream data with full metadata from your Traktor collection
-4. **Enhanced metadata** includes album, filename, and other details not available in the stream
+3. **Database lookup** enriches the basic stream data with full track details from your Traktor collection
+4. **Enhanced track details** include album, filename, and other details not available in the stream
 
 ## Instructions
 
@@ -60,6 +60,6 @@ In Traktor's main interface:
 
 ## Troubleshooting
 
-- **No enhanced metadata**: Check that collection.nml path is correct and Re-read completed
+- **No enhanced track details**: Check that collection.nml path is correct and Re-read completed
 - **Connection issues**: Verify port numbers match between Traktor and **What's Now Playing**
 - **Slow database building**: Normal for large collections (10,000+ tracks)

@@ -122,9 +122,9 @@ The bot must have **Send Messages** and **Attach Files** permissions in the targ
 ## Rich Presence Mode Setup
 
 Rich Presence Mode updates your own Discord status using the Discord desktop app running
-locally on the same machine. The Discord app must already be running before
-**What's Now Playing** starts. If it is not, Rich Presence Mode will not connect. Restart
-**What's Now Playing** after launching Discord.
+locally on the same machine. The Discord app must be running for Rich Presence to connect.
+If Discord is not running when **What's Now Playing** starts, it will retry the connection
+automatically every 20 seconds.
 
 ### Step 1: Create an Application and Get a Client ID
 
