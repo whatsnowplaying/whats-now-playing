@@ -10,6 +10,7 @@ TheAudioDB is a community-driven database of artist information and images.
 * Artist thumbnails
 * Artist websites and social media links
 * Artist biographies
+* Album cover art
 
 ## Requirements
 
@@ -35,6 +36,8 @@ Once enabled and an API key is entered, select what to download:
 
 * **Biography** — artist background text
 * **Banners** — wide horizontal artist banner images
+* **Cover Art** — album artwork fetched by artist and album name. Skipped when cover art is already
+  embedded in the track file. Requires the track's album tag to be set.
 * **Fanart** — large background/fan art images
 * **Logos** — artist logo graphics
 * **Thumbnails** — artist photos and thumbnails

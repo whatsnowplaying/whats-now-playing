@@ -32,6 +32,52 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         self.displayname: str = "Last.fm"
         self.priority: int = 60
 
+    async def _fetch_album_async(
+        self, apikey: str, artist: str, album: str, album_mbid: str | None = None
+    ) -> dict | None:
+        """Fetch album.getinfo from Last.fm API"""
+        if album_mbid:
+            url = (
+                f"{self.API_URL}?method=album.getinfo"
+                f"&mbid={urllib.parse.quote(album_mbid)}"
+                f"&api_key={apikey}"
+                f"&format=json&autocorrect=1"
+            )
+        else:
+            url = (
+                f"{self.API_URL}?method=album.getinfo"
+                f"&artist={urllib.parse.quote(artist)}"
+                f"&album={urllib.parse.quote(album)}"
+                f"&api_key={apikey}"
+                f"&format=json&autocorrect=1"
+            )
+        delay = self.calculate_delay()
+        try:
+            connector = nowplaying.utils.create_http_connector()
+            async with aiohttp.ClientSession(connector=connector) as session:
+                async with session.get(
+                    url,
+                    timeout=aiohttp.ClientTimeout(total=delay),
+                ) as response:
+                    if response.status != 200:
+                        logging.error(
+                            "Last.fm album HTTP error %s for %s/%s", response.status, artist, album
+                        )
+                        return None
+                    data = await response.json()
+                    if "error" in data:
+                        logging.info(
+                            "Last.fm album: %s for %s/%s", data.get("message"), artist, album
+                        )
+                        return None
+                    return data
+        except (asyncio.TimeoutError, aiohttp.ClientError):
+            logging.error("Last.fm album fetch hit timeout for %s/%s", artist, album)
+            return None
+        except Exception:  # pragma: no cover pylint: disable=broad-except
+            logging.exception("Last.fm album fetch hit unexpected error for %s/%s", artist, album)
+            return None
+
     async def _fetch_async(
         self, apikey: str, artist: str, mbid: str | None = None, lang: str = "en"
     ) -> dict | None:
@@ -89,6 +135,44 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         htmlfilter = nowplaying.utils.HTMLFilter()
         htmlfilter.feed(raw)
         return htmlfilter.text.strip()
+
+    async def _queue_coverart(self, apikey: str, metadata: TrackMetadata, imagecache: Any) -> None:
+        """Fetch album cover art from Last.fm and queue for download"""
+        if not self.config.cparser.value("lastfm/coverart", type=bool):
+            return
+        if metadata.get("coverimageraw") or not imagecache:
+            return
+        artist = metadata["artist"]
+        album = metadata.get("album")
+        if not album:
+            return
+        album_mbid = metadata.get("musicbrainzalbumid") or None
+        cache_id = (
+            album_mbid
+            if album_mbid
+            else (f"{urllib.parse.quote(artist)}/{urllib.parse.quote(album)}")
+        )
+        album_data = await nowplaying.apicache.cached_fetch(
+            provider="lastfm",
+            artist_name=artist,
+            endpoint=f"album.getinfo/{cache_id}",
+            fetch_func=lambda: self._fetch_album_async(
+                apikey, artist, album, album_mbid=album_mbid
+            ),
+            ttl_seconds=None,
+        )
+        images = ((album_data or {}).get("album") or {}).get("image") or []
+        cover_url = next(
+            (img["#text"] for img in reversed(images) if img.get("#text")),
+            None,
+        )
+        if cover_url:
+            imagecache.fill_queue(
+                config=self.config,
+                identifier=f"{artist}_{album}",
+                imagetype="front_cover",
+                srclocationlist=[cover_url],
+            )
 
     async def download_async(
         self, metadata: TrackMetadata | None = None, imagecache: Any = None
@@ -155,6 +239,8 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             if url := artist_info.get("url"):
                 result["artistwebsites"] = [url]
 
+        await self._queue_coverart(apikey, metadata, imagecache)
+
         return result or None
 
     def providerinfo(self) -> list[str]:  # pylint: disable=no-self-use
@@ -162,6 +248,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         return [
             "artistlongbio",
             "artistwebsites",
+            "coverimageraw",
         ]
 
     def connect_settingsui(self, qwidget: "QWidget", uihelp: Any) -> None:
@@ -171,7 +258,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         """draw the plugin's settings page"""
         qwidget.lastfm_checkbox.setChecked(self.config.cparser.value("lastfm/enabled", type=bool))
         qwidget.apikey_lineedit.setText(self.config.cparser.value("lastfm/apikey"))
-        for field in ["bio", "websites"]:
+        for field in ["bio", "coverart", "websites"]:
             getattr(qwidget, f"{field}_checkbox").setChecked(
                 self.config.cparser.value(f"lastfm/{field}", type=bool)
             )
@@ -188,7 +275,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         """take the settings page and save it"""
         self.config.cparser.setValue("lastfm/enabled", qwidget.lastfm_checkbox.isChecked())
         self.config.cparser.setValue("lastfm/apikey", qwidget.apikey_lineedit.text())
-        for field in ["bio", "websites"]:
+        for field in ["bio", "coverart", "websites"]:
             self.config.cparser.setValue(
                 f"lastfm/{field}", getattr(qwidget, f"{field}_checkbox").isChecked()
             )
@@ -198,7 +285,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         )
 
     def defaults(self, qsettings: "QSettings") -> None:
-        for field in ["bio", "websites"]:
+        for field in ["bio", "coverart", "websites"]:
             qsettings.setValue(f"lastfm/{field}", True)
         qsettings.setValue("lastfm/enabled", False)
         qsettings.setValue("lastfm/apikey", "")
