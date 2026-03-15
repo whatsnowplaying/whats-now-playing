@@ -484,7 +484,8 @@ class UpgradeConfig:
         if old_discord_enabled is not None:
             enabled = config.value("discord/enabled", type=bool)
             logging.info(
-                "Upgrade to 5.1.0: migrating discord/enabled=%s to bot_enabled and richpresence_enabled",
+                "Upgrade to 5.1.0: migrating discord/enabled=%s"
+                " to bot_enabled and richpresence_enabled",
                 old_discord_enabled,
             )
             config.setValue("discord/bot_enabled", enabled)

@@ -544,7 +544,7 @@ def _make_png(width: int, height: int) -> bytes:
     return buf.getvalue()
 
 
-def test_prepare_channel_image_respects_max_dim(discord_support):
+def test_prepare_channel_image_respects_max_dim():
     """Image is resized to at most max_dim on each side."""
     rawdata = _make_png(1000, 1000)
     result = DiscordSupport._prepare_channel_image(rawdata, max_dim=200)
@@ -554,7 +554,7 @@ def test_prepare_channel_image_respects_max_dim(discord_support):
     assert max(out.size) <= 200
 
 
-def test_prepare_channel_image_caps_at_max_dim_constant(discord_support):
+def test_prepare_channel_image_caps_at_max_dim_constant():
     """Requested max_dim above CHANNEL_IMAGE_MAX_DIM is clamped to the constant."""
     rawdata = _make_png(4096, 4096)
     result = DiscordSupport._prepare_channel_image(rawdata, max_dim=9999)
@@ -564,7 +564,7 @@ def test_prepare_channel_image_caps_at_max_dim_constant(discord_support):
     assert max(out.size) <= DiscordSupport.CHANNEL_IMAGE_MAX_DIM
 
 
-def test_prepare_channel_image_under_byte_limit(discord_support):
+def test_prepare_channel_image_under_byte_limit():
     """Result fits within CHANNEL_IMAGE_MAX_BYTES."""
     rawdata = _make_png(2000, 2000)
     result = DiscordSupport._prepare_channel_image(rawdata, max_dim=500)
@@ -573,13 +573,13 @@ def test_prepare_channel_image_under_byte_limit(discord_support):
     assert len(data) <= DiscordSupport.CHANNEL_IMAGE_MAX_BYTES
 
 
-def test_prepare_channel_image_invalid_data_returns_none(discord_support):
+def test_prepare_channel_image_invalid_data_returns_none():
     """Corrupt/non-image data returns None without raising."""
     result = DiscordSupport._prepare_channel_image(b"this-is-not-an-image")
     assert result is None
 
 
-def test_prepare_channel_image_small_image_unchanged_dimensions(discord_support):
+def test_prepare_channel_image_small_image_unchanged_dimensions():
     """Images already smaller than max_dim are not upscaled."""
     rawdata = _make_png(50, 50)
     result = DiscordSupport._prepare_channel_image(rawdata, max_dim=200)

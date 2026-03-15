@@ -7,6 +7,8 @@ code in this repository.
 
 ### Testing
 
+- **NEVER run pytest in the background** (`run_in_background=True` or `&`). Always run foreground.
+- **NEVER run more than one pytest at a time.** Wait for the current run to finish before starting another.
 - tests should be methods not classes
 - tests should be parameterized when possible
 - tests should be aware of the fixtures in conftest.py to bootstrap the config
