@@ -2791,9 +2791,9 @@ a short delay before the bot's status reflects a new track. This is expected beh
 <p>The bot must have <strong>Send Messages</strong> and <strong>Attach Files</strong> permissions in the target channel.</p>
 <h2 id="rich-presence-mode-setup">Rich Presence Mode Setup<a class="headerlink" href="#rich-presence-mode-setup" title="Permanent link">&para;</a></h2>
 <p>Rich Presence Mode updates your own Discord status using the Discord desktop app running
-locally on the same machine. The Discord app must already be running before
-<strong>What's Now Playing</strong> starts. If it is not, Rich Presence Mode will not connect. Restart
-<strong>What's Now Playing</strong> after launching Discord.</p>
+locally on the same machine. The Discord app must be running for Rich Presence to connect.
+If Discord is not running when <strong>What's Now Playing</strong> starts, it will retry the connection
+automatically every 20 seconds.</p>
 <h3 id="step-1-create-an-application-and-get-a-client-id">Step 1: Create an Application and Get a Client ID<a class="headerlink" href="#step-1-create-an-application-and-get-a-client-id" title="Permanent link">&para;</a></h3>
 <p>Follow Steps 1–3 from Bot Mode above to create an application. The <strong>Application ID</strong>
 shown on the General Information page is your Client ID.</p>
