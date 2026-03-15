@@ -474,7 +474,7 @@ def test_start_function():
 async def test_real_bot_client_setup(bootstrap):
     """Test setting up a real Discord bot client"""
     bootstrap.cparser.setValue("discord/token", os.environ["DISCORD_BOT_TOKEN"])
-    bootstrap.cparser.setValue("discord/enabled", True)
+    bootstrap.cparser.setValue("discord/bot_enabled", True)
 
     stopevent = asyncio.Event()
     support = DiscordSupport(config=bootstrap, stopevent=stopevent)
@@ -493,7 +493,7 @@ async def test_real_bot_client_setup(bootstrap):
 async def test_real_ipc_client_setup(bootstrap):
     """Test setting up a real Discord IPC client"""
     bootstrap.cparser.setValue("discord/clientid", os.environ["DISCORD_CLIENT_ID"])
-    bootstrap.cparser.setValue("discord/enabled", True)
+    bootstrap.cparser.setValue("discord/richpresence_enabled", True)
 
     stopevent = asyncio.Event()
     support = DiscordSupport(config=bootstrap, stopevent=stopevent)
@@ -514,7 +514,7 @@ async def test_real_ipc_client_setup(bootstrap):
 async def test_real_bot_update(bootstrap):
     """Test updating bot status with real client"""
     bootstrap.cparser.setValue("discord/token", os.environ["DISCORD_BOT_TOKEN"])
-    bootstrap.cparser.setValue("discord/enabled", True)
+    bootstrap.cparser.setValue("discord/bot_enabled", True)
 
     stopevent = asyncio.Event()
     support = DiscordSupport(config=bootstrap, stopevent=stopevent)

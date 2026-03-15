@@ -474,11 +474,22 @@ class UpgradeConfig:
 
     @staticmethod
     def _upgrade_to_5_1_0(config: QSettings) -> None:
-        """Upgrade to 5.1.0 - Reset guessgame grace_period from 10 back to 5"""
+        """Upgrade to 5.1.0 - Reset guessgame grace_period; migrate discord/enabled split"""
         grace_period = config.value("guessgame/grace_period")
         if grace_period is not None and int(grace_period) == 10:
             logging.info("Upgrade to 5.1.0: resetting guessgame grace_period from 10 to 5")
             config.setValue("guessgame/grace_period", 5)
+
+        old_discord_enabled = config.value("discord/enabled")
+        if old_discord_enabled is not None:
+            enabled = old_discord_enabled in (True, "true", "1")
+            logging.info(
+                "Upgrade to 5.1.0: migrating discord/enabled=%s to bot_enabled and richpresence_enabled",
+                old_discord_enabled,
+            )
+            config.setValue("discord/bot_enabled", enabled)
+            config.setValue("discord/richpresence_enabled", enabled)
+            config.remove("discord/enabled")
 
     def _cleanup_old_backup_files(self) -> None:
         """Clean up old .bak backup files from pre-5.0.0-preview5"""

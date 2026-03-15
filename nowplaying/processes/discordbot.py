@@ -7,6 +7,7 @@ Discord support code
 
 import asyncio
 import contextlib
+import io
 import logging
 import os
 import pathlib
@@ -15,6 +16,8 @@ import sys
 import threading
 from dataclasses import dataclass
 from typing import Any
+
+import PIL.Image
 
 import discord
 import pypresence
@@ -57,6 +60,8 @@ class DiscordSupport:
     async def _setup_bot_client(self) -> None:
         if not self.config:
             return
+        if not self.config.cparser.value("discord/bot_enabled", type=bool):
+            return
         token: str | None = self.config.cparser.value("discord/token")
         if not token:
             return
@@ -92,6 +97,8 @@ class DiscordSupport:
 
     async def _setup_ipc_client(self) -> None:  # pylint: disable=too-many-return-statements
         if not self.config:
+            return
+        if not self.config.cparser.value("discord/richpresence_enabled", type=bool):
             return
         clientid: str | None = self.config.cparser.value("discord/clientid")
         if not clientid:
@@ -230,8 +237,14 @@ class DiscordSupport:
         return self.stopevent is not None and nowplaying.utils.safe_stopevent_check(self.stopevent)
 
     def _is_discord_enabled(self) -> bool:
-        """check if discord integration is enabled"""
-        return self.config and self.config.cparser.value("discord/enabled", type=bool)
+        """check if any discord integration is enabled"""
+        if not self.config:
+            return False
+        bot_enabled: bool = bool(self.config.cparser.value("discord/bot_enabled", type=bool))
+        rp_enabled: bool = bool(
+            self.config.cparser.value("discord/richpresence_enabled", type=bool)
+        )
+        return bot_enabled or rp_enabled
 
     async def _process_metadata_update(
         self, metadb: nowplaying.db.MetadataDB, update_time: float
@@ -256,10 +269,93 @@ class DiscordSupport:
         templatehandler = nowplaying.utils.TemplateHandler(filename=template)
         return templatehandler.generate(metadata)
 
+    # Hard ceiling and byte size for channel image attachments
+    CHANNEL_IMAGE_MAX_DIM = 500
+    CHANNEL_IMAGE_MAX_BYTES = 500 * 1024  # 500 KB
+
+    @staticmethod
+    def _prepare_channel_image(rawdata: bytes, max_dim: int = 200) -> discord.File | None:
+        """Resize and re-encode cover art for Discord channel attachment.
+
+        Resizes to at most max_dim px on each side, then encodes as JPEG,
+        reducing quality until the result fits within CHANNEL_IMAGE_MAX_BYTES.
+        Returns None on any error.
+        """
+        max_dim = min(max_dim, DiscordSupport.CHANNEL_IMAGE_MAX_DIM)
+        try:
+            image = PIL.Image.open(io.BytesIO(rawdata))
+            image = image.convert("RGB")
+            if image.width > max_dim or image.height > max_dim:
+                image.thumbnail((max_dim, max_dim), PIL.Image.Resampling.LANCZOS)
+            quality = 85
+            while quality >= 40:
+                buf = io.BytesIO()
+                image.save(buf, format="JPEG", quality=quality)
+                if buf.tell() <= DiscordSupport.CHANNEL_IMAGE_MAX_BYTES:
+                    buf.seek(0)
+                    return discord.File(buf, filename="cover.jpg")
+                quality -= 10
+            logging.warning("Could not compress cover image to fit within size limit")
+            return None
+        except Exception as error:  # pylint: disable=broad-except
+            logging.debug("Failed to prepare channel image: %s", error)
+            return None
+
+    async def _post_to_channel(
+        self, templateout: str, metadata: dict[str, Any] | None = None
+    ) -> None:
+        """post track info to a configured Discord channel"""
+        if not self.config or not self.clients.bot:
+            return
+        channel_id_str: str | None = self.config.cparser.value("discord/channel_id")
+        if not channel_id_str:
+            return
+        try:
+            channel_id: int = int(channel_id_str)
+        except ValueError:
+            logging.error("discord/channel_id is not a valid integer: %s", channel_id_str)
+            return
+        channel = self.clients.bot.get_channel(channel_id)
+        if channel is None:
+            logging.warning("Discord channel %s not found or bot lacks access", channel_id)
+            return
+        if not isinstance(channel, discord.abc.Messageable):
+            logging.warning("Discord channel %s does not support sending messages", channel_id)
+            return
+
+        attach_image: bool = bool(
+            self.config.cparser.value("discord/channel_attach_image", type=bool)
+        )
+        file: discord.File | None = None
+        if attach_image and metadata:
+            rawdata: bytes | None = metadata.get("coverimageraw")
+            if rawdata:
+                max_dim: int = int(
+                    self.config.cparser.value("discord/channel_image_size", type=int) or 200
+                )
+                file = self._prepare_channel_image(rawdata, max_dim=max_dim)
+
+        try:
+            if file:
+                await channel.send(templateout, file=file)
+            else:
+                await channel.send(templateout)
+        except discord.Forbidden:
+            logging.error("Bot lacks permission to send messages to channel %s", channel_id)
+        except discord.HTTPException as error:
+            logging.error("Failed to send message to Discord channel: %s", error)
+
     async def _update_all_clients(self, templateout: str, metadata: dict[str, Any]) -> None:
-        """update both bot and IPC clients with error handling"""
+        """update bot presence, IPC rich presence, and optional channel post"""
         await self._safe_update_client("bot", self._update_bot, templateout)
         await self._safe_update_client("ipc", self._update_ipc, templateout, metadata)
+        if self.config and self.clients.bot:
+            channel_template: str | None = self.config.cparser.value("discord/channel_template")
+            if channel_template:
+                channel_out = self._generate_template_output(channel_template, metadata)
+            else:
+                channel_out = templateout
+            await self._post_to_channel(channel_out, metadata)
 
     async def _safe_update_client(self, client_type: str, update_func, *args) -> None:
         """safely update a client with consistent error handling"""

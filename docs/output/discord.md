@@ -2,9 +2,9 @@
 
 **What's Now Playing** supports two Discord modes, which can run simultaneously:
 
-* **Bot Mode**: A bot account joins your Discord server and updates its presence with
-  the currently playing track, optionally linking to your Twitch stream.
-* **Client Mode**: Updates your own Discord user's Rich Presence status via the
+* **Bot Mode**: A bot account joins your Discord server, updates its presence with the
+  currently playing track, and can optionally post track announcements to a channel.
+* **Rich Presence Mode**: Updates your own Discord user's Rich Presence status via the
   Discord desktop app running on the same machine.
 
 ## What's Now Playing Configuration
@@ -13,10 +13,10 @@
 
 1. Open Settings from the **What's Now Playing** icon
 2. Select **Discord** from the **Streaming & Chat** section
-3. Check **Enable**
-4. Select the template to use for the status text
-5. Fill in the **Client ID** and/or **Bot Token** fields depending on which modes you want
-6. Click **Save** and restart **What's Now Playing**
+3. Check **Enable Bot Mode** and/or **Enable Rich Presence** depending on which modes you want
+4. Fill in the fields for each enabled mode (see setup sections below)
+5. Set the **Presence Template** for the status text shown in Bot Mode presence and Rich Presence
+6. Click **Save**
 
 ## Bot Mode Setup
 
@@ -48,8 +48,8 @@ You will land on the **General Information** page.
 
 [![Discord app general information](images/discord-appconfig.png)](images/discord-appconfig.png)
 
-Copy the **Application ID**. You will need this for Client Mode. For Bot Mode only, you
-can skip this for now.
+Copy the **Application ID**. You will need this for Rich Presence Mode. For Bot Mode only,
+you can skip this for now.
 
 ### Step 4: Get a Bot Token
 
@@ -101,11 +101,29 @@ updating its presence as tracks change.
 > waits at least 20 seconds between updates to stay within this limit, so there may be
 > a short delay before the bot's status reflects a new track. This is expected behavior.
 
-## Client Mode Setup
+## Channel Posting
 
-Client Mode updates your own Discord Rich Presence status using the Discord desktop app
-running locally on the same machine. The Discord app must already be running before
-**What's Now Playing** starts. If it isn't, Client Mode will not connect. Restart
+Bot Mode can post a track announcement to a Discord text channel each time a new track plays.
+
+### Setup
+
+1. Right-click the channel in Discord and select **Copy Channel ID** (Developer Mode must be
+   enabled in Discord's Advanced settings)
+2. Paste the ID into the **Channel ID** field in **What's Now Playing**'s Discord settings
+3. Optionally set a **Channel Template** for the message format. If left empty, the
+   Presence Template is used
+4. To include cover art with each post, check **Attach cover image to channel posts** and
+   set the **Max size (px)** for the image. The default is 200 px, which keeps file sizes
+   small. The maximum is 500 px.
+5. Click **Save**
+
+The bot must have **Send Messages** and **Attach Files** permissions in the target channel.
+
+## Rich Presence Mode Setup
+
+Rich Presence Mode updates your own Discord status using the Discord desktop app running
+locally on the same machine. The Discord app must already be running before
+**What's Now Playing** starts. If it is not, Rich Presence Mode will not connect. Restart
 **What's Now Playing** after launching Discord.
 
 ### Step 1: Create an Application and Get a Client ID
@@ -116,8 +134,8 @@ shown on the General Information page is your Client ID.
 ### Step 2: Configure What's Now Playing
 
 Paste the Application ID into the **Client ID** field in **What's Now Playing**'s Discord
-settings. No bot token, no server invite, and no privileged intents are needed for Client
-Mode.
+settings. No bot token, no server invite, and no privileged intents are needed for Rich
+Presence Mode.
 
 Click **Save** and restart **What's Now Playing**.
 

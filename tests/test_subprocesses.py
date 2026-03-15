@@ -21,7 +21,8 @@ def mock_config():
         "kick/enabled": True,
         "kick/chat": True,
         "obsws/enabled": True,
-        "discord/enabled": True,
+        "discord/bot_enabled": True,
+        "discord/richpresence_enabled": True,
     }.get(key, kwargs.get("defaultValue", False))
     config.getbundledir.return_value = "/mock/bundle"
     return config
