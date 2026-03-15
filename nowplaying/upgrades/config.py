@@ -480,6 +480,10 @@ class UpgradeConfig:
             logging.info("Upgrade to 5.1.0: resetting guessgame grace_period from 10 to 5")
             config.setValue("guessgame/grace_period", 5)
 
+        if not config.value("theaudiodb/apikey"):
+            logging.info("Upgrade to 5.1.0: setting theaudiodb/apikey to free tier key 123")
+            config.setValue("theaudiodb/apikey", "123")
+
         old_discord_enabled = config.value("discord/enabled")
         if old_discord_enabled is not None:
             enabled = config.value("discord/enabled", type=bool)

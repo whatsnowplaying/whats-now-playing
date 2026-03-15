@@ -1,6 +1,6 @@
 # Track Skip
 
-Track Skip allows you to automatically skip tracks based on metadata fields. If a track's metadata contains specific
+Track Skip allows you to automatically skip tracks based on their tags. If a track's tags contain specific
 text in the Comment or Genre fields, that track will be skipped and not displayed as "now playing."
 
 [![Track Skip Settings](images/trackskip.png)](images/trackskip.png)
@@ -9,7 +9,7 @@ text in the Comment or Genre fields, that track will be skipped and not displaye
 
 ## How It Works
 
-Track Skip checks the Comment and Genre metadata fields of each track. If
+Track Skip checks the Comment and Genre tags of each track. If
 either field contains the text you specify, the track will be skipped entirely.
 
 For example:

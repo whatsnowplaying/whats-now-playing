@@ -433,9 +433,9 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
     def defaults(self, qsettings: "QSettings") -> None:
         for field in ["banners", "bio", "fanart", "logos", "thumbnails", "websites"]:
-            qsettings.setValue(f"theaudiodb/{field}", False)
+            qsettings.setValue(f"theaudiodb/{field}", True)
 
-        qsettings.setValue("theaudiodb/enabled", False)
-        qsettings.setValue("theaudiodb/apikey", "")
+        qsettings.setValue("theaudiodb/enabled", True)
+        qsettings.setValue("theaudiodb/apikey", "123")
         qsettings.setValue("theaudiodb/bio_iso", "EN")
         qsettings.setValue("theaudiodb/bio_iso_en_fallback", True)

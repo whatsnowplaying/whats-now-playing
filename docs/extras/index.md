@@ -107,13 +107,13 @@ shows something rather than going blank:
 **When cover art is missing:**
 
 * Use fan art, logo, or thumbnail as a cover art substitute (configured via
-  the "No Cover Fallback" setting)
+  the "For missing coverart use:" setting)
 
 ## Requirements for Best Results
 
 Artist Extras works best with well-tagged music files:
 
-* **ISRC codes**: Enable automatic MusicBrainz lookups for missing metadata
+* **ISRC codes**: Enable automatic MusicBrainz lookups for missing information
 
 * **Complete artist/album/title tags**: Improve matching accuracy
 

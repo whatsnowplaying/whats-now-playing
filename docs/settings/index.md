@@ -18,7 +18,7 @@
 
 * A setting of zero will update the track info on-screen immediately
    as a new track is detected. If you're blending or crossfading, this
-   may be too soon — viewers would see the new track title before they
+   may be too soon; viewers would see the new track title before they
    can hear it. A delay of 5–10 seconds gives your mix time to settle
    before the display updates. Artist Extras also uses this window to
    download images, so a longer delay means more content is ready when

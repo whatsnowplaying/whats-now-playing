@@ -23,7 +23,7 @@
 
 ### Database Settings
 
-1. Click **Re-read** to build the metadata database
+1. Click **Re-read** to build the track database
 2. Set **Max age** for automatic database refreshes (default: 7 days)
 3. **Use Remix Field** - Filters out remix data (recommended)
 
@@ -34,7 +34,7 @@
 - Check that History directory path is correct
 - Ensure VirtualDJ is writing history files (play tracks long enough)
 
-### No Enhanced Metadata
+### No Enhanced Track Details
 
 - Click **Re-read** to build database from VirtualDJ's collection
 
@@ -44,11 +44,11 @@
 - Click **Re-read** after making playlist changes in VirtualDJ
 - Playlist files only update when VirtualDJ is closed
 
-### Changing Metadata
+### Changing Track Tags
 
-If **What's Now Playing** acts erratic when changing metadata in VirtualDJ:
+If **What's Now Playing** acts erratic when changing track tags in VirtualDJ:
 
 1. Pause **What's Now Playing** from the menu
-2. Make your metadata changes in VirtualDJ
+2. Make your tag changes in VirtualDJ
 3. Play the next track
 4. Unpause **What's Now Playing**

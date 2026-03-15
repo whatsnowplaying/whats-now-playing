@@ -1,7 +1,7 @@
 # Improving Accuracy
 
 The general rule is: the more data in, the better data out. A few
-metadata tags go a very long way. In order of most important to least
+track tags go a very long way. In order of most important to least
 important:
 
 1. [Musicbrainz](https://musicbrainz.org//) Recording IDs
@@ -15,10 +15,10 @@ aren't, such as cover art. Unlike a lot of software, **What's Now
 Playing** errs on the side of caution.
 
 For example of what I mean, let's take a real world example. While
-testing some of the audio recognition and metadata downloading
+testing some of the audio recognition and track information downloading
 capabilities, [Pet Shop Boys -
 "Vocal"](https://www.youtube.com/watch?v=qNR8gQAoYCs) was used as an
-input with no modification the metadata (so, in other words, very much
+input with no modification to the tags (so, in other words, very much
 wrong and very much a mess). Virtual DJ reported the song came from the
 album
 [Electric](https://musicbrainz.org/release/eeb0aa28-b7c9-4109-b8a6-e08611a6ca84)
