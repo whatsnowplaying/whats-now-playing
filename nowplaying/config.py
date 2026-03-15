@@ -482,15 +482,14 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
     def getregexlist(self) -> list[re.Pattern[str]]:
         """get the regex title filter"""
         try:
-            if self.lastloaddate == 0 or self.lastloaddate < (
-                self.cparser.value("settings/lastsavedate", type=int) or 0
-            ):
+            lastsavedate = int(self.cparser.value("settings/lastsavedate") or 0)
+            if self.lastloaddate == 0 or self.lastloaddate < lastsavedate:
                 self.striprelist = [
                     re.compile(self.cparser.value(configitem))
                     for configitem in self.cparser.allKeys()
                     if "regex_filter/" in configitem
                 ]
-                self.lastloaddate = self.cparser.value("settings/lastsavedate", type=int)
+                self.lastloaddate = lastsavedate
         except re.error as error:
             logging.error("Filter error with '%s': %s", error.pattern, error.msg)
         return self.striprelist

@@ -240,11 +240,9 @@ class DiscordSupport:
         """check if any discord integration is enabled"""
         if not self.config:
             return False
-        bot_enabled: bool = bool(self.config.cparser.value("discord/bot_enabled", type=bool))
-        rp_enabled: bool = bool(
-            self.config.cparser.value("discord/richpresence_enabled", type=bool)
-        )
-        return bot_enabled or rp_enabled
+        return self.config.cparser.value(
+            "discord/bot_enabled", type=bool
+        ) or self.config.cparser.value("discord/richpresence_enabled", type=bool)
 
     async def _process_metadata_update(
         self, metadb: nowplaying.db.MetadataDB, update_time: float
@@ -307,12 +305,12 @@ class DiscordSupport:
         """post track info to a configured Discord channel"""
         if not self.config or not self.clients.bot:
             return
-        channel_id_str: str | None = self.config.cparser.value("discord/channel_id")
+        channel_id_str = self.config.cparser.value("discord/channel_id")
         if not channel_id_str:
             return
         try:
-            channel_id: int = int(channel_id_str)
-        except ValueError:
+            channel_id = int(channel_id_str)
+        except (ValueError, TypeError):
             logging.error("discord/channel_id is not a valid integer: %s", channel_id_str)
             return
         channel = self.clients.bot.get_channel(channel_id)
@@ -323,16 +321,11 @@ class DiscordSupport:
             logging.warning("Discord channel %s does not support sending messages", channel_id)
             return
 
-        attach_image: bool = bool(
-            self.config.cparser.value("discord/channel_attach_image", type=bool)
-        )
         file: discord.File | None = None
-        if attach_image and metadata:
+        if self.config.cparser.value("discord/channel_attach_image", type=bool) and metadata:
             rawdata: bytes | None = metadata.get("coverimageraw")
             if rawdata:
-                max_dim: int = int(
-                    self.config.cparser.value("discord/channel_image_size", type=int) or 200
-                )
+                max_dim = int(self.config.cparser.value("discord/channel_image_size") or 200)
                 file = self._prepare_channel_image(rawdata, max_dim=max_dim)
 
         try:

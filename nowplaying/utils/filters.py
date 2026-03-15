@@ -401,7 +401,7 @@ def titlestripper(config: "nowplaying.config.ConfigFile", title: str | None = No
     config.cparser.sync()
 
     # Check if config has changed since last load
-    current_save_date = config.cparser.value("settings/lastsavedate", type=int) or 0
+    current_save_date = int(config.cparser.value("settings/lastsavedate") or 0)
 
     # Use cached FilterManager or create new one
     if _cached_filter_manager is None:
