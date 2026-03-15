@@ -1390,15 +1390,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#client-mode-setup" class="md-nav__link">
+  <a href="#channel-posting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Client Mode Setup
+        Channel Posting
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Client Mode Setup">
+    <nav class="md-nav" aria-label="Channel Posting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rich-presence-mode-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rich Presence Mode Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rich Presence Mode Setup">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2677,9 +2705,9 @@
 <h1 id="discord">Discord<a class="headerlink" href="#discord" title="Permanent link">&para;</a></h1>
 <p><strong>What's Now Playing</strong> supports two Discord modes, which can run simultaneously:</p>
 <ul>
-<li><strong>Bot Mode</strong>: A bot account joins your Discord server and updates its presence with
-  the currently playing track, optionally linking to your Twitch stream.</li>
-<li><strong>Client Mode</strong>: Updates your own Discord user's Rich Presence status via the
+<li><strong>Bot Mode</strong>: A bot account joins your Discord server, updates its presence with the
+  currently playing track, and can optionally post track announcements to a channel.</li>
+<li><strong>Rich Presence Mode</strong>: Updates your own Discord user's Rich Presence status via the
   Discord desktop app running on the same machine.</li>
 </ul>
 <h2 id="whats-now-playing-configuration">What's Now Playing Configuration<a class="headerlink" href="#whats-now-playing-configuration" title="Permanent link">&para;</a></h2>
@@ -2687,10 +2715,10 @@
 <ol>
 <li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
 <li>Select <strong>Discord</strong> from the <strong>Streaming &amp; Chat</strong> section</li>
-<li>Check <strong>Enable</strong></li>
-<li>Select the template to use for the status text</li>
-<li>Fill in the <strong>Client ID</strong> and/or <strong>Bot Token</strong> fields depending on which modes you want</li>
-<li>Click <strong>Save</strong> and restart <strong>What's Now Playing</strong></li>
+<li>Check <strong>Enable Bot Mode</strong> and/or <strong>Enable Rich Presence</strong> depending on which modes you want</li>
+<li>Fill in the fields for each enabled mode (see setup sections below)</li>
+<li>Set the <strong>Presence Template</strong> for the status text shown in Bot Mode presence and Rich Presence</li>
+<li>Click <strong>Save</strong></li>
 </ol>
 <h2 id="bot-mode-setup">Bot Mode Setup<a class="headerlink" href="#bot-mode-setup" title="Permanent link">&para;</a></h2>
 <p>Bot Mode connects a bot account to your Discord server and updates its presence with the
@@ -2709,8 +2737,8 @@ and click <strong>Create</strong>. You may be asked to complete a CAPTCHA.</p>
 <h3 id="step-3-note-your-application-id">Step 3: Note Your Application ID<a class="headerlink" href="#step-3-note-your-application-id" title="Permanent link">&para;</a></h3>
 <p>You will land on the <strong>General Information</strong> page.</p>
 <p><a href="../images/discord-appconfig.png"><img alt="Discord app general information" src="../images/discord-appconfig.png" /></a></p>
-<p>Copy the <strong>Application ID</strong>. You will need this for Client Mode. For Bot Mode only, you
-can skip this for now.</p>
+<p>Copy the <strong>Application ID</strong>. You will need this for Rich Presence Mode. For Bot Mode only,
+you can skip this for now.</p>
 <h3 id="step-4-get-a-bot-token">Step 4: Get a Bot Token<a class="headerlink" href="#step-4-get-a-bot-token" title="Permanent link">&para;</a></h3>
 <p>In the left sidebar, click <strong>Bot</strong>.</p>
 <p><a href="../images/discord-botsidebar.png"><img alt="Discord app sidebar showing Bot option" src="../images/discord-botsidebar.png" /></a></p>
@@ -2746,18 +2774,33 @@ updating its presence as tracks change.</p>
 waits at least 20 seconds between updates to stay within this limit, so there may be
 a short delay before the bot's status reflects a new track. This is expected behavior.</p>
 </blockquote>
-<h2 id="client-mode-setup">Client Mode Setup<a class="headerlink" href="#client-mode-setup" title="Permanent link">&para;</a></h2>
-<p>Client Mode updates your own Discord Rich Presence status using the Discord desktop app
-running locally on the same machine. The Discord app must already be running before
-<strong>What's Now Playing</strong> starts. If it isn't, Client Mode will not connect. Restart
+<h2 id="channel-posting">Channel Posting<a class="headerlink" href="#channel-posting" title="Permanent link">&para;</a></h2>
+<p>Bot Mode can post a track announcement to a Discord text channel each time a new track plays.</p>
+<h3 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Right-click the channel in Discord and select <strong>Copy Channel ID</strong> (Developer Mode must be
+   enabled in Discord's Advanced settings)</li>
+<li>Paste the ID into the <strong>Channel ID</strong> field in <strong>What's Now Playing</strong>'s Discord settings</li>
+<li>Optionally set a <strong>Channel Template</strong> for the message format. If left empty, the
+   Presence Template is used</li>
+<li>To include cover art with each post, check <strong>Attach cover image to channel posts</strong> and
+   set the <strong>Max size (px)</strong> for the image. The default is 200 px, which keeps file sizes
+   small. The maximum is 500 px.</li>
+<li>Click <strong>Save</strong></li>
+</ol>
+<p>The bot must have <strong>Send Messages</strong> and <strong>Attach Files</strong> permissions in the target channel.</p>
+<h2 id="rich-presence-mode-setup">Rich Presence Mode Setup<a class="headerlink" href="#rich-presence-mode-setup" title="Permanent link">&para;</a></h2>
+<p>Rich Presence Mode updates your own Discord status using the Discord desktop app running
+locally on the same machine. The Discord app must already be running before
+<strong>What's Now Playing</strong> starts. If it is not, Rich Presence Mode will not connect. Restart
 <strong>What's Now Playing</strong> after launching Discord.</p>
 <h3 id="step-1-create-an-application-and-get-a-client-id">Step 1: Create an Application and Get a Client ID<a class="headerlink" href="#step-1-create-an-application-and-get-a-client-id" title="Permanent link">&para;</a></h3>
 <p>Follow Steps 1–3 from Bot Mode above to create an application. The <strong>Application ID</strong>
 shown on the General Information page is your Client ID.</p>
 <h3 id="step-2-configure-whats-now-playing">Step 2: Configure What's Now Playing<a class="headerlink" href="#step-2-configure-whats-now-playing" title="Permanent link">&para;</a></h3>
 <p>Paste the Application ID into the <strong>Client ID</strong> field in <strong>What's Now Playing</strong>'s Discord
-settings. No bot token, no server invite, and no privileged intents are needed for Client
-Mode.</p>
+settings. No bot token, no server invite, and no privileged intents are needed for Rich
+Presence Mode.</p>
 <p>Click <strong>Save</strong> and restart <strong>What's Now Playing</strong>.</p>
 <blockquote>
 <p><strong>Note</strong>: Discord only allows one application to display Rich Presence at a time. If
