@@ -50,7 +50,7 @@ class KickSettings:
 
         # Initialize OAuth2 handler
         self.oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        self.update_oauth_status()
+        self._show_stored_token_status()
         # Timer disabled to prevent blocking main thread
         # self.start_status_timer()
 
@@ -156,6 +156,18 @@ class KickSettings:
     def cleanup(self) -> None:
         """Clean up resources when settings UI is closed"""
         self.stop_status_timer()
+
+    def _show_stored_token_status(self) -> None:
+        """Show auth status from stored tokens only — no network calls."""
+        if not self.oauth or not self.widget:
+            return
+        access_token, _ = self.oauth.get_stored_tokens()
+        if access_token:
+            self.widget.oauth_status_label.setText("Authenticated (not verified)")
+            self.widget.authenticate_button.setText("Re-authenticate")
+        else:
+            self.widget.oauth_status_label.setText("Not authenticated")
+            self.widget.authenticate_button.setText("Authenticate with Kick")
 
     def update_oauth_status(self) -> None:
         """update the OAuth status display"""

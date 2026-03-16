@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>wikimedia_ui</class>
- <widget class="QWidget" name="wikimedia_ui">
+ <class>artistextras_wikimedia_ui</class>
+ <widget class="QWidget" name="artistextras_wikimedia_ui">
   <property name="geometry">
    <rect>
     <x>0</x>

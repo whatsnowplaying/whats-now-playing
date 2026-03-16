@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>denon_ui</class>
- <widget class="QWidget" name="denon_ui">
+ <class>inputs_denon_ui</class>
+ <widget class="QWidget" name="inputs_denon_ui">
   <property name="geometry">
    <rect>
     <x>0</x>

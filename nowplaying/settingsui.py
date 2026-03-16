@@ -14,7 +14,7 @@ import re
 from typing import TYPE_CHECKING
 
 # pylint: disable=no-name-in-module
-from PySide6.QtCore import QFile, QStandardPaths, Qt, Slot
+from PySide6.QtCore import QCoreApplication, QFile, QStandardPaths, Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
@@ -62,8 +62,12 @@ NOCOVER_COMBOBOX = ["None", "Fanart", "Logo", "Thumbnail"]
 class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-instance-attributes
     """create settings form window"""
 
-    def __init__(self, tray: "nowplaying.tray.Tray"):
-        self.config = nowplaying.config.ConfigFile()
+    def __init__(
+        self,
+        tray: "nowplaying.tray.Tray",
+        config: "nowplaying.config.ConfigFile | None" = None,
+    ):
+        self.config = config or nowplaying.config.ConfigFile()
         if not self.config:
             logging.error("FATAL ERROR: Cannot get configuration!")
             raise RuntimeError("Cannot get configuration")
@@ -148,7 +152,6 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
     def load_qtui(self):  # pylint: disable=too-many-branches, too-many-statements
         """load the base UI and wire it up"""
-
         self.qtui = load_widget_ui(self.config, "settings")
         self.uihelp = nowplaying.uihelp.UIHelp(self.config, self.qtui)
 
@@ -172,6 +175,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         for uiname in baseuis:
             self._setup_widgets(uiname)
+            QCoreApplication.processEvents()
 
         pluginuis = {}
         pluginuinames = []
@@ -189,6 +193,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     self.input_display_to_module[display_name.lower()] = pkey
                     self.widgets["source"].sourcelist.addItem(display_name)
                 self._setup_widgets(f"{plugintype}_{pkey}")
+                QCoreApplication.processEvents()
 
         # Connect the source list signal once after all items are added
         self.widgets["source"].sourcelist.currentRowChanged.connect(self._set_source_description)
@@ -217,6 +222,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             mb_plugin.connect_settingsui(self.widgets["recognition_musicbrainz"], self.uihelp)
 
         self._connect_plugins()
+
         self._build_settings_tree()
 
         self.qtui.settings_tree.itemClicked.connect(self._on_tree_item_clicked)
@@ -350,6 +356,10 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             stack_index = self.qtui.settings_stack.indexOf(widget)
             if stack_index >= 0:
                 self.qtui.settings_stack.setCurrentIndex(stack_index)
+
+        # Trigger on-demand token validation when navigating to auth-sensitive panels
+        if mapped_value in ("twitch", "kick") and mapped_value in self.settingsclasses:
+            self.settingsclasses[mapped_value].update_oauth_status()
 
     def _connect_destroy_widget(self, qobject):
         qobject.startover_button.clicked.connect(self.fresh_start)
@@ -1483,84 +1493,37 @@ def about_version_text(config, qwidget):
 
 
 def load_widget_ui(config, name):
-    """load a UI file into a widget, supporting both single files and tabbed interfaces"""
-
-    # First try to load single UI file (existing behavior)
+    """Load a UI widget via QUiLoader."""
     single_path = config.uidir.joinpath(f"{name}_ui.ui")
     if single_path.exists():
-        return _load_single_ui_file(single_path, name)
+        loader = QUiLoader()
+        ui_file = QFile(str(single_path))
+        ui_file.open(QFile.ReadOnly)
+        try:
+            qwidget = loader.load(ui_file)
+        except RuntimeError as error:
+            logging.warning("Unable to load the UI for %s: %s", name, error)
+            return None
+        finally:
+            ui_file.close()
+        return qwidget
 
-    if tab_files := _find_tab_ui_files(config.uidir, name):
-        return _load_tabbed_ui_files(tab_files, name)
-
-    # Neither single nor tabbed files found
-    return None
-
-
-def _load_single_ui_file(path, name):
-    """Load a single UI file"""
-    loader = QUiLoader()
-    ui_file = QFile(str(path))
-    ui_file.open(QFile.ReadOnly)
-    try:
-        qwidget = loader.load(ui_file)
-    except RuntimeError as error:
-        logging.warning("Unable to load the UI for %s: %s", name, error)
+    pattern = str(config.uidir.joinpath(f"{name}_*_ui.ui"))
+    tab_files_raw = sorted(glob.glob(pattern))
+    if not tab_files_raw:
         return None
-    ui_file.close()
-    return qwidget
 
-
-def _find_tab_ui_files(uidir, name):
-    """Find all tab UI files for a given plugin name"""
-
-    pattern = str(uidir.joinpath(f"{name}_*_ui.ui"))
-    tab_files = glob.glob(pattern)
-
-    if not tab_files:
-        return []
-
-    # Sort by filename to ensure consistent tab order
-    tab_files.sort()
-
-    # Extract tab names from filenames for logging
-    tab_names = []
-    for filepath in tab_files:
-        filename = pathlib.Path(filepath).stem  # e.g., "inputs_serato_connection_ui"
-        # Extract tab name: inputs_serato_connection_ui -> connection
-        parts = filename.split("_")
-        if len(parts) >= 3 and parts[-1] == "ui":
-            tab_name = "_".join(parts[2:-1])  # Everything between plugin name and 'ui'
-            tab_names.append(tab_name)
-        else:
-            tab_names.append(f"tab_{len(tab_names)}")
-
-    logging.debug("Found tab UI files for %s: %s", name, tab_names)
-    return list(zip(tab_files, tab_names, strict=False))
-
-
-def _load_tabbed_ui_files(tab_files, name):
-    """Load multiple tab UI files into a QTabWidget"""
     tab_widget = QTabWidget()
     loader = QUiLoader()
-
-    for filepath, tab_name in tab_files:
+    for filepath in tab_files_raw:
         ui_file = QFile(filepath)
         ui_file.open(QFile.ReadOnly)
         try:
             if tab_content := loader.load(ui_file):
-                # Use the tab name from filename, but could be overridden by windowTitle in XML
-                display_name = tab_content.windowTitle() or tab_name.replace("_", " ").title()
+                display_name = tab_content.windowTitle() or pathlib.Path(filepath).stem.replace("_", " ").title()
                 tab_widget.addTab(tab_content, display_name)
-                logging.debug("Added tab '%s' for %s from %s", display_name, name, filepath)
         except RuntimeError as error:
             logging.warning("Unable to load tab UI file %s for %s: %s", filepath, name, error)
         finally:
             ui_file.close()
-
-    if tab_widget.count() == 0:
-        logging.warning("No valid tab UI files loaded for %s", name)
-        return None
-
-    logging.info("Loaded %d tabs for %s", tab_widget.count(), name)
-    return tab_widget
+    return tab_widget if tab_widget.count() > 0 else None

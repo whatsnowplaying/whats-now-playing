@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>mpris2_ui</class>
- <widget class="QWidget" name="mpris2_ui">
+ <class>inputs_mpris2_ui</class>
+ <widget class="QWidget" name="inputs_mpris2_ui">
   <property name="geometry">
    <rect>
     <x>0</x>

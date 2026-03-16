@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>lastfm_ui</class>
- <widget class="QWidget" name="lastfm_ui">
+ <class>artistextras_lastfm_ui</class>
+ <widget class="QWidget" name="artistextras_lastfm_ui">
   <property name="geometry">
    <rect>
     <x>0</x>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>guessgame_advanced_form</class>
- <widget class="QWidget" name="guessgame_advanced_form">
+ <class>guessgame_2_advanced_ui</class>
+ <widget class="QWidget" name="guessgame_2_advanced_ui">
   <property name="geometry">
    <rect>
     <x>0</x>

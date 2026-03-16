@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>fanarttv_ui</class>
- <widget class="QWidget" name="fanarttv_ui">
+ <class>artistextras_fanarttv_ui</class>
+ <widget class="QWidget" name="artistextras_fanarttv_ui">
   <property name="geometry">
    <rect>
     <x>0</x>

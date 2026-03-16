@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>realtimesetlist_ui</class>
- <widget class="QWidget" name="realtimesetlist_ui">
+ <class>notifications_realtimesetlist_ui</class>
+ <widget class="QWidget" name="notifications_realtimesetlist_ui">
   <property name="geometry">
    <rect>
     <x>0</x>

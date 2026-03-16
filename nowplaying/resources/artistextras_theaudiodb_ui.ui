@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>theaudiodb_ui</class>
- <widget class="QWidget" name="theaudiodb_ui">
+ <class>artistextras_theaudiodb_ui</class>
+ <widget class="QWidget" name="artistextras_theaudiodb_ui">
   <property name="geometry">
    <rect>
     <x>0</x>

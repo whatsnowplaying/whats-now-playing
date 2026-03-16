@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>inputsource_ui</class>
- <widget class="QWidget" name="inputsource_ui">
+ <class>source_ui</class>
+ <widget class="QWidget" name="source_ui">
   <property name="geometry">
    <rect>
     <x>0</x>

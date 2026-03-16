@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>serato_library_ui</class>
- <widget class="QWidget" name="serato_library_ui">
+ <class>inputs_serato_library_ui</class>
+ <widget class="QWidget" name="inputs_serato_library_ui">
   <property name="geometry">
    <rect>
     <x>0</x>

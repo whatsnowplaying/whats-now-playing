@@ -40,16 +40,21 @@ LASTANNOUNCED: dict[str, str | None] = {"artist": None, "title": None}
 class Tray:  # pylint: disable=too-many-instance-attributes
     """System Tray object"""
 
-    def __init__(self, startup_window: "nowplaying.startup.StartupWindow | None" = None) -> None:
+    def __init__(
+        self,
+        startup_window: "nowplaying.startup.StartupWindow | None" = None,
+        config: "nowplaying.config.ConfigFile | None" = None,
+    ) -> None:
         self.startup_window = startup_window
 
         # Initialize attributes that will be set later
         self.watcher = None
         self.requestswindow = None
         self.link_thread = None  # QThread for Twitch account linking
+        self.vacuum_thread = None  # QThread for background database vacuum
 
         # Core initialization
-        self._initialize_core_components()
+        self._initialize_core_components(config=config)
 
         # UI setup
         self._setup_about_window()
@@ -71,11 +76,13 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self._setup_tray_menu()
         self._finalize_initialization()
 
-    def _initialize_core_components(self) -> None:
+    def _initialize_core_components(
+        self, config: "nowplaying.config.ConfigFile | None" = None
+    ) -> None:
         """Initialize core configuration and tray components."""
         self._update_startup_progress("Loading configuration...")
 
-        self.config = nowplaying.config.ConfigFile()
+        self.config = config or nowplaying.config.ConfigFile()
 
         # Clean up any stray temporary OAuth2 credentials from previous sessions
         self._update_startup_progress("Cleaning OAuth2 credentials...")
@@ -104,9 +111,6 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def _setup_database_and_processes(self) -> None:
         """Setup database optimization and process manager."""
-        self._update_startup_progress("Optimizing database...")
-        self._vacuum_databases_on_startup()
-
         self._update_startup_progress("Initializing guess game database...")
         nowplaying.guessgame.GuessGame.initialize_database()
 
@@ -118,7 +122,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self._update_startup_progress("Loading settings interface...")
 
         try:
-            self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self)
+            self.settingswindow = nowplaying.settingsui.SettingsUI(tray=self, config=self.config)
         except (RuntimeError, OSError, ImportError) as error:
             logging.error("Failed to create settings window: %s", error, exc_info=True)
             self._show_installation_error("settings UI files")
@@ -216,6 +220,9 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         # Link Twitch account to charts if authenticated
         self._link_twitch_to_charts()
+
+        # Vacuum databases in the background — maintenance, not required for startup
+        self._start_background_vacuum()
 
     def _handle_installer_dialogs(self) -> None:
         """Handle installer dialogs that may require window hiding."""
@@ -376,6 +383,25 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         msgbox.exec()
         if app := QApplication.instance():
             app.exit(1)
+
+    def _start_background_vacuum(self) -> None:
+        """Start database vacuum operations in a background thread."""
+
+        class _VacuumThread(QThread):  # pylint: disable=too-few-public-methods
+            def run(self) -> None:
+                logging.debug("Starting background database vacuum")
+                try:
+                    nowplaying.apicache.APIResponseCache.vacuum_database_file()
+                except (sqlite3.Error, OSError) as error:
+                    logging.error("Error vacuuming API cache: %s", error)
+                try:
+                    nowplaying.guessgame.GuessGame.vacuum_database()
+                except (sqlite3.Error, OSError) as error:
+                    logging.error("Error vacuuming guess game database: %s", error)
+                logging.debug("Background database vacuum complete")
+
+        self.vacuum_thread = _VacuumThread()
+        self.vacuum_thread.start()
 
     def _vacuum_databases_on_startup(self) -> None:
         """Vacuum databases on startup to reclaim space from previous session"""

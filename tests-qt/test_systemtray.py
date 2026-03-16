@@ -108,6 +108,7 @@ class MockSettingsUI:
     def __init__(
         self,
         tray=None,
+        config=None,
     ):
         self.tray = tray
         self.shown = False
@@ -246,17 +247,19 @@ def test_menu_actions_creation(qtbot, mock_dependencies):
 
 
 def test_database_vacuum_on_startup(qtbot, mock_dependencies):
-    """Test that databases are vacuumed on startup"""
-    with patch("nowplaying.systemtray.Tray._vacuum_databases_on_startup") as mock_vacuum:
+    """Test that background vacuum is started on startup"""
+    with patch("nowplaying.systemtray.Tray._start_background_vacuum") as mock_vacuum:
         nowplaying.systemtray.Tray()
 
-        # Verify vacuum was called during initialization
         mock_vacuum.assert_called_once()
 
 
 def test_vacuum_databases_on_startup_method(qtbot, mock_dependencies):
-    """Test the actual vacuum database startup method"""
-    _ = nowplaying.systemtray.Tray()
+    """Test the actual vacuum database method calls the expected functions"""
+    with patch("nowplaying.systemtray.Tray._start_background_vacuum"):
+        tray = nowplaying.systemtray.Tray()
+
+    tray._vacuum_databases_on_startup()
 
     # Verify API cache vacuum was called
     mock_dependencies["api_vacuum"].assert_called_once()

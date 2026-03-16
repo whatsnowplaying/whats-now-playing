@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>twitch</class>
- <widget class="QWidget" name="twitch">
+ <class>twitch_ui</class>
+ <widget class="QWidget" name="twitch_ui">
   <property name="geometry">
    <rect>
     <x>0</x>
