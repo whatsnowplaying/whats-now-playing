@@ -286,9 +286,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                 metadata["artist"] = corrected_artist
             break
 
-    async def albumdatafromname_async(
-        self, apikey: str, artist: str, album: str
-    ) -> TrackMetadata | None:
+    async def albumdatafromname_async(self, apikey: str, artist: str, album: str) -> dict | None:
         """Fetch album data by artist and album name"""
         urlart = urllib.parse.quote(artist)
         urlalbum = urllib.parse.quote(album)

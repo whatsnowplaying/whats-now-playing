@@ -142,9 +142,9 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             return
         if metadata.get("coverimageraw") or not imagecache:
             return
-        artist = metadata["artist"]
+        artist = metadata.get("artist")
         album = metadata.get("album")
-        if not album:
+        if not artist or not album:
             return
         album_mbid = metadata.get("musicbrainzalbumid") or None
         cache_id = (
