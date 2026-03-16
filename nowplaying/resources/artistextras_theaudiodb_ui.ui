@@ -120,6 +120,16 @@
      </widget>
     </item>
     <item>
+     <widget class="QCheckBox" name="coverart_checkbox">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Cover Art</string>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QCheckBox" name="fanart_checkbox">
       <property name="enabled">
        <bool>false</bool>
@@ -255,6 +265,16 @@
      <x>363</x>
      <y>214</y>
     </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>theaudiodb_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>coverart_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel"><x>190</x><y>51</y></hint>
+    <hint type="destinationlabel"><x>120</x><y>319</y></hint>
    </hints>
   </connection>
   <connection>

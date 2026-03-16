@@ -203,11 +203,11 @@ class Plugin(ArtistExtrasPlugin):
                             mymeta["artistfanarturls"].append(image["url"])
                             if not gotonefanart and imagecache:
                                 gotonefanart = True
-                                imagecache.fill_queue(
-                                    config=self.config,
-                                    identifier=metadata["imagecacheartist"],
-                                    imagetype="artistfanart",
-                                    srclocationlist=[image["url"]],
+                                self.queue_artist_image(
+                                    metadata["imagecacheartist"],
+                                    "artistfanart",
+                                    [image["url"]],
+                                    imagecache,
                                 )
                         elif image["kind"] == "query-thumbnail":
                             thumbs.append(image["url"])
@@ -217,11 +217,11 @@ class Plugin(ArtistExtrasPlugin):
                     and thumbs
                     and self.config.cparser.value("wikimedia/thumbnails", type=bool)
                 ):
-                    imagecache.fill_queue(
-                        config=self.config,
-                        identifier=metadata["imagecacheartist"],
-                        imagetype="artistthumbnail",
-                        srclocationlist=thumbs,
+                    self.queue_artist_image(
+                        metadata["imagecacheartist"],
+                        "artistthumbnail",
+                        thumbs,
+                        imagecache,
                     )
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("Async metadata breaks wikimedia (%s): %s", err, metadata)

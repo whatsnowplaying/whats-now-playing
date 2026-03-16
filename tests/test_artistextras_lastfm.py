@@ -25,8 +25,44 @@ def _artist_url(artist: str, lang: str = "en") -> str:
     )
 
 
+def _album_url(artist: str, album: str) -> str:
+    return (
+        f"{LASTFM_BASE_URL}?method=album.getinfo"
+        f"&artist={urllib.parse.quote(artist)}"
+        f"&album={urllib.parse.quote(album)}"
+        f"&api_key={TEST_APIKEY}"
+        f"&format=json&autocorrect=1"
+    )
+
+
+def _album_mbid_url(mbid: str) -> str:
+    return (
+        f"{LASTFM_BASE_URL}?method=album.getinfo"
+        f"&mbid={urllib.parse.quote(mbid)}"
+        f"&api_key={TEST_APIKEY}"
+        f"&format=json&autocorrect=1"
+    )
+
+
 NIN_URL = _artist_url("Nine Inch Nails")
 XYZ_URL = _artist_url("XYZ Nonexistent Artist XYZ")
+NIN_ALBUM_URL = _album_url("Nine Inch Nails", "The Downward Spiral")
+COVER_IMAGE_URL = "https://lastfm.freetls.fastly.net/i/u/300x300/cover.jpg"
+
+NIN_ALBUM_RESPONSE = {
+    "album": {
+        "name": "The Downward Spiral",
+        "artist": "Nine Inch Nails",
+        "url": "https://www.last.fm/music/Nine+Inch+Nails/The+Downward+Spiral",
+        "image": [
+            {"#text": "https://lastfm.freetls.fastly.net/i/u/34s/cover.jpg", "size": "small"},
+            {"#text": "https://lastfm.freetls.fastly.net/i/u/64s/cover.jpg", "size": "medium"},
+            {"#text": "https://lastfm.freetls.fastly.net/i/u/174s/cover.jpg", "size": "large"},
+            {"#text": COVER_IMAGE_URL, "size": "extralarge"},
+            {"#text": COVER_IMAGE_URL, "size": "mega"},
+        ],
+    }
+}
 
 NIN_RESPONSE = {
     "artist": {
@@ -434,5 +470,173 @@ async def test_lastfm_live_lang_fallback(bootstrap, isolated_api_cache):  # pyli
 
         assert result is not None
         assert result.get("artistlongbio"), "Expected English fallback bio"
+    finally:
+        nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+async def test_lastfm_coverart_queued(bootstrap):
+    """album cover art URL is queued in imagecache when album is present"""
+    plugin, imagecache = _setup_plugin(bootstrap)
+    bootstrap.cparser.setValue("lastfm/coverart", True)
+
+    with aioresponses() as mockr:
+        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+        mockr.get(NIN_ALBUM_URL, payload=NIN_ALBUM_RESPONSE)
+        result = await plugin.download_async(
+            {
+                "artist": "Nine Inch Nails",
+                "album": "The Downward Spiral",
+                "imagecacheartist": "nineinchnails",
+            },
+            imagecache=imagecache,
+        )
+
+    assert result is not None
+    identifier = "Nine Inch Nails_The Downward Spiral"
+    assert identifier in imagecache.urls
+    assert imagecache.urls[identifier]["front_cover"] == [COVER_IMAGE_URL]
+
+
+@pytest.mark.asyncio
+async def test_lastfm_coverart_disabled(bootstrap):
+    """album cover art is not fetched when coverart setting is disabled"""
+    plugin, imagecache = _setup_plugin(bootstrap)
+    bootstrap.cparser.setValue("lastfm/coverart", False)
+
+    with aioresponses() as mockr:
+        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+        result = await plugin.download_async(
+            {
+                "artist": "Nine Inch Nails",
+                "album": "The Downward Spiral",
+                "imagecacheartist": "nineinchnails",
+            },
+            imagecache=imagecache,
+        )
+
+    assert result is not None
+    assert "Nine Inch Nails_The Downward Spiral" not in imagecache.urls
+
+
+@pytest.mark.asyncio
+async def test_lastfm_coverart_skipped_when_coverimageraw_present(bootstrap):
+    """album cover art fetch is skipped when coverimageraw already in metadata"""
+    plugin, imagecache = _setup_plugin(bootstrap)
+    bootstrap.cparser.setValue("lastfm/coverart", True)
+
+    with aioresponses() as mockr:
+        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+        result = await plugin.download_async(
+            {
+                "artist": "Nine Inch Nails",
+                "album": "The Downward Spiral",
+                "imagecacheartist": "nineinchnails",
+                "coverimageraw": b"\xff\xd8\xff",
+            },
+            imagecache=imagecache,
+        )
+
+    assert result is not None
+    # No album.getinfo call was made; imagecache should not have front_cover queued
+    assert "Nine Inch Nails_The Downward Spiral" not in imagecache.urls
+
+
+@pytest.mark.asyncio
+async def test_lastfm_coverart_no_album(bootstrap):
+    """album cover art fetch is skipped when no album in metadata"""
+    plugin, imagecache = _setup_plugin(bootstrap)
+    bootstrap.cparser.setValue("lastfm/coverart", True)
+
+    with aioresponses() as mockr:
+        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+        result = await plugin.download_async(
+            {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
+            imagecache=imagecache,
+        )
+
+    assert result is not None
+    assert not imagecache.urls
+
+
+@pytest.mark.asyncio
+async def test_lastfm_coverart_album_api_error(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+    """album API error does not prevent artist data from being returned"""
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+
+    try:
+        plugin, imagecache = _setup_plugin(bootstrap)
+        bootstrap.cparser.setValue("lastfm/coverart", True)
+
+        with aioresponses() as mockr:
+            mockr.get(NIN_URL, payload=NIN_RESPONSE)
+            mockr.get(NIN_ALBUM_URL, payload={"error": 6, "message": "Album not found"})
+            result = await plugin.download_async(
+                {
+                    "artist": "Nine Inch Nails",
+                    "album": "The Downward Spiral",
+                    "imagecacheartist": "nineinchnails",
+                },
+                imagecache=imagecache,
+            )
+
+        assert result is not None
+        assert result.get("artistlongbio") or result.get("artistwebsites")
+        assert "Nine Inch Nails_The Downward Spiral" not in imagecache.urls
+    finally:
+        nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+async def test_lastfm_coverart_with_album_mbid(bootstrap):
+    """album cover art uses MBID-based URL when musicbrainzalbumid is present"""
+    plugin, imagecache = _setup_plugin(bootstrap)
+    bootstrap.cparser.setValue("lastfm/coverart", True)
+    album_mbid = "12345678-1234-1234-1234-123456789abc"
+    mbid_url = _album_mbid_url(album_mbid)
+
+    with aioresponses() as mockr:
+        mockr.get(NIN_URL, payload=NIN_RESPONSE)
+        mockr.get(mbid_url, payload=NIN_ALBUM_RESPONSE)
+        result = await plugin.download_async(
+            {
+                "artist": "Nine Inch Nails",
+                "album": "The Downward Spiral",
+                "imagecacheartist": "nineinchnails",
+                "musicbrainzalbumid": album_mbid,
+            },
+            imagecache=imagecache,
+        )
+
+    assert result is not None
+    identifier = "Nine Inch Nails_The Downward Spiral"
+    assert identifier in imagecache.urls
+    assert imagecache.urls[identifier]["front_cover"] == [COVER_IMAGE_URL]
+
+
+@pytest.mark.asyncio
+@skip_no_lastfm_key
+async def test_lastfm_live_coverart(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+    """live: album cover art URL is queued for Nine Inch Nails - The Downward Spiral"""
+    original_cache = nowplaying.apicache._global_cache_instance  # pylint: disable=protected-access
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+
+    try:
+        plugin, imagecache = _setup_live_plugin(bootstrap)
+        bootstrap.cparser.setValue("lastfm/coverart", True)
+        result = await plugin.download_async(
+            {
+                "artist": "Nine Inch Nails",
+                "album": "The Downward Spiral",
+                "imagecacheartist": "nineinchnails",
+            },
+            imagecache=imagecache,
+        )
+
+        identifier = "Nine Inch Nails_The Downward Spiral"
+        assert result is not None
+        assert identifier in imagecache.urls, "Expected cover art to be queued"
+        assert imagecache.urls[identifier].get("front_cover"), "Expected front_cover URL list"
     finally:
         nowplaying.apicache.set_cache_instance(original_cache)

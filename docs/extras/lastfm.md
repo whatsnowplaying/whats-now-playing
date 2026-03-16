@@ -7,6 +7,7 @@ database of artist biographies and metadata.
 
 * Artist biographies
 * Artist website URL
+* Album cover art
 
 ## Requirements
 
@@ -30,6 +31,8 @@ rate limits imposed for typical usage.
 Once enabled and an API key is entered, select what to download:
 
 * **Biography** — full artist biography text
+* **Album Cover Art** — album artwork fetched by artist and album name. Skipped when cover art is
+  already embedded in the track file. Requires the track's album tag to be set.
 * **Websites** — the artist's Last.fm profile URL
 
 Enable only what your templates actually use.

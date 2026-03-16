@@ -238,11 +238,8 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         ):
             return
 
-        imagecache.fill_queue(
-            config=self.config,
-            identifier=metadata["imagecacheartist"],
-            imagetype=image_type,
-            srclocationlist=[artdata[source_key]],
+        self.queue_artist_image(
+            metadata["imagecacheartist"], image_type, [artdata[source_key]], imagecache
         )
 
     def _handle_fanart_data(
@@ -264,11 +261,8 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
             if not fanart_queued:
                 fanart_queued = True
-                imagecache.fill_queue(
-                    config=self.config,
-                    identifier=metadata["imagecacheartist"],
-                    imagetype="artistfanart",
-                    srclocationlist=[artdata[artstring]],
+                self.queue_artist_image(
+                    metadata["imagecacheartist"], "artistfanart", [artdata[artstring]], imagecache
                 )
 
     def _correct_artist_name(
@@ -291,6 +285,34 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                 )
                 metadata["artist"] = corrected_artist
             break
+
+    async def albumdatafromname_async(self, apikey: str, artist: str, album: str) -> dict | None:
+        """Fetch album data by artist and album name"""
+        urlart = urllib.parse.quote(artist)
+        urlalbum = urllib.parse.quote(album)
+        data = await self._fetch_cached(apikey, f"searchalbum.php?s={urlart}&a={urlalbum}", artist)
+        if not data or not data.get("album"):
+            return None
+        return data
+
+    async def _queue_coverart(self, apikey: str, metadata: TrackMetadata, imagecache: Any) -> None:
+        """Fetch album cover art from TheAudioDB and queue for download"""
+        if not self.config.cparser.value("theaudiodb/coverart", type=bool):
+            return
+        if metadata.get("coverimageraw") or not imagecache:
+            return
+        artist = metadata.get("artist")
+        album = metadata.get("album")
+        if not artist or not album:
+            return
+        album_data = await self.albumdatafromname_async(apikey, artist, album)
+        if not album_data:
+            return
+        for albuminfo in album_data["album"]:
+            cover_url = albuminfo.get("strAlbumThumbHQ") or albuminfo.get("strAlbumThumb")
+            if cover_url:
+                self.queue_front_cover(artist, album, cover_url, imagecache)
+                return
 
     async def artistdatafrommbid_async(
         self, apikey: str, mbartistid: str, artist_name: str
@@ -390,7 +412,9 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         if not extradata:
             return None
 
-        return self._handle_extradata(extradata, metadata, imagecache, used_musicbrainz)
+        result = self._handle_extradata(extradata, metadata, imagecache, used_musicbrainz)
+        await self._queue_coverart(apikey, metadata, imagecache)
+        return result
 
     def providerinfo(self) -> list[str]:  # pylint: disable=no-self-use
         """return list of what is provided by this plug-in"""
@@ -399,6 +423,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             "artistlongbio",
             "artistlogoraw",
             "artistthumbnailraw",
+            "coverimageraw",
             "theaudiodb-artistfanarturls",
         ]
 
@@ -414,7 +439,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         qwidget.apikey_lineedit.setText(self.config.cparser.value("theaudiodb/apikey"))
         qwidget.bio_iso_lineedit.setText(self.config.cparser.value("theaudiodb/bio_iso"))
 
-        for field in ["banners", "bio", "fanart", "logos", "thumbnails"]:
+        for field in ["banners", "bio", "coverart", "fanart", "logos", "thumbnails"]:
             func = getattr(qwidget, f"{field}_checkbox")
             func.setChecked(self.config.cparser.value(f"theaudiodb/{field}", type=bool))
         if self.config.cparser.value("theaudiodb/bio_iso_en_fallback", type=bool):
@@ -435,12 +460,12 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             "theaudiodb/bio_iso_en_fallback", qwidget.bio_iso_en_checkbox.isChecked()
         )
 
-        for field in ["banners", "bio", "fanart", "logos", "thumbnails", "websites"]:
+        for field in ["banners", "bio", "coverart", "fanart", "logos", "thumbnails", "websites"]:
             func = getattr(qwidget, f"{field}_checkbox")
             self.config.cparser.setValue(f"theaudiodb/{field}", func.isChecked())
 
     def defaults(self, qsettings: "QSettings") -> None:
-        for field in ["banners", "bio", "fanart", "logos", "thumbnails", "websites"]:
+        for field in ["banners", "bio", "coverart", "fanart", "logos", "thumbnails", "websites"]:
             qsettings.setValue(f"theaudiodb/{field}", True)
 
         qsettings.setValue("theaudiodb/enabled", True)

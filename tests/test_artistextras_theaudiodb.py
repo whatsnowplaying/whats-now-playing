@@ -392,3 +392,240 @@ async def test_theaudiodb_429_not_cached(bootstrap, isolated_api_cache):  # pyli
     finally:
         # Restore original cache
         nowplaying.apicache.set_cache_instance(original_cache)
+
+
+NIN_ARTIST_URL = f"{TADB_BASE_URL}/search.php?s=nine%20inch%20nails"
+NIN_ALBUM_URL = f"{TADB_BASE_URL}/searchalbum.php?s=Nine%20Inch%20Nails&a=The%20Downward%20Spiral"
+COVER_IMAGE_URL = "https://cdn.theaudiodb.com/images/media/album/thumb/cover.jpg"
+
+NIN_ARTIST_RESPONSE = {
+    "artists": [
+        {
+            "idArtist": "111239",
+            "strArtist": "Nine Inch Nails",
+            "strBiography": "Nine Inch Nails is an American industrial rock band.",
+            "strArtistThumb": "https://cdn.theaudiodb.com/images/media/artist/thumb/nin.jpg",
+            "strWebsite": "www.nin.com",
+        }
+    ]
+}
+
+NIN_ALBUM_RESPONSE = {
+    "album": [
+        {
+            "idAlbum": "2087504",
+            "strAlbum": "The Downward Spiral",
+            "strArtist": "Nine Inch Nails",
+            "strAlbumThumb": COVER_IMAGE_URL,
+        }
+    ]
+}
+
+NIN_ALBUM_RESPONSE_HQ = {
+    "album": [
+        {
+            "idAlbum": "2087504",
+            "strAlbum": "The Downward Spiral",
+            "strArtist": "Nine Inch Nails",
+            "strAlbumThumb": "https://cdn.theaudiodb.com/images/media/album/thumb/cover_sd.jpg",
+            "strAlbumThumbHQ": COVER_IMAGE_URL,
+        }
+    ]
+}
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_coverart_queued(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+    """album cover art URL is queued in imagecache when album is present"""
+    original_cache = nowplaying.apicache._global_cache_instance
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+
+    try:
+        plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
+        bootstrap.cparser.setValue("theaudiodb/coverart", True)
+
+        with aioresponses() as mockr:
+            mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
+            mockr.get(NIN_ALBUM_URL, payload=NIN_ALBUM_RESPONSE)
+            result = await plugin.download_async(
+                {
+                    "artist": "Nine Inch Nails",
+                    "album": "The Downward Spiral",
+                    "imagecacheartist": "nineinchnails",
+                },
+                imagecache=imagecache,
+            )
+
+        assert result is not None
+        identifier = "Nine Inch Nails_The Downward Spiral"
+        assert identifier in imagecache.urls
+        assert imagecache.urls[identifier]["front_cover"] == [COVER_IMAGE_URL]
+    finally:
+        nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_coverart_prefers_hq(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+    """strAlbumThumbHQ is preferred over strAlbumThumb when available"""
+    original_cache = nowplaying.apicache._global_cache_instance
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+
+    try:
+        plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
+        bootstrap.cparser.setValue("theaudiodb/coverart", True)
+
+        with aioresponses() as mockr:
+            mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
+            mockr.get(NIN_ALBUM_URL, payload=NIN_ALBUM_RESPONSE_HQ)
+            result = await plugin.download_async(
+                {
+                    "artist": "Nine Inch Nails",
+                    "album": "The Downward Spiral",
+                    "imagecacheartist": "nineinchnails",
+                },
+                imagecache=imagecache,
+            )
+
+        assert result is not None
+        identifier = "Nine Inch Nails_The Downward Spiral"
+        assert imagecache.urls[identifier]["front_cover"] == [COVER_IMAGE_URL]
+    finally:
+        nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_coverart_disabled(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+    """album cover art is not fetched when coverart setting is disabled"""
+    original_cache = nowplaying.apicache._global_cache_instance
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+
+    try:
+        plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
+        bootstrap.cparser.setValue("theaudiodb/coverart", False)
+
+        with aioresponses() as mockr:
+            mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
+            result = await plugin.download_async(
+                {
+                    "artist": "Nine Inch Nails",
+                    "album": "The Downward Spiral",
+                    "imagecacheartist": "nineinchnails",
+                },
+                imagecache=imagecache,
+            )
+
+        assert result is not None
+        assert "Nine Inch Nails_The Downward Spiral" not in imagecache.urls
+    finally:
+        nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_coverart_skipped_when_coverimageraw_present(  # pylint: disable=redefined-outer-name
+    bootstrap, isolated_api_cache
+):
+    """album cover art fetch is skipped when coverimageraw already in metadata"""
+    original_cache = nowplaying.apicache._global_cache_instance
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+
+    try:
+        plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
+        bootstrap.cparser.setValue("theaudiodb/coverart", True)
+
+        with aioresponses() as mockr:
+            mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
+            result = await plugin.download_async(
+                {
+                    "artist": "Nine Inch Nails",
+                    "album": "The Downward Spiral",
+                    "imagecacheartist": "nineinchnails",
+                    "coverimageraw": b"\xff\xd8\xff",
+                },
+                imagecache=imagecache,
+            )
+
+        assert result is not None
+        assert "Nine Inch Nails_The Downward Spiral" not in imagecache.urls
+    finally:
+        nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_coverart_no_album(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+    """album cover art fetch is skipped when no album in metadata"""
+    original_cache = nowplaying.apicache._global_cache_instance
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+
+    try:
+        plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
+        bootstrap.cparser.setValue("theaudiodb/coverart", True)
+
+        with aioresponses() as mockr:
+            mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
+            result = await plugin.download_async(
+                {"artist": "Nine Inch Nails", "imagecacheartist": "nineinchnails"},
+                imagecache=imagecache,
+            )
+
+        assert result is not None
+        assert not any("front_cover" in imagecache.urls.get(k, {}) for k in imagecache.urls)
+    finally:
+        nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_coverart_album_api_error(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+    """album API error does not prevent artist data from being returned"""
+    original_cache = nowplaying.apicache._global_cache_instance
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+
+    try:
+        plugin, imagecache = _setup_theaudiodb_plugin_no_key(bootstrap)
+        bootstrap.cparser.setValue("theaudiodb/coverart", True)
+
+        with aioresponses() as mockr:
+            mockr.get(NIN_ARTIST_URL, payload=NIN_ARTIST_RESPONSE)
+            mockr.get(NIN_ALBUM_URL, payload={"album": None})
+            result = await plugin.download_async(
+                {
+                    "artist": "Nine Inch Nails",
+                    "album": "The Downward Spiral",
+                    "imagecacheartist": "nineinchnails",
+                },
+                imagecache=imagecache,
+            )
+
+        assert result is not None
+        assert "Nine Inch Nails_The Downward Spiral" not in imagecache.urls
+    finally:
+        nowplaying.apicache.set_cache_instance(original_cache)
+
+
+@pytest.mark.asyncio
+async def test_theaudiodb_live_coverart(bootstrap, isolated_api_cache):  # pylint: disable=redefined-outer-name
+    """live: album cover art URL is queued for Nine Inch Nails - The Downward Spiral"""
+    original_cache = nowplaying.apicache._global_cache_instance
+    nowplaying.apicache.set_cache_instance(isolated_api_cache)
+
+    try:
+        plugin, imagecache = _setup_theaudiodb_plugin(bootstrap)
+        bootstrap.cparser.setValue("theaudiodb/coverart", True)
+
+        try:
+            result = await plugin.download_async(
+                {
+                    "artist": "Nine Inch Nails",
+                    "album": "The Downward Spiral",
+                    "imagecacheartist": "nineinchnails",
+                },
+                imagecache=imagecache,
+            )
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            pytest.fail(f"Plugin raised exception during live cover art test: {exc}")
+
+        identifier = "Nine Inch Nails_The Downward Spiral"
+        assert result is not None
+        assert identifier in imagecache.urls, "Expected cover art to be queued"
+        assert imagecache.urls[identifier].get("front_cover"), "Expected front_cover URL list"
+    finally:
+        nowplaying.apicache.set_cache_instance(original_cache)

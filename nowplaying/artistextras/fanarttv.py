@@ -141,9 +141,7 @@ class Plugin(ArtistExtrasPlugin):
         """Queue images sorted by popularity (likes)."""
         sorted_images = sorted(image_list, key=lambda x: x.get("likes", 0), reverse=True)
         urls = [img["url"] for img in sorted_images]
-        imagecache.fill_queue(
-            config=self.config, identifier=identifier, imagetype=image_type, srclocationlist=urls
-        )
+        self.queue_artist_image(identifier, image_type, urls, imagecache)
 
     def _process_fanart_backgrounds(
         self, backgrounds, metadata: TrackMetadata | None, identifier, imagecache
@@ -157,11 +155,8 @@ class Plugin(ArtistExtrasPlugin):
             metadata["artistfanarturls"] = []
         # Queue first image for display
         if backgrounds:
-            imagecache.fill_queue(
-                config=self.config,
-                identifier=identifier,
-                imagetype="artistfanart",
-                srclocationlist=[backgrounds[0]["url"]],
+            self.queue_artist_image(
+                identifier, "artistfanart", [backgrounds[0]["url"]], imagecache
             )
             # Collect all URLs for reference
             for background in backgrounds:

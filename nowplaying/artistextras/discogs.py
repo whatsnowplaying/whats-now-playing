@@ -147,11 +147,8 @@ class Plugin(ArtistExtrasPlugin):
                     and record.get("uri150")
                     and self.config.cparser.value("discogs/thumbnails", type=bool)
                 ):
-                    imagecache.fill_queue(
-                        config=self.config,
-                        identifier=artistname,
-                        imagetype="artistthumbnail",
-                        srclocationlist=[record["uri150"]],
+                    self.queue_artist_image(
+                        artistname, "artistthumbnail", [record["uri150"]], imagecache
                     )
 
                 if (
@@ -160,11 +157,8 @@ class Plugin(ArtistExtrasPlugin):
                     and self.config.cparser.value("discogs/fanart", type=bool)
                 ):
                     if not gotonefanart:
-                        imagecache.fill_queue(
-                            config=self.config,
-                            identifier=artistname,
-                            imagetype="artistfanart",
-                            srclocationlist=[record["uri"]],
+                        self.queue_artist_image(
+                            artistname, "artistfanart", [record["uri"]], imagecache
                         )
                         gotonefanart = True
                     self.addmeta["artistfanarturls"].append(record["uri"])

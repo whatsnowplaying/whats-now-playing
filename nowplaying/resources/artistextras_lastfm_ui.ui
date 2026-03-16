@@ -141,7 +141,7 @@
     <string>Fallback to EN</string>
    </property>
   </widget>
-  <widget class="QCheckBox" name="websites_checkbox">
+  <widget class="QCheckBox" name="coverart_checkbox">
    <property name="enabled">
     <bool>false</bool>
    </property>
@@ -149,6 +149,22 @@
     <rect>
      <x>10</x>
      <y>135</y>
+     <width>150</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Album Cover Art</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="websites_checkbox">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>160</y>
      <width>88</width>
      <height>20</height>
     </rect>
@@ -161,7 +177,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>200</y>
+     <y>215</y>
      <width>611</width>
      <height>80</height>
     </rect>
@@ -209,11 +225,21 @@
   <connection>
    <sender>lastfm_checkbox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>websites_checkbox</receiver>
+   <receiver>coverart_checkbox</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel"><x>115</x><y>20</y></hint>
     <hint type="destinationlabel"><x>50</x><y>145</y></hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lastfm_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>websites_checkbox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel"><x>115</x><y>20</y></hint>
+    <hint type="destinationlabel"><x>50</x><y>170</y></hint>
    </hints>
   </connection>
   <connection>
