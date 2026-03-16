@@ -108,6 +108,7 @@ class MockSettingsUI:
     def __init__(
         self,
         tray=None,
+        config=None,
     ):
         self.tray = tray
         self.shown = False
@@ -246,20 +247,26 @@ def test_menu_actions_creation(qtbot, mock_dependencies):
 
 
 def test_database_vacuum_on_startup(qtbot, mock_dependencies):
-    """Test that databases are vacuumed on startup"""
-    with patch("nowplaying.systemtray.Tray._vacuum_databases_on_startup") as mock_vacuum:
+    """Test that background vacuum is started on startup"""
+    with patch("nowplaying.systemtray.Tray._start_background_vacuum") as mock_vacuum:
         nowplaying.systemtray.Tray()
 
-        # Verify vacuum was called during initialization
         mock_vacuum.assert_called_once()
 
 
-def test_vacuum_databases_on_startup_method(qtbot, mock_dependencies):
-    """Test the actual vacuum database startup method"""
-    _ = nowplaying.systemtray.Tray()
+def test_start_background_vacuum(qtbot, mock_dependencies):
+    """Test that _start_background_vacuum creates a VacuumThread and starts it"""
+    with patch("nowplaying.systemtray._VacuumThread") as mock_thread_class:
+        mock_thread_instance = MagicMock()
+        mock_thread_class.return_value = mock_thread_instance
 
-    # Verify API cache vacuum was called
-    mock_dependencies["api_vacuum"].assert_called_once()
+        with patch("nowplaying.systemtray.Tray._start_background_vacuum"):
+            tray = nowplaying.systemtray.Tray()
+
+        tray._start_background_vacuum()
+
+        mock_thread_class.assert_called_once_with(tray.tray)
+        mock_thread_instance.start.assert_called_once()
 
 
 def test_settings_window_integration(qtbot, mock_dependencies):
@@ -365,7 +372,7 @@ def test_ui_loading_error_handling(qtbot, mock_dependencies):
         nowplaying.systemtray.Tray()
 
         # Verify installation error dialog was called
-        mock_error_dialog.assert_called_once_with("about_ui.ui")
+        mock_error_dialog.assert_called_once_with("about.ui")
 
 
 def test_settings_ui_creation_error_handling(qtbot, mock_dependencies):

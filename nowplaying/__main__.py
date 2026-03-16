@@ -78,7 +78,7 @@ def actualmain():  # pragma: no cover
             startup_window.update_progress("Starting system tray...")
             qapp.processEvents()
 
-            tray = nowplaying.systemtray.Tray(startup_window=startup_window)  # pylint: disable=unused-variable
+            tray = nowplaying.systemtray.Tray(startup_window=startup_window, config=config)  # pylint: disable=unused-variable
             icon = QIcon(str(config.iconfile))
             qapp.setWindowIcon(icon)
 

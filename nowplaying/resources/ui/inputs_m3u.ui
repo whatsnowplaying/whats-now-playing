@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>inputs_m3u_ui</class>
+ <widget class="QWidget" name="inputs_m3u_ui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>480</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>M3U</string>
+  </property>
+  <widget class="QWidget" name="horizontalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>100</y>
+     <width>631</width>
+     <height>80</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QLabel" name="dir_label">
+      <property name="text">
+       <string>M3U Directory</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="dir_button">
+      <property name="text">
+       <string>Select Dir ...</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="dir_lineedit"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QLabel" name="help_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>210</y>
+     <width>601</width>
+     <height>231</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>M3U support is for a variety of tools, including Virtual DJ.  Select the directory where the .m3u file exists.  Now Playing will read any new/updated m3u file in it.</string>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
