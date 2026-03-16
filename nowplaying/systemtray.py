@@ -407,35 +407,6 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.vacuum_thread = _VacuumThread(self.tray)
         self.vacuum_thread.start()
 
-    def _vacuum_databases_on_startup(self) -> None:
-        """Vacuum databases on startup to reclaim space from previous session"""
-        logging.debug("Starting database vacuum operations on startup")
-
-        # Vacuum API cache database
-        try:
-            nowplaying.apicache.APIResponseCache.vacuum_database_file()
-            logging.debug("API cache database vacuumed successfully")
-        except (sqlite3.Error, OSError) as error:
-            logging.error("Error vacuuming API cache: %s", error, exc_info=True)
-
-        # Vacuum guess game database
-        try:
-            nowplaying.guessgame.GuessGame.vacuum_database()
-        except (sqlite3.Error, OSError) as error:
-            logging.error("Error vacuuming guess game database: %s", error, exc_info=True)
-
-        # Skip metadata database vacuum - it gets cleared on every startup anyway
-
-        # Vacuum requests database (will be created later, so check if available)
-        try:
-            if hasattr(self, "requestswindow") and self.requestswindow:
-                self.requestswindow.vacuum_database()
-                logging.debug("Requests database vacuumed successfully")
-        except (sqlite3.Error, AttributeError) as error:
-            logging.error("Error vacuuming requests database: %s", error, exc_info=True)
-
-        logging.debug("Database vacuum operations completed")
-
     def _setup_charts_key(self) -> None:
         """Generate anonymous charts key if none exists"""
         self._update_startup_progress("Setting up Charts service...")

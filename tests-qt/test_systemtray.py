@@ -254,15 +254,19 @@ def test_database_vacuum_on_startup(qtbot, mock_dependencies):
         mock_vacuum.assert_called_once()
 
 
-def test_vacuum_databases_on_startup_method(qtbot, mock_dependencies):
-    """Test the actual vacuum database method calls the expected functions"""
-    with patch("nowplaying.systemtray.Tray._start_background_vacuum"):
-        tray = nowplaying.systemtray.Tray()
+def test_start_background_vacuum(qtbot, mock_dependencies):
+    """Test that _start_background_vacuum creates a VacuumThread and starts it"""
+    with patch("nowplaying.systemtray._VacuumThread") as mock_thread_class:
+        mock_thread_instance = MagicMock()
+        mock_thread_class.return_value = mock_thread_instance
 
-    tray._vacuum_databases_on_startup()
+        with patch("nowplaying.systemtray.Tray._start_background_vacuum"):
+            tray = nowplaying.systemtray.Tray()
 
-    # Verify API cache vacuum was called
-    mock_dependencies["api_vacuum"].assert_called_once()
+        tray._start_background_vacuum()
+
+        mock_thread_class.assert_called_once_with(tray.tray)
+        mock_thread_instance.start.assert_called_once()
 
 
 def test_settings_window_integration(qtbot, mock_dependencies):

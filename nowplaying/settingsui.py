@@ -14,7 +14,7 @@ import re
 from typing import TYPE_CHECKING
 
 # pylint: disable=no-name-in-module
-from PySide6.QtCore import QCoreApplication, QFile, QStandardPaths, Qt, Slot
+from PySide6.QtCore import QCoreApplication, QEventLoop, QFile, QStandardPaths, Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
@@ -175,7 +175,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
 
         for uiname in baseuis:
             self._setup_widgets(uiname)
-            QCoreApplication.processEvents()
+            QCoreApplication.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
         pluginuis = {}
         pluginuinames = []
@@ -193,7 +193,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                     self.input_display_to_module[display_name.lower()] = pkey
                     self.widgets["source"].sourcelist.addItem(display_name)
                 self._setup_widgets(f"{plugintype}_{pkey}")
-                QCoreApplication.processEvents()
+                QCoreApplication.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
         # Connect the source list signal once after all items are added
         self.widgets["source"].sourcelist.currentRowChanged.connect(self._set_source_description)
