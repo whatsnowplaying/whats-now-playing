@@ -9,6 +9,14 @@ from PySide6.QtWidgets import QApplication, QMessageBox  # pylint: disable=no-na
 
 import nowplaying.twitch.oauth2
 from nowplaying.exceptions import PluginVerifyError
+from nowplaying.twitch.constants import (
+    BROADCASTER_OAUTH_STATUS_KEY,
+    BROADCASTER_USERNAME_KEY,
+    CHAT_OAUTH_STATUS_KEY,
+    CHAT_USERNAME_KEY,
+    OAUTH_STATUS_AUTHENTICATED,
+    OAUTH_STATUS_EXPIRED,
+)
 
 
 class TwitchSettings:
@@ -99,9 +107,9 @@ class TwitchSettings:
     @staticmethod
     def _token_label(status: str, name: str, has_token: bool = False) -> str:
         """Return a display label for a single token status."""
-        if status == "authenticated":
+        if status == OAUTH_STATUS_AUTHENTICATED:
             return f"{name} authenticated"
-        if status == "expired":
+        if status == OAUTH_STATUS_EXPIRED:
             return f"{name} token expired"
         if has_token:
             return f"{name} connecting..."
@@ -110,8 +118,8 @@ class TwitchSettings:
     def _read_token_statuses(self) -> tuple[str, str, bool, bool]:
         """Read broadcaster and chat token statuses and token presence from cparser."""
         cparser = self.oauth.config.cparser
-        broadcaster = str(cparser.value("twitchbot/broadcaster_oauth_status", defaultValue=""))
-        chat = str(cparser.value("twitchbot/chat_oauth_status", defaultValue=""))
+        broadcaster = str(cparser.value(BROADCASTER_OAUTH_STATUS_KEY, defaultValue=""))
+        chat = str(cparser.value(CHAT_OAUTH_STATUS_KEY, defaultValue=""))
         has_broadcaster = bool(cparser.value("twitchbot/accesstoken", defaultValue=""))
         has_chat = bool(cparser.value("twitchbot/chattoken", defaultValue=""))
         return broadcaster, chat, has_broadcaster, has_chat
@@ -123,8 +131,8 @@ class TwitchSettings:
             return
 
         cparser = self.oauth.config.cparser
-        broadcaster_name = str(cparser.value("twitchbot/broadcaster_username", defaultValue=""))
-        chat_name = str(cparser.value("twitchbot/chat_username", defaultValue=""))
+        broadcaster_name = str(cparser.value(BROADCASTER_USERNAME_KEY, defaultValue=""))
+        chat_name = str(cparser.value(CHAT_USERNAME_KEY, defaultValue=""))
         _, _, has_broadcaster, has_chat = self._read_token_statuses()
 
         parts = []
@@ -141,7 +149,7 @@ class TwitchSettings:
 
     def update_oauth_status(self):
         """update the OAuth status display from cached cparser values"""
-        if not self.oauth or not self.widget:
+        if not self.oauth or not self.oauth.config or not self.widget:
             return
 
         self.oauth.client_id = self.widget.clientid_lineedit.text().strip()
@@ -171,13 +179,13 @@ class TwitchSettings:
     def _update_auth_button_states(self, broadcaster: str, chat: str) -> None:
         """Update authentication button text and states"""
 
-        if broadcaster == "authenticated":
+        if broadcaster == OAUTH_STATUS_AUTHENTICATED:
             self.widget.copy_broadcaster_auth_button.setText("✅ Broadcaster Authenticated")
         else:
             self.widget.copy_broadcaster_auth_button.setText("Copy Broadcaster Auth URL")
         self.widget.copy_broadcaster_auth_button.setEnabled(True)
 
-        if chat == "authenticated":
+        if chat == OAUTH_STATUS_AUTHENTICATED:
             self.widget.copy_chat_auth_button.setText("✅ Chat Bot Authenticated")
         else:
             self.widget.copy_chat_auth_button.setText("Copy Chat Bot Auth URL")

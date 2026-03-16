@@ -150,7 +150,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         if not self.settingswindow:
             return
         self.config.get()
-        self.settingswindow._update_all_oauth_status()
+        self.settingswindow.update_all_oauth_status()
         self.settingswindow.show()
         if self.settingswindow.qtui:
             self.settingswindow.qtui.raise_()

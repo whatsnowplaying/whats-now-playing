@@ -13,6 +13,11 @@ import nowplaying.frozen
 import nowplaying.kick.chat
 import nowplaying.kick.oauth2
 import nowplaying.kick.utils
+from nowplaying.kick.constants import (
+    OAUTH_STATUS_AUTHENTICATED,
+    OAUTH_STATUS_EXPIRED,
+    OAUTH_STATUS_KEY,
+)
 
 
 class KickLaunch:  # pylint: disable=too-many-instance-attributes
@@ -66,12 +71,12 @@ class KickLaunch:  # pylint: disable=too-many-instance-attributes
             # Use consolidated token refresh function
             if await nowplaying.kick.utils.attempt_token_refresh(self.config):
                 logging.info("Kick token is valid - proceeding with chat")
-                self.config.cparser.setValue("kick/oauth_status", "authenticated")
+                self.config.cparser.setValue(OAUTH_STATUS_KEY, OAUTH_STATUS_AUTHENTICATED)
                 self.config.cparser.sync()
                 return True
 
             logging.error("Please re-authenticate via Settings -> Kick -> Authenticate")
-            self.config.cparser.setValue("kick/oauth_status", "expired")
+            self.config.cparser.setValue(OAUTH_STATUS_KEY, OAUTH_STATUS_EXPIRED)
             self.config.cparser.sync()
 
         except Exception as error:  # pylint: disable=broad-exception-caught

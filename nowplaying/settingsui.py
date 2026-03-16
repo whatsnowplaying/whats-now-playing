@@ -120,13 +120,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             )
 
             # Validate stored OAuth2 tokens and update UI status
-            self._update_all_oauth_status()
+            self.update_all_oauth_status()
 
-    def _update_all_oauth_status(self):
+    def update_all_oauth_status(self):
         """Update OAuth status displays from cached cparser values"""
         for service in ("twitch", "kick"):
             if service in self.settingsclasses:
-                self.settingsclasses[service].update_oauth_status()
+                try:
+                    self.settingsclasses[service].update_oauth_status()
+                except Exception as error:  # pylint: disable=broad-except
+                    logging.error("Error updating %s OAuth status: %s", service, error)
 
     def _setup_widgets(self, uiname):
         self.widgets[uiname] = load_widget_ui(self.config, f"{uiname}")

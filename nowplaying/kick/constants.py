@@ -32,3 +32,11 @@ SPLIT_MESSAGE_TEXT = "****SPLITMESSAGEHERE****"  # Message splitting marker
 
 # UI constants - needs to match ui file
 KICKBOT_CHECKBOXES = ["anyone", "broadcaster", "moderator", "subscriber", "founder", "vip"]
+
+# OAuth status values
+OAUTH_STATUS_AUTHENTICATED = "authenticated"
+OAUTH_STATUS_EXPIRED = "expired"
+
+# cparser keys for OAuth status
+OAUTH_STATUS_KEY = "kick/oauth_status"
+ACCESS_TOKEN_KEY = "kick/accesstoken"

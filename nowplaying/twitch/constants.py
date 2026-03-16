@@ -49,6 +49,16 @@ TWITCHBOT_CHECKBOXES = [
 # Special message marker for template splitting
 SPLITMESSAGETEXT = "****SPLITMESSAGEHERE****"
 
+# OAuth status values
+OAUTH_STATUS_AUTHENTICATED = "authenticated"
+OAUTH_STATUS_EXPIRED = "expired"
+
+# cparser keys for OAuth status and usernames
+BROADCASTER_OAUTH_STATUS_KEY = "twitchbot/broadcaster_oauth_status"
+BROADCASTER_USERNAME_KEY = "twitchbot/broadcaster_username"
+CHAT_OAUTH_STATUS_KEY = "twitchbot/chat_oauth_status"
+CHAT_USERNAME_KEY = "twitchbot/chat_username"
+
 # OAuth2 service configuration
 TWITCH_SERVICE_CONFIG: nowplaying.oauth2.ServiceConfig = {
     "oauth_host": OAUTH_HOST,

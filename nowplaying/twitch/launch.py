@@ -51,7 +51,12 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
             self.twitchlogin.api_login(), name="twitch_broadcaster_auth"
         )
         await asyncio.sleep(5)
-        await auth_task
+        try:
+            await asyncio.wait_for(auth_task, timeout=15)
+        except asyncio.TimeoutError:
+            logging.error("Broadcaster auth timed out; continuing startup")
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error("Broadcaster auth failed: %s; continuing startup", error)
 
         if self.chat:
             logging.info("Starting Twitch chat task")

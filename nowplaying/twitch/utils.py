@@ -9,7 +9,14 @@ from twitchAPI.twitch import Twitch
 
 import nowplaying.twitch.oauth2
 import nowplaying.utils
-from nowplaying.twitch.constants import BROADCASTER_AUTH_SCOPES, BROADCASTER_SCOPE_STRINGS
+from nowplaying.twitch.constants import (
+    BROADCASTER_AUTH_SCOPES,
+    BROADCASTER_OAUTH_STATUS_KEY,
+    BROADCASTER_SCOPE_STRINGS,
+    BROADCASTER_USERNAME_KEY,
+    OAUTH_STATUS_AUTHENTICATED,
+    OAUTH_STATUS_EXPIRED,
+)
 
 
 async def get_user_image(
@@ -115,10 +122,10 @@ class TwitchLogin:
                     oauth_client.refresh_token = refresh_token
                     logging.debug("Existing Twitch token is valid")
                     self.config.cparser.setValue(
-                        "twitchbot/broadcaster_oauth_status", "authenticated"
+                        BROADCASTER_OAUTH_STATUS_KEY, OAUTH_STATUS_AUTHENTICATED
                     )
                     self.config.cparser.setValue(
-                        "twitchbot/broadcaster_username", validation.get("login", "")
+                        BROADCASTER_USERNAME_KEY, validation.get("login", "")
                     )
                     self.config.cparser.sync()
                     return True
@@ -140,12 +147,12 @@ class TwitchLogin:
                     oauth_client.access_token = new_access_token
                     oauth_client.refresh_token = new_refresh_token or refresh_token
                     self.config.cparser.setValue(
-                        "twitchbot/broadcaster_oauth_status", "authenticated"
+                        BROADCASTER_OAUTH_STATUS_KEY, OAUTH_STATUS_AUTHENTICATED
                     )
                     new_validation = await oauth_client.validate_token_async(new_access_token)
                     if new_validation:
                         self.config.cparser.setValue(
-                            "twitchbot/broadcaster_username", new_validation.get("login", "")
+                            BROADCASTER_USERNAME_KEY, new_validation.get("login", "")
                         )
                     self.config.cparser.sync()
 
@@ -156,7 +163,7 @@ class TwitchLogin:
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Token refresh failed: %s", error)
 
-        self.config.cparser.setValue("twitchbot/broadcaster_oauth_status", "expired")
+        self.config.cparser.setValue(BROADCASTER_OAUTH_STATUS_KEY, OAUTH_STATUS_EXPIRED)
         self.config.cparser.sync()
         return False
 
