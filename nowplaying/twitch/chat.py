@@ -51,6 +51,10 @@ import nowplaying.twitch.utils
 import nowplaying.utils
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.twitch.constants import (
+    CHAT_OAUTH_STATUS_KEY,
+    CHAT_USERNAME_KEY,
+    OAUTH_STATUS_AUTHENTICATED,
+    OAUTH_STATUS_EXPIRED,
     SPLITMESSAGETEXT,
     TWITCH_MESSAGE_LIMIT,
     TWITCHBOT_CHECKBOXES,
@@ -136,11 +140,14 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
             valid = await validate_token(token)
             if valid.get("status") == 401:
                 logging.debug("Chat token expired, attempting refresh")
+                self.config.cparser.setValue(CHAT_OAUTH_STATUS_KEY, OAUTH_STATUS_EXPIRED)
                 return await self._refresh_chat_token()
         except Exception as error:  # pylint: disable=broad-except
             logging.error("cannot validate chat token: %s", error)
             return None
 
+        self.config.cparser.setValue(CHAT_OAUTH_STATUS_KEY, OAUTH_STATUS_AUTHENTICATED)
+        self.config.cparser.setValue(CHAT_USERNAME_KEY, valid.get("login", ""))
         return token
 
     def _clean_token_format(self, token: str) -> str:
@@ -258,8 +265,10 @@ class TwitchChat:  # pylint: disable=too-many-instance-attributes
             try:
                 if await self._authenticate_and_setup_chat(twitchlogin):
                     loggedin = True
+                    self.config.cparser.sync()
                     await self._start_chat_monitoring()
                 else:
+                    self.config.cparser.sync()
                     await asyncio.sleep(60)
             except (aiohttp.client_exceptions.ClientConnectorError, socket.gaierror) as error:
                 logging.error(error)

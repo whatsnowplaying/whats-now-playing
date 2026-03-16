@@ -9,6 +9,14 @@ from PySide6.QtWidgets import QApplication, QMessageBox  # pylint: disable=no-na
 
 import nowplaying.twitch.oauth2
 from nowplaying.exceptions import PluginVerifyError
+from nowplaying.twitch.constants import (
+    BROADCASTER_OAUTH_STATUS_KEY,
+    BROADCASTER_USERNAME_KEY,
+    CHAT_OAUTH_STATUS_KEY,
+    CHAT_USERNAME_KEY,
+    OAUTH_STATUS_AUTHENTICATED,
+    OAUTH_STATUS_EXPIRED,
+)
 
 
 class TwitchSettings:
@@ -43,7 +51,6 @@ class TwitchSettings:
 
         # Initialize single OAuth2 handler
         self.oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)
-        self._show_stored_token_status()
 
         # Start periodic status updates for real-time refresh detection
         # Stop any existing timer first to prevent multiple timers
@@ -97,81 +104,71 @@ class TwitchSettings:
         if not widget.channel_lineedit.text().strip():
             raise PluginVerifyError("Twitch Channel is required")
 
+    @staticmethod
+    def _token_label(status: str, name: str, has_token: bool = False) -> str:
+        """Return a display label for a single token status."""
+        if status == OAUTH_STATUS_AUTHENTICATED:
+            return f"{name} authenticated"
+        if status == OAUTH_STATUS_EXPIRED:
+            return f"{name} token expired"
+        if has_token:
+            return f"{name} connecting..."
+        return ""
+
+    def _read_token_statuses(self) -> tuple[str, str, bool, bool]:
+        """Read broadcaster and chat token statuses and token presence from cparser."""
+        cparser = self.oauth.config.cparser
+        broadcaster = str(cparser.value(BROADCASTER_OAUTH_STATUS_KEY, defaultValue=""))
+        chat = str(cparser.value(CHAT_OAUTH_STATUS_KEY, defaultValue=""))
+        has_broadcaster = bool(cparser.value("twitchbot/accesstoken", defaultValue=""))
+        has_chat = bool(cparser.value("twitchbot/chattoken", defaultValue=""))
+        return broadcaster, chat, has_broadcaster, has_chat
+
     def update_token_name(self):
-        """update the token name in the UI based on both token types"""
-        if not self.oauth:
+        """update the account name display based on stored usernames"""
+        if not self.oauth or not self.oauth.config:
             self.widget.chatbot_username_line.setText("Not authenticated")
             return
 
-        # Get OAuth status from service
-        status = self.oauth.get_oauth_status()
+        cparser = self.oauth.config.cparser
+        broadcaster_name = str(cparser.value(BROADCASTER_USERNAME_KEY, defaultValue=""))
+        chat_name = str(cparser.value(CHAT_USERNAME_KEY, defaultValue=""))
+        _, _, has_broadcaster, has_chat = self._read_token_statuses()
 
-        broadcaster_username = status["broadcaster_username"]
-        chat_username = status["chat_username"]
-        broadcaster_valid = status["broadcaster_valid"]
-        chat_valid = status["chat_valid"]
+        parts = []
+        if broadcaster_name:
+            parts.append(f"{broadcaster_name} (Broadcaster)")
+        elif has_broadcaster:
+            parts.append("Broadcaster connecting...")
+        if chat_name:
+            parts.append(f"{chat_name} (Chat Bot)")
+        elif has_chat:
+            parts.append("Chat Bot connecting...")
 
-        # Display combined status showing both tokens
-        if broadcaster_valid and chat_valid:
-            # Both tokens present
-            self.widget.chatbot_username_line.setText(
-                f"🎥 {broadcaster_username} (Broadcaster) | 💬 {chat_username} (Chat Bot)"
-            )
-        elif broadcaster_valid:
-            # Only broadcaster token
-            self.widget.chatbot_username_line.setText(
-                f"🎥 {broadcaster_username} (Broadcaster, also for chat)"
-            )
-        elif chat_valid:
-            # Only chat token (unusual but possible)
-            self.widget.chatbot_username_line.setText(
-                f"💬 {chat_username} (Chat Bot, no broadcaster auth)"
-            )
-        else:
-            # No tokens
-            self.widget.chatbot_username_line.setText("Not authenticated")
-
-    def _show_stored_token_status(self) -> None:
-        """Show auth status from stored tokens only — no network calls."""
-        if not self.oauth or not self.widget:
-            return
-        access_token, _ = self.oauth.get_stored_tokens()
-        chat_token = (
-            self.oauth.config.cparser.value("twitchbot/chattoken") if self.oauth.config else None
-        )
-        if access_token or chat_token:
-            self.widget.oauth_status_label.setText("Authenticated (not verified)")
-            self.widget.chatbot_username_line.setText("Authenticated")
-        else:
-            self.widget.oauth_status_label.setText("Not authenticated")
-            self.widget.chatbot_username_line.setText("Not authenticated")
+        self.widget.chatbot_username_line.setText(" | ".join(parts) or "Not authenticated")
 
     def update_oauth_status(self):
-        """update the OAuth status display"""
-        if not self.oauth or not self.widget:
+        """update the OAuth status display from cached cparser values"""
+        if not self.oauth or not self.oauth.config or not self.widget:
             return
 
-        # Update OAuth client with current form values
         self.oauth.client_id = self.widget.clientid_lineedit.text().strip()
         self.oauth.client_secret = self.widget.secret_lineedit.text().strip()
 
-        # Check if configuration is complete
         if not self.oauth.is_configuration_complete():
             self.widget.oauth_status_label.setText("Configuration incomplete")
-            # Disable copy buttons if configuration is incomplete
             self._set_auth_buttons_enabled(False)
             return
 
-        # Get OAuth status from service
-        status = self.oauth.get_oauth_status()
+        broadcaster, chat, has_broadcaster, has_chat = self._read_token_statuses()
+        parts = [
+            self._token_label(broadcaster, "Broadcaster", has_broadcaster),
+            self._token_label(chat, "Chat Bot", has_chat),
+        ]
+        text = " | ".join(p for p in parts if p) or "Not authenticated"
+        self.widget.oauth_status_label.setText(text)
 
-        # Update button states with status-aware messaging
-        self._update_auth_button_states(status)
-
-        # Update status label
-        self.widget.oauth_status_label.setText(status["status_text"])
-
-        # Update account name display
+        self._update_auth_button_states(broadcaster, chat)
         self.update_token_name()
 
     def _set_auth_buttons_enabled(self, enabled: bool) -> None:
@@ -179,19 +176,16 @@ class TwitchSettings:
         self.widget.copy_broadcaster_auth_button.setEnabled(enabled)
         self.widget.copy_chat_auth_button.setEnabled(enabled)
 
-    def _update_auth_button_states(self, status: dict) -> None:
-        """Update authentication button text and states based on OAuth status"""
-        broadcaster_valid = status["broadcaster_valid"]
-        chat_valid = status["chat_valid"]
+    def _update_auth_button_states(self, broadcaster: str, chat: str) -> None:
+        """Update authentication button text and states"""
 
-        # Update button states with status-aware messaging
-        if broadcaster_valid:
+        if broadcaster == OAUTH_STATUS_AUTHENTICATED:
             self.widget.copy_broadcaster_auth_button.setText("✅ Broadcaster Authenticated")
         else:
             self.widget.copy_broadcaster_auth_button.setText("Copy Broadcaster Auth URL")
         self.widget.copy_broadcaster_auth_button.setEnabled(True)
 
-        if chat_valid:
+        if chat == OAUTH_STATUS_AUTHENTICATED:
             self.widget.copy_chat_auth_button.setText("✅ Chat Bot Authenticated")
         else:
             self.widget.copy_chat_auth_button.setText("Copy Chat Bot Auth URL")

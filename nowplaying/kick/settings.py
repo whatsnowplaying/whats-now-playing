@@ -12,6 +12,12 @@ import nowplaying.config
 import nowplaying.kick.oauth2
 import nowplaying.kick.utils
 from nowplaying.exceptions import PluginVerifyError
+from nowplaying.kick.constants import (
+    ACCESS_TOKEN_KEY,
+    OAUTH_STATUS_AUTHENTICATED,
+    OAUTH_STATUS_EXPIRED,
+    OAUTH_STATUS_KEY,
+)
 
 
 class KickSettings:
@@ -50,7 +56,6 @@ class KickSettings:
 
         # Initialize OAuth2 handler
         self.oauth = nowplaying.kick.oauth2.KickOAuth2(config)
-        self._show_stored_token_status()
         # Timer disabled to prevent blocking main thread
         # self.start_status_timer()
 
@@ -157,51 +162,36 @@ class KickSettings:
         """Clean up resources when settings UI is closed"""
         self.stop_status_timer()
 
-    def _show_stored_token_status(self) -> None:
-        """Show auth status from stored tokens only — no network calls."""
-        if not self.oauth or not self.widget:
-            return
-        access_token, _ = self.oauth.get_stored_tokens()
-        if access_token:
-            self.widget.oauth_status_label.setText("Authenticated (not verified)")
-            self.widget.authenticate_button.setText("Re-authenticate")
-        else:
-            self.widget.oauth_status_label.setText("Not authenticated")
-            self.widget.authenticate_button.setText("Authenticate with Kick")
-
     def update_oauth_status(self) -> None:
-        """update the OAuth status display"""
-        if not self.oauth or not self.widget:
+        """update the OAuth status display from cached cparser values"""
+        if not self.oauth or not self.oauth.config or not self.widget:
             return
 
-        # Reset button state
-        self.widget.authenticate_button.setText("Authenticate with Kick")
-        self.widget.authenticate_button.setEnabled(True)
-
-        # Check if we have valid configuration
         client_id = self.widget.clientid_lineedit.text().strip()
         client_secret = self.widget.secret_lineedit.text().strip()
-        # Note: redirect URI is always valid since it's auto-generated
-
         if not client_id or not client_secret:
             self.widget.oauth_status_label.setText("Configuration incomplete")
             return
 
-        # Check for stored tokens and validate them
-        access_token, refresh_token = self.oauth.get_stored_tokens()
-
-        if access_token:
-            # Validate token synchronously like Twitch does
-            if nowplaying.kick.oauth2.KickOAuth2.validate_token_sync(access_token):
-                self.widget.oauth_status_label.setText("Authenticated")
-                self.widget.authenticate_button.setText("Re-authenticate")
-            elif refresh_token:
-                self.widget.oauth_status_label.setText("Refreshing expired token...")
-            else:
-                self.widget.oauth_status_label.setText("Token expired - re-authentication needed")
-                self.widget.authenticate_button.setText("Authenticate")
+        cparser = self.oauth.config.cparser
+        status = str(cparser.value(OAUTH_STATUS_KEY, defaultValue=""))
+        has_token = bool(cparser.value(ACCESS_TOKEN_KEY, defaultValue=""))
+        if status == OAUTH_STATUS_AUTHENTICATED:
+            self.widget.oauth_status_label.setText("Authenticated")
+            self.widget.authenticate_button.setText("Re-authenticate")
+            self.widget.authenticate_button.setEnabled(True)
+        elif status == OAUTH_STATUS_EXPIRED:
+            self.widget.oauth_status_label.setText("Token expired — re-authenticate")
+            self.widget.authenticate_button.setText("Authenticate with Kick")
+            self.widget.authenticate_button.setEnabled(True)
+        elif has_token:
+            self.widget.oauth_status_label.setText("Connecting...")
+            self.widget.authenticate_button.setText("Connecting...")
+            self.widget.authenticate_button.setEnabled(False)
         else:
             self.widget.oauth_status_label.setText("Not authenticated")
+            self.widget.authenticate_button.setText("Authenticate with Kick")
+            self.widget.authenticate_button.setEnabled(True)
 
     def clear_authentication(self) -> None:
         """clear stored authentication tokens"""

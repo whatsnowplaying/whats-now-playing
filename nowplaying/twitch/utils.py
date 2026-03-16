@@ -9,7 +9,14 @@ from twitchAPI.twitch import Twitch
 
 import nowplaying.twitch.oauth2
 import nowplaying.utils
-from nowplaying.twitch.constants import BROADCASTER_AUTH_SCOPES, BROADCASTER_SCOPE_STRINGS
+from nowplaying.twitch.constants import (
+    BROADCASTER_AUTH_SCOPES,
+    BROADCASTER_OAUTH_STATUS_KEY,
+    BROADCASTER_SCOPE_STRINGS,
+    BROADCASTER_USERNAME_KEY,
+    OAUTH_STATUS_AUTHENTICATED,
+    OAUTH_STATUS_EXPIRED,
+)
 
 
 async def get_user_image(
@@ -114,6 +121,13 @@ class TwitchLogin:
                     oauth_client.access_token = access_token
                     oauth_client.refresh_token = refresh_token
                     logging.debug("Existing Twitch token is valid")
+                    self.config.cparser.setValue(
+                        BROADCASTER_OAUTH_STATUS_KEY, OAUTH_STATUS_AUTHENTICATED
+                    )
+                    self.config.cparser.setValue(
+                        BROADCASTER_USERNAME_KEY, validation.get("login", "")
+                    )
+                    self.config.cparser.sync()
                     return True
                 logging.debug("Stored access token is invalid")
 
@@ -132,6 +146,15 @@ class TwitchLogin:
                     self.config.save()
                     oauth_client.access_token = new_access_token
                     oauth_client.refresh_token = new_refresh_token or refresh_token
+                    self.config.cparser.setValue(
+                        BROADCASTER_OAUTH_STATUS_KEY, OAUTH_STATUS_AUTHENTICATED
+                    )
+                    new_validation = await oauth_client.validate_token_async(new_access_token)
+                    if new_validation:
+                        self.config.cparser.setValue(
+                            BROADCASTER_USERNAME_KEY, new_validation.get("login", "")
+                        )
+                    self.config.cparser.sync()
 
                 logging.debug("Twitch token refreshed successfully")
                 return True
@@ -140,6 +163,8 @@ class TwitchLogin:
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Token refresh failed: %s", error)
 
+        self.config.cparser.setValue(BROADCASTER_OAUTH_STATUS_KEY, OAUTH_STATUS_EXPIRED)
+        self.config.cparser.sync()
         return False
 
     async def initiate_oauth_flow(self):

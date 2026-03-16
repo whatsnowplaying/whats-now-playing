@@ -147,7 +147,10 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def _show_settings(self) -> None:
         """Show settings window and bring it to the front."""
+        if not self.settingswindow:
+            return
         self.config.get()
+        self.settingswindow.update_all_oauth_status()
         self.settingswindow.show()
         if self.settingswindow.qtui:
             self.settingswindow.qtui.raise_()
@@ -222,7 +225,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         # Settings and process startup
         self._update_startup_progress("Initializing settings...")
-        self.settingswindow.post_tray_init()
+        if self.settingswindow:
+            self.settingswindow.post_tray_init()
 
         self._update_startup_progress("Starting processes...")
         self.subprocesses.start_all_processes(startup_window=self.startup_window)

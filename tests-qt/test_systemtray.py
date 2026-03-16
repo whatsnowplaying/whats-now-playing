@@ -127,6 +127,9 @@ class MockSettingsUI:
     def setFocus(self):  # pylint: disable=invalid-name
         """Set focus to settings window"""
 
+    def update_all_oauth_status(self):
+        """Update OAuth status displays"""
+
     def post_tray_init(self):
         """Post tray initialization"""
 
