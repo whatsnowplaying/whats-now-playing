@@ -40,7 +40,7 @@ LASTANNOUNCED: dict[str, str | None] = {"artist": None, "title": None}
 class _VacuumThread(QThread):  # pylint: disable=too-few-public-methods
     """Background thread for database vacuum operations on startup."""
 
-    def run(self) -> None:
+    def run(self) -> None:  # pylint: disable=no-self-use
         """Run vacuum operations on API cache and guess game databases."""
         logging.debug("Starting background database vacuum")
         try:
