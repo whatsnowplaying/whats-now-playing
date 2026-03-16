@@ -114,6 +114,13 @@ class TwitchLogin:
                     oauth_client.access_token = access_token
                     oauth_client.refresh_token = refresh_token
                     logging.debug("Existing Twitch token is valid")
+                    self.config.cparser.setValue(
+                        "twitchbot/broadcaster_oauth_status", "authenticated"
+                    )
+                    self.config.cparser.setValue(
+                        "twitchbot/broadcaster_username", validation.get("login", "")
+                    )
+                    self.config.cparser.sync()
                     return True
                 logging.debug("Stored access token is invalid")
 
@@ -132,6 +139,15 @@ class TwitchLogin:
                     self.config.save()
                     oauth_client.access_token = new_access_token
                     oauth_client.refresh_token = new_refresh_token or refresh_token
+                    self.config.cparser.setValue(
+                        "twitchbot/broadcaster_oauth_status", "authenticated"
+                    )
+                    new_validation = await oauth_client.validate_token_async(new_access_token)
+                    if new_validation:
+                        self.config.cparser.setValue(
+                            "twitchbot/broadcaster_username", new_validation.get("login", "")
+                        )
+                    self.config.cparser.sync()
 
                 logging.debug("Twitch token refreshed successfully")
                 return True
@@ -140,6 +156,8 @@ class TwitchLogin:
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Token refresh failed: %s", error)
 
+        self.config.cparser.setValue("twitchbot/broadcaster_oauth_status", "expired")
+        self.config.cparser.sync()
         return False
 
     async def initiate_oauth_flow(self):

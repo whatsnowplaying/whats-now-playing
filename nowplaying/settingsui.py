@@ -120,24 +120,13 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             )
 
             # Validate stored OAuth2 tokens and update UI status
-            self._validate_all_oauth_tokens()
+            self._update_all_oauth_status()
 
-    def _validate_all_oauth_tokens(self):
-        """Validate all stored OAuth2 tokens and update UI status"""
-        try:
-            # Validate Twitch OAuth2 tokens (broadcaster + chat)
-            if "twitch" in self.settingsclasses:
-                twitch_settings = self.settingsclasses["twitch"]
-                twitch_settings.update_oauth_status()
-
-            # Validate Kick OAuth2 tokens
-            if "kick" in self.settingsclasses:
-                kick_settings = self.settingsclasses["kick"]
-                kick_settings.update_oauth_status()
-
-            logging.debug("OAuth2 token validation completed during settings UI initialization")
-        except Exception as error:  # pylint: disable=broad-except
-            logging.error("Error during OAuth2 token validation: %s", error)
+    def _update_all_oauth_status(self):
+        """Update OAuth status displays from cached cparser values"""
+        for service in ("twitch", "kick"):
+            if service in self.settingsclasses:
+                self.settingsclasses[service].update_oauth_status()
 
     def _setup_widgets(self, uiname):
         self.widgets[uiname] = load_widget_ui(self.config, f"{uiname}")
@@ -358,8 +347,9 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
                 self.qtui.settings_stack.setCurrentIndex(stack_index)
 
         # Trigger on-demand token validation when navigating to auth-sensitive panels
-        if mapped_value in ("twitch", "kick") and mapped_value in self.settingsclasses:
-            self.settingsclasses[mapped_value].update_oauth_status()
+        for service in ("twitch", "kick"):
+            if mapped_value == f"{service}_group" and service in self.settingsclasses:
+                self.settingsclasses[service].update_oauth_status()
 
     def _connect_destroy_widget(self, qobject):
         qobject.startover_button.clicked.connect(self.fresh_start)

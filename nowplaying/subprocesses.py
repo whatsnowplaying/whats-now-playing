@@ -41,6 +41,17 @@ class SubprocessManager:
     ):
         """start our various threads"""
 
+        # Clear OAuth status so subprocesses write fresh values after authenticating
+        for key in (
+            "twitchbot/broadcaster_oauth_status",
+            "twitchbot/broadcaster_username",
+            "twitchbot/chat_oauth_status",
+            "twitchbot/chat_username",
+            "kick/oauth_status",
+        ):
+            self.config.cparser.remove(key)
+        self.config.cparser.sync()
+
         for key, module in self.processes.items():
             if startup_window:
                 startup_window.update_progress(f"Starting {key}...")

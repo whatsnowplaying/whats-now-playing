@@ -44,7 +44,15 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
                 self.loop = asyncio.get_running_loop()
             except RuntimeError:
                 self.loop = asyncio.new_event_loop()
+
+        # Pre-authenticate broadcaster token concurrently with startup delay
+        # so status is written before the chat task even starts
+        auth_task = self.loop.create_task(
+            self.twitchlogin.api_login(), name="twitch_broadcaster_auth"
+        )
         await asyncio.sleep(5)
+        await auth_task
+
         if self.chat:
             logging.info("Starting Twitch chat task")
             task = self.loop.create_task(self.chat.run_chat(self.twitchlogin), name="twitch_chat")
