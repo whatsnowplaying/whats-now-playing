@@ -2684,6 +2684,7 @@
 <li>Artist thumbnails</li>
 <li>Artist websites and social media links</li>
 <li>Artist biographies</li>
+<li>Album cover art</li>
 </ul>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <p>An API key from <a href="https://www.theaudiodb.com">TheAudioDB</a> is required. A free tier is available
@@ -2705,6 +2706,8 @@ a Patreon subscription.</p>
 <ul>
 <li><strong>Biography</strong> — artist background text</li>
 <li><strong>Banners</strong> — wide horizontal artist banner images</li>
+<li><strong>Cover Art</strong> — album artwork fetched by artist and album name. Skipped when cover art is already
+  embedded in the track file. Requires the track's album tag to be set.</li>
 <li><strong>Fanart</strong> — large background/fan art images</li>
 <li><strong>Logos</strong> — artist logo graphics</li>
 <li><strong>Thumbnails</strong> — artist photos and thumbnails</li>
