@@ -41,6 +41,28 @@ class ArtistExtrasPlugin(WNPBasePlugin):
 
     #### Utilities
 
+    def queue_artist_image(
+        self, identifier: str, imagetype: str, urls: list[str], imagecache: object
+    ) -> None:
+        """Queue artist image URLs into the image cache."""
+        imagecache.fill_queue(  # type: ignore[union-attr]
+            config=self.config,
+            identifier=identifier,
+            imagetype=imagetype,
+            srclocationlist=urls,
+        )
+
+    def queue_front_cover(
+        self, artist: str, album: str, cover_url: str, imagecache: object
+    ) -> None:
+        """Queue a cover art URL into the image cache for the given artist/album."""
+        imagecache.fill_queue(  # type: ignore[union-attr]
+            config=self.config,
+            identifier=f"{artist}_{album}",
+            imagetype="front_cover",
+            srclocationlist=[cover_url],
+        )
+
     def calculate_delay(self) -> float:
         """determine a reasonable, minimal delay"""
 

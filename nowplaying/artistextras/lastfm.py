@@ -60,13 +60,13 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
                     timeout=aiohttp.ClientTimeout(total=delay),
                 ) as response:
                     if response.status != 200:
-                        logging.error(
+                        logging.warning(
                             "Last.fm album HTTP error %s for %s/%s", response.status, artist, album
                         )
                         return None
                     data = await response.json()
                     if "error" in data:
-                        logging.info(
+                        logging.debug(
                             "Last.fm album: %s for %s/%s", data.get("message"), artist, album
                         )
                         return None
@@ -167,12 +167,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
             None,
         )
         if cover_url:
-            imagecache.fill_queue(
-                config=self.config,
-                identifier=f"{artist}_{album}",
-                imagetype="front_cover",
-                srclocationlist=[cover_url],
-            )
+            self.queue_front_cover(artist, album, cover_url, imagecache)
 
     async def download_async(
         self, metadata: TrackMetadata | None = None, imagecache: Any = None

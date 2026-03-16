@@ -238,11 +238,8 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         ):
             return
 
-        imagecache.fill_queue(
-            config=self.config,
-            identifier=metadata["imagecacheartist"],
-            imagetype=image_type,
-            srclocationlist=[artdata[source_key]],
+        self.queue_artist_image(
+            metadata["imagecacheartist"], image_type, [artdata[source_key]], imagecache
         )
 
     def _handle_fanart_data(
@@ -264,11 +261,8 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
 
             if not fanart_queued:
                 fanart_queued = True
-                imagecache.fill_queue(
-                    config=self.config,
-                    identifier=metadata["imagecacheartist"],
-                    imagetype="artistfanart",
-                    srclocationlist=[artdata[artstring]],
+                self.queue_artist_image(
+                    metadata["imagecacheartist"], "artistfanart", [artdata[artstring]], imagecache
                 )
 
     def _correct_artist_name(
@@ -319,12 +313,7 @@ class Plugin(nowplaying.artistextras.ArtistExtrasPlugin):
         for albuminfo in album_data["album"]:
             cover_url = albuminfo.get("strAlbumThumbHQ") or albuminfo.get("strAlbumThumb")
             if cover_url:
-                imagecache.fill_queue(
-                    config=self.config,
-                    identifier=f"{artist}_{album}",
-                    imagetype="front_cover",
-                    srclocationlist=[cover_url],
-                )
+                self.queue_front_cover(artist, album, cover_url, imagecache)
                 return
 
     async def artistdatafrommbid_async(
