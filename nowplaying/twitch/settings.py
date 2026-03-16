@@ -43,8 +43,7 @@ class TwitchSettings:
 
         # Initialize single OAuth2 handler
         self.oauth = nowplaying.twitch.oauth2.TwitchOAuth2(config)
-        self.update_oauth_status()
-        self.update_token_name()
+        self._show_stored_token_status()
 
         # Start periodic status updates for real-time refresh detection
         # Stop any existing timer first to prevent multiple timers
@@ -130,6 +129,21 @@ class TwitchSettings:
             )
         else:
             # No tokens
+            self.widget.chatbot_username_line.setText("Not authenticated")
+
+    def _show_stored_token_status(self) -> None:
+        """Show auth status from stored tokens only — no network calls."""
+        if not self.oauth or not self.widget:
+            return
+        access_token, _ = self.oauth.get_stored_tokens()
+        chat_token = (
+            self.oauth.config.cparser.value("twitchbot/chattoken") if self.oauth.config else None
+        )
+        if access_token or chat_token:
+            self.widget.oauth_status_label.setText("Authenticated (not verified)")
+            self.widget.chatbot_username_line.setText("Authenticated")
+        else:
+            self.widget.oauth_status_label.setText("Not authenticated")
             self.widget.chatbot_username_line.setText("Not authenticated")
 
     def update_oauth_status(self):

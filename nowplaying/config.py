@@ -415,11 +415,11 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
             return None
 
         for testdir in [
-            ConfigFile.BUNDLEDIR,
+            ConfigFile.BUNDLEDIR.joinpath("resources") / "ui",
             ConfigFile.BUNDLEDIR.joinpath("bin"),
-            ConfigFile.BUNDLEDIR.joinpath("resources"),
+            ConfigFile.BUNDLEDIR,
         ]:
-            testfile = testdir.joinpath("settings_ui.ui")
+            testfile = testdir.joinpath("settings.ui")
             if testfile.exists():
                 logging.debug("ui file at %s", testfile)
                 return testdir
