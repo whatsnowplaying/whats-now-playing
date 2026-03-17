@@ -3,11 +3,12 @@
 
 ## Version 5.1.0 - in development
 
+* macOS
+  * This is the last release with pre-built binaries for macOS 11 (Intel) and macOS 12 (Apple Silicon)
+
 * Major New Features
   * djay Pro
     * Added basic support for djay Pro
-  * Support Klipy as an alternative to the EOLing Tenor
-    * Klipy is preferred when both API keys are configured
   * Guess Game
     * Add a new Twitch chat-based guessing game for your audience
     * System tray toggle to enable or disable the game at runtime
@@ -19,6 +20,8 @@
     * Added support for Last.fm as a source for track metadata
 
 * Minor New Features
+  * Support Klipy as an alternative to the EOLing Tenor
+    * Klipy is preferred when both API keys are configured
   * Add support for autodiscovery using Bonjour/Zeroconf for Remote Output and for
     some upcoming feature support
   * Add a new /v1/status webserver endpoint
@@ -26,7 +29,7 @@
   * Direct link to your version's documentation from the menu bar/system tray
 
 * General Bug Fixes
-  * Major speed up of program launch
+  * Major speedup of program launch
   * Configuration files can now be exported and imported for portability across systems
     * The exporting machine's home directory is recorded in the config file so paths are
       automatically remapped to the importing machine's home directory
@@ -38,7 +41,7 @@
     * Linux users now receive correct upgrade notifications
   * Found an issue where in some cases changed templates would always trigger an 'update'
     on program launch despite the `.new` file actually being correct.
-  * Webserver template assets (including vendor libraries and guessing game files) now load correctly
+  * Web server template assets (including vendor libraries and guessing game files) now load correctly
   * Fixed an issue where Qt SVG support was sometimes unavailable on Windows
   * Respinning a request that doesn't have a playlist assigned no longer crashes parts of the system
   * Major documentation overhaul
