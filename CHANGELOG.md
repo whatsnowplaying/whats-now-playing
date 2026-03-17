@@ -57,9 +57,6 @@
 * Denon
   * Fixed a crash on certain network environments during device discovery
 
-* Icecast
-  * docs had the old images
-
 * Kick and Twitch
   * Twitch accounts will now be automatically linked to your Charts profile at startup
     * A warning is shown if the account is already linked to a different Charts profile
