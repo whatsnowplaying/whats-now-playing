@@ -127,7 +127,7 @@ class ImageCache:
         """create the database"""
 
         if initialize and self.databasefile.exists():
-            self.databasefile.unlink()
+            nowplaying.utils.sqlite.retry_file_operation(self.databasefile.unlink)
 
         self.attempt_v1tov2_upgrade()
 
@@ -638,8 +638,7 @@ VALUES (?,?,?);
 
         cachekeys = {}
 
-        try:
-            logging.debug("Starting image cache verification")
+        async def _do_verify():
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 sql = "SELECT cachekey, srclocation FROM identifiersha"
@@ -649,6 +648,10 @@ VALUES (?,?,?);
                         if srclocation == "STOPWNP":
                             continue
                         cachekeys[row["cachekey"]] = srclocation
+
+        try:
+            logging.debug("Starting image cache verification")
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_verify)
         except Exception as err:  # pylint: disable=broad-except
             logging.exception("Error: %s", err)
 

@@ -414,3 +414,40 @@ async def test_trackpoll_start_artistfanartpool(trackpollbootstrap):  # pylint: 
 
     finally:
         await trackpoll.stop()
+
+
+@pytest.mark.parametrize(
+    "fill_duration,configured_delay,expected",
+    [
+        # Fast fill: final sleep = configured_delay / 2 (full grace period)
+        (0.0, 1.0, 0.5),
+        (0.0, 2.0, 1.0),
+        (0.0, 0.5, 0.25),
+        # Fill equal to half delay: grace period unchanged
+        (0.5, 1.0, 0.5),
+        (1.0, 2.0, 1.0),
+        # Fill equals configured delay: no reduction yet
+        (1.0, 1.0, 0.5),
+        (2.0, 2.0, 1.0),
+        # Fill slightly exceeds configured: grace period starts reducing
+        (1.2, 1.0, 0.3),
+        (2.4, 2.0, 0.6),
+        # Fill exceeds configured by half: grace period = 0
+        (1.5, 1.0, 0.0),
+        (3.0, 2.0, 0.0),
+        # Fill far exceeds configured: clamped to 0
+        (5.0, 1.0, 0.0),
+        # Realistic DJ delay of 10s — old hardcoded 0.5 would be wildly wrong here
+        (0.5, 10.0, 5.0),  # fast fill: full 5s grace period
+        (2.0, 10.0, 5.0),  # typical metadata fetch: still full grace period
+        (5.0, 10.0, 5.0),  # slow fetch, still within configured: full grace period
+        (10.0, 10.0, 5.0),  # fill equals configured: grace period unaffected
+        (12.0, 10.0, 3.0),  # fill exceeds by 2s: grace reduced to 3s
+        (15.0, 10.0, 0.0),  # fill exceeds by 5s: grace period exhausted
+        (20.0, 10.0, 0.0),  # fill far exceeds: clamped to 0
+    ],
+)
+def test_gettrack_final_sleep_formula(fill_duration, configured_delay, expected):
+    """final sleep before checkagain must scale with configured_delay"""
+    sleep_time = max(0.0, configured_delay / 2 - max(0.0, fill_duration - configured_delay))
+    assert abs(sleep_time - expected) < 1e-9

@@ -436,7 +436,9 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             await self._process_imagecache()
             self._start_artistfanartpool()
             # Reduce sleep by any remaining fill duration beyond the configured delay
-            sleep_time = max(0.0, 0.5 - max(0.0, fill_duration - configured_delay))
+            sleep_time = max(
+                0.0, configured_delay / 2 - max(0.0, fill_duration - configured_delay)
+            )
             await asyncio.sleep(sleep_time)
         else:
             # cache was already warmed so just go for it
