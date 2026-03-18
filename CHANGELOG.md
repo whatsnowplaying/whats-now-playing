@@ -3,54 +3,33 @@
 
 ## Version 5.1.0 - in development
 
-* New Features
+* macOS
+  * This is the last release with pre-built binaries for macOS 11 (Intel) and macOS 12 (Apple Silicon)
+
+* Major New Features
+  * djay Pro
+    * Added basic support for djay Pro
+  * Guess Game
+    * Add a new Twitch chat-based guessing game for your audience
+    * System tray toggle to enable or disable the game at runtime
+    * Viewers guess the current track via configurable Twitch chat commands
+    * Leaderboards, scoring, and personal stats available via chat
+    * Real-time OBS overlay support to display game state on stream
+    * Support for seeing the current game and leaderboards from the whatsnowplaying.com website
+  * Last.fm
+    * Added support for Last.fm as a source for track metadata
+
+* Minor New Features
   * Support Klipy as an alternative to the EOLing Tenor
     * Klipy is preferred when both API keys are configured
   * Add support for autodiscovery using Bonjour/Zeroconf for Remote Output and for
     some upcoming feature support
   * Add a new /v1/status webserver endpoint
-  * Twitch accounts will now be automatically linked to your Charts profile at startup
-    * A warning is shown if the account is already linked to a different Charts profile
   * Requests now support reporting 'for @user'
-  * Artist biographies are now deduplicated per session. The same bio will not be shown twice
-    during a stream. This can be disabled in settings.
   * Direct link to your version's documentation from the menu bar/system tray
 
-* Guess Game
-  * Add a new Twitch chat-based guessing game for your audience
-  * System tray toggle to enable or disable the game at runtime
-  * Viewers guess the current track via configurable Twitch chat commands
-  * Leaderboards, scoring, and personal stats available via chat
-  * Real-time OBS overlay support to display game state on stream
-  * Support for seeing the current game and leaderboards from the whatsnowplaying.com website
-
-* Denon
-  * Fixed a crash on certain network environments during device discovery
-
-* djay Pro
-  * Added basic support for djay Pro
-
-* Icecast
-  * docs had the old images
-
-* Serato
-  * Add artist-based library query support for Serato 4
-    * Search entire library or selected playlists/crates for artist tracks
-    * Enhanced crate search and metadata querying capabilities
-  * Track filename resolution now works correctly using location ID and portable ID mapping
-  * All Serato library database files are now auto-discovered. Manual path configuration
-    is no longer needed
-  * Changes to better detect when the latest track is playing
-
-* Traktor
-  * partially corrupted XML library files no longer cause a complete import failure;
-    parsing continues with whatever data was successfully read
-
-* VirtualDJ
-  * partially corrupted XML library files no longer cause a complete import failure;
-    parsing continues with whatever data was successfully read
-
 * General Bug Fixes
+  * Major speedup of program launch
   * Configuration files can now be exported and imported for portability across systems
     * The exporting machine's home directory is recorded in the config file so paths are
       automatically remapped to the importing machine's home directory
@@ -62,12 +41,54 @@
     * Linux users now receive correct upgrade notifications
   * Found an issue where in some cases changed templates would always trigger an 'update'
     on program launch despite the `.new` file actually being correct.
-  * Token refreshes for Kick and Twitch would sometimes get lost
-  * Webserver template assets (including vendor libraries and guessing game files) now load correctly
+  * Web server template assets (including vendor libraries and guessing game files) now load correctly
   * Fixed an issue where Qt SVG support was sometimes unavailable on Windows
   * Respinning a request that doesn't have a playlist assigned no longer crashes parts of the system
   * Major documentation overhaul
   * Minor graphics cleanup
+
+* Artist Extras
+  * Artist biographies are now deduplicated per session. The same bio will not be shown twice
+    during a stream. This can be disabled in settings.
+  * Last.fm and TheAudioDB can now be used for album art lookup
+  * TheAudioDB basic features no longer require an API key
+
+* Discord
+  * Bot Mode and Rich Presence are now independently toggled
+  * Bot Mode can now post to a channel with cover art
+
+* Denon
+  * Fixed a crash on certain network environments during device discovery
+
+* Kick and Twitch
+  * Twitch accounts will now be automatically linked to your Charts profile at startup
+    * A warning is shown if the account is already linked to a different Charts profile
+  * Token refreshes for Kick and Twitch would sometimes get lost
+  * Twitch and Kick OAuth authentication status is now more accurately reflected in the Settings panel
+    * The panel now shows the actual account name(s) associated with authenticated tokens
+    * Stale authentication state from a previous session is cleared on startup
+
+* Serato
+  * Add artist-based library query support for Serato 4
+    * Search entire library or selected playlists/crates for artist tracks
+    * Enhanced crate search and metadata querying capabilities
+  * Track filename resolution now works correctly using location ID and portable ID mapping
+  * All Serato library database files are now auto-discovered. Manual path configuration
+    is no longer needed
+  * Changes to better detect when the latest track is playing
+  * Better support for tracks from streaming services
+  * Optionally disable tracking of played status
+
+* Traktor
+  * partially corrupted XML library files no longer cause a complete import failure;
+    parsing continues with whatever data was successfully read
+
+* VirtualDJ
+  * partially corrupted XML library files no longer cause a complete import failure;
+    parsing continues with whatever data was successfully read
+
+* Linux
+  * Linux binary builds are now available
 
 * Developer Stuff
   * Dependency updates
