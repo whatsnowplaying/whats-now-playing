@@ -32,6 +32,16 @@ from nowplaying.types import TrackMetadata
 COREMETA = ["artist", "filename", "title"]
 
 
+def compute_final_sleep(fill_duration: float, configured_delay: float) -> float:
+    """Compute grace-period sleep before checkagain.
+
+    Gives up to configured_delay/2 of extra sleep, reduced by however much
+    fill_duration exceeded configured_delay.  Ensures the total inter-track
+    gap scales correctly with the user's configured delay.
+    """
+    return max(0.0, configured_delay / 2 - max(0.0, fill_duration - configured_delay))
+
+
 class TrackPoll:  # pylint: disable=too-many-instance-attributes
     """
     Do the heavy lifting of reading from the DJ software
@@ -436,10 +446,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             await self._process_imagecache()
             self._start_artistfanartpool()
             # Reduce sleep by any remaining fill duration beyond the configured delay
-            sleep_time = max(
-                0.0, configured_delay / 2 - max(0.0, fill_duration - configured_delay)
-            )
-            await asyncio.sleep(sleep_time)
+            await asyncio.sleep(compute_final_sleep(fill_duration, configured_delay))
         else:
             # cache was already warmed so just go for it
             await self._half_delay_write(fill_duration)  # Use fill duration for first delay

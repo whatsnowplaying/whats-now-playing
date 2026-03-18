@@ -449,5 +449,7 @@ async def test_trackpoll_start_artistfanartpool(trackpollbootstrap):  # pylint: 
 )
 def test_gettrack_final_sleep_formula(fill_duration, configured_delay, expected):
     """final sleep before checkagain must scale with configured_delay"""
-    sleep_time = max(0.0, configured_delay / 2 - max(0.0, fill_duration - configured_delay))
+    sleep_time = nowplaying.processes.trackpoll.compute_final_sleep(
+        fill_duration, configured_delay
+    )
     assert abs(sleep_time - expected) < 1e-9

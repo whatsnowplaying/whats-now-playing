@@ -652,8 +652,10 @@ VALUES (?,?,?);
         try:
             logging.debug("Starting image cache verification")
             await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_verify)
+        except sqlite3.Error as err:
+            logging.exception("SQLite error during cache verification: %s", err)
         except Exception as err:  # pylint: disable=broad-except
-            logging.exception("Error: %s", err)
+            logging.exception("Unexpected error during cache verification: %s", err)
 
         startsize = len(cachekeys)
         if not startsize:
