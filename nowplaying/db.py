@@ -199,38 +199,40 @@ class MetadataDB:
         if not self.databasefile.exists():
             self.setupsql()
 
-        async with aiosqlite.connect(self.databasefile, timeout=10) as connection:
-            # do not want to modify the original dictionary
-            # otherwise Bad Things(tm) will happen
-            mdcopy: dict[str, Any] = copy.deepcopy(dict(metadata))
-            mdcopy["artistfanartraw"] = None
+        # do not want to modify the original dictionary
+        # otherwise Bad Things(tm) will happen
+        mdcopy: dict[str, Any] = copy.deepcopy(dict(metadata))
+        mdcopy["artistfanartraw"] = None
 
-            # toss any keys we do not care about
-            mdcopy = filterkeys(mdcopy)
+        # toss any keys we do not care about
+        mdcopy = filterkeys(mdcopy)
 
-            cursor = await connection.cursor()
+        logging.debug("Adding record with %s/%s", mdcopy["artist"], mdcopy["title"])
 
-            logging.debug("Adding record with %s/%s", mdcopy["artist"], mdcopy["title"])
+        for key in METADATABLOBLIST:
+            if key not in mdcopy:
+                mdcopy[key] = None
 
-            for key in METADATABLOBLIST:
-                if key not in mdcopy:
-                    mdcopy[key] = None
+        for data in mdcopy:
+            if isinstance(mdcopy[data], list):
+                mdcopy[data] = SPLITSTR.join(mdcopy[data])
+            elif isinstance(mdcopy[data], bool):
+                mdcopy[data] = "true" if mdcopy[data] else "false"
+            elif isinstance(mdcopy[data], str) and len(mdcopy[data]) == 0:
+                mdcopy[data] = None
 
-            for data in mdcopy:
-                if isinstance(mdcopy[data], list):
-                    mdcopy[data] = SPLITSTR.join(mdcopy[data])
-                elif isinstance(mdcopy[data], bool):
-                    mdcopy[data] = "true" if mdcopy[data] else "false"
-                elif isinstance(mdcopy[data], str) and len(mdcopy[data]) == 0:
-                    mdcopy[data] = None
+        sql = "INSERT INTO currentmeta ("
+        sql += ", ".join(mdcopy.keys()) + ") VALUES ("
+        sql += "?," * (len(mdcopy.keys()) - 1) + "?)"
+        datatuple = tuple(list(mdcopy.values()))
 
-            sql = "INSERT INTO currentmeta ("
-            sql += ", ".join(mdcopy.keys()) + ") VALUES ("
-            sql += "?," * (len(mdcopy.keys()) - 1) + "?)"
+        async def _do_write() -> None:
+            async with aiosqlite.connect(self.databasefile, timeout=10) as connection:
+                cursor = await connection.cursor()
+                await cursor.execute(sql, datatuple)
+                await connection.commit()
 
-            datatuple = tuple(list(mdcopy.values()))
-            await cursor.execute(sql, datatuple)
-            await connection.commit()
+        await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_write)
 
     def make_previoustracklist(self) -> list[dict[str, str]] | None:
         """create a reversed list of the tracks played"""
@@ -266,16 +268,21 @@ class MetadataDB:
             logging.error("MetadataDB does not exist yet?")
             return None
 
-        async with aiosqlite.connect(self.databasefile, timeout=10) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = await connection.cursor()
-            try:
-                await cursor.execute("""SELECT artist, title FROM currentmeta ORDER BY id DESC""")
-            except sqlite3.OperationalError:
-                return None
+        records: list[sqlite3.Row] = []
 
-            records = await cursor.fetchall()
-            await connection.commit()
+        async def _do_read_list() -> None:
+            async with aiosqlite.connect(self.databasefile, timeout=10) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = await connection.cursor()
+                await cursor.execute("""SELECT artist, title FROM currentmeta ORDER BY id DESC""")
+                rows = await cursor.fetchall()
+                await connection.commit()
+                records.extend(rows)
+
+        try:
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_read_list)
+        except sqlite3.OperationalError:
+            return None
 
         previouslist = []
         if records:
@@ -321,21 +328,26 @@ class MetadataDB:
             logging.error("MetadataDB does not exist yet?")
             return None
 
-        async with aiosqlite.connect(self.databasefile, timeout=10) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = await connection.cursor()
-            try:
+        row: sqlite3.Row | None = None
+
+        async def _do_read() -> None:
+            nonlocal row
+            async with aiosqlite.connect(self.databasefile, timeout=10) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = await connection.cursor()
                 await cursor.execute("""SELECT * FROM currentmeta ORDER BY id DESC LIMIT 1""")
-            except sqlite3.OperationalError as err:
-                logging.exception("SQLite3 error: %s", err)
-                return None
+                row = await cursor.fetchone()
+                await cursor.close()
+                await connection.commit()
 
-            row = await cursor.fetchone()
-            await cursor.close()
-            await connection.commit()
+        try:
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_read)
+        except sqlite3.OperationalError as err:
+            logging.exception("SQLite3 error: %s", err)
+            return None
 
-            if not row:
-                return None
+        if not row:
+            return None
 
         metadata = self._postprocess_read_last_meta(row)
         metadata["previoustrack"] = await self.make_previoustracklist_async()  # type: ignore[misc]
@@ -377,7 +389,7 @@ class MetadataDB:
         self.databasefile.parent.mkdir(parents=True, exist_ok=True)
         if self.databasefile.exists():
             logging.info("Clearing cache file %s", self.databasefile)
-            os.unlink(self.databasefile)
+            nowplaying.utils.sqlite.retry_file_operation(self.databasefile.unlink)
 
         with nowplaying.utils.sqlite.sqlite_connection(
             self.databasefile, timeout=10
