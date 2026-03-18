@@ -121,7 +121,7 @@ class ImageCache:
                 failed = True
 
         if failed:
-            self.databasefile.unlink()
+            nowplaying.utils.sqlite.retry_file_operation(self.databasefile.unlink)
 
     def setup_sql(self, initialize: bool = False) -> None:
         """create the database"""
