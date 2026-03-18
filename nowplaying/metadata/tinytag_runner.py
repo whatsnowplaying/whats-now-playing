@@ -57,15 +57,10 @@ def _date_calc(datedata: dict[str, str]) -> str | None:
 class TinyTagRunner:  # pylint: disable=too-few-public-methods
     """tinytag manager"""
 
-    _patches_applied: bool = False
-
     def __init__(self, imagecache: "nowplaying.imagecache.ImageCache | None" = None):
         self.imagecache: nowplaying.imagecache.ImageCache | None = imagecache
         self.metadata: TrackMetadata = {}
         self.datedata: dict[str, str] = {}
-
-        # Vendored TinyTag already includes all fixes
-        TinyTagRunner._patches_applied = True
 
     @staticmethod
     def tt_date_calc(tag: object) -> str | None:

@@ -7,7 +7,6 @@ import logging
 import pathlib
 import re
 import sqlite3
-import time
 import typing as t
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
@@ -182,20 +181,14 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         logging.debug("Setting up the database %s", self.databasefile)
         self.databasefile.parent.mkdir(parents=True, exist_ok=True)
         if self.databasefile.exists():
-            for attempt in range(3):
-                try:
-                    self.databasefile.unlink()
-                    break
-                except OSError as error:
-                    if attempt < 2:  # Don't sleep on the last attempt
-                        time.sleep(0.5 * (attempt + 1))  # 0.5s, then 1.0s
-                        continue
-                    # Final attempt failed - continue without rotation rather than crash
-                    logging.warning(
-                        "Could not delete request.db after 3 attempts "
-                        "(previous instance may still be shutting down): %s",
-                        error,
-                    )
+            try:
+                nowplaying.utils.sqlite.retry_file_operation(self.databasefile.unlink)
+            except OSError as error:
+                logging.warning(
+                    "Could not delete request.db after retries "
+                    "(previous instance may still be shutting down): %s",
+                    error,
+                )
 
         with nowplaying.utils.sqlite.sqlite_connection(
             self.databasefile, timeout=30
@@ -276,11 +269,18 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         logging.debug("marking %s as played against %s", artist, playlist)
         sql = "INSERT INTO rouletteartist (artist,playlist) VALUES (?,?)"
         datatuple = (artist, playlist)
-        async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = await connection.cursor()
-            await cursor.execute(sql, datatuple)
-            await connection.commit()
+
+        async def _do_add_roulette_dupelist():
+            async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = await connection.cursor()
+                await cursor.execute(sql, datatuple)
+                await connection.commit()
+
+        try:
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_add_roulette_dupelist)
+        except sqlite3.OperationalError:
+            logging.exception("Failed to add roulette dupelist after retries")
 
     async def get_roulette_dupe_list(self, playlist: str | None = None) -> Iterable[str] | None:
         """get the artist dupelist"""
@@ -288,26 +288,29 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             logging.error("%s does not exist, refusing to add.", self.databasefile)
             return
 
-        sql = "SELECT artist FROM rouletteartist"
-        async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = lambda cursor, row: row[0]
-            cursor = await connection.cursor()
-            try:
+        async def _do_get_roulette_dupe_list():
+            async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = lambda cursor, row: row[0]
+                cursor = await connection.cursor()
                 if playlist:
-                    sql += " WHERE playlist=?"
-                    datatuple = (playlist,)
-                    await cursor.execute(sql, datatuple)
+                    await cursor.execute(
+                        "SELECT artist FROM rouletteartist WHERE playlist=?", (playlist,)
+                    )
                 else:
-                    await cursor.execute(sql)
+                    await cursor.execute("SELECT artist FROM rouletteartist")
                 await connection.commit()
-            except sqlite3.OperationalError as error:
-                logging.error(error)
-                return None
+                dataset = await cursor.fetchall()
+                if not dataset:
+                    return None
+                return dataset
 
-            dataset = await cursor.fetchall()
-            if not dataset:
-                return None
-        return dataset
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(
+                _do_get_roulette_dupe_list
+            )
+        except sqlite3.OperationalError:
+            logging.exception("Failed to get roulette dupe list after retries")
+            return None
 
     @staticmethod
     def _normalize(text: str | None) -> str:
@@ -369,7 +372,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         sql += "?," * (len(data.keys()) - 1) + "?)"
         datatuple = tuple(list(data.values()))
 
-        try:
+        async def _do_add_to_gifwordsdb():
             logging.debug(
                 "Request gifwords: >%s< / url: >%s< has made it to the requestdb",
                 data.get("keywords"),
@@ -381,8 +384,10 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 await cursor.execute(sql, datatuple)
                 await connection.commit()
 
-        except sqlite3.OperationalError as error:
-            logging.exception(error)
+        try:
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_add_to_gifwordsdb)
+        except sqlite3.OperationalError:
+            logging.exception("Failed to add to gifwords database after retries")
 
     def respin_a_reqid(self, reqid: int):
         """given a reqid, set to respin"""
@@ -428,14 +433,17 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             logging.error("%s does not exist, refusing to erase.", self.databasefile)
             return
 
-        async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = sqlite3.Row
-            cursor = await connection.cursor()
-            try:
+        async def _do_erase_gifwords_id():
+            async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = await connection.cursor()
                 await cursor.execute("DELETE FROM gifwords WHERE reqid=?;", (reqid,))
                 await connection.commit()
-            except sqlite3.OperationalError as error:
-                logging.exception(error)
+
+        try:
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_erase_gifwords_id)
+        except sqlite3.OperationalError:
+            logging.exception("Failed to erase gifwords ID %s after retries", reqid)
 
     async def _find_good_request(self, setting: TrackRequestSetting) -> TrackMetadata | None:
         artistdupes = await self.get_roulette_dupe_list(playlist=setting["playlist"])
@@ -586,15 +594,21 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             logging.error("%s does not exist, refusing to fuzzy lookup.", self.databasefile)
             return None
 
-        try:
-            # Get all requests from database for fuzzy matching
+        all_requests: list = []
+
+        async def _do_fuzzy_fetch():
+            nonlocal all_requests
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
                 await cursor.execute("SELECT * FROM userrequest")
                 all_requests = await cursor.fetchall()
+
+        try:
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_fuzzy_fetch)
         except sqlite3.OperationalError as error:
             logging.exception(error)
+            return None
 
         if not all_requests:
             return None
@@ -796,22 +810,29 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                 continue
 
             try:
-                async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
-                    connection.row_factory = sqlite3.Row
-                    cursor = await connection.cursor()
-                    await cursor.execute(
-                        "SELECT * from userrequest WHERE filename=? ORDER BY timestamp DESC",
-                        datatuple,
-                    )
-                    rows_to_process = []
-                    while row := await cursor.fetchone():
-                        logging.debug(
-                            "calling user_roulette_request: %s %s %s",
-                            row["username"],
-                            row["playlist"],
-                            row["reqid"],
+
+                async def _do_fetch_respins():
+                    rows: list[dict] = []
+                    async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
+                        connection.row_factory = sqlite3.Row
+                        cursor = await connection.cursor()
+                        await cursor.execute(
+                            "SELECT * from userrequest WHERE filename=? ORDER BY timestamp DESC",
+                            datatuple,
                         )
-                        rows_to_process.append(dict(row))
+                        while row := await cursor.fetchone():
+                            logging.debug(
+                                "calling user_roulette_request: %s %s %s",
+                                row["username"],
+                                row["playlist"],
+                                row["reqid"],
+                            )
+                            rows.append(dict(row))
+                    return rows
+
+                rows_to_process = await nowplaying.utils.sqlite.retry_sqlite_operation_async(
+                    _do_fetch_respins
+                )
 
                 # need to do this outside of the aiosqlite call to avoid DB locks
                 for row_data in rows_to_process:
@@ -840,8 +861,10 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
     async def check_for_gifwords(self) -> GifWordsTrackRequest:
         """check if a gifword has been requested"""
         content: GifWordsTrackRequest = {"requester": None, "image": None, "keywords": None}
-        reqid = None
-        try:
+        reqid: int | None = None
+
+        async def _do_check_for_gifwords():
+            nonlocal content, reqid
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
@@ -853,6 +876,9 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
                         "keywords": row["keywords"],
                     }
                     reqid = row["reqid"]
+
+        try:
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_check_for_gifwords)
             if reqid is not None:
                 await self.erase_gifwords_id(reqid)
         except Exception as err:  # pylint: disable=broad-except
@@ -1198,16 +1224,23 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             fields = [column[0] for column in cursor.description]
             return dict(zip(fields, row, strict=False))
 
-        async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
-            connection.row_factory = dict_factory
-            cursor = await connection.cursor()
-            try:
-                await cursor.execute("""SELECT * FROM userrequest""")
-            except sqlite3.OperationalError as error:
-                logging.exception(error)
+        records: list[UserTrackRequest] = []
 
-            while dataset := await cursor.fetchone():
-                yield dataset
+        async def _do_get_all():
+            async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
+                connection.row_factory = dict_factory
+                cursor = await connection.cursor()
+                await cursor.execute("""SELECT * FROM userrequest""")
+                while record := await cursor.fetchone():
+                    records.append(record)
+
+        try:
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_get_all)
+        except sqlite3.OperationalError:
+            logging.exception("Failed to get all records after retries")
+
+        for record in records:
+            yield record
 
     def get_dataset(self) -> list[UserTrackRequest] | None:
         """get the current request list for display"""
