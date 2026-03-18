@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """test mDNS discovery module"""
 
+import socket
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -88,7 +89,8 @@ async def test_discover_whatsnowplaying_services_success():
 
         mock_browser_class.side_effect = create_browser
 
-        services = nowplaying.mdns_discovery.discover_whatsnowplaying_services(timeout=0.1)
+        with patch("nowplaying.mdns_discovery.get_local_addresses", return_value=set()):
+            services = nowplaying.mdns_discovery.discover_whatsnowplaying_services(timeout=0.1)
 
         assert len(services) == 1
         assert services[0].host == "testhost.local."
@@ -151,3 +153,129 @@ async def test_get_first_whatsnowplaying_service_not_found():
         service = nowplaying.mdns_discovery.get_first_whatsnowplaying_service()
 
         assert service is None
+
+
+def test_get_local_addresses_returns_set():
+    """test get_local_addresses returns a set of IP strings"""
+    addresses = nowplaying.mdns_discovery.get_local_addresses()
+    assert isinstance(addresses, set)
+    for addr in addresses:
+        # Each entry should be a valid IPv4 address string
+        socket.inet_aton(addr)  # raises if invalid
+
+
+def test_get_local_addresses_no_netifaces():
+    """test get_local_addresses falls back to socket when netifaces unavailable"""
+    with patch("nowplaying.mdns_discovery._HAVE_NETIFACES", False):
+        addresses = nowplaying.mdns_discovery.get_local_addresses()
+    assert isinstance(addresses, set)
+
+
+def test_is_local_service_all_local():
+    """test _is_local_service returns True when all addresses are local"""
+    service = nowplaying.mdns_discovery.DiscoveredService(
+        name="test",
+        host="myhost.local.",
+        port=8899,
+        addresses=["192.168.1.10", "10.0.0.5"],
+        properties={},
+    )
+    assert nowplaying.mdns_discovery._is_local_service(  # pylint: disable=protected-access
+        service, {"192.168.1.10", "10.0.0.5"}
+    )
+
+
+def test_is_local_service_partial_local():
+    """test _is_local_service returns False when only some addresses are local"""
+    service = nowplaying.mdns_discovery.DiscoveredService(
+        name="test",
+        host="myhost.local.",
+        port=8899,
+        addresses=["192.168.1.10", "192.168.1.99"],
+        properties={},
+    )
+    assert not nowplaying.mdns_discovery._is_local_service(  # pylint: disable=protected-access
+        service, {"192.168.1.10"}
+    )
+
+
+def test_is_local_service_no_addresses():
+    """test _is_local_service returns False when service has no addresses"""
+    service = nowplaying.mdns_discovery.DiscoveredService(
+        name="test",
+        host="myhost.local.",
+        port=8899,
+        addresses=[],
+        properties={},
+    )
+    assert not nowplaying.mdns_discovery._is_local_service(  # pylint: disable=protected-access
+        service, {"192.168.1.10"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_discover_filters_own_service():
+    """test that discover_whatsnowplaying_services filters out the local machine's own service"""
+    with (
+        patch("nowplaying.mdns_discovery.Zeroconf") as mock_zeroconf_class,
+        patch("nowplaying.mdns_discovery.ServiceBrowser") as mock_browser_class,
+        patch("nowplaying.mdns_discovery.time.sleep"),
+        patch(
+            "nowplaying.mdns_discovery.get_local_addresses",
+            return_value={"192.168.1.100"},
+        ),
+    ):
+        mock_zc = MagicMock()
+        mock_zeroconf_class.return_value = mock_zc
+
+        def create_browser(mock_zeroconf, service_type, listener):
+            # Simulate finding this machine's own service
+            mock_info = MagicMock()
+            mock_info.server = "myhost.local."
+            mock_info.port = 8899
+            mock_info.addresses = [b"\xc0\xa8\x01\x64"]  # 192.168.1.100
+            mock_info.properties = {}
+            mock_zeroconf.get_service_info.return_value = mock_info
+            listener.add_service(mock_zeroconf, service_type, "WhatsNowPlaying")
+            return MagicMock()
+
+        mock_browser_class.side_effect = create_browser
+
+        services = nowplaying.mdns_discovery.discover_whatsnowplaying_services(timeout=0.1)
+
+    # Own service should be filtered out
+    assert len(services) == 0
+
+
+@pytest.mark.asyncio
+async def test_discover_keeps_remote_service():
+    """test that discover_whatsnowplaying_services keeps remote machines' services"""
+    with (
+        patch("nowplaying.mdns_discovery.Zeroconf") as mock_zeroconf_class,
+        patch("nowplaying.mdns_discovery.ServiceBrowser") as mock_browser_class,
+        patch("nowplaying.mdns_discovery.time.sleep"),
+        patch(
+            "nowplaying.mdns_discovery.get_local_addresses",
+            return_value={"192.168.1.50"},  # local machine is .50, service is .100
+        ),
+    ):
+        mock_zc = MagicMock()
+        mock_zeroconf_class.return_value = mock_zc
+
+        def create_browser(mock_zeroconf, service_type, listener):
+            mock_info = MagicMock()
+            mock_info.server = "remotehost.local."
+            mock_info.port = 8899
+            mock_info.addresses = [b"\xc0\xa8\x01\x64"]  # 192.168.1.100
+            mock_info.properties = {}
+            mock_zeroconf.get_service_info.return_value = mock_info
+            listener.add_service(mock_zeroconf, service_type, "WhatsNowPlaying")
+            return MagicMock()
+
+        mock_browser_class.side_effect = create_browser
+
+        services = nowplaying.mdns_discovery.discover_whatsnowplaying_services(timeout=0.1)
+
+    # Remote service should not be filtered
+    assert len(services) == 1
+    assert services[0].addresses == ["192.168.1.100"]

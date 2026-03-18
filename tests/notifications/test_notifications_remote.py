@@ -498,3 +498,71 @@ async def test_remote_notification_verify_settingsui_manual_port_out_of_range(po
         plugin.verify_settingsui(mock_qwidget)
 
     assert "Remote port must be between 1 and 65535" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_autodiscover_caches_after_first_success(remote_notification_bootstrap):
+    """test that autodiscover only runs mDNS once; subsequent calls use cached server/port"""
+    config = remote_notification_bootstrap
+    config.cparser.setValue("remote/enabled", True)
+    config.cparser.setValue("remote/autodiscover", True)
+
+    plugin = nowplaying.notifications.remote.Plugin(config=config)
+
+    mock_service = MagicMock()
+    mock_service.addresses = ["192.168.1.200"]
+    mock_service.host = "remote.local."
+    mock_service.port = 9000
+
+    call_count = 0
+
+    async def mock_async_discover():
+        nonlocal call_count
+        call_count += 1
+        return mock_service
+
+    with patch(
+        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async",
+        side_effect=mock_async_discover,
+    ):
+        await plugin.start()
+        await plugin.start()
+        await plugin.start()
+
+    # Discovery should have run exactly once
+    assert call_count == 1
+    assert plugin.server == "192.168.1.200"
+    assert plugin.port == 9000
+
+
+@pytest.mark.asyncio
+async def test_autodiscover_cache_cleared_when_disabled(remote_notification_bootstrap):
+    """test that disabling autodiscover clears the cached server/port"""
+    config = remote_notification_bootstrap
+    config.cparser.setValue("remote/enabled", True)
+    config.cparser.setValue("remote/autodiscover", True)
+
+    plugin = nowplaying.notifications.remote.Plugin(config=config)
+
+    mock_service = MagicMock()
+    mock_service.addresses = ["192.168.1.200"]
+    mock_service.host = "remote.local."
+    mock_service.port = 9000
+
+    async def mock_async_discover():
+        return mock_service
+
+    with patch(
+        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async",
+        side_effect=mock_async_discover,
+    ):
+        await plugin.start()
+
+    assert plugin._autodiscovered_server == "192.168.1.200"  # pylint: disable=protected-access
+
+    # Disable autodiscover — cache should be cleared
+    config.cparser.setValue("remote/autodiscover", False)
+    await plugin.start()
+
+    assert plugin._autodiscovered_server is None  # pylint: disable=protected-access
+    assert plugin._autodiscovered_port is None  # pylint: disable=protected-access
