@@ -713,7 +713,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
         start_time = int(time.time())
 
-        try:
+        async def _do_start_new_game():
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 cursor = await connection.cursor()
 
@@ -726,7 +726,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     (track, artist, start_time),
                 )
 
-                game_id = cursor.lastrowid
+                local_game_id = cursor.lastrowid
 
                 # Clear and insert current game state
                 await cursor.execute("DELETE FROM current_game")
@@ -746,7 +746,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                         json.dumps(list(revealed_letters)),
                         start_time,
                         max_duration,
-                        game_id,
+                        local_game_id,
                         difficulty_bonus,
                     ),
                 )
@@ -754,12 +754,14 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 await connection.commit()
                 logging.info(
                     "New guess game started (game_id=%s, difficulty=%.2f, bonus=%s)",
-                    game_id,
+                    local_game_id,
                     difficulty,
                     difficulty_bonus,
                 )
                 return True
 
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_start_new_game)
         except sqlite3.Error as error:
             logging.error("Failed to start new game: %s", error)
             return False
@@ -796,7 +798,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         if not guess_text:
             return None
 
-        try:
+        async def _do_process_guess():  # pylint: disable=too-many-locals,too-many-branches,too-many-statements,too-many-return-statements
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
@@ -1146,6 +1148,8 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 await connection.commit()
                 return result
 
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_process_guess)
         except sqlite3.Error as error:
             logging.error("Failed to process guess: %s", error)
             return None
@@ -1201,7 +1205,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         if not self.is_enabled():
             return False
 
-        try:
+        async def _do_end_game():
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 cursor = await connection.cursor()
 
@@ -1248,6 +1252,8 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 self.last_game_end_time = time.time()
                 return True
 
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_end_game)
         except sqlite3.Error as error:
             logging.error("Failed to end game: %s", error)
             return False
@@ -1263,7 +1269,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         if not self.is_enabled():
             return None
 
-        try:
+        async def _do_get_current_state():
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
@@ -1335,6 +1341,10 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
                 return state
 
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(
+                _do_get_current_state
+            )
         except sqlite3.Error as error:
             logging.error("Failed to get current state: %s", error)
             return None
@@ -1367,7 +1377,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
         score_col, solves_col = column_mapping[leaderboard_type]
 
-        try:
+        async def _do_get_leaderboard():
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
@@ -1398,6 +1408,8 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
                 return leaderboard
 
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_get_leaderboard)
         except sqlite3.Error as error:
             logging.error("Failed to get leaderboard: %s", error)
             return None
@@ -1416,7 +1428,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         if not self.is_enabled():
             return None
 
-        try:
+        async def _do_get_user_stats():
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
@@ -1443,6 +1455,8 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     "all_time_guesses": row["all_time_guesses"],
                 }
 
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_get_user_stats)
         except sqlite3.Error as error:
             logging.error("Failed to get user stats: %s", error)
             return None
@@ -1458,7 +1472,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         if not self.is_enabled():
             return False
 
-        try:
+        async def _do_reset_session():
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 cursor = await connection.cursor()
 
@@ -1488,6 +1502,8 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                 logging.info("Session scores reset")
                 return True
 
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_reset_session)
         except sqlite3.Error as error:
             logging.error("Failed to reset session: %s", error)
             return False
@@ -1516,7 +1532,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         if not self.is_enabled():
             return False
 
-        try:
+        async def _do_check_game_timeout():
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = sqlite3.Row
                 cursor = await connection.cursor()
@@ -1541,6 +1557,10 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
 
                 return False
 
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(
+                _do_check_game_timeout
+            )
         except sqlite3.Error as error:
             logging.error("Failed to check game timeout: %s", error)
             return False
