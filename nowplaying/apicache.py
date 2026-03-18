@@ -81,12 +81,19 @@ class APIResponseCache:
 
     async def _initialize_db(self):
         """Initialize the database schema."""
-        async with aiosqlite.connect(self.db_file) as connection:
-            await connection.execute(self.CREATE_TABLE_SQL)
-            for index_sql in self.CREATE_INDICES_SQL:
-                await connection.execute(index_sql)
-            await connection.commit()
-            logging.debug("API cache database initialized at %s", self.db_file)
+
+        async def _do_init():
+            async with aiosqlite.connect(self.db_file) as connection:
+                await connection.execute(self.CREATE_TABLE_SQL)
+                for index_sql in self.CREATE_INDICES_SQL:
+                    await connection.execute(index_sql)
+                await connection.commit()
+                logging.debug("API cache database initialized at %s", self.db_file)
+
+        try:
+            await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_init)
+        except sqlite3.OperationalError:
+            logging.exception("Failed to initialize API cache database")
 
     async def _handle_missing_table_error(self, operation: str) -> None:
         """Handle 'no such table' errors by reinitializing the database."""
@@ -228,7 +235,8 @@ class APIResponseCache:
         current_time = int(time.time())
 
         async with self._lock:
-            try:
+
+            async def _do_get():
                 async with aiosqlite.connect(self.db_file) as connection:
                     cursor = await connection.execute(
                         "SELECT response_data, expires_at, access_count FROM api_responses "
@@ -255,6 +263,8 @@ class APIResponseCache:
                         data, provider, artist_name, endpoint, expires_at, current_time
                     )
 
+            try:
+                return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_get)
             except sqlite3.Error as error:
                 if "no such table" in str(error).lower():
                     await self._handle_missing_table_error("get")
@@ -307,7 +317,8 @@ class APIResponseCache:
             return
 
         async with self._lock:
-            try:
+
+            async def _do_put():
                 async with aiosqlite.connect(self.db_file) as connection:
                     await connection.execute(
                         "INSERT OR REPLACE INTO api_responses "
@@ -330,6 +341,8 @@ class APIResponseCache:
                         "Cached %s:%s:%s (TTL: %ds)", provider, artist_name, endpoint, ttl_seconds
                     )
 
+            try:
+                await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_put)
             except sqlite3.Error as error:
                 if "no such table" in str(error).lower():
                     await self._handle_missing_table_error("put")
@@ -390,10 +403,14 @@ class APIResponseCache:
         Returns:
             Number of entries removed
         """
+        # Ensure database is initialized before operations
+        await self._init_task
+
         current_time = int(time.time())
 
         async with self._lock:
-            try:
+
+            async def _do_cleanup():
                 async with aiosqlite.connect(self.db_file) as connection:
                     cursor = await connection.execute(
                         "DELETE FROM api_responses WHERE expires_at < ?", (current_time,)
@@ -406,6 +423,8 @@ class APIResponseCache:
 
                     return removed_count
 
+            try:
+                return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_cleanup)
             except sqlite3.Error as error:
                 logging.error("Database error during cleanup: %s", error)
                 return 0
@@ -416,9 +435,12 @@ class APIResponseCache:
         Returns:
             Dictionary with cache statistics
         """
+        # Ensure database is initialized before operations
+        await self._init_task
+
         current_time = int(time.time())
 
-        try:
+        async def _do_get_stats():
             async with aiosqlite.connect(self.db_file) as connection:
                 # Total entries
                 cursor = await connection.execute("SELECT COUNT(*) FROM api_responses")
@@ -459,6 +481,8 @@ class APIResponseCache:
                     "cache_hit_potential": f"{(valid_entries / max(total_entries, 1)) * 100:.1f}%",
                 }
 
+        try:
+            return await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_get_stats)
         except sqlite3.Error as error:
             logging.error("Database error getting stats: %s", error)
             return {}
@@ -470,8 +494,12 @@ class APIResponseCache:
             provider: If specified, only clear entries for this provider.
                      If None, clear all entries.
         """
+        # Ensure database is initialized before operations
+        await self._init_task
+
         async with self._lock:
-            try:
+
+            async def _do_clear():
                 async with aiosqlite.connect(self.db_file) as connection:
                     if provider:
                         await connection.execute(
@@ -483,6 +511,8 @@ class APIResponseCache:
                         logging.info("Cleared entire API response cache")
                     await connection.commit()
 
+            try:
+                await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_clear)
             except sqlite3.Error as error:
                 logging.error("Database error clearing cache: %s", error)
 
