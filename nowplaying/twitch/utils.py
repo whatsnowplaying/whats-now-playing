@@ -155,10 +155,11 @@ class TwitchLogin:
                             BROADCASTER_USERNAME_KEY, new_validation.get("login", "")
                         )
                     self.config.cparser.sync()
-
-                logging.debug("Twitch token refreshed successfully")
-                return True
-            logging.debug("No refresh_token available")
+                    logging.debug("Twitch token refreshed successfully")
+                    return True
+                logging.error("Token refresh response missing access_token")
+            else:
+                logging.debug("No refresh_token available")
 
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Token refresh failed: %s", error)

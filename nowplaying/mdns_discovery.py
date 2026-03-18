@@ -9,6 +9,13 @@ from typing import NamedTuple
 
 from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
 
+try:
+    import netifaces  # pylint: disable=import-error
+
+    _HAVE_NETIFACES = True
+except ImportError:
+    _HAVE_NETIFACES = False
+
 
 class DiscoveredService(NamedTuple):
     """Information about a discovered service"""
@@ -36,8 +43,11 @@ class ServiceDiscoveryListener(ServiceListener):
         """Service discovered"""
         info = zc.get_service_info(type_, name)
         if info:
-            # Convert addresses to readable IP strings
-            addresses = [socket.inet_ntoa(addr) for addr in info.addresses]
+            # Convert addresses to readable IP strings (IPv4 only)
+            addresses = []
+            for addr in info.addresses:
+                if len(addr) == 4:
+                    addresses.append(socket.inet_ntoa(addr))
             service = DiscoveredService(
                 name=name,
                 host=info.server,
@@ -49,12 +59,55 @@ class ServiceDiscoveryListener(ServiceListener):
             logging.debug("Discovered service: %s at %s:%s", name, addresses, info.port)
 
 
-def discover_whatsnowplaying_services(timeout: float = 3.0) -> list[DiscoveredService]:
+def _collect_netifaces_ips() -> set[str]:
+    """Return non-loopback IPv4 addresses from all network interfaces via netifaces."""
+    ips: set[str] = set()
+    for interface in netifaces.interfaces():  # pylint: disable=no-member
+        for addr_info in netifaces.ifaddresses(interface).get(netifaces.AF_INET, []):  # pylint: disable=no-member
+            ip_addr = addr_info.get("addr")
+            if ip_addr and not ip_addr.startswith("127."):
+                ips.add(ip_addr)
+    return ips
+
+
+def get_local_addresses() -> set[str]:
+    """Return the set of local non-loopback IPv4 addresses for self-filtering."""
+    local_ips: set[str] = set()
+    if _HAVE_NETIFACES:
+        try:
+            local_ips = _collect_netifaces_ips()
+        except Exception:  # pylint: disable=broad-except
+            logging.debug(
+                "Error enumerating local interfaces via netifaces; will try hostname fallback",
+                exc_info=True,
+            )
+    if not local_ips:
+        # Fallback: resolve own hostname
+        try:
+            ip_addr = socket.gethostbyname(socket.gethostname())
+            if ip_addr and not ip_addr.startswith("127."):
+                local_ips.add(ip_addr)
+        except Exception:  # pylint: disable=broad-except
+            logging.debug("Error resolving local hostname for self-filter", exc_info=True)
+    return local_ips
+
+
+def _is_local_service(service: DiscoveredService, local_ips: set[str]) -> bool:
+    """Return True if all of a service's addresses belong to this machine."""
+    if not service.addresses:
+        return False
+    return all(addr in local_ips for addr in service.addresses)
+
+
+def discover_whatsnowplaying_services(
+    timeout: float = 3.0, filter_local: bool = True
+) -> list[DiscoveredService]:
     """
     Discover WhatsNowPlaying services on the local network via mDNS/Bonjour
 
     Args:
         timeout: How long to search for services (seconds)
+        filter_local: If True, exclude services running on this machine
 
     Returns:
         List of discovered services
@@ -68,6 +121,17 @@ def discover_whatsnowplaying_services(timeout: float = 3.0) -> list[DiscoveredSe
         time.sleep(timeout)
 
         zeroconf.close()
+
+        if filter_local:
+            local_ips = get_local_addresses()
+            services = [s for s in listener.services if not _is_local_service(s, local_ips)]
+            if len(services) < len(listener.services):
+                logging.debug(
+                    "Filtered %d local self-service(s) from discovery results",
+                    len(listener.services) - len(services),
+                )
+            return services
+
         return listener.services
     except Exception as error:  # pylint: disable=broad-except
         logging.warning("mDNS discovery failed: %s", error)

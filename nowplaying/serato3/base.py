@@ -140,10 +140,10 @@ class SeratoBaseReader:  # pylint: disable=too-few-public-methods
         self.decode_func_first: dict[str, Callable[[bytes], t.Any]] = {
             "b": lambda x: struct.unpack("?", x)[0],
             "o": self._decode_struct_sync,
-            "p": lambda x: x.decode("utf-16-be", errors="replace"),
+            "p": lambda x: x.decode("utf-16-be", errors="replace").rstrip("\x00"),
             "r": self._decode_struct_sync,
             "s": lambda x: struct.unpack(">H", x)[0],
-            "t": lambda x: x.decode("utf-16-be", errors="replace"),
+            "t": lambda x: x.decode("utf-16-be", errors="replace").rstrip("\x00"),
             "u": self._decode_unsigned,  # Keep our error handling
         }
 
@@ -184,7 +184,7 @@ class SeratoBaseReader:  # pylint: disable=too-few-public-methods
 
     @staticmethod
     def _decode_unicode(data: bytes) -> str:
-        return data.decode("utf-16-be")[:-1]
+        return data.decode("utf-16-be", errors="replace").rstrip("\x00")
 
     @staticmethod
     def _decode_unsigned(data: bytes) -> int:

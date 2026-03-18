@@ -36,6 +36,8 @@ class Plugin(NotificationPlugin):
         self.server = "remotehost"
         self.port = 8899
         self.key: str | None = None
+        self._autodiscovered_server: str | None = None
+        self._autodiscovered_port: int | None = None
 
     async def notify_track_change(
         self, metadata: TrackMetadata, imagecache: "nowplaying.imagecache.ImageCache|None" = None
@@ -153,20 +155,36 @@ class Plugin(NotificationPlugin):
             )
             self.key = self.config.cparser.value("remote/remote_key")
 
-            # Auto-discovery if checkbox is enabled
+            # Auto-discovery if checkbox is enabled — cached after first success
             if autodiscover:
-                service = await nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async()
-                if service:
-                    self.server = service.addresses[0] if service.addresses else service.host
-                    self.port = service.port
-                    logging.info(
-                        "Auto-discovered WhatsNowPlaying service at %s:%d", self.server, self.port
-                    )
+                if self._autodiscovered_server is not None:
+                    self.server = self._autodiscovered_server
+                    self.port = self._autodiscovered_port  # type: ignore[assignment]
                 else:
-                    logging.warning(
-                        "Auto-discovery enabled but no WhatsNowPlaying service found on network"
+                    service = (
+                        await nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async()
                     )
-                    self.enabled = False
+                    if service:
+                        self._autodiscovered_server = (
+                            service.addresses[0] if service.addresses else service.host
+                        )
+                        self._autodiscovered_port = service.port
+                        self.server = self._autodiscovered_server
+                        self.port = self._autodiscovered_port
+                        logging.info(
+                            "Auto-discovered WhatsNowPlaying service at %s:%d",
+                            self.server,
+                            self.port,
+                        )
+                    else:
+                        logging.warning(
+                            "Auto-discovery enabled but no WhatsNowPlaying service found"
+                        )
+                        self.enabled = False
+            else:
+                # Clear cache when autodiscover is turned off
+                self._autodiscovered_server = None
+                self._autodiscovered_port = None
 
         if self.enabled != oldenabled:
             logging.info("Remote output enabled for %s:%d", self.server, self.port)

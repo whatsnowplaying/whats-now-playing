@@ -13,6 +13,7 @@ import pytest_asyncio  # pylint: disable=import-error
 
 import nowplaying.inputs.serato3  # pylint: disable=import-error
 import nowplaying.serato.remote
+import nowplaying.serato3.base
 
 MONEYSTRING = "Money Thats What I Want"  # codespell:ignore
 
@@ -355,3 +356,79 @@ def test_remote_extract_edge_cases():  # pylint: disable=protected-access
 
     # Pattern matching should fail on short content
     assert handler._extract_by_pattern(malformed_tree) is None
+
+
+# --- Unit tests for serato3/base.py UTF-16-BE decoder null-stripping ---
+
+
+def _utf16be(text: str) -> bytes:
+    """Encode text as UTF-16-BE with a null terminator, as Serato stores it."""
+    return text.encode("utf-16-be") + b"\x00\x00"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Daft Punk",
+        "Björk",
+        "t.A.T.u.",
+        "µ-Ziq",
+        "DJ ¥£$",
+        "Røyksopp",
+        "寺田 創一",
+        "Daft Punk 🎵",
+        "DJ 🎧 Mix",
+    ],
+)
+def test_t_handler_strips_null(text):
+    """'t'-type fields (title, artist, album, etc.) must not have trailing null chars"""
+    raw = _utf16be(text)
+    handler = nowplaying.serato3.base.SeratoBaseReader("/dev/null")
+    decode_t = handler.decode_func_first["t"]
+    result = decode_t(raw)
+    assert result == text
+    assert "\x00" not in result
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "/Music/Daft Punk/Discovery/01 One More Time.mp3",
+        "/Music/Björk/Homogenic/01 Jóga.flac",
+        "/Music/DJ 🎧/Set.mp3",
+    ],
+)
+def test_p_handler_strips_null(text):
+    """'p'-type fields (file paths) must not have trailing null chars"""
+    raw = _utf16be(text)
+    handler = nowplaying.serato3.base.SeratoBaseReader("/dev/null")
+    decode_p = handler.decode_func_first["p"]
+    result = decode_p(raw)
+    assert result == text
+    assert "\x00" not in result
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "1.0",
+        "2.5.0",
+        "Version 1.0 🎵",
+    ],
+)
+def test_decode_unicode_strips_null(text):
+    """_decode_unicode (used for 'vrsn' version tag) must strip trailing null correctly"""
+    raw = _utf16be(text)
+    result = nowplaying.serato3.base.SeratoBaseReader._decode_unicode(raw)
+    assert result == text
+    assert "\x00" not in result
+
+
+def test_t_handler_no_double_strip():
+    """Strings without a null terminator should pass through unchanged"""
+    text = "No Null Here"
+    raw = text.encode("utf-16-be")  # No null terminator
+    handler = nowplaying.serato3.base.SeratoBaseReader("/dev/null")
+    decode_t = handler.decode_func_first["t"]
+    result = decode_t(raw)
+    assert result == text

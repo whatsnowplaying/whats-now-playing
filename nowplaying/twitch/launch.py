@@ -10,6 +10,10 @@ import nowplaying.twitch.chat
 import nowplaying.twitch.redemptions
 import nowplaying.twitch.utils
 import nowplaying.utils
+from nowplaying.twitch.constants import (
+    BROADCASTER_OAUTH_STATUS_KEY,
+    OAUTH_STATUS_EXPIRED,
+)
 
 
 class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
@@ -55,8 +59,12 @@ class TwitchLaunch:  # pylint: disable=too-many-instance-attributes
             await asyncio.wait_for(auth_task, timeout=15)
         except asyncio.TimeoutError:
             logging.error("Broadcaster auth timed out; continuing startup")
+            self.config.cparser.setValue(BROADCASTER_OAUTH_STATUS_KEY, OAUTH_STATUS_EXPIRED)
+            self.config.cparser.sync()
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Broadcaster auth failed: %s; continuing startup", error)
+            self.config.cparser.setValue(BROADCASTER_OAUTH_STATUS_KEY, OAUTH_STATUS_EXPIRED)
+            self.config.cparser.sync()
 
         if self.chat:
             logging.info("Starting Twitch chat task")

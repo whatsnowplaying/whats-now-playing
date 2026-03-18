@@ -81,6 +81,8 @@ class KickLaunch:  # pylint: disable=too-many-instance-attributes
 
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Kick authentication error: %s", error)
+            self.config.cparser.setValue(OAUTH_STATUS_KEY, OAUTH_STATUS_EXPIRED)
+            self.config.cparser.sync()
 
         return False
 
