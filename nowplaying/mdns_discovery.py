@@ -59,18 +59,23 @@ class ServiceDiscoveryListener(ServiceListener):
             logging.debug("Discovered service: %s at %s:%s", name, addresses, info.port)
 
 
+def _collect_netifaces_ips() -> set[str]:
+    """Return non-loopback IPv4 addresses from all network interfaces via netifaces."""
+    ips: set[str] = set()
+    for interface in netifaces.interfaces():  # pylint: disable=no-member
+        for addr_info in netifaces.ifaddresses(interface).get(netifaces.AF_INET, []):  # pylint: disable=no-member
+            ip_addr = addr_info.get("addr")
+            if ip_addr and not ip_addr.startswith("127."):
+                ips.add(ip_addr)
+    return ips
+
+
 def get_local_addresses() -> set[str]:
     """Return the set of local non-loopback IPv4 addresses for self-filtering."""
     local_ips: set[str] = set()
     if _HAVE_NETIFACES:
         try:
-            for interface in netifaces.interfaces():  # pylint: disable=no-member
-                addrs = netifaces.ifaddresses(interface)  # pylint: disable=no-member
-                if netifaces.AF_INET in addrs:  # pylint: disable=no-member
-                    for addr_info in addrs[netifaces.AF_INET]:  # pylint: disable=no-member
-                        ip_addr = addr_info.get("addr")
-                        if ip_addr and not ip_addr.startswith("127."):
-                            local_ips.add(ip_addr)
+            local_ips = _collect_netifaces_ips()
         except Exception:  # pylint: disable=broad-except
             logging.debug(
                 "Error enumerating local interfaces via netifaces; will try hostname fallback",

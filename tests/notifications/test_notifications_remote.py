@@ -501,7 +501,7 @@ async def test_remote_notification_verify_settingsui_manual_port_out_of_range(po
 
 
 @pytest.mark.asyncio
-async def test_autodiscover_disables_on_no_service(remote_notification_bootstrap):
+async def test_autodiscover_disables_on_no_service(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
     """autodiscover failure (no service found) disables remote and does not cache server/port"""
     config = remote_notification_bootstrap
     config.cparser.setValue("remote/enabled", True)
@@ -524,7 +524,7 @@ async def test_autodiscover_disables_on_no_service(remote_notification_bootstrap
 
 
 @pytest.mark.asyncio
-async def test_autodiscover_caches_after_first_success(remote_notification_bootstrap):
+async def test_autodiscover_caches_after_first_success(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
     """test that autodiscover only runs mDNS once; subsequent calls use cached server/port"""
     config = remote_notification_bootstrap
     config.cparser.setValue("remote/enabled", True)
@@ -559,7 +559,7 @@ async def test_autodiscover_caches_after_first_success(remote_notification_boots
 
 
 @pytest.mark.asyncio
-async def test_autodiscover_cache_cleared_when_disabled(remote_notification_bootstrap):
+async def test_autodiscover_cache_cleared_when_disabled(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
     """test that disabling autodiscover clears the cached server/port"""
     config = remote_notification_bootstrap
     config.cparser.setValue("remote/enabled", True)

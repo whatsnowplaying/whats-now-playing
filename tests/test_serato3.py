@@ -383,10 +383,7 @@ def _utf16be(text: str) -> bytes:
 def test_t_handler_strips_null(text):
     """'t'-type fields (title, artist, album, etc.) must not have trailing null chars"""
     raw = _utf16be(text)
-    handler = nowplaying.serato3.base.SeratoBaseReader.__new__(
-        nowplaying.serato3.base.SeratoBaseReader
-    )
-    handler.__init__("/dev/null")
+    handler = nowplaying.serato3.base.SeratoBaseReader("/dev/null")
     decode_t = handler.decode_func_first["t"]
     result = decode_t(raw)
     assert result == text
@@ -404,10 +401,7 @@ def test_t_handler_strips_null(text):
 def test_p_handler_strips_null(text):
     """'p'-type fields (file paths) must not have trailing null chars"""
     raw = _utf16be(text)
-    handler = nowplaying.serato3.base.SeratoBaseReader.__new__(
-        nowplaying.serato3.base.SeratoBaseReader
-    )
-    handler.__init__("/dev/null")
+    handler = nowplaying.serato3.base.SeratoBaseReader("/dev/null")
     decode_p = handler.decode_func_first["p"]
     result = decode_p(raw)
     assert result == text
@@ -434,10 +428,7 @@ def test_t_handler_no_double_strip():
     """Strings without a null terminator should pass through unchanged"""
     text = "No Null Here"
     raw = text.encode("utf-16-be")  # No null terminator
-    handler = nowplaying.serato3.base.SeratoBaseReader.__new__(
-        nowplaying.serato3.base.SeratoBaseReader
-    )
-    handler.__init__("/dev/null")
+    handler = nowplaying.serato3.base.SeratoBaseReader("/dev/null")
     decode_t = handler.decode_func_first["t"]
     result = decode_t(raw)
     assert result == text
