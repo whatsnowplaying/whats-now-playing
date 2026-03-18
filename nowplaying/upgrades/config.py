@@ -288,8 +288,8 @@ class UpgradeConfig:
         if oldversion < Version("5.1.0-preview4"):
             self._upgrade_to_5_1_0_preview4(config)
 
-        if oldversion < Version("5.1.0"):
-            self._upgrade_to_5_1_0(config)
+        if oldversion < Version("5.1.0-preview5"):
+            self._upgrade_to_5_1_0_preview5(config)
 
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
@@ -474,15 +474,19 @@ class UpgradeConfig:
                 config.remove(key)
 
     @staticmethod
-    def _upgrade_to_5_1_0(config: QSettings) -> None:
+    def _upgrade_to_5_1_0_preview5(config: QSettings) -> None:
         """Upgrade to 5.1.0 - Reset guessgame grace_period; migrate discord/enabled split"""
         grace_period = config.value("guessgame/grace_period")
         if grace_period is not None and int(grace_period) == 10:
-            logging.info("Upgrade to 5.1.0: resetting guessgame grace_period from 10 to 5")
+            logging.info(
+                "Upgrade to 5.1.0-preview5: resetting guessgame grace_period from 10 to 5"
+            )
             config.setValue("guessgame/grace_period", 5)
 
         if not config.value("theaudiodb/apikey"):
-            logging.info("Upgrade to 5.1.0: setting theaudiodb/apikey to default free tier key")
+            logging.info(
+                "Upgrade to 5.1.0-preview5: setting theaudiodb/apikey to default free tier key"
+            )
             config.setValue(
                 "theaudiodb/apikey",
                 nowplaying.artistextras.theaudiodb.DEFAULT_THEAUDIODB_API_KEY,
@@ -492,7 +496,7 @@ class UpgradeConfig:
         if old_discord_enabled is not None:
             enabled = config.value("discord/enabled", type=bool)
             logging.info(
-                "Upgrade to 5.1.0: migrating discord/enabled=%s"
+                "Upgrade to 5.1.0-preview5: migrating discord/enabled=%s"
                 " to bot_enabled and richpresence_enabled",
                 old_discord_enabled,
             )
