@@ -81,7 +81,9 @@ class Plugin(ArtistExtrasPlugin):
                 ttl_seconds=None,  # Use provider default from apicache.py
             )
         except Exception as error:  # pylint: disable=broad-except
-            logging.error("discogs search cache error for %s: %s", artist_name, error)
+            logging.error(
+                "discogs search cache error for %s: %s", artist_name, error, exc_info=True
+            )
             return None
 
         # Reconstruct objects from cached JSON data if needed
@@ -136,7 +138,9 @@ class Plugin(ArtistExtrasPlugin):
                 ttl_seconds=None,  # Use provider default from apicache.py
             )
         except Exception as error:  # pylint: disable=broad-except
-            logging.error("discogs artist cache error for %s: %s", artist_name, error)
+            logging.error(
+                "discogs artist cache error for %s: %s", artist_name, error, exc_info=True
+            )
             return None
 
         # Reconstruct artist object from cached JSON data if needed
