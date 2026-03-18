@@ -108,14 +108,20 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
                 logging.warning(
                     "Remote metadata submission without secret from %s", request.remote
                 )
-                return web.json_response({"error": "Missing secret in request"}, status=403)
+                await self._send_images_error(
+                    websocket, "MISSING_SECRET", "Missing secret in request"
+                )
+                await websocket.close()
+                return
 
             # Use constant-time comparison to prevent timing attacks
             if not secrets.compare_digest(required_secret, provided_secret):
                 logging.warning(
                     "Remote metadata submission with invalid secret from %s", request.remote
                 )
-                return web.json_response({"error": "Invalid secret"}, status=403)
+                await self._send_images_error(websocket, "INVALID_SECRET", "Invalid secret")
+                await websocket.close()
+                return
 
         await websocket.send_json(
             {

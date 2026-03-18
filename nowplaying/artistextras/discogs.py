@@ -7,7 +7,6 @@ import nowplaying.apicache
 import nowplaying.discogsclient
 import nowplaying.utils
 from nowplaying.artistextras import ArtistExtrasPlugin
-from nowplaying.discogsclient import Models as models
 
 
 class Plugin(ArtistExtrasPlugin):
@@ -59,7 +58,9 @@ class Plugin(ArtistExtrasPlugin):
                 return {
                     "results": [
                         {
-                            "type": "release" if isinstance(r, models.Release) else "unknown",
+                            "type": "release"
+                            if isinstance(r, nowplaying.discogsclient.Models.Release)
+                            else "unknown",
                             "data": r.data if hasattr(r, "data") else r,
                             "artists": [
                                 a.data if hasattr(a, "data") else a
@@ -71,13 +72,17 @@ class Plugin(ArtistExtrasPlugin):
                 }
             return result
 
-        cached_result = await nowplaying.apicache.cached_fetch(
-            provider="discogs",
-            artist_name=artist_name,
-            endpoint=f"search_{search_type}_{album_title}",
-            fetch_func=fetch_func,
-            ttl_seconds=None,  # Use provider default from apicache.py
-        )
+        try:
+            cached_result = await nowplaying.apicache.cached_fetch(
+                provider="discogs",
+                artist_name=artist_name,
+                endpoint=f"search_{search_type}_{album_title}",
+                fetch_func=fetch_func,
+                ttl_seconds=None,  # Use provider default from apicache.py
+            )
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error("discogs search cache error for %s: %s", artist_name, error)
+            return None
 
         # Reconstruct objects from cached JSON data if needed
         if isinstance(cached_result, dict) and "results" in cached_result:
@@ -90,10 +95,11 @@ class Plugin(ArtistExtrasPlugin):
                     for item in results:
                         if item["type"] == "release":
                             # Reconstruct Release object
-                            release = models.Release(item["data"])
+                            release = nowplaying.discogsclient.Models.Release(item["data"])
                             # Reconstruct artist objects
                             release.artists = [
-                                models.Artist(artist_data) for artist_data in item["artists"]
+                                nowplaying.discogsclient.Models.Artist(artist_data)
+                                for artist_data in item["artists"]
                             ]
                             self.results.append(release)
 
@@ -121,18 +127,22 @@ class Plugin(ArtistExtrasPlugin):
                 }
             return None
 
-        cached_result = await nowplaying.apicache.cached_fetch(
-            provider="discogs",
-            artist_name=artist_name,
-            endpoint=f"artist_{artist_id}",
-            fetch_func=fetch_func,
-            ttl_seconds=None,  # Use provider default from apicache.py
-        )
+        try:
+            cached_result = await nowplaying.apicache.cached_fetch(
+                provider="discogs",
+                artist_name=artist_name,
+                endpoint=f"artist_{artist_id}",
+                fetch_func=fetch_func,
+                ttl_seconds=None,  # Use provider default from apicache.py
+            )
+        except Exception as error:  # pylint: disable=broad-except
+            logging.error("discogs artist cache error for %s: %s", artist_name, error)
+            return None
 
         # Reconstruct artist object from cached JSON data if needed
         if isinstance(cached_result, dict) and cached_result.get("type") == "artist":
             # Reconstruct Artist object
-            return models.Artist(cached_result["data"])
+            return nowplaying.discogsclient.Models.Artist(cached_result["data"])
 
         return cached_result
 
@@ -239,7 +249,11 @@ class Plugin(ArtistExtrasPlugin):
             return None
 
         return next(
-            (result.artists[0] for result in resultlist if isinstance(result, models.Release)),
+            (
+                result.artists[0]
+                for result in resultlist
+                if isinstance(result, nowplaying.discogsclient.Models.Release)
+            ),
             None,
         )
 
