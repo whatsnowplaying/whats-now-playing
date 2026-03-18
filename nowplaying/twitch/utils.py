@@ -158,7 +158,8 @@ class TwitchLogin:
                     logging.debug("Twitch token refreshed successfully")
                     return True
                 logging.error("Token refresh response missing access_token")
-            logging.debug("No refresh_token available")
+            else:
+                logging.debug("No refresh_token available")
 
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Token refresh failed: %s", error)

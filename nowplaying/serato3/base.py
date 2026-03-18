@@ -184,7 +184,7 @@ class SeratoBaseReader:  # pylint: disable=too-few-public-methods
 
     @staticmethod
     def _decode_unicode(data: bytes) -> str:
-        return data.decode("utf-16-be").rstrip("\x00")
+        return data.decode("utf-16-be", errors="replace").rstrip("\x00")
 
     @staticmethod
     def _decode_unsigned(data: bytes) -> int:

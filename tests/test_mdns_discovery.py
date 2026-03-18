@@ -171,6 +171,28 @@ def test_get_local_addresses_no_netifaces():
     assert isinstance(addresses, set)
 
 
+def test_add_service_filters_ipv6_addresses():
+    """add_service must silently skip non-IPv4 (16-byte) addresses and not crash"""
+    listener = nowplaying.mdns_discovery.ServiceDiscoveryListener()
+
+    mock_zc = MagicMock()
+    mock_info = MagicMock()
+    mock_info.server = "testhost.local."
+    mock_info.port = 8899
+    mock_info.properties = {}
+    mock_info.addresses = [
+        b"\xc0\xa8\x01\x64",  # 192.168.1.100 — valid IPv4
+        b"\x00" * 16,  # 16-byte IPv6-like entry — must be skipped
+    ]
+    mock_zc.get_service_info.return_value = mock_info
+
+    listener.add_service(mock_zc, "_whatsnowplaying._tcp.local.", "TestService")
+
+    assert len(listener.services) == 1
+    assert listener.services[0].addresses == ["192.168.1.100"]
+    assert all(len(addr.split(".")) == 4 for addr in listener.services[0].addresses)
+
+
 def test_is_local_service_all_local():
     """test _is_local_service returns True when all addresses are local"""
     service = nowplaying.mdns_discovery.DiscoveredService(

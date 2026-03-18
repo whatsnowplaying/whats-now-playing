@@ -72,7 +72,10 @@ def get_local_addresses() -> set[str]:
                         if ip_addr and not ip_addr.startswith("127."):
                             local_ips.add(ip_addr)
         except Exception:  # pylint: disable=broad-except
-            pass
+            logging.debug(
+                "Error enumerating local interfaces via netifaces; will try hostname fallback",
+                exc_info=True,
+            )
     if not local_ips:
         # Fallback: resolve own hostname
         try:
@@ -80,7 +83,7 @@ def get_local_addresses() -> set[str]:
             if ip_addr and not ip_addr.startswith("127."):
                 local_ips.add(ip_addr)
         except Exception:  # pylint: disable=broad-except
-            pass
+            logging.debug("Error resolving local hostname for self-filter", exc_info=True)
     return local_ips
 
 

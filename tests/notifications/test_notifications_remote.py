@@ -501,6 +501,29 @@ async def test_remote_notification_verify_settingsui_manual_port_out_of_range(po
 
 
 @pytest.mark.asyncio
+async def test_autodiscover_disables_on_no_service(remote_notification_bootstrap):
+    """autodiscover failure (no service found) disables remote and does not cache server/port"""
+    config = remote_notification_bootstrap
+    config.cparser.setValue("remote/enabled", True)
+    config.cparser.setValue("remote/autodiscover", True)
+
+    plugin = nowplaying.notifications.remote.Plugin(config=config)
+
+    async def mock_no_service():
+        return None
+
+    with patch(
+        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async",
+        side_effect=mock_no_service,
+    ):
+        await plugin.start()
+
+    assert plugin.enabled is False
+    assert plugin._autodiscovered_server is None  # pylint: disable=protected-access
+    assert plugin._autodiscovered_port is None  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
 async def test_autodiscover_caches_after_first_success(remote_notification_bootstrap):
     """test that autodiscover only runs mDNS once; subsequent calls use cached server/port"""
     config = remote_notification_bootstrap
