@@ -292,17 +292,13 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = lambda cursor, row: row[0]
                 cursor = await connection.cursor()
-                try:
-                    if playlist:
-                        await cursor.execute(
-                            "SELECT artist FROM rouletteartist WHERE playlist=?", (playlist,)
-                        )
-                    else:
-                        await cursor.execute("SELECT artist FROM rouletteartist")
-                    await connection.commit()
-                except sqlite3.OperationalError as error:
-                    logging.error(error)
-                    return None
+                if playlist:
+                    await cursor.execute(
+                        "SELECT artist FROM rouletteartist WHERE playlist=?", (playlist,)
+                    )
+                else:
+                    await cursor.execute("SELECT artist FROM rouletteartist")
+                await connection.commit()
                 dataset = await cursor.fetchall()
                 if not dataset:
                     return None
@@ -1234,11 +1230,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
             async with aiosqlite.connect(self.databasefile, timeout=30) as connection:
                 connection.row_factory = dict_factory
                 cursor = await connection.cursor()
-                try:
-                    await cursor.execute("""SELECT * FROM userrequest""")
-                except sqlite3.OperationalError as error:
-                    logging.exception(error)
-                    return
+                await cursor.execute("""SELECT * FROM userrequest""")
                 while record := await cursor.fetchone():
                     records.append(record)
 
