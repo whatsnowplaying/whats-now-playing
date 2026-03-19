@@ -214,7 +214,7 @@ class TemplateBuilder:
     @staticmethod
     def download_vendor_file(
         filename: str, url: str, vendor_cache_dir: Path, vendor_out_dir: Path
-    ) -> bool:
+    ) -> None:
         """Download a vendor file if it doesn't exist in cache"""
         cache_file = vendor_cache_dir / filename
         output_file = vendor_out_dir / filename
@@ -223,23 +223,22 @@ class TemplateBuilder:
         if not cache_file.exists():
             print(f"    Downloading {filename} from {url}")
             try:
-                urllib.request.urlretrieve(url, cache_file)
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req) as response:
+                    cache_file.write_bytes(response.read())
                 print(f"    Downloaded: {cache_file}")
-            except (OSError, ValueError) as err:
-                print(f"    Error downloading {filename}: {err}")
-                return False
+            except (OSError, ValueError) as download_err:
+                raise RuntimeError(
+                    f"Failed to download {filename} from {url}: {download_err}"
+                ) from download_err
         else:
             print(f"    Using cached: {cache_file}")
 
-        # Copy from cache to output (handle both text and binary files)
         try:
-            # Try binary copy first (works for all file types)
             output_file.write_bytes(cache_file.read_bytes())
-        except OSError as err:
-            print(f"    Error copying {filename}: {err}")
-            return False
+        except OSError as copy_err:
+            raise RuntimeError(f"Failed to copy {filename} to output: {copy_err}") from copy_err
         print(f"    Copied vendor file: {output_file}")
-        return True
 
     def setup_vendor_files(self) -> None:
         """Download and setup vendor JavaScript files"""
@@ -256,20 +255,16 @@ class TemplateBuilder:
             print(f"No vendor config found at {vendor_config_file}")
             return
 
-        try:
-            config = yaml.safe_load(vendor_config_file.read_text())
-            dependencies = config.get("vendor_dependencies", {})
+        config = yaml.safe_load(vendor_config_file.read_text())
+        dependencies = config.get("vendor_dependencies", {})
 
-            for filename, info in dependencies.items():
-                url = info["url"]
-                version = info.get("version", "unknown")
-                description = info.get("description", filename)
+        for filename, info in dependencies.items():
+            url = info["url"]
+            version = info.get("version", "unknown")
+            description = info.get("description", filename)
 
-                print(f"Processing {description} v{version}")
-                self.download_vendor_file(filename, url, vendor_cache_dir, vendor_out_dir)
-
-        except (OSError, yaml.YAMLError) as err:
-            print(f"Error processing vendor config: {err}")
+            print(f"Processing {description} v{version}")
+            self.download_vendor_file(filename, url, vendor_cache_dir, vendor_out_dir)
 
     def copy_vendor_files(self) -> None:
         """Setup vendor files using configuration-based downloads"""
@@ -331,13 +326,19 @@ if __name__ == "__main__":
 
     builder = TemplateBuilder()
 
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "--family":
-            if len(sys.argv) > 2:
-                builder.build_family(sys.argv[2])
+    try:
+        if len(sys.argv) > 1:
+            if sys.argv[1] == "--family":
+                if len(sys.argv) > 2:
+                    builder.build_family(sys.argv[2])
+                else:
+                    print("Usage: build_templates.py --family <family_name>")
+                    sys.exit(1)
             else:
-                print("Usage: build_templates.py --family <family_name>")
+                print("Usage: build_templates.py [--family <family_name>]")
+                sys.exit(1)
         else:
-            print("Usage: build_templates.py [--family <family_name>]")
-    else:
-        builder.build_all()
+            builder.build_all()
+    except (OSError, RuntimeError, yaml.YAMLError) as err:
+        print(f"Build failed: {err}", file=sys.stderr)
+        sys.exit(1)

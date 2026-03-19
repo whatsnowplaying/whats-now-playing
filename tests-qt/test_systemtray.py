@@ -191,6 +191,7 @@ def mock_dependencies():
         patch("nowplaying.trackrequests.Requests", MockTrackrequests),
         patch("nowplaying.db.MetadataDB", MockMetadataDB),
         patch("nowplaying.apicache.APIResponseCache.vacuum_database_file") as mock_api_vacuum,
+        patch("nowplaying.guessgame.GuessGame.vacuum_database"),
         patch("nowplaying.systemtray.QFileSystemWatcher") as mock_watcher,
     ):
         mock_load_ui.return_value = MagicMock()
@@ -270,7 +271,7 @@ def test_start_background_vacuum(qtbot, mock_dependencies):
 
         tray._start_background_vacuum()
 
-        mock_thread_class.assert_called_once_with(tray.tray)
+        mock_thread_class.assert_called_once_with()
         mock_thread_instance.start.assert_called_once()
 
 
