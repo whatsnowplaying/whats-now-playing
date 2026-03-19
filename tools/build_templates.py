@@ -227,15 +227,17 @@ class TemplateBuilder:
                 with urllib.request.urlopen(req) as response:
                     cache_file.write_bytes(response.read())
                 print(f"    Downloaded: {cache_file}")
-            except (OSError, ValueError) as err:
-                raise RuntimeError(f"Failed to download {filename} from {url}: {err}") from err
+            except (OSError, ValueError) as download_err:
+                raise RuntimeError(
+                    f"Failed to download {filename} from {url}: {download_err}"
+                ) from download_err
         else:
             print(f"    Using cached: {cache_file}")
 
         try:
             output_file.write_bytes(cache_file.read_bytes())
-        except OSError as err:
-            raise RuntimeError(f"Failed to copy {filename} to output: {err}") from err
+        except OSError as copy_err:
+            raise RuntimeError(f"Failed to copy {filename} to output: {copy_err}") from copy_err
         print(f"    Copied vendor file: {output_file}")
 
     def setup_vendor_files(self) -> None:
