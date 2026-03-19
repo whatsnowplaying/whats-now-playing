@@ -569,13 +569,21 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             self.currentmeta["artistthumbnailraw"] = self.currentmeta["coverimageraw"]
 
         if not self.currentmeta.get("coverimageraw") and self.imagecache:
-            if imagetype := self.config.cparser.value("artistextras/nocoverfallback"):
-                imagetype = imagetype.lower()
-                if imagetype != "none" and self.currentmeta.get("imagecacheartist"):
-                    self.currentmeta["coverimageraw"] = self.imagecache.random_image_fetch(
-                        identifier=self.currentmeta["imagecacheartist"],
-                        imagetype=f"artist{imagetype}",
-                    )
+            artist = self.currentmeta.get("artist")
+            album = self.currentmeta.get("album")
+            if artist and album:
+                self.currentmeta["coverimageraw"] = self.imagecache.random_image_fetch(
+                    identifier=f"{artist}_{album}",
+                    imagetype="front_cover",
+                )
+            if not self.currentmeta.get("coverimageraw"):
+                if imagetype := self.config.cparser.value("artistextras/nocoverfallback"):
+                    imagetype = imagetype.lower()
+                    if imagetype != "none" and self.currentmeta.get("imagecacheartist"):
+                        self.currentmeta["coverimageraw"] = self.imagecache.random_image_fetch(
+                            identifier=self.currentmeta["imagecacheartist"],
+                            imagetype=f"artist{imagetype}",
+                        )
 
     async def _half_delay_write(self, elapsed_time: float = 0.0):
         try:
