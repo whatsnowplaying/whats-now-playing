@@ -565,10 +565,12 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
         self.subprocesses.stop_all_processes()
 
+        # Wait for background vacuum thread to finish before cleanup
+        if self.vacuum_thread and self.vacuum_thread.isRunning():
+            self.vacuum_thread.wait()
+
         # Clean up any stray temporary OAuth2 credentials before shutdown
         nowplaying.oauth2.OAuth2Client.cleanup_stray_temp_credentials(self.config)
-
-        # Database vacuum operations moved to startup for better performance
 
     def fresh_start_quit(self) -> None:
         """wipe the current config"""

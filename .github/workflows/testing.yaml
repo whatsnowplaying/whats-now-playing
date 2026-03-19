@@ -53,6 +53,7 @@ jobs:
           versioningit --write
           /tmp/venv/bin/python tools/setupnltk.py
           /tmp/venv/bin/python tools/build_templates.py
+          /tmp/venv/bin/pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
       - name: tests
         shell: bash
         run: |
@@ -126,6 +127,7 @@ jobs:
           versioningit --write
           python tools/setupnltk.py
           python tools/build_templates.py
+          pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
       - name: tests
         shell: bash
         run: |
@@ -229,6 +231,7 @@ jobs:
           versioningit --write
           /tmp/venv/bin/python tools/setupnltk.py
           /tmp/venv/bin/python tools/build_templates.py
+          /tmp/venv/bin/pyside6-rcc nowplaying/resources/settings.qrc > nowplaying/qtrc.py
       - name: tests
         shell: bash
         run: |
