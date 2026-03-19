@@ -408,7 +408,8 @@ class Tray:  # pylint: disable=too-many-instance-attributes
     def _start_background_vacuum(self) -> None:
         """Start database vacuum operations in a background thread."""
 
-        self.vacuum_thread = _VacuumThread(self.tray)
+        self.vacuum_thread = _VacuumThread()
+        self.vacuum_thread.finished.connect(self.vacuum_thread.deleteLater)
         self.vacuum_thread.start()
 
     def _setup_charts_key(self) -> None:
