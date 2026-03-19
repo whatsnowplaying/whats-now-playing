@@ -23,7 +23,7 @@ class MockConfig:
     """Mock config for systemtray testing"""
 
     def __init__(self):
-        self.iconfile = pathlib.Path("test_icon.png")
+        self.iconfile = pathlib.Path(__file__).parent.parent / "nowplaying" / "resources" / "icon.ico"
         self.logpath = pathlib.Path("/tmp/test.log")
         self.notif = True
         self.initialized = True
