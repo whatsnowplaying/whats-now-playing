@@ -279,7 +279,7 @@ class ImageProvider:
 
     async def get_random_image(
         self, artist_identifier: str, image_type: str, provider: str | None = None
-    ) -> tuple[Any, dict] | None:
+    ) -> tuple[Any, dict, str] | None:
         """
         Get a random image for an artist and type.
 

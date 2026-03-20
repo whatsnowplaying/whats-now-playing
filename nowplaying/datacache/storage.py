@@ -18,7 +18,7 @@ import logging
 import sqlite3
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, overload
 
 import aiosqlite
 from PySide6.QtCore import QStandardPaths  # pylint: disable=no-name-in-module
@@ -208,6 +208,24 @@ class DataStorage:
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.error("Failed to retrieve cached data for URL %s: %s", url, error)
             return None
+
+    @overload
+    async def retrieve_by_identifier(
+        self,
+        identifier: str,
+        data_type: str,
+        provider: str | None = ...,
+        random: Literal[True] = ...,
+    ) -> tuple[Any, dict, str] | None: ...
+
+    @overload
+    async def retrieve_by_identifier(
+        self,
+        identifier: str,
+        data_type: str,
+        provider: str | None = ...,
+        random: Literal[False] = ...,
+    ) -> list[tuple[Any, dict, str]]: ...
 
     async def retrieve_by_identifier(  # pylint: disable=too-many-locals
         self, identifier: str, data_type: str, provider: str | None = None, random: bool = False

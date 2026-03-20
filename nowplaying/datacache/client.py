@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 import aiohttp
-import aiohttp_client_cache
 
 from .queue import RateLimiterManager
 from .storage import DataStorage
@@ -33,23 +32,13 @@ class DataCacheClient:
         self.storage = DataStorage(cache_dir)
         self.rate_limiters = RateLimiterManager()
         self._initialized = False
-        self._session: aiohttp_client_cache.CachedSession | None = None
+        self._session: aiohttp.ClientSession | None = None
 
     async def initialize(self) -> None:
         """Initialize the client and underlying storage"""
         if not self._initialized:
             await self.storage.initialize()
-
-            # Create HTTP cache in same directory as datacache for PyInstaller compatibility
-            http_cache_path = self.storage.database_path.parent / "datacache_http.sqlite"
-
-            # Create cached session for HTTP requests
-            self._session = aiohttp_client_cache.CachedSession(
-                cache=aiohttp_client_cache.SQLiteBackend(
-                    cache_name=str(http_cache_path.with_suffix("")),  # Remove .sqlite extension
-                    expire_after=3600,  # 1 hour default
-                )
-            )
+            self._session = aiohttp.ClientSession()
             self._initialized = True
 
     async def close(self) -> None:
@@ -157,8 +146,8 @@ class DataCacheClient:
         # Fetch with retries
         for attempt in range(retries + 1):
             try:
-                # Type checker: self._session is guaranteed non-None after the check above
-                async with self._session.get(  # pylint: disable=not-async-context-manager
+                # self._session is guaranteed non-None after the check above
+                async with self._session.get(
                     url, timeout=aiohttp.ClientTimeout(total=timeout)
                 ) as response:
                     if response.status == 200:

@@ -52,6 +52,7 @@ Example usage:
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 # Core components
 from .client import DataCacheClient, get_client
@@ -97,7 +98,7 @@ __all__ = [
 # Module-level convenience functions
 
 
-async def initialize_datacache(cache_dir: str | None = None) -> DataCacheProviders:
+async def initialize_datacache(cache_dir: Path | None = None) -> DataCacheProviders:
     """
     Initialize the datacache system.
 
@@ -123,7 +124,7 @@ async def shutdown_datacache() -> None:
     await providers.close()
 
 
-def run_maintenance(cache_dir: str | None = None) -> dict[str, int]:
+def run_maintenance(cache_dir: Path | None = None) -> dict[str, int]:
     """
     Run datacache maintenance tasks.
 
@@ -169,6 +170,7 @@ class LegacyImageCacheShim:
             Random image data or None
         """
         await self._ensure_providers()
+        assert self._providers is not None
         result = await self._providers.images.get_random_image(
             artist_identifier=artist_identifier, image_type=image_type
         )
