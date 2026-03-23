@@ -18,6 +18,7 @@ from PySide6.QtGui import (  # pylint: disable=no-name-in-module
     QBrush,
     QColor,
     QFont,
+    QFontMetrics,
     QPainter,
     QPen,
     QPolygonF,
@@ -260,11 +261,23 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
 
     def _draw_text(self, painter: QPainter, x: int, y: int) -> None:  # pylint: disable=invalid-name
         """Draw instructional text near the arrow."""
+        label = "What's Now Playing\nis running here!"
         text_color = QColor(255, 255, 255, 220)
         font = QFont("Arial", 14, QFont.Weight.Bold)
         painter.setFont(font)
 
-        rect_w, rect_h = 220, 64
+        # Derive rect from actual rendered text size so it adapts to DPI/font/locale.
+        # Pass a generous max-width so Qt can measure the two explicit lines correctly.
+        pad = 16
+        font_metrics = QFontMetrics(font)
+        text_bounds = font_metrics.boundingRect(
+            QRect(0, 0, 600, 0),
+            Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap,
+            label,
+        )
+        rect_w = text_bounds.width() + pad * 2
+        rect_h = text_bounds.height() + pad * 2
+
         # Place text below the arrow origin on macOS, above on Windows/Linux
         if self.platform_location == "menu_bar":
             text_top = y + 50
@@ -280,7 +293,6 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
         painter.drawRoundedRect(text_rect, 10, 10)
 
         painter.setPen(QPen(text_color))
-        label = "What's Now Playing\nis running here!"
         painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, label)
 
     def show_with_timer(self, duration_ms: int = 5000) -> None:
