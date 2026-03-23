@@ -224,8 +224,8 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
         """Draw the arrow pointing in the specified direction."""
         arrow_color = QColor(255, 100, 0, 255)  # Orange, full alpha
         scale = self.arrow_scale
-        shaft_length = 55 * scale
-        head_size = 24 * scale
+        shaft_length = 80 * scale
+        head_size = 30 * scale
 
         # Unit direction vector (diagonal 45°)
         diag = 1.0 / math.sqrt(2)
@@ -247,7 +247,7 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
         corner2 = QPointF(base.x() - perp_x * half_w, base.y() - perp_y * half_w)
 
         # Draw shaft stopping at arrowhead base
-        pen = QPen(arrow_color, 8)
+        pen = QPen(arrow_color, 10)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
@@ -426,7 +426,6 @@ def _show_arrow_overlay(tray_icon=None) -> FirstInstallArrowOverlay | None:
 
         # Force window to appear on top of everything including menu bar
         overlay.raise_()
-        overlay.activateWindow()
 
         # Process events to ensure the overlay renders
         QApplication.processEvents()
