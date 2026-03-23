@@ -8,6 +8,7 @@ import time
 
 from PySide6.QtCore import (  # pylint: disable=no-name-in-module
     QEasingCurve,
+    QPointF,
     QPropertyAnimation,
     QRect,
     Qt,
@@ -19,6 +20,7 @@ from PySide6.QtGui import (  # pylint: disable=no-name-in-module
     QFont,
     QPainter,
     QPen,
+    QPolygonF,
 )
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QApplication,
@@ -216,79 +218,70 @@ class FirstInstallArrowOverlay(QWidget):  # pylint: disable=too-many-instance-at
         radius = int(60 * self.arrow_scale)
         painter.drawEllipse(x - radius, y - radius, radius * 2, radius * 2)
 
-    def _draw_arrow(self, painter: QPainter, x: int, y: int, direction: str) -> None:  # pylint: disable=invalid-name
+    def _draw_arrow(  # pylint: disable=invalid-name,too-many-locals
+        self, painter: QPainter, x: int, y: int, direction: str
+    ) -> None:
         """Draw the arrow pointing in the specified direction."""
-        # Set up arrow color and pen (opacity handled by Qt effect)
-        arrow_color = QColor(255, 100, 0, 255)  # Orange arrow, full alpha
-        pen = QPen(arrow_color, 10)  # Much thicker line for better visibility
-        brush = QBrush(arrow_color)
-        painter.setPen(pen)
-        painter.setBrush(brush)
-
-        # Scale the arrow
+        arrow_color = QColor(255, 100, 0, 255)  # Orange, full alpha
         scale = self.arrow_scale
+        shaft_length = 55 * scale
+        head_size = 24 * scale
 
-        # Simple clean arrow pointing up and right (for macOS menu bar)
-        # Draw arrow shaft (line from bottom-left to top-right)
-        shaft_start_x = x
-        shaft_start_y = y
-        shaft_end_x = x + 60 * scale
-        if direction == "up_right":
-            shaft_end_y = y - 60 * scale
-            painter.drawLine(shaft_start_x, shaft_start_y, shaft_end_x, shaft_end_y)
+        # Unit direction vector (diagonal 45°)
+        diag = 1.0 / math.sqrt(2)
+        dir_x = diag
+        dir_y = -diag if direction == "up_right" else diag
 
-            # Draw arrowhead at the end
-            head_size = 20 * scale
-            # Top part of arrowhead
-            painter.drawLine(
-                shaft_end_x, shaft_end_y, shaft_end_x - head_size, shaft_end_y + head_size * 0.5
-            )
-            # Right part of arrowhead
-            painter.drawLine(
-                shaft_end_x, shaft_end_y, shaft_end_x - head_size * 0.5, shaft_end_y + head_size
-            )
+        # Perpendicular unit vector (CCW rotation)
+        perp_x, perp_y = -dir_y, dir_x
 
-        else:  # down_right
-            shaft_end_y = y + 60 * scale
-            painter.drawLine(shaft_start_x, shaft_start_y, shaft_end_x, shaft_end_y)
+        # Tip of the arrow
+        tip = QPointF(x + dir_x * shaft_length, y + dir_y * shaft_length)
 
-            # Draw arrowhead at the end
-            head_size = 20 * scale
-            # Bottom part of arrowhead
-            painter.drawLine(
-                shaft_end_x, shaft_end_y, shaft_end_x - head_size, shaft_end_y - head_size * 0.5
-            )
-            # Right part of arrowhead
-            painter.drawLine(
-                shaft_end_x, shaft_end_y, shaft_end_x - head_size * 0.5, shaft_end_y - head_size
-            )
+        # Base midpoint of the arrowhead triangle (shaft end)
+        base = QPointF(tip.x() - dir_x * head_size, tip.y() - dir_y * head_size)
+
+        # Two corners of the arrowhead base
+        half_w = head_size * 0.55
+        corner1 = QPointF(base.x() + perp_x * half_w, base.y() + perp_y * half_w)
+        corner2 = QPointF(base.x() - perp_x * half_w, base.y() - perp_y * half_w)
+
+        # Draw shaft stopping at arrowhead base
+        pen = QPen(arrow_color, 8)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawLine(QPointF(x, y), base)
+
+        # Draw filled arrowhead polygon
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(arrow_color))
+        painter.drawPolygon(QPolygonF([tip, corner1, corner2]))
 
     def _draw_text(self, painter: QPainter, x: int, y: int) -> None:  # pylint: disable=invalid-name
         """Draw instructional text near the arrow."""
-        # Set up text properties (opacity handled by Qt effect)
-        text_color = QColor(255, 255, 255, 200)  # White text, fixed alpha
-        painter.setPen(QPen(text_color))
-
+        text_color = QColor(255, 255, 255, 220)
         font = QFont("Arial", 14, QFont.Weight.Bold)
         painter.setFont(font)
 
-        # Platform-specific text
+        rect_w, rect_h = 220, 64
+        # Place text below the arrow origin on macOS, above on Windows/Linux
         if self.platform_location == "menu_bar":
-            text_y = y + 80
+            text_top = y + 50
         else:
-            text_y = y - 80
+            text_top = y - 50 - rect_h
 
-        text_x = x - 120
-        text = "What's Now Playing\nis running here!"
-        # Draw text with background for better visibility
-        text_rect = QRect(text_x - 10, text_y - 30, 140, 50)
+        text_rect = QRect(x - rect_w // 2, text_top, rect_w, rect_h)
 
-        # Semi-transparent background (opacity handled by Qt effect)
-        bg_color = QColor(0, 0, 0, 100)  # Fixed alpha
-        painter.fillRect(text_rect, bg_color)
+        # Semi-transparent background pill
+        bg_color = QColor(0, 0, 0, 140)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(bg_color))
+        painter.drawRoundedRect(text_rect, 10, 10)
 
-        # Draw the text
-        painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, text)
+        painter.setPen(QPen(text_color))
+        label = "What's Now Playing\nis running here!"
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, label)
 
     def show_with_timer(self, duration_ms: int = 5000) -> None:
         """Show the overlay and automatically dismiss after specified duration."""
