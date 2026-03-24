@@ -9,7 +9,6 @@ import platform
 import socket
 import sys
 
-import truststore
 from PySide6.QtCore import QCoreApplication, Qt  # pylint: disable=import-error, no-name-in-module
 from PySide6.QtGui import QIcon  # pylint: disable=import-error, no-name-in-module
 import PySide6.QtSvg  # noqa: F401  # pylint: disable=import-error, no-name-in-module, unused-import
@@ -23,8 +22,6 @@ import nowplaying.singleinstance
 import nowplaying.startup
 import nowplaying.systemtray
 import nowplaying.upgrade
-
-truststore.inject_into_ssl()
 
 #
 # as of now, there isn't really much here to test... basic bootstrap stuff

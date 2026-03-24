@@ -69,6 +69,9 @@ class ConfigFile:  # pylint: disable=too-many-instance-attributes, too-many-publ
         logging.info("Bundle: %s", ConfigFile.BUNDLEDIR)
         logging.debug("SSL_CERT_FILE=%s", os.environ.get("SSL_CERT_FILE"))
         logging.debug("SSL CA FILE=%s", ssl.get_default_verify_paths().cafile)
+        logging.debug(
+            "SSL using system trust store=%s", ssl.SSLContext.__module__ == "truststore._api"
+        )
 
         self.qsettingsformat: QSettings.Format = QSettings.NativeFormat
         if sys.platform == "win32":
