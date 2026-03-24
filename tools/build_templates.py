@@ -6,7 +6,10 @@ from pathlib import Path
 from typing import Any
 
 import jinja2
+import truststore
 import yaml
+
+truststore.inject_into_ssl()  # use system trust store for all SSL connections
 
 
 class TemplateBuilder:
