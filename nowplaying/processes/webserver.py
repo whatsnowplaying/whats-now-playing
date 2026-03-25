@@ -188,7 +188,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 logging.warning("No network interfaces found, using localhost")
                 addresses = [socket.inet_aton("127.0.0.1")]
 
-            hostname = socket.gethostname()
+            hostname = socket.gethostname().split(".")[0]
 
             # Create service info
             info = AsyncServiceInfo(
@@ -201,12 +201,17 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                     "version": config.version,
                     "app": "WhatsNowPlaying",
                 },
-                server=f"{hostname}.",
+                server=f"{hostname}.local.",
             )
 
             # Register the service
             self.aiozc = AsyncZeroconf(ip_version=IPVersion.V4Only)
-            await self.aiozc.async_register_service(info)
+            try:
+                await self.aiozc.async_register_service(info)
+            except Exception:
+                await self.aiozc.async_close()
+                self.aiozc = None
+                raise
             self.service_info = info
 
             # Convert addresses back to readable format for logging
