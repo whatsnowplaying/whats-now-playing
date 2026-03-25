@@ -188,7 +188,8 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 logging.warning("No network interfaces found, using localhost")
                 addresses = [socket.inet_aton("127.0.0.1")]
 
-            hostname = socket.gethostname().split(".")[0]
+            raw_hostname = socket.gethostname().split(".")[0]
+            hostname = raw_hostname if raw_hostname else "localhost"
 
             # Create service info
             info = AsyncServiceInfo(
@@ -208,8 +209,14 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             self.aiozc = AsyncZeroconf(ip_version=IPVersion.V4Only)
             try:
                 await self.aiozc.async_register_service(info)
-            except Exception:
-                await self.aiozc.async_close()
+            except Exception as reg_exc:
+                logging.warning("mDNS service registration failed: %s", reg_exc)
+                try:
+                    await self.aiozc.async_close()
+                except Exception as close_exc:  # pylint: disable=broad-exception-caught
+                    logging.warning(
+                        "mDNS close after registration failure also failed: %s", close_exc
+                    )
                 self.aiozc = None
                 raise
             self.service_info = info
