@@ -217,7 +217,7 @@ class Plugin(NotificationPlugin):
         if self.enabled:
             logging.debug("Remote output notifications stopped")
 
-    def defaults(self, qsettings: "QSettings"):
+    def defaults(self, qsettings: "QSettings"):  # pylint: disable=no-self-use
         """Set default configuration values"""
         qsettings.setValue("remote/enabled", False)
         qsettings.setValue("remote/autodiscover", False)
@@ -256,10 +256,10 @@ class Plugin(NotificationPlugin):
         else:
             qwidget.scan_status_label.setText("No servers found")
 
-    def _on_service_selected(self, qwidget: "QWidget", index: int) -> None:
+    @staticmethod
+    def _on_service_selected(qwidget: "QWidget", index: int) -> None:
         """Fill server/port fields when a service is chosen from the combobox."""
-        data = qwidget.discovered_combobox.itemData(index)
-        if data:
+        if data := qwidget.discovered_combobox.itemData(index):
             server, port = data
             qwidget.server_lineedit.setText(server)
             qwidget.port_lineedit.setText(str(port))
