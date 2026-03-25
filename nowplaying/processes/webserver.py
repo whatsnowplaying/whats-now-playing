@@ -74,6 +74,9 @@ JINJA2_KEY = web.AppKey("jinja2_env", jinja2.Environment)
 METADATA_KEY = web.AppKey("metadata", nowplaying.metadata.MetadataProcessors)
 
 
+_MDNS_LABEL_ALLOWED = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-")
+
+
 class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
     """aiohttp built server that does both http and websocket"""
 
@@ -173,17 +176,22 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         hyphens, and enforces the 63-character DNS label limit.
         Falls back to 'localhost' if the result would be empty.
         """
-        _ALLOWED = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-")
         base = raw.split(".")[0].lower()
-        normalized = "".join(c if c in _ALLOWED else "-" for c in base).strip("-")[:63]
+        normalized = "".join(c if c in _MDNS_LABEL_ALLOWED else "-" for c in base).strip("-")[:63]
         return normalized or "localhost"
 
     async def _close_aiozc_safely(self) -> None:
-        """Close and clear self.aiozc, logging but not propagating close errors."""
+        """Best-effort Zeroconf cleanup.
+
+        Swallows all exceptions including cancellation, because it is only
+        used in shutdown paths where task cancellation state is not inspected.
+        """
         if self.aiozc is None:
             return
         try:
             await self.aiozc.async_close()
+        except asyncio.CancelledError:
+            raise
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logging.warning("Failed to close mDNS Zeroconf instance: %s", exc)
         finally:
@@ -231,12 +239,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
             # Register the service
             self.aiozc = AsyncZeroconf(ip_version=IPVersion.V4Only)
-            try:
-                await self.aiozc.async_register_service(info)
-            except Exception as reg_exc:
-                logging.warning("mDNS service registration failed: %s", reg_exc)
-                await self._close_aiozc_safely()
-                raise
+            await self.aiozc.async_register_service(info)
             self.service_info = info
 
             # Convert addresses back to readable format for logging
@@ -249,9 +252,14 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             )
         except Exception as error:  # pylint: disable=broad-except
             logging.warning("Failed to register mDNS service: %s", error)
+            await self._close_aiozc_safely()
 
     async def _unregister_mdns_service(self):
-        """Unregister the mDNS/Bonjour service"""
+        """Best-effort mDNS service teardown.
+
+        Swallows all exceptions including cancellation, because it is only
+        used in shutdown paths where task cancellation state is not inspected.
+        """
         try:
             if self.service_info and self.aiozc:
                 await self.aiozc.async_unregister_service(self.service_info)
