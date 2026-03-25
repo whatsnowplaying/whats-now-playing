@@ -164,6 +164,31 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
         self.databasefile.parent.mkdir(parents=True, exist_ok=True)
 
+    @staticmethod
+    def _mdns_safe_hostname(raw: str) -> str:
+        """Return a valid mDNS label from raw hostname.
+
+        Strips any existing domain suffix, lowercases, replaces characters
+        that are not letters/digits/hyphens with '-', strips leading/trailing
+        hyphens, and enforces the 63-character DNS label limit.
+        Falls back to 'localhost' if the result would be empty.
+        """
+        _ALLOWED = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-")
+        base = raw.split(".")[0].lower()
+        normalized = "".join(c if c in _ALLOWED else "-" for c in base).strip("-")[:63]
+        return normalized or "localhost"
+
+    async def _close_aiozc_safely(self) -> None:
+        """Close and clear self.aiozc, logging but not propagating close errors."""
+        if self.aiozc is None:
+            return
+        try:
+            await self.aiozc.async_close()
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logging.warning("Failed to close mDNS Zeroconf instance: %s", exc)
+        finally:
+            self.aiozc = None
+
     async def _register_mdns_service(self, config: nowplaying.config.ConfigFile):
         """Register the webserver via mDNS/Bonjour for autodiscovery"""
         try:
@@ -188,7 +213,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 logging.warning("No network interfaces found, using localhost")
                 addresses = [socket.inet_aton("127.0.0.1")]
 
-            hostname = socket.gethostname().split(".")[0] or "localhost"
+            hostname = self._mdns_safe_hostname(socket.gethostname())
 
             # Create service info
             info = AsyncServiceInfo(
@@ -210,13 +235,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 await self.aiozc.async_register_service(info)
             except Exception as reg_exc:
                 logging.warning("mDNS service registration failed: %s", reg_exc)
-                try:
-                    await self.aiozc.async_close()
-                except Exception as close_exc:  # pylint: disable=broad-exception-caught
-                    logging.warning(
-                        "mDNS close after registration failure also failed: %s", close_exc
-                    )
-                self.aiozc = None
+                await self._close_aiozc_safely()
                 raise
             self.service_info = info
 
@@ -236,13 +255,13 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         try:
             if self.service_info and self.aiozc:
                 await self.aiozc.async_unregister_service(self.service_info)
-                await self.aiozc.async_close()
-                # Clear references so subsequent calls are no-ops
                 self.service_info = None
-                self.aiozc = None
                 logging.info("mDNS service unregistered")
         except Exception as error:  # pylint: disable=broad-except
             logging.warning("Failed to unregister mDNS service: %s", error)
+            self.service_info = None
+        finally:
+            await self._close_aiozc_safely()
 
     async def stopeventtask(self):
         """task to wait for the stop event"""
