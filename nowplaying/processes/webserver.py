@@ -74,6 +74,9 @@ JINJA2_KEY = web.AppKey("jinja2_env", jinja2.Environment)
 METADATA_KEY = web.AppKey("metadata", nowplaying.metadata.MetadataProcessors)
 
 
+_MDNS_LABEL_ALLOWED = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-")
+
+
 class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
     """aiohttp built server that does both http and websocket"""
 
@@ -164,6 +167,34 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
         self.databasefile.parent.mkdir(parents=True, exist_ok=True)
 
+    @staticmethod
+    def _mdns_safe_hostname(raw: str) -> str:
+        """Return a valid mDNS label from raw hostname.
+
+        Strips any existing domain suffix, lowercases, replaces characters
+        that are not letters/digits/hyphens with '-', strips leading/trailing
+        hyphens, and enforces the 63-character DNS label limit.
+        Falls back to 'localhost' if the result would be empty.
+        """
+        base = raw.split(".")[0].lower()
+        normalized = "".join(c if c in _MDNS_LABEL_ALLOWED else "-" for c in base).strip("-")[:63]
+        return normalized or "localhost"
+
+    async def _close_aiozc_safely(self) -> None:
+        """Best-effort Zeroconf cleanup.
+
+        Swallows all exceptions including cancellation, because it is only
+        used in shutdown paths where task cancellation state is not inspected.
+        """
+        if self.aiozc is None:
+            return
+        try:
+            await self.aiozc.async_close()
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logging.warning("Failed to close mDNS Zeroconf instance: %s", exc)
+        finally:
+            self.aiozc = None
+
     async def _register_mdns_service(self, config: nowplaying.config.ConfigFile):
         """Register the webserver via mDNS/Bonjour for autodiscovery"""
         try:
@@ -188,7 +219,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 logging.warning("No network interfaces found, using localhost")
                 addresses = [socket.inet_aton("127.0.0.1")]
 
-            hostname = socket.gethostname()
+            hostname = self._mdns_safe_hostname(socket.gethostname())
 
             # Create service info
             info = AsyncServiceInfo(
@@ -201,7 +232,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                     "version": config.version,
                     "app": "WhatsNowPlaying",
                 },
-                server=f"{hostname}.",
+                server=f"{hostname}.local.",
             )
 
             # Register the service
@@ -219,19 +250,24 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             )
         except Exception as error:  # pylint: disable=broad-except
             logging.warning("Failed to register mDNS service: %s", error)
+            await self._close_aiozc_safely()
 
     async def _unregister_mdns_service(self):
-        """Unregister the mDNS/Bonjour service"""
+        """Best-effort mDNS service teardown.
+
+        Swallows all exceptions including cancellation, because it is only
+        used in shutdown paths where task cancellation state is not inspected.
+        """
         try:
             if self.service_info and self.aiozc:
                 await self.aiozc.async_unregister_service(self.service_info)
-                await self.aiozc.async_close()
-                # Clear references so subsequent calls are no-ops
                 self.service_info = None
-                self.aiozc = None
                 logging.info("mDNS service unregistered")
         except Exception as error:  # pylint: disable=broad-except
             logging.warning("Failed to unregister mDNS service: %s", error)
+            self.service_info = None
+        finally:
+            await self._close_aiozc_safely()
 
     async def stopeventtask(self):
         """task to wait for the stop event"""
