@@ -188,8 +188,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 logging.warning("No network interfaces found, using localhost")
                 addresses = [socket.inet_aton("127.0.0.1")]
 
-            raw_hostname = socket.gethostname().split(".")[0]
-            hostname = raw_hostname if raw_hostname else "localhost"
+            hostname = socket.gethostname().split(".")[0] or "localhost"
 
             # Create service info
             info = AsyncServiceInfo(
