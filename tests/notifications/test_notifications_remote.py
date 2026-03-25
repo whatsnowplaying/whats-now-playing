@@ -234,6 +234,8 @@ async def test_remote_notification_init(remote_notification_bootstrap):  # pylin
     assert plugin.server == "remotehost"
     assert plugin.port == 8899
     assert plugin.key is None
+    assert plugin._discovered_services is None  # pylint: disable=protected-access
+    assert plugin._scan_task is None  # pylint: disable=protected-access
 
 
 @pytest.mark.asyncio
@@ -251,11 +253,12 @@ async def test_remote_notification_start_manual_config(remote_notification_boots
     assert plugin.enabled is True
     assert plugin.server == "manual.host"
     assert plugin.port == 9000
+    assert plugin._scan_task is None  # pylint: disable=protected-access
 
 
 @pytest.mark.asyncio
-async def test_remote_notification_start_autodiscover_found(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
-    """test start method with autodiscover when service is found"""
+async def test_remote_notification_autodiscover_single_service(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
+    """autodiscover with one service found: use it automatically"""
     config = remote_notification_bootstrap
     config.cparser.setValue("remote/enabled", True)
     config.cparser.setValue("remote/autodiscover", True)
@@ -267,47 +270,24 @@ async def test_remote_notification_start_autodiscover_found(remote_notification_
     mock_service.host = "discovered.local."
     mock_service.port = 8899
 
-    async def mock_async_discover():
-        return mock_service
-
     with patch(
-        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async",
-        side_effect=mock_async_discover,
+        "nowplaying.mdns_discovery.discover_whatsnowplaying_services_async",
+        return_value=[mock_service],
     ):
         await plugin.start()
 
-        assert plugin.enabled is True
-        assert plugin.server == "192.168.1.100"
-        assert plugin.port == 8899
+    assert plugin.enabled is True
+    assert plugin.server == "192.168.1.100"
+    assert plugin.port == 8899
+    assert plugin._scan_task is not None  # pylint: disable=protected-access
+    plugin._scan_task.cancel()  # pylint: disable=protected-access
 
 
 @pytest.mark.asyncio
-async def test_remote_notification_start_autodiscover_not_found(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
-    """test start method with autodiscover when no service is found"""
-    config = remote_notification_bootstrap
-    config.cparser.setValue("remote/enabled", True)
-    config.cparser.setValue("remote/autodiscover", True)
-
-    plugin = nowplaying.notifications.remote.Plugin(config=config)
-
-    async def mock_async_discover():
-        return None
-
-    with patch(
-        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async",
-        side_effect=mock_async_discover,
-    ):
-        await plugin.start()
-
-        # Should disable plugin when autodiscover fails
-        assert plugin.enabled is False
-
-
-@pytest.mark.asyncio
-async def test_remote_notification_start_autodiscover_fallback_to_host(
+async def test_remote_notification_autodiscover_single_service_no_addresses(
     remote_notification_bootstrap,
 ):  # pylint: disable=redefined-outer-name
-    """test start method autodiscover uses hostname when no addresses"""
+    """autodiscover with one service and no addresses: fall back to host"""
     config = remote_notification_bootstrap
     config.cparser.setValue("remote/enabled", True)
     config.cparser.setValue("remote/autodiscover", True)
@@ -319,18 +299,166 @@ async def test_remote_notification_start_autodiscover_fallback_to_host(
     mock_service.host = "fallback.local."
     mock_service.port = 8899
 
-    async def mock_async_discover():
-        return mock_service
-
     with patch(
-        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async",
-        side_effect=mock_async_discover,
+        "nowplaying.mdns_discovery.discover_whatsnowplaying_services_async",
+        return_value=[mock_service],
     ):
         await plugin.start()
 
-        assert plugin.enabled is True
-        assert plugin.server == "fallback.local."
-        assert plugin.port == 8899
+    assert plugin.enabled is True
+    assert plugin.server == "fallback.local."
+    plugin._scan_task.cancel()  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_remote_notification_autodiscover_multiple_matched(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
+    """autodiscover with multiple services: use saved server/port if it matches"""
+    config = remote_notification_bootstrap
+    config.cparser.setValue("remote/enabled", True)
+    config.cparser.setValue("remote/autodiscover", True)
+    config.cparser.setValue("remote/remote_server", "192.168.1.200")
+    config.cparser.setValue("remote/remote_port", 9000)
+
+    plugin = nowplaying.notifications.remote.Plugin(config=config)
+
+    mock_a = MagicMock()
+    mock_a.addresses = ["192.168.1.100"]
+    mock_a.host = "server-a.local."
+    mock_a.port = 8899
+
+    mock_b = MagicMock()
+    mock_b.addresses = ["192.168.1.200"]
+    mock_b.host = "server-b.local."
+    mock_b.port = 9000
+
+    with patch(
+        "nowplaying.mdns_discovery.discover_whatsnowplaying_services_async",
+        return_value=[mock_a, mock_b],
+    ):
+        await plugin.start()
+
+    assert plugin.enabled is True
+    assert plugin.server == "192.168.1.200"
+    assert plugin.port == 9000
+    plugin._scan_task.cancel()  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_remote_notification_autodiscover_multiple_unmatched(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
+    """autodiscover with multiple services and no saved match: use first and warn"""
+    config = remote_notification_bootstrap
+    config.cparser.setValue("remote/enabled", True)
+    config.cparser.setValue("remote/autodiscover", True)
+    config.cparser.setValue("remote/remote_server", "remotehost")
+    config.cparser.setValue("remote/remote_port", 8899)
+
+    plugin = nowplaying.notifications.remote.Plugin(config=config)
+
+    mock_a = MagicMock()
+    mock_a.addresses = ["192.168.1.100"]
+    mock_a.host = "server-a.local."
+    mock_a.port = 8899
+
+    mock_b = MagicMock()
+    mock_b.addresses = ["192.168.1.200"]
+    mock_b.host = "server-b.local."
+    mock_b.port = 9000
+
+    with patch(
+        "nowplaying.mdns_discovery.discover_whatsnowplaying_services_async",
+        return_value=[mock_a, mock_b],
+    ):
+        await plugin.start()
+
+    assert plugin.enabled is True
+    assert plugin.server == "192.168.1.100"
+    assert plugin.port == 8899
+    plugin._scan_task.cancel()  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_remote_notification_autodiscover_no_services(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
+    """autodiscover with no services found: disable plugin"""
+    config = remote_notification_bootstrap
+    config.cparser.setValue("remote/enabled", True)
+    config.cparser.setValue("remote/autodiscover", True)
+
+    plugin = nowplaying.notifications.remote.Plugin(config=config)
+
+    with patch(
+        "nowplaying.mdns_discovery.discover_whatsnowplaying_services_async",
+        return_value=[],
+    ):
+        await plugin.start()
+
+    assert plugin.enabled is False
+    plugin._scan_task.cancel()  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_remote_notification_autodiscover_uses_cache(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
+    """autodiscover only runs mDNS scan once; subsequent start() calls use cached results"""
+    config = remote_notification_bootstrap
+    config.cparser.setValue("remote/enabled", True)
+    config.cparser.setValue("remote/autodiscover", True)
+
+    plugin = nowplaying.notifications.remote.Plugin(config=config)
+
+    mock_service = MagicMock()
+    mock_service.addresses = ["192.168.1.100"]
+    mock_service.host = "remote.local."
+    mock_service.port = 9000
+
+    call_count = 0
+
+    async def mock_discover():
+        nonlocal call_count
+        call_count += 1
+        return [mock_service]
+
+    with patch(
+        "nowplaying.mdns_discovery.discover_whatsnowplaying_services_async",
+        side_effect=mock_discover,
+    ):
+        await plugin.start()
+        await plugin.start()
+        await plugin.start()
+
+    assert call_count == 1
+    assert plugin.server == "192.168.1.100"
+    assert plugin.port == 9000
+    plugin._scan_task.cancel()  # pylint: disable=protected-access
+
+
+@pytest.mark.asyncio
+async def test_remote_notification_autodiscover_cache_cleared_on_disable(
+    remote_notification_bootstrap,
+):  # pylint: disable=redefined-outer-name
+    """disabling autodiscover clears the cached service list"""
+    config = remote_notification_bootstrap
+    config.cparser.setValue("remote/enabled", True)
+    config.cparser.setValue("remote/autodiscover", True)
+
+    plugin = nowplaying.notifications.remote.Plugin(config=config)
+
+    mock_service = MagicMock()
+    mock_service.addresses = ["192.168.1.100"]
+    mock_service.host = "remote.local."
+    mock_service.port = 9000
+
+    with patch(
+        "nowplaying.mdns_discovery.discover_whatsnowplaying_services_async",
+        return_value=[mock_service],
+    ):
+        await plugin.start()
+
+    assert plugin._discovered_services is not None  # pylint: disable=protected-access
+
+    config.cparser.setValue("remote/autodiscover", False)
+    await plugin.start()
+
+    assert plugin._discovered_services is None  # pylint: disable=protected-access
+    assert plugin._scan_task is None  # pylint: disable=protected-access
 
 
 @pytest.mark.asyncio
@@ -361,11 +489,6 @@ async def test_remote_notification_load_settingsui(remote_notification_bootstrap
     plugin = nowplaying.notifications.remote.Plugin(config=config)
 
     mock_qwidget = MagicMock()
-    mock_qwidget.enable_checkbox = MagicMock()
-    mock_qwidget.autodiscover_checkbox = MagicMock()
-    mock_qwidget.server_lineedit = MagicMock()
-    mock_qwidget.port_lineedit = MagicMock()
-    mock_qwidget.secret_lineedit = MagicMock()
 
     plugin.load_settingsui(mock_qwidget)
 
@@ -374,7 +497,8 @@ async def test_remote_notification_load_settingsui(remote_notification_bootstrap
     mock_qwidget.server_lineedit.setText.assert_called_once_with("testhost")
     mock_qwidget.port_lineedit.setText.assert_called_once_with("8899")
     mock_qwidget.secret_lineedit.setText.assert_called_once_with("secret")
-    # Verify signal connection is set up
+    mock_qwidget.scan_button.clicked.connect.assert_called_once()
+    mock_qwidget.discovered_combobox.currentIndexChanged.connect.assert_called_once()
     mock_qwidget.autodiscover_checkbox.stateChanged.connect.assert_called_once()
 
 
@@ -401,41 +525,150 @@ async def test_remote_notification_save_settingsui(remote_notification_bootstrap
 
 
 @pytest.mark.asyncio
-async def test_remote_notification_update_field_states():
-    """test _update_field_states method"""
+async def test_remote_notification_update_field_states_autodiscover_on():
+    """scan widgets visible and manual fields disabled when autodiscover is checked"""
     plugin = nowplaying.notifications.remote.Plugin()
 
     mock_qwidget = MagicMock()
     mock_qwidget.autodiscover_checkbox.isChecked.return_value = True
-    mock_qwidget.server_lineedit = MagicMock()
-    mock_qwidget.port_lineedit = MagicMock()
 
     plugin._update_field_states(mock_qwidget)  # pylint: disable=protected-access
 
-    # Fields should be disabled when autodiscover is checked
+    mock_qwidget.scan_button.setVisible.assert_called_once_with(True)
+    mock_qwidget.scan_status_label.setVisible.assert_called_once_with(True)
+    mock_qwidget.discovered_combobox.setVisible.assert_called_once_with(True)
     mock_qwidget.server_lineedit.setEnabled.assert_called_once_with(False)
     mock_qwidget.port_lineedit.setEnabled.assert_called_once_with(False)
 
 
 @pytest.mark.asyncio
+async def test_remote_notification_update_field_states_autodiscover_off():
+    """scan widgets hidden and manual fields enabled when autodiscover is unchecked"""
+    plugin = nowplaying.notifications.remote.Plugin()
+
+    mock_qwidget = MagicMock()
+    mock_qwidget.autodiscover_checkbox.isChecked.return_value = False
+
+    plugin._update_field_states(mock_qwidget)  # pylint: disable=protected-access
+
+    mock_qwidget.scan_button.setVisible.assert_called_once_with(False)
+    mock_qwidget.scan_status_label.setVisible.assert_called_once_with(False)
+    mock_qwidget.discovered_combobox.setVisible.assert_called_once_with(False)
+    mock_qwidget.server_lineedit.setEnabled.assert_called_once_with(True)
+    mock_qwidget.port_lineedit.setEnabled.assert_called_once_with(True)
+
+
+def test_remote_notification_scan_for_servers_found(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
+    """scan button populates combobox and status label when servers found"""
+    config = remote_notification_bootstrap
+    plugin = nowplaying.notifications.remote.Plugin(config=config)
+
+    mock_service = MagicMock()
+    mock_service.addresses = ["192.168.1.100"]
+    mock_service.host = "found.local."
+    mock_service.port = 8899
+
+    mock_qwidget = MagicMock()
+
+    with patch(
+        "nowplaying.mdns_discovery.discover_whatsnowplaying_services",
+        return_value=[mock_service],
+    ):
+        plugin._scan_for_servers(mock_qwidget)  # pylint: disable=protected-access
+
+    assert plugin._discovered_services == [mock_service]  # pylint: disable=protected-access
+    mock_qwidget.discovered_combobox.addItem.assert_called_once()
+    mock_qwidget.scan_status_label.setText.assert_called_once_with("1 server(s) found")
+    mock_qwidget.discovered_combobox.setCurrentIndex.assert_called_with(0)
+
+
+def test_remote_notification_scan_for_servers_not_found(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
+    """scan button shows no-servers message when nothing found"""
+    config = remote_notification_bootstrap
+    plugin = nowplaying.notifications.remote.Plugin(config=config)
+
+    mock_qwidget = MagicMock()
+
+    with patch(
+        "nowplaying.mdns_discovery.discover_whatsnowplaying_services",
+        return_value=[],
+    ):
+        plugin._scan_for_servers(mock_qwidget)  # pylint: disable=protected-access
+
+    assert plugin._discovered_services == []  # pylint: disable=protected-access
+    mock_qwidget.scan_status_label.setText.assert_called_once_with("No servers found")
+
+
+def test_remote_notification_on_service_selected(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
+    """selecting a combobox item fills the server and port fields"""
+    config = remote_notification_bootstrap
+    plugin = nowplaying.notifications.remote.Plugin(config=config)
+
+    mock_qwidget = MagicMock()
+    mock_qwidget.discovered_combobox.itemData.return_value = ("192.168.1.50", 9000)
+
+    plugin._on_service_selected(mock_qwidget, 0)  # pylint: disable=protected-access
+
+    mock_qwidget.server_lineedit.setText.assert_called_once_with("192.168.1.50")
+    mock_qwidget.port_lineedit.setText.assert_called_once_with("9000")
+
+
+def test_remote_notification_on_service_selected_no_data(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
+    """selecting a combobox item with no userData does not update fields"""
+    config = remote_notification_bootstrap
+    plugin = nowplaying.notifications.remote.Plugin(config=config)
+
+    mock_qwidget = MagicMock()
+    mock_qwidget.discovered_combobox.itemData.return_value = None
+
+    plugin._on_service_selected(mock_qwidget, 0)  # pylint: disable=protected-access
+
+    mock_qwidget.server_lineedit.setText.assert_not_called()
+    mock_qwidget.port_lineedit.setText.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_remote_notification_verify_settingsui_autodiscover():
-    """test verify_settingsui with autodiscover enabled"""
+    """verify_settingsui passes with empty server/port when autodiscover is enabled"""
     plugin = nowplaying.notifications.remote.Plugin()
 
     mock_qwidget = MagicMock()
     mock_qwidget.enable_checkbox.isChecked.return_value = True
     mock_qwidget.autodiscover_checkbox.isChecked.return_value = True
-
-    # Should pass validation even with empty server/port
     mock_qwidget.server_lineedit.text.return_value = ""
-    result = plugin.verify_settingsui(mock_qwidget)
 
-    assert result is True
+    assert plugin.verify_settingsui(mock_qwidget) is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "server,port,expected_error",
+    [
+        ("", "8899", "Remote server address is required"),
+        ("testhost", "invalid", "port must be a valid number"),
+        ("testhost", "0", "Remote port must be between 1 and 65535"),
+        ("testhost", "65536", "Remote port must be between 1 and 65535"),
+    ],
+)
+async def test_remote_notification_verify_settingsui_manual_invalid(server, port, expected_error):
+    """verify_settingsui raises for invalid manual config"""
+    plugin = nowplaying.notifications.remote.Plugin()
+
+    mock_qwidget = MagicMock()
+    mock_qwidget.enable_checkbox.isChecked.return_value = True
+    mock_qwidget.autodiscover_checkbox.isChecked.return_value = False
+    mock_qwidget.server_lineedit.text.return_value = server
+    mock_qwidget.port_lineedit.text.return_value = port
+
+    with pytest.raises(Exception) as exc_info:
+        plugin.verify_settingsui(mock_qwidget)
+
+    assert expected_error in str(exc_info.value)
 
 
 @pytest.mark.asyncio
 async def test_remote_notification_verify_settingsui_manual_valid():
-    """test verify_settingsui with manual config and valid settings"""
+    """verify_settingsui passes with valid manual config"""
     plugin = nowplaying.notifications.remote.Plugin()
 
     mock_qwidget = MagicMock()
@@ -444,148 +677,4 @@ async def test_remote_notification_verify_settingsui_manual_valid():
     mock_qwidget.server_lineedit.text.return_value = "testhost"
     mock_qwidget.port_lineedit.text.return_value = "8899"
 
-    result = plugin.verify_settingsui(mock_qwidget)
-
-    assert result is True
-
-
-@pytest.mark.asyncio
-async def test_remote_notification_verify_settingsui_manual_invalid_server():
-    """test verify_settingsui with manual config and empty server"""
-    plugin = nowplaying.notifications.remote.Plugin()
-
-    mock_qwidget = MagicMock()
-    mock_qwidget.enable_checkbox.isChecked.return_value = True
-    mock_qwidget.autodiscover_checkbox.isChecked.return_value = False
-    mock_qwidget.server_lineedit.text.return_value = ""
-
-    with pytest.raises(Exception) as exc_info:
-        plugin.verify_settingsui(mock_qwidget)
-
-    assert "Remote server address is required" in str(exc_info.value)
-
-
-@pytest.mark.asyncio
-async def test_remote_notification_verify_settingsui_manual_invalid_port():
-    """test verify_settingsui with manual config and non-numeric port"""
-    plugin = nowplaying.notifications.remote.Plugin()
-
-    mock_qwidget = MagicMock()
-    mock_qwidget.enable_checkbox.isChecked.return_value = True
-    mock_qwidget.autodiscover_checkbox.isChecked.return_value = False
-    mock_qwidget.server_lineedit.text.return_value = "testhost"
-    mock_qwidget.port_lineedit.text.return_value = "invalid"
-
-    with pytest.raises(Exception) as exc_info:
-        plugin.verify_settingsui(mock_qwidget)
-
-    assert "port must be a valid number" in str(exc_info.value)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("port_value", ["0", "65536", "-1", "100000"])
-async def test_remote_notification_verify_settingsui_manual_port_out_of_range(port_value):
-    """test verify_settingsui with manual config and out-of-range port"""
-    plugin = nowplaying.notifications.remote.Plugin()
-
-    mock_qwidget = MagicMock()
-    mock_qwidget.enable_checkbox.isChecked.return_value = True
-    mock_qwidget.autodiscover_checkbox.isChecked.return_value = False
-    mock_qwidget.server_lineedit.text.return_value = "testhost"
-    mock_qwidget.port_lineedit.text.return_value = port_value
-
-    with pytest.raises(Exception) as exc_info:
-        plugin.verify_settingsui(mock_qwidget)
-
-    assert "Remote port must be between 1 and 65535" in str(exc_info.value)
-
-
-@pytest.mark.asyncio
-async def test_autodiscover_disables_on_no_service(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
-    """autodiscover failure (no service found) disables remote and does not cache server/port"""
-    config = remote_notification_bootstrap
-    config.cparser.setValue("remote/enabled", True)
-    config.cparser.setValue("remote/autodiscover", True)
-
-    plugin = nowplaying.notifications.remote.Plugin(config=config)
-
-    async def mock_no_service():
-        return None
-
-    with patch(
-        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async",
-        side_effect=mock_no_service,
-    ):
-        await plugin.start()
-
-    assert plugin.enabled is False
-    assert plugin._autodiscovered_server is None  # pylint: disable=protected-access
-    assert plugin._autodiscovered_port is None  # pylint: disable=protected-access
-
-
-@pytest.mark.asyncio
-async def test_autodiscover_caches_after_first_success(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
-    """test that autodiscover only runs mDNS once; subsequent calls use cached server/port"""
-    config = remote_notification_bootstrap
-    config.cparser.setValue("remote/enabled", True)
-    config.cparser.setValue("remote/autodiscover", True)
-
-    plugin = nowplaying.notifications.remote.Plugin(config=config)
-
-    mock_service = MagicMock()
-    mock_service.addresses = ["192.168.1.200"]
-    mock_service.host = "remote.local."
-    mock_service.port = 9000
-
-    call_count = 0
-
-    async def mock_async_discover():
-        nonlocal call_count
-        call_count += 1
-        return mock_service
-
-    with patch(
-        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async",
-        side_effect=mock_async_discover,
-    ):
-        await plugin.start()
-        await plugin.start()
-        await plugin.start()
-
-    # Discovery should have run exactly once
-    assert call_count == 1
-    assert plugin.server == "192.168.1.200"
-    assert plugin.port == 9000
-
-
-@pytest.mark.asyncio
-async def test_autodiscover_cache_cleared_when_disabled(remote_notification_bootstrap):  # pylint: disable=redefined-outer-name
-    """test that disabling autodiscover clears the cached server/port"""
-    config = remote_notification_bootstrap
-    config.cparser.setValue("remote/enabled", True)
-    config.cparser.setValue("remote/autodiscover", True)
-
-    plugin = nowplaying.notifications.remote.Plugin(config=config)
-
-    mock_service = MagicMock()
-    mock_service.addresses = ["192.168.1.200"]
-    mock_service.host = "remote.local."
-    mock_service.port = 9000
-
-    async def mock_async_discover():
-        return mock_service
-
-    with patch(
-        "nowplaying.mdns_discovery.get_first_whatsnowplaying_service_async",
-        side_effect=mock_async_discover,
-    ):
-        await plugin.start()
-
-    assert plugin._autodiscovered_server == "192.168.1.200"  # pylint: disable=protected-access
-
-    # Disable autodiscover — cache should be cleared
-    config.cparser.setValue("remote/autodiscover", False)
-    await plugin.start()
-
-    assert plugin._autodiscovered_server is None  # pylint: disable=protected-access
-    assert plugin._autodiscovered_port is None  # pylint: disable=protected-access
+    assert plugin.verify_settingsui(mock_qwidget) is True

@@ -237,7 +237,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
 
             # Register the service
             self.aiozc = AsyncZeroconf(ip_version=IPVersion.V4Only)
-            await self.aiozc.async_register_service(info)
+            await self.aiozc.async_register_service(info, allow_name_change=True)
             self.service_info = info
 
             # Convert addresses back to readable format for logging
@@ -249,7 +249,7 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 self.port,
             )
         except Exception as error:  # pylint: disable=broad-except
-            logging.warning("Failed to register mDNS service: %s", error)
+            logging.exception("Failed to register mDNS service: %s", error)
             await self._close_aiozc_safely()
 
     async def _unregister_mdns_service(self):
