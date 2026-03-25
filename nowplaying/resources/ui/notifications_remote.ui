@@ -58,11 +58,47 @@
     <string>Auto-discover server</string>
    </property>
   </widget>
-  <widget class="QLabel" name="server_label">
+  <widget class="QPushButton" name="scan_button">
    <property name="geometry">
     <rect>
      <x>40</x>
      <y>120</y>
+     <width>150</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Scan for servers</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="scan_status_label">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>124</y>
+     <width>250</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="discovered_combobox">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>155</y>
+     <width>410</width>
+     <height>26</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="server_label">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>193</y>
      <width>67</width>
      <height>16</height>
     </rect>
@@ -75,7 +111,7 @@
    <property name="geometry">
     <rect>
      <x>110</x>
-     <y>120</y>
+     <y>190</y>
      <width>200</width>
      <height>22</height>
     </rect>
@@ -88,7 +124,7 @@
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>150</y>
+     <y>223</y>
      <width>67</width>
      <height>16</height>
     </rect>
@@ -101,7 +137,7 @@
    <property name="geometry">
     <rect>
      <x>110</x>
-     <y>150</y>
+     <y>220</y>
      <width>100</width>
      <height>22</height>
     </rect>
@@ -114,7 +150,7 @@
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>180</y>
+     <y>253</y>
      <width>67</width>
      <height>16</height>
     </rect>
@@ -127,7 +163,7 @@
    <property name="geometry">
     <rect>
      <x>110</x>
-     <y>180</y>
+     <y>250</y>
      <width>200</width>
      <height>22</height>
     </rect>
@@ -143,14 +179,15 @@
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>220</y>
+     <y>290</y>
      <width>500</width>
-     <height>80</height>
+     <height>100</height>
     </rect>
    </property>
    <property name="text">
     <string>Remote Output sends track metadata to a remote What's Now Playing instance.
-Enable auto-discover to find services on your local network automatically, or manually configure the server hostname/IP, port, and optional secret key.
+Enable auto-discover to find services automatically. Click "Scan for servers" to find instances on your local network and select one from the list.
+If multiple instances are found, you must select one from the list to save it as your target.
 The remote server must be running with the webserver enabled.</string>
    </property>
    <property name="wordWrap">
