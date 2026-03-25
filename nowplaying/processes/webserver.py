@@ -190,8 +190,6 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             return
         try:
             await self.aiozc.async_close()
-        except asyncio.CancelledError:
-            raise
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logging.warning("Failed to close mDNS Zeroconf instance: %s", exc)
         finally:
