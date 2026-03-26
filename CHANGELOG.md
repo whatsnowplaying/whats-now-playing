@@ -1,7 +1,7 @@
 
 # Changelog
 
-## Version 5.1.0 - in development
+## Version 5.1.0 - 2026-03-26
 
 * macOS
   * This is the last release with pre-built binaries for macOS 11 (Intel) and macOS 12 (Apple Silicon)
@@ -29,7 +29,11 @@
   * Direct link to your version's documentation from the menu bar/system tray
 
 * General Bug Fixes
+  * Security vulnerability fixes
+  * SSL certificate verification now uses the system certificate store, fixing
+    connection failures on some systems (particularly Windows)
   * Major speedup of program launch
+  * General reliability improvements
   * Configuration files can now be exported and imported for portability across systems
     * The exporting machine's home directory is recorded in the config file so paths are
       automatically remapped to the importing machine's home directory
@@ -46,6 +50,8 @@
   * Respinning a request that doesn't have a playlist assigned no longer crashes parts of the system
   * Major documentation overhaul
   * Minor graphics cleanup
+  * Arrow overlay now uses a filled arrowhead and wider text area
+  * Fixed font scaling on Windows in several settings panels
 
 * Artist Extras
   * Artist biographies are now deduplicated per session. The same bio will not be shown twice
@@ -69,6 +75,7 @@
     * Stale authentication state from a previous session is cleared on startup
 
 * Serato
+  * Fixed an issue where tracks with null bytes in metadata were not handled correctly
   * Add artist-based library query support for Serato 4
     * Search entire library or selected playlists/crates for artist tracks
     * Enhanced crate search and metadata querying capabilities

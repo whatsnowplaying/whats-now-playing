@@ -287,7 +287,7 @@
    </property>
    <property name="html">
     <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;style type=&quot;text/css&quot;&gt;p { margin: 3px 0; }&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot;font-size: 10pt;&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;style type=&quot;text/css&quot;&gt;p { margin: 3px 0; }&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
 &lt;p&gt;&lt;b&gt;Guess Game&lt;/b&gt; creates a hangman-style game for your Twitch chat. Viewers type &lt;b&gt;!guess &amp;lt;letter/word&amp;gt;&lt;/b&gt; to play.&lt;/p&gt;
 &lt;p&gt;&lt;b&gt;Templates:&lt;/b&gt; twitchbot_guess.txt, twitchbot_mypoints.txt (customize in templates folder)&lt;/p&gt;
 &lt;p&gt;&lt;b&gt;OBS Sources:&lt;/b&gt; http://localhost:8899/guessgame/guessgame.htm (game) and guessgame-leaderboard.htm?type=session (leaderboard)&lt;/p&gt;

@@ -78,6 +78,10 @@ Example announcement template:
 
 ## Configuration
 
+[![What's Now Playing Kick settings](images/kickbot-settings.png)](images/kickbot-settings.png)
+
+[![What's Now Playing Kick chat settings](images/kickbot-chat.png)](images/kickbot-chat.png)
+
 1. Enable Kick chat in the Kick settings tab
 2. Configure your OAuth2 credentials
 3. Set up your announcement template

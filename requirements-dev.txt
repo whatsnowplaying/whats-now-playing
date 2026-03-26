@@ -1,7 +1,6 @@
 #
 # development
 #
-basedpyright
 pip-upgrader
 pylint==2.17.5
 PyYAML==6.0.3
