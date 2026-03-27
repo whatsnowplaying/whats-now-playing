@@ -76,6 +76,7 @@ site_dir: site
 
 nav:
   - Home: index.md
+  - Features: features.md
   - Quickstart: quickstart.md
   - Usage: usage.md
   - Upgrading: upgrading.md
