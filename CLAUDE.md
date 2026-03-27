@@ -433,10 +433,10 @@ Comprehensive test suite in `tests/audio_metadata/` validates multi-value field 
 
 When adding, removing, or significantly changing features, update these two files:
 
-* `docs/features.md` — the complete feature overview used by users and LLM crawlers
+- `docs/features.md` — the complete feature overview used by users and LLM crawlers
   to understand everything WNP can do; keep input sources, outputs, integrations,
   and capabilities accurate
-* `docs/llms.txt` — the LLM crawler index; update if major new sections or pages
+- `docs/llms.txt` — the LLM crawler index; update if major new sections or pages
   are added to the docs
 
 ## Documentation Style Guidelines
