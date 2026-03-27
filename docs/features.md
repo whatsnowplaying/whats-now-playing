@@ -39,7 +39,7 @@ updates required.
 * **MPRIS2** (Linux) — reads from VLC, Rhythmbox, Spotify, and any
   MPRIS2-compatible player
 
-### Remote WNP Instance
+### [Remote WNP Instance](input/remote.md)
 
 * One WNP instance can receive track data from another WNP instance over the
   network, allowing a central streaming PC to consolidate output from one or
@@ -49,20 +49,20 @@ updates required.
 
 For tracks that are untagged or missing metadata:
 
-* **AcoustID** — audio fingerprinting to identify tracks by sound
-* **MusicBrainz** — look up detailed track and artist metadata by fingerprint
+* **[AcoustID](recognition/acoustid.md)** — audio fingerprinting to identify tracks by sound
+* **[MusicBrainz](recognition/musicbrainz.md)** — look up detailed track and artist metadata by fingerprint
   or ID
 
 ## Artist Data Enrichment
 
 WNP can automatically fetch additional artist information to enhance displays:
 
-* **Discogs** — artist biographies and images
-* **TheAudioDB** — artist biographies, images, and album art (free tier
+* **[Discogs](extras/discogs.md)** — artist biographies and images
+* **[TheAudioDB](extras/theaudiodb.md)** — artist biographies, images, and album art (free tier
   available without API key)
-* **FanArt.TV** — high-quality fan art, artist logos, and background images
-* **Wikimedia / Wikipedia** — artist biographies and images
-* **Last.fm** — album art lookup
+* **[FanArt.TV](extras/fanarttv.md)** — high-quality fan art, artist logos, and background images
+* **[Wikimedia / Wikipedia](extras/wikimedia.md)** — artist biographies and images
+* **[Last.fm](extras/lastfm.md)** — album art lookup
 * **MusicBrainz** — artist website links, IDs, and relationship data
 
 Artist biographies are deduplicated per session — the same bio will not be
@@ -123,7 +123,7 @@ variable and exportable.
 
 ## Audience Engagement
 
-### Guess Game
+### [Guess Game](output/guessgame.md)
 
 A Twitch chat-based guessing game where viewers try to identify the current
 track. Features include:
@@ -135,12 +135,12 @@ track. Features include:
 * Integration with the whatsnowplaying.com online leaderboard
 * System tray toggle to enable or disable at runtime
 
-### Track Requests
+### [Track Requests](requests.md)
 
 Viewers can request tracks directly from Twitch chat:
 
-* Fuzzy matching handles typos and natural language (e.g. "anything by nine
-  inch nails")
+* Fuzzy matching handles typos and natural language (e.g. 'anything by Nine
+  Inch Nails')
 * `!hasartist` command to check if an artist is in the library
 * Supports searching the full library or specific crates/playlists
 * Channel point redemption support
@@ -204,10 +204,5 @@ community service that tracks what DJs are playing across streams:
 * [Template Variables](reference/templatevariables.md) — full list of available metadata variables
 * [Input Sources](input/index.md) — detailed setup for each DJ software integration
 * [Output & Display](output/index.md) — OBS, web server, text output, and set lists
-* [Streaming & Chat](output/twitchbot.md) — Twitch, Kick, and Discord bot setup
-* [Guess Game](output/guessgame.md) — audience engagement game
-* [Track Requests](requests.md) — viewer request system
 * [Artist Data](extras/index.md) — Discogs, FanArt.TV, TheAudioDB, Wikimedia
-* [Recognition](recognition/index.md) — AcoustID and MusicBrainz
 * [API Reference](reference/api.md) — web server REST API
-* [Charts](output/charts.md) — community charts at <https://whatsnowplaying.com/>
