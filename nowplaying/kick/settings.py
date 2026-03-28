@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QCheckBox, QTableWidgetItem  # pylint: disable=no-
 import nowplaying.config
 import nowplaying.kick.oauth2
 import nowplaying.kick.utils
+import nowplaying.preview.textwindow
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.kick.constants import (
     ACCESS_TOKEN_KEY,
@@ -217,6 +218,8 @@ class KickChatSettings:
     def __init__(self) -> None:
         self.widget: Any = None
         self.uihelp: Any = None
+        self.config: nowplaying.config.ConfigFile | None = None
+        self._textpreview_window: nowplaying.preview.textwindow.TextPreviewWindow | None = None
 
     def connect(self, uihelp: Any, widget: Any) -> None:
         """connect kick chat settings"""
@@ -224,6 +227,7 @@ class KickChatSettings:
         self.uihelp = uihelp
         # Connect buttons
         widget.announce_button.clicked.connect(self.on_announce_button)
+        widget.announce_preview_button.clicked.connect(self.on_announce_preview_button)
         widget.add_button.clicked.connect(self.on_add_button)
         widget.del_button.clicked.connect(self.on_del_button)
 
@@ -231,6 +235,18 @@ class KickChatSettings:
     def on_announce_button(self) -> None:
         """kick announce button clicked action"""
         self.uihelp.template_picker_lineedit(self.widget.announce_lineedit, limit="kickbot_*.txt")
+
+    @Slot()
+    def on_announce_preview_button(self) -> None:
+        """open or raise the kickbot announce template preview window"""
+        if self._textpreview_window is None:
+            self._textpreview_window = nowplaying.preview.textwindow.TextPreviewWindow(
+                config=self.config,
+                glob_pattern="kickbot_*.txt",
+                config_key="kick/announce",
+            )
+        self._textpreview_window.show()
+        self._textpreview_window.raise_()
 
     @Slot()
     def on_add_button(self) -> None:
@@ -258,6 +274,7 @@ class KickChatSettings:
         uihelp: "nowplaying.uihelp.UIHelp",  # pylint: disable=unused-argument
     ) -> None:
         """load kick chat settings"""
+        self.config = config
         self.widget = widget
         widget.enable_checkbox.setChecked(config.cparser.value("kick/chat", type=bool))
         widget.announce_lineedit.setText(config.cparser.value("kick/announce") or "")

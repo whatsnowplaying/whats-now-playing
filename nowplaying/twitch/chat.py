@@ -45,6 +45,7 @@ import nowplaying.db
 import nowplaying.guessgame
 import nowplaying.inputs
 import nowplaying.pluginimporter
+import nowplaying.preview.textwindow
 import nowplaying.trackrequests
 import nowplaying.twitch.oauth2
 import nowplaying.twitch.utils
@@ -963,12 +964,15 @@ class TwitchChatSettings:
     def __init__(self):
         self.widget = None
         self.uihelp = None
+        self.config = None
+        self._textpreview_window: nowplaying.preview.textwindow.TextPreviewWindow | None = None
 
     def connect(self, uihelp, widget):
         """connect twitchbot"""
         self.widget = widget
         self.uihelp = uihelp
         widget.announce_button.clicked.connect(self.on_announce_button)
+        widget.announce_preview_button.clicked.connect(self.on_announce_preview_button)
         widget.add_button.clicked.connect(self.on_add_button)
         widget.del_button.clicked.connect(self.on_del_button)
 
@@ -978,6 +982,18 @@ class TwitchChatSettings:
         self.uihelp.template_picker_lineedit(
             self.widget.announce_lineedit, limit="twitchbot_*.txt"
         )
+
+    @Slot()
+    def on_announce_preview_button(self):
+        """open or raise the twitchbot announce template preview window"""
+        if self._textpreview_window is None:
+            self._textpreview_window = nowplaying.preview.textwindow.TextPreviewWindow(
+                config=self.config,
+                glob_pattern="twitchbot_*.txt",
+                config_key="twitchbot/announce",
+            )
+        self._textpreview_window.show()
+        self._textpreview_window.raise_()
 
     def _twitchbot_command_load(self, command=None, **kwargs):
         if not command:
@@ -1019,6 +1035,7 @@ class TwitchChatSettings:
     def load(self, config, widget, uihelp):  # pylint: disable=unused-argument
         """load the settings window"""
 
+        self.config = config
         self.widget = widget
 
         def clear_table(widget):

@@ -53,6 +53,7 @@ import nowplaying.imagecache
 import nowplaying.kick.oauth2
 import nowplaying.metadata
 import nowplaying.oauth2
+import nowplaying.preview.sampledata
 import nowplaying.twitch.oauth2
 import nowplaying.utils
 import nowplaying.webserver.shutdown
@@ -396,7 +397,11 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
                 await websocket.send_json(self._base64ifier(metadata))
 
     async def _wss_do_update(
-        self, websocket: web.WebSocketResponse, database: nowplaying.db.MetadataDB
+        self,
+        websocket: web.WebSocketResponse,
+        database: nowplaying.db.MetadataDB,
+        preview: bool = False,
+        bundledir: pathlib.Path | None = None,
     ):
         # early launch can be a bit weird so
         # pause a bit
@@ -406,9 +411,12 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
             if nowplaying.webserver.shutdown.safe_stopevent_check_websocket(self.stopevent):
                 return time.time()
             metadata = await database.read_last_meta_async()
+            if not metadata and preview:
+                metadata = nowplaying.preview.sampledata.get_preview_metadata(bundledir)
+                break
             await asyncio.sleep(1)
         if metadata:
-            del metadata["dbid"]
+            metadata.pop("dbid", None)
             if not websocket.closed:
                 await websocket.send_json(self._transparentifier(metadata))
         return time.time()
@@ -420,14 +428,18 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         await websocket.prepare(request)
         request.app[WS_KEY].add(websocket)
 
-        # Get session ID from query parameters
+        # Get session ID and preview flag from query parameters
         session_id = request.query.get("session_id", "unknown")
+        preview = "preview" in request.query
         logging.info(
             "Session %s: WebSocket streamer connected from %s", session_id, request.remote
         )
 
         try:
-            mytime = await self._wss_do_update(websocket, request.app[METADB_KEY])
+            bundledir = request.app[CONFIG_KEY].getbundledir()
+            mytime = await self._wss_do_update(
+                websocket, request.app[METADB_KEY], preview=preview, bundledir=bundledir
+            )
             # Track loop start time for shutdown delay monitoring
             loop_start_time = time.time()
             while (

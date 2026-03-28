@@ -92,9 +92,22 @@
     <rect>
      <x>310</x>
      <y>32</y>
-     <width>311</width>
+     <width>201</width>
      <height>25</height>
     </rect>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="textpreview_button">
+   <property name="geometry">
+    <rect>
+     <x>520</x>
+     <y>32</y>
+     <width>101</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Preview ...</string>
    </property>
   </widget>
   <widget class="QLineEdit" name="textoutput_lineedit">

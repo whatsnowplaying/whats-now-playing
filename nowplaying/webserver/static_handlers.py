@@ -13,6 +13,7 @@ from aiohttp import web
 
 import nowplaying.db
 import nowplaying.hostmeta
+import nowplaying.preview.sampledata
 import nowplaying.utils
 from nowplaying.types import TrackMetadata
 
@@ -113,7 +114,7 @@ class StaticContentHandler:
         """handle web output"""
         return await self._metacheck_htm_handler(request, "weboutput/requestertemplate")
 
-    async def template_handler(self, request: web.Request):
+    async def template_handler(self, request: web.Request):  # pylint: disable=too-many-return-statements
         """handle direct template file requests"""
         template_name = request.match_info.get("template_name")
         if not template_name or not template_name.endswith(".htm"):
@@ -142,8 +143,13 @@ class StaticContentHandler:
 
             metadata = await request.app[self.metadb_key].read_last_meta_async()
             if not metadata:
-                metadata = nowplaying.hostmeta.gethostmeta()
-                metadata["httpport"] = config.cparser.value("weboutput/httpport", type=int)
+                if "preview" in request.query:
+                    metadata = nowplaying.preview.sampledata.get_preview_metadata(
+                        config.getbundledir()
+                    )
+                else:
+                    metadata = nowplaying.hostmeta.gethostmeta()
+            metadata["httpport"] = config.cparser.value("weboutput/httpport", type=int)
 
             # Add session ID to metadata for template use
             metadata["session_id"] = session_id
@@ -174,13 +180,28 @@ class StaticContentHandler:
             logging.exception("_htm_handler: %s", err)
         return htmloutput
 
-    async def _metacheck_htm_handler(self, request: web.Request, cfgtemplate: str):
+    async def _metacheck_htm_handler(self, request: web.Request, cfgtemplate: str):  # pylint: disable=too-many-return-statements
         """handle static html files after checking metadata"""
         request.app[self.config_key].cparser.sync()
         template = request.app[self.config_key].cparser.value(cfgtemplate)
         source = os.path.basename(template) if template else "unknown"
         htmloutput = ""
         request.app[self.config_key].get()
+
+        if "preview" in request.query:
+            config = request.app[self.config_key]
+            metadata = await request.app[self.metadb_key].read_last_meta_async()
+            if not metadata:
+                metadata = nowplaying.preview.sampledata.get_preview_metadata(
+                    config.getbundledir()
+                )
+                metadata.update(nowplaying.hostmeta.gethostmeta())
+            metadata["httpport"] = config.cparser.value("weboutput/httpport", type=int)
+            if not template or not os.path.exists(template):
+                return web.Response(status=202, content_type="text/html", text=INDEXREFRESH)
+            htmloutput = await self._htm_handler(request, template, metadata=metadata)
+            return web.Response(content_type="text/html", text=htmloutput)
+
         metadata = await request.app[self.metadb_key].read_last_meta_async()
         lastid = await self.getlastid(request, source)
         once = request.app[self.config_key].cparser.value("weboutput/once", type=bool)

@@ -156,6 +156,7 @@ for execname, execpy in executables.items():
                  binaries=[],
                  datas=[('nowplaying/resources/*', 'resources/'),
                         ('nowplaying/resources/ui/*', 'resources/ui/'),
+                        ('nowplaying/resources/preview/*', 'resources/preview/'),
                         ('nowplaying/templates/*', 'templates/')] +
                        _nltk_datas('punkt') +
                        _nltk_datas('punkt_tab'),

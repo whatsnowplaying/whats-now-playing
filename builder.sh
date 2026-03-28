@@ -46,7 +46,7 @@ if [[ "${SYSTEM}" == "dev" ]]; then
   fi
   check_python_version "${PYTHONBIN}"
   echo "*****"
-  echo "* Dev setup using ${PYTHONBIN}"
+  echo "* Dev setup using ${PYTHONBIN} ($("${PYTHONBIN}" --version 2>&1))"
   echo "****"
   if [[ ! -d venv ]]; then
     "${PYTHONBIN}" -m venv venv
@@ -137,7 +137,7 @@ DISTDIR=WhatsNowPlaying-"${VERSION}-${DISTNAME}"
 PYTHONBIN="${PYTHONBIN:-$(command -v "${PYTHON}")}"
 echo "*****"
 echo "* Building on ${SYSTEM} / ${UNAMESYS}"
-echo "* Using ${PYTHONBIN}"
+echo "* Using ${PYTHONBIN} ($("${PYTHONBIN}" --version 2>&1))"
 echo "****"
 
 check_python_version "${PYTHONBIN}"

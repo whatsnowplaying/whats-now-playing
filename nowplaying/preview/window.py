@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+"""Embedded browser preview window for webserver templates"""
+
+import logging
+import pathlib
+
+from PySide6.QtCore import QSize, QUrl  # pylint: disable=no-name-in-module
+from PySide6.QtGui import QColor  # pylint: disable=no-name-in-module
+from PySide6.QtWebEngineWidgets import QWebEngineView  # pylint: disable=no-name-in-module
+from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+# Background presets: (label, hex color)
+_BG_PRESETS: list[tuple[str, str]] = [
+    ("Dark gray", "#1a1a1a"),
+    ("Black", "#000000"),
+    ("White", "#ffffff"),
+    ("Medium gray", "#808080"),
+    ("Chroma green", "#00b140"),
+]
+
+
+class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
+    """Standalone non-modal window showing a live preview of a webserver template.
+
+    The preview loads the template via the local webserver with ``?preview=1``
+    appended, which causes the server to render using the last known metadata
+    or fall back to sample data when nothing is playing.
+
+    The URL label shows the clean URL (without ``?preview=1``) so users can
+    copy it directly into OBS or a browser.
+    """
+
+    def __init__(self, config, parent=None) -> None:
+        super().__init__(parent)
+        self.config = config
+        self.setWindowTitle("Template Preview")
+        self.resize(900, 600)
+        self._setup_ui()
+        self._populate_templates()
+        self._load_current()
+
+    # ------------------------------------------------------------------
+    # Setup
+    # ------------------------------------------------------------------
+
+    def _setup_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(4)
+
+        # ---- toolbar row ----
+        toolbar = QHBoxLayout()
+
+        template_label = QLabel("Template:")
+        toolbar.addWidget(template_label)
+
+        self.template_combo = QComboBox()
+        self.template_combo.setEditable(False)
+        self.template_combo.setMinimumWidth(220)
+        self.template_combo.currentIndexChanged.connect(self._on_template_selected)
+        toolbar.addWidget(self.template_combo)
+
+        # URL display (clean, no ?preview=1 — safe to copy into OBS)
+        self.url_label = QLabel()
+        self.url_label.setWordWrap(False)
+        toolbar.addWidget(self.url_label, stretch=1)
+
+        # Background color selector
+        bg_label = QLabel("BG:")
+        toolbar.addWidget(bg_label)
+
+        self.bg_combo = QComboBox()
+        for name, _ in _BG_PRESETS:
+            self.bg_combo.addItem(name)
+        self.bg_combo.currentIndexChanged.connect(self._on_bg_selected)
+        toolbar.addWidget(self.bg_combo)
+
+        refresh_button = QPushButton("Refresh")
+        refresh_button.setFixedWidth(80)
+        refresh_button.clicked.connect(self._reload)
+        toolbar.addWidget(refresh_button)
+
+        layout.addLayout(toolbar)
+
+        # ---- browser ----
+        self.webview = QWebEngineView()
+        self._apply_bg(0)
+        layout.addWidget(self.webview)
+
+    def _populate_templates(self) -> None:
+        """Fill the combobox with .htm files from the bundled template directory."""
+        templatedir = pathlib.Path(self.config.templatedir)
+        templates = sorted(templatedir.glob("*.htm"))
+
+        configured = self.config.cparser.value("weboutput/htmltemplate", defaultValue="")
+        configured_name = pathlib.Path(configured).name if configured else ""
+
+        self.template_combo.blockSignals(True)
+        if not templates:
+            self.template_combo.addItem("(no templates found)", userData=None)
+            self.template_combo.setEnabled(False)
+            self.webview.setEnabled(False)
+        else:
+            for tmpl in templates:
+                self.template_combo.addItem(tmpl.name, userData=tmpl.name)
+
+            # Pre-select the currently configured template if it's in the list
+            if configured_name:
+                idx = self.template_combo.findData(configured_name)
+                if idx >= 0:
+                    self.template_combo.setCurrentIndex(idx)
+
+        self.template_combo.blockSignals(False)
+
+    # ------------------------------------------------------------------
+    # URL helpers
+    # ------------------------------------------------------------------
+
+    def _clean_url(self, template_name: str) -> str:
+        """URL suitable for display and for copying into OBS — no ?preview=1."""
+        port = self.config.cparser.value("weboutput/httpport", type=int)
+        path = f"/{template_name}" if template_name else "/"
+        return f"http://localhost:{port}{path}"
+
+    def _preview_url(self, template_name: str) -> QUrl:
+        """URL actually loaded in the webview — includes ?preview=1."""
+        return QUrl(self._clean_url(template_name) + "?preview=1")
+
+    def _current_template_name(self) -> str:
+        return self.template_combo.currentData() or ""
+
+    # ------------------------------------------------------------------
+    # Actions
+    # ------------------------------------------------------------------
+
+    def _apply_bg(self, index: int) -> None:
+        _, color = _BG_PRESETS[index]
+        self.webview.page().setBackgroundColor(QColor(color))
+
+    def _load_current(self) -> None:
+        name = self._current_template_name()
+        self.url_label.setText(self._clean_url(name))
+        url = self._preview_url(name)
+        logging.debug("WebPreviewWindow loading %s", url.toString())
+        self.webview.load(url)
+
+    def _on_template_selected(self) -> None:
+        self._load_current()
+
+    def _on_bg_selected(self, index: int) -> None:
+        self._apply_bg(index)
+        self.webview.reload()
+
+    def _reload(self) -> None:
+        self.webview.reload()
+
+    # ------------------------------------------------------------------
+    # Qt overrides
+    # ------------------------------------------------------------------
+
+    def sizeHint(self) -> QSize:  # pylint: disable=invalid-name,no-self-use
+        """preferred initial size"""
+        return QSize(900, 600)

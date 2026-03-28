@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 import nowplaying.config
 import nowplaying.firstinstall
 import nowplaying.guessgamesettings
+import nowplaying.preview.window
 import nowplaying.hostmeta
 import nowplaying.musicbrainz.plugin
 import nowplaying.settings.categories
@@ -76,6 +77,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.qtui = None
         self.errormessage = None
         self.widgets = {}
+        self._webpreview_window: nowplaying.preview.window.WebPreviewWindow | None = None
         self.settingsclasses = {
             "twitch": nowplaying.twitch.settings.TwitchSettings(),
             "twitchchat": nowplaying.twitch.chat.TwitchChatSettings(),
@@ -373,6 +375,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             qobject.hostip_label.setText(data["hostip"])
 
         qobject.template_button.clicked.connect(self.on_html_template_button)
+        qobject.preview_button.clicked.connect(self.on_webserver_preview_button)
 
     def _connect_discordbot_widget(self, qobject):
         """connect discord widget signals"""
@@ -1032,6 +1035,16 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
             self.uihelp.template_picker_lineedit(
                 self.widgets["webserver"].template_lineedit, limit="*.htm *.html"
             )
+
+    @Slot()
+    def on_webserver_preview_button(self):
+        """open or raise the template preview window"""
+        if not self._webpreview_window:
+            self._webpreview_window = nowplaying.preview.window.WebPreviewWindow(
+                config=self.config
+            )
+        self._webpreview_window.show()
+        self._webpreview_window.raise_()
 
     def _filter_regex_load(self, regex=None):
         """setup the filter table"""
