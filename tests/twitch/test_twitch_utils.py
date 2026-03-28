@@ -241,7 +241,7 @@ async def test_initiate_oauth_flow_success(bootstrap):
     """Test OAuth flow initiation success."""
     bootstrap.cparser.setValue("twitchbot/clientid", "test_client")
     bootstrap.cparser.setValue("twitchbot/secret", "test_secret")
-    bootstrap.cparser.setValue("webserver/port", 8899)
+    bootstrap.cparser.setValue("weboutput/httpport", 8899)
 
     login = nowplaying.twitch.utils.TwitchLogin(bootstrap)
 
