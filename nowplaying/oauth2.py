@@ -515,7 +515,7 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
             return None
 
         # Set appropriate redirect URI based on token type
-        port = self.config.cparser.value("webserver/port", type=int) or 8899
+        port = self.config.cparser.value("weboutput/httpport", type=int)
 
         # Default redirect path - can be overridden by subclasses
         redirect_path = f"{self.config_prefix}redirect"
@@ -533,7 +533,7 @@ class OAuth2Client:  # pylint: disable=too-many-instance-attributes
 
     def get_redirect_uri(self, token_type: str = "main") -> str:  # pylint: disable=unused-argument
         """Get the redirect URI for the specified token type"""
-        port = self.config.cparser.value("webserver/port", type=int) or 8899
+        port = self.config.cparser.value("weboutput/httpport", type=int)
         redirect_path = f"{self.config_prefix}redirect"
         return f"http://localhost:{port}/{redirect_path}"
 
@@ -723,7 +723,7 @@ class _OAuthRedirectHelper:  # pylint: disable=too-many-instance-attributes
             oauth = self.oauth_class(self.config)
             # Set the session ID to match the one from state validation
             oauth.session_id = self.session_id
-            port = self.config.cparser.value("webserver/port", type=int) or 8899
+            port = self.config.cparser.value("weboutput/httpport", type=int)
             oauth.redirect_uri = f"http://localhost:{port}/{self.redirect_path}"
 
             # Exchange code for tokens

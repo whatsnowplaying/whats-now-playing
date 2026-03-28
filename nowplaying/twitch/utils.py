@@ -178,7 +178,7 @@ class TwitchLogin:
 
         if not oauth_client.redirect_uri:
             # Set default redirect URI if not configured
-            port = self.config.cparser.value("webserver/port", type=int) or 8899
+            port = self.config.cparser.value("weboutput/httpport", type=int)
             oauth_client.redirect_uri = f"http://localhost:{port}/twitchredirect"
             self.config.cparser.setValue("twitchbot/redirecturi", oauth_client.redirect_uri)
             self.config.save()
