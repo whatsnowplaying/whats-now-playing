@@ -73,7 +73,7 @@ class TwitchOAuth2(nowplaying.oauth2.OAuth2Client):
             return None
 
         # Set appropriate redirect URI based on token type
-        port = self.config.cparser.value("weboutput/httpport", type=int) or 8899
+        port = self.config.cparser.value("weboutput/httpport", type=int)
         if token_type == "chat":
             self.redirect_uri = f"http://localhost:{port}/twitchchatredirect"
         else:
@@ -99,7 +99,7 @@ class TwitchOAuth2(nowplaying.oauth2.OAuth2Client):
 
     def get_redirect_uri(self, token_type: str = "broadcaster") -> str:
         """Get the redirect URI for the specified token type"""
-        port = self.config.cparser.value("weboutput/httpport", type=int) or 8899
+        port = self.config.cparser.value("weboutput/httpport", type=int)
         if token_type == "chat":
             return f"http://localhost:{port}/twitchchatredirect"
         return f"http://localhost:{port}/twitchredirect"
@@ -167,7 +167,7 @@ async def main() -> None:
         return
 
     # Set redirect URI dynamically (required for authorization)
-    port = oauth.config.cparser.value("weboutput/httpport", type=int) or 8899
+    port = oauth.config.cparser.value("weboutput/httpport", type=int)
     oauth.redirect_uri = f"http://localhost:{port}/twitchredirect"
 
     # Step 1: Open browser for authorization

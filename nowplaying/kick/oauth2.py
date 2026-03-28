@@ -158,7 +158,7 @@ async def main() -> None:
         return
 
     # Set redirect URI dynamically (required for authorization)
-    port = oauth.config.cparser.value("weboutput/httpport", type=int) or 8899
+    port = oauth.config.cparser.value("weboutput/httpport", type=int)
     oauth.redirect_uri = f"http://localhost:{port}/kickredirect"
 
     # Step 1: Open browser for authorization
