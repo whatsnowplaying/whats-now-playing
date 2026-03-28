@@ -73,7 +73,8 @@ jobs:
             libxcb-shape0 \
             libxcb-xinerama0 \
             libxcb-xkb1 \
-            libxkbcommon-x11-0
+            libxkbcommon-x11-0 \
+            libqt6webenginecore6
       - name: download artifact
         uses: actions/download-artifact@v8
         with:

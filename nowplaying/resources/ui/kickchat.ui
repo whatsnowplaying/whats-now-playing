@@ -126,15 +126,31 @@
     <rect>
      <x>240</x>
      <y>100</y>
-     <width>381</width>
+     <width>271</width>
      <height>25</height>
     </rect>
    </property>
    <property name="minimumSize">
     <size>
-     <width>381</width>
+     <width>271</width>
      <height>0</height>
     </size>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="announce_preview_button">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>520</x>
+     <y>100</y>
+     <width>101</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Preview ...</string>
    </property>
   </widget>
   <widget class="QPushButton" name="announce_button">
@@ -298,6 +314,12 @@
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>announce_button</receiver>
+   <slot>setEnabled(bool)</slot>
+  </connection>
+  <connection>
+   <sender>enable_checkbox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>announce_preview_button</receiver>
    <slot>setEnabled(bool)</slot>
   </connection>
   <connection>

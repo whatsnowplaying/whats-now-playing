@@ -54,7 +54,8 @@ class WhatsNowPlayingWebSocket {
             return;
         }
 
-        const wsUrl = `ws://${this.hostIp}:${this.httpPort}${this.endpoint}?session_id=${this.sessionId}`;
+        const previewParam = new URLSearchParams(window.location.search).has('preview') ? '&preview=1' : '';
+        const wsUrl = `ws://${this.hostIp}:${this.httpPort}${this.endpoint}?session_id=${this.sessionId}${previewParam}`;
         this.log(`Connecting to ${wsUrl} from scene: ${this.sceneName}`);
 
         try {

@@ -5,6 +5,7 @@ import logging
 import pathlib
 from typing import TYPE_CHECKING
 
+import nowplaying.preview.textwindow
 import nowplaying.utils
 from nowplaying.exceptions import PluginVerifyError
 from nowplaying.types import TrackMetadata
@@ -34,6 +35,7 @@ class Plugin(NotificationPlugin):
         self.output_file: str | None = None
         self.template_file: str | None = None
         self.txttemplatehandler: TemplateHandler | None = None
+        self._textpreview_window: nowplaying.preview.textwindow.TextPreviewWindow | None = None
 
     @classmethod
     def get_path_keys(cls) -> frozenset[str]:
@@ -182,12 +184,22 @@ class Plugin(NotificationPlugin):
         qwidget.textoutput_button.clicked.connect(
             lambda: self._on_file_save_button(qwidget, uihelp)
         )
+        qwidget.textpreview_button.clicked.connect(self._on_preview_button)
 
     def _on_file_save_button(self, qwidget: "QWidget", uihelp):  # pylint: disable=no-self-use
         """Handle file save button click"""
         uihelp.save_file_picker_lineedit(
             qwidget.textoutput_lineedit, title="Save text output file", filter_str="*.txt"
         )
+
+    def _on_preview_button(self) -> None:
+        """Open or raise the text template preview window."""
+        if self._textpreview_window is None:
+            self._textpreview_window = nowplaying.preview.textwindow.TextPreviewWindow(
+                config=self.config,
+            )
+        self._textpreview_window.show()
+        self._textpreview_window.raise_()
 
     def desc_settingsui(self, qwidget: "QWidget"):
         """Description for settings UI"""

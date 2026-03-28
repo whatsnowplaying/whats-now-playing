@@ -1,51 +1,60 @@
-# Use Python 3.11 on Debian Bullseye for a stable glibc base
-FROM python:3.11-slim-bullseye
+# AlmaLinux 8 = manylinux_2_28: the exact ABI PySide6 wheels target.
+# Ships libwebp.so.6, libtiff.so.5, glibc 2.28, Mesa 23.x natively —
+# no compatibility shims needed.  Binaries run on Ubuntu 22.04+
+# (glibc 2.34+) via backward glibc compatibility.
+FROM almalinux:8
 
-# Install essential build tools and Qt/XCB dependencies
-# We include 'binutils' and 'patchelf' which PyInstaller needs to
-# bake the RPATH into your binary for ICU/Qt.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Enable EPEL (patchelf, xcb-util-*) and PowerTools/CRB (some devel headers)
+RUN dnf install -y epel-release dnf-plugins-core && \
+    dnf config-manager --set-enabled powertools && \
+    dnf clean all
+
+# Python 3.12 + build essentials
+# python3.12-devel is needed for pyicu / other extension wheels
+RUN dnf install -y \
+    python3.12 \
+    python3.12-devel \
     binutils \
-    g++ \
+    gcc-c++ \
     git \
-    libcairo-gobject2 \
-    libcairo2 \
-    libdbus-1-3 \
-    libegl1 \
-    libfontconfig1 \
-    libfreetype6 \
-    libgdk-pixbuf-2.0-0 \
-    libgl1 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libharfbuzz0b \
-    libicu-dev \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libtiff5 \
-    libx11-xcb1 \
-    libxcb-cursor0 \
-    libxcb-glx0 \
-    libxcb-icccm4 \
-    libxcb-image0 \
-    libxcb-keysyms1 \
-    libxcb-randr0 \
-    libxcb-render-util0 \
-    libxcb-shape0 \
-    libxcb-xinerama0 \
-    libxcb-xkb1 \
-    libxkbcommon-x11-0 \
-    locales \
+    glibc-langpack-en \
+    libicu-devel \
     patchelf \
     pkg-config \
     zip \
-    && rm -rf /var/lib/apt/lists/*
+    && dnf clean all
 
-RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
-    locale-gen
+# Qt/WebEngine runtime deps that PySide6's bundled Qt6WebEngine needs at
+# PyInstaller analysis time.  AlmaLinux 8 ships the same library versions
+# the PySide6 manylinux wheel was compiled against, so PyInstaller bundles
+# them under the right SONAMEs automatically.
+RUN dnf install -y \
+    alsa-lib \
+    libdrm \
+    mesa-libEGL \
+    mesa-libGL \
+    nss \
+    nspr \
+    pulseaudio-libs \
+    libwayland-client \
+    libwayland-cursor \
+    libwayland-egl \
+    libwayland-server \
+    libX11-xcb \
+    libxcb \
+    xcb-util \
+    xcb-util-cursor \
+    xcb-util-image \
+    xcb-util-keysyms \
+    xcb-util-renderutil \
+    xcb-util-wm \
+    libxkbcommon-x11 \
+    && dnf clean all
 
 RUN git config --system --add safe.directory /src
 
+# Tell builder.sh to use Python 3.12 explicitly
+ENV PYTHONBIN=/usr/bin/python3.12
 ENV NLTK_DATA=/tmp/nltk_data
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en

@@ -342,3 +342,64 @@ async def test_webserver_remote_input_source_agent(getwebserver):
             response_data = await req.json()
             processed = response_data["processed_metadata"]
             assert processed["artist"] == "Test Artist"
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "/?preview=1",
+        "/index.html?preview=1",
+        "/index.htm?preview=1",
+    ],
+)
+async def test_webserver_preview_empty_db(getwebserver, endpoint):
+    """preview mode renders sample data when no metadata is in the DB"""
+    config, _metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    template_path = config.getbundledir().joinpath("templates", "basic-plain.txt")
+    config.cparser.setValue("weboutput/htmltemplate", str(template_path))
+    config.cparser.setValue("weboutput/once", True)
+    config.cparser.sync()
+
+    webserver_ready = await wait_for_webserver_ready(port, timeout=10.0)
+    if not webserver_ready:
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f"http://localhost:{port}{endpoint}", timeout=aiohttp.ClientTimeout(total=5)
+        ) as req:
+            assert req.status == 200
+            text = await req.text()
+            # basic-plain.txt renders "{{ artist }} - {{ title }}"
+            assert "Sample Artist" in text
+            assert "Sample Track Title" in text
+
+
+@pytest.mark.xfail(sys.platform == "darwin", reason="timeouts on macos CI")
+@pytest.mark.asyncio
+async def test_webserver_preview_uses_live_metadata(getwebserver):
+    """preview mode uses live metadata from DB when a track is playing"""
+    config, metadb = getwebserver
+    port = config.cparser.value("weboutput/httpport", type=int)
+    template_path = config.getbundledir().joinpath("templates", "basic-plain.txt")
+    config.cparser.setValue("weboutput/htmltemplate", str(template_path))
+    config.cparser.setValue("weboutput/once", False)
+    config.cparser.sync()
+
+    await metadb.write_to_metadb(metadata={"artist": "Live Artist", "title": "Live Title"})
+
+    webserver_ready = await wait_for_webserver_ready(port, timeout=10.0)
+    if not webserver_ready:
+        raise RuntimeError(f"Webserver on port {port} failed to respond within 10 seconds")
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f"http://localhost:{port}/?preview=1", timeout=aiohttp.ClientTimeout(total=5)
+        ) as req:
+            assert req.status == 200
+            text = await req.text()
+            assert "Live Artist" in text
+            assert "Live Title" in text
