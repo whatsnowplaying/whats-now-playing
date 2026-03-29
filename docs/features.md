@@ -76,6 +76,13 @@ shown twice during a stream.
   real time
 * **Browser Sources** — serve custom HTML overlays via the built-in web
   server for display in OBS or any browser
+* **OBS Scene Export** — generate a ready-to-import OBS 28+ scene collection
+  JSON file from the system tray ("Export for OBS…"). Select which browser
+  sources to include, choose the template for each, set dimensions and layout
+  hints (fill, top, bottom, left, right, center), and preview each template
+  before exporting. The file is saved directly to the OBS scenes directory
+  (auto-detected per platform) so it appears in OBS immediately without
+  manual file copying.
 
 ### Web Server
 

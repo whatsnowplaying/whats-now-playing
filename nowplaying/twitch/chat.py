@@ -991,9 +991,17 @@ class TwitchChatSettings:
                 config=self.config,
                 glob_pattern="twitchbot_*.txt",
                 config_key="twitchbot/announce",
+                enable_select_button=True,
             )
+            self._textpreview_window.template_selected.connect(self._on_announce_template_selected)
         self._textpreview_window.show()
         self._textpreview_window.raise_()
+
+    @Slot(str)
+    def _on_announce_template_selected(self, template_name: str) -> None:
+        self.widget.announce_lineedit.setText(
+            str(pathlib.Path(self.config.templatedir) / template_name)
+        )
 
     def _twitchbot_command_load(self, command=None, **kwargs):
         if not command:

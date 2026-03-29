@@ -88,6 +88,13 @@ Example announcement template:
 4. Configure announcement delay if needed
 5. Test the connection with the "Authenticate with Kick" button
 
+## Template Preview
+
+Click the **Preview** button next to the announcement template field to open a
+preview of the rendered output using sample metadata. Use the template dropdown
+to browse available `kickbot_*.txt` templates, then click **Use This Template**
+to apply your selection back to the announcement template setting.
+
 ## Current Limitations
 
 - **Chat Commands**: Interactive commands are not yet implemented

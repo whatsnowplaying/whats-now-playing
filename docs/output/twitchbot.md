@@ -132,6 +132,13 @@ again change them back to no permissions granted.
 Once the permissions are set and Save is clicked, those permissions will
 be preserved on every restart.
 
+### Template Preview
+
+Click the **Preview** button next to the announcement template field to open a
+preview of the rendered output using sample metadata. Use the template dropdown
+to browse available `twitchbot_*.txt` templates, then click **Use This Template**
+to apply your selection back to the announcement template setting.
+
 ### Adding New Commands
 
 Create a new file in **What's Now Playing**'s `templates` directory

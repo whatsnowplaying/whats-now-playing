@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
 )
 
 import nowplaying.apicache
+import nowplaying.obs.exportdialog
 import nowplaying.version  # pylint: disable=no-name-in-module,import-error
 import nowplaying.config
 import nowplaying.db
@@ -69,6 +70,7 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.requestswindow = None
         self.link_thread = None  # QThread for Twitch account linking
         self.vacuum_thread = None  # QThread for background database vacuum
+        self._obs_export_dialog = None
 
         # Core initialization
         self._initialize_core_components(config=config)
@@ -145,6 +147,16 @@ class Tray:  # pylint: disable=too-many-instance-attributes
             self._show_installation_error("settings UI files")
             self.settingswindow = None
 
+    def _show_obs_export(self) -> None:
+        """Open the OBS scene export dialog (non-modal)."""
+        if self._obs_export_dialog is None:
+            self._obs_export_dialog = nowplaying.obs.exportdialog.OBSExportDialog(
+                config=self.config
+            )
+        self._obs_export_dialog.show()
+        self._obs_export_dialog.raise_()
+        self._obs_export_dialog.activateWindow()
+
     def _show_settings(self) -> None:
         """Show settings window and bring it to the front."""
         if not self.settingswindow:
@@ -175,6 +187,10 @@ class Tray:  # pylint: disable=too-many-instance-attributes
         self.settings_action = QAction("Settings")
         self.settings_action.triggered.connect(self._show_settings)
         self.menu.addAction(self.settings_action)
+
+        self.obs_export_action = QAction("Export for OBS...")
+        self.obs_export_action.triggered.connect(self._show_obs_export)
+        self.menu.addAction(self.obs_export_action)
 
         self.request_action = QAction("Requests")
         self.request_action.triggered.connect(self._requestswindow)

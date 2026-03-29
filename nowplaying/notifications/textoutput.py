@@ -36,6 +36,7 @@ class Plugin(NotificationPlugin):
         self.template_file: str | None = None
         self.txttemplatehandler: TemplateHandler | None = None
         self._textpreview_window: nowplaying.preview.textwindow.TextPreviewWindow | None = None
+        self._settings_qwidget: "QWidget | None" = None
 
     @classmethod
     def get_path_keys(cls) -> frozenset[str]:
@@ -178,6 +179,7 @@ class Plugin(NotificationPlugin):
 
     def connect_settingsui(self, qwidget: "QWidget", uihelp):
         """Connect UI elements to their handlers"""
+        self._settings_qwidget = qwidget
         qwidget.texttemplate_button.clicked.connect(
             lambda: uihelp.template_picker_lineedit(qwidget.texttemplate_lineedit)
         )
@@ -197,9 +199,17 @@ class Plugin(NotificationPlugin):
         if self._textpreview_window is None:
             self._textpreview_window = nowplaying.preview.textwindow.TextPreviewWindow(
                 config=self.config,
+                enable_select_button=True,
             )
+            self._textpreview_window.template_selected.connect(self._on_template_selected)
         self._textpreview_window.show()
         self._textpreview_window.raise_()
+
+    def _on_template_selected(self, template_name: str) -> None:
+        if self._settings_qwidget is not None:
+            self._settings_qwidget.texttemplate_lineedit.setText(
+                str(pathlib.Path(self.config.templatedir) / template_name)
+            )
 
     def desc_settingsui(self, qwidget: "QWidget"):
         """Description for settings UI"""

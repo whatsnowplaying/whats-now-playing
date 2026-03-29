@@ -29,6 +29,13 @@ This feature is built into macOS, Windows 10+, and most Linux distributions.
 | HTML Template | The [Jinja2 template](https://jinja.palletsprojects.com/en/stable/templates/) file to use when fetching `/`. See [Templates](../reference/templatevariables.md) for more information. |
 | Once | Only serve `/` once per title, then return an empty refresh page until the next song change. This setting is handy for providing a simple way to do fade-in and fade-out using simple HTML. |
 
+## Template Preview
+
+Click the **Preview** button in the Web Server settings to open a live preview
+of any template using sample metadata — no live track required. Use the
+template dropdown in the preview window to browse templates, then click
+**Use This Template** to apply your selection to the HTML Template setting.
+
 ## OBS Browser Source
 
 To display track information as an overlay in OBS Studio, add a Browser Source and point it at

@@ -3,6 +3,7 @@
 
 import logging
 import os
+import pathlib
 from typing import Any
 
 from PySide6.QtCore import QTimer, Slot  # pylint: disable=no-name-in-module
@@ -244,9 +245,17 @@ class KickChatSettings:
                 config=self.config,
                 glob_pattern="kickbot_*.txt",
                 config_key="kick/announce",
+                enable_select_button=True,
             )
+            self._textpreview_window.template_selected.connect(self._on_announce_template_selected)
         self._textpreview_window.show()
         self._textpreview_window.raise_()
+
+    @Slot(str)
+    def _on_announce_template_selected(self, template_name: str) -> None:
+        self.widget.announce_lineedit.setText(
+            str(pathlib.Path(self.config.templatedir) / template_name)
+        )
 
     @Slot()
     def on_add_button(self) -> None:

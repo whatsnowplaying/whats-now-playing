@@ -4,7 +4,9 @@
 > track data from DJ software and makes it available to stream overlays, chat
 > bots, text files, and APIs. Supports Serato DJ, Traktor, Virtual DJ, Denon DJ,
 > djay Pro, DJUCED, and more. Outputs to OBS, Twitch, Kick, Discord, and custom
-> HTML overlays via a built-in web server with Jinja2 templating.
+> HTML overlays via a built-in web server with Jinja2 templating. Includes OBS
+> scene export to generate ready-to-import OBS 28+ scene collection JSON files
+> with pre-configured browser sources.
 
 ## Key Pages
 

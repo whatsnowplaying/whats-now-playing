@@ -20,3 +20,12 @@ the entire setlist on exit.
   WhatsNowPlaying/setlists directory when **What's Now Playing** is shutdown
   of all of the tracks that were played as GitHub-flavored markdown
   table.
+
+## Template Preview
+
+Click the **Preview** button next to the Text Template field to open a preview
+of the rendered output using sample metadata. Use the template dropdown to
+browse available templates, then click **Use This Template** to apply your
+selection back to the Text Template setting.
+
+[![Text template preview window](images/text-preview.png)](images/text-preview.png)
