@@ -12,7 +12,6 @@ jinja2==3.1.6
 lxml==6.0.2
 netifaces-plus==0.12.5
 nltk==3.9.3
-normality==2.6.1
 pillow==12.1.1
 pillow_avif_plugin==1.5.5
 puremagic<2; python_version < "3.12"
@@ -29,6 +28,28 @@ twitchAPI==4.5.0
 url_normalize==2.2.1
 watchdog==6.0.0
 zeroconf==0.148.0
+
+#
+# PyICU + Normality is a special hell
+#
+# normality < 3 works without pyicu
+#
+# Windows builds of PyICU are a nightmare.
+# a lot of this comes down to the stupidity that is the Python
+# packaging system.  I'd love to use pyicu-wheels here but it can't
+# alias itself as pyicu generically :(
+
+pyicu==2.16.2 ; sys_platform != 'win32' # requires Homebrew icu4c on macOS
+
+# --- WINDOWS (Pre-compiled Binaries) ---
+# Each line checks your Python version and architecture to pull the right wheel.
+# These use the 2.16.2 release from GitHub to satisfy the 'PyICU' name requirement.
+
+PyICU @ https://github.com/cgohlke/pyicu-build/releases/download/v2.16.2/pyicu-2.16.2-cp311-cp311-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.11'
+PyICU @ https://github.com/cgohlke/pyicu-build/releases/download/v2.16.2/pyicu-2.16.2-cp312-cp312-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.12'
+PyICU @ https://github.com/cgohlke/pyicu-build/releases/download/v2.16.2/pyicu-2.16.2-cp313-cp313-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.13'
+PyICU @ https://github.com/cgohlke/pyicu-build/releases/download/v2.16.2/pyicu-2.16.2-cp314-cp314-win_amd64.whl ; sys_platform == 'win32' and python_version == '3.14'
+normality==3.1.0
 
 #
 # required to install
