@@ -111,7 +111,7 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
             for tmpl in templates:
                 self.template_combo.addItem(tmpl.name, userData=tmpl.name)
 
-            # Pre-select the currently configured template if it's in the list
+            # Preselect the currently configured template if it's in the list
             if configured_name:
                 idx = self.template_combo.findData(configured_name)
                 if idx >= 0:

@@ -61,8 +61,8 @@ SIMPLE_FILTER_DEFAULT_OFF = [
 SIMPLE_FILTER_PHRASES = SIMPLE_FILTER_DEFAULT_ON + SIMPLE_FILTER_DEFAULT_OFF
 
 # Global cache for FilterManager to avoid recreation on every titlestripper call
-_cached_filter_manager: FilterManager | None = None
-_cache_last_load_date: int = 0
+_cached_filter_manager: FilterManager | None = None  # pylint: disable=invalid-name
+_cache_last_load_date: int = 0  # pylint: disable=invalid-name
 
 
 class FilterManager:

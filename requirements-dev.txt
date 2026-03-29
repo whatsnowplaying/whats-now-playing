@@ -2,7 +2,7 @@
 # development
 #
 pip-upgrader
-pylint==2.17.5
+pylint
 PyYAML==6.0.3
 sourcery
 ruff

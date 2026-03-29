@@ -29,7 +29,7 @@ class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         config: Application config object.
         glob_pattern: Glob pattern for listing templates, e.g. ``"twitchbot_*.txt"``.
                       Defaults to ``"*.txt"`` (all text templates).
-        config_key: QSettings key used to pre-select the currently configured
+        config_key: QSettings key used to preselect the currently configured
                     template, e.g. ``"twitchbot/announce"``.
     """
 

@@ -163,7 +163,7 @@ Post-v3.0.2, the Twitchbot will always respond to the command
 The TwitchBot adds the following additional values for templating purposes:
 
 | Variable | Description |
-|----|----|
+| ---- | ---- |
 | cmduser | Person, bot, etc that typed the command |
 | cmdtarget\[x\] | The x'th target on the command, starting with 0. For example, if the command was `!so modernmeerkat`, then `{% raw %}{{ cmdtarget[0] }}{% endraw %}` will have `modernmeerkat` in it. See below for an example. |
 | startnewmessage | Split the text at this location and start a new message to send to chat. |

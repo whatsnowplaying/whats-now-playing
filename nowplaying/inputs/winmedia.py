@@ -34,7 +34,6 @@ class Plugin(InputPlugin):
         if not WINMEDIA_STATUS:
             self.available = False
             self.winmedia_status = False
-            return
 
     def install(self):
         """Auto-install for WinMedia"""

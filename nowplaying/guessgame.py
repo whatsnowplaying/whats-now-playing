@@ -502,7 +502,7 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
                     if char.isalpha():
                         revealed_letters.add(char.lower())
 
-    def _process_word_guess(  # pylint: disable=too-many-arguments
+    def _process_word_guess(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         guess_text: str,
         guess_normalized: str,

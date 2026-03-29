@@ -24,7 +24,7 @@ This feature is built into macOS, Windows 10+, and most Linux distributions.
 [![Webserver settings screen](images/webserver.png)](images/webserver.png)
 
 | Setting | Description |
-|---------|-------------|
+| --------- | ----------- |
 | Port | The HTTP server's TCP port. A firewall should protect this port for security reasons to limit which hosts will be permitted to connect. **What's Now Playing** does not limit what systems may connect to it. |
 | HTML Template | The [Jinja2 template](https://jinja.palletsprojects.com/en/stable/templates/) file to use when fetching `/`. See [Templates](../reference/templatevariables.md) for more information. |
 | Once | Only serve `/` once per title, then return an empty refresh page until the next song change. This setting is handy for providing a simple way to do fade-in and fade-out using simple HTML. |
@@ -45,7 +45,7 @@ the webserver:
 ## Supported URLs
 
 | URL | Description |
-|-----|-------------|
+| ----- | ----------- |
 | `/` (or `/index.htm`) | Renders the configured HTML template as a title card. |
 | `/index.txt` | Same output as the text output in the General settings. |
 | `/cover.png` | Returns the cover image, if available. |

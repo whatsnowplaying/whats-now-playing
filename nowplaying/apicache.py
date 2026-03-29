@@ -579,7 +579,7 @@ class APIResponseCache:
 
 
 # Global cache instance for use across the application
-_global_cache_instance: APIResponseCache | None = None
+_global_cache_instance: APIResponseCache | None = None  # pylint: disable=invalid-name
 
 
 def get_cache() -> APIResponseCache:

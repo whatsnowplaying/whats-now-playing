@@ -23,7 +23,7 @@ jobs:
           path: src
           fetch-depth: 0
       - name: test-patch
-        uses: apache/yetus-test-patch-action@main
+        uses: effectivemachines/yetus-test-patch-action@main
         with:
           basedir: ./src
           patchdir: ./out

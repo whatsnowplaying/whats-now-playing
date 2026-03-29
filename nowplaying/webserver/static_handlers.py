@@ -488,6 +488,7 @@ class StaticContentHandler:
 
     async def api_v1_remoteinput_handler(self, request: web.Request):
         """POST: receive metadata from remote source and store in remote database"""
+        request_data: dict = {}
         if request.method == "POST":
             try:
                 request_data = await request.json()
