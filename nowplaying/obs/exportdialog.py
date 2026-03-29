@@ -86,7 +86,7 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
         layout.addWidget(button_box)
 
     def _make_template_combo(self, default_path: str, configured_name: str) -> QComboBox:
-        """Build a template-selector combo pre-selecting the given path's template."""
+        """Build a template-selector combo preselecting the given path's template."""
         combo = QComboBox()
         for tmpl in self._templates:
             combo.addItem(tmpl)

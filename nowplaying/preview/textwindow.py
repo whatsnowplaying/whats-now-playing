@@ -19,7 +19,7 @@ import nowplaying.preview.sampledata
 import nowplaying.utils
 
 
-class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
+class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-many-arguments
     """Standalone non-modal window showing a rendered preview of a text output template.
 
     Renders the selected template using sample metadata so users can see how
