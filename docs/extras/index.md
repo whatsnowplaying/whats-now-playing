@@ -13,7 +13,7 @@ information.
 [![OBS screen with an example of each image type](images/artexamples.png)](images/artexamples.png)
 
 | Type | WebSocket URL | Raw Image URL | Size | Description |
-|------|---------------|---------------|------|-------------|
+| ------ | --------------- | --------------- | ---- | ----------- |
 | **Banners** | /artistbanner.htm | /artistbanner.png | 200px × unlimited | Artist image with name text |
 | **Fan Art** | /artistfanart.htm | N/A | 800px × 1280px | High-quality background images |
 | **Logos** | /artistlogo.htm | /artistlogo.png | 200px × 480px | Stylized artist text/graphics |

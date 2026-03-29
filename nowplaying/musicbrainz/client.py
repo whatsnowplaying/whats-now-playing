@@ -329,7 +329,7 @@ class MusicBrainzClient:  # pylint: disable=too-many-instance-attributes
 
 
 # Global client instance for backward compatibility
-_default_client: MusicBrainzClient | None = None
+_default_client: MusicBrainzClient | None = None  # pylint: disable=invalid-name
 
 
 def get_default_client() -> MusicBrainzClient:

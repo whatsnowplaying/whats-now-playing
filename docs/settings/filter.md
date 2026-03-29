@@ -27,7 +27,8 @@ By default, these phrases are enabled for dash/paren/bracket filtering:
 
 * Video quality indicators: 1080p, 480p, 4k, 720p, hd, high quality, hq
 * Content descriptors: ce, cs, clean, clean version, dirty, explicit, explicit version
-* Video types: lyric video, lyrics video, music video, official audio, official music video, official trailer, official video
+* Video types: lyric video, lyrics video, music video, official audio,
+  official music video, official trailer, official video
 * Audio processing: remaster, remastered
 
 #### Managing Custom Phrases

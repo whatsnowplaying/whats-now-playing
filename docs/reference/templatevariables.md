@@ -35,7 +35,7 @@ MusicBrainz lookups if that service is enabled to fill in any missing data.
 ## Supported Variables
 
 | Variable | Description |
-|----|----|
+| ---- | ---- |
 | album | Album track comes from |
 | albumartist | Artist listed on the album |
 | acoustidid | AcoustID fingerprint identifier (if recognition is enabled) |
@@ -156,7 +156,7 @@ templates to add timestamps. These are particularly useful for setlists and logg
 when tracks were played:
 
 | Function | Example Output | Description |
-|----------|----------------|-------------|
+| ---------- | ---------------- | ----------- |
 | `now()` | `14:32:15` | Current time when the template is rendered |
 | `today()` | `2023-12-15` | Current date when the template is rendered |
 | `timestamp()` | `2023-12-15 14:32:15` | Current date and time when the template is rendered |

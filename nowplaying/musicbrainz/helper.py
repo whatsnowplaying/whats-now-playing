@@ -28,7 +28,7 @@ REMIX_RE = re.compile(r"^\s*(.*)\s+[\(\[].*[\)\]]$")
 def _verify_artist_name(artistname, artistcredit):
     logging.debug("called verify_artist_name: %s vs %s", artistname, artistcredit)
     if "Various Artists" in artistcredit:
-        logging.debug("skipped %s -- VA")
+        logging.debug("skipped %s -- VA", artistcredit)
         return False
     normname = normalize(artistname, nospaces=True)
     normcredit = normalize(artistcredit, nospaces=True)

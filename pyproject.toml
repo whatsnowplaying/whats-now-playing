@@ -116,6 +116,9 @@ ignore-paths = [
   "nowplaying/version.py"
 ]
 
+[tool.pylint.design]
+max-positional-arguments = 8
+
 [tool.vendoring]
 destination = "nowplaying/vendor"
 requirements = "vendor.txt"
