@@ -17,8 +17,8 @@ the entire setlist on exit.
 - **Append new track** - Keep adding new tracks to the file rather than
   replace the content.
 - **Enable setlists** - Setting this option will create a file in the
-  WhatsNowPlaying/setlists directory when **What's Now Playing** is shutdown
-  of all of the tracks that were played as GitHub-flavored markdown
+  WhatsNowPlaying/setlists directory when **What's Now Playing** is shut down
+  of all of the tracks that were played as a GitHub-flavored markdown
   table.
 
 ## Template Preview
