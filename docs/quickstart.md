@@ -39,15 +39,20 @@ is working by opening `http://localhost:8899/` in a browser while a track is pla
 
 If you need to change the port or other settings, go to **Output & Display → Web Server**.
 
-## Step 4: Add a Browser Source in OBS
+## Step 4: Set Up OBS
 
-1. In OBS Studio, add a new **Browser Source**
-2. Set the URL to `http://localhost:8899/`
-3. Set the width and height to match your chosen template (check the `width` and `height`
-   values in the template files in `Documents/WhatsNowPlaying/templates`)
-4. Play a track in your DJ software. Track information should appear in OBS.
+The easiest way to get your overlays into OBS is to use the built-in export:
 
-For full details and customization options, see [Web Server](output/webserver.md).
+1. **Quit OBS Studio** if it is running
+2. In **What's Now Playing**, click the system tray icon and choose **Export for OBS...**
+3. Review the sources and templates, then click **Export**
+4. Relaunch OBS Studio — the new **WhatsNowPlaying** scene collection will appear
+   under **Scene Collection** in the menu bar
+
+See [Export for OBS](output/obs-export.md) for full details.
+
+If you prefer to set up OBS manually, see [Web Server](output/webserver.md) for
+instructions on adding a Browser Source by hand.
 
 ## Step 5: Announce Tracks in Chat (Optional)
 

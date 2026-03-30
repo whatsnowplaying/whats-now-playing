@@ -1,6 +1,28 @@
 
 # Changelog
 
+## Version 5.2.0 - In Progress
+
+* New Features
+  * OBS Scene Collection exporter
+    * New "Export for OBS..." system tray menu item generates a ready-to-import
+      OBS 28+ scene collection JSON file with pre-configured browser sources
+    * Customize template, dimensions, and canvas position per source before exporting
+    * Warns if OBS is already running so the new collection won't be missed
+    * Saves directly to the OBS scenes directory when found, or falls back to
+      Documents/WhatsNowPlaying/obs_scenes
+  * Template preview improvements
+    * Web preview window now has a "Use This Template" button that applies the
+      selected template back to the settings field that launched the preview
+    * Text template preview is now available from Twitch Bot, Kick Bot, and
+      Text Output settings, also with "Use This Template" support
+
+* Bug Fixes
+  * Kick and Twitch authentication failed if the webserver port wasn't 8899
+
+* Developer Stuff
+  * Dependency updates
+
 ## Version 5.1.0 - 2026-03-26
 
 * macOS
