@@ -420,10 +420,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-4-add-a-browser-source-in-obs" class="md-nav__link">
+  <a href="#step-4-set-up-obs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 4: Add a Browser Source in OBS
+        Step 4: Set Up OBS
       
     </span>
   </a>
@@ -2708,15 +2708,18 @@ launch also includes building a file index, which may take a few minutes for lar
 <p>The built-in web server is enabled by default and runs on port <code>8899</code>. You can verify it
 is working by opening <code>http://localhost:8899/</code> in a browser while a track is playing.</p>
 <p>If you need to change the port or other settings, go to <strong>Output &amp; Display → Web Server</strong>.</p>
-<h2 id="step-4-add-a-browser-source-in-obs">Step 4: Add a Browser Source in OBS<a class="headerlink" href="#step-4-add-a-browser-source-in-obs" title="Permanent link">&para;</a></h2>
+<h2 id="step-4-set-up-obs">Step 4: Set Up OBS<a class="headerlink" href="#step-4-set-up-obs" title="Permanent link">&para;</a></h2>
+<p>The easiest way to get your overlays into OBS is to use the built-in export:</p>
 <ol>
-<li>In OBS Studio, add a new <strong>Browser Source</strong></li>
-<li>Set the URL to <code>http://localhost:8899/</code></li>
-<li>Set the width and height to match your chosen template (check the <code>width</code> and <code>height</code>
-   values in the template files in <code>Documents/WhatsNowPlaying/templates</code>)</li>
-<li>Play a track in your DJ software. Track information should appear in OBS.</li>
+<li><strong>Quit OBS Studio</strong> if it is running</li>
+<li>In <strong>What's Now Playing</strong>, click the system tray icon and choose <strong>Export for OBS...</strong></li>
+<li>Review the sources and templates, then click <strong>Export</strong></li>
+<li>Relaunch OBS Studio — the new <strong>WhatsNowPlaying</strong> scene collection will appear
+   under <strong>Scene Collection</strong> in the menu bar</li>
 </ol>
-<p>For full details and customization options, see <a href="../output/webserver/">Web Server</a>.</p>
+<p>See <a href="../output/obs-export/">Export for OBS</a> for full details.</p>
+<p>If you prefer to set up OBS manually, see <a href="../output/webserver/">Web Server</a> for
+instructions on adding a Browser Source by hand.</p>
 <h2 id="step-5-announce-tracks-in-chat-optional">Step 5: Announce Tracks in Chat (Optional)<a class="headerlink" href="#step-5-announce-tracks-in-chat-optional" title="Permanent link">&para;</a></h2>
 <p><strong>What's Now Playing</strong> can automatically post track announcements to chat when a new song plays.</p>
 <ul>
