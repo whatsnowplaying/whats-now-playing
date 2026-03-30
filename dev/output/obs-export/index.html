@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="http://whatsnowplaying.github.io/dev/output/discord/">
+        <link rel="canonical" href="http://whatsnowplaying.github.io/dev/output/obs-export/">
       
       
-        <link rel="prev" href="../webserver/">
+        <link rel="prev" href="../charts/">
       
       
-        <link rel="next" href="../kickbot/">
+        <link rel="next" href="../obswebsocket/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Discord - What's Now Playing</title>
+        <title>Export for OBS - What's Now Playing</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#discord" class="md-skip">
+        <a href="#export-for-obs" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Discord
+              Export for OBS
             
           </span>
         </div>
@@ -1017,18 +1017,20 @@
       
   
   
+    
   
   
+  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
         
           
           <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
@@ -1049,7 +1051,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1120,10 +1122,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../obs-export/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Export for OBS
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1139,6 +1168,87 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#opening-the-export-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Opening the Export Dialog
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuring-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuring Sources
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuring Sources">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#previewing-a-template" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Previewing a Template
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exporting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#importing-into-obs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Importing into OBS
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1239,20 +1349,18 @@
       
   
   
-    
   
   
-  
     
     
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
         
           
           <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
@@ -1273,7 +1381,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1288,37 +1396,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Discord
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../discord/" class="md-nav__link">
         
   
   
@@ -1334,187 +1415,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#whats-now-playing-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What's Now Playing Configuration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#bot-mode-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Bot Mode Setup
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Bot Mode Setup">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#step-1-go-to-the-discord-developer-portal" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 1: Go to the Discord Developer Portal
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#step-2-create-a-new-application" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 2: Create a New Application
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#step-3-note-your-application-id" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 3: Note Your Application ID
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#step-4-get-a-bot-token" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 4: Get a Bot Token
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#step-5-invite-the-bot-to-your-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 5: Invite the Bot to Your Server
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#step-6-configure-whats-now-playing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 6: Configure What's Now Playing
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#channel-posting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Channel Posting
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Channel Posting">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Setup
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rich-presence-mode-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rich Presence Mode Setup
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Rich Presence Mode Setup">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#step-1-create-an-application-and-get-a-client-id" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 1: Create an Application and Get a Client ID
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#step-2-configure-whats-now-playing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 2: Configure What's Now Playing
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2732,10 +2632,10 @@
     
     
       <li class="md-path__item">
-        <a href="./" class="md-path__link">
+        <a href="../" class="md-path__link">
           
   <span class="md-ellipsis">
-    Streaming & Chat
+    Output & Display
   </span>
 
         </a>
@@ -2757,115 +2657,62 @@
   
 
 
-<h1 id="discord">Discord<a class="headerlink" href="#discord" title="Permanent link">&para;</a></h1>
-<p><strong>What's Now Playing</strong> supports two Discord modes, which can run simultaneously:</p>
-<ul>
-<li><strong>Bot Mode</strong>: A bot account joins your Discord server, updates its presence with the
-  currently playing track, and can optionally post track announcements to a channel.</li>
-<li><strong>Rich Presence Mode</strong>: Updates your own Discord user's Rich Presence status via the
-  Discord desktop app running on the same machine.</li>
-</ul>
-<h2 id="whats-now-playing-configuration">What's Now Playing Configuration<a class="headerlink" href="#whats-now-playing-configuration" title="Permanent link">&para;</a></h2>
-<p><a href="../images/wnp_discord_settings.png"><img alt="Discord settings in What's Now Playing" src="../images/wnp_discord_settings.png" /></a></p>
-<ol>
-<li>Open Settings from the <strong>What's Now Playing</strong> icon</li>
-<li>Select <strong>Discord</strong> from the <strong>Streaming &amp; Chat</strong> section</li>
-<li>Check <strong>Enable Bot Mode</strong> and/or <strong>Enable Rich Presence</strong> depending on which modes you want</li>
-<li>Fill in the fields for each enabled mode (see setup sections below)</li>
-<li>Set the <strong>Presence Template</strong> for the status text shown in Bot Mode presence and Rich Presence</li>
-<li>Click <strong>Save</strong></li>
-</ol>
-<h2 id="bot-mode-setup">Bot Mode Setup<a class="headerlink" href="#bot-mode-setup" title="Permanent link">&para;</a></h2>
-<p>Bot Mode connects a bot account to your Discord server and updates its presence with the
-currently playing track. If Twitch is also configured and enabled, the presence will show
-as a Twitch stream link.</p>
-<h3 id="step-1-go-to-the-discord-developer-portal">Step 1: Go to the Discord Developer Portal<a class="headerlink" href="#step-1-go-to-the-discord-developer-portal" title="Permanent link">&para;</a></h3>
-<p>Go to <a href="https://discord.com/developers/applications">https://discord.com/developers/applications</a>. If this is your first time, you may
-see a "What brings you to the Developer Portal?" onboarding screen.</p>
-<p><a href="../images/discord-onboarding.png"><img alt="Discord developer portal onboarding" src="../images/discord-onboarding.png" /></a></p>
-<p>Select <strong>Build a Bot</strong> and click <strong>Continue to Portal</strong>.</p>
-<h3 id="step-2-create-a-new-application">Step 2: Create a New Application<a class="headerlink" href="#step-2-create-a-new-application" title="Permanent link">&para;</a></h3>
-<p>Click <strong>New Application</strong> in the upper right corner.</p>
-<p><a href="../images/discord-createnewapp-dialog.png"><img alt="Create a new app dialog" src="../images/discord-createnewapp-dialog.png" /></a></p>
-<p>Give your application a name (e.g., <code>wnpbot</code>), agree to the Developer Terms of Service,
-and click <strong>Create</strong>. You may be asked to complete a CAPTCHA.</p>
-<h3 id="step-3-note-your-application-id">Step 3: Note Your Application ID<a class="headerlink" href="#step-3-note-your-application-id" title="Permanent link">&para;</a></h3>
-<p>You will land on the <strong>General Information</strong> page.</p>
-<p><a href="../images/discord-appconfig.png"><img alt="Discord app general information" src="../images/discord-appconfig.png" /></a></p>
-<p>Copy the <strong>Application ID</strong>. You will need this for Rich Presence Mode. For Bot Mode only,
-you can skip this for now.</p>
-<h3 id="step-4-get-a-bot-token">Step 4: Get a Bot Token<a class="headerlink" href="#step-4-get-a-bot-token" title="Permanent link">&para;</a></h3>
-<p>In the left sidebar, click <strong>Bot</strong>.</p>
-<p><a href="../images/discord-botsidebar.png"><img alt="Discord app sidebar showing Bot option" src="../images/discord-botsidebar.png" /></a></p>
-<p><a href="../images/discord-botopts1.png"><img alt="Discord bot options" src="../images/discord-botopts1.png" /></a></p>
-<p>Click <strong>Reset Token</strong>. Discord will ask you to log in again to confirm. After authenticating,
-the token will be displayed once. Copy it immediately, as you cannot view it again without
-regenerating it. No privileged intents are required for <strong>What's Now Playing</strong>.</p>
-<h3 id="step-5-invite-the-bot-to-your-server">Step 5: Invite the Bot to Your Server<a class="headerlink" href="#step-5-invite-the-bot-to-your-server" title="Permanent link">&para;</a></h3>
-<p>In the left sidebar, click <strong>Installation</strong>.</p>
-<p><a href="../images/discord-invite.png"><img alt="Discord installation page" src="../images/discord-invite.png" /></a></p>
-<p>Under <strong>Installation Contexts</strong>, make sure only <strong>Guild Install</strong> is checked (not User Install).</p>
-<p>Under <strong>Default Install Settings → Guild Install</strong>, set the <strong>Scopes</strong> to include <code>bot</code>
-and set the following <strong>Permissions</strong>:</p>
-<ul>
-<li>View Channels</li>
-<li>Send Messages</li>
-<li>Embed Links</li>
-<li>Attach Files</li>
-<li>Read Message History</li>
-</ul>
-<p>Copy the <strong>Discord Provided Link</strong> and open it in a browser.</p>
-<p><a href="../images/discord-postinvitelink.png"><img alt="Discord add app dialog" src="../images/discord-postinvitelink.png" /></a></p>
-<p>Click <strong>Add to Server</strong>.</p>
-<p><a href="../images/discord-addtoserver.png"><img alt="Discord add to server authorization" src="../images/discord-addtoserver.png" /></a></p>
-<p>Select your server from the dropdown and click <strong>Authorize</strong>. You must have <strong>Manage
-Server</strong> permission in the server to add a bot.</p>
-<h3 id="step-6-configure-whats-now-playing">Step 6: Configure What's Now Playing<a class="headerlink" href="#step-6-configure-whats-now-playing" title="Permanent link">&para;</a></h3>
-<p>Paste the bot token into the <strong>Bot Token</strong> field in <strong>What's Now Playing</strong>'s Discord
-settings. Click <strong>Save</strong> and restart. The bot will appear in your server and begin
-updating its presence as tracks change.</p>
+<h1 id="export-for-obs">Export for OBS<a class="headerlink" href="#export-for-obs" title="Permanent link">&para;</a></h1>
+<p><strong>What's Now Playing</strong> can generate a ready-to-import OBS 28+ scene collection
+JSON file containing pre-configured browser sources for your overlays.</p>
 <blockquote>
-<p><strong>Note</strong>: Discord enforces a rate limit on presence updates. <strong>What's Now Playing</strong>
-waits at least 20 seconds between updates to stay within this limit, so there may be
-a short delay before the bot's status reflects a new track. This is expected behavior.</p>
+<p>NOTE: This feature requires OBS Studio 28 or later and the built-in
+<a href="../webserver/">Web Server</a> output to be enabled and running.</p>
 </blockquote>
-<h2 id="channel-posting">Channel Posting<a class="headerlink" href="#channel-posting" title="Permanent link">&para;</a></h2>
-<p>Bot Mode can post a track announcement to a Discord text channel each time a new track plays.</p>
-<h3 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h3>
-<ol>
-<li>Right-click the channel in Discord and select <strong>Copy Channel ID</strong> (Developer Mode must be
-   enabled in Discord's Advanced settings)</li>
-<li>Paste the ID into the <strong>Channel ID</strong> field in <strong>What's Now Playing</strong>'s Discord settings</li>
-<li>Optionally set a <strong>Channel Template</strong> for the message format. If left empty, the
-   Presence Template is used</li>
-<li>To include cover art with each post, check <strong>Attach cover image to channel posts</strong> and
-   set the <strong>Max size (px)</strong> for the image. The default is 200 px, which keeps file sizes
-   small. The maximum is 500 px.</li>
-<li>Click <strong>Save</strong></li>
-</ol>
-<p>The bot must have <strong>Send Messages</strong> and <strong>Attach Files</strong> permissions in the target channel.</p>
-<h2 id="rich-presence-mode-setup">Rich Presence Mode Setup<a class="headerlink" href="#rich-presence-mode-setup" title="Permanent link">&para;</a></h2>
-<p>Rich Presence Mode updates your own Discord status using the Discord desktop app running
-locally on the same machine. The Discord app must be running for Rich Presence to connect.
-If Discord is not running when <strong>What's Now Playing</strong> starts, it will retry the connection
-automatically every 20 seconds.</p>
-<h3 id="step-1-create-an-application-and-get-a-client-id">Step 1: Create an Application and Get a Client ID<a class="headerlink" href="#step-1-create-an-application-and-get-a-client-id" title="Permanent link">&para;</a></h3>
-<p>Follow Steps 1–3 from Bot Mode above to create an application. The <strong>Application ID</strong>
-shown on the General Information page is your Client ID.</p>
-<h3 id="step-2-configure-whats-now-playing">Step 2: Configure What's Now Playing<a class="headerlink" href="#step-2-configure-whats-now-playing" title="Permanent link">&para;</a></h3>
-<p>Paste the Application ID into the <strong>Client ID</strong> field in <strong>What's Now Playing</strong>'s Discord
-settings. No bot token, no server invite, and no privileged intents are needed for Rich
-Presence Mode.</p>
-<p>Click <strong>Save</strong> and restart <strong>What's Now Playing</strong>.</p>
+<h2 id="opening-the-export-dialog">Opening the Export Dialog<a class="headerlink" href="#opening-the-export-dialog" title="Permanent link">&para;</a></h2>
+<p>Select <strong>Export for OBS...</strong> from the <strong>What's Now Playing</strong> system tray menu.</p>
+<p><a href="../images/obs-export.png"><img alt="OBS Export dialog" src="../images/obs-export.png" /></a></p>
+<h2 id="configuring-sources">Configuring Sources<a class="headerlink" href="#configuring-sources" title="Permanent link">&para;</a></h2>
+<p>The dialog lists the available browser sources. For each source you can:</p>
+<ul>
+<li><strong>Include</strong> — check or uncheck to include or exclude it from the export</li>
+<li><strong>Source</strong> — the name that will appear in OBS Studio</li>
+<li><strong>Template</strong> — the template file served at that browser source's URL</li>
+<li><strong>Width / Height</strong> — the pixel dimensions of the browser source</li>
+<li><strong>Position</strong> — where the source is placed on the canvas:</li>
+<li><code>fill</code> — scaled to fill the entire canvas (good for full-screen backgrounds)</li>
+<li><code>top</code> — anchored to the top-left corner</li>
+<li><code>bottom</code> — anchored to the bottom of the canvas</li>
+<li><code>left</code> — vertically centred on the left edge</li>
+<li><code>right</code> — vertically centred on the right edge</li>
+<li><code>center</code> — centred on the canvas</li>
+</ul>
+<h3 id="previewing-a-template">Previewing a Template<a class="headerlink" href="#previewing-a-template" title="Permanent link">&para;</a></h3>
+<p>Click <strong>Preview</strong> on any row to open a live preview of that source's template
+in your browser. Use the template dropdown in the preview window to try
+different templates, then click <strong>Use This Template</strong> to apply your choice
+back to that row.</p>
+<p><a href="../images/obs-export-preview.png"><img alt="Web preview window" src="../images/obs-export-preview.png" /></a></p>
+<h2 id="exporting">Exporting<a class="headerlink" href="#exporting" title="Permanent link">&para;</a></h2>
+<p>Click <strong>Export</strong> to generate the scene collection file. <strong>What's Now Playing</strong>
+will save it to:</p>
+<ul>
+<li><strong>macOS</strong>: <code>~/Library/Application Support/obs-studio/basic/scenes/</code></li>
+<li><strong>Windows</strong>: <code>%APPDATA%\obs-studio\basic\scenes\</code></li>
+<li><strong>Linux</strong>: <code>~/.config/obs-studio/basic/scenes/</code></li>
+</ul>
+<p>If the OBS scenes directory is not found, the file is saved to
+<code>~/Documents/WhatsNowPlaying/obs_scenes/</code> instead.</p>
+<p>The filename follows the pattern <code>WNP-YYYY-MM-DD-HHMMSS.json</code>.</p>
+<h2 id="importing-into-obs">Importing into OBS<a class="headerlink" href="#importing-into-obs" title="Permanent link">&para;</a></h2>
 <blockquote>
-<p><strong>Note</strong>: Discord only allows one application to display Rich Presence at a time. If
-you are playing a game or running another app that also updates Rich Presence,
-<strong>What's Now Playing</strong> may be suppressed until the other application stops. Close
-any competing applications if Rich Presence is not appearing.</p>
-<p><strong>Note</strong>: Discord enforces a rate limit on presence updates. <strong>What's Now Playing</strong>
-waits at least 20 seconds between updates to stay within this limit, so there may be
-a short delay before your status reflects a new track. This is expected behavior.</p>
+<p>NOTE: <strong>OBS Studio must not be running</strong> when you export. OBS reads its
+scene collection files on startup, so quit OBS before clicking Export,
+then relaunch it to pick up the new collection.</p>
 </blockquote>
+<p>After exporting and relaunching OBS:</p>
+<ol>
+<li>Open the <strong>Scene Collection</strong> menu in the OBS menu bar</li>
+<li>The new <strong>WhatsNowPlaying</strong> collection will appear in the list — click it
+   to switch to it</li>
+</ol>
+<p>The imported scene contains a single scene called <strong>WNP Sources</strong> with all
+the browser sources you selected, already sized and positioned.</p>
 
 
 
