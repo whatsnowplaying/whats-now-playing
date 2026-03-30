@@ -81,7 +81,9 @@ def get_obs_scenes_dir() -> pathlib.Path | None:
             / "scenes"
         )
     else:
-        candidate = pathlib.Path.home() / ".config" / "obs-studio" / "basic" / "scenes"
+        xdg_config = os.environ.get("XDG_CONFIG_HOME", "")
+        config_base = pathlib.Path(xdg_config) if xdg_config else pathlib.Path.home() / ".config"
+        candidate = config_base / "obs-studio" / "basic" / "scenes"
 
     if candidate.is_dir():
         return candidate
