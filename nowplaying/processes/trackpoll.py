@@ -220,7 +220,10 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         if self._pending_meta:
             logging.info("Flushing pending metadata on shutdown")
             if self.guessgame:
-                await self.guessgame.end_game(reason="shutdown")
+                try:
+                    await self.guessgame.end_game(reason="shutdown")
+                except Exception as err:  # pylint: disable=broad-except
+                    logging.exception("end_game failed on shutdown: %s", err)
             await self._publish(self._pending_meta)
             self._pending_meta = None
         self.stopevent.set()
@@ -229,7 +232,10 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             self.imagecache.stop_process()
         if self.icprocess:
             logging.debug("joining imagecache")
-            self.icprocess.join()
+            self.icprocess.join(timeout=15)
+            if self.icprocess.is_alive():
+                logging.warning("imagecache did not stop cleanly, terminating")
+                self.icprocess.terminate()
         if self.input:
             await self.input.stop()
         self.plugins = None
@@ -396,8 +402,15 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         if self._ismetasame(nextmeta):
             # Same track still playing — use this idle cycle to check write permission.
             if self._pending_meta and self.guessgame:
-                await self.guessgame.check_game_timeout()
-                if await self.guessgame.may_publish():
+                try:
+                    await self.guessgame.check_game_timeout()
+                    if await self.guessgame.may_publish():
+                        await self._publish(self._pending_meta)
+                        self._pending_meta = None
+                except Exception as err:  # pylint: disable=broad-except
+                    logging.exception(
+                        "Guessgame idle check failed, publishing deferred track: %s", err
+                    )
                     await self._publish(self._pending_meta)
                     self._pending_meta = None
             return
@@ -422,11 +435,17 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         self.currentmeta["version"] = nowplaying.version.__VERSION__  # pylint: disable=no-member
 
         logging.info(
-            "Potential new track: %s / %s", self.currentmeta["artist"], self.currentmeta["title"]
+            "Potential new track: %s / %s",
+            self.currentmeta.get("artist", ""),
+            self.currentmeta.get("title", ""),
         )
 
         if await self.checkskip(nextmeta):
-            logging.info("Skipping %s / %s", self.currentmeta["artist"], self.currentmeta["title"])
+            logging.info(
+                "Skipping %s / %s",
+                self.currentmeta.get("artist", ""),
+                self.currentmeta.get("title", ""),
+            )
             return
 
         # Get configured delay for optimization calculations
@@ -470,7 +489,10 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
         # If a previous game was active, reveal its track before starting the new one.
         if self._pending_meta:
             if self.guessgame:
-                await self.guessgame.end_game(reason="track_change")
+                try:
+                    await self.guessgame.end_game(reason="track_change")
+                except Exception as err:  # pylint: disable=broad-except
+                    logging.exception("end_game failed on track change: %s", err)
             await self._publish(self._pending_meta)
             self._pending_meta = None
 
@@ -481,17 +503,21 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             and self.currentmeta.get("artist")
             and self.currentmeta.get("title")
         ):
-            if await self.guessgame.start_new_game(
-                track=self.currentmeta["title"], artist=self.currentmeta["artist"]
-            ):
-                self._pending_meta = self.currentmeta.copy()
-                logging.info(
-                    "Started guess game, deferring write for: %s - %s",
-                    self.currentmeta.get("artist"),
-                    self.currentmeta.get("title"),
-                )
-            else:
-                logging.error("Failed to start guess game, publishing track immediately")
+            try:
+                if await self.guessgame.start_new_game(
+                    track=self.currentmeta["title"], artist=self.currentmeta["artist"]
+                ):
+                    self._pending_meta = self.currentmeta.copy()
+                    logging.info(
+                        "Started guess game, deferring write for: %s - %s",
+                        self.currentmeta.get("artist"),
+                        self.currentmeta.get("title"),
+                    )
+                else:
+                    logging.error("Failed to start guess game, publishing track immediately")
+                    await self._publish(self.currentmeta)
+            except Exception as err:  # pylint: disable=broad-except
+                logging.exception("start_new_game raised, publishing track immediately: %s", err)
                 await self._publish(self.currentmeta)
         else:
             await self._publish(self.currentmeta)
@@ -522,8 +548,11 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
     async def _publish(self, metadata: TrackMetadata) -> None:
         """Write metadata to database and notify plugins."""
         if not self.testmode:
-            metadb = nowplaying.db.MetadataDB()
-            await metadb.write_to_metadb(metadata=metadata)
+            try:
+                metadb = nowplaying.db.MetadataDB()
+                await metadb.write_to_metadb(metadata=metadata)
+            except Exception as err:  # pylint: disable=broad-except
+                logging.exception("write_to_metadb failed, still notifying plugins: %s", err)
         await self._notify_plugins(metadata=metadata)
 
     async def _notify_plugins(self, metadata: TrackMetadata | None = None) -> None:
