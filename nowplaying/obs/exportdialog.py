@@ -225,7 +225,8 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
         """Collect checked rows and call scenebuilder.build_and_save."""
         if self._obs_is_running():
             self.status_label.setText(
-                "OBS is running — please quit OBS before exporting, then relaunch it to load the new scene collection."
+                "OBS is running — please quit OBS before exporting, "
+                "then relaunch it to load the new scene collection."
             )
             return
 
