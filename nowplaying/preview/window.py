@@ -4,7 +4,7 @@
 import logging
 import pathlib
 
-from PySide6.QtCore import QSize, QUrl  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QSize, QUrl, Signal  # pylint: disable=no-name-in-module
 from PySide6.QtGui import QColor  # pylint: disable=no-name-in-module
 from PySide6.QtWebEngineWidgets import QWebEngineView  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
@@ -35,11 +35,18 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
 
     The URL label shows the clean URL (without ``?preview=1``) so users can
     copy it directly into OBS or a browser.
+
+    When ``enable_select_button=True`` a "Use This Template" button is shown;
+    clicking it emits ``template_selected(name)`` with the current template
+    filename so callers can update their own state.
     """
 
-    def __init__(self, config, parent=None) -> None:
+    template_selected = Signal(str)
+
+    def __init__(self, config, parent=None, enable_select_button: bool = False) -> None:
         super().__init__(parent)
         self.config = config
+        self._enable_select_button = enable_select_button
         self.setWindowTitle("Template Preview")
         self.resize(900, 600)
         self._setup_ui()
@@ -86,6 +93,11 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         refresh_button.setFixedWidth(80)
         refresh_button.clicked.connect(self._reload)
         toolbar.addWidget(refresh_button)
+
+        if self._enable_select_button:
+            use_button = QPushButton("Use This Template")
+            use_button.clicked.connect(self._on_use_template)
+            toolbar.addWidget(use_button)
 
         layout.addLayout(toolbar)
 
@@ -160,6 +172,11 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
 
     def _reload(self) -> None:
         self.webview.reload()
+
+    def _on_use_template(self) -> None:
+        name = self._current_template_name()
+        if name:
+            self.template_selected.emit(name)
 
     # ------------------------------------------------------------------
     # Qt overrides

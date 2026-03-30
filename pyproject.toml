@@ -41,6 +41,7 @@ packages = [
   "nowplaying.__pyinstaller",
   "nowplaying.artistextras",
   "nowplaying.inputs",
+  "nowplaying.obs",
   "nowplaying.processes",
   "nowplaying.recognition",
   "nowplaying.resources",
@@ -80,6 +81,7 @@ include = [
   "nowplaying",
   "nowplaying/artistextras",
   "nowplaying/inputs",
+  "nowplaying/obs",
   "nowplaying/processes",
   "nowplaying/recognition",
   "nowplaying/twitch"]

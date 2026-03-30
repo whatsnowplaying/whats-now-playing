@@ -4,7 +4,7 @@
 import logging
 import pathlib
 
-from PySide6.QtCore import QSize  # pylint: disable=no-name-in-module
+from PySide6.QtCore import QSize, Signal  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QComboBox,
     QHBoxLayout,
@@ -31,19 +31,25 @@ class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
                       Defaults to ``"*.txt"`` (all text templates).
         config_key: QSettings key used to preselect the currently configured
                     template, e.g. ``"twitchbot/announce"``.
+        enable_select_button: When True, show a "Use This Template" button that
+                              emits ``template_selected`` with the chosen filename.
     """
 
-    def __init__(
+    template_selected = Signal(str)
+
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         config,
         glob_pattern: str = "*.txt",
         config_key: str = "textoutput/txttemplate",
+        enable_select_button: bool = False,
         parent=None,
     ) -> None:
         super().__init__(parent)
         self.config = config
         self.glob_pattern = glob_pattern
         self.config_key = config_key
+        self._enable_select_button = enable_select_button
         self.setWindowTitle("Text Template Preview")
         self.resize(600, 300)
         self._setup_ui()
@@ -75,6 +81,11 @@ class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         refresh_button.setFixedWidth(80)
         refresh_button.clicked.connect(self._render)
         toolbar.addWidget(refresh_button)
+
+        if self._enable_select_button:
+            use_button = QPushButton("Use This Template")
+            use_button.clicked.connect(self._on_use_template)
+            toolbar.addWidget(use_button)
 
         layout.addLayout(toolbar)
 
@@ -136,6 +147,11 @@ class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
 
     def _on_template_selected(self) -> None:
         self._render()
+
+    def _on_use_template(self) -> None:
+        name = self.template_combo.currentData()
+        if name:
+            self.template_selected.emit(name)
 
     # ------------------------------------------------------------------
     # Qt overrides

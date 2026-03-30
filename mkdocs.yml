@@ -103,6 +103,7 @@ nav:
   - Output & Display:
       - Overview: output/index.md
       - Charts: output/charts.md
+      - Export for OBS: output/obs-export.md
       - OBS WebSocket: output/obswebsocket.md
       - Text Output: output/textoutput.md
       - Web Server: output/webserver.md

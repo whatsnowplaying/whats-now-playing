@@ -6,13 +6,17 @@
 from PyInstaller.utils.hooks import collect_submodules  # pylint: disable=import-error
 
 hiddenimports = (
-    collect_submodules("nowplaying.artistextras")
+    collect_submodules("chardet")
+    + collect_submodules("psutil")
+    + collect_submodules("nowplaying.artistextras")
     + collect_submodules("nowplaying.denon")
     + collect_submodules("nowplaying.inputs")
     + collect_submodules("nowplaying.kick")
     + collect_submodules("nowplaying.metadata")
     + collect_submodules("nowplaying.musicbrainz")
     + collect_submodules("nowplaying.notifications")
+    + collect_submodules("nowplaying.obs")
+    + collect_submodules("nowplaying.preview")
     + collect_submodules("nowplaying.processes")
     + collect_submodules("nowplaying.recognition")
     + collect_submodules("nowplaying.serato")

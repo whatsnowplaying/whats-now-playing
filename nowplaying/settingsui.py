@@ -1041,10 +1041,18 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         """open or raise the template preview window"""
         if not self._webpreview_window:
             self._webpreview_window = nowplaying.preview.window.WebPreviewWindow(
-                config=self.config
+                config=self.config, enable_select_button=True
             )
+            self._webpreview_window.template_selected.connect(self._on_webserver_template_selected)
         self._webpreview_window.show()
         self._webpreview_window.raise_()
+        self._webpreview_window.activateWindow()
+
+    @Slot(str)
+    def _on_webserver_template_selected(self, template_name: str) -> None:
+        """Update the webserver template lineedit when chosen from the preview window."""
+        full_path = str(self.config.templatedir / template_name)
+        self.widgets["webserver"].template_lineedit.setText(full_path)
 
     def _filter_regex_load(self, regex=None):
         """setup the filter table"""

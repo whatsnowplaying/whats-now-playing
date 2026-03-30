@@ -17,6 +17,15 @@ the entire setlist on exit.
 - **Append new track** - Keep adding new tracks to the file rather than
   replace the content.
 - **Enable setlists** - Setting this option will create a file in the
-  WhatsNowPlaying/setlists directory when **What's Now Playing** is shutdown
-  of all of the tracks that were played as GitHub-flavored markdown
+  WhatsNowPlaying/setlists directory when **What's Now Playing** is shut down
+  of all of the tracks that were played as a GitHub-flavored markdown
   table.
+
+## Template Preview
+
+Click the **Preview** button next to the Text Template field to open a preview
+of the rendered output using sample metadata. Use the template dropdown to
+browse available templates, then click **Use This Template** to apply your
+selection back to the Text Template setting.
+
+[![Text template preview window](images/text-preview.png)](images/text-preview.png)
