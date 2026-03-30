@@ -19,7 +19,7 @@ import nowplaying.preview.sampledata
 import nowplaying.utils
 
 
-class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-many-arguments
+class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
     """Standalone non-modal window showing a rendered preview of a text output template.
 
     Renders the selected template using sample metadata so users can see how
@@ -37,7 +37,7 @@ class TextPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods,too-
 
     template_selected = Signal(str)
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         config,
         glob_pattern: str = "*.txt",
