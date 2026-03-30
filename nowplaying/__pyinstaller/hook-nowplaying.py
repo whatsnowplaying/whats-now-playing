@@ -7,6 +7,7 @@ from PyInstaller.utils.hooks import collect_submodules  # pylint: disable=import
 
 hiddenimports = (
     collect_submodules("chardet")
+    + collect_submodules("psutil")
     + collect_submodules("nowplaying.artistextras")
     + collect_submodules("nowplaying.denon")
     + collect_submodules("nowplaying.inputs")

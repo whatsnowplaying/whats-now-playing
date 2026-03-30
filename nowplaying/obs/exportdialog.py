@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """OBS scene collection export dialog."""
 
+import contextlib
 import logging
 import pathlib
+
+import psutil
 
 # pylint: disable=no-name-in-module
 from PySide6.QtCore import Qt, Slot
@@ -207,9 +210,25 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
             name=name, path=path, width=width, height=height, hint=hint
         )
 
+    @staticmethod
+    def _obs_is_running() -> bool:
+        """Return True if an OBS Studio process is currently running."""
+        obs_names = {"obs64.exe", "obs.exe", "obs", "obs-studio"}
+        for proc in psutil.process_iter(["name"]):
+            with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                if proc.info["name"] and proc.info["name"].lower() in obs_names:
+                    return True
+        return False
+
     @Slot()
     def _on_export(self) -> None:
         """Collect checked rows and call scenebuilder.build_and_save."""
+        if self._obs_is_running():
+            self.status_label.setText(
+                "OBS is running — please quit OBS before exporting, then relaunch it to load the new scene collection."
+            )
+            return
+
         sources = [
             src
             for row in range(self.table.rowCount())
