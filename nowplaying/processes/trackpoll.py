@@ -236,6 +236,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             if self.icprocess.is_alive():
                 logging.warning("imagecache did not stop cleanly, terminating")
                 self.icprocess.terminate()
+                self.icprocess.join(timeout=5)
         if self.input:
             await self.input.stop()
         self.plugins = None
