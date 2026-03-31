@@ -59,6 +59,23 @@ class APIResponseCache:
         "CREATE INDEX IF NOT EXISTS idx_last_accessed ON api_responses(last_accessed);",
     ]
 
+    @property
+    def _lock(self) -> asyncio.Lock:
+        """Return an asyncio.Lock valid for the current event loop.
+
+        A new lock is created whenever the running loop changes — this keeps
+        tests that use per-function event loops from inheriting a stale lock
+        created by an earlier test's loop.
+        """
+        try:
+            current_loop: asyncio.AbstractEventLoop | None = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+        if self.__lock is None or self.__lock_loop is not current_loop:
+            self.__lock_loop = current_loop
+            self.__lock = asyncio.Lock()
+        return self.__lock
+
     def __init__(self, cache_dir: pathlib.Path | None = None):
         """Initialize the API cache.
 
@@ -74,7 +91,8 @@ class APIResponseCache:
 
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.db_file = self.cache_dir / "api_responses.db"
-        self._lock = asyncio.Lock()
+        self.__lock: asyncio.Lock | None = None
+        self.__lock_loop: asyncio.AbstractEventLoop | None = None
 
         # Initialize database if needed
         self._init_task = asyncio.create_task(self._initialize_db())

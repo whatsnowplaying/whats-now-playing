@@ -18,12 +18,12 @@ check_python_version() {
   pyver=$("${pybin}" --version 2>&1)
   pyver=${pyver#* }
   read -ra PY_VER <<< "${pyver}"
-  if [[ ${PY_VER[0]} -ne 3 || ${PY_VER[1]} -lt 10 ]]; then
-    echo "Python 3.10 or later is required (got ${pyver})."
+  if [[ ${PY_VER[0]} -ne 3 || ${PY_VER[1]} -lt 11 ]]; then
+    echo "Python 3.11 or later is required (got ${pyver})."
     exit 1
   fi
   if [[ ${PY_VER[1]} -ge 14 ]]; then
-    echo "Python 3.14+ is not yet supported (got ${pyver}). Use Python 3.10–3.13."
+    echo "Python 3.14+ is not yet supported (got ${pyver}). Use Python 3.11–3.13."
     exit 1
   fi
 }
@@ -41,7 +41,7 @@ if [[ "${SYSTEM}" == "dev" ]]; then
   esac
   PYTHONBIN="${PYTHONBIN:-$(command -v "${PYTHON}")}"
   if [[ -z "${PYTHONBIN}" ]]; then
-    echo "Error: '${PYTHON}' not found on PATH. Please install Python 3.10–3.13."
+    echo "Error: '${PYTHON}' not found on PATH. Please install Python 3.11–3.13."
     exit 1
   fi
   check_python_version "${PYTHONBIN}"

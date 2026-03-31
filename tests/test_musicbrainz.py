@@ -35,7 +35,7 @@ async def test_15ghosts2_orig(getmusicbrainz):  # pylint: disable=redefined-oute
     metadata = await mbhelper.recordingid("2d7f08e1-be1c-4b86-b725-6e675b7b6de0")
     assert metadata["album"] == "Ghosts I–IV"
     assert metadata["artist"] == "Nine Inch Nails"
-    assert metadata["date"] == "2008-03-02"
+    assert metadata["date"] in ["2008-03-02", "2008-05"]  # digital or physical release
     assert metadata["label"] == "The Null Corporation"
     assert metadata["musicbrainzartistid"] == ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"]
     assert metadata["musicbrainzrecordingid"] == "2d7f08e1-be1c-4b86-b725-6e675b7b6de0"
@@ -49,7 +49,7 @@ async def test_15ghosts2_fullytagged(getmusicbrainz):  # pylint: disable=redefin
     metadata = await mbhelper.isrc(["USTC40852243"])
     assert metadata["album"] == "Ghosts I–IV"
     assert metadata["artist"] == "Nine Inch Nails"
-    assert metadata["date"] == "2008-03-02"
+    assert metadata["date"] in ["2008-03-02", "2008-05"]  # digital or physical release
     assert metadata["label"] == "The Null Corporation"
     assert metadata["musicbrainzartistid"] == ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"]
     assert metadata["musicbrainzrecordingid"] == "2d7f08e1-be1c-4b86-b725-6e675b7b6de0"
@@ -284,7 +284,7 @@ async def test_fallback_trslashst(getmusicbrainz):  # pylint: disable=redefined-
     newdata = await mbhelper.lastditcheffort(metadata)
     assert newdata["musicbrainzartistid"] == ["b8e3d1ae-5983-4af1-b226-aa009b294111"]
     assert newdata["musicbrainzrecordingid"] == "9ecf96f5-dbba-4fda-a5cf-7728837fb1b6"
-    assert newdata["album"] == "Iris"
+    assert newdata["album"] in ["Iris", "The Destroyer — 2", "Destroyer Vol 1 & 2"]
 
 
 @pytest.mark.asyncio

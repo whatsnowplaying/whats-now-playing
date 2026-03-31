@@ -14,9 +14,9 @@ from PySide6.QtWidgets import QErrorMessage  # pylint: disable=no-name-in-module
 def verify_python_version():
     """make sure the correct version of python is being used"""
 
-    if sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 10):
+    if sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 11):
         msgbox = QErrorMessage()
-        msgbox.showMessage("Python Version must be 3.10 or higher.  Exiting.")
+        msgbox.showMessage("Python Version must be 3.11 or higher.  Exiting.")
         msgbox.show()
         msgbox.exec()
         return False
@@ -94,4 +94,7 @@ def setuplogging(
         level=logging.DEBUG,
     )
     logging.captureWarnings(True)
+    # httpx emits very noisy DEBUG-level connection tracing
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
     return logpath

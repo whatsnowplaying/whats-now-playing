@@ -111,14 +111,26 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
                     self.metadata["artist"] = parts[0].strip()
                     self.metadata["title"] = parts[1].strip()
 
-        if (
-            " - " in self.metadata.get("title", "")
-            and self.metadata.get("artist")
-            and self.metadata["artist"] in self.metadata.get("title", "")
-        ):
-            logging.debug("Removing extra artist - from title")
-            parts = self.metadata["title"].split(" - ", 1)
-            self.metadata["title"] = parts[1].strip()
+        if " - " in self.metadata.get("title", "") and self.metadata.get("artist"):
+            artist = self.metadata["artist"]
+            title = self.metadata["title"]
+            if artist in title or artist.translate(nowplaying.utils.CUSTOM_TRANSLATE) in title:
+                logging.debug("Removing extra artist - from title")
+                parts = title.split(" - ", 1)
+                prefix = parts[0].strip()
+                self.metadata["title"] = parts[1].strip()
+                # If the prefix has a feat. component, append it to the current
+                # artist so MB search can match all credited artists.
+                # Preserve the existing (possibly non-ASCII) artist name so that
+                # wnpmb's arid-based Pass 0 still fires for non-Latin scripts.
+                for sep in [" feat.", " ft.", " featuring", " with "]:
+                    idx = prefix.lower().find(sep)
+                    if idx != -1:
+                        feat_part = prefix[idx:]
+                        new_artist = artist + feat_part
+                        logging.debug("Appending feat. to artist: %s", new_artist)
+                        self.metadata["artist"] = new_artist
+                        break
 
         await self._process_plugins(skipplugins)
 
@@ -153,6 +165,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         if "date" in self.metadata and (not self.metadata["date"] or self.metadata["date"] == "0"):
             del self.metadata["date"]
+
+        if date := self.metadata.get("date"):
+            date = str(date)
+            if len(date) == 8 and date.isdigit():
+                self.metadata["date"] = f"{date[:4]}-{date[4:6]}-{date[6:]}"
+            elif len(date) == 6 and date.isdigit():
+                self.metadata["date"] = f"{date[:4]}-{date[4:]}"
 
     def _fix_duration(self) -> None:
         if not self.metadata or not self.metadata.get("duration"):
