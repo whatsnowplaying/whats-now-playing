@@ -26,6 +26,7 @@ async def trackpollbootstrap(bootstrap, getroot, tmp_path):  # pylint: disable=r
     config = bootstrap
     config.templatedir = getroot.joinpath("tests", "templates")
     config.cparser.setValue("artistextras/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
     config.cparser.setValue("control/paused", True)
     config.cparser.setValue("settings/input", "jsonreader")
     config.cparser.setValue("settings/delay", 0)  # No artificial delay in tests
@@ -94,15 +95,19 @@ async def wait_for_output(filename):
         {
             "id": "nofile",
             "template": "simplewfn.txt",
-            "metadata": {"title": "title", "artist": "artist"},
-            "expected": ["", "artist", "title"],
+            "metadata": {"title": "Xyzzy WNP Test Title", "artist": "Xyzzy WNP Test Artist"},
+            "expected": ["", "Xyzzy WNP Test Artist", "Xyzzy WNP Test Title"],
         },
         # Bad file test
         {
             "id": "badfile",
             "template": "simplewfn.txt",
-            "metadata": {"title": "title", "artist": "artist", "filename": "completejunk"},
-            "expected": ["", "artist", "title"],
+            "metadata": {
+                "title": "Xyzzy WNP Test Title",
+                "artist": "Xyzzy WNP Test Artist",
+                "filename": "completejunk",
+            },
+            "expected": ["", "Xyzzy WNP Test Artist", "Xyzzy WNP Test Title"],
         },
     ],
 )
