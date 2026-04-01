@@ -16,7 +16,6 @@ __all__ = [
     "MusicBrainzClient",
     "MusicBrainzError",
     "NetworkError",
-    "NetworkError",
     "RateLimitError",
     "ResponseError",
     "RetrySettings",

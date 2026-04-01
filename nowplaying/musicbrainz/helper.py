@@ -182,54 +182,47 @@ class MusicBrainzHelper:
         """uncached version of recordingid lookup"""
         self._setemail()
 
+        newdata: dict[str, Any] = {}
         try:
             async with self.mb_client:
                 mb_data = await self.mb_client.get_recording_by_id(recordingid)
+                if not mb_data:
+                    return {}
+
+                enriched = await self.mb_client.process_recording_data(mb_data, recordingid)
+
+                # Map wnpmb key names to WNP TrackMetadata key names
+                newdata = {
+                    "musicbrainzrecordingid": enriched["musicbrainz_recording_id"],
+                }
+                for key in ("title", "artist", "album", "date", "label"):
+                    if key in enriched:
+                        newdata[key] = enriched[key]
+                if "musicbrainz_artist_id" in enriched:
+                    newdata["musicbrainzartistid"] = enriched["musicbrainz_artist_id"]
+                if "genres" in enriched:
+                    newdata["genres"] = enriched["genres"]
+                    newdata["genre"] = "/".join(enriched["genres"])
+
+                # Cover art
+                best_release = select_best_release(mb_data.get("releases", []))
+                if best_release:
+                    if best_release.get("cover-art-archive", {}).get("artwork") is True:
+                        with contextlib.suppress(Exception):
+                            newdata["coverimageraw"] = await self.mb_client.get_image_front(
+                                best_release["id"]
+                            )
+
+                    if not newdata.get("coverimageraw") and best_release.get(
+                        "release-group", {}
+                    ).get("id"):
+                        with contextlib.suppress(Exception):
+                            newdata["coverimageraw"] = await self.mb_client.get_image_front(
+                                best_release["release-group"]["id"], "release-group"
+                            )
         except MusicBrainzError:
             logger.exception("MusicBrainz error fetching recording %s", recordingid)
             return {}
-
-        if not mb_data:
-            return {}
-
-        try:
-            async with self.mb_client:
-                enriched = await self.mb_client.process_recording_data(mb_data, recordingid)
-        except MusicBrainzError:
-            logger.exception("MusicBrainz error processing recording %s", recordingid)
-            return {}
-
-        # Map wnpmb key names to WNP TrackMetadata key names
-        newdata: dict[str, Any] = {
-            "musicbrainzrecordingid": enriched["musicbrainz_recording_id"],
-        }
-        for key in ("title", "artist", "album", "date", "label"):
-            if key in enriched:
-                newdata[key] = enriched[key]
-        if "musicbrainz_artist_id" in enriched:
-            newdata["musicbrainzartistid"] = enriched["musicbrainz_artist_id"]
-        if "genres" in enriched:
-            newdata["genres"] = enriched["genres"]
-            newdata["genre"] = "/".join(enriched["genres"])
-
-        # Cover art
-        best_release = select_best_release(mb_data.get("releases", []))
-        if best_release:
-            if best_release.get("cover-art-archive", {}).get("artwork") is True:
-                with contextlib.suppress(Exception):
-                    async with self.mb_client:
-                        newdata["coverimageraw"] = await self.mb_client.get_image_front(
-                            best_release["id"]
-                        )
-
-            if not newdata.get("coverimageraw") and best_release.get(
-                "release-group", {}
-            ).get("id"):
-                with contextlib.suppress(Exception):
-                    async with self.mb_client:
-                        newdata["coverimageraw"] = await self.mb_client.get_image_front(
-                            best_release["release-group"]["id"], "release-group"
-                        )
 
         if newdata.get("musicbrainzartistid"):
             newdata["artistwebsites"] = await self._websites(newdata["musicbrainzartistid"])
@@ -251,43 +244,44 @@ class MusicBrainzHelper:
             return None
 
         sitelist = []
-        for artistid in idlist:
-            if self.config.cparser.value("musicbrainz/musicbrainz", type=bool):
-                sitelist.append(f"https://musicbrainz.org/artist/{artistid}")
+        async with self.mb_client:
+            for artistid in idlist:
+                if self.config.cparser.value("musicbrainz/musicbrainz", type=bool):
+                    sitelist.append(f"https://musicbrainz.org/artist/{artistid}")
 
-            try:
-                async with self.mb_client:
+                webdata = None
+                try:
                     webdata = await self.mb_client.get_artist_by_id(
                         artistid, includes=["url-rels"]
                     )
-            except Exception:  # pylint: disable=broad-exception-caught
-                logger.error("MusicBrainz does not know artistid %s", artistid)
-                return None
-
-            if not webdata:
-                continue
-
-            urls = extract_artist_urls(webdata)
-
-            convdict = {
-                "bandcamp": "bandcamp",
-                "official homepage": "homepage",
-                "last.fm": "lastfm",
-                "discogs": "discogs",
-                "wikidata": "wikidata",
-            }
-
-            for src, dest in convdict.items():
-                if src not in urls:
+                except Exception:  # pylint: disable=broad-exception-caught
+                    logger.exception("MusicBrainz does not know artistid %s", artistid)
                     continue
-                if src == "discogs" and self.config.cparser.value("musicbrainz/discogs", type=bool):
-                    sitelist.append(urls[src])
-                    logger.debug("placed %s", dest)
-                elif src == "wikidata":
-                    sitelist.append(urls[src])
-                elif self.config.cparser.value(f"musicbrainz/{dest}", type=bool):
-                    sitelist.append(urls[src])
-                    logger.debug("placed %s", dest)
+
+                if not webdata:
+                    continue
+
+                urls = extract_artist_urls(webdata)
+
+                convdict = {
+                    "bandcamp": "bandcamp",
+                    "official homepage": "homepage",
+                    "last.fm": "lastfm",
+                    "discogs": "discogs",
+                    "wikidata": "wikidata",
+                }
+
+                for src, dest in convdict.items():
+                    if src not in urls:
+                        continue
+                    if src == "discogs" and self.config.cparser.value("musicbrainz/discogs", type=bool):
+                        sitelist.append(urls[src])
+                        logger.debug("placed %s", dest)
+                    elif src == "wikidata":
+                        sitelist.append(urls[src])
+                    elif self.config.cparser.value(f"musicbrainz/{dest}", type=bool):
+                        sitelist.append(urls[src])
+                        logger.debug("placed %s", dest)
 
         return list(dict.fromkeys(sitelist))
 
