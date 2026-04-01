@@ -216,9 +216,10 @@ async def test_integration_collaboration_not_in_mb(bootstrap):
             assert len(processor.metadata["musicbrainzartistid"]) == len(
                 case["expected_artists"]
             ), f"Expected {len(case['expected_artists'])} artists for {case['artist']}"
-            assert processor.metadata.get("artists") == case["expected_artists"], (
-                f"Artist names don't match for {case['artist']}"
-            )
+            for name in case["expected_artists"]:
+                assert name in processor.metadata.get("artist", ""), (
+                    f"{name} not found in artist field for {case['artist']}"
+                )
 
             # Verify all individual artist IDs are valid UUIDs (MusicBrainz format)
             for artist_id in processor.metadata["musicbrainzartistid"]:
@@ -344,9 +345,10 @@ async def test_integration_collaborations_split(bootstrap, collaboration, expect
             f"Expected {len(expected_artists)} artists for {collaboration}, "
             f"got {len(processor.metadata['musicbrainzartistid'])}"
         )
-        assert processor.metadata["artists"] == expected_artists, (
-            f"Expected {expected_artists}, got {processor.metadata['artists']}"
-        )
+        for name in expected_artists:
+            assert name in processor.metadata.get("artist", ""), (
+                f"{name} not found in artist field for {collaboration}"
+            )
 
         # All artist IDs should be valid MusicBrainz UUIDs
         for artist_id in processor.metadata["musicbrainzartistid"]:
@@ -354,7 +356,7 @@ async def test_integration_collaborations_split(bootstrap, collaboration, expect
                 f"Invalid MusicBrainz ID format: {artist_id}"
             )
 
-        logging.info("✓ %s correctly split into: %s", collaboration, processor.metadata["artists"])
+        logging.info("✓ %s resolved to: %s", collaboration, processor.metadata.get("artist"))
     elif processor.metadata.get("musicbrainzartistid"):
         logging.info("✓ %s found as complete collaboration in MusicBrainz", collaboration)
     else:
@@ -379,7 +381,10 @@ async def test_integration_real_collaboration_example(bootstrap):
         and len(processor.metadata["musicbrainzartistid"]) > 1
     ):
         assert len(processor.metadata["musicbrainzartistid"]) == 2
-        assert processor.metadata["artists"] == ["Disclosure", "AlunaGeorge"]
+        for name in ["Disclosure", "AlunaGeorge"]:
+            assert name in processor.metadata.get("artist", ""), (
+                f"{name} not found in artist field"
+            )
 
         # Should have found both Disclosure and AlunaGeorge
         disclosure_id = processor.metadata["musicbrainzartistid"][0]

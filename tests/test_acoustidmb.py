@@ -31,7 +31,7 @@ async def test_15ghosts2_orig(getacoustidplugin, getroot):  # pylint: disable=re
     )
     assert metadata["album"] == "Ghosts I–IV"
     assert metadata["artist"] == "Nine Inch Nails"
-    assert metadata["date"] == "2008-03-02"
+    assert metadata["date"] in ["2008-03-02", "2008-05"]  # digital or physical release
     assert metadata["label"] == "The Null Corporation"
     assert metadata["musicbrainzartistid"] == ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"]
     assert metadata["musicbrainzrecordingid"] == "2d7f08e1-be1c-4b86-b725-6e675b7b6de0"
@@ -47,7 +47,7 @@ async def test_15ghosts2_fullytagged(getacoustidplugin, getroot):  # pylint: dis
     )
     assert metadata["album"] == "Ghosts I–IV"
     assert metadata["artist"] == "Nine Inch Nails"
-    assert metadata["date"] == "2008-03-02"
+    assert metadata["date"] in ["2008-03-02", "2008-05"]  # digital or physical release
     assert metadata["label"] == "The Null Corporation"
     assert metadata["musicbrainzartistid"] == ["b7ffd2af-418f-4be2-bdd1-22f8b48613da"]
     assert metadata["musicbrainzrecordingid"] == "2d7f08e1-be1c-4b86-b725-6e675b7b6de0"
