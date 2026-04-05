@@ -274,7 +274,9 @@ class MusicBrainzHelper:
                 for src, dest in convdict.items():
                     if src not in urls:
                         continue
-                    if src == "discogs" and self.config.cparser.value("musicbrainz/discogs", type=bool):
+                    if src == "discogs" and self.config.cparser.value(
+                        "musicbrainz/discogs", type=bool
+                    ):
                         sitelist.append(urls[src])
                         logger.debug("placed %s", dest)
                     elif src == "wikidata":

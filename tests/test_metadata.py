@@ -853,3 +853,88 @@ def test_metadata_handles_zero_values(test_value, expected_result):
     assert should_process == expected_result, (
         f"Value {test_value} should {'be processed' if expected_result else 'be ignored'}"
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "date_in,date_out",
+    [
+        ("20201218", "2020-12-18"),
+        ("202012", "2020-12"),
+        ("2020", "2020"),
+        ("2020-12-18", "2020-12-18"),
+        ("2020-12", "2020-12"),
+    ],
+)
+async def test_date_normalization(bootstrap, date_in, date_out):
+    """date strings from tinytag may arrive without separators; verify normalization"""
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+    metadatain = {"date": date_in}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+        metadata=metadatain
+    )
+    assert metadataout["date"] == date_out
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "artist,title_in,title_out,artist_out",
+    [
+        # ASCII artist in title prefix: simple strip
+        (
+            "Pet Shop Boys",
+            "Pet Shop Boys - Can You Forgive Her?",
+            "Can You Forgive Her?",
+            "Pet Shop Boys",
+        ),
+        # Non-ASCII artist matched via CUSTOM_TRANSLATE: strip prefix
+        # Title uses ASCII transliteration of artist (as seen in VDJ filenames)
+        (
+            "MӨЯIS BLΛK",
+            "MORIS BLAK - Complicate",
+            "Complicate",
+            "MӨЯIS BLΛK",
+        ),
+        # Non-ASCII artist with feat. in prefix: append feat. to artist
+        (
+            "MӨЯIS BLΛK",
+            "MORIS BLAK feat. grabyourface - Complicate",
+            "Complicate",
+            "MӨЯIS BLΛK feat. grabyourface",
+        ),
+        # ASCII artist with feat. in prefix
+        (
+            "Artist One",
+            "Artist One feat. Artist Two - Song Title",
+            "Song Title",
+            "Artist One feat. Artist Two",
+        ),
+        # ft. abbreviation
+        (
+            "DJ Test",
+            "DJ Test ft. Vocalist - Track",
+            "Track",
+            "DJ Test ft. Vocalist",
+        ),
+        # No artist in title: title unchanged
+        (
+            "Artist One",
+            "Completely Different - Something",
+            "Completely Different - Something",
+            "Artist One",
+        ),
+    ],
+)
+async def test_artist_in_title_strip(bootstrap, artist, title_in, title_out, artist_out):
+    """artist prefix in title field should be stripped; feat. credits preserved on artist"""
+    config = bootstrap
+    config.cparser.setValue("acoustidmb/enabled", False)
+    config.cparser.setValue("musicbrainz/enabled", False)
+    metadatain = {"artist": artist, "title": title_in}
+    metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
+        metadata=metadatain
+    )
+    assert metadataout["title"] == title_out
+    assert metadataout["artist"] == artist_out
