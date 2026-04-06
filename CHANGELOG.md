@@ -22,6 +22,10 @@
 
 * Developer Stuff
   * Dependency updates
+  * **Python 3.10 is no longer supported**; minimum version is now Python 3.11
+  * Replace vendored musicbrainzngs library with wnpmb package, removing ~3,500
+    lines of XML-based MusicBrainz client code in favour of a JSON/httpx async
+    client with improved release selection accuracy
 
 ## Version 5.1.0 - 2026-03-26
 

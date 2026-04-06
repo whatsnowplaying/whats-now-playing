@@ -247,8 +247,34 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             return False  # Still default to audio, but log as error for investigation
 
     @staticmethod
+    def _decode_bpm(bpm_value) -> str | None:
+        """Extract a valid numeric BPM from a field value.
+
+        M4A files can have multiple 'bpm' atoms: a raw float32 binary blob
+        followed by the human-readable string (e.g. ['AAD8Qg==', '126']).
+        Return the first value that parses as a finite float.
+        """
+        if not bpm_value:
+            return None
+        values = bpm_value if isinstance(bpm_value, list) else [bpm_value]
+        for v in values:
+            try:
+                f = float(str(v))
+                if f > 0:
+                    return str(v)
+            except (ValueError, TypeError):
+                pass
+        return None
+
+    @staticmethod
     def _decode_musical_key(key_value) -> str | None:
         """Decode musical key field, handling JSON structures from MixedInKey."""
+        if not key_value:
+            return None
+
+        # M4A custom atoms surface as a list; take the first element.
+        if isinstance(key_value, list):
+            key_value = key_value[0] if key_value else None
         if not key_value:
             return None
 
@@ -277,6 +303,7 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
             "acoustid id": "acoustidid",
             "bpm": "bpm",
             "isrc": "isrc",
+            "initial_key": "key",
             "key": "key",
             "composer": "composer",
             "lyricist": "lyricist",
@@ -300,9 +327,12 @@ class TinyTagRunner:  # pylint: disable=too-few-public-methods
 
             if key in list_fields:
                 self._process_list_field(extra[key], newkey)
-            elif key == "key":
+            elif key in ("key", "initial_key"):
                 # Special handling for musical key field
                 self.metadata[newkey] = self._decode_musical_key(extra[key])
+            elif key == "bpm":
+                # M4A can store bpm as multiple atoms; pick the numeric one
+                self.metadata[newkey] = self._decode_bpm(extra[key])
             else:
                 self._process_single_field(extra[key], newkey)
 

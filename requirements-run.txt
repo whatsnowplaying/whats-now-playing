@@ -28,6 +28,7 @@ truststore==0.10.4
 twitchAPI==4.5.0
 url_normalize==2.2.1
 watchdog==6.0.0
+wnpmb @ git+https://github.com/whatsnowplaying/wnpmb.git@0.1.0
 zeroconf==0.148.0
 
 #

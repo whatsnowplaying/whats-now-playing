@@ -7,6 +7,7 @@ import pathlib
 import unittest.mock
 
 import puremagic
+import pytest
 
 from nowplaying.metadata.tinytag_runner import TinyTagRunner, _date_calc
 from nowplaying.vendor import tinytag  # pylint: disable=no-name-in-module
@@ -235,6 +236,67 @@ def test_decode_musical_key_empty_string():
     """Empty string returns None."""
     result = TinyTagRunner._decode_musical_key("")  # pylint: disable=protected-access
     assert result is None
+
+
+def test_decode_musical_key_list_single_element():
+    """List with one element is unwrapped before decoding."""
+    result = TinyTagRunner._decode_musical_key(["Em"])  # pylint: disable=protected-access
+    assert result == "Em"
+
+
+def test_decode_musical_key_list_base64_json():
+    """List wrapping a base64-JSON element is unwrapped correctly."""
+    key_data = json.dumps({"key": "Bbm"})
+    encoded = base64.b64encode(key_data.encode("utf-8")).decode("utf-8")
+    result = TinyTagRunner._decode_musical_key([encoded])  # pylint: disable=protected-access
+    assert result == "Bbm"
+
+
+def test_decode_musical_key_empty_list():
+    """Empty list returns None."""
+    result = TinyTagRunner._decode_musical_key([])  # pylint: disable=protected-access
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# TinyTagRunner._decode_bpm tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "bpm_value,expected",
+    [
+        ("126", "126"),
+        (["126"], "126"),
+        # M4A multi-atom: float32 blob first, ASCII string second
+        (["AAD8Qg==", "126"], "126"),
+        # Only blob present: no valid numeric → None
+        (["AAD8Qg=="], None),
+        (None, None),
+        ([], None),
+        ("0", None),  # BPM of 0 is not valid
+    ],
+)
+def test_decode_bpm(bpm_value, expected):
+    """_decode_bpm returns the first positive-numeric BPM string from the value."""
+    result = TinyTagRunner._decode_bpm(bpm_value)  # pylint: disable=protected-access
+    assert result == expected
+
+
+def test_process_extra_bpm_multivalue():
+    """M4A-style multi-atom bpm list yields the numeric value."""
+    runner = TinyTagRunner()
+    runner.metadata = {}
+    runner._process_extra({"bpm": ["AAD8Qg==", "126"]})  # pylint: disable=protected-access
+    assert runner.metadata["bpm"] == "126"
+
+
+def test_process_extra_initial_key_takes_priority():
+    """initial_key is preferred over the custom 'key' atom."""
+    runner = TinyTagRunner()
+    runner.metadata = {}
+    runner._process_extra({"initial_key": ["Em"], "key": ["MTk="]})  # pylint: disable=protected-access
+    assert runner.metadata["key"] == "Em"
 
 
 # ---------------------------------------------------------------------------

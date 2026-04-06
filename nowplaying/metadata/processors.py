@@ -101,24 +101,8 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         except Exception:  # pylint: disable=broad-except
             logging.exception("Ignoring sub-metaproc failure.")
 
-        if self.metadata.get("filename") and not self.metadata.get("title"):
-            logging.debug("No title, so setting to filename stem")
-            self.metadata["title"] = pathlib.Path(self.metadata["filename"]).stem
-            if " - " in self.metadata.get("title", "") and not self.metadata.get("artist"):
-                parts = self.metadata["title"].split(" - ", 1)
-                if len(parts) == 2:
-                    logging.debug("Splitting out filename stem to artist - title")
-                    self.metadata["artist"] = parts[0].strip()
-                    self.metadata["title"] = parts[1].strip()
-
-        if (
-            " - " in self.metadata.get("title", "")
-            and self.metadata.get("artist")
-            and self.metadata["artist"] in self.metadata.get("title", "")
-        ):
-            logging.debug("Removing extra artist - from title")
-            parts = self.metadata["title"].split(" - ", 1)
-            self.metadata["title"] = parts[1].strip()
+        self._fix_filename_stem()
+        self._fix_artist_in_title()
 
         await self._process_plugins(skipplugins)
 
@@ -141,6 +125,51 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
         self._fix_duration()
         return self.metadata
 
+    def _fix_filename_stem(self) -> None:
+        """if no title, derive it (and possibly artist) from the filename stem"""
+        if not self.metadata.get("filename") or self.metadata.get("title"):
+            return
+        logging.debug("No title, so setting to filename stem")
+        self.metadata["title"] = pathlib.Path(self.metadata["filename"]).stem
+        if " - " in self.metadata.get("title", "") and not self.metadata.get("artist"):
+            parts = self.metadata["title"].split(" - ", 1)
+            if len(parts) == 2:
+                logging.debug("Splitting out filename stem to artist - title")
+                self.metadata["artist"] = parts[0].strip()
+                self.metadata["title"] = parts[1].strip()
+
+    def _fix_artist_in_title(self) -> None:
+        """strip redundant 'Artist - ' prefix from title field"""
+        if " - " not in self.metadata.get("title", "") or not self.metadata.get("artist"):
+            return
+        artist = self.metadata["artist"]
+        title = self.metadata["title"]
+        parts = title.split(" - ", 1)
+        prefix = parts[0].strip()
+        translated_artist = artist.translate(nowplaying.utils.CUSTOM_TRANSLATE)
+        # Only strip when the title prefix exactly equals the artist name or
+        # starts with it followed by a space (feat. patterns).  This avoids
+        # false positives where the artist name appears elsewhere in the title.
+        prefix_lower = prefix.lower()
+        if not any(
+            prefix_lower == cand.lower() or prefix_lower.startswith(cand.lower() + " ")
+            for cand in (artist, translated_artist)
+        ):
+            return
+        logging.debug("Removing extra artist - from title")
+        self.metadata["title"] = parts[1].strip()
+        # If the prefix has a feat. component, append it to the current
+        # artist so MB search can match all credited artists.
+        # Preserve the existing (possibly non-ASCII) artist name so that
+        # wnpmb's arid-based Pass 0 still fires for non-Latin scripts.
+        for sep in [" feat.", " ft.", " featuring", " with "]:
+            idx = prefix.lower().find(sep)
+            if idx != -1:
+                feat_part = prefix[idx:]
+                logging.debug("Appending feat. to artist: %s", artist + feat_part)
+                self.metadata["artist"] = artist + feat_part
+                break
+
     def _fix_dates(self) -> None:
         """take care of year / date cleanup"""
         if not self.metadata:
@@ -153,6 +182,13 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         if "date" in self.metadata and (not self.metadata["date"] or self.metadata["date"] == "0"):
             del self.metadata["date"]
+
+        if date := self.metadata.get("date"):
+            date = str(date)
+            if len(date) == 8 and date.isdigit():
+                self.metadata["date"] = f"{date[:4]}-{date[4:6]}-{date[6:]}"
+            elif len(date) == 6 and date.isdigit():
+                self.metadata["date"] = f"{date[:4]}-{date[4:]}"
 
     def _fix_duration(self) -> None:
         if not self.metadata or not self.metadata.get("duration"):

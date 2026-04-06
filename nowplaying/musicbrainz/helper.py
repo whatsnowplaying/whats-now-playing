@@ -2,55 +2,43 @@
 # pylint: disable=invalid-name
 """support for musicbrainz"""
 
+import asyncio
 import contextlib
-import functools
 import logging
-import logging.config
-import logging.handlers
 import os
-import re
 import sys
+from typing import Any
 
-from aiocache import cached
+from wnpmb import (
+    MusicBrainzClient,
+    MusicBrainzError,
+    WNPCacheAdapter,
+    extract_artist_urls,
+)
+from wnpmb.client._base import RetrySettings
+from wnpmb.normalization import normalize
 
 import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
-from nowplaying.utils import artist_name_variations, normalize, normalize_text
-import nowplaying.utils.artists
+import nowplaying.utils.metadata
 
-from . import client
-
-REMIX_RE = re.compile(r"^\s*(.*)\s+[\(\[].*[\)\]]$")
-
-
-@functools.lru_cache(maxsize=128, typed=False)
-def _verify_artist_name(artistname, artistcredit):
-    logging.debug("called verify_artist_name: %s vs %s", artistname, artistcredit)
-    if "Various Artists" in artistcredit:
-        logging.debug("skipped %s -- VA", artistcredit)
-        return False
-    normname = normalize(artistname, nospaces=True)
-    normcredit = normalize(artistcredit, nospaces=True)
-    if not normname or not normcredit or normname not in normcredit:
-        logging.debug("rejecting %s (ours) not in %s (mb)", normname, normcredit)
-        return False
-    return True
+logger = logging.getLogger(__name__)
 
 
 class MusicBrainzHelper:
     """handler for NowPlaying"""
 
     def __init__(self, config=None):
-        logging.getLogger("musicbrainzngs").setLevel(logging.INFO)
         if config:
             self.config = config
         else:
             self.config = nowplaying.config.ConfigFile()
 
         self.emailaddressset = False
-        # Create our own MusicBrainz client instance
-        self.mb_client = client.MusicBrainzClient(rate_limit_interval=0.5)
+        self.mb_client = MusicBrainzClient(
+            retry_settings=RetrySettings(max_retries=2, wait=0.5),
+        )
 
     def _setemail(self):
         """make sure the musicbrainz fetch has an email address set
@@ -60,197 +48,39 @@ class MusicBrainzHelper:
                 self.config.cparser.value("musicbrainz/emailaddress")
                 or "aw+wnp@effectivemachines.com"
             )
-
             self.mb_client.set_useragent("whats-now-playing", self.config.version, emailaddress)
+            self.mb_client.cache_service = WNPCacheAdapter(nowplaying.apicache.get_cache())
             self.emailaddressset = True
 
-    async def _pickarecording(self, testdata, mbdata, allowothers=False):  # pylint: disable=too-many-statements, too-many-branches
-        """core routine for last ditch"""
-
-        def _check_build_artid():
-            if len(recording["artist-credit"]) > 1:
-                artname = ""
-                artid = []
-                for artdata in recording["artist-credit"]:
-                    if isinstance(artdata, dict):
-                        artname = artname + artdata["name"]
-                        artid.append(artdata["artist"]["id"])
-                        if testdata.get("artist") and not _verify_artist_name(
-                            artdata["name"], testdata["artist"]
-                        ):
-                            logging.debug(
-                                "Rejecting bz %s does not appear in %s",
-                                artdata["name"],
-                                testdata["artist"],
-                            )
-                            return []
-                    else:
-                        artname = artname + artdata
-
-                # if not _verify_artist_name(testdata.get('artist'), artname):
-                #    return []
-                mbartid = artid
-            else:
-                if not _verify_artist_name(
-                    testdata.get("artist"), recording["artist-credit"][0]["name"]
-                ):
-                    return []
-                # logging.debug(recording)
-                mbartid = [recording["artist-credit"][0]["artist"]["id"]]
-            return mbartid
-
-        def _check_not_allow_others():
-            if relgroup.get("type") and "Compilation" in relgroup["type"]:
-                logging.debug("skipped %s -- compilation type", title)
-                return False
-            if relgroup.get("secondary-type-list"):
-                if "Compilation" in relgroup["secondary-type-list"]:
-                    logging.debug("skipped %s -- 2nd compilation", title)
-                    return False
-                if "Live" in relgroup["secondary-type-list"]:
-                    logging.debug("skipped %s -- 2nd live", title)
-                    return False
-            return True
-
-        riddata = {}
-        mbartid = []
-        if not mbdata.get("recording-list"):
-            return riddata
-
-        newlist = sorted(
-            mbdata["recording-list"], key=lambda d: d.get("first-release-date", "9999-99-99")
-        )
-        variousartistrid = None
-        # logging.debug(newlist)
-        for recording in newlist:
-            rid = recording["id"]
-            logging.debug("recording id = %s", rid)
-            if not recording.get("release-list"):
-                logging.debug("skipping recording id %s -- no releases", rid)
-                continue
-            mbartid = _check_build_artid()
-            if not mbartid:
-                continue
-            for release in recording["release-list"]:
-                title = release["title"]
-                if testdata.get("album") and normalize_text(testdata["album"]) != normalize_text(
-                    title
-                ):
-                    logging.debug("skipped %s <> %s", title, testdata["album"])
-                    continue
-                if (
-                    release.get("artist-credit")
-                    and release["artist-credit"][0]["name"] == "Various Artists"
-                ):
-                    if not variousartistrid:
-                        variousartistrid = rid
-                        logging.debug("saving various artist just in case")
-                    else:
-                        logging.debug("already have a various artist")
-                    continue
-                relgroup = release["release-group"]
-                if not relgroup:
-                    logging.debug("skipped %s -- no rel group", title)
-                    continue
-                if not allowothers and not _check_not_allow_others():
-                    continue
-                logging.debug("checking %s", recording["id"])
-                if riddata := await self.recordingid(recording["id"]):
-                    return riddata
-        if not riddata and variousartistrid:
-            logging.debug("Using a previous analyzed various artist release")
-            if riddata := await self.recordingid(variousartistrid):
-                riddata["musicbrainzartistid"] = mbartid
-                return riddata
-        logging.debug("Exiting pick a recording")
-        return riddata
-
     async def _lastditchrid(self, metadata):
-        """Original method - extracts fields and delegates to cached version"""
-        # Check original metadata for existing recording ID
+        """extract fields and run search"""
         if metadata.get("musicbrainzrecordingid"):
-            logging.debug("Skipping fallback: already have a rid")
+            logger.debug("Skipping fallback: already have a rid")
             return None
 
-        return await self._lastditchrid_cached(
-            metadata.get("artist"), metadata.get("title"), metadata.get("album")
-        )
+        artist = metadata.get("artist")
+        title = metadata.get("title")
+        album = metadata.get("album")
 
-    @cached(ttl=300)  # 5 minute cache
-    async def _lastditchrid_cached(self, artist: str, title: str, album: str | None = None):
-        """Cached implementation of lastditch recording ID lookup"""
+        if not artist or not title:
+            return None
 
-        async def havealbum():
-            for artist_var in artist_name_variations(artist):
-                try:
-                    mydict = await self.mb_client.search_recordings(
-                        artist=artist_var, recording=title, release=album
-                    )
-                except Exception:  # pylint: disable=broad-exception-caught
-                    logging.exception(
-                        "mb_client.search_recordings- ar:%s, t:%s, al:%s",
-                        artist_var,
-                        title,
-                        album,
-                    )
-                    continue
-
-                # Create addmeta for _pickarecording compatibility
-                addmeta = {"artist": artist, "title": title, "album": album}
-                if riddata := await self._pickarecording(
-                    addmeta, mydict
-                ) or await self._pickarecording(addmeta, mydict, allowothers=True):
-                    return riddata
-            return {}
-
-        mydict = {}
-        riddata = {}
-
-        logging.debug(
-            "Starting data: {'artist': %s, 'title': %s, 'album': %s}", artist, title, album
-        )
-        if album:
-            if riddata := await havealbum():
-                return riddata
-
-        for artist_var in artist_name_variations(artist):
-            logging.debug("Trying %s", artist_var)
-            try:
-                mydict = await self.mb_client.search_recordings(artist=artist_var, recording=title)
-            except Exception:  # pylint: disable=broad-exception-caught
-                logging.exception(
-                    "mb_client.search_recordings- ar:%s, t:%s (strict)", artist_var, title
+        self._setemail()
+        year = nowplaying.utils.metadata.get_best_year(metadata)
+        try:
+            async with self.mb_client:
+                mbid = await self.mb_client.find_recording(
+                    title=title,
+                    artist=artist,
+                    album=album,
+                    year=year,
                 )
-                continue
-
-            if mydict.get("recording-count", 0) == 0:
-                logging.debug("no recordings found for this artist/title combination")
-                continue
-
-            if mydict.get("recording-count", 0) > 100:
-                logging.debug("too many, going stricter")
-                query = (
-                    f'artist:{artist_var} AND recording:"{title}" AND '
-                    "-(secondarytype:compilation OR secondarytype:live) AND status:official"
-                )
-                logging.debug(query)
-                try:
-                    mydict = await self.mb_client.search_recordings(query=query, limit=100)
-                except Exception:  # pylint: disable=broad-exception-caught
-                    logging.exception("mb_client.search_recordings- q:%s", query)
-                continue
-
-            # Create addmeta for _pickarecording compatibility
-            addmeta = {"artist": artist, "title": title, "album": album}
-            if riddata := await self._pickarecording(addmeta, mydict):
-                return riddata
-
-        # Create addmeta for final _pickarecording call
-        addmeta = {"artist": artist, "title": title, "album": album}
-        if riddata := await self._pickarecording(addmeta, mydict, allowothers=True):
-            return riddata
-        logging.debug("Last ditch MB lookup failed. Sorry.")
-        return riddata
+        except MusicBrainzError:
+            logger.exception("MusicBrainz error during find_recording")
+            return None
+        if mbid:
+            return await self.recordingid(mbid)
+        return None
 
     async def lastditcheffort(self, metadata):
         """there is like no data, so..."""
@@ -260,51 +90,40 @@ class MusicBrainzHelper:
 
         self._setemail()
 
-        addmeta = {
-            "artist": metadata.get("artist"),
-            "title": metadata.get("title"),
-            "album": metadata.get("album"),
-        }
-
-        riddata = await self._lastditchrid(addmeta)
-        if not riddata and REMIX_RE.match(addmeta["title"]):
-            addmeta["title"] = REMIX_RE.match(addmeta["title"]).group(1)
-            riddata = await self._lastditchrid(addmeta)
+        riddata = await self._lastditchrid(metadata)
 
         if riddata:
-            if normalize(riddata["title"]) != normalize(metadata.get("title")):
-                logging.debug("No title match, so just using artist data")
+            if normalize(riddata.get("title")) != normalize(metadata.get("title")):
+                logger.debug("No title match, so just using artist data")
 
-                # Check if strict album matching is enabled
                 strict_album_matching = self.config.cparser.value(
                     "musicbrainz/strict_album_matching", True, type=bool
                 )
 
-                # If original request had an album and we're in strict mode, return nothing
-                # rather than partial data to avoid wrong album information
                 if strict_album_matching and metadata.get("album"):
-                    logging.debug(
+                    logger.debug(
                         "Strict album matching enabled: rejecting partial match for album request"
                     )
-                    return None
+                    return {}
 
-                # Otherwise, return artist data without album/recording info
                 for delitem in [
                     "album",
                     "coverimageraw",
                     "date",
                     "genre",
+                    "genres",
                     "label",
                     "musicbrainzrecordingid",
                 ]:
                     if delitem in riddata:
                         del riddata[delitem]
-            logging.debug(
+
+            logger.debug(
                 "metadata added artistid = %s / recordingid = %s",
                 riddata.get("musicbrainzartistid"),
                 riddata.get("musicbrainzrecordingid"),
             )
-        return riddata
+        return riddata or {}
 
     async def recognize(self, metadata):
         """fill in any blanks from musicbrainz"""
@@ -315,23 +134,17 @@ class MusicBrainzHelper:
         addmeta = {}
 
         if metadata.get("musicbrainzrecordingid"):
-            logging.debug("Preprocessing with musicbrainz recordingid")
+            logger.debug("Preprocessing with musicbrainz recordingid")
             addmeta = await self.recordingid(metadata["musicbrainzrecordingid"])
         elif metadata.get("isrc"):
-            logging.debug("Preprocessing with musicbrainz isrc")
+            logger.debug("Preprocessing with musicbrainz isrc")
             addmeta = await self.isrc(metadata["isrc"])
         elif metadata.get("musicbrainzartistid"):
-            logging.debug("Preprocessing with musicbrainz artistid")
+            logger.debug("Preprocessing with musicbrainz artistid")
             addmeta = await self.artistids(metadata["musicbrainzartistid"])
         elif metadata.get("artist") and metadata.get("title"):
-            logging.debug("Attempting artist+title lookup with multi-artist resolution")
-            addmeta = await self.artist_title_lookup(metadata)
-            if addmeta.get("musicbrainzartistid"):
-                # Get additional metadata from artistids and merge
-                artist_metadata = await self.artistids(addmeta["musicbrainzartistid"])
-                if artist_metadata:
-                    # Merge artist metadata into our results, preserving multi-artist data
-                    addmeta.update(artist_metadata)
+            logger.debug("Attempting lastditcheffort lookup")
+            addmeta = await self.lastditcheffort(metadata)
         return addmeta
 
     async def isrc(self, isrclist):
@@ -340,191 +153,81 @@ class MusicBrainzHelper:
             return None
 
         self._setemail()
-        mbdata = {}
 
-        for isrc in isrclist:
-            with contextlib.suppress(Exception):
-                mbdata = await self.mb_client.get_recordings_by_isrc(
-                    isrc, includes=["releases"], release_status=["official"]
-                )
-        if not mbdata:
-            for isrc in isrclist:
-                try:
-                    mbdata = await self.mb_client.get_recordings_by_isrc(
-                        isrc, includes=["releases"]
-                    )
-                except Exception as error:  # pylint: disable=broad-except
-                    logging.info("musicbrainz cannot find ISRC %s: %s", isrc, error)
-
-        if "isrc" not in mbdata or "recording-list" not in mbdata["isrc"]:
+        try:
+            async with self.mb_client:
+                mbid = await self.mb_client.resolve_recording_by_isrc(isrclist)
+        except MusicBrainzError:
+            logger.exception("MusicBrainz error during ISRC lookup")
             return None
 
-        recordinglist = sorted(
-            mbdata["isrc"]["recording-list"], key=lambda k: k["release-count"], reverse=True
-        )
-        return await self.recordingid(recordinglist[0]["id"])
+        if mbid:
+            return await self.recordingid(mbid)
+        return None
 
-    async def recordingid(self, recordingid):  # pylint: disable=too-many-branches, too-many-return-statements, too-many-statements
+    async def recordingid(self, recordingid):
         """lookup the musicbrainz information based upon recording id"""
         if not self.config.cparser.value("musicbrainz/enabled", type=bool):
             return None
 
-        # Use cached version for better performance
         async def fetch_func():
             return await self._recordingid_uncached(recordingid)
 
-        return await nowplaying.apicache.cached_fetch(
+        data = await nowplaying.apicache.cached_fetch(
             provider="musicbrainz",
-            artist_name="recording",  # Use a generic key for recording lookups
+            artist_name="recording",
             endpoint=f"recording/{recordingid}",
             fetch_func=fetch_func,
-            ttl_seconds=7 * 24 * 60 * 60,  # 7 days for MusicBrainz data
+            ttl_seconds=7 * 24 * 60 * 60,
         )
+        if data and data.get("musicbrainzartistid"):
+            # artistwebsites is config-dependent (which URLs to inject depends on
+            # user settings), so it must be computed fresh on every call rather
+            # than baked into the cached recording data
+            data = dict(data)
+            data["artistwebsites"] = await self._websites(data["musicbrainzartistid"])
+        return data
 
-    async def _recordingid_uncached(self, recordingid):  # pylint: disable=too-many-branches,too-many-statements
+    async def _recordingid_uncached(self, recordingid) -> dict:
         """uncached version of recordingid lookup"""
         self._setemail()
 
-        def read_label(releasedata):
-            if "label-info-list" not in releasedata:
-                return None
-
-            for labelinfo in releasedata["label-info-list"]:
-                if "label" not in labelinfo:
-                    continue
-
-                if "type" not in labelinfo["label"]:
-                    continue
-
-                if "name" in labelinfo["label"]:
-                    return labelinfo["label"]["name"]
-
-            return None
-
-        async def releaselookup_noartist(recordingid):
-            mbdata = None
-
-            self._setemail()
-
-            try:
-                mbdata = await self.mb_client.browse_releases(
-                    recording=recordingid,
-                    includes=["artist-credits", "labels", "release-groups", "release-group-rels"],
-                    release_status=["official"],
-                )
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error("MusicBrainz threw an error: %s", error)
-                return None
-
-            if "release-count" not in mbdata or mbdata["release-count"] == 0:
-                try:
-                    mbdata = await self.mb_client.browse_releases(
-                        recording=recordingid,
-                        includes=[
-                            "artist-credits",
-                            "labels",
-                            "release-groups",
-                            "release-group-rels",
-                        ],
-                    )
-                except Exception as error:  # pylint: disable=broad-except
-                    logging.error("MusicBrainz threw an error: %s", error)
-                    return None
-            return mbdata
-
-        def _pickarelease(newdata, mbdata):
-            namedartist = []
-            variousartist = []
-            for release in mbdata["release-list"]:
-                if (
-                    (
-                        len(newdata["musicbrainzartistid"]) > 1
-                        and newdata.get("artist")
-                        and release["artist-credit-phrase"] in newdata["artist"]
-                    )
-                    or "artist" in newdata
-                    and normalize_text(release["artist-credit-phrase"])
-                    == normalize_text(newdata["artist"])
-                ):
-                    namedartist.append(release)
-                elif release["artist-credit-phrase"] == "Various Artists":
-                    variousartist.append(release)
-
-            if not namedartist:
-                return variousartist
-
-            return namedartist
-
-        newdata = {"musicbrainzrecordingid": recordingid}
+        newdata: dict[str, Any] = {}
         try:
-            logging.debug("looking up recording id %s", recordingid)
-            mbdata = await self.mb_client.get_recording_by_id(
-                recordingid, includes=["artists", "genres", "release-group-rels"]
-            )
-        except Exception as error:  # pylint: disable=broad-except
-            logging.error("MusicBrainz does not know recording id %s: %s", recordingid, error)
-            return None
+            async with self.mb_client:
+                mb_data = await self.mb_client.get_recording_by_id(recordingid)
+                if not mb_data:
+                    return {}
 
-        if "recording" in mbdata:
-            if "title" in mbdata["recording"]:
-                newdata["title"] = mbdata["recording"]["title"]
-            if "artist-credit-phrase" in mbdata["recording"]:
-                newdata["artist"] = mbdata["recording"]["artist-credit-phrase"]
-                for artist in mbdata["recording"]["artist-credit"]:
-                    if not isinstance(artist, dict):
-                        continue
-                    if not newdata.get("musicbrainzartistid"):
-                        newdata["musicbrainzartistid"] = []
-                    newdata["musicbrainzartistid"].append(artist["artist"]["id"])
-            if "first-release-date" in mbdata["recording"]:
-                newdata["date"] = mbdata["recording"]["first-release-date"]
-            if "genre-list" in mbdata["recording"]:
-                newdata["genres"] = []
-                for genre in sorted(
-                    mbdata["recording"]["genre-list"], key=lambda d: d["count"], reverse=True
-                ):
-                    newdata["genres"].append(genre["name"])
-                newdata["genre"] = "/".join(newdata["genres"])
+                enriched = await self.mb_client.process_recording_data(mb_data, recordingid)
 
-        mbdata = await releaselookup_noartist(recordingid)
+                # Map wnpmb key names to WNP TrackMetadata key names
+                newdata = {
+                    "musicbrainzrecordingid": enriched["musicbrainz_recording_id"],
+                }
+                for key in ("title", "artist", "album", "date", "label"):
+                    if key in enriched:
+                        newdata[key] = enriched[key]
+                if "musicbrainz_artist_id" in enriched:
+                    newdata["musicbrainzartistid"] = enriched["musicbrainz_artist_id"]
+                if "genres" in enriched:
+                    newdata["genres"] = enriched["genres"]
+                    newdata["genre"] = "/".join(enriched["genres"])
 
-        if not mbdata or "release-count" not in mbdata or mbdata["release-count"] == 0:
-            return newdata
+                # Cover art — use the release already selected by process_recording_data
+                if release_id := enriched.get("musicbrainz_release_id"):
+                    with contextlib.suppress(Exception):
+                        newdata["coverimageraw"] = await self.mb_client.get_image_front(release_id)
+                if not newdata.get("coverimageraw"):
+                    if rg_id := enriched.get("musicbrainz_release_group_id"):
+                        with contextlib.suppress(Exception):
+                            newdata["coverimageraw"] = await self.mb_client.get_image_front(
+                                rg_id, "release-group"
+                            )
+        except MusicBrainzError:
+            logger.exception("MusicBrainz error fetching recording %s", recordingid)
+            return {}
 
-        mbdata = _pickarelease(newdata, mbdata)
-        if not mbdata:
-            logging.debug("questionable release; skipping for safety")
-            return None
-
-        release = mbdata[0]
-        if "title" in release:
-            newdata["album"] = release["title"]
-        if "date" in release and not newdata.get("date"):
-            newdata["date"] = release["date"]
-        label = read_label(release)
-        if label:
-            newdata["label"] = label
-
-        if (
-            "cover-art-archive" in release
-            and "artwork" in release["cover-art-archive"]
-            and release["cover-art-archive"]["artwork"] == "true"
-        ):
-            try:
-                newdata["coverimageraw"] = await self.mb_client.get_image_front(release["id"])
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error("Failed to get release cover art: %s", error)
-
-        if not newdata.get("coverimageraw"):
-            try:
-                newdata["coverimageraw"] = await self.mb_client.get_image_front(
-                    release["release-group"]["id"], "release-group"
-                )
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error("Failed to get release group cover art: %s", error)
-
-        newdata["artistwebsites"] = await self._websites(newdata["musicbrainzartistid"])
-        # self.recordingid_tempcache[recordingid] = newdata
         return newdata
 
     async def artistids(self, idlist):
@@ -542,198 +245,52 @@ class MusicBrainzHelper:
             return None
 
         sitelist = []
-        for artistid in idlist:
-            if self.config.cparser.value("musicbrainz/musicbrainz", type=bool):
-                sitelist.append(f"https://musicbrainz.org/artist/{artistid}")
-            try:
-                webdata = await self.mb_client.get_artist_by_id(artistid, includes=["url-rels"])
-            except Exception as error:  # pylint: disable=broad-except
-                logging.error("MusicBrainz does not know artistid id %s: %s", artistid, error)
-                return None
+        async with self.mb_client:
+            for artistid in idlist:
+                if self.config.cparser.value("musicbrainz/musicbrainz", type=bool):
+                    sitelist.append(f"https://musicbrainz.org/artist/{artistid}")
 
-            if not webdata.get("artist") or not webdata["artist"].get("url-relation-list"):
-                continue
+                webdata = None
+                try:
+                    webdata = await self.mb_client.get_artist_by_id(
+                        artistid, includes=["url-rels"]
+                    )
+                except Exception:  # pylint: disable=broad-exception-caught
+                    logger.exception("MusicBrainz does not know artistid %s", artistid)
+                    continue
 
-            convdict = {
-                "bandcamp": "bandcamp",
-                "official homepage": "homepage",
-                "last.fm": "lastfm",
-                "discogs": "discogs",
-                "wikidata": "wikidata",
-            }
+                if not webdata:
+                    continue
 
-            for urlrel in webdata["artist"]["url-relation-list"]:
-                # logging.debug('checking %s', urlrel['type'])
+                urls = extract_artist_urls(webdata)
+
+                convdict = {
+                    "bandcamp": "bandcamp",
+                    "official homepage": "homepage",
+                    "last.fm": "lastfm",
+                    "discogs": "discogs",
+                    "wikidata": "wikidata",
+                }
+
                 for src, dest in convdict.items():
-                    if (
+                    if src not in urls:
+                        continue
+                    # inject Discogs URL from MB relations if either the full
+                    # Discogs plugin is enabled OR the MB-level discogs toggle
+                    # is on (allows MB→Discogs URL without the full plugin)
+                    if src == "discogs" and (
                         self.config.cparser.value("discogs/enabled", type=bool)
-                        and urlrel["type"] == "discogs"
+                        or self.config.cparser.value("musicbrainz/discogs", type=bool)
                     ):
-                        sitelist.append(urlrel["target"])
-                        logging.debug("placed %s", dest)
-                    elif urlrel["type"] == "wikidata":
-                        sitelist.append(urlrel["target"])
-                    elif urlrel["type"] == src and self.config.cparser.value(
-                        f"musicbrainz/{dest}", type=bool
-                    ):
-                        sitelist.append(urlrel["target"])
-                        logging.debug("placed %s", dest)
+                        sitelist.append(urls[src])
+                        logger.debug("placed %s", dest)
+                    elif src == "wikidata":
+                        sitelist.append(urls[src])
+                    elif self.config.cparser.value(f"musicbrainz/{dest}", type=bool):
+                        sitelist.append(urls[src])
+                        logger.debug("placed %s", dest)
+
         return list(dict.fromkeys(sitelist))
-
-    async def artist_title_lookup(self, metadata):
-        """Lookup artist+title with multi-artist resolution fallback"""
-
-        # First try standard artist+title lookup (using existing lastditcheffort logic)
-        standard_result = await self.lastditcheffort(metadata)
-        if standard_result and standard_result.get("musicbrainzartistid"):
-            return standard_result
-
-        # If no artist ID found, try multi-artist resolution
-        artist_string = metadata.get("artist", "")
-        logging.debug("Attempting multi-artist resolution for: %s", artist_string)
-
-        # Try hierarchical breakdown
-        song_title = metadata.get("title")
-        resolved_artists = await self._hierarchical_artist_resolution(
-            [artist_string], song_title=song_title
-        )
-        if resolved_artists and len(resolved_artists) > 1:
-            logging.info(
-                "Successfully resolved multi-artist string: %s -> %d artists",
-                artist_string,
-                len(resolved_artists),
-            )
-
-            # Store individual artist IDs
-            artist_ids = [a["musicbrainzartistid"] for a in resolved_artists]
-            artist_names = [a["name"] for a in resolved_artists]
-
-            result = {
-                "musicbrainzartistid": artist_ids,  # List of all artist IDs as per TrackMetadata
-                "artists": artist_names,
-                "artist": artist_string,  # Keep original
-            }
-
-            logging.debug("Stored artist IDs: %s", artist_ids)
-            return result
-        logging.debug(
-            "Could not resolve all artists (%d), keeping original",
-            len(resolved_artists),
-        )
-        return standard_result or {}
-
-    async def _hierarchical_artist_resolution(
-        self,
-        candidate_parts: list[str],
-        depth: int = 0,
-        max_depth: int = 3,
-        song_title: str | None = None,
-    ) -> list[dict[str, str]]:
-        """Recursively resolve artist parts using hierarchical breakdown"""
-        # Guard against excessive recursion depth
-        if depth >= max_depth:
-            logging.debug(
-                "Reached maximum recursion depth (%d), stopping hierarchical resolution", max_depth
-            )
-            return []
-
-        resolved_artists = []
-        parts_resolved = (
-            0  # Count of original parts that were resolved (may expand to multiple artists)
-        )
-
-        for part in candidate_parts:
-            part = part.strip()
-            if not part:
-                continue
-
-            # Try to resolve this part as-is first
-            artist_id = await self._lookup_single_artist(part, song_title)
-            if artist_id:
-                resolved_artists.append({"name": part, "musicbrainzartistid": artist_id})
-                logging.debug("Resolved artist part: %s -> %s", part, artist_id)
-                parts_resolved += 1
-            else:
-                # Failed to resolve - try splitting this part further
-                logging.debug("Failed to resolve '%s', attempting further breakdown", part)
-                split_parts = nowplaying.utils.artists.split_artist_string(part)
-
-                if len(split_parts) > 1:
-                    # Recursively resolve the split parts
-                    sub_resolved = await self._hierarchical_artist_resolution(
-                        split_parts, depth + 1, max_depth, song_title
-                    )
-                    if sub_resolved:
-                        # Got some artists back - success!
-                        resolved_artists.extend(sub_resolved)
-                        logging.debug(
-                            "Successfully resolved sub-parts of '%s': %d artists",
-                            part,
-                            len(sub_resolved),
-                        )
-                        parts_resolved += 1
-                    else:
-                        # Empty list = failure
-                        logging.debug("Failed to resolve sub-parts of '%s'", part)
-                        return []
-                else:
-                    # Cannot split further and lookup failed
-                    logging.debug("Cannot resolve or split further: %s", part)
-                    return []
-
-        if parts_resolved == len(candidate_parts):
-            return resolved_artists
-        logging.debug(
-            "Hierarchical resolution failed: resolved %d/%d original parts",
-            parts_resolved,
-            len(candidate_parts),
-        )
-        return []
-
-    async def _lookup_single_artist(
-        self, artist_name: str, song_title: str | None = None
-    ) -> str | None:
-        """Look up a single artist and return MusicBrainz artist ID using artist+title search"""
-
-        # Use cached version for better performance
-        async def fetch_func():
-            try:
-                # Use recordings search with artist+title, same pattern as rest of codebase
-                if song_title:
-                    mydict = await self.mb_client.search_recordings(
-                        artist=artist_name, recording=song_title, limit=1
-                    )
-                else:
-                    # Fallback to artist-only search if no title provided
-                    mydict = await self.mb_client.search_recordings(artist=artist_name, limit=1)
-
-                if mydict.get("recording-count", 0) == 0:
-                    logging.debug("No recordings found for artist: %s", artist_name)
-                    return None
-
-                # Extract artist ID from first recording
-                recordings = mydict.get("recording-list", [])
-                if recordings:
-                    recording = recordings[0]
-                    artist_credits = recording.get("artist-credit", [])
-                    if artist_credits and isinstance(artist_credits[0], dict):
-                        artist_info = artist_credits[0].get("artist", {})
-                        if artist_id := artist_info.get("id"):
-                            logging.debug("Found artist ID for %s: %s", artist_name, artist_id)
-                            return artist_id
-
-            except Exception as error:  # pylint: disable=broad-except
-                logging.debug("Artist lookup failed for %s: %s", artist_name, error)
-
-            return None
-
-        return await nowplaying.apicache.cached_fetch(
-            provider="musicbrainz",
-            artist_name=artist_name,
-            endpoint=f"artist_search/{normalize_text(artist_name)}",
-            fetch_func=fetch_func,
-            ttl_seconds=7 * 24 * 60 * 60,  # 7 days for MusicBrainz data
-        )
 
     def providerinfo(self):  # pylint: disable=no-self-use
         """return list of what is provided by this recognition system"""
@@ -757,10 +314,9 @@ def main():
     bundledir = os.path.abspath(os.path.dirname(__file__))
     logging.basicConfig(level=logging.DEBUG)
     nowplaying.bootstrap.set_qt_names()
-    # need to make sure config is initialized with something
     nowplaying.config.ConfigFile(bundledir=bundledir)
     musicbrainz = MusicBrainzHelper(config=nowplaying.config.ConfigFile(bundledir=bundledir))
-    metadata = musicbrainz.recordingid(isrc)
+    metadata = asyncio.run(musicbrainz.recordingid(isrc))
     if not metadata:
         print("No information")
         sys.exit(1)
