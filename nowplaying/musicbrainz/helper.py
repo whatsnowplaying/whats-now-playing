@@ -217,9 +217,7 @@ class MusicBrainzHelper:
                 # Cover art — use the release already selected by process_recording_data
                 if release_id := enriched.get("musicbrainz_release_id"):
                     with contextlib.suppress(Exception):
-                        newdata["coverimageraw"] = await self.mb_client.get_image_front(
-                            release_id
-                        )
+                        newdata["coverimageraw"] = await self.mb_client.get_image_front(release_id)
                 if not newdata.get("coverimageraw"):
                     if rg_id := enriched.get("musicbrainz_release_group_id"):
                         with contextlib.suppress(Exception):
