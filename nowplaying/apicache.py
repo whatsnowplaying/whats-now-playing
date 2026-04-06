@@ -129,8 +129,9 @@ class APIResponseCache:
             operation,
             self.db_file,
         )
+        self._initialized = False
         try:
-            await self._initialize_db()
+            await self._ensure_initialized()
             logging.debug("API cache database reinitialized after %s error", operation)
         except Exception as init_error:  # pylint: disable=broad-exception-caught
             logging.error(
