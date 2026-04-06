@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import ssl
+import sys
 import time
 import traceback
 from html.parser import HTMLParser
@@ -341,8 +342,11 @@ def create_http_connector(
     base_config = {
         "ssl": ssl_context,
         "keepalive_timeout": 0.5 if service_type == "musicbrainz" else 1,
-        "enable_cleanup_closed": True,
     }
+    # Work around a Python socket cleanup bug — fixed upstream in CPython 3.13.12
+    # (https://github.com/python/cpython/pull/118960); not backported to 3.11/3.12
+    if sys.version_info < (3, 13, 12):
+        base_config["enable_cleanup_closed"] = True
 
     # MusicBrainz needs stricter connection limits
     if service_type == "musicbrainz":

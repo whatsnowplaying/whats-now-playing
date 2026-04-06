@@ -93,9 +93,7 @@ class APIResponseCache:
         self.db_file = self.cache_dir / "api_responses.db"
         self.__lock: asyncio.Lock | None = None
         self.__lock_loop: asyncio.AbstractEventLoop | None = None
-
-        # Initialize database if needed
-        self._init_task = asyncio.create_task(self._initialize_db())
+        self._initialized = False
 
     async def _initialize_db(self):
         """Initialize the database schema."""
@@ -110,8 +108,19 @@ class APIResponseCache:
 
         try:
             await nowplaying.utils.sqlite.retry_sqlite_operation_async(_do_init)
+            self._initialized = True
         except sqlite3.OperationalError:
             logging.exception("Failed to initialize API cache database")
+
+    async def _ensure_initialized(self) -> None:
+        """Lazily initialize the database on first use.
+
+        Using create_task() in __init__ binds initialization to a specific event
+        loop and the task gets cancelled when pytest-asyncio tears down that loop,
+        causing CancelledError in subsequent tests.  A simple flag avoids that.
+        """
+        if not self._initialized:
+            await self._initialize_db()
 
     async def _handle_missing_table_error(self, operation: str) -> None:
         """Handle 'no such table' errors by reinitializing the database."""
@@ -247,7 +256,7 @@ class APIResponseCache:
             Cached response data or None if not found/expired
         """
         # Ensure database is initialized before operations
-        await self._init_task
+        await self._ensure_initialized()
 
         cache_key = APIResponseCache._make_cache_key(provider, artist_name, endpoint, params)
         current_time = int(time.time())
@@ -316,7 +325,7 @@ class APIResponseCache:
             return
 
         # Ensure database is initialized before operations
-        await self._init_task
+        await self._ensure_initialized()
 
         cache_key = APIResponseCache._make_cache_key(provider, artist_name, endpoint, params)
         current_time = int(time.time())
@@ -422,7 +431,7 @@ class APIResponseCache:
             Number of entries removed
         """
         # Ensure database is initialized before operations
-        await self._init_task
+        await self._ensure_initialized()
 
         current_time = int(time.time())
 
@@ -454,7 +463,7 @@ class APIResponseCache:
             Dictionary with cache statistics
         """
         # Ensure database is initialized before operations
-        await self._init_task
+        await self._ensure_initialized()
 
         current_time = int(time.time())
 
@@ -513,7 +522,7 @@ class APIResponseCache:
                      If None, clear all entries.
         """
         # Ensure database is initialized before operations
-        await self._init_task
+        await self._ensure_initialized()
 
         async with self._lock:
 
@@ -540,14 +549,6 @@ class APIResponseCache:
         This should be called before shutting down to prevent RuntimeError
         warnings about closed event loops.
         """
-        # Cancel the initialization task if it's still running
-        if not self._init_task.done():
-            self._init_task.cancel()
-            try:
-                await self._init_task
-            except asyncio.CancelledError:
-                pass
-
         # Wait for any pending lock operations to complete
         async with self._lock:
             # This ensures all pending database operations complete
