@@ -199,6 +199,9 @@ ignore = [
 ]
 
 # Per-file ignores (similar to pylint ignore-paths)
+[tool.ruff.lint.isort]
+known-first-party = ["nowplaying"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = [
   "S101",     # assert statements in tests

@@ -9,10 +9,6 @@ import os
 import sys
 from typing import Any
 
-import nowplaying.apicache
-import nowplaying.bootstrap
-import nowplaying.config
-import nowplaying.utils.metadata
 from wnpmb import (
     MusicBrainzClient,
     MusicBrainzError,
@@ -22,6 +18,10 @@ from wnpmb import (
 from wnpmb.client._base import RetrySettings
 from wnpmb.normalization import normalize
 
+import nowplaying.apicache
+import nowplaying.bootstrap
+import nowplaying.config
+import nowplaying.utils.metadata
 
 logger = logging.getLogger(__name__)
 

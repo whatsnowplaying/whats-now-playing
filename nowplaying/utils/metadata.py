@@ -19,5 +19,5 @@ def get_best_year(metadata: "TrackMetadata") -> int | None:
     for field in ("originalyear", "date", "year"):
         if raw := metadata.get(field):
             with contextlib.suppress(ValueError, TypeError):
-                return int(str(raw).split("-")[0])
+                return int(str(raw).split("-", maxsplit=1)[0])
     return None
