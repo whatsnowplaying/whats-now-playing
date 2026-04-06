@@ -602,7 +602,7 @@ async def test_keeptitle_despite_mb(bootstrap):  # pylint: disable=redefined-out
     mdp = nowplaying.metadata.MetadataProcessors(config=config)
     metadataout = await mdp.getmoremetadata(metadata=metadatain)
     assert not metadataout.get("album")
-    assert metadataout["artistwebsites"] == ["https://www.discogs.com/artist/18547"]
+    assert "https://www.discogs.com/artist/18547" in metadataout["artistwebsites"]
     assert metadataout["artist"] == "Simple Minds"
     assert not metadataout.get("date")
     assert metadataout["imagecacheartist"] == "simple minds"

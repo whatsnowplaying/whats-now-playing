@@ -12,6 +12,7 @@ from typing import Any
 import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
+import nowplaying.utils.metadata
 from wnpmb import (
     MusicBrainzClient,
     MusicBrainzError,
@@ -65,12 +66,14 @@ class MusicBrainzHelper:
             return None
 
         self._setemail()
+        year = nowplaying.utils.metadata.get_best_year(metadata)
         try:
             async with self.mb_client:
                 mbid = await self.mb_client.find_recording(
                     title=title,
                     artist=artist,
                     album=album,
+                    year=year,
                 )
         except MusicBrainzError:
             logger.exception("MusicBrainz error during find_recording")
@@ -170,13 +173,20 @@ class MusicBrainzHelper:
         async def fetch_func():
             return await self._recordingid_uncached(recordingid)
 
-        return await nowplaying.apicache.cached_fetch(
+        data = await nowplaying.apicache.cached_fetch(
             provider="musicbrainz",
             artist_name="recording",
             endpoint=f"recording/{recordingid}",
             fetch_func=fetch_func,
             ttl_seconds=7 * 24 * 60 * 60,
         )
+        if data and data.get("musicbrainzartistid"):
+            # artistwebsites is config-dependent (which URLs to inject depends on
+            # user settings), so it must be computed fresh on every call rather
+            # than baked into the cached recording data
+            data = dict(data)
+            data["artistwebsites"] = await self._websites(data["musicbrainzartistid"])
+        return data
 
     async def _recordingid_uncached(self, recordingid) -> dict:
         """uncached version of recordingid lookup"""
@@ -223,9 +233,6 @@ class MusicBrainzHelper:
         except MusicBrainzError:
             logger.exception("MusicBrainz error fetching recording %s", recordingid)
             return {}
-
-        if newdata.get("musicbrainzartistid"):
-            newdata["artistwebsites"] = await self._websites(newdata["musicbrainzartistid"])
 
         return newdata
 
@@ -274,8 +281,12 @@ class MusicBrainzHelper:
                 for src, dest in convdict.items():
                     if src not in urls:
                         continue
-                    if src == "discogs" and self.config.cparser.value(
-                        "musicbrainz/discogs", type=bool
+                    # inject Discogs URL from MB relations if either the full
+                    # Discogs plugin is enabled OR the MB-level discogs toggle
+                    # is on (allows MB→Discogs URL without the full plugin)
+                    if src == "discogs" and (
+                        self.config.cparser.value("discogs/enabled", type=bool)
+                        or self.config.cparser.value("musicbrainz/discogs", type=bool)
                     ):
                         sitelist.append(urls[src])
                         logger.debug("placed %s", dest)
