@@ -462,16 +462,20 @@ def test_gettrack_final_sleep_formula(fill_duration, configured_delay, expected)
     assert abs(sleep_time - expected) < 1e-9
 
 
-def _make_trackpoll(config):
-    """Create a minimal TrackPoll for unit testing _artfallbacks."""
-    return nowplaying.processes.trackpoll.TrackPoll(
-        stopevent=threading.Event(), config=config, testmode=True
+@pytest.fixture
+def trackpoll_testmode(bootstrap):
+    """Create a minimal TrackPoll for unit testing _artfallbacks, closing its loop on teardown."""
+    tp = nowplaying.processes.trackpoll.TrackPoll(
+        stopevent=threading.Event(), config=bootstrap, testmode=True
     )
+    yield tp
+    if not tp.loop.is_running() and not tp.loop.is_closed():
+        tp.loop.close()
 
 
-def test_artfallbacks_front_cover_from_imagecache(bootstrap):
+def test_artfallbacks_front_cover_from_imagecache(bootstrap, trackpoll_testmode):
     """front_cover in imagecache is used before falling back to artist images"""
-    tptest = _make_trackpoll(bootstrap)
+    tptest = trackpoll_testmode
     cover_bytes = b"fake_cover"
     mock_ic = unittest.mock.MagicMock()
     mock_ic.random_image_fetch.side_effect = lambda identifier, imagetype: (
@@ -487,9 +491,11 @@ def test_artfallbacks_front_cover_from_imagecache(bootstrap):
     mock_ic.random_image_fetch.assert_any_call(identifier="Artist_Album", imagetype="front_cover")
 
 
-def test_artfallbacks_falls_back_to_artist_image_when_no_front_cover(bootstrap):
+def test_artfallbacks_falls_back_to_artist_image_when_no_front_cover(
+    bootstrap, trackpoll_testmode
+):
     """artist fallback image used when imagecache has no front_cover"""
-    tptest = _make_trackpoll(bootstrap)
+    tptest = trackpoll_testmode
     fanart_bytes = b"fake_fanart"
     mock_ic = unittest.mock.MagicMock()
     mock_ic.random_image_fetch.side_effect = lambda identifier, imagetype: (
@@ -504,9 +510,11 @@ def test_artfallbacks_falls_back_to_artist_image_when_no_front_cover(bootstrap):
     assert tptest.currentmeta.get("coverimageraw") == fanart_bytes
 
 
-def test_artfallbacks_no_fallback_when_front_cover_missing_and_nocoverfallback_none(bootstrap):
+def test_artfallbacks_no_fallback_when_front_cover_missing_and_nocoverfallback_none(
+    bootstrap, trackpoll_testmode
+):
     """coverimageraw stays empty when nocoverfallback is 'none'"""
-    tptest = _make_trackpoll(bootstrap)
+    tptest = trackpoll_testmode
     mock_ic = unittest.mock.MagicMock()
     mock_ic.random_image_fetch.return_value = None
     tptest.imagecache = mock_ic
@@ -518,9 +526,9 @@ def test_artfallbacks_no_fallback_when_front_cover_missing_and_nocoverfallback_n
     assert not tptest.currentmeta.get("coverimageraw")
 
 
-def test_artfallbacks_cover_used_as_logo_fallback(bootstrap):
+def test_artfallbacks_cover_used_as_logo_fallback(bootstrap, trackpoll_testmode):
     """existing coverimageraw is copied to artistlogoraw when coverfornologos enabled"""
-    tptest = _make_trackpoll(bootstrap)
+    tptest = trackpoll_testmode
     tptest.imagecache = None
     cover_bytes = b"fake_cover"
     tptest.currentmeta = {"coverimageraw": cover_bytes}
@@ -531,9 +539,9 @@ def test_artfallbacks_cover_used_as_logo_fallback(bootstrap):
     assert tptest.currentmeta.get("artistlogoraw") == cover_bytes
 
 
-def test_artfallbacks_cover_used_as_thumbnail_fallback(bootstrap):
+def test_artfallbacks_cover_used_as_thumbnail_fallback(bootstrap, trackpoll_testmode):
     """existing coverimageraw is copied to artistthumbnailraw when coverfornothumbs enabled"""
-    tptest = _make_trackpoll(bootstrap)
+    tptest = trackpoll_testmode
     tptest.imagecache = None
     cover_bytes = b"fake_cover"
     tptest.currentmeta = {"coverimageraw": cover_bytes}
@@ -544,9 +552,9 @@ def test_artfallbacks_cover_used_as_thumbnail_fallback(bootstrap):
     assert tptest.currentmeta.get("artistthumbnailraw") == cover_bytes
 
 
-def test_artfallbacks_preexisting_cover_not_overwritten(bootstrap):
+def test_artfallbacks_preexisting_cover_not_overwritten(bootstrap, trackpoll_testmode):
     """coverimageraw already in metadata is never replaced"""
-    tptest = _make_trackpoll(bootstrap)
+    tptest = trackpoll_testmode
     original = b"original_cover"
     mock_ic = unittest.mock.MagicMock()
     mock_ic.random_image_fetch.return_value = b"should_not_be_used"
