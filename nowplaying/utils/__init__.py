@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import ssl
+import sys
 import time
 import traceback
 from html.parser import HTMLParser
@@ -341,8 +342,13 @@ def create_http_connector(
     base_config = {
         "ssl": ssl_context,
         "keepalive_timeout": 0.5 if service_type == "musicbrainz" else 1,
-        "enable_cleanup_closed": True,
     }
+    # Mirror aiohttp's NEEDS_CLEANUP_CLOSED check: the CPython socket cleanup bug
+    # (https://github.com/python/cpython/pull/118960) is fixed in 3.12.7+, with a
+    # regression reintroduced in 3.13.0 and fixed again in 3.13.1.
+    _ver = sys.version_info
+    if ((3, 13, 0) <= _ver < (3, 13, 1)) or (_ver < (3, 12, 7)):
+        base_config["enable_cleanup_closed"] = True
 
     # MusicBrainz needs stricter connection limits
     if service_type == "musicbrainz":

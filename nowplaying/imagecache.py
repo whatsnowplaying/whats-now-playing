@@ -574,51 +574,50 @@ VALUES (?,?,?);
         threading.current_thread().name = "ICFollower"
         logging.getLogger("requests_cache").setLevel(logging.CRITICAL + 1)
         logging.getLogger("aiosqlite").setLevel(logging.CRITICAL + 1)
-        session = requests_cache.CachedSession(str(self.httpcachefile))
-
-        logging.debug("Downloading %s %s", imagedict["imagetype"], imagedict["srclocation"])
-        try:
-            headers = {
-                "user-agent": f"whatsnowplaying/{nowplaying.version.__VERSION__}"  # pylint: disable=no-member
-                " +http://whatsnowplaying.github.io/"
-            }
-            dlimage = session.get(imagedict["srclocation"], timeout=5, headers=headers)
-        except Exception as error:  # pylint: disable=broad-except
-            logging.error("image_dl: %s %s", imagedict["srclocation"], error)
-            self.erase_srclocation(imagedict["srclocation"])
-            return {"error_type": "network_error", "cooldown": 300}  # 5 minutes for network errors
-        if dlimage.status_code == 200:
-            if not self.put_db_cachekey(
-                identifier=imagedict["identifier"],
-                srclocation=imagedict["srclocation"],
-                imagetype=imagedict["imagetype"],
-                content=dlimage.content,
-            ):
-                logging.error("db put failed")
-            return None  # Successful download, no cooldown needed
-        if dlimage.status_code == 429:
-            # Rate limit exceeded - don't erase URL, it's still valid
+        with requests_cache.CachedSession(str(self.httpcachefile)) as session:
+            logging.debug("Downloading %s %s", imagedict["imagetype"], imagedict["srclocation"])
+            try:
+                headers = {
+                    "user-agent": f"whatsnowplaying/{nowplaying.version.__VERSION__}"  # pylint: disable=no-member
+                    " +http://whatsnowplaying.github.io/"
+                }
+                dlimage = session.get(imagedict["srclocation"], timeout=5, headers=headers)
+            except Exception as error:  # pylint: disable=broad-except
+                logging.error("image_dl: %s %s", imagedict["srclocation"], error)
+                self.erase_srclocation(imagedict["srclocation"])
+                return {"error_type": "network_error", "cooldown": 300}
+            if dlimage.status_code == 200:
+                if not self.put_db_cachekey(
+                    identifier=imagedict["identifier"],
+                    srclocation=imagedict["srclocation"],
+                    imagetype=imagedict["imagetype"],
+                    content=dlimage.content,
+                ):
+                    logging.error("db put failed")
+                return None  # Successful download, no cooldown needed
+            if dlimage.status_code == 429:
+                # Rate limit exceeded - don't erase URL, it's still valid
+                logging.warning(
+                    "image_dl: rate limit exceeded (429) for %s - keeping URL for retry",
+                    imagedict["srclocation"],
+                )
+                return {"error_type": "rate_limit", "cooldown": 60}
+            if 400 <= dlimage.status_code < 500:
+                # Client errors (404, 403, etc.) - URL is likely invalid, remove it
+                logging.error(
+                    "image_dl: client error %s for %s - removing invalid URL",
+                    dlimage.status_code,
+                    imagedict["srclocation"],
+                )
+                self.erase_srclocation(imagedict["srclocation"])
+                return {"error_type": "client_error", "cooldown": 0}  # No retry for client errors
+            # Server errors (500, 503, etc.) - transient issues, keep URL for retry
             logging.warning(
-                "image_dl: rate limit exceeded (429) for %s - keeping URL for retry",
-                imagedict["srclocation"],
-            )
-            return {"error_type": "rate_limit", "cooldown": 60}
-        if 400 <= dlimage.status_code < 500:
-            # Client errors (404, 403, etc.) - URL is likely invalid, remove it
-            logging.error(
-                "image_dl: client error %s for %s - removing invalid URL",
+                "image_dl: server error %s for %s - keeping URL for retry",
                 dlimage.status_code,
                 imagedict["srclocation"],
             )
-            self.erase_srclocation(imagedict["srclocation"])
-            return {"error_type": "client_error", "cooldown": 0}  # No retry for client errors
-        # Server errors (500, 503, etc.) - transient issues, keep URL for retry
-        logging.warning(
-            "image_dl: server error %s for %s - keeping URL for retry",
-            dlimage.status_code,
-            imagedict["srclocation"],
-        )
-        return {"error_type": "server_error", "cooldown": 600}  # 10 minutes for server errors
+            return {"error_type": "server_error", "cooldown": 600}  # 10 minutes for server errors
 
     async def verify_cache_timer(self, stopevent: asyncio.Event) -> None:
         """run verify_cache periodically"""

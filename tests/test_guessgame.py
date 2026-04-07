@@ -6,7 +6,6 @@ Unit tests for the Guess Game system
 
 import asyncio
 import pathlib
-import sqlite3
 import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,6 +15,7 @@ import pytest_asyncio
 from freezegun import freeze_time
 
 import nowplaying.guessgame
+import nowplaying.utils.sqlite
 
 
 @pytest_asyncio.fixture
@@ -77,7 +77,7 @@ def test_initialize_database_creates_schema(tmp_path):
 
     assert db_path.exists()
 
-    with sqlite3.connect(db_path) as conn:
+    with nowplaying.utils.sqlite.sqlite_connection(str(db_path)) as conn:
         cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         table_names = {row[0] for row in cursor.fetchall()}
     # sqlite_sequence is an internal SQLite table created by AUTOINCREMENT; allow it
@@ -91,7 +91,7 @@ def test_initialize_database_creates_schema(tmp_path):
     }
     assert expected <= table_names
 
-    with sqlite3.connect(db_path) as conn:
+    with nowplaying.utils.sqlite.sqlite_connection(str(db_path)) as conn:
         cursor = conn.execute("SELECT version FROM schema_version")
         assert cursor.fetchone()[0] == 1
 
@@ -131,18 +131,17 @@ def test_clear_leaderboards(tmp_path):
     db_path = tmp_path / "test.db"
     nowplaying.guessgame.GuessGame.initialize_database(db_path)
 
-    with sqlite3.connect(db_path) as conn:
+    with nowplaying.utils.sqlite.sqlite_connection(str(db_path)) as conn:
         conn.execute(
             "INSERT INTO user_scores (username, last_updated) VALUES (?, ?)",
             ("testuser", 1234567890),
         )
-        conn.commit()
 
     with patch.object(nowplaying.guessgame.GuessGame, "_get_database_path", return_value=db_path):
         result = nowplaying.guessgame.GuessGame.clear_leaderboards()
 
     assert result is True
-    with sqlite3.connect(db_path) as conn:
+    with nowplaying.utils.sqlite.sqlite_connection(str(db_path)) as conn:
         cursor = conn.execute("SELECT COUNT(*) FROM user_scores")
         assert cursor.fetchone()[0] == 0
 

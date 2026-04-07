@@ -280,6 +280,7 @@ async def test_fallback_trslashst(getmusicbrainz):  # pylint: disable=redefined-
     assert newdata["album"] in ["Iris", "The Destroyer — 2", "Destroyer Vol 1 & 2"]
 
 
+@pytest.mark.xfail(reason="MusicBrainz returns inconsistent results for popular artists")
 @pytest.mark.asyncio
 async def test_fallback_queen(getmusicbrainz):  # pylint: disable=redefined-outer-name
     """test large output"""
