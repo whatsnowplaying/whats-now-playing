@@ -463,7 +463,7 @@ def test_gettrack_final_sleep_formula(fill_duration, configured_delay, expected)
 
 
 @pytest.fixture
-def trackpoll_testmode(bootstrap):
+def trackpoll_testmode(bootstrap):  # pylint: disable=redefined-outer-name
     """Create a minimal TrackPoll for unit testing _artfallbacks, closing its loop on teardown."""
     tp = nowplaying.processes.trackpoll.TrackPoll(
         stopevent=threading.Event(), config=bootstrap, testmode=True
@@ -473,7 +473,7 @@ def trackpoll_testmode(bootstrap):
         tp.loop.close()
 
 
-def test_artfallbacks_front_cover_from_imagecache(bootstrap, trackpoll_testmode):
+def test_artfallbacks_front_cover_from_imagecache(bootstrap, trackpoll_testmode):  # pylint: disable=redefined-outer-name
     """front_cover in imagecache is used before falling back to artist images"""
     tptest = trackpoll_testmode
     cover_bytes = b"fake_cover"
@@ -492,7 +492,8 @@ def test_artfallbacks_front_cover_from_imagecache(bootstrap, trackpoll_testmode)
 
 
 def test_artfallbacks_falls_back_to_artist_image_when_no_front_cover(
-    bootstrap, trackpoll_testmode
+    bootstrap,
+    trackpoll_testmode,  # pylint: disable=redefined-outer-name
 ):
     """artist fallback image used when imagecache has no front_cover"""
     tptest = trackpoll_testmode
@@ -511,7 +512,8 @@ def test_artfallbacks_falls_back_to_artist_image_when_no_front_cover(
 
 
 def test_artfallbacks_no_fallback_when_front_cover_missing_and_nocoverfallback_none(
-    bootstrap, trackpoll_testmode
+    bootstrap,
+    trackpoll_testmode,  # pylint: disable=redefined-outer-name
 ):
     """coverimageraw stays empty when nocoverfallback is 'none'"""
     tptest = trackpoll_testmode
@@ -526,7 +528,7 @@ def test_artfallbacks_no_fallback_when_front_cover_missing_and_nocoverfallback_n
     assert not tptest.currentmeta.get("coverimageraw")
 
 
-def test_artfallbacks_cover_used_as_logo_fallback(bootstrap, trackpoll_testmode):
+def test_artfallbacks_cover_used_as_logo_fallback(bootstrap, trackpoll_testmode):  # pylint: disable=redefined-outer-name
     """existing coverimageraw is copied to artistlogoraw when coverfornologos enabled"""
     tptest = trackpoll_testmode
     tptest.imagecache = None
@@ -539,7 +541,7 @@ def test_artfallbacks_cover_used_as_logo_fallback(bootstrap, trackpoll_testmode)
     assert tptest.currentmeta.get("artistlogoraw") == cover_bytes
 
 
-def test_artfallbacks_cover_used_as_thumbnail_fallback(bootstrap, trackpoll_testmode):
+def test_artfallbacks_cover_used_as_thumbnail_fallback(bootstrap, trackpoll_testmode):  # pylint: disable=redefined-outer-name
     """existing coverimageraw is copied to artistthumbnailraw when coverfornothumbs enabled"""
     tptest = trackpoll_testmode
     tptest.imagecache = None
@@ -552,7 +554,7 @@ def test_artfallbacks_cover_used_as_thumbnail_fallback(bootstrap, trackpoll_test
     assert tptest.currentmeta.get("artistthumbnailraw") == cover_bytes
 
 
-def test_artfallbacks_preexisting_cover_not_overwritten(bootstrap, trackpoll_testmode):
+def test_artfallbacks_preexisting_cover_not_overwritten(bootstrap, trackpoll_testmode):  # pylint: disable=redefined-outer-name
     """coverimageraw already in metadata is never replaced"""
     tptest = trackpoll_testmode
     original = b"original_cover"
