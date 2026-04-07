@@ -473,25 +473,28 @@ async def test_stopwnp_with_valid_items(bootstrap):
     imagecache = nowplaying.imagecache.ImageCache(cachedir=dbdir)
     recently_processed = {}
 
-    # Simulate shutdown with valid work still pending
-    mock_dataset = [
-        {"srclocation": "validurl1", "identifier": "artist1", "imagetype": "fanart"},
-        {"srclocation": "validurl2", "identifier": "artist2", "imagetype": "fanart"},
-        {"srclocation": "STOPWNP", "identifier": "STOPWNP", "imagetype": "STOPWNP"},
-    ]
+    try:
+        # Simulate shutdown with valid work still pending
+        mock_dataset = [
+            {"srclocation": "validurl1", "identifier": "artist1", "imagetype": "fanart"},
+            {"srclocation": "validurl2", "identifier": "artist2", "imagetype": "fanart"},
+            {"srclocation": "STOPWNP", "identifier": "STOPWNP", "imagetype": "STOPWNP"},
+        ]
 
-    with patch.object(imagecache, "get_next_dlset", return_value=mock_dataset):
-        batch = imagecache._get_next_queue_batch(recently_processed)  # pylint: disable=protected-access
-        assert len(batch) == 3
+        with patch.object(imagecache, "get_next_dlset", return_value=mock_dataset):
+            batch = imagecache._get_next_queue_batch(recently_processed)  # pylint: disable=protected-access
+            assert len(batch) == 3
 
-    # Filter out STOPWNP but keep valid items
-    items_to_process = [item for item in batch if item["srclocation"] != "STOPWNP"]
-    should_stop = len(items_to_process) != len(batch)
+        # Filter out STOPWNP but keep valid items
+        items_to_process = [item for item in batch if item["srclocation"] != "STOPWNP"]
+        should_stop = len(items_to_process) != len(batch)
 
-    assert len(items_to_process) == 2  # Valid items should be processed
-    assert should_stop
-    assert items_to_process[0]["srclocation"] == "validurl1"
-    assert items_to_process[1]["srclocation"] == "validurl2"
+        assert len(items_to_process) == 2  # Valid items should be processed
+        assert should_stop
+        assert items_to_process[0]["srclocation"] == "validurl1"
+        assert items_to_process[1]["srclocation"] == "validurl2"
+    finally:
+        imagecache.close()
 
 
 @pytest.mark.asyncio
