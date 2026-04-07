@@ -170,3 +170,25 @@ async def test_charts_plugin_disabled(bootstrap):
     await plugin.start()
 
     assert plugin.enabled is False
+
+
+@pytest.mark.asyncio
+async def test_charts_skips_when_remote_charts_submitted(bootstrap):
+    """Test that charts plugin skips submission when remote client already submitted"""
+    config = nowplaying.config.ConfigFile(bundledir=bootstrap, testmode=True)
+    config.cparser.setValue("charts/enabled", True)
+    config.cparser.setValue("charts/charts_key", "test_key_abc123")
+
+    plugin = nowplaying.notifications.charts.Plugin(config=config)
+    await plugin.start()
+
+    metadata = {
+        "artist": "Test Artist",
+        "title": "Test Title",
+        "remote_charts_submitted": True,
+    }
+
+    await plugin.notify_track_change(metadata)
+
+    # Queue should be empty — submission was skipped
+    assert len(plugin.queue) == 0

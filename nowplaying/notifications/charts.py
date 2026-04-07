@@ -120,6 +120,10 @@ class Plugin(NotificationPlugin):  # pylint: disable=too-many-instance-attribute
         if not self.enabled:
             return
 
+        if metadata.get("remote_charts_submitted"):
+            logging.debug("Charts already submitted by remote client, skipping")
+            return
+
         # Prepare metadata for charts submission
         charts_data = self._strip_blobs_metadata(metadata)
         charts_data = self._build_source_agent(charts_data)

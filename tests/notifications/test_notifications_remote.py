@@ -678,3 +678,46 @@ async def test_remote_notification_verify_settingsui_manual_valid():
     mock_qwidget.port_lineedit.text.return_value = "8899"
 
     assert plugin.verify_settingsui(mock_qwidget) is True
+
+
+@pytest.mark.asyncio
+async def test_remote_sets_charts_submitted_flag_when_charts_enabled(
+    remote_plugin,  # pylint: disable=redefined-outer-name
+):
+    """remote plugin sets remote_charts_submitted when client has charts enabled"""
+    remote_plugin.config.cparser.setValue("remote/enabled", True)
+    remote_plugin.config.cparser.setValue("remote/remote_server", "localhost")
+    remote_plugin.config.cparser.setValue("remote/remote_port", 8899)
+    remote_plugin.config.cparser.setValue("charts/enabled", True)
+    remote_plugin.config.cparser.setValue("charts/charts_key", "test_key_abc123")
+    await remote_plugin.start()
+
+    metadata = {"artist": "Test Artist", "title": "Test Title"}
+
+    with aioresponses() as mock_resp:
+        mock_resp.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 1})
+        await remote_plugin.notify_track_change(metadata)
+
+        request = mock_resp.requests[list(mock_resp.requests.keys())[0]][0]
+        assert request.kwargs["json"].get("remote_charts_submitted") is True
+
+
+@pytest.mark.asyncio
+async def test_remote_omits_charts_submitted_flag_when_charts_disabled(
+    remote_plugin,  # pylint: disable=redefined-outer-name
+):
+    """remote plugin does not set remote_charts_submitted when client has charts disabled"""
+    remote_plugin.config.cparser.setValue("remote/enabled", True)
+    remote_plugin.config.cparser.setValue("remote/remote_server", "localhost")
+    remote_plugin.config.cparser.setValue("remote/remote_port", 8899)
+    remote_plugin.config.cparser.setValue("charts/enabled", False)
+    await remote_plugin.start()
+
+    metadata = {"artist": "Test Artist", "title": "Test Title"}
+
+    with aioresponses() as mock_resp:
+        mock_resp.post("http://localhost:8899/v1/remoteinput", payload={"dbid": 1})
+        await remote_plugin.notify_track_change(metadata)
+
+        request = mock_resp.requests[list(mock_resp.requests.keys())[0]][0]
+        assert "remote_charts_submitted" not in request.kwargs["json"]
