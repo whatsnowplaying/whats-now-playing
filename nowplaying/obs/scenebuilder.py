@@ -31,6 +31,27 @@ DEFAULT_SOURCES: list[OBSSourceDef] = [
     OBSSourceDef("Artist Logo", "/ws-artistlogo-nofade.htm", 480, 200, "right"),
 ]
 
+MAIN_SCENE_NAME = "WNP Sources"
+GUESS_GAME_SCENE_NAME = "WNP Guess Game"
+
+GUESSGAME_SOURCES: list[OBSSourceDef] = [
+    OBSSourceDef("Guess Game", "/guessgame/guessgame.htm", 800, 500, "center"),
+    OBSSourceDef(
+        "Session Leaderboard",
+        "/guessgame/guessgame-leaderboard.htm?type=session",
+        550,
+        700,
+        "left",
+    ),
+    OBSSourceDef(
+        "All-Time Leaderboard",
+        "/guessgame/guessgame-leaderboard.htm?type=all_time",
+        550,
+        700,
+        "right",
+    ),
+]
+
 _CANVAS_W = 1920.0
 _CANVAS_H = 1080.0
 
@@ -159,7 +180,7 @@ def _make_scene_item(source: OBSSourceDef, item_id: int) -> dict:
     }
 
 
-def _make_scene_source(sources: list[OBSSourceDef]) -> dict:
+def _make_scene_source(sources: list[OBSSourceDef], scene_name: str) -> dict:
     """Return the scene source dict that references all browser sources."""
     # fill sources first (rendered behind), others after
     ordered = sorted(sources, key=lambda s: 0 if s.hint == "fill" else 1)
@@ -175,7 +196,7 @@ def _make_scene_source(sources: list[OBSSourceDef]) -> dict:
         "mixers": 0,
         "monitoring_type": 0,
         "muted": False,
-        "name": "WNP Sources",
+        "name": scene_name,
         "private_settings": {},
         "push-to-mute": False,
         "push-to-mute-delay": 0,
@@ -213,12 +234,18 @@ def build_and_save(sources: list[OBSSourceDef], port: int) -> pathlib.Path:
         save_dir.mkdir(parents=True, exist_ok=True)
         logger.info("OBS scenes dir not found; saving to: %s", save_dir)
 
-    browser_sources = [_make_browser_source(s, port) for s in sources]
-    scene_source = _make_scene_source(sources)
+    scene_groups: dict[str, list[OBSSourceDef]] = {
+        MAIN_SCENE_NAME: sources,
+        GUESS_GAME_SCENE_NAME: GUESSGAME_SOURCES,
+    }
+    all_browser_sources = [
+        _make_browser_source(s, port) for srcs in scene_groups.values() for s in srcs
+    ]
+    all_scene_sources = [_make_scene_source(srcs, name) for name, srcs in scene_groups.items()]
 
     collection = {
-        "current_program_scene": "WNP Sources",
-        "current_scene": "WNP Sources",
+        "current_program_scene": MAIN_SCENE_NAME,
+        "current_scene": MAIN_SCENE_NAME,
         "current_transition": "Fade",
         "groups": [],
         "modules": {},
@@ -227,8 +254,8 @@ def build_and_save(sources: list[OBSSourceDef], port: int) -> pathlib.Path:
         "quick_transitions": [],
         "saved_projectors": [],
         "scaling_enabled": False,
-        "scene_order": [{"name": "WNP Sources"}],
-        "sources": browser_sources + [scene_source],
+        "scene_order": [{"name": name} for name in scene_groups],
+        "sources": all_browser_sources + all_scene_sources,
         "transition_duration": 300,
         "transitions": [],
     }
