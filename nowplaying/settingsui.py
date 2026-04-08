@@ -1358,6 +1358,7 @@ class SettingsUI(QWidget):  # pylint: disable=too-many-public-methods, too-many-
         self.upd_conf()  # This sets initialized=True
         self.close()
         self.tray.fix_mixmode_menu()
+        self.tray.fix_guessgame_menu()
         self.tray.action_pause.setText("Pause")
         self.tray.action_pause.setEnabled(True)
 

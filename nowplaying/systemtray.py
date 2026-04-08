@@ -498,8 +498,18 @@ class Tray:  # pylint: disable=too-many-instance-attributes
 
     def fix_guessgame_menu(self) -> None:
         """update the guess game menu based on config"""
+        twitch_ready = bool(
+            self.config.cparser.value("twitchbot/accesstoken", defaultValue="")
+            and self.config.cparser.value("twitchbot/channel", defaultValue="")
+        )
+        self.action_guessgame.setEnabled(twitch_ready)
+        if not twitch_ready and self.config.cparser.value(
+            "guessgame/enabled", type=bool, defaultValue=False
+        ):
+            self.config.cparser.setValue("guessgame/enabled", False)
+            self.config.cparser.sync()
         enabled = self.config.cparser.value("guessgame/enabled", type=bool, defaultValue=False)
-        self.action_guessgame.setChecked(enabled)
+        self.action_guessgame.setChecked(bool(enabled))
 
     def fix_mixmode_menu(self) -> None:
         """update the mixmode based upon current rules"""
