@@ -1735,6 +1735,10 @@ class GuessGame:  # pylint: disable=too-many-instance-attributes
         if not state:
             return (False, 5)
 
+        # Nothing to report while waiting for a game to start
+        if state["status"] == "waiting":
+            return (False, 10)
+
         # Build payload using helper
         payload = await self._build_server_payload(state, charts_key)
 

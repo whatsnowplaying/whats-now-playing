@@ -40,6 +40,10 @@ See [TwitchBot → Setting Permissions](twitchbot.md#setting-permissions) for de
 
 ### Enabling the Guess Game
 
+> NOTE: The **Enable Guess Game** menu item is only available when Twitch Bot
+> is fully configured (access token and channel set). If it appears grayed out,
+> complete the [TwitchBot setup](twitchbot.md) and save settings first.
+
 **macOS:**
 
 1. Click the **What's Now Playing** menu bar icon
