@@ -242,7 +242,9 @@ class OBSExportDialog(QDialog):  # pylint: disable=too-few-public-methods,too-ma
 
         try:
             saved_path = nowplaying.obs.scenebuilder.build_and_save(sources, self.port)
-            self.status_label.setText(f"Saved to: {saved_path}")
+            self.status_label.setText(
+                f"Saved to: {saved_path} (scenes: WNP Sources, WNP Guess Game)"
+            )
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.error("OBS export failed: %s", exc)
             self.status_label.setText(f"Error: {exc}")
