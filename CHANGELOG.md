@@ -18,6 +18,8 @@
       Text Output settings, also with "Use This Template" support
 
 * Bug Fixes
+  * Guess Game menu item is now grayed out and auto-disabled when Twitch Bot
+    is not configured, since guesses arrive exclusively via Twitch chat
   * Kick and Twitch authentication failed if the webserver port wasn't 8899
   * Remote Output + Charts: when both the sending and receiving WNP instances
     have Charts enabled, tracks were submitted to the charts server twice.
