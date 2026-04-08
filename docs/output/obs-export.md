@@ -63,5 +63,12 @@ After exporting and relaunching OBS:
 2. The new **WhatsNowPlaying** collection will appear in the list — click it
    to switch to it
 
-The imported scene contains a single scene called **WNP Sources** with all
-the browser sources you selected, already sized and positioned.
+The collection contains two scenes:
+
+* **WNP Sources** — the browser sources you selected and configured in the
+  export dialog, already sized and positioned
+* **WNP Guess Game** — three fixed sources for the Guess Game feature:
+  the game overlay, the session leaderboard, and the all-time leaderboard
+
+Both scenes are intended as a source library. Copy the individual browser
+sources from either scene into your own scenes as needed.

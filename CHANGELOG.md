@@ -11,6 +11,8 @@
     * Warns if OBS is already running so the new collection won't be missed
     * Saves directly to the OBS scenes directory when found, or falls back to
       Documents/WhatsNowPlaying/obs_scenes
+    * Always includes a second "WNP Guess Game" scene with the game overlay,
+      session leaderboard, and all-time leaderboard sources pre-configured
   * Template preview improvements
     * Web preview window now has a "Use This Template" button that applies the
       selected template back to the settings field that launched the preview
