@@ -61,6 +61,14 @@ class Plugin(NotificationPlugin):
         if self.key:
             remote_data["secret"] = self.key
 
+        # Signal that the client already submitted to charts so the server skips it
+        if (
+            self.config
+            and self.config.cparser.value("charts/enabled", type=bool, defaultValue=True)
+            and self.config.cparser.value("charts/charts_key")
+        ):
+            remote_data["remote_charts_submitted"] = True
+
         # Prepare debug data without secret
         debug_data = dict(remote_data)
         if "secret" in debug_data:

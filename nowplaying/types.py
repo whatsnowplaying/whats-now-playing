@@ -101,6 +101,7 @@ class TrackMetadata(TypedDict, total=False):
 
     # Control metadata
     cache_warmed: bool
+    remote_charts_submitted: bool
     secret: str
 
 

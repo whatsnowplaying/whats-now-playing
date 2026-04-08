@@ -19,6 +19,9 @@
 
 * Bug Fixes
   * Kick and Twitch authentication failed if the webserver port wasn't 8899
+  * Remote Output + Charts: when both the sending and receiving WNP instances
+    have Charts enabled, tracks were submitted to the charts server twice.
+    The sender now signals to the receiver to skip charts submission.
 
 * Developer Stuff
   * Dependency updates

@@ -67,6 +67,7 @@ METADATALIST = [
     "requestdisplayname",
     "requestedfor",
     "requester",
+    "remote_charts_submitted",
     "source_agent_name",
     "source_agent_version",
     "title",
@@ -85,6 +86,7 @@ LISTFIELDS = [
 
 BOOLFIELDS = [
     "has_video",
+    "remote_charts_submitted",
 ]
 
 # NOTE: artistfanartraw is never actually stored in this DB
