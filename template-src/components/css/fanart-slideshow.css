@@ -1,0 +1,37 @@
+/* Artist Fanart Slideshow */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    overflow: hidden;
+    background: #000;
+    width: 100vw;
+    height: 100vh;
+}
+
+#slideshow {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.slide {
+    position: absolute;
+    inset: 0;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    /* start both slides off-screen to the right */
+    transform: translateX(100%);
+}
+
+/* Current slide: slide in from right, hold, slide out to left */
+.slide.entering {
+    transform: translateX(0);
+    transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide.leaving {
+    transform: translateX(-100%);
+    transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+}

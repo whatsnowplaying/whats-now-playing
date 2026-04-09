@@ -55,3 +55,11 @@ For a complete list of templates, see the [Template Reference](../reference/temp
 ### ws-anime-elastic
 
 [![Elastic animation overlay](images/ws-anime-elastic.webp)](images/ws-anime-elastic.webp)
+
+### ws-frosted-glass
+
+[![Frosted glass overlay](images/ws-frosted-glass.png)](images/ws-frosted-glass.png)
+
+A semi-transparent lower-third panel that uses CSS `backdrop-filter: blur()` to blur the actual
+stream content behind it, creating a genuine frosted glass appearance. OBS Studio's built-in
+browser supports `backdrop-filter`.

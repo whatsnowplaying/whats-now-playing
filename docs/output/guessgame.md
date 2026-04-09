@@ -115,7 +115,15 @@ See [TwitchBot → Setting Permissions](twitchbot.md#setting-permissions) for de
 
 ## OBS Integration
 
-The Guess Game provides two OBS browser sources for displaying game information on your stream:
+The easiest way to add Guess Game sources to OBS is via **Export for OBS** in the system tray
+menu — it creates a scene collection with all three sources pre-configured. See
+[Export for OBS](obs-export.md) for details.
+
+To add sources manually, use the URLs below.
+
+The Guess Game provides two sets of OBS browser sources. The WebGL versions use animated
+effects and require OBS Studio's built-in browser (CEF), which supports WebGL. The basic
+versions work everywhere.
 
 ### Game Display
 
@@ -126,31 +134,29 @@ The Guess Game provides two OBS browser sources for displaying game information 
 Shows the current game state with masked track and artist names, time remaining, guessed letters,
 and game status (Active, Solved, Timeout, Waiting).
 
-1. Add a **Browser** source in OBS
-2. Set URL to: `http://localhost:8899/guessgame/guessgame.htm`
-3. Set dimensions: `640x600` (adjust height based on your typical track/artist name lengths;
-   longer names wrap to multiple lines)
-4. Customize the display by editing `templates/guessgame/guessgame.htm`
+* **WebGL** (animated tiles, particle effects, shader background):
+  `http://localhost:8899/guessgame/guessgame-webgl.htm` — dimensions: `800x500`
+* **Basic** (standard HTML/CSS):
+  `http://localhost:8899/guessgame/guessgame.htm` — dimensions: `640x600`
 
 ### Leaderboard Display
 
 [![All-time leaderboard display](images/guessgame_leaderboard.png)](images/guessgame_leaderboard.png)
 
 Shows rank, username, total score, and number of solves with gold/silver/bronze styling for the
-top 3. Both session and all-time leaderboards use the same template; the URL parameter controls
-which data is displayed.
+top 3. The URL `?type=` parameter controls which data is displayed.
 
 #### Session Leaderboard
 
-1. Add a **Browser** source in OBS
-2. Set URL to: `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session`
-3. Set dimensions: `560x500` (or adjust to your layout)
+* **WebGL**: `http://localhost:8899/guessgame/guessgame-leaderboard-webgl.htm?type=session`
+* **Basic**: `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session`
+* Dimensions: `550x700`
 
 #### All-Time Leaderboard
 
-1. Add a **Browser** source in OBS
-2. Set URL to: `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=all_time`
-3. Set dimensions: `560x500` (or adjust to your layout)
+* **WebGL**: `http://localhost:8899/guessgame/guessgame-leaderboard-webgl.htm?type=all_time`
+* **Basic**: `http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=all_time`
+* Dimensions: `550x700`
 
 ## How It Works
 

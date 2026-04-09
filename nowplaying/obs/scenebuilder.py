@@ -33,18 +33,37 @@ DEFAULT_SOURCES: list[OBSSourceDef] = [
 
 MAIN_SCENE_NAME = "WNP Sources"
 GUESS_GAME_SCENE_NAME = "WNP Guess Game"
+GUESS_GAME_BASIC_SCENE_NAME = "WNP Guess Game Basic"
 
 GUESSGAME_SOURCES: list[OBSSourceDef] = [
-    OBSSourceDef("Guess Game", "/guessgame/guessgame.htm", 800, 500, "center"),
+    OBSSourceDef("Guess Game", "/guessgame/guessgame-webgl.htm", 800, 500, "center"),
     OBSSourceDef(
         "Session Leaderboard",
-        "/guessgame/guessgame-leaderboard.htm?type=session",
+        "/guessgame/guessgame-leaderboard-webgl.htm?type=session",
         550,
         700,
         "left",
     ),
     OBSSourceDef(
         "All-Time Leaderboard",
+        "/guessgame/guessgame-leaderboard-webgl.htm?type=all_time",
+        550,
+        700,
+        "right",
+    ),
+]
+
+GUESSGAME_BASIC_SOURCES: list[OBSSourceDef] = [
+    OBSSourceDef("Guess Game Basic", "/guessgame/guessgame.htm", 800, 500, "center"),
+    OBSSourceDef(
+        "Session Leaderboard Basic",
+        "/guessgame/guessgame-leaderboard.htm?type=session",
+        550,
+        700,
+        "left",
+    ),
+    OBSSourceDef(
+        "All-Time Leaderboard Basic",
         "/guessgame/guessgame-leaderboard.htm?type=all_time",
         550,
         700,
@@ -237,6 +256,7 @@ def build_and_save(sources: list[OBSSourceDef], port: int) -> pathlib.Path:
     scene_groups: dict[str, list[OBSSourceDef]] = {
         MAIN_SCENE_NAME: sources,
         GUESS_GAME_SCENE_NAME: GUESSGAME_SOURCES,
+        GUESS_GAME_BASIC_SCENE_NAME: GUESSGAME_BASIC_SOURCES,
     }
     all_browser_sources = [
         _make_browser_source(s, port) for srcs in scene_groups.values() for s in srcs

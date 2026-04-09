@@ -63,12 +63,15 @@ After exporting and relaunching OBS:
 2. The new **WhatsNowPlaying** collection will appear in the list — click it
    to switch to it
 
-The collection contains two scenes:
+The collection contains three scenes:
 
 * **WNP Sources** — the browser sources you selected and configured in the
   export dialog, already sized and positioned
-* **WNP Guess Game** — three fixed sources for the Guess Game feature:
-  the game overlay, the session leaderboard, and the all-time leaderboard
+* **WNP Guess Game** — three WebGL-enhanced Guess Game sources: the animated
+  game overlay, the session leaderboard, and the all-time leaderboard.
+  Requires OBS Studio's built-in browser (CEF), which supports WebGL.
+* **WNP Guess Game Basic** — the same three Guess Game sources using the
+  standard HTML/CSS templates, for use if WebGL is unavailable or unsupported.
 
-Both scenes are intended as a source library. Copy the individual browser
-sources from either scene into your own scenes as needed.
+All three scenes are intended as source libraries. Copy the individual browser
+sources into your own scenes as needed.

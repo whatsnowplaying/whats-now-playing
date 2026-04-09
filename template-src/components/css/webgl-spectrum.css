@@ -1,0 +1,74 @@
+/* WebGL Spectrum (EQ bars) Lower-Third */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    overflow: hidden;
+    background: transparent;
+    width: 800px;
+    height: 150px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#card {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 800px;
+    height: 150px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+#card.visible {
+    opacity: 1;
+}
+
+/* Dark base behind everything */
+#card-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(4, 6, 20, 0.82);
+    border-top: 1px solid rgba(0, 200, 255, 0.2);
+}
+
+#bgCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 800px;
+    height: 150px;
+    z-index: 1;
+}
+
+#track-info {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 28px;
+}
+
+#track-artist {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 6px;
+    text-shadow: 0 0 16px rgba(0, 220, 255, 0.6);
+}
+
+#track-title {
+    font-size: 16px;
+    font-weight: 400;
+    color: rgba(0, 220, 255, 0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

@@ -120,3 +120,19 @@ template_families:
         body_layout: typing_layout
         display_js: typed_effects
         body_class: typewriter-style
+
+  frosted_glass:
+    base: websocket-base
+    description: "CSS backdrop-filter frosted glass lower-third"
+    common_css:
+      - obs-compatibility
+      - frosted-glass
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-frosted-glass:
+        title: "Frosted Glass"
+        description: "Frosted glass panel using CSS backdrop-filter blur"
+        body_layout: frosted-glass-layout
+        display_js: frosted-glass-display

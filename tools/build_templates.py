@@ -93,6 +93,11 @@ class TemplateBuilder:
         """Gather all JavaScript content for a template"""
         js_parts = []
 
+        # Add common JS helpers (prepended before display_js)
+        for js_name in family_config.get("common_js", []):
+            if js_content := self.load_component("js", js_name):
+                js_parts.append(js_content)
+
         # Add display JavaScript
         if template_config.get("display_js"):
             if display_js := self.load_component("js", template_config["display_js"]):
@@ -114,8 +119,8 @@ class TemplateBuilder:
             if effect_js := self.load_component("js", effect):
                 js_parts.append(effect_js)
 
-        # Add WebSocket setup (only for websocket-base templates)
-        if family_config["base"] == "websocket-base":
+        # Add WebSocket setup (for any non-static base)
+        if family_config["base"] != "static-base":
             for ws_component in family_config.get("common_websocket", []):
                 if ws_js := self.load_component("websocket", ws_component):
                     js_parts.append(ws_js)
@@ -154,6 +159,8 @@ class TemplateBuilder:
             css_components.extend(template_config["custom_css"])
 
         js_components = []
+        if family_config.get("common_js"):
+            js_components.extend(family_config["common_js"])
         if template_config.get("display_js"):
             js_components.append(template_config["display_js"])
         if template_config.get("effects"):

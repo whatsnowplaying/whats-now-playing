@@ -6,6 +6,7 @@ import pathlib
 
 from PySide6.QtCore import QSize, QUrl, Signal  # pylint: disable=no-name-in-module
 from PySide6.QtGui import QColor  # pylint: disable=no-name-in-module
+from PySide6.QtWebEngineCore import QWebEngineSettings  # pylint: disable=no-name-in-module
 from PySide6.QtWebEngineWidgets import QWebEngineView  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QComboBox,
@@ -103,6 +104,9 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
 
         # ---- browser ----
         self.webview = QWebEngineView()
+        settings = self.webview.settings()
+        settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
+        settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
         self._apply_bg(0)
         layout.addWidget(self.webview)
 

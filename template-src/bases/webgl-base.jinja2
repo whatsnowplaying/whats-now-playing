@@ -1,0 +1,57 @@
+<!DOCTYPE HTML>
+<!--
+Template Metadata (AI-parseable):
+{
+  "name": "{{template_name}}",
+  "description": "{{template_description}}",
+  "type": "websocket",
+  "base": "webgl-base",
+  "image_field": "{{image_field|default('none')}}",
+  "effects": {{effects|default([])|tojson}},
+  "css_components": {{css_components|default([])|tojson}},
+  "js_components": {{js_components|default([])|tojson}},
+  "purpose": "Real-time display using WebSocket streaming with WebGL graphics",
+  "customizable_elements": {
+    "colors": "CSS color properties in style section",
+    "fonts": "Font family and size in CSS",
+    "layout": "HTML structure in body",
+    "animations": "WebGL shaders and JavaScript animation"
+  },
+  "websocket_endpoints": {
+    "metadata": "/wsstream",
+    "artist_fanart": "/wsartistfanartstream",
+    "gifwords": "/wsgifwordsstream",
+    "images": "/v1/images/ws"
+  },
+  "documentation": {
+    "template_variables": "http://whatsnowplaying.github.io/whats-now-playing/latest/reference/templatevariables/",
+    "api_reference": "http://whatsnowplaying.github.io/whats-now-playing/latest/reference/api/",
+    "template_reference": "http://whatsnowplaying.github.io/whats-now-playing/latest/reference/templates/",
+    "gallery_examples": "http://whatsnowplaying.github.io/whats-now-playing/latest/gallery/",
+    "websocket_guide": "http://whatsnowplaying.github.io/whats-now-playing/latest/output/obswebsocket/"
+  }
+}
+-->
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>{{template_title}}</title>
+    {%- if external_imports %}
+    {{external_imports}}
+    {%- endif %}
+    <style>
+        {{css_content}}
+    </style>
+    <script src="/whatsnowplaying-websocket.js"></script>
+</head>
+
+<body>
+    {{body_content}}
+
+    <script type="text/javascript">
+        {{js_content}}
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,94 @@
+/* WebGL Hologram Lower-Third */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    overflow: hidden;
+    background: transparent;
+    width: 800px;
+    height: 150px;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+#card {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 800px;
+    height: 150px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#card.visible {
+    opacity: 1;
+}
+
+#bgCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 800px;
+    height: 150px;
+    z-index: 0;
+}
+
+/* Left accent bar */
+#accent-bar {
+    position: absolute;
+    top: 16px;
+    bottom: 16px;
+    left: 20px;
+    width: 3px;
+    background: linear-gradient(
+        to bottom,
+        transparent,
+        rgba(0, 255, 180, 0.9) 20%,
+        rgba(0, 255, 180, 0.9) 80%,
+        transparent
+    );
+    z-index: 10;
+    box-shadow: 0 0 8px rgba(0, 255, 180, 0.8);
+}
+
+#track-info {
+    position: absolute;
+    top: 0;
+    left: 36px;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 24px;
+}
+
+#track-label {
+    font-size: 9px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: rgba(0, 255, 180, 0.55);
+    margin-bottom: 6px;
+}
+
+#track-artist {
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    text-shadow: 0 0 12px rgba(0, 255, 180, 0.5), 0 0 2px rgba(255, 80, 200, 0.3);
+}
+
+#track-title {
+    font-size: 15px;
+    color: rgba(0, 255, 180, 0.75);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    letter-spacing: 0.5px;
+}

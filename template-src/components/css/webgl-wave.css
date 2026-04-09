@@ -1,0 +1,63 @@
+/* WebGL Wave-Edge Panel */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    overflow: hidden;
+    background: transparent;
+    width: 800px;
+    height: 150px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#card {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 800px;
+    height: 150px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+#card.visible {
+    opacity: 1;
+}
+
+#bgCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 800px;
+    height: 150px;
+}
+
+#track-info {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 32px 22px;
+}
+
+#track-artist {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 6px;
+}
+
+#track-title {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.70);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

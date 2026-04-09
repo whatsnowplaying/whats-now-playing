@@ -1,0 +1,98 @@
+/* WebGL Vinyl Record Card Layout */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    overflow: hidden;
+    background: transparent;
+    width: 800px;
+    height: 200px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#card {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 800px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    background: rgba(8, 6, 18, 0.82);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+#card.visible {
+    opacity: 1;
+}
+
+#vinyl-wrap {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+}
+
+#vinylCanvas {
+    display: block;
+}
+
+#track-info {
+    flex: 1;
+    padding: 20px 28px 20px 12px;
+    overflow: hidden;
+}
+
+#track-artist {
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 8px;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+#track-title {
+    font-size: 17px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.65);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 6px;
+}
+
+#track-album {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.35);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Vertical accent bar between vinyl and text */
+#track-info::before {
+    content: '';
+    position: absolute;
+    left: 195px;
+    top: 24px;
+    bottom: 24px;
+    width: 2px;
+    background: linear-gradient(
+        to bottom,
+        transparent,
+        rgba(255, 255, 255, 0.15) 30%,
+        rgba(255, 255, 255, 0.15) 70%,
+        transparent
+    );
+}
+
+#card {
+    position: relative;
+}
