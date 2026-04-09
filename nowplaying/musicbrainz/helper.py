@@ -9,7 +9,7 @@ import os
 import sys
 from typing import Any
 
-from nowplaying.vendor.wnpmb import (  # pylint: disable=no-name-in-module
+from nowplaying.vendor.wnpmb import (  # pylint: disable=no-name-in-module,import-error
     MusicBrainzClient,
     MusicBrainzError,
     WNPCacheAdapter,

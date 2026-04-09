@@ -3,7 +3,7 @@
 MusicBrainz client for nowplaying — thin re-export of wnpmb.
 """
 
-from nowplaying.vendor.wnpmb import (  # pylint: disable=no-name-in-module
+from nowplaying.vendor.wnpmb import (  # pylint: disable=no-name-in-module,import-error
     MusicBrainzClient,
     MusicBrainzError,
     NetworkError,
