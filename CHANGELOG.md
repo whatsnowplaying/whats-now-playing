@@ -11,8 +11,26 @@
     * Warns if OBS is already running so the new collection won't be missed
     * Saves directly to the OBS scenes directory when found, or falls back to
       Documents/WhatsNowPlaying/obs_scenes
-    * Always includes a second "WNP Guess Game" scene with the game overlay,
-      session leaderboard, and all-time leaderboard sources pre-configured
+    * Includes two Guess Game scenes: "WNP Guess Game" with WebGL-enhanced
+      animated overlays, and "WNP Guess Game Basic" as a CSS-only fallback
+  * WebGL Guess Game overlays
+    * New animated game board with shader background, 3D letter-tile flip
+      reveals, particle bursts, and SVG arc timer
+    * New animated leaderboard with matching shader background, gold/cyan
+      accent colors, medal badges for top 3, and staggered row animations
+  * New WebGL and effects "Now Playing" overlay templates
+    * `ws-webgl-vinyl` — spinning vinyl record with cover art mapped as a
+      WebGL texture; center label and grooved outer area, 800×200
+    * `ws-webgl-spectrum` — 56 animated fake EQ bars with cyan-to-blue
+      gradient and burst effect on track change, 800×150
+    * `ws-webgl-hologram` — cyberpunk scanline panel with glitch slice
+      displacement and character-scramble text reveal, 800×150
+    * `ws-webgl-wave` — dark panel with animated wavy top edge and blue
+      glow line tracing the boundary, 800×150
+    * `ws-webgl-particles` — floating particles (Canvas 2D) over a fully
+      transparent background with burst on track change, 800×150
+    * `ws-frosted-glass` — CSS `backdrop-filter` frosted glass lower-third
+      that blurs actual stream content behind the panel, 800×150
   * Template preview improvements
     * Web preview window now has a "Use This Template" button that applies the
       selected template back to the settings field that launched the preview
@@ -31,6 +49,8 @@
 * Bug Fixes
   * Guess Game menu item is now grayed out and auto-disabled when Twitch Bot
     is not configured, since guesses arrive exclusively via Twitch chat
+  * Filenames using an en dash separator (e.g. `Artist – Title.mp4`) are now
+    correctly split into artist and title when track tags are absent
   * Kick and Twitch authentication failed if the webserver port wasn't 8899
   * Remote Output + Charts: when both the sending and receiving WNP instances
     have Charts enabled, tracks were submitted to the charts server twice.

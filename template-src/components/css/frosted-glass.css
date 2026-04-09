@@ -1,0 +1,63 @@
+/* Frosted Glass Lower-Third */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    overflow: hidden;
+    background: transparent;
+    width: 800px;
+    height: 150px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#card {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 800px;
+    height: 150px;
+    background: rgba(12, 14, 26, 0.45);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border: 2px solid rgba(180, 210, 255, 0.65);
+    border-top-width: 3px;
+    box-shadow: 0 0 20px rgba(140, 190, 255, 0.2);
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+#card.visible {
+    opacity: 1;
+}
+
+#track-info {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 32px;
+}
+
+#track-artist {
+    font-size: 32px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 7px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.8);
+}
+
+#track-title {
+    font-size: 20px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.9);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9), 0 0 10px rgba(0, 0, 0, 0.8);
+}

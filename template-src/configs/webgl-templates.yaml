@@ -1,0 +1,83 @@
+---
+template_families:
+  webgl_vinyl:
+    base: webgl-base
+    description: "WebGL-rendered spinning vinyl record with cover art texture"
+    common_css:
+      - obs-compatibility
+      - webgl-vinyl
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-webgl-vinyl:
+        title: "WebGL Vinyl"
+        description: "Spinning vinyl record with cover art and track info"
+        body_layout: webgl-vinyl-layout
+        display_js: webgl-vinyl
+        image_field: coverimagebase64
+
+  webgl_spectrum:
+    base: webgl-base
+    description: "WebGL animated EQ spectrum bars lower-third"
+    common_css:
+      - obs-compatibility
+      - webgl-spectrum
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-webgl-spectrum:
+        title: "WebGL Spectrum"
+        description: "Animated EQ bars with artist and title overlay"
+        body_layout: webgl-spectrum-layout
+        display_js: webgl-spectrum
+
+  webgl_hologram:
+    base: webgl-base
+    description: "WebGL scanline hologram panel with glitch text reveal"
+    common_css:
+      - obs-compatibility
+      - webgl-hologram
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-webgl-hologram:
+        title: "WebGL Hologram"
+        description: "Cyberpunk scanline panel with glitch text reveal on track change"
+        body_layout: webgl-hologram-layout
+        display_js: webgl-hologram
+
+  webgl_wave:
+    base: webgl-base
+    description: "WebGL panel with animated wavy top edge and glow line"
+    common_css:
+      - obs-compatibility
+      - webgl-wave
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-webgl-wave:
+        title: "WebGL Wave"
+        description: "Dark panel with animated wavy top boundary and glow edge"
+        body_layout: webgl-wave-layout
+        display_js: webgl-wave
+
+  webgl_particles:
+    base: webgl-base
+    description: "WebGL floating particles over transparent stream background"
+    common_css:
+      - obs-compatibility
+      - webgl-particles
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-webgl-particles:
+        title: "WebGL Particles"
+        description: "Floating particles over the stream with text overlay, no panel"
+        body_layout: webgl-particles-layout
+        display_js: webgl-particles
+

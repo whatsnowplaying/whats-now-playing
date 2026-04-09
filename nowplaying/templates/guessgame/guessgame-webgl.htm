@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Guess Game</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: transparent;
+            overflow: hidden;
+            width: 800px;
+            height: 500px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 800px; height: 500px;
+        }
+
+        #bgCanvas { z-index: 0; }
+        #particleCanvas { z-index: 10; pointer-events: none; }
+
+        #overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 800px; height: 500px;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            padding: 24px;
+        }
+
+        #overlay.hidden { visibility: hidden; }
+
+        /* ---- section labels ---- */
+        .section-label {
+            font-size: 10px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: #55aaff;
+            opacity: 0.65;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+
+        /* ---- tile rows ---- */
+        .tiles-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            max-width: 760px;
+        }
+
+        .word-group {
+            display: flex;
+            gap: 3px;
+        }
+
+        /* ---- individual tile ---- */
+        .tile {
+            perspective: 220px;
+        }
+
+        .tile-inner {
+            width: 100%; height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        .tile.animating .tile-inner {
+            transition: transform 0.45s ease;
+        }
+
+        .tile.flip .tile-inner,
+        .tile.revealed .tile-inner {
+            transform: rotateY(180deg);
+        }
+
+        /* Prevent the instant-flip on already-revealed tiles from showing transition */
+        .tile.revealed:not(.animating) .tile-inner {
+            transition: none;
+        }
+
+        .tile-front, .tile-back {
+            position: absolute;
+            width: 100%; height: 100%;
+            backface-visibility: hidden;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .tile-front {
+            background: rgba(8, 8, 28, 0.82);
+            border: 1px solid rgba(40, 100, 220, 0.35);
+            color: rgba(80, 130, 255, 0.4);
+        }
+
+        .tile-back {
+            background: rgba(0, 35, 75, 0.92);
+            border: 1px solid rgba(0, 190, 255, 0.75);
+            color: #00ddff;
+            transform: rotateY(180deg);
+            box-shadow: 0 0 8px rgba(0, 190, 255, 0.35),
+                        inset 0 0 5px rgba(0, 190, 255, 0.08);
+        }
+
+        /* Special chars (punctuation, numbers — always visible) */
+        .tile.special .tile-front {
+            background: transparent;
+            border-color: transparent;
+            color: rgba(255, 255, 255, 0.55);
+        }
+
+        .tile.special .tile-back {
+            background: transparent;
+            border-color: transparent;
+            box-shadow: none;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* ---- timer ---- */
+        #timer-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #timer-svg {
+            width: 52px; height: 52px;
+            overflow: visible;
+        }
+
+        #timer-track {
+            fill: none;
+            stroke: rgba(0, 90, 180, 0.25);
+            stroke-width: 4;
+        }
+
+        #timer-arc {
+            fill: none;
+            stroke: #00aaff;
+            stroke-width: 4;
+            stroke-linecap: round;
+            transform: rotate(-90deg);
+            transform-origin: 26px 26px;
+            transition: stroke-dashoffset 0.6s ease, stroke 0.5s;
+        }
+
+        #timer-label {
+            font-size: 22px;
+            font-weight: 700;
+            color: #00aaff;
+            font-variant-numeric: tabular-nums;
+            min-width: 46px;
+            text-align: center;
+            transition: color 0.5s;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        #timer-label.mid  { color: #ffaa00; }
+        #timer-label.low  { color: #ff4444; animation: blink 0.9s infinite; }
+        #timer-arc.mid    { stroke: #ffaa00; }
+        #timer-arc.low    { stroke: #ff4444; }
+
+        /* ---- status overlay ---- */
+        #status-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+            background: transparent;
+        }
+
+        #status-overlay.visible { opacity: 1; }
+
+        .status-title {
+            font-size: 52px;
+            font-weight: 900;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            text-shadow: 0 0 24px currentColor, 0 0 60px currentColor;
+        }
+
+        .status-title.solved  { color: #44ff88; }
+        .status-title.timeout { color: #ff4444; }
+
+        .status-sub {
+            font-size: 17px;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.75);
+            text-shadow: 0 0 8px rgba(255,255,255,0.3);
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.45; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="bgCanvas"       width="800" height="500"></canvas>
+<canvas id="particleCanvas" width="800" height="500"></canvas>
+
+<div id="overlay" class="hidden">
+    <div id="track-section">
+        <div class="section-label">Track</div>
+        <div class="tiles-row" id="track-tiles"></div>
+    </div>
+    <div id="artist-section">
+        <div class="section-label">Artist</div>
+        <div class="tiles-row" id="artist-tiles"></div>
+    </div>
+    <div id="timer-wrap">
+        <svg id="timer-svg" viewBox="0 0 52 52">
+            <circle id="timer-track" cx="26" cy="26" r="22"/>
+            <circle id="timer-arc"   cx="26" cy="26" r="22"
+                    stroke-dasharray="138.23" stroke-dashoffset="0"/>
+        </svg>
+        <div id="timer-label">0:00</div>
+    </div>
+</div>
+
+<div id="status-overlay">
+    <div class="status-title" id="status-title"></div>
+    <div class="status-sub"   id="status-sub"></div>
+</div>
+
+<script src="guessgame-websocket.js"></script>
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────
+// WebGL background shader
+// ─────────────────────────────────────────────
+(function initBG() {
+    const canvas = document.getElementById('bgCanvas');
+    const gl = canvas.getContext('webgl', { alpha: false });
+    if (!gl) { canvas.style.background = '#010108'; return; }
+
+    const vert = `
+        attribute vec2 a_pos;
+        void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+    `;
+
+    const frag = `
+        precision mediump float;
+        uniform float u_t;
+        uniform vec2  u_res;
+
+        float grid(vec2 uv, float sz, float lw) {
+            vec2 g = fract(uv * sz);
+            return clamp(
+                step(1.0 - lw, g.x) + step(1.0 - lw, g.y),
+                0.0, 1.0
+            );
+        }
+
+        void main() {
+            vec2 uv = gl_FragCoord.xy / u_res;
+
+            // Base: dark navy gradient
+            vec3 col = mix(vec3(0.02, 0.01, 0.06), vec3(0.01, 0.02, 0.07), uv.y);
+
+            // Slow-pulse grid
+            float pulse = 0.35 + 0.2 * sin(u_t * 0.6);
+            float g = grid(uv, 14.0, 0.025);
+            col += g * vec3(0.0, 0.18, 0.42) * pulse;
+
+            // Horizontal sweep glow that drifts down
+            float sweep = fract(u_t * 0.12);
+            float band  = smoothstep(0.025, 0.0, abs(uv.y - sweep));
+            col += band * vec3(0.0, 0.35, 0.7) * 0.65;
+
+            // Scanlines
+            col *= 0.96 + 0.04 * step(0.5, fract(uv.y * 300.0));
+
+            // Vignette
+            vec2 c = uv - 0.5;
+            col  *= clamp(1.0 - dot(c, c) * 2.0, 0.0, 1.0);
+
+            gl_FragColor = vec4(col, 1.0);
+        }
+    `;
+
+    function makeShader(type, src) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return s;
+    }
+
+    const prog = gl.createProgram();
+    gl.attachShader(prog, makeShader(gl.VERTEX_SHADER,   vert));
+    gl.attachShader(prog, makeShader(gl.FRAGMENT_SHADER, frag));
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
+
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER,
+        new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+    const aPos = gl.getAttribLocation(prog, 'a_pos');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    const uT   = gl.getUniformLocation(prog, 'u_t');
+    const uRes = gl.getUniformLocation(prog, 'u_res');
+    gl.uniform2f(uRes, 800, 500);
+
+    const t0 = performance.now();
+    (function frame() {
+        gl.uniform1f(uT, (performance.now() - t0) / 1000);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        requestAnimationFrame(frame);
+    })();
+})();
+
+// ─────────────────────────────────────────────
+// Particle system
+// ─────────────────────────────────────────────
+const pCanvas = document.getElementById('particleCanvas');
+const pCtx    = pCanvas.getContext('2d');
+let particles = [];
+
+function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1.5 + Math.random() * 5;
+        particles.push({
+            x, y,
+            vx:    Math.cos(angle) * speed,
+            vy:    Math.sin(angle) * speed - 1.5,
+            life:  1.0,
+            decay: 0.014 + Math.random() * 0.018,
+            r:     1.5 + Math.random() * 3.5,
+            color
+        });
+    }
+}
+
+(function tickParticles() {
+    pCtx.clearRect(0, 0, 800, 500);
+    particles = particles.filter(p => p.life > 0);
+    for (const p of particles) {
+        p.x  += p.vx;
+        p.y  += p.vy;
+        p.vy += 0.10;
+        p.life -= p.decay;
+        pCtx.globalAlpha = Math.max(0, p.life);
+        pCtx.fillStyle   = p.color;
+        pCtx.beginPath();
+        pCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        pCtx.fill();
+    }
+    pCtx.globalAlpha = 1;
+    requestAnimationFrame(tickParticles);
+})();
+
+// ─────────────────────────────────────────────
+// Tile sizing — shrink for long strings
+// ─────────────────────────────────────────────
+function tileSize(charCount) {
+    if (charCount <= 18) return { w: 38, h: 44, fs: 20 };
+    if (charCount <= 26) return { w: 31, h: 37, fs: 17 };
+    return                      { w: 24, h: 30, fs: 13 };
+}
+
+// ─────────────────────────────────────────────
+// Build tile DOM for a masked string
+// ─────────────────────────────────────────────
+function buildTiles(container, masked) {
+    container.innerHTML = '';
+    const words    = masked.split(' ');
+    const charCount = masked.replace(/ /g, '').length;
+    const sz        = tileSize(charCount);
+
+    for (let wi = 0; wi < words.length; wi++) {
+        if (wi > 0) {
+            const gap = document.createElement('div');
+            gap.style.width = '10px';
+            container.appendChild(gap);
+        }
+        const group = document.createElement('div');
+        group.className = 'word-group';
+        for (const ch of words[wi]) {
+            const isUnknown = ch === '_';
+            const isSpecial = !isUnknown && !/[a-zA-Z0-9]/.test(ch);
+
+            const tile = document.createElement('div');
+            tile.className = 'tile'
+                + (isSpecial ? ' special'  : '')
+                + (!isUnknown ? ' revealed' : '');
+            tile.style.width  = sz.w + 'px';
+            tile.style.height = sz.h + 'px';
+            tile.dataset.ch   = ch;
+
+            const inner = document.createElement('div');
+            inner.className = 'tile-inner';
+
+            const front = document.createElement('div');
+            front.className = 'tile-front';
+            front.style.fontSize = sz.fs + 'px';
+            // show special chars on front too (they're always visible)
+            if (isSpecial) front.textContent = ch;
+
+            const back = document.createElement('div');
+            back.className = 'tile-back';
+            back.style.fontSize = sz.fs + 'px';
+            back.textContent = isUnknown ? '' : ch;
+
+            inner.appendChild(front);
+            inner.appendChild(back);
+            tile.appendChild(inner);
+            group.appendChild(tile);
+        }
+        container.appendChild(group);
+    }
+}
+
+// ─────────────────────────────────────────────
+// Diff old→new masked and animate newly revealed
+// ─────────────────────────────────────────────
+function revealNewTiles(container, newMasked, oldMasked) {
+    const tiles    = [...container.querySelectorAll('.tile')];
+    const newChars = [...newMasked].filter(c => c !== ' ');
+    const oldChars = [...oldMasked].filter(c => c !== ' ');
+
+    tiles.forEach((tile, i) => {
+        const nc = newChars[i];
+        const oc = oldChars[i] || '_';
+        if (!nc || nc === '_') return;
+        if (oc !== '_') return;  // already revealed — nothing to do
+
+        tile.querySelector('.tile-back').textContent = nc;
+        tile.dataset.ch = nc;
+
+        const delay = Math.min(i * 35, 350);
+        setTimeout(() => {
+            tile.classList.add('animating', 'flip');
+            const rect = tile.getBoundingClientRect();
+            spawnParticles(rect.left + rect.width / 2,
+                           rect.top  + rect.height / 2,
+                           '#00ccff', 7);
+        }, delay);
+    });
+}
+
+// ─────────────────────────────────────────────
+// Timer (SVG arc)
+// r=22  → circumference = 2π×22 ≈ 138.23
+// ─────────────────────────────────────────────
+const CIRC       = 2 * Math.PI * 22;
+const timerArc   = document.getElementById('timer-arc');
+const timerLabel = document.getElementById('timer-label');
+
+function updateTimer(remaining, duration) {
+    const frac   = duration > 0 ? Math.max(0, remaining / duration) : 0;
+    timerArc.style.strokeDashoffset = (CIRC * (1 - frac)).toFixed(2);
+
+    const mins = Math.floor(remaining / 60);
+    const secs = Math.floor(remaining) % 60;
+    timerLabel.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+    const cls = remaining < 30 ? 'low' : remaining < 60 ? 'mid' : '';
+    timerLabel.className = cls;
+    timerArc.className   = cls;
+}
+
+// ─────────────────────────────────────────────
+// Status overlay
+// ─────────────────────────────────────────────
+const statusOverlay = document.getElementById('status-overlay');
+const statusTitle   = document.getElementById('status-title');
+const statusSub     = document.getElementById('status-sub');
+
+function showStatus(type, subtitle) {
+    statusTitle.className   = 'status-title ' + type;
+    statusTitle.textContent = type === 'solved' ? 'SOLVED!' : "TIME'S UP";
+    statusSub.textContent   = subtitle || '';
+    statusOverlay.className = 'visible';
+
+    if (type === 'solved') {
+        spawnParticles(400, 250, '#44ff88', 55);
+        spawnParticles(400, 250, '#00ccff', 35);
+        spawnParticles(400, 250, '#ffffff', 15);
+    } else {
+        spawnParticles(400, 250, '#ff4444', 40);
+        spawnParticles(400, 250, '#ff8800', 25);
+    }
+}
+
+function hideStatus() {
+    statusOverlay.className = '';
+}
+
+// ─────────────────────────────────────────────
+// Main game state handler
+// ─────────────────────────────────────────────
+const overlay      = document.getElementById('overlay');
+const trackTiles   = document.getElementById('track-tiles');
+const artistTiles  = document.getElementById('artist-tiles');
+
+let lastStatus       = '';
+let prevTrackMasked  = '';
+let prevArtistMasked = '';
+let gameDuration     = 180;
+
+function updateGameState(data) {
+    const {
+        status, masked_track, masked_artist,
+        revealed_track, revealed_artist,
+        time_remaining, time_elapsed, current_solver
+    } = data;
+
+    if (status === 'waiting') {
+        overlay.classList.add('hidden');
+        hideStatus();
+        lastStatus = prevTrackMasked = prevArtistMasked = '';
+        return;
+    }
+
+    overlay.classList.remove('hidden');
+
+    if (status === 'active') {
+        hideStatus();
+
+        const isNew = !prevTrackMasked || lastStatus === 'waiting';
+        if (isNew) {
+            // Infer full duration from first active frame
+            gameDuration = (time_remaining || 0) + (time_elapsed || 0) || 180;
+            buildTiles(trackTiles,  masked_track);
+            buildTiles(artistTiles, masked_artist);
+        } else {
+            revealNewTiles(trackTiles,  masked_track,  prevTrackMasked);
+            revealNewTiles(artistTiles, masked_artist, prevArtistMasked);
+        }
+
+        prevTrackMasked  = masked_track;
+        prevArtistMasked = masked_artist;
+        updateTimer(time_remaining || 0, gameDuration);
+
+    } else if (status === 'solved' || status === 'timeout') {
+        if (status !== lastStatus) {
+            const track  = revealed_track  || masked_track  || '';
+            const artist = revealed_artist || masked_artist || '';
+            buildTiles(trackTiles,  track);
+            buildTiles(artistTiles, artist);
+
+            const sub = status === 'solved'
+                ? `by ${current_solver || 'someone'}`
+                : `${track} — ${artist}`;
+            showStatus(status, sub);
+        }
+        updateTimer(0, gameDuration);
+    }
+
+    lastStatus = status;
+}
+
+// ─────────────────────────────────────────────
+// WebSocket
+// ─────────────────────────────────────────────
+function connect() {
+    const params    = new URLSearchParams(window.location.search);
+    const sessionId = 'browser_' + Date.now();
+    const ws = new WebSocket(
+        buildWebSocketUrl(
+            `/wsguessgamestream?session_id=${encodeURIComponent(sessionId)}`,
+            params.get('port')
+        )
+    );
+    ws.onmessage = (e) => {
+        try { updateGameState(JSON.parse(e.data)); }
+        catch (err) { console.error('guessgame parse error', err); }
+    };
+    ws.onclose = () => setTimeout(connect, 5000);
+}
+
+connect();
+</script>
+</body>
+</html>

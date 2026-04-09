@@ -24,17 +24,26 @@ async def test_filename_stem_as_title(bootstrap):
 
 
 @pytest.mark.asyncio
-async def test_filename_stem_artist_dash_title(bootstrap):
-    """When filename is 'Artist - Title.mp3' with no metadata, split into artist and title."""
+@pytest.mark.parametrize(
+    "filename,expected_artist,expected_title",
+    [
+        ("/some/path/Pet Shop Boys - West End Girls.mp3", "Pet Shop Boys", "West End Girls"),
+        ("/Volumes/Music/input5/sombr \u2013 Undressed.mp4", "sombr", "Undressed"),
+    ],
+)
+async def test_filename_stem_artist_sep_title(
+    bootstrap, filename, expected_artist, expected_title
+):
+    """When filename is 'Artist - Title' or 'Artist – Title' with no metadata, split correctly."""
     config = bootstrap
     config.cparser.setValue("acoustidmb/enabled", False)
     config.cparser.setValue("musicbrainz/enabled", False)
-    metadatain = {"filename": "/some/path/Pet Shop Boys - West End Girls.mp3"}
+    metadatain = {"filename": filename}
     metadataout = await nowplaying.metadata.MetadataProcessors(config=config).getmoremetadata(
         metadata=metadatain
     )
-    assert metadataout["artist"] == "Pet Shop Boys"
-    assert metadataout["title"] == "West End Girls"
+    assert metadataout["artist"] == expected_artist
+    assert metadataout["title"] == expected_title
 
 
 @pytest.mark.asyncio

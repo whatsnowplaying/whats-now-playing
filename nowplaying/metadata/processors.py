@@ -131,12 +131,15 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
         logging.debug("No title, so setting to filename stem")
         self.metadata["title"] = pathlib.Path(self.metadata["filename"]).stem
-        if " - " in self.metadata.get("title", "") and not self.metadata.get("artist"):
-            parts = self.metadata["title"].split(" - ", 1)
-            if len(parts) == 2:
-                logging.debug("Splitting out filename stem to artist - title")
-                self.metadata["artist"] = parts[0].strip()
-                self.metadata["title"] = parts[1].strip()
+        if not self.metadata.get("artist"):
+            for sep in (" \u2013 ", " - "):
+                if sep in self.metadata.get("title", ""):
+                    parts = self.metadata["title"].split(sep, 1)
+                    if len(parts) == 2:
+                        logging.debug("Splitting out filename stem to artist - title")
+                        self.metadata["artist"] = parts[0].strip()
+                        self.metadata["title"] = parts[1].strip()
+                        break
 
     def _fix_artist_in_title(self) -> None:
         """strip redundant 'Artist - ' prefix from title field"""

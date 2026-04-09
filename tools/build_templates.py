@@ -114,8 +114,8 @@ class TemplateBuilder:
             if effect_js := self.load_component("js", effect):
                 js_parts.append(effect_js)
 
-        # Add WebSocket setup (only for websocket-base templates)
-        if family_config["base"] == "websocket-base":
+        # Add WebSocket setup (for any non-static base)
+        if family_config["base"] != "static-base":
             for ws_component in family_config.get("common_websocket", []):
                 if ws_js := self.load_component("websocket", ws_component):
                     js_parts.append(ws_js)
