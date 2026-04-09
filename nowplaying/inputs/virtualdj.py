@@ -347,7 +347,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
                     row = await cursor.fetchone()
                 if not row and artist and title:
                     await cursor.execute(
-                        """SELECT * FROM songs WHERE artist=? AND title=? ORDER BY id DESC LIMIT 1""",
+                        "SELECT * FROM songs WHERE artist=? AND title=? ORDER BY id DESC LIMIT 1",
                         (artist, title),
                     )
                     row = await cursor.fetchone()
@@ -359,7 +359,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
         metadata = {data: row[data] for data in METADATALIST}
         if metadata.get("bpm"):
-            metadata["bpm"] = VirtualDJSAXHandler._convert_bpm(metadata["bpm"])
+            metadata["bpm"] = VirtualDJSAXHandler._convert_bpm(metadata["bpm"])  # pylint: disable=protected-access
         for key in LISTFIELDS:
             # Only process LISTFIELDS that actually exist in the row
             if key in row and row[key]:
@@ -573,7 +573,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
                 return None
             return row["filename"]
 
-    async def stop(self):
+    async def stop(self):  # pylint: disable=duplicate-code
         """stop the virtual dj plugin"""
         self._reset_meta()
         if self.observer:
