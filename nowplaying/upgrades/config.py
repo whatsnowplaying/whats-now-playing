@@ -291,6 +291,9 @@ class UpgradeConfig:
         if oldversion < Version("5.1.0-preview5"):
             self._upgrade_to_5_1_0_preview5(config)
 
+        if oldversion < Version("5.2.0"):
+            self._upgrade_to_5_2_0(config)
+
         self._oldkey_to_newkey(rawconfig, config, mapping)
 
         config.setValue("settings/configversion", thisverstr)
@@ -503,6 +506,13 @@ class UpgradeConfig:
             config.setValue("discord/bot_enabled", enabled)
             config.setValue("discord/richpresence_enabled", enabled)
             config.remove("discord/enabled")
+
+    @staticmethod
+    def _upgrade_to_5_2_0(config: QSettings) -> None:
+        """Upgrade to 5.2.0 - Remove Tenor API key (Tenor support removed)"""
+        if config.value("gifwords/tenorkey") is not None:
+            logging.info("Upgrade to 5.2.0: removing gifwords/tenorkey (Tenor support removed)")
+            config.remove("gifwords/tenorkey")
 
     def _cleanup_old_backup_files(self) -> None:
         """Clean up old .bak backup files from pre-5.0.0-preview5"""

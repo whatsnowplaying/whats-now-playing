@@ -120,7 +120,6 @@ TITLE_ARTIST_RE = re.compile(
 TITLE_RE = re.compile(r'^\s*"(?P<title>.*?)"\s*(?:for @(?P<requestedfor>\S+))?$')
 TWOFERTITLE_RE = re.compile(r'^\s*"?(?P<title>.*?)"?\s*(?:for @(?P<requestedfor>\S+))?$')
 
-TENOR_BASE_URL = "https://tenor.googleapis.com/v2/search"
 KLIPY_BASE_URL = "https://api.klipy.com/v2/search"
 
 GIFWORDS_TEXT = ["keywords", "requester", "requestdisplayname", "imageurl"]
@@ -969,48 +968,6 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
 
         return newdata
 
-    async def _tenor_request(self, search_terms: str) -> GifWordsTrackRequest:
-        """get an image from tenor for a given set of terms"""
-
-        content: GifWordsTrackRequest = {
-            "imageurl": None,
-            "image": nowplaying.utils.TRANSPARENT_PNG_BIN,
-            "keywords": search_terms,
-        }
-
-        apikey = self.config.cparser.value("gifwords/tenorkey")
-
-        if not apikey:
-            return content
-
-        result = None
-        streamer = self.config.cparser.value("twitch/channel")
-        client_key = f"whatsnowplaying/{self.config.version}/{streamer}"
-
-        params = {
-            "media_filter": "gif",
-            "client_key": client_key,
-            "key": apikey,
-            "limit": 1,
-            "q": search_terms,
-        }
-
-        async with aiohttp.ClientSession() as session:
-            async with session.get(TENOR_BASE_URL, params=params, timeout=10) as response:
-                if response.status == 200:
-                    # load the GIFs using the urls for the smaller GIF sizes
-                    result = await response.json()
-
-        if result:
-            content["imageurl"] = result["results"][0]["media_formats"]["gif"]["url"]
-            async with aiohttp.ClientSession() as session:
-                async with session.get(content["imageurl"], timeout=10) as response:
-                    if response.status == 200:
-                        # load the GIFs using the urls for the smaller GIF sizes
-                        content["image"] = await response.read()
-
-        return content
-
     async def _klipy_request(self, search_terms: str) -> GifWordsTrackRequest:
         """get an image from klipy for a given set of terms"""
 
@@ -1061,12 +1018,7 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
         if not user_input and self.testmode:
             return None
 
-        # Use Klipy if key is defined, otherwise fall back to Tenor
-        klipykey = self.config.cparser.value("gifwords/klipykey")
-        if klipykey:
-            content = await self._klipy_request(user_input)
-        else:
-            content = await self._tenor_request(user_input)
+        content = await self._klipy_request(user_input)
 
         content["requester"] = user
         content["requestdisplayname"] = setting.get("displayname")
@@ -1406,13 +1358,12 @@ class TrackRequestSettings:
         )
         enable_checkbox = uihelp.find_widget_in_tabs(widget, "enable_checkbox")
         fuzzy_threshold_spinbox = uihelp.find_widget_in_tabs(widget, "fuzzy_threshold_spinbox")
-        tenor_key_lineedit = uihelp.find_widget_in_tabs(widget, "tenor_key_lineedit")
         klipy_key_lineedit = uihelp.find_widget_in_tabs(widget, "klipy_key_lineedit")
 
         if request_table:
             clear_table(request_table)
 
-        if config.cparser.value("gifwords/tenorkey") or config.cparser.value("gifwords/klipykey"):
+        if config.cparser.value("gifwords/klipykey"):
             self.enablegifwords = True
 
         for configitem in config.cparser.childGroups():
@@ -1442,11 +1393,6 @@ class TrackRequestSettings:
         if fuzzy_threshold_spinbox:
             threshold = config.cparser.value("requests/fuzzythreshold", type=int, defaultValue=85)
             fuzzy_threshold_spinbox.setValue(threshold)
-
-        # Load Tenor API key
-        if tenor_key_lineedit:
-            tenor_key = config.cparser.value("gifwords/tenorkey", defaultValue="")
-            tenor_key_lineedit.setText(tenor_key)
 
         # Load Klipy API key
         if klipy_key_lineedit:
@@ -1483,7 +1429,6 @@ class TrackRequestSettings:
         fuzzy_threshold_spinbox = self.uihelp.find_widget_in_tabs(
             widget, "fuzzy_threshold_spinbox"
         )
-        tenor_key_lineedit = self.uihelp.find_widget_in_tabs(widget, "tenor_key_lineedit")
         klipy_key_lineedit = self.uihelp.find_widget_in_tabs(widget, "klipy_key_lineedit")
         request_table = self.uihelp.find_widget_in_tabs(widget, "request_table")
 
@@ -1501,10 +1446,6 @@ class TrackRequestSettings:
         # Save fuzzy matching threshold setting
         if fuzzy_threshold_spinbox:
             config.cparser.setValue("requests/fuzzythreshold", fuzzy_threshold_spinbox.value())
-
-        # Save Tenor API key
-        if tenor_key_lineedit:
-            config.cparser.setValue("gifwords/tenorkey", tenor_key_lineedit.text())
 
         # Save Klipy API key
         if klipy_key_lineedit:

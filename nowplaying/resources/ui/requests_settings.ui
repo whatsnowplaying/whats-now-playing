@@ -64,40 +64,11 @@
     <string>Minimum similarity score for fuzzy matching (50-100%). Higher values require closer matches.</string>
    </property>
   </widget>
-  <widget class="QLabel" name="tenor_key_label">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>110</y>
-     <width>100</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Tenor API Key:</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="tenor_key_lineedit">
-   <property name="geometry">
-    <rect>
-     <x>130</x>
-     <y>110</y>
-     <width>300</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>Enter Tenor API key for GifWords mode (optional)</string>
-   </property>
-   <property name="toolTip">
-    <string>API key from Google Tenor (https://developers.google.com/tenor). Required for GifWords request mode.</string>
-   </property>
-  </widget>
   <widget class="QLabel" name="klipy_key_label">
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>140</y>
+     <y>110</y>
      <width>100</width>
      <height>24</height>
     </rect>
@@ -110,25 +81,25 @@
    <property name="geometry">
     <rect>
      <x>130</x>
-     <y>140</y>
+     <y>110</y>
      <width>300</width>
      <height>24</height>
     </rect>
    </property>
    <property name="placeholderText">
-    <string>Enter Klipy API key to replace Tenor (optional)</string>
+    <string>Enter Klipy API key for GifWords mode (optional)</string>
    </property>
    <property name="toolTip">
-    <string>API key from Klipy (https://klipy.com/docs). If provided, Klipy will be used instead of Tenor.</string>
+    <string>API key from Klipy (https://klipy.com/docs). Required for GifWords request mode.</string>
    </property>
   </widget>
   <widget class="QTextBrowser" name="settings_infobox">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>180</y>
+     <y>150</y>
      <width>621</width>
-     <height>290</height>
+     <height>320</height>
     </rect>
    </property>
    <property name="html">
@@ -154,10 +125,8 @@ li.checked::marker { content: &quot;\2612&quot;; }
 &lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;4. Response is sent back to chat using the configured template&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;&lt;span style=&quot;font-weight: 600&quot;&gt;GIF APIs for GifWords:&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;GifWords mode displays animated GIFs based on text keywords. You need either a Tenor or Klipy API key.&lt;/p&gt;
-&lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;• &lt;span style=&quot;font-weight: 600&quot;&gt;Klipy&lt;/span&gt; (Recommended): https://klipy.com/docs - Free API, replaces Tenor&lt;/p&gt;
-&lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;• &lt;span style=&quot;font-weight: 600&quot;&gt;Tenor&lt;/span&gt;: https://developers.google.com/tenor - Legacy support&lt;/p&gt;
-&lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;If both keys are provided, Klipy will be used.&lt;/p&gt;
+&lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;GifWords mode displays animated GIFs based on text keywords. A Klipy API key is required.&lt;/p&gt;
+&lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;• &lt;span style=&quot;font-weight: 600&quot;&gt;Klipy&lt;/span&gt;: https://klipy.com/docs - Free API&lt;/p&gt;
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;&lt;span style=&quot;font-weight: 600&quot;&gt;Next Steps:&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;1. Configure your commands in the &lt;span style=&quot;font-weight: 600&quot;&gt;Commands&lt;/span&gt; tab&lt;/p&gt;
