@@ -60,3 +60,19 @@ template_families:
         description: "Conditional Artist Fanart (audio only, transparent video)"
         body_layout: single-image-layout
         display_js: conditional-fanart-display
+
+  artist_fanart_slideshow:
+    base: websocket-base
+    description: "Artist fanart slideshow cycling through multiple images with slide transition"
+    common_css:
+      - obs-compatibility
+      - fanart-slideshow
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-artistfanart-slideshow:
+        title: "artistfanart-slideshow"
+        description: "Fanart slideshow cycling through multiple artist images"
+        body_layout: fanart-slideshow-layout
+        display_js: fanart-slideshow

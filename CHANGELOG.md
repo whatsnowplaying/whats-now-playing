@@ -29,6 +29,12 @@
       glow line tracing the boundary, 800×150
     * `ws-webgl-particles` — floating particles (Canvas 2D) over a fully
       transparent background with burst on track change, 800×150
+    * `ws-webgl-cube` — rotating 3D WebGL cube textured with artist fanart
+      on faces 1–5 and cover art on face 0; falls back gracefully when
+      fewer than 6 fanart images are available, 800×200
+    * `ws-artistfanart-slideshow` — full-screen (1920×1080) CSS slideshow
+      cycling up to 20 artist fanart images with slide transitions every
+      8 seconds, resets on artist change
     * `ws-frosted-glass` — CSS `backdrop-filter` frosted glass lower-third
       that blurs actual stream content behind the panel, 800×150
   * Template preview improvements
@@ -62,6 +68,15 @@
   * Replace vendored musicbrainzngs library with wnpmb package, removing ~3,500
     lines of XML-based MusicBrainz client code in favour of a JSON/httpx async
     client with improved release selection accuracy
+  * WebGL template refactoring
+    * Extracted shared `WNPWebGL` helper namespace (`webgl-helpers.js`) with
+      `compileProgram()` and `fullscreenQuad()` utilities used by all WebGL
+      templates; eliminates ~18 lines of duplicated boilerplate per template
+    * Extracted common Guess Game WebGL background shader to
+      `guessgame-webgl-bg.js`, shared by both the game board and leaderboard
+      overlays
+    * Fixed `webgl-base.jinja2` Jinja2 default arrays (was passing string
+      `'[]'` to `tojson` instead of actual empty list `[]`)
 
 ## Version 5.1.0 - 2026-03-26
 

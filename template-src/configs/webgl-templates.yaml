@@ -6,6 +6,8 @@ template_families:
     common_css:
       - obs-compatibility
       - webgl-vinyl
+    common_js:
+      - webgl-helpers
     common_websocket:
       - metadata-streaming
 
@@ -23,6 +25,8 @@ template_families:
     common_css:
       - obs-compatibility
       - webgl-spectrum
+    common_js:
+      - webgl-helpers
     common_websocket:
       - metadata-streaming
 
@@ -39,6 +43,8 @@ template_families:
     common_css:
       - obs-compatibility
       - webgl-hologram
+    common_js:
+      - webgl-helpers
     common_websocket:
       - metadata-streaming
 
@@ -55,6 +61,8 @@ template_families:
     common_css:
       - obs-compatibility
       - webgl-wave
+    common_js:
+      - webgl-helpers
     common_websocket:
       - metadata-streaming
 
@@ -81,3 +89,20 @@ template_families:
         body_layout: webgl-particles-layout
         display_js: webgl-particles
 
+  webgl_cube:
+    base: webgl-base
+    description: "Rotating 3D cube textured with artist fanart images"
+    common_css:
+      - obs-compatibility
+      - webgl-cube
+    common_js:
+      - webgl-helpers
+    common_websocket:
+      - metadata-streaming
+
+    templates:
+      ws-webgl-cube:
+        title: "WebGL Fanart Cube"
+        description: "Rotating 3D cube with artist fanart on each face, falls back to cover art"
+        body_layout: webgl-cube-layout
+        display_js: webgl-cube

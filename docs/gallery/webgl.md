@@ -55,3 +55,25 @@ Fully transparent background — no panel. Soft blue particles drift upward over
 continuously, with a burst of larger faster particles on each track change. Artist and title
 are rendered directly over the stream with a drop shadow for legibility against any content.
 Uses Canvas 2D rather than WebGL for reliable alpha compositing in OBS browser sources.
+
+## ws-webgl-cube
+
+**Dimensions:** 800 × 200
+
+[![WebGL fanart cube overlay](images/webgl-cube.png)](images/webgl-cube.png)
+
+A rotating 3D cube rendered in WebGL, textured with artist fanart images. Face 0 always shows
+the current track's cover art; faces 1–5 are filled with fanart fetched live via the images
+WebSocket as they become available. The cube uses diffuse lighting against face normals for
+depth. If fewer than 6 fanart images are available, remaining faces fall back to cover art.
+Artist, title, and album are displayed in the text panel beside the cube.
+
+## ws-artistfanart-slideshow
+
+**Dimensions:** 1920 × 1080 (full-screen)
+
+Similar to the other artist fanart templates but instead of crossfading, images slide in from
+the right and out to the left on a CSS `translateX` transition every 8 seconds. Fetches up to
+20 fanart images live via the images WebSocket and cycles through them full-screen. Uses
+`background-size: contain` so no part of the fanart is cropped. Resets automatically when
+the artist changes.
