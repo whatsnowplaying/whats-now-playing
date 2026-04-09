@@ -3,14 +3,14 @@
 MusicBrainz client for nowplaying — thin re-export of wnpmb.
 """
 
-from wnpmb import (
+from nowplaying.vendor.wnpmb import (
     MusicBrainzClient,
     MusicBrainzError,
     NetworkError,
     RateLimitError,
     ResponseError,
 )
-from wnpmb.client._base import RetrySettings
+from nowplaying.vendor.wnpmb.client._base import RetrySettings
 
 __all__ = [
     "MusicBrainzClient",

@@ -9,14 +9,14 @@ import os
 import sys
 from typing import Any
 
-from wnpmb import (
+from nowplaying.vendor.wnpmb import (
     MusicBrainzClient,
     MusicBrainzError,
     WNPCacheAdapter,
     extract_artist_urls,
 )
-from wnpmb.client._base import RetrySettings
-from wnpmb.normalization import normalize
+from nowplaying.vendor.wnpmb.client._base import RetrySettings
+from nowplaying.vendor.wnpmb.normalization import normalize
 
 import nowplaying.apicache
 import nowplaying.bootstrap

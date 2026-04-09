@@ -213,6 +213,7 @@ NowPlaying*.zip
 nowplaying/version.py
 nowplaying/qtrc.py
 nowplaying/vendor/tinytag
+nowplaying/vendor/wnpmb
 fixed_wheel
 
 # Qt Creator user files

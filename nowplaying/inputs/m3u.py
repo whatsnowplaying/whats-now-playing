@@ -4,6 +4,7 @@
 import contextlib
 import logging
 import os
+import pathlib
 import re
 
 from PySide6.QtCore import QDir  # pylint: disable=no-name-in-module
@@ -95,7 +96,12 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
     def _verify_file(self, m3ufilename, filestring):
         found = None
         if b"netsearch://" in filestring or b"http://" in filestring or b"https://" in filestring:
-            logging.debug("Remote resource; skipping filename decode")
+            logging.debug("Remote resource; returning URL as-is")
+            for encoding in ["utf-8", "ascii", "cp1252", "utf-16"]:
+                try:
+                    return filestring.decode(encoding)
+                except UnicodeDecodeError:
+                    continue
             return None
         for encoding in ["utf-8", "ascii", "cp1252", "utf-16"]:
             try:
@@ -210,7 +216,10 @@ class Plugin(InputPlugin):  # pylint: disable=too-many-instance-attributes
 
         # just in case called without calling start...
         await self.start()
-        return self.metadata
+        metadata = dict(self.metadata)
+        if metadata.get("filename") and not pathlib.Path(metadata["filename"]).exists():
+            metadata["filename"] = None
+        return metadata
 
     async def getrandomtrack(self, playlist):
         """not supported"""

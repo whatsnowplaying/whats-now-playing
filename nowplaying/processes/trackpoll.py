@@ -417,6 +417,7 @@ class TrackPoll:  # pylint: disable=too-many-instance-attributes
             return
 
         # fill in the blanks and make it live
+        logging.debug("raw input metadata: %s", nextmeta)
         oldmeta = self.currentmeta
         fill_start_time = time.time()
         try:
