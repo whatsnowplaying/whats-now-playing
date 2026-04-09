@@ -19,6 +19,15 @@
     * Text template preview is now available from Twitch Bot, Kick Bot, and
       Text Output settings, also with "Use This Template" support
 
+* VirtualDJ
+  * Track metadata (genre, BPM, key, label, year, etc.) is now pulled from
+    the local library database for tracks that have been previously cataloged
+    by WNP, including streaming service tracks
+  * Key and BPM from the Scan element are now captured during cataloging when
+    not present in the track tags
+  * BPM is now correctly converted from VirtualDJ's internal seconds-per-beat
+    format to beats-per-minute
+
 * Bug Fixes
   * Guess Game menu item is now grayed out and auto-disabled when Twitch Bot
     is not configured, since guesses arrive exclusively via Twitch chat

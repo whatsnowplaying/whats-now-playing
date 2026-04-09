@@ -101,6 +101,7 @@ playing" information from various DJ software.
 - Use Python 3.10+ union syntax (`X | Y`) instead of `Union[X, Y]`
 - Use Python 3.10+ optional syntax (`X | None`) instead of `Optional[X]`
 - Use built-in generics (`dict`, `list`) instead of `typing.Dict`, `typing.List`
+- Use `pathlib.Path` for all file path operations instead of `os.path`
 
 **Import Style Guidelines:**
 

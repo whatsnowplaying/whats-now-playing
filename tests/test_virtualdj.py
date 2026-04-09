@@ -524,7 +524,7 @@ def test_sax_handler_expanded_metadata():
                     "Album": "Test Album",
                     "Genre": "Electronic",
                     "Year": "2023",
-                    "Bpm": "128",
+                    "Bpm": "0.458015",  # VDJ stores seconds-per-beat → 131.0 BPM
                     "Key": "Am",
                     "Label": "Test Records",
                     "TrackNumber": "5",
@@ -542,7 +542,7 @@ def test_sax_handler_expanded_metadata():
             assert row[3] == "/path/to/test.mp3"  # filename
             assert row[4] == "Electronic"  # genre
             assert row[5] == "2023"  # year
-            assert row[6] == "128"  # bpm
+            assert row[6] == "131.0"  # bpm (converted from seconds-per-beat)
             assert row[7] == "Am"  # key
             assert row[8] == "Test Records"  # label
             assert row[9] == "5"  # tracknumber
@@ -601,3 +601,161 @@ def test_sax_handler_partial_metadata():
         # Clean up temporary file
         if os.path.exists(temp_db_path):
             os.unlink(temp_db_path)
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("0.458015", "131.0"),  # seconds-per-beat → BPM
+        ("0.5", "120.0"),  # seconds-per-beat → BPM
+        ("10", "10.0"),  # boundary: exactly at BPM threshold
+        ("128.0", "128.0"),  # already BPM (old format)
+        ("133", "133.0"),  # already BPM (old format, no decimal)
+        (None, None),  # missing
+        ("0", None),  # zero
+        ("-1", None),  # negative
+        ("bad", None),  # non-numeric
+    ],
+)
+def test_convert_bpm(raw, expected):
+    """Test VirtualDJSAXHandler._convert_bpm handles both formats"""
+    result = nowplaying.inputs.virtualdj.VirtualDJSAXHandler._convert_bpm(raw)  # pylint: disable=protected-access
+    assert result == expected
+
+
+def test_sax_handler_scan_key_fallback():
+    """Test VirtualDJSAXHandler reads key from Scan element when Tags has none"""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_db = pathlib.Path(tmpdir) / "songs.db"
+        with nowplaying.utils.sqlite.sqlite_connection(tmp_db) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE songs (
+                    artist TEXT, title TEXT, album TEXT, filename TEXT,
+                    genre TEXT, year TEXT, bpm TEXT, key TEXT, label TEXT, tracknumber TEXT,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT
+                )
+            """)
+
+            handler = nowplaying.inputs.virtualdj.VirtualDJSAXHandler(cursor)
+
+            handler.startElement("Song", {"FilePath": "/path/to/track.mp3"})
+            handler.startElement("Tags", {"Author": "Prince", "Title": "Dance With The Devil"})
+            handler.startElement("Scan", {"Key": "Am", "Bpm": "0.729206"})
+            handler.endElement("Song")
+
+            cursor.execute("SELECT key, bpm FROM songs")
+            row = cursor.fetchone()
+
+            assert row[0] == "Am"
+            assert row[1] == "82.3"  # converted from 0.729206 seconds-per-beat
+
+
+def test_sax_handler_scan_does_not_override_tags_key():
+    """Test VirtualDJSAXHandler does not overwrite key from Tags with Scan value"""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_db = pathlib.Path(tmpdir) / "songs.db"
+        with nowplaying.utils.sqlite.sqlite_connection(tmp_db) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE songs (
+                    artist TEXT, title TEXT, album TEXT, filename TEXT,
+                    genre TEXT, year TEXT, bpm TEXT, key TEXT, label TEXT, tracknumber TEXT,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT
+                )
+            """)
+
+            handler = nowplaying.inputs.virtualdj.VirtualDJSAXHandler(cursor)
+
+            handler.startElement("Song", {"FilePath": "/path/to/track.mp3"})
+            handler.startElement("Tags", {"Author": "Artist", "Title": "Song", "Key": "Dm"})
+            handler.startElement("Scan", {"Key": "Am"})
+            handler.endElement("Song")
+
+            cursor.execute("SELECT key FROM songs")
+            row = cursor.fetchone()
+
+            assert row[0] == "Dm"
+
+
+@pytest.mark.asyncio
+async def test_getplayingtrack_enriches_from_songs_db(
+    virtualdj_bootstrap,  # pylint: disable=redefined-outer-name
+):
+    """getplayingtrack should enrich M3U metadata with songs DB data via filename lookup"""
+    config = virtualdj_bootstrap
+    myvirtualdjdir = config.cparser.value("virtualdj/history")
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_db = pathlib.Path(tmpdir) / "songs.db"
+        audio_file = pathlib.Path(tmpdir) / "test.mp3"
+        audio_file.touch()
+
+        plugin.songs_databasefile = tmp_db
+        with nowplaying.utils.sqlite.sqlite_connection(tmp_db) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "CREATE TABLE songs ("
+                "artist TEXT, title TEXT, album TEXT, filename TEXT, "
+                "genre TEXT, year TEXT, bpm TEXT, key TEXT, label TEXT, tracknumber TEXT, "
+                "id INTEGER PRIMARY KEY AUTOINCREMENT)"
+            )
+            cursor.execute(
+                "INSERT INTO songs (artist, title, album, filename, genre, bpm, key) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    "Test Artist",
+                    "Test Song",
+                    "Test Album",
+                    str(audio_file),
+                    "Electronic",
+                    "128",
+                    "Am",
+                ),
+            )
+
+        plugin.metadata = {
+            "artist": "Test Artist",
+            "title": "Test Song",
+            "filename": str(audio_file),
+        }
+        metadata = await plugin.getplayingtrack()
+
+        assert metadata.get("artist") == "Test Artist"
+        assert metadata.get("title") == "Test Song"
+        assert metadata.get("album") == "Test Album"
+        assert metadata.get("genre") == "Electronic"
+        assert metadata.get("bpm") == "128.0"
+        assert metadata.get("key") == "Am"
+        assert metadata.get("filename") == str(audio_file)
+
+
+@pytest.mark.asyncio
+async def test_getplayingtrack_no_db_match_returns_raw(
+    virtualdj_bootstrap,  # pylint: disable=redefined-outer-name
+):
+    """getplayingtrack falls back to raw M3U metadata when filename not in songs DB"""
+    config = virtualdj_bootstrap
+    myvirtualdjdir = config.cparser.value("virtualdj/history")
+    plugin = nowplaying.inputs.virtualdj.Plugin(config=config, m3udir=myvirtualdjdir)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_db = pathlib.Path(tmpdir) / "songs.db"
+
+        plugin.songs_databasefile = tmp_db
+        with nowplaying.utils.sqlite.sqlite_connection(tmp_db) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "CREATE TABLE songs ("
+                "artist TEXT, title TEXT, album TEXT, filename TEXT, "
+                "genre TEXT, year TEXT, bpm TEXT, key TEXT, label TEXT, tracknumber TEXT, "
+                "id INTEGER PRIMARY KEY AUTOINCREMENT)"
+            )
+
+        plugin.metadata = {"artist": "Unknown", "title": "Streaming Track", "filename": None}
+        metadata = await plugin.getplayingtrack()
+
+        assert metadata.get("artist") == "Unknown"
+        assert metadata.get("title") == "Streaming Track"
+        assert metadata.get("album") is None

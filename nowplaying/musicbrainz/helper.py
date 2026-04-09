@@ -9,14 +9,14 @@ import os
 import sys
 from typing import Any
 
-from wnpmb import (
+from nowplaying.vendor.wnpmb import (  # pylint: disable=no-name-in-module,import-error
     MusicBrainzClient,
     MusicBrainzError,
     WNPCacheAdapter,
     extract_artist_urls,
 )
-from wnpmb.client._base import RetrySettings
-from wnpmb.normalization import normalize
+from nowplaying.vendor.wnpmb.client._base import RetrySettings  # pylint: disable=no-name-in-module,import-error
+from nowplaying.vendor.wnpmb.normalization import normalize  # pylint: disable=no-name-in-module,import-error
 
 import nowplaying.apicache
 import nowplaying.bootstrap

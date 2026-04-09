@@ -59,6 +59,26 @@ class VirtualDJSAXHandler(xml.sax.ContentHandler):
         super().__init__()
         self.sqlcursor = sqlcursor
 
+    @staticmethod
+    def _convert_bpm(value: str | None) -> str | None:
+        """Convert VirtualDJ BPM value to beats-per-minute.
+
+        VirtualDJ stores BPM as seconds-per-beat (e.g. 0.458 = 131 BPM), but
+        older versions may have stored actual BPM values. Values >= 10 are
+        treated as already in BPM; values < 10 are converted from seconds-per-beat.
+        """
+        if not value:
+            return None
+        try:
+            raw = float(value)
+            if raw <= 0:
+                return None
+            if raw >= 10:
+                return str(round(raw, 1))
+            return str(round(60.0 / raw, 1))
+        except ValueError:
+            return None
+
     def startElement(self, name: str, attrs: dict[str, str]) -> None:
         if name == "Song":
             if filepath := attrs.get("FilePath", ""):
@@ -77,15 +97,22 @@ class VirtualDJSAXHandler(xml.sax.ContentHandler):
                 }
         elif name == "Tags" and hasattr(self, "current_entry"):
             # Extract metadata from Tags element
+            # VirtualDJ stores BPM as seconds-per-beat; convert to beats-per-minute
             self.current_entry["artist"] = attrs.get("Author")
             self.current_entry["title"] = attrs.get("Title")
             self.current_entry["album"] = attrs.get("Album")
             self.current_entry["genre"] = attrs.get("Genre")
             self.current_entry["year"] = attrs.get("Year")
-            self.current_entry["bpm"] = attrs.get("Bpm")
+            self.current_entry["bpm"] = self._convert_bpm(attrs.get("Bpm"))
             self.current_entry["key"] = attrs.get("Key")
             self.current_entry["label"] = attrs.get("Label")
             self.current_entry["tracknumber"] = attrs.get("TrackNumber")
+        elif name == "Scan" and hasattr(self, "current_entry"):
+            # Scan element holds analyzed key and bpm; use as fallback if Tags didn't provide them
+            if not self.current_entry.get("key"):
+                self.current_entry["key"] = attrs.get("Key")
+            if not self.current_entry.get("bpm"):
+                self.current_entry["bpm"] = self._convert_bpm(attrs.get("Bpm"))
 
     def endElement(self, name: str) -> None:
         if name == "Song" and hasattr(self, "current_entry"):
@@ -149,6 +176,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
             QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
         ).joinpath("virtualdj", "virtualdj-playlists.db")
         self.database = None
+        self.lastmetadata: dict[str, str | None] = {}
 
         # Add XML processor for songs table only (M3U handles playlists)
         def get_virtualdj_xml():
@@ -300,25 +328,38 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
             backup_db_path.unlink()
 
     async def lookup(
-        self, artist: str | None = None, title: str | None = None
-    ) -> dict[str, str] | None:
-        """lookup the metadata from songs table"""
+        self,
+        artist: str | None = None,
+        title: str | None = None,
+        filename: str | None = None,
+    ) -> dict[str, str | None] | None:
+        """lookup the metadata from songs table by filename, or artist+title as fallback"""
         async with aiosqlite.connect(self.songs_databasefile) as connection:
             connection.row_factory = sqlite3.Row
             cursor = await connection.cursor()
+            row = None
             try:
-                await cursor.execute(
-                    """SELECT * FROM songs WHERE artist=? AND title=? ORDER BY id DESC LIMIT 1""",
-                    (artist, title),
-                )
+                if filename:
+                    await cursor.execute(
+                        """SELECT * FROM songs WHERE filename=? ORDER BY id DESC LIMIT 1""",
+                        (filename,),
+                    )
+                    row = await cursor.fetchone()
+                if not row and artist and title:
+                    await cursor.execute(
+                        "SELECT * FROM songs WHERE artist=? AND title=? ORDER BY id DESC LIMIT 1",
+                        (artist, title),
+                    )
+                    row = await cursor.fetchone()
             except sqlite3.OperationalError:
                 return None
 
-            row = await cursor.fetchone()
             if not row:
                 return None
 
         metadata = {data: row[data] for data in METADATALIST}
+        if metadata.get("bpm"):
+            metadata["bpm"] = VirtualDJSAXHandler._convert_bpm(metadata["bpm"])  # pylint: disable=protected-access
         for key in LISTFIELDS:
             # Only process LISTFIELDS that actually exist in the row
             if key in row and row[key]:
@@ -489,7 +530,28 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
 
     async def getplayingtrack(self):
         """wrapper to call getplayingtrack"""
-        return self.metadata
+        icmetadata = self.metadata
+        if (
+            self.lastmetadata.get("filename") == icmetadata.get("filename")
+            and self.lastmetadata.get("artist") == icmetadata.get("artist")
+            and self.lastmetadata.get("title") == icmetadata.get("title")
+        ):
+            result = dict(self.lastmetadata)
+            if result.get("filename") and not pathlib.Path(result["filename"]).exists():
+                result["filename"] = None
+            return result
+
+        dbmeta = await self.lookup(
+            filename=icmetadata.get("filename"),
+            artist=icmetadata.get("artist"),
+            title=icmetadata.get("title"),
+        )
+        # Store raw filename in lastmetadata for future cache comparisons
+        self.lastmetadata = dbmeta if dbmeta else dict(icmetadata)
+        result = dict(self.lastmetadata)
+        if result.get("filename") and not pathlib.Path(result["filename"]).exists():
+            result["filename"] = None
+        return result
 
     async def getrandomtrack(self, playlist):
         """return the contents of a playlist"""
@@ -511,7 +573,7 @@ class Plugin(M3UPlugin):  # pylint: disable=too-many-instance-attributes,too-man
                 return None
             return row["filename"]
 
-    async def stop(self):
+    async def stop(self):  # pylint: disable=duplicate-code
         """stop the virtual dj plugin"""
         self._reset_meta()
         if self.observer:
