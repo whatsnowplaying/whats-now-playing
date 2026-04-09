@@ -608,6 +608,7 @@ def test_sax_handler_partial_metadata():
     [
         ("0.458015", "131.0"),  # seconds-per-beat → BPM
         ("0.5", "120.0"),  # seconds-per-beat → BPM
+        ("10", "10.0"),  # boundary: exactly at BPM threshold
         ("128.0", "128.0"),  # already BPM (old format)
         ("133", "133.0"),  # already BPM (old format, no decimal)
         (None, None),  # missing
