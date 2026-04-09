@@ -3292,36 +3292,40 @@ complete the <a href="../twitchbot/">TwitchBot setup</a> and save settings first
 <li><strong>Clear All Leaderboards</strong> button: Permanently deletes all user scores (session and all-time)</li>
 </ul>
 <h2 id="obs-integration">OBS Integration<a class="headerlink" href="#obs-integration" title="Permanent link">&para;</a></h2>
-<p>The Guess Game provides two OBS browser sources for displaying game information on your stream:</p>
+<p>The easiest way to add Guess Game sources to OBS is via <strong>Export for OBS</strong> in the system tray
+menu — it creates a scene collection with all three sources pre-configured. See
+<a href="../obs-export/">Export for OBS</a> for details.</p>
+<p>To add sources manually, use the URLs below.</p>
+<p>The Guess Game provides two sets of OBS browser sources. The WebGL versions use animated
+effects and require OBS Studio's built-in browser (CEF), which supports WebGL. The basic
+versions work everywhere.</p>
 <h3 id="game-display">Game Display<a class="headerlink" href="#game-display" title="Permanent link">&para;</a></h3>
 <p><a href="../images/guessgame_template.png"><img alt="Active guess game display" src="../images/guessgame_template.png" /></a></p>
 <p><a href="../images/guessgame_failed.png"><img alt="Failed guess game display" src="../images/guessgame_failed.png" /></a></p>
 <p>Shows the current game state with masked track and artist names, time remaining, guessed letters,
 and game status (Active, Solved, Timeout, Waiting).</p>
-<ol>
-<li>Add a <strong>Browser</strong> source in OBS</li>
-<li>Set URL to: <code>http://localhost:8899/guessgame/guessgame.htm</code></li>
-<li>Set dimensions: <code>640x600</code> (adjust height based on your typical track/artist name lengths;
-   longer names wrap to multiple lines)</li>
-<li>Customize the display by editing <code>templates/guessgame/guessgame.htm</code></li>
-</ol>
+<ul>
+<li><strong>WebGL</strong> (animated tiles, particle effects, shader background):
+  <code>http://localhost:8899/guessgame/guessgame-webgl.htm</code> — dimensions: <code>800x500</code></li>
+<li><strong>Basic</strong> (standard HTML/CSS):
+  <code>http://localhost:8899/guessgame/guessgame.htm</code> — dimensions: <code>640x600</code></li>
+</ul>
 <h3 id="leaderboard-display">Leaderboard Display<a class="headerlink" href="#leaderboard-display" title="Permanent link">&para;</a></h3>
 <p><a href="../images/guessgame_leaderboard.png"><img alt="All-time leaderboard display" src="../images/guessgame_leaderboard.png" /></a></p>
 <p>Shows rank, username, total score, and number of solves with gold/silver/bronze styling for the
-top 3. Both session and all-time leaderboards use the same template; the URL parameter controls
-which data is displayed.</p>
+top 3. The URL <code>?type=</code> parameter controls which data is displayed.</p>
 <h4 id="session-leaderboard">Session Leaderboard<a class="headerlink" href="#session-leaderboard" title="Permanent link">&para;</a></h4>
-<ol>
-<li>Add a <strong>Browser</strong> source in OBS</li>
-<li>Set URL to: <code>http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session</code></li>
-<li>Set dimensions: <code>560x500</code> (or adjust to your layout)</li>
-</ol>
+<ul>
+<li><strong>WebGL</strong>: <code>http://localhost:8899/guessgame/guessgame-leaderboard-webgl.htm?type=session</code></li>
+<li><strong>Basic</strong>: <code>http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=session</code></li>
+<li>Dimensions: <code>550x700</code></li>
+</ul>
 <h4 id="all-time-leaderboard">All-Time Leaderboard<a class="headerlink" href="#all-time-leaderboard" title="Permanent link">&para;</a></h4>
-<ol>
-<li>Add a <strong>Browser</strong> source in OBS</li>
-<li>Set URL to: <code>http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=all_time</code></li>
-<li>Set dimensions: <code>560x500</code> (or adjust to your layout)</li>
-</ol>
+<ul>
+<li><strong>WebGL</strong>: <code>http://localhost:8899/guessgame/guessgame-leaderboard-webgl.htm?type=all_time</code></li>
+<li><strong>Basic</strong>: <code>http://localhost:8899/guessgame/guessgame-leaderboard.htm?type=all_time</code></li>
+<li>Dimensions: <code>550x700</code></li>
+</ul>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <h3 id="game-flow">Game Flow<a class="headerlink" href="#game-flow" title="Permanent link">&para;</a></h3>
 <ol>
