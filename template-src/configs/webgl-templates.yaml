@@ -51,7 +51,8 @@ template_families:
     templates:
       ws-webgl-hologram:
         title: "WebGL Hologram"
-        description: "Cyberpunk scanline panel with glitch text reveal on track change"
+        description: "Cyberpunk scanline panel with glitch text reveal on track
+          change"
         body_layout: webgl-hologram-layout
         display_js: webgl-hologram
 
@@ -85,7 +86,8 @@ template_families:
     templates:
       ws-webgl-particles:
         title: "WebGL Particles"
-        description: "Floating particles over the stream with text overlay, no panel"
+        description: "Floating particles over the stream with text overlay, no
+          panel"
         body_layout: webgl-particles-layout
         display_js: webgl-particles
 
@@ -103,6 +105,7 @@ template_families:
     templates:
       ws-webgl-cube:
         title: "WebGL Fanart Cube"
-        description: "Rotating 3D cube with artist fanart on each face, falls back to cover art"
+        description: "Rotating 3D cube with artist fanart on each face,
+          falls back to cover art"
         body_layout: webgl-cube-layout
         display_js: webgl-cube

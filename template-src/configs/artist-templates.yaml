@@ -63,7 +63,8 @@ template_families:
 
   artist_fanart_slideshow:
     base: websocket-base
-    description: "Artist fanart slideshow cycling through multiple images with slide transition"
+    description: "Artist fanart slideshow cycling through multiple images
+      with slide transition"
     common_css:
       - obs-compatibility
       - fanart-slideshow
