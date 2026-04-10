@@ -195,16 +195,20 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
         self.webview.reload()
 
     def _on_load_finished(self, ok: bool) -> None:
-        """After page load, probe WebGL and show notice if unavailable."""
+        """After page load, probe WebGL availability if the template uses it.
+
+        Detects WebGL templates by checking whether WNPWebGL is defined in the
+        page's JS context — all WebGL overlay templates define it, non-WebGL
+        templates do not, so no name-based heuristic is needed.
+        """
         if not ok:
             return
-        name = self._current_template_name()
-        if "webgl" not in name.lower():
-            self.webgl_notice.setVisible(False)
-            return
         self.webview.page().runJavaScript(
-            "(function(){ var c=document.createElement('canvas');"
-            " return !!(c.getContext('webgl')||c.getContext('experimental-webgl')); })()",
+            "(function(){"
+            " if (typeof WNPWebGL === 'undefined') return true;"
+            " var c = document.createElement('canvas');"
+            " return !!(c.getContext('webgl') || c.getContext('experimental-webgl'));"
+            "})()",
             self._on_webgl_check_result,
         )
 
