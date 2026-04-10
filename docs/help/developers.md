@@ -6,7 +6,7 @@
 
 ## Requirements
 
-* Python 3.10–3.13 for your operating system (3.14+ is not yet supported)
+* Python 3.11+ for your operating system
 * A terminal / development shell
 * `git` installed and working
 
@@ -53,8 +53,29 @@ source venv/bin/activate        # Windows: venv\Scripts\activate
 pytest
 ```
 
-See [CLAUDE.md](https://github.com/whatsnowplaying/whats-now-playing/blob/main/CLAUDE.md)
-for more detail on the test suite layout and code quality tools.
+## Testing in a Virtual Machine
+
+When running WNP from source inside a VM (e.g. QEMU/KVM on Windows), the
+template preview window uses Qt WebEngine (Chromium), which blocklists GPU
+features when it detects a software or unrecognised display driver such as
+Microsoft Basic Render Driver. WebGL overlays will show a warning banner and
+animations will not render.
+
+To override the blocklist and enable software WebGL (ANGLE/WARP or SwiftShader),
+set this environment variable before launching:
+
+```bash
+# Linux / macOS host shell or Windows cmd
+set QTWEBENGINE_CHROMIUM_FLAGS=--ignore-gpu-blocklist   # Windows cmd
+export QTWEBENGINE_CHROMIUM_FLAGS=--ignore-gpu-blocklist  # bash
+```
+
+Then launch normally (`./wnppyi.py` or the executable). The animations will
+render in software — adequate for development and testing.
+
+> NOTE: This flag is intentionally not set by default in WNP itself, because
+> bypassing the blocklist on a genuinely broken driver can cause crashes.
+> Set it only in development environments where you control the setup.
 
 ## Build Executable
 

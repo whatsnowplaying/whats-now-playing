@@ -7,6 +7,7 @@ repo_name: whatsnowplaying/whats-now-playing
 
 theme:
   name: material
+  custom_dir: overrides
   palette:
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"

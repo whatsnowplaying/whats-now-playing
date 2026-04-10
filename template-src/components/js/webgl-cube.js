@@ -5,7 +5,11 @@
 (function () {
     const canvas = document.getElementById('cubeCanvas');
     const gl = canvas.getContext('webgl', { alpha: false });
-    if (!gl) { console.error('WebGL not available'); return; }
+    if (!gl) {
+        console.error('WebGL not available');
+        window.updateDisplay = function () {};
+        return;
+    }
 
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
