@@ -11,7 +11,7 @@ httpx==0.28.1
 jinja2==3.1.6
 lxml==6.0.2
 netifaces-plus==0.12.5
-nltk==3.9.3
+nltk==3.9.4
 pillow==12.2.0
 pillow_avif_plugin==1.5.5
 psutil==7.2.2
