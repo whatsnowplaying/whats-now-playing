@@ -152,7 +152,7 @@ Viewers can request tracks directly from Twitch chat:
 * Supports searching the full library or specific crates/playlists
 * Channel point redemption support
 * Moderation queue with approve/reject controls
-* Animated GIF/meme responses via Klipy or Tenor
+* Animated GIF/meme responses via Klipy
 
 ## Metadata Processing
 

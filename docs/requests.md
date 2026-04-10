@@ -159,21 +159,16 @@ GIF image. The GIF can then be displayed on stream via OBS or other streaming so
 
 ### Configuring API Keys
 
-To enable Gifwords requests, you need an API key from either Klipy (recommended) or Tenor:
+To enable Gifwords requests, you need a Klipy API key:
 
-- **Klipy** (Recommended): <https://klipy.com/docs> - Free API that replaces the legacy Tenor service
-- **Tenor**: <https://developers.google.com/tenor> - Legacy support (being discontinued by Google)
-
-If both API keys are configured, **What's Now Playing** will prefer Klipy over Tenor.
+- **Klipy**: <https://klipy.com/docs> - Free API
 
 ### Setup Instructions
 
-1. Obtain an API key from Klipy or Tenor (see links above)
+1. Obtain an API key from Klipy (see link above)
 2. Open Settings from the **What's Now Playing** icon
 3. Select **Requests** from the **Streaming & Chat** section
-4. Enter your API key:
-   - For Klipy: paste into the "Klipy API Key" field
-   - For Tenor: paste into the "Tenor API Key" field
+4. Paste your API key into the "Klipy API Key" field
 5. Configure a request entry (chat command or channel redemption) with Gifwords mode
 6. Users submit keywords via the configured command or redemption
 7. The GIF is fetched and stored in the requests queue

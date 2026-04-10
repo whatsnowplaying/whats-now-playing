@@ -29,6 +29,7 @@ IGNORE_KEYS = [
     "db/",
     "artistextras/cachedbfile",
     # Legacy keys no longer written by any current code; strip them from configs on export/import.
+    "gifwords/tenorkey",
     "icecast/traktor-collections",
     "remote/remotedb",
     "serato/seratodir",

@@ -37,11 +37,26 @@
       8 seconds, resets on artist change
     * `ws-frosted-glass` — CSS `backdrop-filter` frosted glass lower-third
       that blurs actual stream content behind the panel, 800×150
-  * Template preview improvements
-    * Web preview window now has a "Use This Template" button that applies the
+  * Template preview
+    * Web preview window has a "Use This Template" button that applies the
       selected template back to the settings field that launched the preview
-    * Text template preview is now available from Twitch Bot, Kick Bot, and
-      Text Output settings, also with "Use This Template" support
+    * Template preview is available from Twitch Bot, Kick Bot, and Text Output
+      settings in addition to the main webserver output setting
+
+* Removed
+  * Tenor GIF support has been removed; use Klipy instead
+
+* Bug Fixes
+  * BPM and key are now read correctly from M4A files that store the same
+    field more than once
+  * Guess Game menu item is now grayed out and auto-disabled when Twitch Bot
+    is not configured, since guesses arrive exclusively via Twitch chat
+  * Filenames using an en dash separator (e.g. `Artist – Title.mp4`) are now
+    correctly split into artist and title when track tags are absent
+  * Kick and Twitch authentication failed if the webserver port wasn't 8899
+  * Remote Output + Charts: when both the sending and receiving WNP instances
+    have Charts enabled, tracks were submitted to the charts server twice.
+    The sender now signals to the receiver to skip charts submission.
 
 * VirtualDJ
   * Track metadata (genre, BPM, key, label, year, etc.) is now pulled from
@@ -52,31 +67,15 @@
   * BPM is now correctly converted from VirtualDJ's internal seconds-per-beat
     format to beats-per-minute
 
-* Bug Fixes
-  * Guess Game menu item is now grayed out and auto-disabled when Twitch Bot
-    is not configured, since guesses arrive exclusively via Twitch chat
-  * Filenames using an en dash separator (e.g. `Artist – Title.mp4`) are now
-    correctly split into artist and title when track tags are absent
-  * Kick and Twitch authentication failed if the webserver port wasn't 8899
-  * Remote Output + Charts: when both the sending and receiving WNP instances
-    have Charts enabled, tracks were submitted to the charts server twice.
-    The sender now signals to the receiver to skip charts submission.
-
 * Developer Stuff
   * Dependency updates
   * **Python 3.10 is no longer supported**; minimum version is now Python 3.11
   * Replace vendored musicbrainzngs library with wnpmb package, removing ~3,500
     lines of XML-based MusicBrainz client code in favour of a JSON/httpx async
     client with improved release selection accuracy
-  * WebGL template refactoring
-    * Extracted shared `WNPWebGL` helper namespace (`webgl-helpers.js`) with
-      `compileProgram()` and `fullscreenQuad()` utilities used by all WebGL
-      templates; eliminates ~18 lines of duplicated boilerplate per template
-    * Extracted common Guess Game WebGL background shader to
-      `guessgame-webgl-bg.js`, shared by both the game board and leaderboard
-      overlays
-    * Fixed `webgl-base.jinja2` Jinja2 default arrays (was passing string
-      `'[]'` to `tojson` instead of actual empty list `[]`)
+  * Extracted common Guess Game WebGL background shader to
+    `guessgame-webgl-bg.js`, shared by both the game board and leaderboard
+    overlays
 
 ## Version 5.1.0 - 2026-03-26
 
