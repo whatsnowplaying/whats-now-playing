@@ -22,7 +22,8 @@ MPRIS2-compatible players (Linux)
 
 ## Download
 
-[Get the latest release](https://github.com/whatsnowplaying/whats-now-playing/releases) for Windows 10+ or macOS 11+.
+[Get the latest release](https://github.com/whatsnowplaying/whats-now-playing/releases)
+in binary or source forms.
 
 ## Quick Links
 
