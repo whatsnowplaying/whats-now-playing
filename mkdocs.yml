@@ -7,6 +7,7 @@ repo_name: whatsnowplaying/whats-now-playing
 
 theme:
   name: material
+  custom_dir: overrides
   palette:
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
@@ -121,6 +122,7 @@ nav:
       - Overview: extras/index.md
       - Discogs: extras/discogs.md
       - FanArt.TV: extras/fanarttv.md
+      - Last.fm: extras/lastfm.md
       - TheAudioDB: extras/theaudiodb.md
       - Wikimedia: extras/wikimedia.md
   - System:
@@ -141,6 +143,7 @@ nav:
   - Gallery:
       - Overview: gallery/index.md
       - Webserver Templates: gallery/webserver.md
+      - WebGL Templates: gallery/webgl.md
       - OBS WebSocket: gallery/obswebsocket.md
       - Unicode Support: gallery/unicode.md
   - Developers: help/developers.md

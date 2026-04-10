@@ -10,6 +10,7 @@ from PySide6.QtWebEngineCore import QWebEngineSettings  # pylint: disable=no-nam
 from PySide6.QtWebEngineWidgets import QWebEngineView  # pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (  # pylint: disable=no-name-in-module
     QComboBox,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -102,11 +103,30 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
 
         layout.addLayout(toolbar)
 
+        # ---- WebGL notice (hidden until needed) ----
+        self.webgl_notice = QFrame()
+        self.webgl_notice.setStyleSheet(
+            "QFrame { background: #7a4f00; border-radius: 4px; padding: 2px; }"
+        )
+        notice_layout = QHBoxLayout(self.webgl_notice)
+        notice_layout.setContentsMargins(8, 4, 8, 4)
+        notice_label = QLabel(
+            "WebGL is not available in this environment \u2014 "
+            "the animation will not render. "
+            "The text overlay will still work in OBS if the viewer's GPU supports WebGL."
+        )
+        notice_label.setStyleSheet("color: #ffe0a0;")
+        notice_label.setWordWrap(True)
+        notice_layout.addWidget(notice_label)
+        self.webgl_notice.setVisible(False)
+        layout.addWidget(self.webgl_notice)
+
         # ---- browser ----
         self.webview = QWebEngineView()
         settings = self.webview.settings()
         settings.setAttribute(QWebEngineSettings.WebAttribute.WebGLEnabled, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.Accelerated2dCanvasEnabled, True)
+        self.webview.loadFinished.connect(self._on_load_finished)  # type: ignore[attr-defined]
         self._apply_bg(0)
         layout.addWidget(self.webview)
 
@@ -173,6 +193,27 @@ class WebPreviewWindow(QWidget):  # pylint: disable=too-few-public-methods
     def _on_bg_selected(self, index: int) -> None:
         self._apply_bg(index)
         self.webview.reload()
+
+    def _on_load_finished(self, ok: bool) -> None:
+        """After page load, probe WebGL availability if the template uses it.
+
+        Detects WebGL templates by checking whether WNPWebGL is defined in the
+        page's JS context — all WebGL overlay templates define it, non-WebGL
+        templates do not, so no name-based heuristic is needed.
+        """
+        if not ok:
+            return
+        self.webview.page().runJavaScript(
+            "(function(){"
+            " if (typeof WNPWebGL === 'undefined') return true;"
+            " var c = document.createElement('canvas');"
+            " return !!(c.getContext('webgl') || c.getContext('experimental-webgl'));"
+            "})()",
+            self._on_webgl_check_result,
+        )
+
+    def _on_webgl_check_result(self, has_webgl: bool) -> None:
+        self.webgl_notice.setVisible(not has_webgl)
 
     def _reload(self) -> None:
         self.webview.reload()

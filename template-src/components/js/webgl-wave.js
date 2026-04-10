@@ -7,6 +7,7 @@
 
     if (!gl) {
         console.error('WebGL not available');
+        window.updateDisplay = function () {};
         return;
     }
 

@@ -7,6 +7,7 @@
 
     if (!ctx) {
         console.error('Canvas 2D not available');
+        window.updateDisplay = function () {};
         return;
     }
 
