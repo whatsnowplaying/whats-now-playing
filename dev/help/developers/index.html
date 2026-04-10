@@ -59,6 +59,9 @@
 
     
     
+
+<link rel="alternate" type="text/plain" href="https://whatsnowplaying.com/llms.txt" />
+
   </head>
   
   
@@ -1705,6 +1708,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../extras/lastfm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Last.fm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../extras/theaudiodb/" class="md-nav__link">
         
   
@@ -2369,6 +2400,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../gallery/webgl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WebGL Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../gallery/obswebsocket/" class="md-nav__link">
         
   
@@ -2536,6 +2595,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#testing-in-a-virtual-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing in a Virtual Machine
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#build-executable" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2634,7 +2704,7 @@ a correct executable when built with PyInstaller.</p>
 </blockquote>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Python 3.10–3.13 for your operating system (3.14+ is not yet supported)</li>
+<li>Python 3.11+ for your operating system</li>
 <li>A terminal / development shell</li>
 <li><code>git</code> installed and working</li>
 </ul>
@@ -2664,8 +2734,25 @@ without recreating the venv from scratch.</p>
 <h2 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>pytest
 </code></pre></div>
-<p>See <a href="https://github.com/whatsnowplaying/whats-now-playing/blob/main/CLAUDE.md">CLAUDE.md</a>
-for more detail on the test suite layout and code quality tools.</p>
+<h2 id="testing-in-a-virtual-machine">Testing in a Virtual Machine<a class="headerlink" href="#testing-in-a-virtual-machine" title="Permanent link">&para;</a></h2>
+<p>When running WNP from source inside a VM (e.g. QEMU/KVM on Windows), the
+template preview window uses Qt WebEngine (Chromium), which blocklists GPU
+features when it detects a software or unrecognised display driver such as
+Microsoft Basic Render Driver. WebGL overlays will show a warning banner and
+animations will not render.</p>
+<p>To override the blocklist and enable software WebGL (ANGLE/WARP or SwiftShader),
+set this environment variable before launching:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Linux / macOS host shell or Windows cmd</span>
+<span class="nb">set</span><span class="w"> </span><span class="nv">QTWEBENGINE_CHROMIUM_FLAGS</span><span class="o">=</span>--ignore-gpu-blocklist<span class="w">   </span><span class="c1"># Windows cmd</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">QTWEBENGINE_CHROMIUM_FLAGS</span><span class="o">=</span>--ignore-gpu-blocklist<span class="w">  </span><span class="c1"># bash</span>
+</code></pre></div>
+<p>Then launch normally (<code>./wnppyi.py</code> or the executable). The animations will
+render in software — adequate for development and testing.</p>
+<blockquote>
+<p>NOTE: This flag is intentionally not set by default in WNP itself, because
+bypassing the blocklist on a genuinely broken driver can cause crashes.
+Set it only in development environments where you control the setup.</p>
+</blockquote>
 <h2 id="build-executable">Build Executable<a class="headerlink" href="#build-executable" title="Permanent link">&para;</a></h2>
 <p>To build a stand-alone executable:</p>
 <div class="highlight"><pre><span></span><code>./builder.sh<span class="w">           </span><span class="c1"># auto-detects platform (macOS or Windows)</span>
