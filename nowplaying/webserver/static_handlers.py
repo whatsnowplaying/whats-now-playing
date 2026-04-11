@@ -148,7 +148,8 @@ class StaticContentHandler:
                         config.getbundledir()
                     )
                 else:
-                    metadata = nowplaying.hostmeta.gethostmeta()
+                    metadata = {}
+            metadata.update(nowplaying.hostmeta.gethostmeta())
             metadata["httpport"] = config.cparser.value("weboutput/httpport", type=int)
 
             # Add session ID to metadata for template use

@@ -6,6 +6,11 @@ import pathlib
 import nowplaying.preview.imagedata
 from nowplaying.types import TrackMetadata
 
+# NOTE: "Sample Artist" is a sentinel value tied to preview behaviour in
+# nowplaying/webserver/images_websocket.py — when that artist name is seen on
+# a fanart request, the server returns pre-generated images from resources/preview/
+# instead of looking in the image cache.  If you change this name, update
+# _handle_artist_images in images_websocket.py to match.
 _BASE_METADATA: TrackMetadata = {
     "artist": "Sample Artist",
     "title": "Sample Track Title",

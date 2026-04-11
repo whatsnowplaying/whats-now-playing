@@ -16,132 +16,107 @@
   <property name="displayName" stdset="0">
    <string>Real-time Setlist</string>
   </property>
-  
-  <widget class="QCheckBox" name="enable_checkbox">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>200</width>
-     <height>20</height>
-    </rect>
+  <layout class="QVBoxLayout" name="main_layout">
+   <property name="margin">
+    <number>10</number>
    </property>
-   <property name="text">
-    <string>Enable Real-time Setlist</string>
+   <property name="spacing">
+    <number>10</number>
    </property>
-  </widget>
-
-  <widget class="QLabel" name="template_label">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>45</y>
-     <width>111</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Template File</string>
-   </property>
-  </widget>
-  
-  <widget class="QPushButton" name="template_button">
-   <property name="geometry">
-    <rect>
-     <x>140</x>
-     <y>42</y>
-     <width>161</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Browse for File ...</string>
-   </property>
-  </widget>
-  
-  <widget class="QLineEdit" name="template_lineedit">
-   <property name="geometry">
-    <rect>
-     <x>310</x>
-     <y>42</y>
-     <width>311</width>
-     <height>25</height>
-    </rect>
-   </property>
-  </widget>
-
-  <widget class="QLabel" name="filepattern_label">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>85</y>
-     <width>111</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>File Pattern</string>
-   </property>
-  </widget>
-  
-  <widget class="QLineEdit" name="filepattern_lineedit">
-   <property name="geometry">
-    <rect>
-     <x>140</x>
-     <y>82</y>
-     <width>481</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Filename pattern using strftime format. Examples: setlist-%Y%m%d.txt, show-%Y%m%d-%H%M%S.txt</string>
-   </property>
-  </widget>
-
-  <widget class="QLabel" name="help_label">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>120</y>
-     <width>611</width>
-     <height>80</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>**File Pattern Help:**
-%Y = 4-digit year, %m = month, %d = day, %H = hour, %M = minute, %S = second
-Examples: setlist-%Y%m%d.txt → setlist-20231215.txt
-          show-%Y%m%d-%H%M%S.txt → show-20231215-143022.txt
-
-Files are saved to the WhatsNowPlaying/setlists directory.</string>
-   </property>
-   <property name="textFormat">
-    <enum>Qt::MarkdownText</enum>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-  </widget>
-
-  <widget class="QLabel" name="description_label">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>220</y>
-     <width>611</width>
-     <height>60</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Real-time setlist appends each track to a file as it plays, using your custom template.
-This creates a live setlist during your session, unlike the traditional setlist which is 
-generated only at the end. Perfect for streaming or live events where you want real-time updates.</string>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-  </widget>
-
+   <item>
+    <widget class="QCheckBox" name="enable_checkbox">
+     <property name="text">
+      <string>Enable Real-time Setlist</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="template_layout">
+     <item>
+      <widget class="QLabel" name="template_label">
+       <property name="text">
+        <string>Template File</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="template_button">
+       <property name="text">
+        <string>Browse for File ...</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="template_lineedit"/>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="filepattern_layout">
+     <item>
+      <widget class="QLabel" name="filepattern_label">
+       <property name="text">
+        <string>File Pattern</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="filepattern_lineedit">
+       <property name="toolTip">
+        <string>Filename pattern using strftime format. Examples: setlist-%Y%m%d.txt, show-%Y%m%d-%H%M%S.txt</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTextBrowser" name="help_label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+&lt;p&gt;&lt;span style=&quot;font-weight:600;&quot;&gt;File Pattern Help&lt;/span&gt; — uses strftime format codes:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;%Y = 4-digit year&lt;/li&gt;
+&lt;li&gt;%m = month (01–12)&lt;/li&gt;
+&lt;li&gt;%d = day (01–31)&lt;/li&gt;
+&lt;li&gt;%H = hour (00–23)&lt;/li&gt;
+&lt;li&gt;%M = minute (00–59)&lt;/li&gt;
+&lt;li&gt;%S = second (00–59)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;span style=&quot;font-weight:600;&quot;&gt;Examples:&lt;/span&gt; setlist-%Y%m%d.txt → setlist-20231215.txt&lt;br/&gt;show-%Y%m%d-%H%M%S.txt → show-20231215-143022.txt&lt;/p&gt;
+&lt;p&gt;Files are saved to the &lt;span style=&quot;font-weight:600;&quot;&gt;WhatsNowPlaying/setlists&lt;/span&gt; directory.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTextBrowser" name="description_label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+&lt;p&gt;Real-time setlist appends each track to a file as it plays, using your custom template.&lt;/p&gt;
+&lt;p&gt;Unlike the traditional setlist (generated at the end of a session), this creates a live setlist during your session. Perfect for streaming or live events where you want real-time updates.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>

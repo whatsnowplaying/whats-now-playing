@@ -1528,8 +1528,8 @@ def load_widget_ui(config, name):
     if not tab_files_raw:
         return None
 
-    tab_widget = QTabWidget()
     loader = QUiLoader()
+    loaded_tabs: list[tuple[int, str, QWidget]] = []
     for filepath in tab_files_raw:
         ui_file = QFile(filepath)
         ui_file.open(QFile.ReadOnly)
@@ -1539,9 +1539,14 @@ def load_widget_ui(config, name):
                     tab_content.windowTitle()
                     or pathlib.Path(filepath).stem.replace("_", " ").title()
                 )
-                tab_widget.addTab(tab_content, display_name)
+                tab_order = tab_content.property("tabOrder")
+                sort_key = int(tab_order) if tab_order is not None else 9999
+                loaded_tabs.append((sort_key, display_name, tab_content))
         except RuntimeError as error:
             logging.warning("Unable to load tab UI file %s for %s: %s", filepath, name, error)
         finally:
             ui_file.close()
+    tab_widget = QTabWidget()
+    for _, display_name, tab_content in sorted(loaded_tabs, key=lambda t: t[0]):
+        tab_widget.addTab(tab_content, display_name)
     return tab_widget if tab_widget.count() > 0 else None

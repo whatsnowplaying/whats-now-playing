@@ -16,170 +16,140 @@
   <property name="displayName" stdset="0">
    <string>Kick</string>
   </property>
-  <widget class="QWidget" name="formLayoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>40</y>
-     <width>624</width>
-     <height>191</height>
-    </rect>
+  <layout class="QVBoxLayout" name="main_layout">
+   <property name="margin">
+    <number>10</number>
    </property>
-   <layout class="QFormLayout" name="settings_layout">
-    <property name="fieldGrowthPolicy">
-     <enum>QFormLayout::ExpandingFieldsGrow</enum>
-    </property>
-    <item row="0" column="0">
-     <widget class="QLabel" name="channel_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Channel</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="QLineEdit" name="channel_lineedit">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>496</width>
-        <height>0</height>
-       </size>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0">
-     <widget class="QLabel" name="clientid_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Client ID</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QLineEdit" name="clientid_lineedit">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>496</width>
-        <height>0</height>
-       </size>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QLabel" name="secret_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Client Secret</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="QLineEdit" name="secret_lineedit">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>496</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="echoMode">
-       <enum>QLineEdit::Password</enum>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="0">
-     <widget class="QLabel" name="redirecturi_text_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Redirect URI</string>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="1">
-     <widget class="QLabel" name="redirecturi_label">
-      <property name="minimumSize">
-       <size>
-        <width>496</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="text">
-       <string>http://localhost:8899/kickredirect</string>
-      </property>
-     </widget>
-    </item>
-    <item row="4" column="0">
-     <widget class="QLabel" name="oauth_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>OAuth Status</string>
-      </property>
-     </widget>
-    </item>
-    <item row="4" column="1">
-     <widget class="QLabel" name="oauth_status_label">
-      <property name="text">
-       <string>Not authenticated</string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::PlainText</enum>
-      </property>
-     </widget>
-    </item>
-    <item row="5" column="1">
-     <widget class="QPushButton" name="authenticate_button">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Authenticate with Kick</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QCheckBox" name="enable_checkbox">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>141</width>
-     <height>23</height>
-    </rect>
+   <property name="spacing">
+    <number>10</number>
    </property>
-   <property name="text">
-    <string>Enable Kick</string>
-   </property>
-  </widget>
-  <widget class="QTextBrowser" name="help_text">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>240</y>
-     <width>621</width>
-     <height>241</height>
-    </rect>
-   </property>
-   <property name="html">
-    <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+   <item>
+    <widget class="QCheckBox" name="enable_checkbox">
+     <property name="text">
+      <string>Enable Kick</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="settings_form_widget" native="true">
+     <layout class="QFormLayout" name="settings_layout">
+      <property name="fieldGrowthPolicy">
+       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+      </property>
+      <item row="0" column="0">
+       <widget class="QLabel" name="channel_label">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Channel</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="channel_lineedit">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="clientid_label">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Client ID</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="clientid_lineedit">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="secret_label">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Client Secret</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="secret_lineedit">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="echoMode">
+         <enum>QLineEdit::Password</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="redirecturi_text_label">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Redirect URI</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLabel" name="redirecturi_label">
+        <property name="text">
+         <string>http://localhost:8899/kickredirect</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="oauth_label">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>OAuth Status</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLabel" name="oauth_status_label">
+        <property name="text">
+         <string>Not authenticated</string>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::PlainText</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QPushButton" name="authenticate_button">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Authenticate with Kick</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTextBrowser" name="help_text">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 hr { height: 1px; border-width: 0; }
@@ -193,8 +163,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
 &lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;4. Enter your channel name (username where you want to monitor/send messages)&lt;/p&gt;
 &lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;5. Click &lt;span style=&quot;font-weight: 700&quot;&gt;Authenticate with Kick&lt;/span&gt; to complete OAuth2 setup&lt;/p&gt;
 &lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;The webserver must be enabled for OAuth2 authentication to work.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-  </widget>
+     </property>
+    </widget>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections>
@@ -203,160 +175,60 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <signal>toggled(bool)</signal>
    <receiver>channel_label</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>37</x>
-     <y>66</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>channel_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>356</x>
-     <y>66</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>clientid_label</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>38</x>
-     <y>97</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>clientid_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>356</x>
-     <y>97</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>secret_label</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>29</x>
-     <y>128</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>secret_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>356</x>
-     <y>128</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>redirecturi_text_label</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>47</x>
-     <y>159</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>redirecturi_label</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>325</x>
-     <y>159</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>oauth_label</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>43</x>
-     <y>190</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>authenticate_button</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>356</x>
-     <y>221</y>
-    </hint>
-   </hints>
   </connection>
  </connections>
 </ui>

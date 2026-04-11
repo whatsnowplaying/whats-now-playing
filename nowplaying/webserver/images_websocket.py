@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import aiohttp
 from aiohttp import web
 
+import nowplaying.preview.imagedata
 import nowplaying.utils
 import nowplaying.version  # pylint: disable=no-name-in-module, import-error
 
@@ -187,6 +188,26 @@ class ImagesWebSocketHandler:  # pylint: disable=too-few-public-methods
             return
 
         try:
+            # Preview mode: "Sample Artist" is the sentinel used in sampledata.py.
+            # Serve one of the pre-generated fanart variants at random so the
+            # slideshow has enough distinct images to cycle through.
+            if artist == "Sample Artist" and category == "fanart":
+                config = request.app[self.config_key]
+                variants = nowplaying.preview.imagedata.load_sample_fanart_variants(
+                    config.getbundledir()
+                )
+                image_data = secrets.choice(variants)
+                image_b64 = base64.b64encode(image_data).decode("utf-8")
+                await self._send_json_response(
+                    websocket,
+                    "image_data",
+                    data_type="artist",
+                    category=category,
+                    artist=artist,
+                    image_data=image_b64,
+                )
+                return
+
             imagecache = request.app[self.ic_key]
             normalized_artist = self._get_normalized_artist(artist)
 
