@@ -82,7 +82,7 @@ render in software — adequate for development and testing.
 The template preview window works for most templates using sample data, but
 some templates depend on live data sources that cannot be simulated:
 
-* **Fanart slideshow** (`ws-artistfanart-slideshow`) — works in preview;
+* **Fanart slideshow** (`ws-artistfanart-slideshow`) — works in preview and
   serves six pre-generated sample images in rotation via the images WebSocket.
 * **Gifwords** (`ws-gifwords-fade`) — does not work in preview. Gifwords are
   driven by live track requests that include GIF image data; there is no
