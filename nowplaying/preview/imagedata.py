@@ -40,3 +40,17 @@ def load_sample_images(bundledir: pathlib.Path | None) -> dict[str, bytes]:
         "artistlogoraw": _load(resource_dir, "sample_artistlogo.png"),
         "artistfanartraw": _load(resource_dir, "sample_artistfanart.png"),
     }
+
+
+# Number of fanart variants available for slideshow preview.
+# images_websocket.py detects artist == "Sample Artist" and serves these
+# at random so the slideshow has enough distinct images to cycle through.
+FANART_VARIANT_COUNT = 6
+
+
+def load_sample_fanart_variants(bundledir: pathlib.Path | None) -> list[bytes]:
+    """Load the fanart slideshow variants for preview mode."""
+    resource_dir = _resource_dir(bundledir)
+    return [
+        _load(resource_dir, f"sample_artistfanart_{i}.png") for i in range(FANART_VARIANT_COUNT)
+    ]

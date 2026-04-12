@@ -13,97 +13,91 @@
   <property name="windowTitle">
    <string>Commands</string>
   </property>
-  <widget class="QWidget" name="verticalLayoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>621</width>
-     <height>350</height>
-    </rect>
+  <property name="tabOrder" stdset="0">
+   <number>3</number>
+  </property>
+  <layout class="QVBoxLayout" name="full_table_layout">
+   <property name="margin">
+    <number>10</number>
    </property>
-   <layout class="QVBoxLayout" name="full_table_layout">
-    <item>
-     <widget class="QTableWidget" name="request_table">
-      <property name="alternatingRowColors">
-       <bool>true</bool>
+   <item>
+    <widget class="QTableWidget" name="request_table">
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <column>
+      <property name="text">
+       <string>Chat Command</string>
       </property>
-      <property name="selectionBehavior">
-       <enum>QAbstractItemView::SelectRows</enum>
+      <property name="textAlignment">
+       <set>AlignLeading|AlignVCenter</set>
       </property>
-      <column>
+     </column>
+     <column>
+      <property name="text">
+       <string>Redemption Text</string>
+      </property>
+      <property name="textAlignment">
+       <set>AlignLeading|AlignVCenter</set>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Mode</string>
+      </property>
+      <property name="textAlignment">
+       <set>AlignLeading|AlignVCenter</set>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Display Name</string>
+      </property>
+      <property name="textAlignment">
+       <set>AlignLeading|AlignVCenter</set>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Playlist File</string>
+      </property>
+      <property name="textAlignment">
+       <set>AlignLeading|AlignVCenter</set>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="button_layout">
+     <item>
+      <widget class="QPushButton" name="add_button">
        <property name="text">
-        <string>Chat Command</string>
+        <string>Add Entry</string>
        </property>
-       <property name="textAlignment">
-        <set>AlignLeading|AlignVCenter</set>
-       </property>
-      </column>
-      <column>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="del_button">
        <property name="text">
-        <string>Redemption Text</string>
+        <string>Delete Entry</string>
        </property>
-       <property name="textAlignment">
-        <set>AlignLeading|AlignVCenter</set>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Mode</string>
-       </property>
-       <property name="textAlignment">
-        <set>AlignLeading|AlignVCenter</set>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Display Name</string>
-       </property>
-       <property name="textAlignment">
-        <set>AlignLeading|AlignVCenter</set>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Playlist File</string>
-       </property>
-       <property name="textAlignment">
-        <set>AlignLeading|AlignVCenter</set>
-       </property>
-      </column>
-     </widget>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="button_layout">
-      <item>
-       <widget class="QPushButton" name="add_button">
-        <property name="text">
-         <string>Add Entry</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="del_button">
-        <property name="text">
-         <string>Delete Entry</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QTextBrowser" name="commands_infobox">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>370</y>
-     <width>621</width>
-     <height>100</height>
-    </rect>
-   </property>
-   <property name="html">
-    <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTextBrowser" name="commands_infobox">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 hr { height: 1px; border-width: 0; }
@@ -115,8 +109,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
 &lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;• &lt;span style=&quot;font-weight: 600&quot;&gt;Roulette mode&lt;/span&gt; requires a supported playlist • &lt;span style=&quot;font-weight: 600&quot;&gt;ArtistQuery mode&lt;/span&gt; checks if DJ has tracks by the specified artist&lt;/p&gt;
 &lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;• &lt;span style=&quot;font-weight: 600&quot;&gt;Generic mode&lt;/span&gt; supports flexible user input • &lt;span style=&quot;font-weight: 600&quot;&gt;GifWords mode&lt;/span&gt; displays animated text overlays&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-  </widget>
+     </property>
+    </widget>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>

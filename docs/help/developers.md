@@ -77,6 +77,17 @@ render in software — adequate for development and testing.
 > bypassing the blocklist on a genuinely broken driver can cause crashes.
 > Set it only in development environments where you control the setup.
 
+## Template Preview Limitations
+
+The template preview window works for most templates using sample data, but
+some templates depend on live data sources that cannot be simulated:
+
+* **Fanart slideshow** (`ws-artistfanart-slideshow`) — works in preview and
+  serves six pre-generated sample images in rotation via the images WebSocket.
+* **Gifwords** (`ws-gifwords-fade`) — does not work in preview. Gifwords are
+  driven by live track requests that include GIF image data; there is no
+  meaningful sample to show without a real request flowing through the system.
+
 ## Build Executable
 
 To build a stand-alone executable:

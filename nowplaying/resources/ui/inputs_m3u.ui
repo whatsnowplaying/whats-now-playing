@@ -13,51 +13,54 @@
   <property name="windowTitle">
    <string>M3U</string>
   </property>
-  <widget class="QWidget" name="horizontalLayoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>100</y>
-     <width>631</width>
-     <height>80</height>
-    </rect>
+  <layout class="QVBoxLayout" name="main_layout">
+   <property name="margin">
+    <number>10</number>
    </property>
-   <layout class="QHBoxLayout" name="horizontalLayout">
-    <item>
-     <widget class="QLabel" name="dir_label">
-      <property name="text">
-       <string>M3U Directory</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="dir_button">
-      <property name="text">
-       <string>Select Dir ...</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLineEdit" name="dir_lineedit"/>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QLabel" name="help_label">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>210</y>
-     <width>601</width>
-     <height>231</height>
-    </rect>
+   <property name="spacing">
+    <number>10</number>
    </property>
-   <property name="text">
-    <string>M3U support is for a variety of tools, including Virtual DJ.  Select the directory where the .m3u file exists.  Now Playing will read any new/updated m3u file in it.</string>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-  </widget>
+   <item>
+    <layout class="QHBoxLayout" name="dir_layout">
+     <item>
+      <widget class="QLabel" name="dir_label">
+       <property name="text">
+        <string>M3U Directory</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="dir_button">
+       <property name="text">
+        <string>Select Dir ...</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="dir_lineedit"/>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTextBrowser" name="help_label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+&lt;p&gt;M3U support is for a variety of tools, including Virtual DJ.&lt;/p&gt;
+&lt;p&gt;Select the directory where the .m3u file exists. Now Playing will read any new or updated .m3u file in that directory.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>

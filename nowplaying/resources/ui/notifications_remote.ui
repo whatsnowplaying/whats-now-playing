@@ -16,184 +16,165 @@
   <property name="displayName" stdset="0">
    <string>Remote Output</string>
   </property>
-  <widget class="QLabel" name="header_label">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>20</y>
-     <width>281</width>
-     <height>16</height>
-    </rect>
+  <layout class="QVBoxLayout" name="main_layout">
+   <property name="margin">
+    <number>10</number>
    </property>
-   <property name="text">
-    <string>**Remote Output Support**</string>
+   <property name="spacing">
+    <number>10</number>
    </property>
-   <property name="textFormat">
-    <enum>Qt::MarkdownText</enum>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="enable_checkbox">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>60</y>
-     <width>86</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Enable</string>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="autodiscover_checkbox">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>90</y>
-     <width>200</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Auto-discover server</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="scan_button">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>120</y>
-     <width>150</width>
-     <height>26</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Scan for servers</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="scan_status_label">
-   <property name="geometry">
-    <rect>
-     <x>200</x>
-     <y>124</y>
-     <width>250</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="discovered_combobox">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>155</y>
-     <width>410</width>
-     <height>26</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QLabel" name="server_label">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>193</y>
-     <width>67</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Server:</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="server_lineedit">
-   <property name="geometry">
-    <rect>
-     <x>110</x>
-     <y>190</y>
-     <width>200</width>
-     <height>22</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>hostname or IP</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="port_label">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>223</y>
-     <width>67</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Port:</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="port_lineedit">
-   <property name="geometry">
-    <rect>
-     <x>110</x>
-     <y>220</y>
-     <width>100</width>
-     <height>22</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>8899</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="secret_label">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>253</y>
-     <width>67</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Secret:</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="secret_lineedit">
-   <property name="geometry">
-    <rect>
-     <x>110</x>
-     <y>250</y>
-     <width>200</width>
-     <height>22</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>Optional authentication key</string>
-   </property>
-   <property name="echoMode">
-    <enum>QLineEdit::Password</enum>
-   </property>
-  </widget>
-  <widget class="QLabel" name="description_label">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>290</y>
-     <width>500</width>
-     <height>100</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Remote Output sends track metadata to a remote What's Now Playing instance.
-Enable auto-discover to find services automatically. Click "Scan for servers" to find instances on your local network and select one from the list.
-If multiple instances are found, you must select one from the list to save it as your target.
-The remote server must be running with the webserver enabled.</string>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-  </widget>
+   <item>
+    <widget class="QLabel" name="header_label">
+     <property name="text">
+      <string>**Remote Output Support**</string>
+     </property>
+     <property name="textFormat">
+      <enum>Qt::MarkdownText</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="enable_checkbox">
+     <property name="text">
+      <string>Enable</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="autodiscover_checkbox">
+     <property name="text">
+      <string>Auto-discover server</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="scan_layout">
+     <item>
+      <widget class="QPushButton" name="scan_button">
+       <property name="text">
+        <string>Scan for servers</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="scan_status_label">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QComboBox" name="discovered_combobox"/>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="server_layout">
+     <item>
+      <widget class="QLabel" name="server_label">
+       <property name="text">
+        <string>Server:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="server_lineedit">
+       <property name="placeholderText">
+        <string>hostname or IP</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="port_layout">
+     <item>
+      <widget class="QLabel" name="port_label">
+       <property name="text">
+        <string>Port:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="port_lineedit">
+       <property name="placeholderText">
+        <string>8899</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="secret_layout">
+     <item>
+      <widget class="QLabel" name="secret_label">
+       <property name="text">
+        <string>Secret:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="secret_lineedit">
+       <property name="placeholderText">
+        <string>Optional authentication key</string>
+       </property>
+       <property name="echoMode">
+        <enum>QLineEdit::Password</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTextBrowser" name="description_label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+&lt;p&gt;Remote Output sends track metadata to a remote What's Now Playing instance.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Enable &lt;span style=&quot;font-weight:600;&quot;&gt;Auto-discover&lt;/span&gt; to find services automatically, or click &lt;span style=&quot;font-weight:600;&quot;&gt;Scan for servers&lt;/span&gt; to find instances on your local network.&lt;/li&gt;
+&lt;li&gt;If multiple instances are found, select one from the list to save it as your target.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The remote server must be running with the webserver enabled.&lt;/p&gt;
+&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>

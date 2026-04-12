@@ -94,7 +94,8 @@ def setuplogging(
         level=logging.DEBUG,
     )
     logging.captureWarnings(True)
-    # httpx emits very noisy DEBUG-level connection tracing
+    # These libraries emit very noisy DEBUG-level tracing
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("hpack").setLevel(logging.WARNING)
     return logpath

@@ -13,43 +13,40 @@
   <property name="windowTitle">
    <string>Integration</string>
   </property>
-  <widget class="QCheckBox" name="enable_redemptions_checkbox">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>30</y>
-     <width>321</width>
-     <height>23</height>
-    </rect>
+  <property name="tabOrder" stdset="0">
+   <number>1</number>
+  </property>
+  <layout class="QVBoxLayout" name="main_layout">
+   <property name="margin">
+    <number>10</number>
    </property>
-   <property name="text">
-    <string>Enable Twitch Channel Point Redemption Requests</string>
+   <property name="spacing">
+    <number>10</number>
    </property>
-  </widget>
-  <widget class="QCheckBox" name="enable_chat_checkbox">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>60</y>
-     <width>321</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Enable Twitch Chat Requests</string>
-   </property>
-  </widget>
-  <widget class="QTextBrowser" name="integration_infobox">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>100</y>
-     <width>621</width>
-     <height>360</height>
-    </rect>
-   </property>
-   <property name="html">
-    <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+   <item>
+    <widget class="QCheckBox" name="enable_redemptions_checkbox">
+     <property name="text">
+      <string>Enable Twitch Channel Point Redemption Requests</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="enable_chat_checkbox">
+     <property name="text">
+      <string>Enable Twitch Chat Requests</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTextBrowser" name="integration_infobox">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 hr { height: 1px; border-width: 0; }
@@ -74,8 +71,23 @@ li.checked::marker { content: &quot;\2612&quot;; }
 &lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;p style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;&lt;span style=&quot;font-weight: 600&quot;&gt;Important:&lt;/span&gt; These settings only enable request processing. The Twitch Chat configuration controls command availability and permissions.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-  </widget>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer>
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>

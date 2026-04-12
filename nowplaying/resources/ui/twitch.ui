@@ -16,187 +16,163 @@
   <property name="displayName" stdset="0">
    <string>Twitch</string>
   </property>
-  <widget class="QWidget" name="formLayoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>40</y>
-     <width>624</width>
-     <height>281</height>
-    </rect>
+  <layout class="QVBoxLayout" name="main_layout">
+   <property name="margin">
+    <number>10</number>
    </property>
-   <layout class="QFormLayout" name="settings_layout">
-    <property name="fieldGrowthPolicy">
-     <enum>QFormLayout::ExpandingFieldsGrow</enum>
-    </property>
-    <item row="0" column="0">
-     <widget class="QLabel" name="channel_label">
-      <property name="enabled">
-       <bool>false</bool>
+   <property name="spacing">
+    <number>10</number>
+   </property>
+   <item>
+    <widget class="QCheckBox" name="enable_checkbox">
+     <property name="text">
+      <string>Enable Twitch</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="settings_form_widget" native="true">
+     <layout class="QFormLayout" name="settings_layout">
+      <property name="fieldGrowthPolicy">
+       <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
       </property>
-      <property name="text">
-       <string>Channel</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="QLineEdit" name="channel_lineedit">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>496</width>
-        <height>0</height>
-       </size>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="0">
-     <widget class="QLabel" name="clientid_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Client ID</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QLineEdit" name="clientid_lineedit">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>496</width>
-        <height>0</height>
-       </size>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="0">
-     <widget class="QLabel" name="secret_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Secret *</string>
-      </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <widget class="QLineEdit" name="secret_lineedit">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>496</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="echoMode">
-       <enum>QLineEdit::Password</enum>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="0">
-     <widget class="QLabel" name="oauth_label">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>OAuth Status</string>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="1">
-     <widget class="QLabel" name="oauth_status_label">
-      <property name="text">
-       <string>Not authenticated</string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::PlainText</enum>
-      </property>
-     </widget>
-    </item>
-    <item row="4" column="1">
-     <layout class="QHBoxLayout" name="auth_buttons_layout">
-      <item>
-       <widget class="QPushButton" name="copy_broadcaster_auth_button">
+      <item row="0" column="0">
+       <widget class="QLabel" name="channel_label">
         <property name="enabled">
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Copy Broadcaster Auth URL</string>
-        </property>
-        <property name="toolTip">
-         <string>Copy broadcaster authentication URL to clipboard. Use this for your main streaming account that will handle channel points redemptions and API access.</string>
+         <string>Channel</string>
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QPushButton" name="copy_chat_auth_button">
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="channel_lineedit">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="clientid_label">
         <property name="enabled">
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Copy Chat Bot Auth URL</string>
+         <string>Client ID</string>
         </property>
-        <property name="toolTip">
-         <string>Copy chat bot authentication URL to clipboard. Use this for a separate bot account that will only handle chat messages. Optional - leave empty to use broadcaster account for chat.</string>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="clientid_lineedit">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="secret_label">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Secret *</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="secret_lineedit">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="echoMode">
+         <enum>QLineEdit::Password</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="oauth_label">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>OAuth Status</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLabel" name="oauth_status_label">
+        <property name="text">
+         <string>Not authenticated</string>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::PlainText</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <layout class="QHBoxLayout" name="auth_buttons_layout">
+        <item>
+         <widget class="QPushButton" name="copy_broadcaster_auth_button">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Copy Broadcaster Auth URL</string>
+          </property>
+          <property name="toolTip">
+           <string>Copy broadcaster authentication URL to clipboard. Use this for your main streaming account that will handle channel points redemptions and API access.</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="copy_chat_auth_button">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Copy Chat Bot Auth URL</string>
+          </property>
+          <property name="toolTip">
+           <string>Copy chat bot authentication URL to clipboard. Use this for a separate bot account that will only handle chat messages. Optional - leave empty to use broadcaster account for chat.</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="chatbot_username_label">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="text">
+         <string>Account Name</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QLabel" name="chatbot_username_line">
+        <property name="text">
+         <string>autodetermined bot username</string>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::PlainText</enum>
         </property>
        </widget>
       </item>
      </layout>
-    </item>
-    <item row="5" column="1">
-     <widget class="QLabel" name="chatbot_username_line">
-      <property name="text">
-       <string>autodetermined bot username</string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::PlainText</enum>
-      </property>
-     </widget>
-    </item>
-    <item row="5" column="0">
-     <widget class="QLabel" name="chatbot_username_label">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="text">
-       <string>Account Name</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QCheckBox" name="enable_checkbox">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>141</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Enable Twitch</string>
-   </property>
-  </widget>
-  <widget class="QTextBrowser" name="help_text">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>300</y>
-     <width>621</width>
-     <height>120</height>
-    </rect>
-   </property>
-   <property name="html">
-    <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+    </widget>
+   </item>
+   <item>
+    <widget class="QTextBrowser" name="help_text">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 hr { height: 1px; border-width: 0; }
@@ -214,8 +190,10 @@ li.checked::marker { content: &quot;\2612&quot;; }
 &lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;6. Open each URL in your browser and complete the authorization&lt;/p&gt;
 &lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;&lt;span style=&quot;font-weight: 700; color: #d32f2f&quot;&gt;⚠️ IMPORTANT:&lt;/span&gt;&lt;span style=&quot;color: #d32f2f&quot;&gt; For Option B, make sure you are logged into the correct account before using each URL: your main streaming account for broadcaster auth, and your bot account for chat auth.&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px&quot;&gt;OAuth2 provides secure authentication. The broadcaster token handles channel points and API access, while the optional chat token is only for chat messages.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-  </widget>
+     </property>
+    </widget>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections>
@@ -224,144 +202,54 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <signal>toggled(bool)</signal>
    <receiver>channel_label</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>37</x>
-     <y>133</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>clientid_label</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>38</x>
-     <y>195</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>secret_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>356</x>
-     <y>226</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>secret_label</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>29</x>
-     <y>226</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>channel_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>356</x>
-     <y>133</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>clientid_lineedit</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>61</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>356</x>
-     <y>195</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>oauth_label</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>43</x>
-     <y>190</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>copy_broadcaster_auth_button</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>300</x>
-     <y>221</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>enable_checkbox</sender>
    <signal>toggled(bool)</signal>
    <receiver>copy_chat_auth_button</receiver>
    <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>80</x>
-     <y>21</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>450</x>
-     <y>221</y>
-    </hint>
-   </hints>
   </connection>
  </connections>
 </ui>
