@@ -88,6 +88,7 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
                 bundledir=bundledir, logpath=newpath, testmode=True
             )
             config.cparser.setValue("acoustidmb/enabled", False)
+            config.cparser.setValue("testmode/metadbpath", str(dbfile))
             config.cparser.sync()
             config.testdir = pathlib.Path(newpath)
             config.dbtestfile = dbfile

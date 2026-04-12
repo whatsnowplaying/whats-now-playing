@@ -1081,7 +1081,10 @@ class Requests:  # pylint: disable=too-many-instance-attributes, too-many-public
     ) -> TrackRequestResult:
         """twofer request"""
 
-        metadb = nowplaying.db.MetadataDB()
+        metadb_path: str | None = None
+        if self.testmode and self.config:
+            metadb_path = self.config.cparser.value("testmode/metadbpath", defaultValue=None)
+        metadb = nowplaying.db.MetadataDB(databasefile=metadb_path)
         metadata = await metadb.read_last_meta_async()
         if not metadata:
             logging.debug("Twofer: No currently playing track? skipping")
