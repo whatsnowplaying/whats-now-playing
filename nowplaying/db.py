@@ -169,10 +169,10 @@ class MetadataDB:
     @staticmethod
     def init_db_var(databasefile: str | pathlib.Path | None) -> pathlib.Path:
         """split this out to make testing easier"""
-        if os.environ.get("WNP_METADB_TEST_FILE"):
-            return pathlib.Path(os.environ["WNP_METADB_TEST_FILE"])
         if databasefile:
             return pathlib.Path(databasefile)
+        if os.environ.get("WNP_METADB_TEST_FILE"):
+            return pathlib.Path(os.environ["WNP_METADB_TEST_FILE"])
         return pathlib.Path(
             QStandardPaths.standardLocations(QStandardPaths.CacheLocation)[0]
         ).joinpath("metadb", "npsql.db")
