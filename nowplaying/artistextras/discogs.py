@@ -305,6 +305,14 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug("discogs did not find it")
             return None
 
+        # The release search returns only a basic artist reference (id/name only).
+        # Fetch the full artist profile so bio and websites are populated.
+        artist_id = getattr(artistresultlist, "id", None)
+        if artist_id:
+            full_artist = await self._artist_async_cached(str(artist_id), metadata["artist"])
+            if full_artist:
+                artistresultlist = full_artist
+
         self._process_metadata(metadata["imagecacheartist"], artistresultlist, imagecache)
         return self.addmeta
 
