@@ -22,7 +22,6 @@ from PySide6.QtCore import (  # pylint: disable=import-error, no-name-in-module
 import nowplaying.apicache
 import nowplaying.bootstrap
 import nowplaying.config
-import nowplaying.db
 
 # if sys.platform == 'darwin':
 #     import psutil
@@ -82,21 +81,18 @@ def bootstrap(getroot):  # pylint: disable=redefined-outer-name
             dbdir.mkdir()
             dbfile = dbdir.joinpath("test.db")
 
-            with unittest.mock.patch.dict(
-                os.environ,
-                {"WNP_CONFIG_TEST_DIR": str(newpath), "WNP_METADB_TEST_FILE": str(dbfile)},
-            ):
-                rmdir = newpath
-                bundledir = pathlib.Path(getroot).joinpath("nowplaying")
-                nowplaying.bootstrap.set_qt_names(domain=DOMAIN, appname="testsuite")
-                config = nowplaying.config.ConfigFile(
-                    bundledir=bundledir, logpath=newpath, testmode=True
-                )
-                config.cparser.setValue("acoustidmb/enabled", False)
-                config.cparser.sync()
-                config.testdir = pathlib.Path(newpath)
+            rmdir = newpath
+            bundledir = pathlib.Path(getroot).joinpath("nowplaying")
+            nowplaying.bootstrap.set_qt_names(domain=DOMAIN, appname="testsuite")
+            config = nowplaying.config.ConfigFile(
+                bundledir=bundledir, logpath=newpath, testmode=True
+            )
+            config.cparser.setValue("acoustidmb/enabled", False)
+            config.cparser.sync()
+            config.testdir = pathlib.Path(newpath)
+            config.dbtestfile = dbfile
 
-                yield config
+            yield config
             if pathlib.Path(rmdir).exists():
                 shutil.rmtree(rmdir)
 
