@@ -83,7 +83,7 @@ jobs:
             coverage.xml
       #       htmlcov
       # - name: codecov
-      #   uses: codecov/codecov-action@v5
+      #   uses: codecov/codecov-action@v6
       #   with:
       #     fail_ci_if_error: true  # optional (default = false)
       #     files: ./coverage.xml  # optional
@@ -154,7 +154,7 @@ jobs:
             htmlcov
             coverage.xml
       # - name: codecov
-      #   uses: codecov/codecov-action@v5
+      #   uses: codecov/codecov-action@v6
       #   with:
       #     fail_ci_if_error: true  # optional (default = false)
       #     files: ./coverage.xml  # optional
@@ -256,7 +256,7 @@ jobs:
             htmlcov
             coverage.xml
       # - name: codecov
-      #   uses: codecov/codecov-action@v5
+      #   uses: codecov/codecov-action@v6
       #   with:
       #     fail_ci_if_error: true  # optional (default = false)
       #     files: ./coverage.xml  # optional
@@ -314,7 +314,7 @@ jobs:
             htmlcov
             coverage.xml
       - name: codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
