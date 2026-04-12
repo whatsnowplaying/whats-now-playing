@@ -2606,6 +2606,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#template-preview-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Template Preview Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#build-executable" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2753,6 +2764,16 @@ render in software — adequate for development and testing.</p>
 bypassing the blocklist on a genuinely broken driver can cause crashes.
 Set it only in development environments where you control the setup.</p>
 </blockquote>
+<h2 id="template-preview-limitations">Template Preview Limitations<a class="headerlink" href="#template-preview-limitations" title="Permanent link">&para;</a></h2>
+<p>The template preview window works for most templates using sample data, but
+some templates depend on live data sources that cannot be simulated:</p>
+<ul>
+<li><strong>Fanart slideshow</strong> (<code>ws-artistfanart-slideshow</code>) — works in preview and
+  serves six pre-generated sample images in rotation via the images WebSocket.</li>
+<li><strong>Gifwords</strong> (<code>ws-gifwords-fade</code>) — does not work in preview. Gifwords are
+  driven by live track requests that include GIF image data; there is no
+  meaningful sample to show without a real request flowing through the system.</li>
+</ul>
 <h2 id="build-executable">Build Executable<a class="headerlink" href="#build-executable" title="Permanent link">&para;</a></h2>
 <p>To build a stand-alone executable:</p>
 <div class="highlight"><pre><span></span><code>./builder.sh<span class="w">           </span><span class="c1"># auto-detects platform (macOS or Windows)</span>
