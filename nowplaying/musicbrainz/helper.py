@@ -12,6 +12,7 @@ from typing import Any
 from nowplaying.vendor.wnpmb import (  # pylint: disable=no-name-in-module,import-error
     MusicBrainzClient,
     MusicBrainzError,
+    RateLimitError,
     WNPCacheAdapter,
     extract_artist_urls,
 )
@@ -29,16 +30,46 @@ logger = logging.getLogger(__name__)
 class MusicBrainzHelper:
     """handler for NowPlaying"""
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, test_mode: bool = False):
         if config:
             self.config = config
         else:
             self.config = nowplaying.config.ConfigFile()
 
+        self.test_mode = test_mode
         self.emailaddressset = False
         self.mb_client = MusicBrainzClient(
             retry_settings=RetrySettings(max_retries=2, wait=0.5),
         )
+
+    async def _mb_op_with_retry(self, operation, error_msg: str, default: Any) -> Any:
+        """Run an async MB operation, retrying on RateLimitError only in test_mode.
+
+        In live performance mode (test_mode=False) a rate-limit failure returns
+        the default immediately so the DJ is never blocked waiting for retries.
+        """
+        max_attempts = 3 if self.test_mode else 1
+        for attempt in range(max_attempts):
+            if attempt > 0:
+                sleep_time = 10 * attempt
+                logger.warning(
+                    "Rate limited; sleeping %ds before retry %d/%d",
+                    sleep_time,
+                    attempt,
+                    max_attempts - 1,
+                )
+                await asyncio.sleep(sleep_time)
+            try:
+                return await operation()
+            except RateLimitError:
+                if attempt < max_attempts - 1:
+                    continue
+                logger.warning("Rate limited after %d attempts: %s", max_attempts, error_msg)
+                return default
+            except MusicBrainzError:
+                logger.exception("MusicBrainz error: %s", error_msg)
+                return default
+        return default
 
     def _setemail(self):
         """make sure the musicbrainz fetch has an email address set
@@ -67,17 +98,17 @@ class MusicBrainzHelper:
 
         self._setemail()
         year = nowplaying.utils.metadata.get_best_year(metadata)
-        try:
+
+        async def _find():
             async with self.mb_client:
-                mbid = await self.mb_client.find_recording(
+                return await self.mb_client.find_recording(
                     title=title,
                     artist=artist,
                     album=album,
                     year=year,
                 )
-        except MusicBrainzError:
-            logger.exception("MusicBrainz error during find_recording")
-            return None
+
+        mbid = await self._mb_op_with_retry(_find, "find_recording", None)
         if mbid:
             return await self.recordingid(mbid)
         return None
@@ -154,13 +185,11 @@ class MusicBrainzHelper:
 
         self._setemail()
 
-        try:
+        async def _resolve():
             async with self.mb_client:
-                mbid = await self.mb_client.resolve_recording_by_isrc(isrclist)
-        except MusicBrainzError:
-            logger.exception("MusicBrainz error during ISRC lookup")
-            return None
+                return await self.mb_client.resolve_recording_by_isrc(isrclist)
 
+        mbid = await self._mb_op_with_retry(_resolve, "resolve_recording_by_isrc", None)
         if mbid:
             return await self.recordingid(mbid)
         return None
@@ -192,8 +221,7 @@ class MusicBrainzHelper:
         """uncached version of recordingid lookup"""
         self._setemail()
 
-        newdata: dict[str, Any] = {}
-        try:
+        async def _fetch() -> dict:
             async with self.mb_client:
                 mb_data = await self.mb_client.get_recording_by_id(recordingid)
                 if not mb_data:
@@ -202,7 +230,7 @@ class MusicBrainzHelper:
                 enriched = await self.mb_client.process_recording_data(mb_data, recordingid)
 
                 # Map wnpmb key names to WNP TrackMetadata key names
-                newdata = {
+                newdata: dict[str, Any] = {
                     "musicbrainzrecordingid": enriched["musicbrainz_recording_id"],
                 }
                 for key in ("title", "artist", "album", "date", "label"):
@@ -224,11 +252,9 @@ class MusicBrainzHelper:
                             newdata["coverimageraw"] = await self.mb_client.get_image_front(
                                 rg_id, "release-group"
                             )
-        except MusicBrainzError:
-            logger.exception("MusicBrainz error fetching recording %s", recordingid)
-            return {}
+                return newdata
 
-        return newdata
+        return await self._mb_op_with_retry(_fetch, "get_recording_by_id", {})
 
     async def artistids(self, idlist):
         """add data available via musicbrainz artist ids"""

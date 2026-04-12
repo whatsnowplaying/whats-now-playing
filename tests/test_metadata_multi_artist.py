@@ -154,7 +154,7 @@ async def test_integration_single_artist_known_to_mb(bootstrap):
     """Test that artists known to MusicBrainz don't get split"""
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
-    processor = nowplaying.metadata.MetadataProcessors(config=config)
+    processor = nowplaying.metadata.MetadataProcessors(config=config, test_mode=True)
 
     # Test cases: artists that SHOULD be found in MusicBrainz as single entities
     known_single_artists = [
@@ -189,7 +189,7 @@ async def test_integration_collaboration_not_in_mb(bootstrap):
     """Test that collaborations not in MB get resolved to individual artists"""
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
-    processor = nowplaying.metadata.MetadataProcessors(config=config)
+    processor = nowplaying.metadata.MetadataProcessors(config=config, test_mode=True)
 
     # Test cases: collaborations that probably DON'T exist in MB as combined entities
     collaboration_cases = [
@@ -233,7 +233,7 @@ async def test_integration_hierarchical_breakdown(bootstrap):
     """Test hierarchical breakdown with a case that requires splitting"""
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
-    processor = nowplaying.metadata.MetadataProcessors(config=config)
+    processor = nowplaying.metadata.MetadataProcessors(config=config, test_mode=True)
 
     # Test case that should require hierarchical breakdown - using a made-up collaboration
     # that definitely won't exist as a full string in MusicBrainz
@@ -276,7 +276,7 @@ async def test_integration_single_artists_not_split(bootstrap, artist_name):
     await asyncio.sleep(0.5)
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
-    processor = nowplaying.metadata.MetadataProcessors(config=config)
+    processor = nowplaying.metadata.MetadataProcessors(config=config, test_mode=True)
 
     processor.metadata = {
         "artist": artist_name,
@@ -325,7 +325,7 @@ async def test_integration_collaborations_split(bootstrap, collaboration, expect
     await asyncio.sleep(0.5)
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
-    processor = nowplaying.metadata.MetadataProcessors(config=config)
+    processor = nowplaying.metadata.MetadataProcessors(config=config, test_mode=True)
 
     processor.metadata = {
         "artist": collaboration,
@@ -368,7 +368,7 @@ async def test_integration_real_collaboration_example(bootstrap):
     """Test our known working example: Disclosure ft. AlunaGeorge"""
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
-    processor = nowplaying.metadata.MetadataProcessors(config=config)
+    processor = nowplaying.metadata.MetadataProcessors(config=config, test_mode=True)
 
     processor.metadata = {"artist": "Disclosure ft. AlunaGeorge", "title": "White Noise"}
 
@@ -409,7 +409,7 @@ async def test_integration_conservative_splitting(bootstrap):
     """Test that ambiguous cases are handled conservatively"""
     config = bootstrap
     config.cparser.setValue("musicbrainz/enabled", True)
-    processor = nowplaying.metadata.MetadataProcessors(config=config)
+    processor = nowplaying.metadata.MetadataProcessors(config=config, test_mode=True)
 
     # Test ambiguous cases that should NOT split
     conservative_cases = [

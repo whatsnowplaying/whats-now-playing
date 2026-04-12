@@ -25,7 +25,7 @@ def getmusicbrainz(bootstrap):
     for site in ["bandcamp", "homepage", "lastfm", "discogs"]:
         config.cparser.setValue(f"musicbrainz/{site}", True)
     config.cparser.setValue("musicbrainz/emailaddress", "aw+wnptest@effectivemachines.com")
-    return nowplaying.musicbrainz.MusicBrainzHelper(config=config)
+    return nowplaying.musicbrainz.MusicBrainzHelper(config=config, test_mode=True)
 
 
 @pytest.mark.asyncio

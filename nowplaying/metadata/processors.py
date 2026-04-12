@@ -36,9 +36,12 @@ YOUTUBE_MATCH_RE = re.compile("^https?://[www.]*youtube.com/watch.v=")
 class MetadataProcessors:  # pylint: disable=too-few-public-methods
     """Run through a bunch of different metadata processors"""
 
-    def __init__(self, config: nowplaying.config.ConfigFile | None = None):
+    def __init__(
+        self, config: nowplaying.config.ConfigFile | None = None, test_mode: bool = False
+    ):
         self.metadata: TrackMetadata = {}
         self.imagecache: nowplaying.imagecache.ImageCache | None = None
+        self.test_mode = test_mode
         if config:
             self.config: nowplaying.config.ConfigFile = config
         else:
@@ -317,7 +320,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
             return
 
         try:
-            musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
+            musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
+                config=self.config, test_mode=self.test_mode
+            )
             addmeta = await musicbrainz.recognize(copy.copy(self.metadata))
             self.metadata = recognition_replacement(
                 config=self.config, metadata=self.metadata, addmeta=addmeta
@@ -350,7 +355,9 @@ class MetadataProcessors:  # pylint: disable=too-few-public-methods
 
         logging.debug("Attempting musicbrainz fallback")
 
-        musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(config=self.config)
+        musicbrainz = nowplaying.musicbrainz.MusicBrainzHelper(
+            config=self.config, test_mode=self.test_mode
+        )
         addmeta = await musicbrainz.lastditcheffort(copy.copy(self.metadata))
         self.metadata = recognition_replacement(
             config=self.config, metadata=self.metadata, addmeta=addmeta
