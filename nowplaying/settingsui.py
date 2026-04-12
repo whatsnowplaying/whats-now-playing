@@ -1507,7 +1507,7 @@ def about_version_text(config, qwidget):
     )
 
 
-def load_widget_ui(config, name):
+def load_widget_ui(config, name):  # pylint: disable=too-many-locals
     """Load a UI widget via QUiLoader."""
     single_path = config.uidir.joinpath(f"{name}.ui")
     if single_path.exists():
