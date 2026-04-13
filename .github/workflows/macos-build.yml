@@ -32,9 +32,18 @@ jobs:
       contents: read
     steps:
       - name: icu
+        env:
+          MACOSX_DEPLOYMENT_TARGET: ${{ inputs.macos-deployment-target }}
         run: |
           brew update --preinstall || true
-          brew install pkg-config icu4c
+          brew install pkg-config
+          if [[ -n "$MACOSX_DEPLOYMENT_TARGET" ]]; then
+            CFLAGS="-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET" \
+            CXXFLAGS="-mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET" \
+            brew install --build-from-source icu4c
+          else
+            brew install icu4c
+          fi
       - name: checkout
         uses: actions/checkout@v6
         with:
@@ -49,6 +58,7 @@ jobs:
         env:
           MACOSX_DEPLOYMENT_TARGET: ${{ inputs.macos-deployment-target }}
         run: |
+          [[ -z "$MACOSX_DEPLOYMENT_TARGET" ]] && unset MACOSX_DEPLOYMENT_TARGET
           export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
           export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
           ./builder.sh
