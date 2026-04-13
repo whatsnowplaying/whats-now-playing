@@ -305,13 +305,19 @@ class Plugin(ArtistExtrasPlugin):
             logging.debug("discogs did not find it")
             return None
 
-        # The release search returns only a basic artist reference (id/name only).
-        # Fetch the full artist profile so bio and websites are populated.
-        artist_id = getattr(artistresultlist, "id", None)
-        if artist_id:
-            full_artist = await self._artist_async_cached(str(artist_id), metadata["artist"])
-            if full_artist:
-                artistresultlist = full_artist
+        # If load_full_artist_data was rate-limited during the search, the cached result
+        # may have an incomplete artist (no bio/urls).  Fetch the full profile explicitly
+        # so we always have a separate artist_{id} cache entry to fall back on.
+        needs_bio = self.config.cparser.value("discogs/bio", type=bool)
+        needs_websites = self.config.cparser.value("discogs/websites", type=bool)
+        missing_bio = needs_bio and not getattr(artistresultlist, "profile_plaintext", None)
+        missing_urls = needs_websites and not getattr(artistresultlist, "urls", None)
+        if missing_bio or missing_urls:
+            artist_id = getattr(artistresultlist, "discogs_id", None)
+            if artist_id:
+                full_artist = await self._artist_async_cached(str(artist_id), metadata["artist"])
+                if full_artist:
+                    artistresultlist = full_artist
 
         self._process_metadata(metadata["imagecacheartist"], artistresultlist, imagecache)
         return self.addmeta
