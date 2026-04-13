@@ -2715,7 +2715,7 @@ a correct executable when built with PyInstaller.</p>
 </blockquote>
 <h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Python 3.11+ for your operating system</li>
+<li>Python 3.11–3.14 for your operating system (3.15+ is not yet supported)</li>
 <li>A terminal / development shell</li>
 <li><code>git</code> installed and working</li>
 </ul>
@@ -2725,10 +2725,10 @@ a correct executable when built with PyInstaller.</p>
 <span class="nb">cd</span><span class="w"> </span>whats-now-playing
 ./builder.sh<span class="w"> </span>dev
 </code></pre></div>
-<p>If your system default Python is unsupported (e.g. 3.14+) or you have multiple
+<p>If your system default Python is unsupported (e.g. 3.15+) or you have multiple
 versions installed and need to target a specific supported one, set <code>PYTHONBIN</code>
 before running the script:</p>
-<div class="highlight"><pre><span></span><code><span class="nv">PYTHONBIN</span><span class="o">=</span>/usr/local/bin/python3.11<span class="w"> </span>./builder.sh<span class="w"> </span>dev
+<div class="highlight"><pre><span></span><code><span class="nv">PYTHONBIN</span><span class="o">=</span>/usr/local/bin/python3.12<span class="w"> </span>./builder.sh<span class="w"> </span>dev
 </code></pre></div>
 <p><code>builder.sh</code> defaults to <code>python3</code> (or <code>python</code> on Windows) found on <code>PATH</code>.
 <code>PYTHONBIN</code> overrides that for both the venv creation and all subsequent build steps.</p>
