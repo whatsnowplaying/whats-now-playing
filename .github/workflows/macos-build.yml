@@ -16,6 +16,14 @@ on:  # yamllint disable-line rule:truthy
       artifact-name:
         required: true
         type: string
+      python-version:
+        required: false
+        type: string
+        default: '3.12'
+      macos-deployment-target:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build:
@@ -36,8 +44,10 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: ${{ inputs.python-version }}
       - name: run builder
+        env:
+          MACOSX_DEPLOYMENT_TARGET: ${{ inputs.macos-deployment-target }}
         run: |
           export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
           export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
