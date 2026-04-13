@@ -670,7 +670,10 @@ class WebHandler:  # pylint: disable=too-many-public-methods,too-many-instance-a
         template_dir = app[CONFIG_KEY].getbundledir().joinpath("templates")
         app.router.add_static("/vendor/", path=template_dir / "vendor", name="vendor")
         app.router.add_static("/guessgame/", path=template_dir / "guessgame", name="guessgame")
-        app[METADB_KEY] = nowplaying.db.MetadataDB()
+        metadb_path: str | None = None
+        if self.testmode:
+            metadb_path = app[CONFIG_KEY].cparser.value("testmode/metadbpath", defaultValue=None)
+        app[METADB_KEY] = nowplaying.db.MetadataDB(databasefile=metadb_path)
         app[IC_KEY] = nowplaying.imagecache.ImageCache()
         app[WATCHER_KEY] = app[METADB_KEY].watcher()
         app[WATCHER_KEY].start()

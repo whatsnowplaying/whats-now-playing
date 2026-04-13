@@ -7,6 +7,7 @@ A minimal asyncio-based Discogs API client that replaces the vendored discogs_cl
 with just the functionality needed by the nowplaying application.
 """
 
+import contextlib
 import logging
 import ssl
 from typing import Any
@@ -61,12 +62,15 @@ class DiscogsRelease:  # pylint: disable=too-few-public-methods
         url = f"{self.client.BASE_URL}/releases/{self.discogs_id}"
         try:
             async with self.client.session.get(url) as response:
+                self.client._log_rate_limit(response)  # pylint: disable=protected-access
                 if response.status == 200:
                     data = await response.json()
                     if "artists" in data and data["artists"]:
                         # Create artist objects with IDs for further lookup
                         self.artists = [DiscogsArtist(artist) for artist in data["artists"]]
                         self._artists_loaded = True
+                elif response.status == 429:
+                    logging.warning("Discogs release lookup rate limited (429), skipping")
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.debug("Error loading full release data: %s", error)
 
@@ -146,6 +150,20 @@ class AsyncDiscogsClient:
         if self.session:
             await self.session.close()
 
+    @staticmethod
+    def _log_rate_limit(response: aiohttp.ClientResponse) -> None:
+        """Log Discogs rate limit headers so callers can see how close we are."""
+        remaining_str = response.headers.get("X-Discogs-Ratelimit-Remaining")
+        limit_str = response.headers.get("X-Discogs-Ratelimit")
+        if remaining_str is not None and limit_str is not None:
+            with contextlib.suppress(ValueError):
+                remaining = int(remaining_str)
+                limit = int(limit_str)
+                if remaining <= 2:
+                    logging.warning("Discogs rate limit low: %d/%d remaining", remaining, limit)
+                else:
+                    logging.debug("Discogs rate limit: %d/%d remaining", remaining, limit)
+
     async def search(  # pylint: disable=too-many-arguments
         self,
         query: str,
@@ -171,6 +189,7 @@ class AsyncDiscogsClient:
             if not self.session:
                 return DiscogsSearchResult([], self)
             async with self.session.get(url, params=params) as response:  # pylint: disable=not-async-context-manager
+                self._log_rate_limit(response)
                 if response.status == 200:
                     data = await response.json()
                     results = data.get("results", [])
@@ -187,7 +206,10 @@ class AsyncDiscogsClient:
 
                     return search_result
 
-                logging.warning("Discogs search failed with status %d", response.status)
+                if response.status == 429:
+                    logging.warning("Discogs search rate limited (429), skipping")
+                else:
+                    logging.warning("Discogs search failed with status %d", response.status)
                 return DiscogsSearchResult([], self)
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.debug("Discogs search error: %s", error)
@@ -204,6 +226,7 @@ class AsyncDiscogsClient:
 
         try:
             async with self.session.get(url) as response:  # pylint: disable=not-async-context-manager
+                self._log_rate_limit(response)
                 if response.status == 200:
                     data = await response.json()
 
@@ -227,7 +250,10 @@ class AsyncDiscogsClient:
 
                     return DiscogsArtist(data)
 
-                logging.warning("Discogs artist lookup failed with status %d", response.status)
+                if response.status == 429:
+                    logging.warning("Discogs artist lookup rate limited (429), skipping")
+                else:
+                    logging.warning("Discogs artist lookup failed with status %d", response.status)
                 return None
         except Exception as error:  # pylint: disable=broad-exception-caught
             logging.debug("Discogs artist lookup error: %s", error)

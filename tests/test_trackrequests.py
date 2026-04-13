@@ -614,7 +614,7 @@ async def test_twofer(bootstrap, getroot):  # pylint: disable=redefined-outer-na
     )
     config.cparser.sync()
 
-    metadb = nowplaying.db.MetadataDB(initialize=True)
+    metadb = nowplaying.db.MetadataDB(databasefile=bootstrap.dbtestfile, initialize=True)
     trackrequest = nowplaying.trackrequests.Requests(
         stopevent=stopevent, config=config, testmode=True
     )

@@ -37,7 +37,7 @@ async def test_webserver_templates(getwebserver, template_type, endpoint, expect
     port = config.cparser.value("weboutput/httpport", type=int)
 
     # Configure template
-    template_path = config.getbundledir().joinpath("templates", "basic-plain.txt")
+    template_path = str(config.getbundledir().joinpath("templates", "basic-plain.txt"))
     if template_type == "html":
         config.cparser.setValue("weboutput/htmltemplate", template_path)
     else:
