@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "WhatsNowPlaying"
 dynamic = ["version", "dependencies", "optional-dependencies"]
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.14,<3.15"
 license-files = ["LICENSE.txt"]
 
 [project.entry-points.pyinstaller40]
