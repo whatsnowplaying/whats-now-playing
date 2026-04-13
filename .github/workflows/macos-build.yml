@@ -52,6 +52,12 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ inputs.python-version }}
+      - name: python diagnostics
+        run: |
+          python3 --version
+          python3 -c "import sysconfig; print('Python deployment target:', sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET'))"
+          python3 -c "import platform; print('Platform:', platform.platform())"
+          echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-<not set>}"
       - name: run builder
         env:
           MACOSX_DEPLOYMENT_TARGET: ${{ inputs.macos-deployment-target }}
@@ -60,6 +66,23 @@ jobs:
           export PATH="$(brew --prefix)/opt/icu4c/bin:$(brew --prefix)/opt/icu4c/sbin:$PATH"
           export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(brew --prefix)/opt/icu4c/lib/pkgconfig"
           ./builder.sh
+      - name: check binary deployment target
+        run: |
+          APPDIR=$(find WhatsNowPlaying-* -name "WhatsNowPlaying.app" -type d | head -1)
+          echo "=== Main binary ==="
+          vtool -show-build "${APPDIR}/Contents/MacOS/WhatsNowPlaying"
+          echo ""
+          echo "=== Bundled app dylibs ==="
+          find "${APPDIR}" -name "*.dylib" | sort | while read -r lib; do
+            minos=$(vtool -show-build "$lib" 2>/dev/null | awk '/minos/ {print $2}')
+            echo "${minos}  $(basename "$lib")"
+          done | sort
+          echo ""
+          echo "=== Venv dylibs ==="
+          find /tmp/build-venv -name "*.dylib" -o -name "*.so" | sort | while read -r lib; do
+            minos=$(vtool -show-build "$lib" 2>/dev/null | awk '/minos/ {print $2}')
+            echo "${minos}  ${lib#/tmp/build-venv/}"
+          done | sort
       - name: smoke test binary
         run: |
           BINARY=$(find WhatsNowPlaying-* -path "*/Contents/MacOS/WhatsNowPlaying" -type f | head -1)
